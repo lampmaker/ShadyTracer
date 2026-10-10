@@ -21,7 +21,12 @@
 // since it was measured; not shown for an open object (a plane), whose box is only where the search stopped.
 //
 // IT NEVER TAKES THE MOUSE: pointer events pass through it to the picture, so a handle under it can still be grabbed
-// and the camera still orbits through it -- except while the typed entry is open in it, which needs the keys.
+// and the camera still orbits through it -- except while the typed entry is open in it, which needs the keys, and
+// its one button.
+//
+// IT FOLDS (the user, 2026-10-10: "it can be fairly large and is not always needed"): the chevron in its head leaves
+// the head alone, remembered (raytracer.builder.edit.readout). What must be read still shows folded: a 'bad' note
+// (a refusal, a shape that will not hold) and the typed entry, which Enter opened and so was asked for.
 //
 // UNDER THE LIBRARY'S STRIP: an item being edited puts its Save and Close across the top right (library/edit.js,
 // shell.css .shell-edit-strip); the panel moves below it.
@@ -140,6 +145,21 @@ export function installReadout(stage) {
     Object.assign(head.style, { display: 'flex', gap: '8px', alignItems: 'baseline' })
     el.append(head, body)
     let model = null, key = null, form = null, strip
+    /* FOLDED: the button is the one part that takes the mouse, so the panel still lets the picture through */
+    const FOLD_KEY = 'raytracer.builder.edit.readout'
+    let folded = false
+    try { folded = localStorage.getItem(FOLD_KEY) === 'folded' } catch { /* no storage: open */ }
+    const fold = document.createElement('button')
+    fold.className = 'edit-readout-fold'
+    Object.assign(fold.style, { pointerEvents: 'auto', cursor: 'pointer', border: 'none', background: 'none', color: '#9aa5ae',
+        font: '11px Arial, sans-serif', padding: '0 2px', margin: '0 -4px 0 0', lineHeight: '1', alignSelf: 'center' })
+    fold.addEventListener('pointerdown', e => e.stopPropagation())
+    fold.addEventListener('click', e => {
+        e.stopPropagation()
+        folded = !folded
+        try { localStorage.setItem(FOLD_KEY, folded ? 'folded' : 'open') } catch { /* kept for this page only */ }
+        render()
+    })
 
     /* below the library's strip while it is there: its height read only when it comes or goes */
     const place = () => {
@@ -183,9 +203,13 @@ export function installReadout(stage) {
         if (!m && !form) { el.style.display = 'none'; return }
         el.style.display = 'block'
         el.style.pointerEvents = form ? 'auto' : 'none'
+        el.style.minWidth = folded && !form ? '0' : '200px'
+        fold.textContent = folded ? '▸' : '▾'
+        fold.title = folded ? 'Show the numbers' : 'Hide the numbers'
         head.replaceChildren(...(m ? [span(m.title, { color: '#fff', fontWeight: 'bold', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: '1' }),
-            ...(m.sub ? [span(m.sub, { color: TONE.note })] : []), ...(m.unit ? [span(m.unit, { color: TONE.note })] : [])] : []))
+            ...(m.sub ? [span(m.sub, { color: TONE.note })] : []), ...(m.unit ? [span(m.unit, { color: TONE.note })] : [])] : []), fold)
         if (form) { if (body.firstChild !== form || body.childNodes.length !== 1) { body.replaceChildren(form); form.style.marginTop = '4px' } }
+        else if (folded) body.replaceChildren(...(m ? numbers({ notes: (m.notes || []).filter(n => n.tone === 'bad') }) : []))
         else body.replaceChildren(...(m ? numbers(m) : []))
     }
     return {
@@ -205,6 +229,8 @@ export function installReadout(stage) {
             render()
         },
         get element() { return el },
+        /** Whether it is folded to its head. */
+        get folded() { return folded },
         /** The model last shown, for the checks. */
         get model() { return model },
     }
