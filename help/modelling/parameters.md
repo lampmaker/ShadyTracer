@@ -1,0 +1,66 @@
+# Parameters and code
+
+Every shape in ShadyTracer is a small piece of code with **parameters**: a sphere's radius, a box's size. You can
+change the numbers, add parameters of your own, drive one from another, or rewrite the code.
+
+## Parameters
+
+In an object's or group's Properties, each parameter is a row: a number, a vector (x, y, z) or a colour. **+** in
+the parameters header adds one. Each parameter can be:
+
+- **live** (the usual): a slider moves the picture with no compile;
+- **compile-time**: built into the program, for a number the code must know before it runs, such as a loop's count.
+  The Menger sponge's depth in [Infinite detail](example:infinite-detail.json) is one;
+- **a length**: shown in the scene's unit, and scaled with it;
+- given a **range**, which its slider keeps to.
+
+Every setting in the program, the renderer's included, also has a path, such as `scene/<id>/radius`. The
+[Parameters panel](show:parameters) lists them all, and **Ctrl K** finds one by name. Typing `exposure = 2` there
+sets it.
+
+## Component parameters
+
+A group can have parameters, and what it holds can be **bound** to them. That makes the group a component:
+change its few numbers, and everything inside follows. In a child's Properties, the bindings are lines of
+`target = expression`:
+
+```
+size.x = fins * pitch / 2
+pos.z = base + finHeight / 2
+copies.count = fins
+copies.pitch = pitch
+copies.along = x
+```
+
+A target is one of the child's parameters (or one part of a vector, `size.x`), its position or rotation
+(`pos.x`, `rot.z`, `scale`), a group's `blend`, or an array's `copies.count`, `copies.pitch` and `copies.along`. An
+expression uses numbers, `+ - * /`, brackets, and the names of parameters of the groups above. A name that no group
+above has is reported, never guessed.
+
+[Parametric part](example:parametric-part.json) is a heatsink built this way: change `fins` in its Properties.
+
+## Arrays
+
+A plain group can have **copies**: a list of places where everything in it is drawn again. A row of copies is
+made in its Properties; bound to parameters as above, the count and spacing follow them. A copy is a place to draw
+the same shapes again, not a new shape: its position is a live value.
+
+## Writing code
+
+Any object, group or material can be rewritten in **WGSL**, the graphics card's language. Open its *code* box in
+Properties. A probe compile runs half a second after you stop typing and shows any error **at your own line**.
+**Ctrl Enter** applies.
+
+- **An object's code** adds a shape: `C = add_new(C, Nsphere(p, radius), MATERIAL);` where `p` is the point in the
+  object's own frame and your parameters are names.
+- **A group's code** changes the space its children are drawn in, then calls them: `C = children(C, p);`. Every
+  modifier is a group with code, so open one to see how it is done.
+- **A material's code** runs where a ray hits, after its fields are set. It can change `m.baseColor`,
+  `m.roughness` and the rest from the hit point: a checker, a stripe, a grain.
+- **The scene's functions** (in the scene's Properties) are helpers any code in the scene can call.
+
+The [Shapes](../reference/shapes.md) and [Modifiers](../reference/modifiers.md) references show what each built-in
+one does. Their code is the place to start.
+
+> A shape's code runs at every step of every ray -- hundreds of times per ray -- so keep it short. A material's code
+> runs about once per bounce, where the ray hits, and costs far less.

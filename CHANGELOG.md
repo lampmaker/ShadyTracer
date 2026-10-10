@@ -15,6 +15,50 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.56.0 — 2026-10-10
+
+**The help's two tracks are written** (the user: "explanation of SDF, what makes this system different than regular
+cad; how to deal with object, materials, etc. trace settings; optical raytracing; features, limitations. Go deep. ...
+split between regular users and optical designers"). 18 pages, in the Help panel (F1) and on GitHub under `help/`.
+
+**Modelling and rendering**, for anyone making shapes and pictures, with no optics assumed:
+- How shapes are made (distance functions, with the live explainer)
+- How this differs from regular CAD
+- Objects, groups and the tree
+- Shapes from points
+- Parameters and code
+- Materials
+- Light, environment and camera
+- Render settings and saving pictures
+- Projects, files and the library
+- When something is wrong
+
+**Optical design:**
+- Optical design with ShadyTracer
+- Light in numbers (units and colour)
+- Sources
+- Optical materials, detectors and limiters
+- The analysis setup
+- The charts
+- How far to trust the numbers
+- What the optics trace does not do: every known limitation, each with the file that states it.
+
+**Every statement was checked against the code or the repository's own documents first.** Two of those
+documents turned out to be wrong, and are corrected here:
+- **Absorption through a material's thickness** was listed as missing in `FEATURES.md` §3.7 and in the README's *Not
+  there yet*. It has been in since 0.37.0, as a material's colour depth: Beer-Lambert in the picture and in the optics
+  trace, whose totals book what the medium absorbed (`optics/kernels.js` `O_VOL`).
+- **The README's workspace section** still listed four layouts, including Render, which 0.53.0 removed.
+
+Where a number has not been measured, the page says it is typical, or does not give it. The *not yet seen on
+hardware* features (coatings, dispersion, the manifold connection, the far-field and flux-balance checks) are named
+as such.
+
+**What to look at:** read a page or two of each track in the panel. Then:
+- Do the examples, commands and panels the links name open? (Each link is checked to exist, but not that it reads
+  well.)
+- Is anything said about the program that you know to be otherwise?
+
 ## 0.55.0 — 2026-10-10
 
 **A Help panel** (the user: "an extensive help / tutorial system will have to be made"). **Help › Contents** or
