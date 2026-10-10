@@ -724,6 +724,18 @@ the chain is cut into submissions by its share of the frame's time, which is why
 renders here do not need weavesim's strip rendering to stay under Windows's two-second
 command-list watchdog. The Render stats' Samples row says "× N batches" when there is more than one.
 
+**A sample over several frames (0.58.0).** The live loop's frames (and only they: `R.trace(..., { slice: true })`)
+cut a sample slower than `sliceMs` (Performance, default 30 ms) into more batches than the buffer needs, run a few
+a frame, and keep the sample pending in `R._slice` until the frame that runs its last batch resolves it. So the GPU
+is never handed a whole slow sample in one go, and the browser draws in between. The per-pixel cost of a sample
+(`R._pxMs`, an EMA) sizes the slices; `R.sampled` says how much of a sample a call traced, for the loop's rate.
+- **What drops a pending sample:** another size, photon plan or scene, the buffers reallocated or cleared, or a
+  trace that is not a slice. Its part is then cleared from the frame and splat buffers, since only resolve empties
+  them otherwise. If three are dropped in a row, the next sample runs whole.
+- **A reset does not drop it:** it goes on under the new view and replaces the picture, and the average starts again
+  after it.
+- **Fast samples** are not cut, and a frame holds no more of them than fit in `sliceMs`.
+
 Until 0.38.1 a sample was one fill: above the cap it fired fewer camera rays than there were
 pixels (a 4K frame about a quarter of them per pass), and the photons got what the camera rays
 left -- none from about 2.3 Mpx, so light tracing switched itself off and a large save lost the

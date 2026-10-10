@@ -15,6 +15,42 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.58.0 — 2026-10-10
+
+**The page stays responsive on a heavy scene** (the user: "when renders take very long the whole UI becomes
+unresponsive"). Before this change, a live frame was always at least one whole sample. It was cut into submissions
+against Windows' two-second watchdog, but every piece went in at once, so a 500 ms sample was 500 ms of GPU in one
+burst, and the browser's own drawing waited behind it. That last part is inferred: it matches the freeze reported here
+and in `PERFORMANCE.md` P5.
+
+Now the live view splits a slow sample into batches and runs a few each frame, about **Render settings › Performance ›
+GPU time a frame** (30 ms by default) at a time. The frame that runs the last batch adds the sample to the picture.
+- **The splitting:** it uses the batches a sample already runs in when it does not fit the ray buffer
+  (`core/photons.js`), with more of them. Each batch is its share of the camera rays and of every photon, so the sum is
+  the same estimate.
+- **What updates:** the menus, panels and camera keep the screen's rate. The picture changes once a sample, as fast as
+  before (its total GPU time is the same) but no faster. Render stats' Samples row reads *a sample over frames: batch
+  k/K*.
+- **Moving the camera:** the sample in progress is not thrown away. It finishes under the new view and replaces the
+  picture, part old view and part new, in bands. The average then starts again from the new view alone. Throwing it
+  away would show nothing at all for as long as a drag lasts.
+- **Fast scenes:** a sample that fits in the time is not split. A frame now holds no more samples than fit, so the
+  sample count the loop had grown on a light scene is no longer handed to a heavy one.
+- **What is unchanged:** Save an image, Tests and `RT.step` trace whole samples. 0 puts the old behaviour back. The
+  setting sits behind the Developer switch, like the rest of that box.
+
+None of this has been seen on a card. Measured: nothing. Read in code: what is above. Inferred: that the browser
+gets the GPU back between the pieces.
+
+**What to look at:**
+- Open the Noise library at 100% resolution with the loop running. Do the panels, sliders and a camera drag stay
+  responsive? Compare with the Developer switch on and GPU time a frame at 0.
+- The picture's brightness and noise should be the same either way. A fast scene (Surface materials) should look and
+  run as before, and Render stats should show no *sample over frames*.
+- Drag the camera on the heavy scene and let go. You will see banding while it moves; none should be left a second
+  or so after it stops.
+- Save an image should take as long as it did.
+
 ## 0.57.1 — 2026-10-10
 
 **The capped torus is where it is put again** (the user: "the capped torus ... does not render"). The builder guesses
