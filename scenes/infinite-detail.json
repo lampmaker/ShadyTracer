@@ -380,8 +380,8 @@
         "blend": 0,
         "transform": {
           "pos": {
-            "x": 0,
-            "y": 0,
+            "x": 4,
+            "y": 4,
             "z": 0
           },
           "rot": {
@@ -400,8 +400,8 @@
             "enabled": true,
             "transform": {
               "pos": {
-                "x": 4,
-                "y": 4,
+                "x": 0,
+                "y": 0,
                 "z": 3
               },
               "rot": {
