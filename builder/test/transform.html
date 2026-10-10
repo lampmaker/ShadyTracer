@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Transform gizmo · check</title>
+<!-- THE TRANSFORM GIZMO, for builder/test/transform.check.mjs: the real overlay (overlay.js) over the
+     real builder (demo.js) and the real camera (lib/camera.js), with a stand-in renderer that compiles nothing and
+     keeps the uniforms it is given, as points.html's does. A box, a cylinder turned off every parent axis, a sphere and
+     a group, all at the origin -- only the selected one has handles. What the picture shows is the user's to judge:
+     there is no picture here. -->
+<style>
+html, body { margin: 0; background: #000; }
+#stage { position: relative; width: 800px; height: 500px; }
+#c { position: absolute; inset: 0; width: 100%; height: 100%; }
+</style>
+</head>
+<body>
+<div id="stage"><canvas id="c" width="800" height="500"></canvas></div>
+<script type="module">
+import * as M from '../model.js'
+import * as P from '../project.js'
+import * as E from '../pointedit.js'
+import { primitiveObject } from '../primitives.js'
+import { installBuilder } from '../demo.js'
+import { installSelectionOverlay } from '../overlay.js'
+import { worldPerPixels } from '../gizmo.js'
+import { CAMERA } from '../../lib/camera.js'
+import { projectPoint } from '../../lib/pathtracer/core/genrays.js'
+import { toWorldOf } from '../boxes.js'
+
+const stage = document.getElementById('stage'), canvas = document.getElementById('c')
+const cam = CAMERA({ canvas, aspect: 800 / 500, fov: 40, up: [0, 0, 1] })
+cam.set({ target: [0, 0, 0] }); cam.set({ azimuth: -60, elevation: 30, distance: 5 })
+let state = {}, compiles = 0
+const RT = {
+    cam, scene: null,
+    set(values) { const unknown = []; for (const [k, v] of Object.entries(values)) { if (k in state) state[k] = structuredClone(v); else unknown.push(k) } return unknown },
+    get: () => structuredClone(state),
+    settings: () => ({ camera: structuredClone(cam.get()) }),
+    applySettings: () => [],
+    async setScene(s) {
+        compiles++
+        RT.scene = s
+        state = Object.fromEntries(Object.entries(s.uniforms).map(([k, u]) => [k, structuredClone(u.def)]))
+        return 1
+    },
+    size: () => ({ scale: 1 }), setSize: () => true,
+}
+const gpu = { makeCompute: (b, m) => ({ wgsl: `${b}
+${m}`, module: { getCompilationInfo: async () => ({ messages: [] }) }, ready: Promise.resolve() }), makeShader: () => ({ getCompilationInfo: async () => ({ messages: [] }) }) }
+
+const d = M.createDoc({ title: 'transform' })
+M.addObject(d, 'root', { id: 'bx', ...primitiveObject('box') })
+M.addObject(d, 'root', { id: 'cy', ...primitiveObject('cylinder'), transform: { pos: { x: 0, y: 0, z: 0 }, rot: { x: 0, y: 35, z: 30 }, scale: 1 } })
+M.addObject(d, 'root', { id: 'ball', primitive: 'sphere' })
+M.addGroup(d, 'root', { id: 'grp' })
+M.addObject(d, 'grp', { id: 'inner', ...primitiveObject('box') })
+M.addLight(d, 'root', { id: 'lamp', shape: 'rectangle' })
+console.log = () => { }                          // the builder's compile lines
+const B = installBuilder({}, { RT, gpu, project: P.createProject([d]) })
+B.onRestructure = () => { B.apply() }
+await B.apply()
+const overlay = installSelectionOverlay({ stage, canvas, RT, BUILDER: B, onPick: id => overlay.select(id) })
+
+/* where a node's own point is on the stage, worked out here from the camera, not by the overlay */
+const screenOf = (id, local) => {
+    const U = cam.getUniforms(), q = projectPoint(toWorldOf(B.doc, id)(local), U, cam.get().camtype ?? 0)
+    return [(q.x * 0.5 + 0.5) * 800, (0.5 - q.y * 0.5) * 500]
+}
+/* the grid's step at a top-level node's origin, GRID_PX apart on screen (pointedit.gridStep): in its own units, as Ctrl
+   snaps a size to, or (parent: true) in the world's, as Ctrl snaps its position to -- worked out here from the camera */
+const stepAt = (id, { parent = false } = {}) => {
+    const U = cam.getUniforms(), O = toWorldOf(B.doc, id)([0, 0, 0]), S = parent ? 1 : M.find(B.doc, id).node.transform.scale
+    return E.gridStep(worldPerPixels(1, projectPoint(O, U, 0).depth, U.invProjection[5], 500, 0) / S, E.GRID_PX)
+}
+const node = id => structuredClone(M.find(B.doc, id).node)
+window.CHECK = { M, E, B, RT, cam, overlay, screenOf, stepAt, node,
+    get compiles() { return compiles }, get state() { return state },
+    frame: () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))) }
+</script>
+</body>
+</html>

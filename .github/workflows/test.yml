@@ -1,0 +1,31 @@
+# Every check that runs without a GPU: check-shaders.mjs and each `node ... .test.mjs` line in CLAUDE.md, which is
+# the list (a test added there is run here, with nothing else to edit). The *.check.mjs (playwright) and *.gpu.mjs
+# (webgpu + lavapipe) files are optional and say so; they are not run here.
+name: test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: check-shaders and the Node tests
+        run: |
+          fails=()
+          for t in lib/pathtracer/core/check-shaders.mjs $(grep -oE '^node [^ ]+\.test\.mjs' CLAUDE.md | cut -d' ' -f2); do
+            echo "::group::$t"
+            node "$t" || fails+=("$t")
+            echo "::endgroup::"
+          done
+          if [ ${#fails[@]} -gt 0 ]; then
+            for t in "${fails[@]}"; do echo "::error::$t failed"; done
+            exit 1
+          fi

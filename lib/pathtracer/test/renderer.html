@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Renderer panel · check</title>
+<!-- THE RENDERER PANEL, for lib/pathtracer/test/renderer.check.mjs: the renderer's own uniform states
+     (uniforms.schema.js), filled into a real PropertyTable by settingsui.js exactly as installUI fills the
+     Renderer panel -- its boxes in RENDERER_BOXES's order, the Quality buttons first, a stand-in for the render
+     size's rows (installUI's own), the Developer switch at Quality's foot -- in the shell's stylesheet,
+     boxed as the raytracer's page has it. No GPU: `update` records what a change would have restarted. -->
+<link rel="stylesheet" href="../../shell/shell.css">
+<style>html, body { margin: 0; background: var(--sh-panel); } #p { width: 330px; height: auto; overflow: visible; }</style>
+</head>
+<body>
+<div id="p" class="shell-panel shell-boxes"></div>
+<script type="module">
+import { PropertyTable } from '../../guistuff/propertytable/propertytable.js'
+import { UniformGroups, createUniformState } from '../core/uniforms.schema.js'
+import { makeSettingsUI, RENDERER_BOXES, boxIcon } from '../settingsui.js'
+
+const states = Object.fromEntries(['Tracing', 'Advanced', 'Measure'].map(g => [g, createUniformState(UniformGroups[g])]))
+const resets = []
+const mem = new Map()
+const storage = { getItem: k => mem.get(k) ?? null, setItem: (k, v) => mem.set(k, String(v)) }
+const table = new PropertyTable({ container: document.getElementById('p') })
+Object.assign(table.element.style, { fontSize: '13px', width: '100%' })
+// the host's live lines (the facade: the surface tolerance in use, core/tolerances.js toleranceInUse)
+const lineText = { tolerance: 'In use: 10.5 \u00b5m, automatic: 1e-4 of the scene\'s 105 mm.' }
+const UI = makeSettingsUI({ states, update: r => resets.push(r), onRefresh: () => table.refresh(), storage, omit: ['measureMode'],
+                            lines: { tolerance: () => lineText.tolerance } })
+for (const box of RENDERER_BOXES) {
+    if (box.own) { boxIcon(table.addFolder({ title: box.title }), box.icon).addBinding({ size: 'fit viewport' }, 'size', { readonly: true }); continue }
+    UI.addBox(table, box)
+}
+// the Developer switch is Quality's foot (RENDERER_BOXES `developer`): no box of its own, as on the page
+UI.applyVisibility()
+/* THE FALLBACK, a host that places no Quality box: the Developer switch in a box of its own (installDeveloper) */
+const fallback = () => {
+    const el = document.createElement('div')
+    el.id = 'q'
+    el.className = 'shell-panel shell-boxes'
+    document.body.appendChild(el)
+    const t = new PropertyTable({ container: el })
+    const U2 = makeSettingsUI({ states, update: r => resets.push(r), onRefresh: () => t.refresh(), storage })
+    U2.installDeveloper(t)
+    U2.applyVisibility()
+    return U2
+}
+window.CHECK = { states, resets, UI, table, mem, fallback, lineText }
+</script>
+</body>
+</html>

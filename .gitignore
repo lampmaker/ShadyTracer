@@ -1,0 +1,3 @@
+# Written by the Pages deploy (.github/workflows/pages.yml); a stale one in a checkout is never wanted.
+REVISION
+node_modules/

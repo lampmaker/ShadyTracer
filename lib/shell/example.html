@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shell example</title>
+<!-- lib/shell on its own, with plain panels: open over http:// from the repository root. It is also what
+     the headless check drives (the application's page cannot get past WebGPU there). The integration is
+     the marked block. -->
+<link rel="stylesheet" href="../dockview/dockview.css">
+<link rel="stylesheet" href="shell.css">
+<script src="../dockview/dockview.min.js"></script>
+<style>html, body { height: 100%; margin: 0; } .demo { padding: 12px; color: #cfd6dc; font: 13px sans-serif; }</style>
+</head>
+<body>
+<script type="module">
+import { createShell } from './shell.js'
+import { PropertyTable } from '../guistuff/propertytable/propertytable.js'
+import { installViewToolbar } from '../pathtracer/viewtools.js'
+import { installMeasureTool } from '../pathtracer/measure/tool.js'
+import { untitledTable } from '../pathtracer/sections.js'
+import { chartStrip } from '../pathtracer/strip.js'
+import { drawXY } from '../pathtracer/optics/xychart.js'
+import { makeParams } from './params.js'
+import { installParamsPanel, paramsSearch } from './paramspanel.js'
+import { settingsParams } from '../pathtracer/params.js'
+import { UniformGroups, createUniformState } from '../pathtracer/core/uniforms.schema.js'
+
+// ---- the integration ----------------------------------------------------------------------------------
+const S = createShell(document.body, { title: 'Shell example', menus: ['File', 'View', 'Window', 'Help'],
+                                       storageKey: 'shell.example.layout', popoutUrl: '../../popout.html' })
+const view = S.panel({ id: 'view', title: 'View', module: 'renderer', renderer: 'always', popout: false, closable: false })
+view.innerHTML = '<canvas style="position:absolute;inset:0;width:100%;height:100%;background:#123"></canvas>'
+const tree = S.panel({ id: 'tree', title: 'Tree', module: 'builder' })
+tree.innerHTML = '<div class="demo">a tree</div>'
+const chart = S.panel({ id: 'chart', title: 'Chart', module: 'optics' })
+/* A CHART WITH ITS OWN STRIP (lib/pathtracer/strip.js), as the optics charts have: a real line chart
+   under a strip of every kind of control, all changing how it draws */
+Object.assign(chart.style, { display: 'flex', flexDirection: 'column', overflow: 'hidden' })
+const chartCanvas = document.createElement('canvas')
+Object.assign(chartCanvas.style, { flex: '1 1 auto', minHeight: '0', width: '100%' })
+chart.appendChild(chartCanvas)
+const CH = { scale: 'lin', auto: false, series: 'a', offset: 4000, note: '' }
+const drawChart = () => {
+    const pts = Array.from({ length: 41 }, (_, i) => ({ x: i - 20, y: CH.offset + (CH.scale === 'log' ? 10 : 1) * Math.cos(i / 6) * 300 }))
+    if (chartCanvas.clientWidth) drawXY(chartCanvas, { series: [{ label: CH.series, points: pts }], yMin: CH.auto ? 'auto' : 0 })
+}
+const strip = chartStrip(chart)
+strip.choice('scale', { tip: 'scale', options: [{ value: 'lin', text: 'lin' }, { value: 'log', text: 'log' }], get: () => CH.scale, set: v => { CH.scale = v; drawChart() } })
+strip.toggle('auto', { icon: 'curve', tip: 'From where the values are', get: () => CH.auto, set: on => { CH.auto = on; drawChart() } })
+strip.select('series', { tip: 'which', options: () => ({ 'series a': 'a', 'series b': 'b' }), get: () => CH.series, set: v => { CH.series = v; drawChart() } })
+strip.input('offset', { prefix: 'at', tip: 'offset', get: () => CH.offset, set: v => { if (Number.isFinite(+v)) CH.offset = +v; drawChart() } })
+strip.spacer()
+strip.action('table', 'Save (CSV)', () => { CH.note = 'saved' })
+new ResizeObserver(drawChart).observe(chartCanvas)
+const paramsEl = S.panel({ id: 'params', title: 'Parameters', module: 'app' })
+const log = []
+S.onVisible('chart', v => log.push(`chart ${v ? 'shown' : 'hidden'}`))
+S.command({ id: 'file.hello', menu: 'File', label: 'Say hello', keys: 'Ctrl H', run: () => S.status('hello') })
+// a submenu row (registry.js `items`), its entries asked for as it opens; a panel with no View entry (`menu: false`)
+S.command({ id: 'file.greet', menu: 'File', label: 'Greet', items: () => [{ label: 'Ada', run: () => S.status('hi Ada') }, { label: 'Nobody', off: true }] })
+S.panel({ id: 'hidden', title: 'Hidden one', menu: false })
+S.layout.setDefault(() => {
+    S.open('view')
+    S.open('tree', { referencePanel: 'view', direction: 'left' }, { width: 240 })
+})
+S.layout.preset('Wide', () => S.open('view'), 'the view alone')
+S.layout.preset('Charts', () => { S.open('view'); S.open('chart', { referencePanel: 'view', direction: 'below' }) }, 'the view and the chart')
+S.layout.onApply(() => S.open('view'))
+S.standardCommands()
+const how = S.layout.restore()
+S.open('view')
+// ------------------------------------------------------------------------------------------------------
+
+/* THE RENDERER'S VIEW TOOLBAR (lib/pathtracer/viewtools.js) on the view, driven by a stand-in that
+   answers RT.get() and RT.set() -- all the toolbar uses -- and real property tables in its popovers */
+const state = { measureMode: 0, exposureEV: 9.2, autoExposure: 0, measureMin: 1, measureMax: 100000, measureBands: 10 }
+const RT = { get: () => ({ ...state }), set: o => { Object.assign(state, o); return [] }, autoEV: 10.4 }
+const V = installViewToolbar(view, { PropertyTable, RT, tips: { 1: 'a host note' } })
+// filled as installUI fills it: a folder asked for, flat because the icon names it (sections.js)
+untitledTable(V.sections.Show).addFolder({ title: 'Show' }).addBinding(state, 'measureBands', { min: 0, max: 40, step: 1 })
+/* THE MEASURE TOOL (lib/pathtracer/measure/tool.js), the real one, over a picture of nothing: its buttons are the
+   MEASURE group of the view's analysis drawer, and a pin placed marks the drawer's button. Readings need a renderer,
+   which this stand-in has not: a pin reads nothing, and says so. */
+const pic = document.createElement('canvas')
+Object.assign(pic.style, { position: 'absolute', inset: '0', width: '100%', height: '100%' })
+view.appendChild(pic)
+const MEASURE = installMeasureTool({ stage: view, canvas: pic, RT, toolbar: V })
+
+/* THE PARAMETER REGISTRY (params.js): the renderer's real settings (lib/pathtracer/params.js over the
+   real schema, with nothing to render) and a toy scene entry, in the Parameters panel and the palette,
+   as the application wires them */
+const P = makeParams()
+const states = Object.fromEntries(['Tracing', 'Lighting', 'Exposure', 'Measure', 'Advanced'].map(g => [g, createUniformState(UniformGroups[g])]))
+P.provide('renderer', () => settingsParams(states, { update: () => { }, onRefresh: () => V.refresh() }))
+const disc = { radius: 1 }
+P.provide('scene', () => [{ path: 'scene/disc/radius', label: 'Disc › radius', min: 0.1, max: 5, get: () => disc.radius, set: v => { disc.radius = v } }])
+const reveal = p => { if (p.path.startsWith('view/show/')) V.open('Show'); else S.status(`reveal ${p.path}`) }
+const PP = installParamsPanel(paramsEl, P, { reveal, say: t => S.status(t) })
+S.searchIn(paramsSearch(P, { reveal, say: t => S.status(t) }))
+window.EXAMPLE = { S, how, log, V, state, P, PP, states, disc, CH, strip, MEASURE, pic }
+</script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Properties · check</title>
+<!-- THE PROPERTIES PANEL (builder/panel.js), for builder/test/properties.check.mjs: the real panel in the real
+     PropertyTable over the real model, with a stand-in builder -- its document, live() and commit() recorded,
+     check() answering with whatever messages the check has set (no GPU: the probe compile is the page's). -->
+<link rel="stylesheet" href="../../lib/shell/shell.css">
+<style>html, body { height: 100%; margin: 0; } #p { width: 420px; height: 900px; }</style>
+</head>
+<body>
+<div id="p" class="shell-panel"></div>
+<script type="module">
+import * as M from '../model.js'
+import { PropertyTable } from '../../lib/guistuff/propertytable/propertytable.js'
+import { installBuilderPanel } from '../panel.js'
+// the host's hook for a material item's sample, as index.html hands it over
+import { itemSceneDoc, SAMPLE_CHOICES, SAMPLE_SIZES, sampleOf, setSample } from '../../library/edit.js'
+
+let doc = M.createDoc({ title: 'props' })
+doc.unit = 'cm'
+M.addMaterial(doc, { id: 'stone', preset: 'diffuse' })
+M.addObject(doc, 'root', { id: 'a', primitive: 'box', material: 'stone' })
+const T = { live: [], commits: [], structure: 0, messages: [], checked: 0 }
+const BUILDER = {
+    model: M, get doc() { return doc },
+    live: (id, k) => { T.live.push(`${id}.${k}`); return true },
+    commit: k => { T.commits.push(k) }, syncSources: () => { },
+    check: async () => { T.checked++; return { ok: !T.messages.length, messages: T.messages.slice() } },
+}
+const table = new PropertyTable({ container: document.getElementById('p') })
+const panel = installBuilderPanel(table, BUILDER, { onStructure: () => { T.structure++ },
+    itemSample: { choices: SAMPLE_CHOICES, sizes: SAMPLE_SIZES, of: sampleOf, set: setSample } })
+window.CHECK = { T, M, get doc() { return doc }, panel, sampleOf,
+    // a material item's own scene, as library/edit.js opens it, made the panel's document
+    openItem: () => { doc = itemSceneDoc({ id: 'mine:s', name: 'stone item', asset: M.extractAsset(doc, 'stone') }); return doc.libraryItem } }
+</script>
+</body>
+</html>

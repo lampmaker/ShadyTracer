@@ -1,0 +1,502 @@
+{
+  "format": "raytracer-scene",
+  "version": 10,
+  "title": "Builder demo",
+  "nextId": 7,
+  "unit": "m",
+  "materials": [
+    {
+      "id": "chrome",
+      "label": "Chrome",
+      "params": {
+        "baseColor": {
+          "r": 1,
+          "g": 0.20392156862745098,
+          "b": 0.5764705882352941
+        },
+        "metallic": 1,
+        "roughness": 0,
+        "anisotropy": 0,
+        "specular": 1,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
+    },
+    {
+      "id": "orange",
+      "label": "Orange",
+      "params": {
+        "baseColor": {
+          "r": 1,
+          "g": 0.4980392156862745,
+          "b": 0
+        },
+        "metallic": 0,
+        "roughness": 0.6,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
+    },
+    {
+      "id": "checker",
+      "label": "Checker",
+      "params": {
+        "baseColor": {
+          "r": 0.12941176470588237,
+          "g": 0.39215686274509803,
+          "b": 0.4666666666666667
+        },
+        "metallic": 0,
+        "roughness": 0.4,
+        "anisotropy": 0,
+        "specular": 0.6,
+        "specularTint": 0.3,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "C1": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "C2": {
+          "r": 0.10588235294117647,
+          "g": 0.09803921568627451,
+          "b": 0.2901960784313726
+        }
+      },
+      "code": "\nm.baseColor = mix(C1, C2, smoothstep(-0.001, 0.001, sin(p.x * PI) * sin(p.y * PI) * sin(p.z * PI)));"
+    },
+    {
+      "id": "m1",
+      "label": "glass",
+      "params": {
+        "baseColor": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "metallic": 0,
+        "roughness": 0,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 1,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
+    },
+    {
+      "id": "m5",
+      "label": "redglass",
+      "params": {
+        "baseColor": {
+          "r": 1,
+          "g": 0,
+          "b": 0
+        },
+        "metallic": 0,
+        "roughness": 0,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 1,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
+    }
+  ],
+  "root": {
+    "id": "root",
+    "kind": "group",
+    "label": "Builder demo",
+    "enabled": true,
+    "op": "union",
+    "blend": 0,
+    "children": [
+      {
+        "id": "ground",
+        "kind": "object",
+        "type": "code",
+        "label": "Ground",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": -1.2
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "checker",
+        "params": {},
+        "code": "// infinite ground plane: normal +z, at z = 0 of this node (move it with the transform)\nC = add_new(C, VEC4(0.0, 0.0, 1.0, p.z), MATERIAL);"
+      },
+      {
+        "id": "ball",
+        "kind": "object",
+        "type": "code",
+        "label": "Ball",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -1.5,
+            "y": 0,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "chrome",
+        "params": {
+          "radius": 1.2
+        },
+        "code": "C = add_new(C, Nsphere(p, radius), MATERIAL);"
+      },
+      {
+        "id": "slab",
+        "kind": "object",
+        "type": "code",
+        "label": "Slab",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -5.638704031416166,
+            "y": -3.147802937147093,
+            "z": -0.5615892218675667
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m1",
+        "params": {
+          "size": {
+            "x": 1,
+            "y": 1,
+            "z": 0.25
+          },
+          "bevel": 0.1
+        },
+        "code": "// a rounded slab, offset to the right of the ball\nlet q = p - VEC3(1.5, 0.0, 0.0);\nC = add_new(C, sdRoundedBox(q, size, bevel), MATERIAL);"
+      },
+      {
+        "id": "shapes",
+        "kind": "group",
+        "label": "mirror",
+        "enabled": true,
+        "op": "subtract",
+        "blend": 0,
+        "transform": {
+          "pos": {
+            "x": -4.4872532116502315,
+            "y": 4.492978014576353,
+            "z": 0.68069338162227
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "children": [
+          {
+            "id": "n2",
+            "kind": "object",
+            "type": "code",
+            "label": "box",
+            "enabled": true,
+            "transform": {
+              "pos": {
+                "x": -1.6218311672542676,
+                "y": 0,
+                "z": 0
+              },
+              "rot": {
+                "x": 0,
+                "y": 0,
+                "z": 90
+              },
+              "scale": 1
+            },
+            "material": "chrome",
+            "params": {
+              "size": {
+                "x": 2,
+                "y": 0.5,
+                "z": 2
+              },
+              "rounding": 0.02
+            },
+            "code": "C = add_new(C, NboxRounded(p, size, rounding), MATERIAL);"
+          },
+          {
+            "id": "n3",
+            "kind": "object",
+            "type": "code",
+            "label": "cylinder",
+            "enabled": true,
+            "transform": {
+              "pos": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "rot": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "scale": 1
+            },
+            "material": null,
+            "params": {
+              "radius": 2.07,
+              "height": 4.24
+            },
+            "code": "C = add_new(C, Ncylinder(p, height * 0.5, radius), MATERIAL);"
+          }
+        ]
+      },
+      {
+        "id": "carved",
+        "kind": "group",
+        "label": "Carved",
+        "enabled": true,
+        "op": "subtract",
+        "blend": 0.1,
+        "transform": {
+          "pos": {
+            "x": 0,
+            "y": 3,
+            "z": 0
+          },
+          "rot": {
+            "x": -136.7898383153702,
+            "y": -41.10473865838732,
+            "z": 162.8664221408389
+          },
+          "scale": 1
+        },
+        "children": [
+          {
+            "id": "block",
+            "kind": "object",
+            "type": "code",
+            "label": "Block",
+            "enabled": true,
+            "transform": {
+              "pos": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "rot": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "scale": 1
+            },
+            "material": "orange",
+            "params": {},
+            "code": "// the base of the Carved group: its first child, so the ball below is cut out of it\n// sdRoundedBox(point, half-size, corner radius)\nC = add_new(C, sdRoundedBox(p, VEC3(0.8), 0.05), MATERIAL);"
+          },
+          {
+            "id": "scoop",
+            "kind": "object",
+            "type": "code",
+            "label": "Scoop",
+            "enabled": true,
+            "transform": {
+              "pos": {
+                "x": 0.6,
+                "y": 0.6,
+                "z": -0.6
+              },
+              "rot": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "scale": 1
+            },
+            "material": null,
+            "params": {
+              "radius": 0.9
+            },
+            "code": "C = add_new(C, Nsphere(p, radius), MATERIAL);"
+          }
+        ]
+      },
+      {
+        "id": "twisted",
+        "kind": "group",
+        "label": "Twisted",
+        "enabled": true,
+        "op": "union",
+        "blend": 0,
+        "transform": {
+          "pos": {
+            "x": 1.9685292759026147,
+            "y": -2.0936862012344513,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 2.4
+        },
+        "children": [
+          {
+            "id": "column",
+            "kind": "object",
+            "type": "code",
+            "label": "Column",
+            "enabled": true,
+            "transform": {
+              "pos": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "rot": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "scale": 1
+            },
+            "material": "m1",
+            "params": {
+              "size": {
+                "x": 0.4,
+                "y": 0.4,
+                "z": 1.2
+              },
+              "rounding": 0.02
+            },
+            "code": "C = add_new(C, NboxRounded(p, size, rounding), MATERIAL);"
+          }
+        ],
+        "code": "// Twist about z: \"rate\" radians per unit of height. Costs a sin and a cos per step.\n// A twist stretches space, the more the farther from the axis; \"extent\" -- how far the\n// children reach from it -- sets the step scale that keeps the march from overshooting.\nlet a = rate * p.z;\np = VEC3(cos(a) * p.x - sin(a) * p.y, sin(a) * p.x + cos(a) * p.y, p.z);\nwarp(1.0 / sqrt(1.0 + rate * rate * extent * extent));\nC = children(C, p);",
+        "params": {
+          "rate": 2.17,
+          "extent": 0.6
+        },
+        "ranges": {
+          "rate": {
+            "min": -10,
+            "max": 10,
+            "step": 0.01
+          },
+          "extent": {
+            "min": 0.01,
+            "max": 10,
+            "step": 0.01
+          }
+        }
+      },
+      {
+        "id": "n4",
+        "kind": "object",
+        "type": "code",
+        "label": "cylinder",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -0.6903741232215643,
+            "y": 7.3663230550414625,
+            "z": -0.4232320946603956
+          },
+          "rot": {
+            "x": 0,
+            "y": -91.38090847455919,
+            "z": -88.48474629751775
+          },
+          "scale": 1
+        },
+        "material": "m5",
+        "params": {
+          "radius": 0.5,
+          "height": 3.05
+        },
+        "code": "C = add_new(C, Ncylinder(p, height * 0.5, radius), MATERIAL);"
+      },
+      {
+        "id": "n6",
+        "kind": "object",
+        "type": "code",
+        "label": "code",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": null,
+        "params": {},
+        "code": "// Code node: fold shapes into C.  C = add_new(C, <sdf>, MATERIAL);\n//   p         the point, in this node's own frame (its transform is already applied)\n//   MATERIAL  this node's material;  parameters are in scope by name\n//   an sdf is VEC4(normal.xyz, distance); sd(d) wraps a bare distance (normal then computed)\n// e.g. a rounded box:     C = add_new(C, sdRoundedBox(p, VEC3(0.5), 0.05), MATERIAL);\n// e.g. a plane, z up:     C = add_new(C, VEC4(0.0, 0.0, 1.0, p.z), MATERIAL);\n// e.g. two shapes merged: C = add_new(C, csgUnion(Nsphere(p, 0.5), sdBox(p - VEC3(0.6, 0.0, 0.0), VEC3(0.3)), 0.2), MATERIAL);\nC = add_new(C, sdBox(p, VEC3(0.5)), MATERIAL);"
+      }
+    ]
+  },
+  "functions": "// Functions: WGSL helpers any code node or material in this scene can call.\n// Compiled once, before the materials and the SDF; errors show here at their own lines.\n// e.g. a gyroid, usable in a code node as  C = add_new(C, sd(gyroid(p, 4.0)), MATERIAL);\n//   fn gyroid(p: VEC3, s: f32) -> f32 {\n//       let q = p * s;\n//       return abs(dot(sin(q), cos(q.zxy))) / s - 0.03;\n//   }\n"
+}

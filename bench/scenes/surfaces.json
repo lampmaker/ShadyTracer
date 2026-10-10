@@ -1,0 +1,898 @@
+{
+  "format": "raytracer-scene",
+  "version": 10,
+  "title": "Surface materials",
+  "nextId": 28,
+  "unit": "mm",
+  "materials": [
+    {
+      "id": "m1",
+      "label": "floor",
+      "params": {
+        "baseColor": {
+          "r": 0.35,
+          "g": 0.35,
+          "b": 0.35
+        },
+        "metallic": 0,
+        "roughness": 1,
+        "anisotropy": 0,
+        "specular": 0,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   R_local  that frame's rotation to the world, for a direction written in it\n//   S_local  its scale: p_local * S_local is in scene units, and metres(x) is x m in them\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. brushed along the object's x, for an anisotropy above 0 (or turned: grainAround):\n//   m.tangent = grainAlong(R_local, VEC3(1.0, 0.0, 0.0));\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
+    },
+    {
+      "id": "m3",
+      "label": "softbox",
+      "params": {
+        "baseColor": {
+          "r": 0.8,
+          "g": 0.8,
+          "b": 0.8
+        },
+        "metallic": 0,
+        "roughness": 0.5,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1,
+        "emissive": {
+          "r": 1,
+          "g": 0.95,
+          "b": 0.9
+        },
+        "emissiveLuminance": 20000
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   R_local  that frame's rotation to the world, for a direction written in it\n//   S_local  its scale: p_local * S_local is in scene units, and metres(x) is x m in them\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. brushed along the object's x, for an anisotropy above 0 (or turned: grainAround):\n//   m.tangent = grainAlong(R_local, VEC3(1.0, 0.0, 0.0));\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n",
+      "type": "emitter"
+    },
+    {
+      "id": "m5",
+      "label": "white",
+      "params": {
+        "baseColor": {
+          "r": 0.85,
+          "g": 0.85,
+          "b": 0.83
+        },
+        "metallic": 0,
+        "roughness": 1,
+        "anisotropy": 0,
+        "specular": 0,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
+    },
+    {
+      "id": "m7",
+      "label": "glossy red plastic",
+      "params": {
+        "baseColor": {
+          "r": 0.75,
+          "g": 0.08,
+          "b": 0.06
+        },
+        "metallic": 0,
+        "roughness": 0.15,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
+    },
+    {
+      "id": "m9",
+      "label": "gold",
+      "params": {
+        "baseColor": {
+          "r": 1,
+          "g": 0.78,
+          "b": 0.34
+        },
+        "metallic": 1,
+        "roughness": 0.12,
+        "anisotropy": 0,
+        "specular": 1,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
+    },
+    {
+      "id": "m11",
+      "label": "copper",
+      "params": {
+        "baseColor": {
+          "r": 0.95,
+          "g": 0.64,
+          "b": 0.54
+        },
+        "metallic": 1,
+        "roughness": 0.18,
+        "anisotropy": 0,
+        "specular": 1,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
+    },
+    {
+      "id": "m13",
+      "label": "chrome",
+      "params": {
+        "baseColor": {
+          "r": 0.55,
+          "g": 0.56,
+          "b": 0.55
+        },
+        "metallic": 1,
+        "roughness": 0.03,
+        "anisotropy": 0,
+        "specular": 1,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
+    },
+    {
+      "id": "m15",
+      "label": "brushed aluminium",
+      "params": {
+        "baseColor": {
+          "r": 0.91,
+          "g": 0.92,
+          "b": 0.92
+        },
+        "metallic": 1,
+        "roughness": 0.35,
+        "anisotropy": 0.8,
+        "specular": 1,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "streakWidth": 0.6,
+        "streakLength": 50,
+        "streaks": 0.5
+      },
+      "code": "// Brushed along the object's own x: the strokes turn with the object (R_local).\n// Positive anisotropy is smooth along the strokes and rough across them, so the\n// highlight is drawn out ACROSS the strokes, as on real brushed metal.\nm.tangent = grainAlong(R_local, VEC3(1.0, 0.0, 0.0));\n// The lines: grooves of different depths, each a little rougher or smoother and darker or\n// lighter than the next. streakWidth and streakLength in mm, real size whatever the scene's\n// unit or the object's scale -- so on a metre-sized object seen whole they are too fine to see,\n// as in life. streaks is how much the lines differ, 0 to 1.\nlet s = streaksAlong(p_local * S_local, VEC3(1.0, 0.0, 0.0), metres(streakWidth * 0.001), metres(streakLength * 0.001));\nm.roughness = m.roughness * mix(1.0 - 0.6 * streaks, 1.0 + 0.6 * streaks, s);\nm.baseColor = m.baseColor * mix(1.0 - 0.1 * streaks, 1.0, s);\n"
+    },
+    {
+      "id": "m18",
+      "label": "brushed aluminium, coarse",
+      "params": {
+        "baseColor": {
+          "r": 0.91,
+          "g": 0.92,
+          "b": 0.92
+        },
+        "metallic": 1,
+        "roughness": 0.35,
+        "anisotropy": 0.8,
+        "specular": 1,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "streakWidth": 2.5,
+        "streakLength": 120,
+        "streaks": 0.8
+      },
+      "code": "// Brushed along the object's own x: the strokes turn with the object (R_local).\n// Positive anisotropy is smooth along the strokes and rough across them, so the\n// highlight is drawn out ACROSS the strokes, as on real brushed metal.\nm.tangent = grainAlong(R_local, VEC3(1.0, 0.0, 0.0));\n// The lines: grooves of different depths, each a little rougher or smoother and darker or\n// lighter than the next. streakWidth and streakLength in mm, real size whatever the scene's\n// unit or the object's scale -- so on a metre-sized object seen whole they are too fine to see,\n// as in life. streaks is how much the lines differ, 0 to 1.\nlet s = streaksAlong(p_local * S_local, VEC3(1.0, 0.0, 0.0), metres(streakWidth * 0.001), metres(streakLength * 0.001));\nm.roughness = m.roughness * mix(1.0 - 0.6 * streaks, 1.0 + 0.6 * streaks, s);\nm.baseColor = m.baseColor * mix(1.0 - 0.1 * streaks, 1.0, s);\n"
+    },
+    {
+      "id": "m20",
+      "label": "turned aluminium",
+      "params": {
+        "baseColor": {
+          "r": 0.91,
+          "g": 0.92,
+          "b": 0.92
+        },
+        "metallic": 1,
+        "roughness": 0.3,
+        "anisotropy": 0.8,
+        "specular": 1,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "streakWidth": 0.4,
+        "streakLength": 80,
+        "streaks": 0.5
+      },
+      "code": "// Turned on a lathe: circles about the object's own z axis through its origin.\n// On the axis itself there is no direction (grainAround gives zero): the plain frame.\nlet q = p_local * S_local;\nm.tangent = grainAround(R_local, p_local, VEC3(0.0, 0.0, 1.0));\n// The rings: each pass of the tool a little different. streakWidth and streakLength in mm,\n// real size; streaks is how much the rings differ, 0 to 1.\nlet s = streaksAround(q, VEC3(0.0, 0.0, 1.0), metres(streakWidth * 0.001), metres(streakLength * 0.001));\nm.roughness = m.roughness * mix(1.0 - 0.6 * streaks, 1.0 + 0.6 * streaks, s);\nm.baseColor = m.baseColor * mix(1.0 - 0.1 * streaks, 1.0, s);\n"
+    },
+    {
+      "id": "m22",
+      "label": "clear glass",
+      "params": {
+        "baseColor": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "metallic": 0,
+        "roughness": 0,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 1,
+        "ior": 1.52,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
+    },
+    {
+      "id": "m24",
+      "label": "frosted glass",
+      "params": {
+        "baseColor": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "metallic": 0,
+        "roughness": 0.3,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 1,
+        "ior": 1.52,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
+    },
+    {
+      "id": "m26",
+      "label": "black plastic",
+      "params": {
+        "baseColor": {
+          "r": 0.02,
+          "g": 0.02,
+          "b": 0.02
+        },
+        "metallic": 0,
+        "roughness": 0.2,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
+    }
+  ],
+  "root": {
+    "id": "root",
+    "kind": "group",
+    "label": "Surface materials",
+    "enabled": true,
+    "op": "union",
+    "blend": 0,
+    "children": [
+      {
+        "id": "n2",
+        "kind": "object",
+        "type": "code",
+        "label": "floor",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": -45
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m1",
+        "params": {
+          "size": {
+            "x": 450,
+            "y": 300,
+            "z": 5
+          },
+          "rounding": 2
+        },
+        "code": "// A box: size is the HALF-size along each axis; the rounding stays inside it.\nC = add_new(C, NboxRounded(p, size, rounding), MATERIAL);",
+        "ranges": {
+          "rounding": {
+            "min": 0,
+            "max": 2,
+            "step": 0.005
+          }
+        },
+        "lengths": [
+          "size",
+          "rounding"
+        ]
+      },
+      {
+        "id": "n4",
+        "kind": "object",
+        "type": "code",
+        "label": "softbox",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 0,
+            "y": -60,
+            "z": 420
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m3",
+        "params": {
+          "size": {
+            "x": 250,
+            "y": 150,
+            "z": 3
+          },
+          "rounding": 2
+        },
+        "code": "// A box: size is the HALF-size along each axis; the rounding stays inside it.\nC = add_new(C, NboxRounded(p, size, rounding), MATERIAL);",
+        "ranges": {
+          "rounding": {
+            "min": 0,
+            "max": 2,
+            "step": 0.005
+          }
+        },
+        "lengths": [
+          "size",
+          "rounding"
+        ]
+      },
+      {
+        "id": "n6",
+        "kind": "object",
+        "type": "code",
+        "label": "sphere: white",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -275,
+            "y": 70,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m5",
+        "params": {
+          "radius": 40
+        },
+        "code": "// A sphere around this node's origin.\nC = add_new(C, Nsphere(p, radius), MATERIAL);",
+        "ranges": {
+          "radius": {
+            "min": 0.01,
+            "max": 10,
+            "step": 0.01
+          }
+        },
+        "lengths": [
+          "radius"
+        ]
+      },
+      {
+        "id": "n8",
+        "kind": "object",
+        "type": "code",
+        "label": "sphere: glossy red plastic",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -165,
+            "y": 70,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m7",
+        "params": {
+          "radius": 40
+        },
+        "code": "// A sphere around this node's origin.\nC = add_new(C, Nsphere(p, radius), MATERIAL);",
+        "ranges": {
+          "radius": {
+            "min": 0.01,
+            "max": 10,
+            "step": 0.01
+          }
+        },
+        "lengths": [
+          "radius"
+        ]
+      },
+      {
+        "id": "n10",
+        "kind": "object",
+        "type": "code",
+        "label": "sphere: gold",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -55,
+            "y": 70,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m9",
+        "params": {
+          "radius": 40
+        },
+        "code": "// A sphere around this node's origin.\nC = add_new(C, Nsphere(p, radius), MATERIAL);",
+        "ranges": {
+          "radius": {
+            "min": 0.01,
+            "max": 10,
+            "step": 0.01
+          }
+        },
+        "lengths": [
+          "radius"
+        ]
+      },
+      {
+        "id": "n12",
+        "kind": "object",
+        "type": "code",
+        "label": "sphere: copper",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 55,
+            "y": 70,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m11",
+        "params": {
+          "radius": 40
+        },
+        "code": "// A sphere around this node's origin.\nC = add_new(C, Nsphere(p, radius), MATERIAL);",
+        "ranges": {
+          "radius": {
+            "min": 0.01,
+            "max": 10,
+            "step": 0.01
+          }
+        },
+        "lengths": [
+          "radius"
+        ]
+      },
+      {
+        "id": "n14",
+        "kind": "object",
+        "type": "code",
+        "label": "sphere: chrome",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 165,
+            "y": 70,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m13",
+        "params": {
+          "radius": 40
+        },
+        "code": "// A sphere around this node's origin.\nC = add_new(C, Nsphere(p, radius), MATERIAL);",
+        "ranges": {
+          "radius": {
+            "min": 0.01,
+            "max": 10,
+            "step": 0.01
+          }
+        },
+        "lengths": [
+          "radius"
+        ]
+      },
+      {
+        "id": "n16",
+        "kind": "object",
+        "type": "code",
+        "label": "sphere: brushed aluminium",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 275,
+            "y": 70,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m15",
+        "params": {
+          "radius": 40
+        },
+        "code": "// A sphere around this node's origin.\nC = add_new(C, Nsphere(p, radius), MATERIAL);",
+        "ranges": {
+          "radius": {
+            "min": 0.01,
+            "max": 10,
+            "step": 0.01
+          }
+        },
+        "lengths": [
+          "radius"
+        ]
+      },
+      {
+        "id": "n17",
+        "kind": "object",
+        "type": "code",
+        "label": "box: brushed aluminium",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -275,
+            "y": -70,
+            "z": -5
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 25
+          },
+          "scale": 1
+        },
+        "material": "m15",
+        "params": {
+          "size": {
+            "x": 35,
+            "y": 35,
+            "z": 35
+          },
+          "rounding": 8
+        },
+        "code": "// A box: size is the HALF-size along each axis; the rounding stays inside it.\nC = add_new(C, NboxRounded(p, size, rounding), MATERIAL);",
+        "ranges": {
+          "rounding": {
+            "min": 0,
+            "max": 2,
+            "step": 0.005
+          }
+        },
+        "lengths": [
+          "size",
+          "rounding"
+        ]
+      },
+      {
+        "id": "n19",
+        "kind": "object",
+        "type": "code",
+        "label": "box: brushed aluminium, coarse",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -165,
+            "y": -70,
+            "z": -5
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 25
+          },
+          "scale": 1
+        },
+        "material": "m18",
+        "params": {
+          "size": {
+            "x": 35,
+            "y": 35,
+            "z": 35
+          },
+          "rounding": 8
+        },
+        "code": "// A box: size is the HALF-size along each axis; the rounding stays inside it.\nC = add_new(C, NboxRounded(p, size, rounding), MATERIAL);",
+        "ranges": {
+          "rounding": {
+            "min": 0,
+            "max": 2,
+            "step": 0.005
+          }
+        },
+        "lengths": [
+          "size",
+          "rounding"
+        ]
+      },
+      {
+        "id": "n21",
+        "kind": "object",
+        "type": "code",
+        "label": "box: turned aluminium",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -55,
+            "y": -70,
+            "z": -5
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 25
+          },
+          "scale": 1
+        },
+        "material": "m20",
+        "params": {
+          "size": {
+            "x": 35,
+            "y": 35,
+            "z": 35
+          },
+          "rounding": 8
+        },
+        "code": "// A box: size is the HALF-size along each axis; the rounding stays inside it.\nC = add_new(C, NboxRounded(p, size, rounding), MATERIAL);",
+        "ranges": {
+          "rounding": {
+            "min": 0,
+            "max": 2,
+            "step": 0.005
+          }
+        },
+        "lengths": [
+          "size",
+          "rounding"
+        ]
+      },
+      {
+        "id": "n23",
+        "kind": "object",
+        "type": "code",
+        "label": "box: clear glass",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 55,
+            "y": -70,
+            "z": -5
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 25
+          },
+          "scale": 1
+        },
+        "material": "m22",
+        "params": {
+          "size": {
+            "x": 35,
+            "y": 35,
+            "z": 35
+          },
+          "rounding": 8
+        },
+        "code": "// A box: size is the HALF-size along each axis; the rounding stays inside it.\nC = add_new(C, NboxRounded(p, size, rounding), MATERIAL);",
+        "ranges": {
+          "rounding": {
+            "min": 0,
+            "max": 2,
+            "step": 0.005
+          }
+        },
+        "lengths": [
+          "size",
+          "rounding"
+        ]
+      },
+      {
+        "id": "n25",
+        "kind": "object",
+        "type": "code",
+        "label": "box: frosted glass",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 165,
+            "y": -70,
+            "z": -5
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 25
+          },
+          "scale": 1
+        },
+        "material": "m24",
+        "params": {
+          "size": {
+            "x": 35,
+            "y": 35,
+            "z": 35
+          },
+          "rounding": 8
+        },
+        "code": "// A box: size is the HALF-size along each axis; the rounding stays inside it.\nC = add_new(C, NboxRounded(p, size, rounding), MATERIAL);",
+        "ranges": {
+          "rounding": {
+            "min": 0,
+            "max": 2,
+            "step": 0.005
+          }
+        },
+        "lengths": [
+          "size",
+          "rounding"
+        ]
+      },
+      {
+        "id": "n27",
+        "kind": "object",
+        "type": "code",
+        "label": "box: black plastic",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 275,
+            "y": -70,
+            "z": -5
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 25
+          },
+          "scale": 1
+        },
+        "material": "m26",
+        "params": {
+          "size": {
+            "x": 35,
+            "y": 35,
+            "z": 35
+          },
+          "rounding": 8
+        },
+        "code": "// A box: size is the HALF-size along each axis; the rounding stays inside it.\nC = add_new(C, NboxRounded(p, size, rounding), MATERIAL);",
+        "ranges": {
+          "rounding": {
+            "min": 0,
+            "max": 2,
+            "step": 0.005
+          }
+        },
+        "lengths": [
+          "size",
+          "rounding"
+        ]
+      }
+    ]
+  },
+  "functions": "// Functions: WGSL helpers any code node or material in this scene can call.\n// Compiled once, before the materials and the SDF; errors show here at their own lines.\n// e.g. a gyroid, usable in a code node as  C = add_new(C, sd(gyroid(p, 4.0)), MATERIAL);\n//   fn gyroid(p: VEC3, s: f32) -> f32 {\n//       let q = p * s;\n//       return abs(dot(sin(q), cos(q.zxy))) / s - 0.03;\n//   }\n",
+  "environment": {
+    "envMode": 1,
+    "studioIlluminance": 150,
+    "studioTop": 0.5
+  }
+}

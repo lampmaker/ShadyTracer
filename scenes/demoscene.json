@@ -1,0 +1,1546 @@
+{
+  "format": "raytracer-scene",
+  "version": 21,
+  "title": "Demo scene",
+  "nextId": 40,
+  "materials": [
+    {
+      "id": "white",
+      "label": "White",
+      "params": {
+        "baseColor": {
+          "r": 0.95,
+          "g": 0.95,
+          "b": 0.95
+        },
+        "metallic": 0,
+        "roughness": 0.3,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "abbe": 0
+      },
+      "code": ""
+    },
+    {
+      "id": "sixsided",
+      "label": "Six-sided",
+      "params": {
+        "baseColor": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "metallic": 0,
+        "roughness": 0.3,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "xPlus": {
+          "r": 0.99,
+          "g": 0.5,
+          "b": 0.4
+        },
+        "metalRough": 0.2,
+        "yFaces": {
+          "r": 0,
+          "g": 0.5,
+          "b": 1
+        },
+        "zFaces": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "edge": 0.01,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "abbe": 0
+      },
+      "code": "// a different material per face direction, blended sharply at the edges (edge: how sharply):\n// -x the base colour, +x a metal, the y faces and the z faces a colour each, at the base roughness\nlet xmin = makeDiffuse(m.baseColor, m.roughness);\nlet xmax = makeMetal(xPlus, metalRough);\nlet ymin = makeDiffuse(yFaces, m.roughness);\nlet ymax = makeDiffuse(yFaces, m.roughness);\nlet zmin = makeDiffuse(zFaces, m.roughness);\nlet zmax = makeDiffuse(zFaces, m.roughness);\nlet e = 1.0 / edge;\nlet nn = normalize(n);\nlet wxmin = pow(clamp(-nn.x, 0.0, 1.0), e); let wxmax = pow(clamp(nn.x, 0.0, 1.0), e);\nlet wymin = pow(clamp(-nn.y, 0.0, 1.0), e); let wymax = pow(clamp(nn.y, 0.0, 1.0), e);\nlet wzmin = pow(clamp(-nn.z, 0.0, 1.0), e); let wzmax = pow(clamp(nn.z, 0.0, 1.0), e);\nlet wsum = wxmin + wxmax + wymin + wymax + wzmin + wzmax + 1e-6;\nm = xmin;\nm = mixMaterials(m, xmax, wxmax / wsum);\nm = mixMaterials(m, ymin, wymin / wsum);\nm = mixMaterials(m, ymax, wymax / wsum);\nm = mixMaterials(m, zmin, wzmin / wsum);\nm = mixMaterials(m, zmax, wzmax / wsum);",
+      "ranges": {
+        "metalRough": {
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        "edge": {
+          "min": 0.001,
+          "max": 0.5,
+          "step": 0.001
+        }
+      }
+    },
+    {
+      "id": "m2",
+      "label": "rough stone",
+      "params": {
+        "baseColor": {
+          "r": 0.85,
+          "g": 0.83,
+          "b": 0.8
+        },
+        "metallic": 0,
+        "roughness": 0.3,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "pink": {
+          "r": 0.75,
+          "g": 0.5,
+          "b": 0.45
+        },
+        "dark": {
+          "r": 0.08,
+          "g": 0.08,
+          "b": 0.09
+        },
+        "grain": 4,
+        "pinkShare": 0.3,
+        "darkShare": 0.3,
+        "edge": 0.15,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "abbe": 0
+      },
+      "code": "// worley3x cell number: each grain its own mineral -- light (the base colour), pink or dark --\n// as in granite. grain is a crystal's size in mm; the shares are how many of them are pink and\n// dark; edge darkens the boundaries between them.\nlet q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\nlet w = worley3x(q / grain, 6u);\nlet c = select(select(m.baseColor, pink, w.z < darkShare + pinkShare), dark, w.z < darkShare);\nm.baseColor = c * (1.0 - edge + edge * smoothstep(0.0, 0.1, w.y - w.x));",
+      "ranges": {
+        "grain": {
+          "min": 0.2,
+          "max": 50,
+          "step": 0.1
+        },
+        "pinkShare": {
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        "darkShare": {
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        "edge": {
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "grain"
+      ],
+      "relief": {
+        "code": "// Noise relief: bumps up to \"amplitude\" mm high and deep, about \"size\" mm across -- four octaves\n// of gradient noise (lib/pathtracer/core/noise.js), in real millimetres on the object. Four noises\n// per march step near the surface. slope is the MEASURED gradient bound (a quarter of the proved\n// one, NZ_GRAD_LIP, and a quarter the steps); the normal is taken by differences.\nlet peak = nzFbmLip(4u, 1.0, 0.5, 1.0);                 // the octaves' amplitudes summed\nlet n = fbm3(q / size, 1u, 4u, 2.0, 0.5);\nh = amplitude * n.w / peak;\nslope = amplitude / size * nzFbmLip(4u, 2.0, 0.5, NZ_GRAD_LIP_MEASURED) / peak;",
+        "params": {
+          "amplitude": 1.5,
+          "size": 12
+        },
+        "ranges": {
+          "amplitude": {
+            "min": 0,
+            "max": 20,
+            "step": 0.01
+          },
+          "size": {
+            "min": 0.1,
+            "max": 200,
+            "step": 0.1
+          }
+        },
+        "lengths": [
+          "amplitude",
+          "size"
+        ]
+      }
+    },
+    {
+      "id": "m3",
+      "label": "checker",
+      "params": {
+        "baseColor": {
+          "r": 0.807843137254902,
+          "g": 0.807843137254902,
+          "b": 0.807843137254902
+        },
+        "metallic": 1,
+        "roughness": 0,
+        "anisotropy": 0,
+        "specular": 1,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "second": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "square": 348,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "abbe": 0
+      },
+      "code": "// The base colour and the second in alternate cubes `square` mm on a side, moving with the object.\nlet q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\nlet c = floor(q / square);\nlet odd = ((i32(c.x) + i32(c.y) + i32(c.z)) & 1) == 1;\nm.baseColor = select(m.baseColor, second, odd);",
+      "ranges": {
+        "square": {
+          "min": 0.5,
+          "max": 1000,
+          "step": 0.5
+        }
+      },
+      "lengths": [
+        "square"
+      ]
+    },
+    {
+      "id": "m5",
+      "label": "galvanised steel",
+      "params": {
+        "baseColor": {
+          "r": 0.72,
+          "g": 0.73,
+          "b": 0.74
+        },
+        "metallic": 1,
+        "roughness": 0.3,
+        "anisotropy": 0.6,
+        "specular": 1,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "spangle": 52.5,
+        "spread": 0.4,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "abbe": 0
+      },
+      "code": "// worley3x -- two Worley lattices crossed, so the spangles keep to no grid: a spangle every `spangle`\n// mm, each with its own grain direction in the object's xy (the anisotropy), and a roughness and\n// brightness up to `spread` either side of the base ones.\nlet q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\nlet w = worley3x(q / spangle, 31u);\nlet a = 2.0 * PI * w.z;\nm.tangent = grainAlong(R_local, vec3<f32>(cos(a), sin(a), 0.0));\nm.roughness = m.roughness * (1.0 - spread + 2.0 * spread * fract(w.z * 13.0));\nm.baseColor = m.baseColor * (1.0 - 0.5 * spread + spread * fract(w.z * 29.0));",
+      "ranges": {
+        "spangle": {
+          "min": 0.5,
+          "max": 100,
+          "step": 0.5
+        },
+        "spread": {
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "spangle"
+      ]
+    },
+    {
+      "id": "m9",
+      "label": "turned aluminium",
+      "params": {
+        "baseColor": {
+          "r": 0.91,
+          "g": 0.92,
+          "b": 0.92
+        },
+        "metallic": 1,
+        "roughness": 0.3,
+        "anisotropy": 0.8,
+        "specular": 1,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "streakWidth": 0.4,
+        "streakLength": 80,
+        "streaks": 0.5,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "abbe": 0
+      },
+      "code": "// Turned on a lathe: circles about the object's own z axis through its origin.\n// On the axis itself there is no direction (grainAround gives zero): the plain frame.\nlet q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\nm.tangent = grainAround(R_local, p_local, VEC3(0.0, 0.0, 1.0));\n// The rings: each pass of the tool a little different. streakWidth and streakLength in mm,\n// real size; streaks is how much the rings differ, 0 to 1.\nlet s = streaksAround(q, VEC3(0.0, 0.0, 1.0), streakWidth, streakLength);\nm.roughness = m.roughness * mix(1.0 - 0.6 * streaks, 1.0 + 0.6 * streaks, s);\nm.baseColor = m.baseColor * mix(1.0 - 0.1 * streaks, 1.0, s);",
+      "ranges": {
+        "streakWidth": {
+          "min": 0.05,
+          "max": 5,
+          "step": 0.01
+        },
+        "streakLength": {
+          "min": 1,
+          "max": 500,
+          "step": 1
+        },
+        "streaks": {
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "streakWidth",
+        "streakLength"
+      ]
+    },
+    {
+      "id": "m10",
+      "label": "wood",
+      "params": {
+        "baseColor": {
+          "r": 0.72,
+          "g": 0.52,
+          "b": 0.32
+        },
+        "metallic": 0,
+        "roughness": 0.55,
+        "anisotropy": 0,
+        "specular": 0.45,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "latewood": {
+          "r": 0.42,
+          "g": 0.25,
+          "b": 0.12
+        },
+        "ring": 30,
+        "lateShare": 0.6900000000000001,
+        "wobble": 2.48,
+        "wobbleSize": 141.5,
+        "fibre": 0.15,
+        "fibreAmount": 0.27,
+        "heart": 1000,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "abbe": 0
+      },
+      "code": "// Rings about an axis along the object's z -- the heart of the log, `heart` mm along x from the\n// object's origin, so a board cut beside it shows arcs on its face and stripes on its edges --\n// one every `ring` mm: the base colour (earlywood) darkening into latewood over the last\n// `lateShare` of each, then starting again, as a year does. Gradient noise `wobbleSize` mm across\n// (longer along z) bends them by `wobble` rings; fibres `fibre` mm wide and twenty times as long\n// run along z.\nlet q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\nlet bend = gnoise3(q / vec3<f32>(wobbleSize, wobbleSize, 4.0 * wobbleSize), 7u).w;\nlet r = fract(length(q.xy - vec2<f32>(heart, 0.0)) / ring + wobble * bend);\nlet late = smoothstep(1.0 - lateShare, 1.0, r);\nlet fib = 0.5 + 0.5 * vnoise3(q / vec3<f32>(fibre, fibre, 20.0 * fibre), 8u).w;\nm.baseColor = mix(m.baseColor, latewood, late) * (1.0 - fibreAmount + 2.0 * fibreAmount * fib);\nm.roughness = min(1.0, m.roughness + 0.15 * late);",
+      "ranges": {
+        "ring": {
+          "min": 0.3,
+          "max": 30,
+          "step": 0.1
+        },
+        "lateShare": {
+          "min": 0.05,
+          "max": 0.95,
+          "step": 0.01
+        },
+        "wobble": {
+          "min": 0,
+          "max": 3,
+          "step": 0.01
+        },
+        "wobbleSize": {
+          "min": 1,
+          "max": 200,
+          "step": 0.5
+        },
+        "fibre": {
+          "min": 0.02,
+          "max": 2,
+          "step": 0.01
+        },
+        "fibreAmount": {
+          "min": 0,
+          "max": 0.5,
+          "step": 0.01
+        },
+        "heart": {
+          "min": -1000,
+          "max": 1000,
+          "step": 1
+        }
+      },
+      "lengths": [
+        "ring",
+        "wobbleSize",
+        "fibre",
+        "heart"
+      ]
+    },
+    {
+      "id": "m11",
+      "label": "brushed aluminium",
+      "params": {
+        "baseColor": {
+          "r": 0.91,
+          "g": 0.92,
+          "b": 0.92
+        },
+        "metallic": 1,
+        "roughness": 0.35,
+        "anisotropy": 0.8,
+        "specular": 1,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "streakWidth": 0.6,
+        "streakLength": 50,
+        "streaks": 0.5,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "abbe": 0
+      },
+      "code": "// Brushed along the object's own x: the strokes turn with the object (R_local).\n// Positive anisotropy is smooth along the strokes and rough across them, so the\n// highlight is drawn out ACROSS the strokes, as on real brushed metal.\nm.tangent = grainAlong(R_local, VEC3(1.0, 0.0, 0.0));\n// The lines: grooves of different depths, each a little rougher or smoother and darker or\n// lighter than the next. streakWidth and streakLength in mm, real size whatever the scene's\n// unit or the object's scale -- so on a metre-sized object seen whole they are too fine to see,\n// as in life. streaks is how much the lines differ, 0 to 1.\nlet q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\nlet s = streaksAlong(q, VEC3(1.0, 0.0, 0.0), streakWidth, streakLength);\nm.roughness = m.roughness * mix(1.0 - 0.6 * streaks, 1.0 + 0.6 * streaks, s);\nm.baseColor = m.baseColor * mix(1.0 - 0.1 * streaks, 1.0, s);",
+      "ranges": {
+        "streakWidth": {
+          "min": 0.05,
+          "max": 5,
+          "step": 0.01
+        },
+        "streakLength": {
+          "min": 1,
+          "max": 500,
+          "step": 1
+        },
+        "streaks": {
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "streakWidth",
+        "streakLength"
+      ]
+    },
+    {
+      "id": "m12",
+      "label": "anodised aluminium",
+      "params": {
+        "baseColor": {
+          "r": 0.15,
+          "g": 0.35,
+          "b": 0.75
+        },
+        "metallic": 1,
+        "roughness": 0.3,
+        "anisotropy": 0,
+        "specular": 1,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "abbe": 0
+      },
+      "code": ""
+    },
+    {
+      "id": "m13",
+      "label": "metal",
+      "params": {
+        "baseColor": {
+          "r": 0.9,
+          "g": 0.9,
+          "b": 0.9
+        },
+        "metallic": 1,
+        "roughness": 0.2,
+        "anisotropy": 0,
+        "specular": 1,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "abbe": 0
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   R_local  that frame's rotation to the world, for a direction written in it\n//   S_local  its scale: p_local * S_local is in scene units; metres(x) is x m in them, mm(x) x mm\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe; one marked\n//            as a length is in real mm, whatever the scene's unit -- read the point in mm too:\n//   let q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. brushed along the object's x, for an anisotropy above 0 (or turned: grainAround):\n//   m.tangent = grainAlong(R_local, VEC3(1.0, 0.0, 0.0));\n// e.g. with a length width (mm) and a colour stripe added with +, and q as above:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(q.x / width), 0.5));\n"
+    },
+    {
+      "id": "m15",
+      "label": "marble",
+      "params": {
+        "baseColor": {
+          "r": 0.92,
+          "g": 0.91,
+          "b": 0.88
+        },
+        "metallic": 0,
+        "roughness": 0.08,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "vein": {
+          "r": 0.050980392156862744,
+          "g": 0.16862745098039217,
+          "b": 0.35294117647058826
+        },
+        "size": 2000,
+        "turbulence": 1.52,
+        "sharpness": 10,
+        "veinSpacing": 50,
+        "cloud": 0.25,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "abbe": 0
+      },
+      "code": "// Veins about `veinSpacing` mm apart, bent by five octaves of noise over `size` mm -- the stone's\n// movement -- by `turbulence` spacings; `sharpness` is how thin a vein is, and `cloud` a soft grey\n// between them, as Carrara has.\nlet q = p_local * S_local / mm(1.0)/size;   // the point in mm, moving with the object\nlet nz = fbm3(q  , 3u, 5u, 2.0, 0.5);\nlet v = pow(1.0 - abs(sin(PI * (q.x / veinSpacing + turbulence * nz.w))), sharpness);\nlet cl = 0.5 + 0.5 * fbm3(q / 0.5 , 4u, 3u, 2.0, 0.5).w;\nm.baseColor = mix(mix(m.baseColor, vein, cloud * cl), vein, v);",
+      "ranges": {
+        "size": {
+          "min": 5,
+          "max": 2000,
+          "step": 5
+        },
+        "turbulence": {
+          "min": 0,
+          "max": 5,
+          "step": 0.01
+        },
+        "sharpness": {
+          "min": 1,
+          "max": 40,
+          "step": 0.1
+        },
+        "veinSpacing": {
+          "min": 2,
+          "max": 500,
+          "step": 1
+        },
+        "cloud": {
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "veinSpacing",
+        "size"
+      ]
+    },
+    {
+      "id": "m20",
+      "label": "rust",
+      "params": {
+        "baseColor": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "metallic": 1,
+        "roughness": 0,
+        "anisotropy": 0,
+        "specular": 1,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "rust": {
+          "r": 0.1607843137254902,
+          "g": 0.06666666666666667,
+          "b": 0.027450980392156862
+        },
+        "rustLight": {
+          "r": 0.4549019607843137,
+          "g": 0.21176470588235294,
+          "b": 0.0784313725490196
+        },
+        "rustRough": 0.9,
+        "coverage": 0.17,
+        "patchSize": 288.5,
+        "softness": 0.025,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "abbe": 0
+      },
+      "code": "// Five octaves of noise `patchSize` mm across: where it is in the top `coverage`, rust -- its\n// shade varying on a fifth of that -- not a metal any more, rough and with a plain coat.\nlet q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\nlet f = 0.5 + 0.5 * fbm3(q / patchSize, 21u, 5u, 2.0, 0.5).w;\nlet r = smoothstep(1.0 - coverage - softness, 1.0 - coverage + softness, f);\nlet tone = 0.5 + 0.5 * vnoise3(q / (0.2 * patchSize), 22u).w;\nm.baseColor = mix(m.baseColor, mix(rust, rustLight, tone), r);\nm.metallic = m.metallic * (1.0 - r);\nm.roughness = mix(m.roughness, rustRough, r);\nm.specular = mix(m.specular, 0.5, r);",
+      "ranges": {
+        "rustRough": {
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        "coverage": {
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        "patchSize": {
+          "min": 0.5,
+          "max": 500,
+          "step": 0.5
+        },
+        "softness": {
+          "min": 0,
+          "max": 0.3,
+          "step": 0.005
+        }
+      },
+      "lengths": [
+        "patchSize"
+      ]
+    },
+    {
+      "id": "m24",
+      "label": "green tinted glass",
+      "params": {
+        "baseColor": {
+          "r": 0.7,
+          "g": 0.9,
+          "b": 0.75
+        },
+        "metallic": 0,
+        "roughness": 0,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 1,
+        "ior": 1.52,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "abbe": 0
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
+    },
+    {
+      "id": "m26",
+      "label": "glass",
+      "params": {
+        "baseColor": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "metallic": 0,
+        "roughness": 0,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 1,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "abbe": 0
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   R_local  that frame's rotation to the world, for a direction written in it\n//   S_local  its scale: p_local * S_local is in scene units; metres(x) is x m in them, mm(x) x mm\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe; one marked\n//            as a length is in real mm, whatever the scene's unit -- read the point in mm too:\n//   let q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. brushed along the object's x, for an anisotropy above 0 (or turned: grainAround):\n//   m.tangent = grainAlong(R_local, VEC3(1.0, 0.0, 0.0));\n// e.g. with a length width (mm) and a colour stripe added with +, and q as above:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(q.x / width), 0.5));\n"
+    },
+    {
+      "id": "m28",
+      "label": "mirror",
+      "params": {
+        "baseColor": {
+          "r": 0.9,
+          "g": 0.9,
+          "b": 0.9
+        },
+        "metallic": 1,
+        "roughness": 0,
+        "anisotropy": 0,
+        "specular": 1,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "abbe": 0
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   R_local  that frame's rotation to the world, for a direction written in it\n//   S_local  its scale: p_local * S_local is in scene units; metres(x) is x m in them, mm(x) x mm\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe; one marked\n//            as a length is in real mm, whatever the scene's unit -- read the point in mm too:\n//   let q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. brushed along the object's x, for an anisotropy above 0 (or turned: grainAround):\n//   m.tangent = grainAlong(R_local, VEC3(1.0, 0.0, 0.0));\n// e.g. with a length width (mm) and a colour stripe added with +, and q as above:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(q.x / width), 0.5));\n"
+    }
+  ],
+  "root": {
+    "id": "root",
+    "kind": "group",
+    "label": "Menger cubes",
+    "enabled": true,
+    "blend": 0,
+    "children": [
+      {
+        "id": "n16",
+        "kind": "object",
+        "type": "code",
+        "label": "box copy",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -4.8774100688024875,
+            "y": 4.475918952444398,
+            "z": 2.2713051898593815
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m15",
+        "params": {
+          "size": {
+            "x": 10,
+            "y": 0.5,
+            "z": 10
+          },
+          "rounding": 0.02
+        },
+        "block": "b30"
+      },
+      {
+        "id": "n17",
+        "kind": "object",
+        "type": "code",
+        "label": "box copy copy",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -14.532731403158525,
+            "y": -4.199542334851299,
+            "z": 2.808488853896886
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 90
+          },
+          "scale": 1
+        },
+        "material": "m15",
+        "params": {
+          "size": {
+            "x": 10,
+            "y": 0.5,
+            "z": 10
+          },
+          "rounding": 0.02
+        },
+        "block": "b30"
+      },
+      {
+        "id": "n14",
+        "kind": "object",
+        "type": "code",
+        "label": "box",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -4.135359734383621,
+            "y": -4.781899323159902,
+            "z": -3.170761618294512
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 1.1845111736957499
+          },
+          "scale": 1
+        },
+        "material": "m15",
+        "params": {
+          "size": {
+            "x": 10,
+            "y": 10,
+            "z": 0.5
+          },
+          "rounding": 0.02
+        },
+        "block": "b30"
+      },
+      {
+        "id": "n4",
+        "kind": "group",
+        "label": "noise relief",
+        "enabled": true,
+        "blend": 0,
+        "transform": {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "children": [
+          {
+            "id": "n22",
+            "kind": "group",
+            "label": "group",
+            "enabled": true,
+            "blend": 0.261,
+            "transform": {
+              "pos": {
+                "x": -10.759540757439698,
+                "y": -2.132181360442459,
+                "z": 2.814576603875039
+              },
+              "rot": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "scale": 1.75
+            },
+            "children": [
+              {
+                "id": "n23",
+                "kind": "object",
+                "type": "code",
+                "label": "sphere",
+                "enabled": true,
+                "transform": {
+                  "pos": {
+                    "x": 0,
+                    "y": 0,
+                    "z": -0.1467625441311834
+                  },
+                  "rot": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "scale": 0.5205873702098841
+                },
+                "material": "m24",
+                "params": {
+                  "radius": 1
+                },
+                "block": "b32"
+              },
+              {
+                "id": "n21",
+                "kind": "object",
+                "type": "code",
+                "label": "round cone",
+                "enabled": true,
+                "transform": {
+                  "pos": {
+                    "x": 0,
+                    "y": 0,
+                    "z": -1.660766839981079
+                  },
+                  "rot": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "scale": 1
+                },
+                "material": "m24",
+                "params": {
+                  "bottom": 0.87,
+                  "top": 0.43,
+                  "height": 1.6400000000000001
+                },
+                "block": "b33"
+              }
+            ]
+          }
+        ],
+        "params": {
+          "amount": 0.010000000000000002,
+          "size": 0.38
+        },
+        "block": "b31"
+      },
+      {
+        "id": "n18",
+        "kind": "group",
+        "label": "group",
+        "enabled": true,
+        "blend": 0,
+        "transform": {
+          "pos": {
+            "x": -4.905049415793062,
+            "y": -3.259694155777389,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 77.99906380523738
+          },
+          "scale": 1
+        },
+        "children": [
+          {
+            "id": "floor",
+            "kind": "object",
+            "type": "code",
+            "label": "Floor",
+            "enabled": true,
+            "transform": {
+              "pos": {
+                "x": 0.16455387475403352,
+                "y": 0.33746805591733187,
+                "z": -2.531959332019675
+              },
+              "rot": {
+                "x": 90,
+                "y": 0,
+                "z": -79.76225180628472
+              },
+              "scale": 1
+            },
+            "material": "m10",
+            "params": {
+              "size": {
+                "x": 2,
+                "y": 0.1,
+                "z": 2
+              },
+              "rounding": 0
+            },
+            "block": "b34"
+          },
+          {
+            "id": "n7",
+            "kind": "group",
+            "label": "twist",
+            "enabled": true,
+            "blend": 0,
+            "transform": {
+              "pos": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "rot": {
+                "x": 12.572558898261423,
+                "y": 0,
+                "z": 0
+              },
+              "scale": 1
+            },
+            "children": [
+              {
+                "id": "n1",
+                "kind": "object",
+                "type": "code",
+                "label": "torus",
+                "enabled": true,
+                "transform": {
+                  "pos": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "rot": {
+                    "x": -90.62778935594064,
+                    "y": -73.29352020543872,
+                    "z": 96.58542214828901
+                  },
+                  "scale": 1.96
+                },
+                "material": "m2",
+                "params": {
+                  "ring": 0.66,
+                  "tube": 0.22999999999999998
+                },
+                "block": "b36"
+              },
+              {
+                "id": "n8",
+                "kind": "object",
+                "type": "code",
+                "label": "cylinder",
+                "enabled": true,
+                "transform": {
+                  "pos": {
+                    "x": 0.21461284367524613,
+                    "y": 0.1352596482714084,
+                    "z": -2.0848724795935087
+                  },
+                  "rot": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "scale": 1
+                },
+                "material": "m13",
+                "params": {
+                  "radius": 0.11999999999999997,
+                  "height": 1
+                },
+                "block": "b37"
+              }
+            ],
+            "params": {
+              "rate": -1.6,
+              "extent": 3.38
+            },
+            "block": "b35"
+          }
+        ]
+      },
+      {
+        "id": "n19",
+        "kind": "object",
+        "type": "code",
+        "label": "box",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -2.58852032434052,
+            "y": 2.555064998975979,
+            "z": -0.23350153885017466
+          },
+          "rot": {
+            "x": -20.910179677739936,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1.7252437372609666
+        },
+        "material": "m20",
+        "params": {
+          "size": {
+            "x": 1,
+            "y": 0.01,
+            "z": 1.5
+          },
+          "rounding": 0
+        },
+        "block": "b30"
+      },
+      {
+        "id": "n25",
+        "kind": "object",
+        "type": "code",
+        "label": "prism",
+        "enabled": false,
+        "transform": {
+          "pos": {
+            "x": -9.764858315556465,
+            "y": -8.075274891050336,
+            "z": -1.6234159254618448
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": -18.241867538438566
+          },
+          "scale": 1
+        },
+        "material": "m26",
+        "params": {
+          "sides": 5,
+          "radius": 1.42,
+          "height": 1.31
+        },
+        "block": "b38"
+      },
+      {
+        "id": "n27",
+        "kind": "object",
+        "type": "code",
+        "label": "reflector",
+        "enabled": false,
+        "transform": {
+          "pos": {
+            "x": -12.42076798104995,
+            "y": 2.7856651743092473,
+            "z": -1.1337011593040769
+          },
+          "rot": {
+            "x": 82.20361311716107,
+            "y": 7.40600138206291,
+            "z": 37.6641917664265
+          },
+          "scale": 1
+        },
+        "material": "m28",
+        "params": {
+          "focal": 0.66,
+          "aperture": 1.42,
+          "wall": 0.044
+        },
+        "block": "b39"
+      },
+      {
+        "id": "n29",
+        "kind": "object",
+        "type": "light",
+        "label": "disc light",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -10.76602825791248,
+            "y": -2.134943537839847,
+            "z": -2.6089333557282943
+          },
+          "rot": {
+            "x": 0,
+            "y": 5.852832374118301,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": null,
+        "params": {
+          "radius": 0.27
+        },
+        "light": {
+          "shape": "disc",
+          "flux": 1000000,
+          "luminance": 21843897.2604281,
+          "emitN": 1.543,
+          "n": 30.400000000000002,
+          "halfAngle": 36.5,
+          "transparent": true
+        }
+      }
+    ]
+  },
+  "functions": "",
+  "unit": "m",
+  "environment": {
+    "envMode": 0,
+    "studioIlluminance": 1000,
+    "studioColor": {
+      "r": 1,
+      "g": 1,
+      "b": 1
+    },
+    "studioTop": 0.5,
+    "sunIlluminance": 100000,
+    "sunDiameter": 0.53,
+    "skyIlluminance": 15000,
+    "uSunAzimuth": 82,
+    "uSunElevation": 20,
+    "uSkyTurbidity": 0.7
+  },
+  "blocks": [
+    {
+      "id": "b30",
+      "label": "box",
+      "kind": "object",
+      "code": "// A box: size is the HALF-size along each axis; the rounding stays inside it.\nC = add_new(C, NboxRounded(p, size, rounding), MATERIAL);",
+      "params": {
+        "size": {
+          "x": 0.5,
+          "y": 0.5,
+          "z": 0.5
+        },
+        "rounding": 0.02
+      },
+      "ranges": {
+        "rounding": {
+          "min": 0,
+          "max": 2,
+          "step": 0.005
+        }
+      },
+      "lengths": [
+        "size",
+        "rounding"
+      ],
+      "builtin": "box@1"
+    },
+    {
+      "id": "b31",
+      "label": "noise relief",
+      "kind": "group",
+      "code": "// Noise relief: a rough surface up to \"amount\" high and low, with features about \"size\"\n// across -- four octaves of gradient noise (lib/pathtracer/core/noise.js). Costs four\n// noises per step. The relief steepens the field by at most amount / size times the fBm's\n// bound over its peak, so distances are divided by that: shorter steps, no holes. The bound\n// is the MEASURED one (a quarter of the proved one, and a quarter the steps); for a proof\n// use NZ_GRAD_LIP. The normal is by differences.\n// IN A SHELL: the noise moves the surface by at most NZ_GRAD_VALUE_BOUND x amount (proved,\n// noise.js), so beyond that from the plain shape, the plain distance less it is a safe\n// distance -- no noise, no division. Only points near the surface pay for the noise. The\n// edge is twice that out, so a step from the shell is never shorter than the reach (a ray\n// grazing it would crawl), plus the hit tolerance times (slope + 1): a hit is within\n// slope tolerances of the plain shape's reach and its normal's differences one more, so\n// they never straddle the edge, where the value jumps. Under a smooth blend the edge is\n// farther by READ_REACH, as far as the blend reads the field off its surface (unbounded\n// under group code: no shell there). And foldRelief divides by the slope -- or, in a CSG\n// group (DIVIDED_ABOVE), leaves it to the group, which divides once after the blend: divided\n// before it, the fillet would come out the wrong size.\nvar H = children(emptyHit(r), p);\nlet peak = nzFbmLip(4u, 1.0, 0.5, 1.0);                 // the octaves' amplitudes summed\nlet slope = 1.0 + amount / size * nzFbmLip(4u, 2.0, 0.5, NZ_GRAD_LIP_MEASURED) / peak;\nlet reach = NZ_GRAD_VALUE_BOUND * abs(amount) * XF_S;   // how far the noise can move it\nif (abs(H.s.w) > 2.0 * reach + READ_REACH + (slope + 1.0) * marchEps()) {\n    C = fold(C, VEC4(0.0, 0.0, 0.0, H.s.w - sign(H.s.w) * reach), H.m);\n} else {\n    let n = fbm3(p / size, 1u, 4u, 2.0, 0.5);\n    C = foldRelief(C, H.s.w - amount * n.w / peak * XF_S, H.m, slope, DIVIDED_ABOVE);\n}",
+      "params": {
+        "amount": 0.03,
+        "size": 0.3
+      },
+      "ranges": {
+        "amount": {
+          "min": 0,
+          "max": 1,
+          "step": 0.001
+        },
+        "size": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "amount",
+        "size"
+      ],
+      "builtin": "relief@1"
+    },
+    {
+      "id": "b32",
+      "label": "sphere",
+      "kind": "object",
+      "code": "// A sphere around this node's origin.\nC = add_new(C, Nsphere(p, radius), MATERIAL);",
+      "params": {
+        "radius": 0.5
+      },
+      "ranges": {
+        "radius": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "radius"
+      ],
+      "builtin": "sphere@1"
+    },
+    {
+      "id": "b33",
+      "label": "round cone",
+      "kind": "object",
+      "code": "// Two spheres along z, bottom radius at z = -height/2 and top at +height/2, and the cone touching\n// both (shapes.js NroundCone). A height under the radii's difference leaves the bigger sphere.\nC = add_new(C, NroundCone(p, bottom, top, height), MATERIAL);",
+      "params": {
+        "bottom": 0.3,
+        "top": 0.15,
+        "height": 0.55
+      },
+      "ranges": {
+        "bottom": {
+          "min": 0,
+          "max": 10,
+          "step": 0.01
+        },
+        "top": {
+          "min": 0,
+          "max": 10,
+          "step": 0.01
+        },
+        "height": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "bottom",
+        "top",
+        "height"
+      ],
+      "builtin": "round cone@1"
+    },
+    {
+      "id": "b34",
+      "label": "Floor",
+      "kind": "object",
+      "code": "C = add_new(C, NboxRounded(p, size, rounding), MATERIAL);",
+      "params": {
+        "size": {
+          "x": 2,
+          "y": 0.1,
+          "z": 2
+        },
+        "rounding": 0
+      }
+    },
+    {
+      "id": "b35",
+      "label": "twist",
+      "kind": "group",
+      "code": "// Twist about z: \"rate\" radians per unit of height. Costs a sin and a cos per step.\n// A twist stretches space, the more the farther from the axis; \"extent\" -- how far the\n// children reach from it -- sets the step scale that keeps the march from overshooting.\nlet a = rate * p.z;\np = VEC3(cos(a) * p.x - sin(a) * p.y, sin(a) * p.x + cos(a) * p.y, p.z);\nwarp(1.0 / sqrt(1.0 + rate * rate * extent * extent));\nC = children(C, p);",
+      "params": {
+        "rate": 1,
+        "extent": 1
+      },
+      "ranges": {
+        "rate": {
+          "min": -10,
+          "max": 10,
+          "step": 0.01
+        },
+        "extent": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "extent"
+      ],
+      "builtin": "twist@1"
+    },
+    {
+      "id": "b36",
+      "label": "torus",
+      "kind": "object",
+      "code": "// A torus in the xy plane: ring is the radius to the tube's centre, tube its own radius.\nC = add_new(C, Ntorus(p, ring, tube), MATERIAL);",
+      "params": {
+        "ring": 0.4,
+        "tube": 0.1
+      },
+      "ranges": {
+        "ring": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        },
+        "tube": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "ring",
+        "tube"
+      ],
+      "builtin": "torus@1"
+    },
+    {
+      "id": "b37",
+      "label": "cylinder",
+      "kind": "object",
+      "code": "// A cylinder along z, centred on this node's origin.\nC = add_new(C, Ncylinder(p, height * 0.5, radius), MATERIAL);",
+      "params": {
+        "radius": 0.5,
+        "height": 1
+      },
+      "ranges": {
+        "radius": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        },
+        "height": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "radius",
+        "height"
+      ],
+      "builtin": "cylinder@1"
+    },
+    {
+      "id": "b38",
+      "label": "prism",
+      "kind": "object",
+      "code": "// A prism along z, centred: a regular polygon of sides sides (3 a triangle, 4 a square, ...), radius to its\n// corners, a flat side down -- extruded. sides is live: dragging it needs no compile. shapes.js Nprism.\nC = add_new(C, Nprism(p, sides, radius, height), MATERIAL);",
+      "params": {
+        "sides": 3,
+        "radius": 0.5,
+        "height": 1
+      },
+      "ranges": {
+        "sides": {
+          "min": 3,
+          "max": 12,
+          "step": 1
+        },
+        "radius": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        },
+        "height": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "radius",
+        "height"
+      ],
+      "builtin": "prism@1"
+    },
+    {
+      "id": "b39",
+      "label": "reflector",
+      "kind": "object",
+      "code": "// A parabolic reflector with its FOCUS AT THIS NODE'S ORIGIN, opening to +z: the mirror is the\n// paraboloid with that focal length, out to the aperture's radius, its wall behind it -- a light at\n// the origin is at the focus. Give it a mirror material. (shapes.js Ndish: its distance outside is a\n// bound near the rim, never too large.)\nC = add_new(C, Ndish(p, focal, aperture, wall), MATERIAL);",
+      "params": {
+        "focal": 0.125,
+        "aperture": 0.5,
+        "wall": 0.01
+      },
+      "ranges": {
+        "focal": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        },
+        "aperture": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        },
+        "wall": {
+          "min": 0.001,
+          "max": 1,
+          "step": 0.001
+        }
+      },
+      "lengths": [
+        "focal",
+        "aperture",
+        "wall"
+      ],
+      "builtin": "reflector@1"
+    }
+  ]
+}

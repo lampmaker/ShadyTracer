@@ -1,0 +1,639 @@
+{
+  "format": "raytracer-scene",
+  "version": 10,
+  "title": "Material showcase",
+  "nextId": 1,
+  "materials": [
+    {
+      "id": "pmma",
+      "label": "PMMA",
+      "params": {
+        "baseColor": {
+          "r": 0.8,
+          "g": 0.79,
+          "b": 1
+        },
+        "metallic": 0,
+        "roughness": 0,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0.1,
+        "transmission": 1,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": ""
+    },
+    {
+      "id": "mirror",
+      "label": "Mirror",
+      "params": {
+        "baseColor": {
+          "r": 0.9,
+          "g": 0.9,
+          "b": 0.9
+        },
+        "metallic": 1,
+        "roughness": 0,
+        "anisotropy": 0,
+        "specular": 1,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": ""
+    },
+    {
+      "id": "sandblasted",
+      "label": "Sandblasted checker",
+      "params": {
+        "baseColor": {
+          "r": 0.95,
+          "g": 1,
+          "b": 0.95
+        },
+        "metallic": 0,
+        "roughness": 0,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 1,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": "// sandblasted checker: rough glass on alternate cells\nm.roughness = step(0.0, sin(p.y * 4.0) * sin(p.x * 4.0) * sin(p.z * 4.0)) * 0.4;"
+    },
+    {
+      "id": "basicpet",
+      "label": "Petrol gloss",
+      "params": {
+        "baseColor": {
+          "r": 0.12941176470588237,
+          "g": 0.39215686274509803,
+          "b": 0.4666666666666667
+        },
+        "metallic": 0,
+        "roughness": 0.35,
+        "anisotropy": 0,
+        "specular": 0.55,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": ""
+    },
+    {
+      "id": "white",
+      "label": "White",
+      "params": {
+        "baseColor": {
+          "r": 0.95,
+          "g": 0.95,
+          "b": 0.95
+        },
+        "metallic": 0,
+        "roughness": 0.3,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": ""
+    },
+    {
+      "id": "twotone",
+      "label": "Two-tone light",
+      "params": {
+        "baseColor": {
+          "r": 0.8,
+          "g": 0.8,
+          "b": 0.8
+        },
+        "metallic": 0,
+        "roughness": 0.5,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 192000
+      },
+      "code": "// petrol for x < 0, orange for x > 0, as a light -- in cd/m^2, written directly,\n// so the colour here is not normalised the way the emissive field is\nm.emissive = select(VEC3(33.0/255.0, 100.0/255.0, 119.0/255.0), VEC3(255.0/255.0, 127.0/255.0, 0.0/255.0), p.x > 0.0) * 192000.0;",
+      "type": "emitter"
+    },
+    {
+      "id": "roughglass",
+      "label": "Rough glass",
+      "params": {
+        "baseColor": {
+          "r": 1,
+          "g": 0.95,
+          "b": 0.9
+        },
+        "metallic": 0,
+        "roughness": 0.3,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 1,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": ""
+    },
+    {
+      "id": "petrol",
+      "label": "Petrol",
+      "params": {
+        "baseColor": {
+          "r": 0.12941176470588237,
+          "g": 0.39215686274509803,
+          "b": 0.4666666666666667
+        },
+        "metallic": 0,
+        "roughness": 0.5,
+        "anisotropy": 0,
+        "specular": 0.6,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": ""
+    },
+    {
+      "id": "orange",
+      "label": "Orange",
+      "params": {
+        "baseColor": {
+          "r": 1,
+          "g": 0.4980392156862745,
+          "b": 0
+        },
+        "metallic": 0,
+        "roughness": 0.6,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": ""
+    },
+    {
+      "id": "ground",
+      "label": "Ground checker",
+      "params": {
+        "baseColor": {
+          "r": 0.12941176470588237,
+          "g": 0.39215686274509803,
+          "b": 0.4666666666666667
+        },
+        "metallic": 0,
+        "roughness": 0.4,
+        "anisotropy": 0,
+        "specular": 0.6,
+        "specularTint": 0.3,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": "// the old palette's ground: a petrol / orange checker in world space\nlet pet = VEC3(33.0/255.0, 100.0/255.0, 119.0/255.0);\nlet ora = VEC3(255.0/255.0, 127.0/255.0, 0.0/255.0);\nm.baseColor = mix(pet, ora, smoothstep(-0.001, 0.001, sin(p.x * PI) * sin(p.y * PI) * sin(p.z * PI)));"
+    }
+  ],
+  "root": {
+    "id": "root",
+    "kind": "group",
+    "label": "Material showcase",
+    "enabled": true,
+    "op": "union",
+    "blend": 0,
+    "children": [
+      {
+        "id": "glassball",
+        "kind": "object",
+        "type": "code",
+        "label": "Refractive sphere",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": -0.5
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "pmma",
+        "params": {
+          "radius": 1
+        },
+        "code": "C = add_new(C, Nsphere(p, radius), MATERIAL);"
+      },
+      {
+        "id": "mirrorball",
+        "kind": "object",
+        "type": "code",
+        "label": "Mirror sphere",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 3,
+            "y": 0,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "mirror",
+        "params": {
+          "radius": 1
+        },
+        "code": "C = add_new(C, Nsphere(p, radius), MATERIAL);"
+      },
+      {
+        "id": "checkerball",
+        "kind": "object",
+        "type": "code",
+        "label": "Checker sphere",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -3,
+            "y": 0,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "sandblasted",
+        "params": {
+          "radius": 1
+        },
+        "code": "C = add_new(C, Nsphere(p, radius), MATERIAL);"
+      },
+      {
+        "id": "smallbox",
+        "kind": "object",
+        "type": "code",
+        "label": "Small box",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -2,
+            "y": -2,
+            "z": 2
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "basicpet",
+        "params": {
+          "size": {
+            "x": 0.51,
+            "y": 0.51,
+            "z": 0.51
+          },
+          "rounding": 0.01
+        },
+        "code": "C = add_new(C, NboxRounded(p, size, rounding), MATERIAL);"
+      },
+      {
+        "id": "carved",
+        "kind": "object",
+        "type": "code",
+        "label": "Carved box",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "white",
+        "params": {},
+        "code": "// a rounded box with a ball smoothly cut out of it -- the old opSmoothSubtract, kept as it was\nvar bx = Nroundedbox(p + VEC3(0.0, 8.0, 0.0), VEC3(2.0, 2.0, 2.0), 0.9);\nbx = opSmoothSubtract(bx, Nsphere(p + VEC3(0.0, 5.0, -2.0), 2.0), 0.05);\nC = add_new(C, bx, MATERIAL);"
+      },
+      {
+        "id": "lightball",
+        "kind": "object",
+        "type": "code",
+        "label": "Two-tone light",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 0,
+            "y": -5,
+            "z": 2
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "twotone",
+        "params": {
+          "radius": 1
+        },
+        "code": "C = add_new(C, Nsphere(p, radius), MATERIAL);"
+      },
+      {
+        "id": "glassplate",
+        "kind": "object",
+        "type": "code",
+        "label": "Rough glass plate",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 0,
+            "y": 4.3,
+            "z": 2
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "roughglass",
+        "params": {
+          "size": {
+            "x": 1.01,
+            "y": 0.11,
+            "z": 1.01
+          },
+          "rounding": 0.01
+        },
+        "code": "C = add_new(C, NboxRounded(p, size, rounding), MATERIAL);"
+      },
+      {
+        "id": "bar",
+        "kind": "object",
+        "type": "code",
+        "label": "Bar",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -6,
+            "y": 0,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "white",
+        "params": {
+          "size": {
+            "x": 0.11,
+            "y": 3.01,
+            "z": 1.99
+          },
+          "rounding": 0.01
+        },
+        "code": "C = add_new(C, NboxRounded(p, size, rounding), MATERIAL);"
+      },
+      {
+        "id": "shelf1",
+        "kind": "object",
+        "type": "code",
+        "label": "Shelf, petrol",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -6,
+            "y": 0,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "petrol",
+        "params": {
+          "size": {
+            "x": 1.01,
+            "y": 0.11,
+            "z": 2.01
+          },
+          "rounding": 0.01
+        },
+        "code": "C = add_new(C, NboxRounded(p, size, rounding), MATERIAL);"
+      },
+      {
+        "id": "shelf2",
+        "kind": "object",
+        "type": "code",
+        "label": "Shelf, orange",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -6,
+            "y": -0.5,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "orange",
+        "params": {
+          "size": {
+            "x": 1.01,
+            "y": 0.11,
+            "z": 2.01
+          },
+          "rounding": 0.01
+        },
+        "code": "C = add_new(C, NboxRounded(p, size, rounding), MATERIAL);"
+      },
+      {
+        "id": "floor",
+        "kind": "object",
+        "type": "code",
+        "label": "Ground",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": -2
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "ground",
+        "params": {
+          "size": {
+            "x": 10.01,
+            "y": 10.01,
+            "z": 0.11
+          },
+          "rounding": 0.01
+        },
+        "code": "C = add_new(C, NboxRounded(p, size, rounding), MATERIAL);"
+      },
+      {
+        "id": "pillar",
+        "kind": "object",
+        "type": "code",
+        "label": "Glass pillar",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": 2
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "pmma",
+        "params": {
+          "size": {
+            "x": 0.51,
+            "y": 3.51,
+            "z": 0.51
+          },
+          "rounding": 0.01
+        },
+        "code": "C = add_new(C, NboxRounded(p, size, rounding), MATERIAL);"
+      },
+      {
+        "id": "sponge",
+        "kind": "object",
+        "type": "code",
+        "label": "Menger sponge",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 0,
+            "y": 2,
+            "z": 5
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "white",
+        "params": {
+          "iterations": 4
+        },
+        "code": "// a Menger sponge with analytic normals; iterations is compile-time, so its loop unrolls\nC = add_new(C, Nmenger(p, iterations), MATERIAL);",
+        "constants": {
+          "iterations": "u32"
+        },
+        "ranges": {
+          "iterations": {
+            "min": 1,
+            "max": 5,
+            "step": 1
+          }
+        }
+      }
+    ]
+  },
+  "functions": "",
+  "unit": "m"
+}

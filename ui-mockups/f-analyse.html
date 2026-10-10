@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>F · Analyse</title>
+<!-- F: the application's own shell (lib/shell on the vendored dockview), its own property tables and its
+     own charts, on made-up data. Only the arrangement is proposed: every chart a panel of its own, drawn
+     edge to edge; one Analysis pane with the data, the SELECTED chart's settings and the results. -->
+<link rel="stylesheet" href="../lib/dockview/dockview.css">
+<link rel="stylesheet" href="../lib/shell/shell.css">
+<script src="../lib/dockview/dockview.min.js"></script>
+<style>
+    html, body { height: 100%; margin: 0; }
+    .banner { display: flex; gap: 12px; align-items: center; padding: 5px 12px; background: #243240; color: #cfe0ee; font: 12px system-ui, sans-serif;
+              border-bottom: 1px solid #34506a; }
+    .banner b { color: #fff; } .banner a { color: #9fc6ea; margin-left: auto; }
+    #app { height: calc(100% - 27px); }
+    /* a chart is its panel: the canvas fills it; the selected one has an accent edge */
+    .chartpane { position: absolute; inset: 0; }
+    .chartpane canvas { display: block; width: 100%; height: 100%; }
+    .chartpane.sel::after { content: ''; position: absolute; inset: 0; box-shadow: inset 0 0 0 2px var(--sh-accent); pointer-events: none; }
+    /* the one line a chart says about the pointer, bottom left, over the chart */
+    .readout { position: absolute; left: 8px; bottom: 6px; font: 11.5px var(--sh-mono); color: var(--sh-ink); background: rgba(15,18,20,0.72);
+               padding: 2px 6px; border-radius: 3px; pointer-events: none; }
+    .readout:empty { display: none; }
+    /* the results: cards, as mockup B's */
+    .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 6px; padding: 4px 10px 12px; }
+    .card { background: var(--sh-raised); border: 1px solid var(--sh-line); border-radius: 5px; padding: 5px 8px; }
+    .card .k { font-size: 11px; color: var(--sh-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .card .v { font: 600 15px/1.25 var(--sh-mono); color: var(--sh-ink); }
+    .card .e { font: 11px var(--sh-mono); color: var(--sh-faint); }
+    .head { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--sh-muted); padding: 10px 10px 2px; display: flex; gap: 6px; }
+    .head .name { color: var(--sh-accent); text-transform: none; letter-spacing: 0; }
+    .note { font: 12px system-ui, sans-serif; color: var(--sh-faint); padding: 2px 10px 6px; }
+    .runbar { display: flex; gap: 8px; align-items: center; padding: 8px 10px; border-bottom: 1px solid var(--sh-line); }
+    .runbar input { width: 64px; font: 12px var(--sh-mono); color: var(--sh-ink); background: var(--sh-bg); border: 1px solid var(--sh-line); border-radius: 3px; padding: 2px 5px; }
+    .runbar button { font: 12px system-ui, sans-serif; color: #fff; background: #2f5d86; border: 1px solid #3b6f9c; border-radius: 4px; padding: 3px 12px; cursor: pointer; }
+    .runbar .when { margin-left: auto; font-size: 11.5px; color: var(--sh-faint); }
+</style>
+</head>
+<body>
+<div class="banner"><b>F · Analyse</b> <span>Every chart a panel of its own, drawn edge to edge. Click a chart (or its tab) to select it: the Analysis pane shows the data, <i>that</i> chart's settings, and the results. Point at a chart to read it; its siblings follow. Drag on the map to zoom, double-click to reset.</span> <a href="index.html">all approaches</a></div>
+<div id="app"></div>
+<script type="module" src="f.js"></script>
+</body>
+</html>

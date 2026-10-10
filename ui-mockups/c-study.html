@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>C · Study</title>
+<link rel="stylesheet" href="mock.css">
+<style>
+    .left { width: 270px; border-right: 1px solid var(--line); flex: none; }
+    .study { width: 360px; border-left: 1px solid var(--line); flex: none; background: #14181b; }
+    .view { position: relative; min-width: 0; min-height: 0; }
+    .centre { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1.3fr 1fr; gap: 6px; padding: 6px; height: 100%; }
+    .centre .bottom { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; min-height: 0; }
+    .vt { position: absolute; left: 6px; top: 6px; display: flex; gap: 3px; padding: 3px; flex-wrap: wrap; }
+    .vt button { font-size: 11.5px; padding: 1px 6px; }
+    .hud { position: absolute; left: 6px; bottom: 6px; font: 11px var(--mono); color: var(--muted); padding: 2px 7px; }
+    /* the study column: goal, parameters, scores, runs */
+    .sec { border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+    .var { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; padding: 5px 10px; align-items: center; }
+    .var .name { font-size: 12.5px; }
+    .var .name small { color: var(--muted); }
+    .var .rng { grid-column: 1 / -1; display: flex; gap: 6px; align-items: center; font: 11px var(--mono); color: var(--muted); }
+    .var .rng input[type=range] { flex: 1; }
+    .scores { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 4px 10px; }
+    .actions { display: flex; gap: 6px; padding: 8px 10px; flex-wrap: wrap; }
+    .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 5px; overflow: hidden; }
+    .seg button { border-radius: 0; border: 0; border-right: 1px solid var(--line); }
+    .seg button:last-child { border-right: 0; }
+    .goalbar { margin: 4px 10px 6px; padding: 6px 8px; border: 1px solid #6b4a2c; border-radius: 5px; background: #221b14; font-size: 12px; }
+    .goalbar b { color: #f0c38e; }
+    .inspector-add { color: var(--c2); font-size: 11px; cursor: pointer; margin-left: 4px; }
+    @media (max-width: 1000px) { .left { display: none; } .centre { grid-template-columns: 1fr; grid-template-rows: none; } .centre .bottom { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="app">
+    <div class="banner"><b>C · Study</b> The design loop is the program: the right column holds what you tune, what you score it by, and every run so far. The scene and the charts serve it. <a href="index.html">all four approaches</a></div>
+
+    <div class="menubar">
+        <div class="m"><button data-menu>File</button><div class="dropdown" hidden>
+            <div>New scene</div><div>Open scene, project or workspace… <kbd>Ctrl O</kbd></div><div>Bundled scenes ▸</div><hr>
+            <div>Save current scene</div><div>Save all scenes <kbd>Ctrl S</kbd></div><div>Save workspace</div><div>Save study (parameters, scores, runs)</div><hr>
+            <div>Choose ray file…</div><div>Save picture (PNG)…</div><div>Export IES / LDT… <span class="note">(planned)</span></div><div>Export runs (CSV)</div></div></div>
+        <div class="m"><button data-menu>Edit</button><div class="dropdown" hidden>
+            <div>Undo <kbd>Ctrl Z</kbd></div><div>Redo <kbd>Ctrl Y</kbd></div><hr><div>Copy · Paste · Duplicate</div><div>Delete</div></div></div>
+        <div class="m"><button data-menu>Add</button><div class="dropdown" hidden>
+            <div class="sub">Shapes</div><div>sphere · box · cylinder · capsule · torus · cone · lens · rectangle · disc · plane · code</div>
+            <div class="sub">Modifiers</div><div>twist · bend · repeat · mirror · round · shell · displace</div>
+            <div class="sub">Lights</div><div>rectangle · disc · ray file</div><div class="sub">Materials</div><div>diffuse · plastic · metal · mirror · glass · glowing</div></div></div>
+        <div class="m"><button data-menu>Render</button><div class="dropdown" hidden>
+            <div class="sub">the renderer's pages, as a floating window</div><div>◉ View</div><div>☼ Light</div><div>∷ Sampling</div><div>⤓ Output</div><div>⚙ Advanced</div><div>✓ Tests</div></div></div>
+        <div class="m"><button data-menu>Optics</button><div class="dropdown" hidden>
+            <div>Trace settings (rays, steps, live, colour by, path)…</div><div>Far field: from, axis, grid, symmetry…</div><div>Maps: cells, smoothing…</div>
+            <div>Limits: interactions, march steps, tolerance, max distance…</div><hr><div>Where the flux went (results table)</div><div>Detector hits CSV · Intensity CSV · Map CSV</div></div></div>
+        <div class="m"><button data-menu>Study</button><div class="dropdown" hidden>
+            <div>Add parameter…</div><div>Add score…</div><div>Set goal…</div><hr><div>Run once <kbd>F5</kbd></div><div>Sweep…</div><div>Optimise…</div><hr><div>Pin run as reference</div><div>Clear runs</div></div></div>
+    </div>
+
+    <div class="row grow">
+        <!-- the scene and the inspector: every numeric property can be sent to the study -->
+        <div class="left panel col">
+            <div class="h">optics-test <span class="spacer"></span><button>↶</button><button>↷</button><button>＋</button></div>
+            <div class="tree" style="max-height:34%;overflow:auto">
+                <div>☀ LED die <span class="tag src">light</span></div><div class="sel">◯ Lens</div><div>▭ Screen <span class="tag det">detector</span></div>
+                <div>▸ ▦ Housing</div><div>▭ Cut plane <span class="tag lim">limiter</span></div><div>▸ Materials</div>
+            </div>
+            <div class="hline"></div>
+            <div class="h">Lens</div>
+            <div class="scroll grow">
+                <div class="prop"><label>material</label><div class="ctl"><select><option>PMMA</option></select></div></div>
+                <div class="prop"><label>position z</label><div class="ctl"><input type="range"><input class="num" value="12.0"><span class="inspector-add" title="Tune this in the study">◆</span></div></div>
+                <div class="prop"><label>diameter</label><div class="ctl"><input type="range"><input class="num" value="10.0"><span class="inspector-add" style="color:var(--faint)">◇</span></div></div>
+                <div class="prop"><label>thickness</label><div class="ctl"><input type="range"><input class="num" value="3.2"><span class="inspector-add" style="color:var(--faint)">◇</span></div></div>
+                <div class="prop"><label>front radius</label><div class="ctl"><input type="range"><input class="num" value="8.0"><span class="inspector-add">◆</span></div></div>
+                <div class="prop"><label>back radius</label><div class="ctl"><input type="range"><input class="num" value="-15.5"><span class="inspector-add">◆</span></div></div>
+                <div class="pad note">◇ on any number sends it to the study; ◆ means it is there. Code, parameters and the rest of the Builder panel are below, as now.</div>
+            </div>
+        </div>
+
+        <!-- what is being looked at: the view and the scored map large, the other charts under them -->
+        <div class="grow panel">
+            <div class="centre">
+                <div class="chart"><div class="ct"><span class="title">Viewport</span><button class="on">rays</button><button>picture ▾</button><button>⚙</button></div>
+                    <div class="cb view" data-chart="picture" data-rays="1">
+                        <div class="vt float"><button class="on">✥</button><button>⟳</button><button>⤢</button><button>◉ pin</button><button>▭ area</button></div>
+                        <div class="hud float">412 spp · 18 ms</div></div></div>
+                <div class="chart"><div class="ct"><span class="title">Screen · the scored map</span><button class="on">isolux</button><button>ref</button><button>⇩</button></div><div class="cb" data-chart="heat"></div></div>
+                <div class="bottom">
+                    <div class="chart" data-tabgroup><div class="ct"><span class="title">Intensity</span><button class="on" data-tab="p">polar</button><button data-tab="c">I vs γ</button><button>⇩</button></div>
+                        <div class="cb" data-panel="p" data-chart="polar"></div><div class="cb" data-panel="c" data-chart="cartesian"></div></div>
+                    <div class="chart" data-tabgroup><div class="ct"><span class="title">Screen</span><button class="on" data-tab="pr">profiles</button><button data-tab="ra">radial</button><button data-tab="en">encircled</button></div>
+                        <div class="cb" data-panel="pr" data-chart="profile"></div><div class="cb" data-panel="ra" data-chart="radial"></div><div class="cb" data-panel="en" data-chart="encircled"></div></div>
+                    <div class="chart"><div class="ct"><span class="title">Scores against back radius (sweep)</span><button>⇩</button></div><div class="cb" data-chart="sweep"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- THE STUDY -->
+        <div class="study col scroll">
+            <div class="h">Study · uniform spot on the screen</div>
+            <div class="goalbar"><b>Goal</b>: maximise <b>U0 · Screen</b>, keeping efficiency ≥ 0.85 and E mean ≥ 280 lx</div>
+            <div class="sec">
+                <div class="h">Parameters <span class="spacer"></span><button>＋</button></div>
+                <div class="var"><span class="name">back radius <small>· Lens</small></span><span class="num">−15.5 mm</span>
+                    <div class="rng">−25 <input type="range"> −8 <span>13 steps</span></div></div>
+                <div class="var"><span class="name">front radius <small>· Lens</small></span><span class="num">8.0 mm</span>
+                    <div class="rng">5 <input type="range"> 12 <span>fixed</span></div></div>
+                <div class="var"><span class="name">position z <small>· Lens</small></span><span class="num">12.0 mm</span>
+                    <div class="rng">10 <input type="range"> 16 <span>fixed</span></div></div>
+            </div>
+            <div class="sec">
+                <div class="h">Scores <span class="spacer"></span><button>＋</button></div>
+                <div class="scores">
+                    <div class="metric goal"><span class="k">U0 · Screen ↑</span><span class="v">0.78</span><span class="d up">±0.01 · +0.07</span></div>
+                    <div class="metric"><span class="k">efficiency ≥ 0.85</span><span class="v">0.860</span><span class="d">±0.001 · ok</span></div>
+                    <div class="metric"><span class="k">E mean · Screen ≥ 280</span><span class="v">301 lx</span><span class="d down">±2 · −11</span></div>
+                    <div class="metric"><span class="k">beam C0</span><span class="v">27.9°</span><span class="d">watch</span></div>
+                </div>
+            </div>
+            <div class="actions">
+                <div class="seg"><button class="primary">▶ Run once</button><button>Sweep</button><button>Optimise</button></div>
+                <span class="note">2 M rays a run · 4.1 s</span>
+            </div>
+            <div class="sec">
+                <div class="h">Runs <span class="spacer"></span><button title="Pin as reference">pin</button><button title="Restore these parameters">restore</button><button>CSV</button></div>
+                <table class="t"><tr><th>#</th><th>back</th><th>U0</th><th>eff.</th><th>E mean</th></tr>
+                    <tr><td>9</td><td>−10.0</td><td>0.52</td><td>.874</td><td>348</td></tr>
+                    <tr><td>10</td><td>−12.0</td><td>0.61</td><td>.868</td><td>331</td></tr>
+                    <tr><td>11</td><td>−13.0</td><td>0.66</td><td>.864</td><td>320</td></tr>
+                    <tr class="ref"><td>12</td><td>−14.0</td><td>0.71</td><td>.861</td><td>312</td></tr>
+                    <tr><td>13</td><td>−15.0</td><td>0.75</td><td>.859</td><td>305</td></tr>
+                    <tr class="sel"><td>14</td><td>−15.5</td><td>0.78</td><td>.860</td><td>301</td></tr></table>
+                <div class="pad note">Each run keeps its parameters, its numbers and its charts: click one to see its map, pin it to draw it dashed under the current one, restore it to put its parameters back.</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="status"><span><span class="dot"></span>render 412 spp</span><span>optics: run 14 · 2 M rays · 4.1 s</span><span class="spacer"></span><span>study: 6 runs · best U0 0.78 (#14)</span><span>optics-test · mm</span></div>
+</div>
+<script type="module">
+import { boot } from './mock.js'
+boot()
+</script>
+</body>
+</html>

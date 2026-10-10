@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Library panel · check</title>
+<!-- THE LIBRARY PANEL, for library/test/panel.check.mjs: the real panel and store over the real model, the
+     user's items in memory, and a stand-in tree that records what was put in and offers a selection. -->
+<link rel="stylesheet" href="../../lib/shell/shell.css">
+<style>html, body { height: 100%; margin: 0; } #p { width: 340px; height: 600px; }</style>
+</head>
+<body>
+<div id="p" class="shell-panel"></div>
+<script type="module">
+import * as Model from '../../builder/model.js'
+import { createLibrary, memoryBackend } from '../store.js'
+import { installLibraryPanel } from '../panel.js'
+import { ITEM_FILES, itemUrl } from '../items/index.js'
+import { createThumbs, memoryThumbs } from '../thumbs.js'
+
+const doc = Model.createDoc()
+const sphere = Model.addObject(doc, 'root', { primitive: 'sphere', label: 'my ball' })
+const T = { inserted: [], said: [], selected: null, rendered: [], live: [], stopped: 0, dragged: [], edited: [] }
+/* A STAND-IN STUDIO: a picture is a square of a colour of its own, a live view a marker in the tile */
+const thumbs = createThumbs({ backend: memoryThumbs(), render: async it => {
+    T.rendered.push(it.name)
+    const c = new OffscreenCanvas(32, 32), g = c.getContext('2d')
+    g.fillStyle = `hsl(${T.rendered.length * 37 % 360} 60% 50%)`; g.fillRect(0, 0, 32, 32)
+    return c.convertToBlob({ type: 'image/png' })
+} })
+const live = (it, el) => {
+    T.live.push(it.name)
+    const m = document.createElement('canvas'); m.className = 'shell-lib-live'; el.appendChild(m)
+    return () => { T.stopped++; m.remove() }
+}
+const library = createLibrary({ model: Model, backend: memoryBackend(), files: ITEM_FILES, load: async f => (await fetch(itemUrl(f))).json() })
+const panel = installLibraryPanel(document.getElementById('p'), { library, thumbs, live,
+    insert: (asset, name) => { const d = Model.createDoc(); Model.insertAsset(d, asset, 'root'); T.inserted.push(name) },
+    selection: () => T.selected ? { asset: Model.extractAsset(doc, T.selected), name: 'my ball' } : null,
+    say: t => T.said.push(t), drag: it => T.dragged.push(it ? it.name : null),
+    edit: it => { T.edited.push({ id: it.id, name: it.name, source: it.source }) } })
+window.CHECK = { T, library, panel, sphereId: sphere.id }
+</script>
+</body>
+</html>

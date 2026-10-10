@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Camera popover · check</title>
+<!-- THE CAMERA POPOVER'S FIELDS, for lib/pathtracer/test/camera.check.mjs: the real camera (lib/camera.js, no
+     canvas), bound through params.js camBindings into a real PropertyTable folder, as index.js binds them. -->
+<style>html, body { margin: 0; } #p { width: 360px; }</style>
+</head>
+<body>
+<div id="p"></div>
+<script type="module">
+import { PropertyTable } from '../../guistuff/propertytable/propertytable.js'
+import { CAMERA } from '../../camera.js'
+import { camBindings } from '../params.js'
+
+const cam = CAMERA({ aspect: 1, fov: 40, up: [0, 0, 1] })
+cam.set({ target: [1, 2, 3] }); cam.set({ azimuth: 30, elevation: 60, distance: 5 })
+const table = new PropertyTable({ container: document.getElementById('p') })
+const folder = table.addFolder({ title: 'Camera' })
+const rows = new Map(camBindings(cam).map(([k, target, options]) => [k, folder.addBinding(target, k, options)]))
+window.CHECK = { cam, rows, refresh: () => { for (const b of rows.values()) b.refresh() } }
+</script>
+</body>
+</html>

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>E · Shell</title>
+<link rel="stylesheet" href="mock.css">
+<!-- dockview (MIT), pinned: the free package has docking, floating groups, pop-out windows and
+     layout save/restore. Loaded from the CDN for the mockup; the application would vendor it in lib/. -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/dockview@8.3.1/dist/styles/dockview.css">
+<script src="https://cdn.jsdelivr.net/npm/dockview@8.3.1/dist/dockview.min.js"></script>
+<link rel="stylesheet" href="shell.css">
+</head>
+<body>
+<div class="app">
+    <div class="banner"><b>E · Shell</b> <span>The chosen mix, working: drag any tab to dock it anywhere, ⧉ floats a panel, ⇱ pops it out to its own window (another monitor), ⤢ maximises. The layouts on the right arrange the panels for a stage of the work; ＋ keeps your own. Ctrl K finds anything.</span> <a href="index.html">all approaches</a></div>
+    <div class="menubar">
+        <div class="menus"></div>
+        <span class="spacer"></span>
+        <span class="note">layout</span><div class="presets"></div>
+        <input id="search" placeholder="Search commands, panels, parameters…   Ctrl K" aria-label="Search" readonly>
+    </div>
+    <div id="dock" class="dockview-theme-dark"></div>
+    <div class="status">
+        <span><span class="dot"></span>render 412 spp · 18.4 ms</span><span>optics: 2 M rays · 4.1 s · run 14</span>
+        <span class="spacer"></span><span>optics-test · mm</span><span>? hover anything · F1 help</span>
+    </div>
+</div>
+<div id="tip" hidden></div>
+<div id="coach" hidden></div>
+<div id="palette" hidden><div class="box"><input aria-label="Command"><div class="items"></div></div></div>
+<script type="module">
+import { boot } from './shell.js'
+boot()
+</script>
+</body>
+</html>

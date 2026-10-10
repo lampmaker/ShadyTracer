@@ -1,0 +1,3175 @@
+{
+  "format": "raytracer-scene",
+  "version": 21,
+  "title": "New scene 2",
+  "nextId": 122,
+  "unit": "cm",
+  "materials": [
+    {
+      "id": "m1",
+      "label": "white",
+      "params": {
+        "baseColor": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "metallic": 0,
+        "roughness": 1,
+        "anisotropy": 0,
+        "specular": 0,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "abbe": 0
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   R_local  that frame's rotation to the world, for a direction written in it\n//   S_local  its scale: p_local * S_local is in scene units; metres(x) is x m in them, mm(x) x mm\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe; one marked\n//            as a length is in real mm, whatever the scene's unit -- read the point in mm too:\n//   let q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. brushed along the object's x, for an anisotropy above 0 (or turned: grainAround):\n//   m.tangent = grainAlong(R_local, VEC3(1.0, 0.0, 0.0));\n// e.g. with a length width (mm) and a colour stripe added with +, and q as above:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(q.x / width), 0.5));\n"
+    },
+    {
+      "id": "m3",
+      "label": "black plastic",
+      "params": {
+        "baseColor": {
+          "r": 0.02,
+          "g": 0.02,
+          "b": 0.02
+        },
+        "metallic": 0,
+        "roughness": 0.2,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "abbe": 0
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
+    },
+    {
+      "id": "m5",
+      "label": "brushed aluminium",
+      "params": {
+        "baseColor": {
+          "r": 0.11372549019607843,
+          "g": 0.11372549019607843,
+          "b": 0.11372549019607843
+        },
+        "metallic": 1,
+        "roughness": 0.35,
+        "anisotropy": 0.8,
+        "specular": 1,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "streakWidth": 0.15999999999999995,
+        "streakLength": 16,
+        "streaks": 0.5,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "abbe": 0
+      },
+      "code": "// Brushed along the object's own x: the strokes turn with the object (R_local).\n// Positive anisotropy is smooth along the strokes and rough across them, so the\n// highlight is drawn out ACROSS the strokes, as on real brushed metal.\nm.tangent = grainAlong(R_local, VEC3(1.0, 0.0, 0.0));\n// The lines: grooves of different depths, each a little rougher or smoother and darker or\n// lighter than the next. streakWidth and streakLength in mm, real size whatever the scene's\n// unit or the object's scale -- so on a metre-sized object seen whole they are too fine to see,\n// as in life. streaks is how much the lines differ, 0 to 1.\nlet q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\nlet s = streaksAlong(q, VEC3(1.0, 0.0, 0.0), streakWidth, streakLength);\nm.roughness = m.roughness * mix(1.0 - 0.6 * streaks, 1.0 + 0.6 * streaks, s);\nm.baseColor = m.baseColor * mix(1.0 - 0.1 * streaks, 1.0, s);",
+      "ranges": {
+        "streakWidth": {
+          "min": 0.05,
+          "max": 5,
+          "step": 0.01
+        },
+        "streakLength": {
+          "min": 1,
+          "max": 500,
+          "step": 1
+        },
+        "streaks": {
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "streakWidth",
+        "streakLength"
+      ]
+    },
+    {
+      "id": "m8",
+      "label": "metal",
+      "params": {
+        "baseColor": {
+          "r": 0.9,
+          "g": 0.9,
+          "b": 0.9
+        },
+        "metallic": 1,
+        "roughness": 0.34800000000000003,
+        "anisotropy": 0,
+        "specular": 1,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "abbe": 0
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   R_local  that frame's rotation to the world, for a direction written in it\n//   S_local  its scale: p_local * S_local is in scene units; metres(x) is x m in them, mm(x) x mm\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe; one marked\n//            as a length is in real mm, whatever the scene's unit -- read the point in mm too:\n//   let q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. brushed along the object's x, for an anisotropy above 0 (or turned: grainAround):\n//   m.tangent = grainAlong(R_local, VEC3(1.0, 0.0, 0.0));\n// e.g. with a length width (mm) and a colour stripe added with +, and q as above:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(q.x / width), 0.5));\n"
+    },
+    {
+      "id": "m12",
+      "label": "anodised aluminium",
+      "params": {
+        "baseColor": {
+          "r": 0,
+          "g": 0,
+          "b": 0
+        },
+        "metallic": 1,
+        "roughness": 0.34800000000000003,
+        "anisotropy": 0,
+        "specular": 1,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "abbe": 0
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   R_local  that frame's rotation to the world, for a direction written in it\n//   S_local  its scale: p_local * S_local is in scene units; metres(x) is x m in them, mm(x) x mm\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe; one marked\n//            as a length is in real mm, whatever the scene's unit -- read the point in mm too:\n//   let q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. brushed along the object's x, for an anisotropy above 0 (or turned: grainAround):\n//   m.tangent = grainAlong(R_local, VEC3(1.0, 0.0, 0.0));\n// e.g. with a length width (mm) and a colour stripe added with +, and q as above:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(q.x / width), 0.5));\n"
+    },
+    {
+      "id": "m26",
+      "label": "soft red",
+      "params": {
+        "baseColor": {
+          "r": 1,
+          "g": 0.058823529411764705,
+          "b": 0
+        },
+        "metallic": 0,
+        "roughness": 1,
+        "anisotropy": 0,
+        "specular": 0,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "abbe": 0
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
+    },
+    {
+      "id": "m41",
+      "label": "glass",
+      "params": {
+        "baseColor": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "metallic": 0,
+        "roughness": 0,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 1,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "abbe": 0
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   R_local  that frame's rotation to the world, for a direction written in it\n//   S_local  its scale: p_local * S_local is in scene units; metres(x) is x m in them, mm(x) x mm\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe; one marked\n//            as a length is in real mm, whatever the scene's unit -- read the point in mm too:\n//   let q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. brushed along the object's x, for an anisotropy above 0 (or turned: grainAround):\n//   m.tangent = grainAlong(R_local, VEC3(1.0, 0.0, 0.0));\n// e.g. with a length width (mm) and a colour stripe added with +, and q as above:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(q.x / width), 0.5));\n"
+    },
+    {
+      "id": "m111",
+      "label": "frosted glass",
+      "params": {
+        "baseColor": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "metallic": 0,
+        "roughness": 0.3,
+        "anisotropy": 0,
+        "specular": 0,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.52,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "abbe": 0
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n",
+      "type": "detector"
+    },
+    {
+      "id": "m112",
+      "label": "dirty glass",
+      "params": {
+        "baseColor": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "metallic": 0,
+        "roughness": 0,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 1,
+        "ior": 1.522,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "rust": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "rustLight": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "rustRough": 1,
+        "coverage": 0.22,
+        "patchSize": 0.5,
+        "softness": 1.734723475976807e-18,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "abbe": 0
+      },
+      "code": "// Five octaves of noise `patchSize` mm across: where it is in the top `coverage`, rust -- its\n// shade varying on a fifth of that -- not a metal any more, rough and with a plain coat.\nlet q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\nlet f = 0.5 + 0.5 * fbm3(q / patchSize, 21u, 5u, 2.0, 0.5).w;\nlet r = smoothstep(1.0 - coverage - softness, 1.0 - coverage + softness, f);\nlet tone = 0.5 + 0.5 * vnoise3(q / (0.2 * patchSize), 22u).w;\nm.baseColor = mix(m.baseColor, mix(rust, rustLight, tone), r);\nm.metallic = m.metallic * (1.0 - r);\nm.roughness = mix(m.roughness, rustRough, r);\nm.specular = mix(m.specular, 0.5, r);",
+      "ranges": {
+        "rustRough": {
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        "coverage": {
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        "patchSize": {
+          "min": 0.5,
+          "max": 500,
+          "step": 0.5
+        },
+        "softness": {
+          "min": 0,
+          "max": 0.3,
+          "step": 0.005
+        }
+      },
+      "lengths": [
+        "patchSize"
+      ]
+    }
+  ],
+  "root": {
+    "id": "root",
+    "kind": "group",
+    "label": "New scene 2",
+    "enabled": true,
+    "blend": 0,
+    "children": [
+      {
+        "id": "n11",
+        "kind": "group",
+        "label": "Table",
+        "enabled": true,
+        "blend": 0,
+        "transform": {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "children": [
+          {
+            "id": "n6",
+            "kind": "group",
+            "label": "group",
+            "enabled": true,
+            "blend": 0,
+            "transform": {
+              "pos": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "rot": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "scale": 1
+            },
+            "children": [
+              {
+                "id": "n4",
+                "kind": "object",
+                "type": "code",
+                "label": "box copy",
+                "enabled": true,
+                "transform": {
+                  "pos": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "rot": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "scale": 1
+                },
+                "material": "m3",
+                "params": {
+                  "size": {
+                    "x": 5,
+                    "y": 5,
+                    "z": 2
+                  },
+                  "rounding": 0.02
+                },
+                "lockPosition": true,
+                "lockParams": true,
+                "block": "b116"
+              },
+              {
+                "id": "n2",
+                "kind": "object",
+                "type": "code",
+                "label": "box",
+                "enabled": true,
+                "transform": {
+                  "pos": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 2.5
+                  },
+                  "rot": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "scale": 1
+                },
+                "material": "m5",
+                "params": {
+                  "size": {
+                    "x": 5,
+                    "y": 5,
+                    "z": 0.5
+                  },
+                  "rounding": 0.02
+                },
+                "lockPosition": true,
+                "lockParams": true,
+                "block": "b116"
+              },
+              {
+                "id": "n10",
+                "kind": "object",
+                "type": "code",
+                "label": "cone",
+                "enabled": true,
+                "transform": {
+                  "pos": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 3.005356730787808
+                  },
+                  "rot": {
+                    "x": 0,
+                    "y": -180,
+                    "z": 0
+                  },
+                  "scale": 1
+                },
+                "material": "m1",
+                "params": {
+                  "base": 1.3,
+                  "top": 0,
+                  "height": 1
+                },
+                "join": "subtract",
+                "lockPosition": true,
+                "lockParams": true,
+                "block": "b117"
+              },
+              {
+                "id": "n9",
+                "kind": "object",
+                "type": "code",
+                "label": "cylinder",
+                "enabled": true,
+                "transform": {
+                  "pos": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 2.4485359557528854
+                  },
+                  "rot": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "scale": 1
+                },
+                "material": "m1",
+                "params": {
+                  "radius": 0.5,
+                  "height": 1.863476794
+                },
+                "join": "subtract",
+                "lockPosition": true,
+                "lockParams": true,
+                "block": "b118"
+              }
+            ],
+            "lockPosition": true,
+            "lockParams": true
+          }
+        ],
+        "params": {
+          "spacing": {
+            "x": 5,
+            "y": 5,
+            "z": 2.5
+          },
+          "count": {
+            "x": 4,
+            "y": 10,
+            "z": 0
+          }
+        },
+        "straightMaterial": true,
+        "lockPosition": true,
+        "lockParams": true,
+        "block": "b115"
+      },
+      {
+        "id": "n7",
+        "kind": "object",
+        "type": "code",
+        "label": "disc",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": -10
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m1",
+        "params": {
+          "radius": 10
+        },
+        "lockPosition": true,
+        "lockParams": true,
+        "block": "b119"
+      },
+      {
+        "id": "n42",
+        "kind": "group",
+        "label": "LENS 1",
+        "enabled": true,
+        "blend": 0,
+        "transform": {
+          "pos": {
+            "x": 0,
+            "y": -10,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "children": [
+          {
+            "id": "n13",
+            "kind": "group",
+            "label": "pillar",
+            "enabled": true,
+            "blend": 0,
+            "transform": {
+              "pos": {
+                "x": 0,
+                "y": 0,
+                "z": 3
+              },
+              "rot": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "scale": 1
+            },
+            "children": [
+              {
+                "id": "n14",
+                "kind": "object",
+                "type": "code",
+                "label": "cylinder",
+                "enabled": true,
+                "transform": {
+                  "pos": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 5
+                  },
+                  "rot": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "scale": 1
+                },
+                "material": "m12",
+                "params": {
+                  "radius": 1,
+                  "height": 10
+                },
+                "block": "b118"
+              },
+              {
+                "id": "n24",
+                "kind": "object",
+                "type": "code",
+                "label": "cylinder",
+                "enabled": true,
+                "transform": {
+                  "pos": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 10.38533806678002
+                  },
+                  "rot": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "scale": 1
+                },
+                "material": "m1",
+                "params": {
+                  "radius": 0.55,
+                  "height": 3.159080151
+                },
+                "join": "subtract",
+                "joinBlend": 0.043000000000000003,
+                "block": "b118"
+              },
+              {
+                "id": "n17",
+                "kind": "group",
+                "label": "group",
+                "enabled": true,
+                "blend": 0.1,
+                "transform": {
+                  "pos": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "rot": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "scale": 1
+                },
+                "children": [
+                  {
+                    "id": "n16",
+                    "kind": "object",
+                    "type": "code",
+                    "label": "box",
+                    "enabled": true,
+                    "transform": {
+                      "pos": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 0.5018163619788361
+                      },
+                      "rot": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "scale": 1
+                    },
+                    "material": "m12",
+                    "params": {
+                      "size": {
+                        "x": 6,
+                        "y": 3,
+                        "z": 0.5
+                      },
+                      "rounding": 0.1
+                    },
+                    "block": "b116"
+                  },
+                  {
+                    "id": "n18",
+                    "kind": "object",
+                    "type": "code",
+                    "label": "box",
+                    "enabled": true,
+                    "transform": {
+                      "pos": {
+                        "x": -6,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "rot": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "scale": 1
+                    },
+                    "material": "m12",
+                    "params": {
+                      "size": {
+                        "x": 1.75,
+                        "y": 0.75,
+                        "z": 2.332864718
+                      },
+                      "rounding": 0.75
+                    },
+                    "join": "subtract",
+                    "block": "b116"
+                  },
+                  {
+                    "id": "n19",
+                    "kind": "object",
+                    "type": "code",
+                    "label": "box copy",
+                    "enabled": true,
+                    "transform": {
+                      "pos": {
+                        "x": 6,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "rot": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "scale": 1
+                    },
+                    "material": "m12",
+                    "params": {
+                      "size": {
+                        "x": 1.75,
+                        "y": 0.75,
+                        "z": 2.332864718
+                      },
+                      "rounding": 0.75
+                    },
+                    "join": "subtract",
+                    "block": "b116"
+                  },
+                  {
+                    "id": "n22",
+                    "kind": "object",
+                    "type": "code",
+                    "label": "cylinder",
+                    "enabled": true,
+                    "transform": {
+                      "pos": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 10.233614769137711
+                      },
+                      "rot": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "scale": 1
+                    },
+                    "material": "m5",
+                    "params": {
+                      "radius": 0.6,
+                      "height": 4.03
+                    },
+                    "block": "b118"
+                  }
+                ]
+              },
+              {
+                "id": "n27",
+                "kind": "group",
+                "label": "group",
+                "enabled": true,
+                "blend": 0,
+                "transform": {
+                  "pos": {
+                    "x": 0,
+                    "y": 0.5943117922328078,
+                    "z": 0.33013084082080013
+                  },
+                  "rot": {
+                    "x": 0,
+                    "y": 0.533610790581842,
+                    "z": 0
+                  },
+                  "scale": 1
+                },
+                "children": [
+                  {
+                    "id": "n28",
+                    "kind": "object",
+                    "type": "code",
+                    "label": "cylinder copy",
+                    "enabled": true,
+                    "transform": {
+                      "pos": {
+                        "x": 0,
+                        "y": -1.4394890955001065,
+                        "z": 8.464054345072295
+                      },
+                      "rot": {
+                        "x": 90,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "scale": 1
+                    },
+                    "material": "m8",
+                    "params": {
+                      "radius": 0.25,
+                      "height": 1.447172664
+                    },
+                    "block": "b118"
+                  },
+                  {
+                    "id": "n29",
+                    "kind": "group",
+                    "label": "shell",
+                    "enabled": true,
+                    "blend": 0,
+                    "transform": {
+                      "pos": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "rot": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "scale": 1
+                    },
+                    "children": [
+                      {
+                        "id": "n25",
+                        "kind": "object",
+                        "type": "code",
+                        "label": "cylinder",
+                        "enabled": true,
+                        "transform": {
+                          "pos": {
+                            "x": 0,
+                            "y": -2.4874343547320183,
+                            "z": 8.464054345072295
+                          },
+                          "rot": {
+                            "x": 90,
+                            "y": 0,
+                            "z": 0
+                          },
+                          "scale": 1
+                        },
+                        "material": "m26",
+                        "params": {
+                          "radius": 0.9,
+                          "height": 0.69750287
+                        },
+                        "block": "b118"
+                      }
+                    ],
+                    "params": {
+                      "thickness": 0.05
+                    },
+                    "block": "b120"
+                  }
+                ]
+              }
+            ],
+            "lockPosition": true,
+            "lockParams": true
+          },
+          {
+            "id": "n30",
+            "kind": "group",
+            "label": "lensholder",
+            "enabled": true,
+            "blend": 0,
+            "transform": {
+              "pos": {
+                "x": 0,
+                "y": 0,
+                "z": 15.315168750317895
+              },
+              "rot": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "scale": 1
+            },
+            "children": [
+              {
+                "id": "n31",
+                "kind": "object",
+                "type": "code",
+                "label": "box",
+                "enabled": true,
+                "transform": {
+                  "pos": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 4.373827153044355
+                  },
+                  "rot": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "scale": 1
+                },
+                "material": "m12",
+                "params": {
+                  "size": {
+                    "x": 3,
+                    "y": 0.5,
+                    "z": 0.35
+                  },
+                  "rounding": 0.02
+                },
+                "join": "intersect",
+                "lockPosition": true,
+                "lockParams": true,
+                "block": "b116"
+              },
+              {
+                "id": "n39",
+                "kind": "object",
+                "type": "code",
+                "label": "box copy",
+                "enabled": true,
+                "transform": {
+                  "pos": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0.23153584456718646
+                  },
+                  "rot": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "scale": 1
+                },
+                "material": "m12",
+                "params": {
+                  "size": {
+                    "x": 3,
+                    "y": 0.5,
+                    "z": 0.35
+                  },
+                  "rounding": 0.02
+                },
+                "lockPosition": true,
+                "lockParams": true,
+                "block": "b116"
+              },
+              {
+                "id": "n38",
+                "kind": "object",
+                "type": "code",
+                "label": "box copy copy copy",
+                "enabled": true,
+                "transform": {
+                  "pos": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 2.316161291481911
+                  },
+                  "rot": {
+                    "x": 45,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "scale": 0.6900000000000002
+                },
+                "material": "m12",
+                "params": {
+                  "size": {
+                    "x": 4.716416208,
+                    "y": 2,
+                    "z": 2
+                  },
+                  "rounding": 0.02
+                },
+                "join": "subtract",
+                "lockPosition": true,
+                "lockParams": true,
+                "block": "b116"
+              },
+              {
+                "id": "n34",
+                "kind": "object",
+                "type": "code",
+                "label": "cylinder",
+                "enabled": true,
+                "transform": {
+                  "pos": {
+                    "x": 2.5,
+                    "y": 0,
+                    "z": 2.5
+                  },
+                  "rot": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "scale": 1
+                },
+                "material": "m8",
+                "params": {
+                  "radius": 0.24999999999999994,
+                  "height": 5
+                },
+                "lockPosition": true,
+                "lockParams": true,
+                "block": "b118"
+              },
+              {
+                "id": "n35",
+                "kind": "object",
+                "type": "code",
+                "label": "cylinder copy",
+                "enabled": true,
+                "transform": {
+                  "pos": {
+                    "x": -2.5,
+                    "y": 0,
+                    "z": 2.5
+                  },
+                  "rot": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "scale": 1
+                },
+                "material": "m8",
+                "params": {
+                  "radius": 0.24999999999999994,
+                  "height": 5
+                },
+                "lockPosition": true,
+                "lockParams": true,
+                "block": "b118"
+              },
+              {
+                "id": "n40",
+                "kind": "object",
+                "type": "code",
+                "label": "lens",
+                "enabled": true,
+                "transform": {
+                  "pos": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 2.2031824861226994
+                  },
+                  "rot": {
+                    "x": 89.48521938325449,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "scale": 1.1225592364664403
+                },
+                "material": "m41",
+                "params": {
+                  "diameter": 3.3499999999999996,
+                  "thickness": 0.5440000000000003,
+                  "r1": 4.35,
+                  "r2": 7.59
+                },
+                "lockPosition": true,
+                "lockParams": true,
+                "block": "b121"
+              }
+            ],
+            "lockPosition": true,
+            "lockParams": true
+          }
+        ]
+      },
+      {
+        "id": "n91",
+        "kind": "group",
+        "label": "LENS 1 copy",
+        "enabled": true,
+        "blend": 0,
+        "transform": {
+          "pos": {
+            "x": -15,
+            "y": -10,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "children": [
+          {
+            "id": "n92",
+            "kind": "group",
+            "label": "pillar",
+            "enabled": true,
+            "blend": 0,
+            "transform": {
+              "pos": {
+                "x": 0,
+                "y": 0,
+                "z": 3
+              },
+              "rot": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "scale": 1
+            },
+            "children": [
+              {
+                "id": "n93",
+                "kind": "object",
+                "type": "code",
+                "label": "cylinder",
+                "enabled": true,
+                "transform": {
+                  "pos": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 5
+                  },
+                  "rot": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "scale": 1
+                },
+                "material": "m12",
+                "params": {
+                  "radius": 1,
+                  "height": 10
+                },
+                "lockPosition": true,
+                "lockParams": true,
+                "block": "b118"
+              },
+              {
+                "id": "n94",
+                "kind": "object",
+                "type": "code",
+                "label": "cylinder",
+                "enabled": true,
+                "transform": {
+                  "pos": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 10.38533806678002
+                  },
+                  "rot": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "scale": 1
+                },
+                "material": "m1",
+                "params": {
+                  "radius": 0.55,
+                  "height": 3.159080151
+                },
+                "join": "subtract",
+                "joinBlend": 0.043000000000000003,
+                "block": "b118"
+              },
+              {
+                "id": "n95",
+                "kind": "group",
+                "label": "group",
+                "enabled": true,
+                "blend": 0.1,
+                "transform": {
+                  "pos": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "rot": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "scale": 1
+                },
+                "children": [
+                  {
+                    "id": "n96",
+                    "kind": "object",
+                    "type": "code",
+                    "label": "box",
+                    "enabled": true,
+                    "transform": {
+                      "pos": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 0.5018163619788361
+                      },
+                      "rot": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "scale": 1
+                    },
+                    "material": "m12",
+                    "params": {
+                      "size": {
+                        "x": 6,
+                        "y": 3,
+                        "z": 0.5
+                      },
+                      "rounding": 0.1
+                    },
+                    "block": "b116"
+                  },
+                  {
+                    "id": "n97",
+                    "kind": "object",
+                    "type": "code",
+                    "label": "box",
+                    "enabled": true,
+                    "transform": {
+                      "pos": {
+                        "x": -6,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "rot": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "scale": 1
+                    },
+                    "material": "m12",
+                    "params": {
+                      "size": {
+                        "x": 1.75,
+                        "y": 0.75,
+                        "z": 2.332864718
+                      },
+                      "rounding": 0.75
+                    },
+                    "join": "subtract",
+                    "block": "b116"
+                  },
+                  {
+                    "id": "n98",
+                    "kind": "object",
+                    "type": "code",
+                    "label": "box copy",
+                    "enabled": true,
+                    "transform": {
+                      "pos": {
+                        "x": 6,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "rot": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "scale": 1
+                    },
+                    "material": "m12",
+                    "params": {
+                      "size": {
+                        "x": 1.75,
+                        "y": 0.75,
+                        "z": 2.332864718
+                      },
+                      "rounding": 0.75
+                    },
+                    "join": "subtract",
+                    "block": "b116"
+                  },
+                  {
+                    "id": "n99",
+                    "kind": "object",
+                    "type": "code",
+                    "label": "cylinder",
+                    "enabled": true,
+                    "transform": {
+                      "pos": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 10.233614769137711
+                      },
+                      "rot": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "scale": 1
+                    },
+                    "material": "m5",
+                    "params": {
+                      "radius": 0.6,
+                      "height": 4.03
+                    },
+                    "block": "b118"
+                  }
+                ],
+                "lockPosition": true,
+                "lockParams": true
+              },
+              {
+                "id": "n100",
+                "kind": "group",
+                "label": "group",
+                "enabled": true,
+                "blend": 0,
+                "transform": {
+                  "pos": {
+                    "x": 0,
+                    "y": 0.5943117922328078,
+                    "z": 0.33013084082080013
+                  },
+                  "rot": {
+                    "x": 0,
+                    "y": 0.533610790581842,
+                    "z": 0
+                  },
+                  "scale": 1
+                },
+                "children": [
+                  {
+                    "id": "n101",
+                    "kind": "object",
+                    "type": "code",
+                    "label": "cylinder copy",
+                    "enabled": true,
+                    "transform": {
+                      "pos": {
+                        "x": 0,
+                        "y": -1.4394890955001065,
+                        "z": 8.464054345072295
+                      },
+                      "rot": {
+                        "x": 90,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "scale": 1
+                    },
+                    "material": "m8",
+                    "params": {
+                      "radius": 0.25,
+                      "height": 1.447172664
+                    },
+                    "block": "b118"
+                  },
+                  {
+                    "id": "n102",
+                    "kind": "group",
+                    "label": "shell",
+                    "enabled": true,
+                    "blend": 0,
+                    "transform": {
+                      "pos": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "rot": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "scale": 1
+                    },
+                    "children": [
+                      {
+                        "id": "n103",
+                        "kind": "object",
+                        "type": "code",
+                        "label": "cylinder",
+                        "enabled": true,
+                        "transform": {
+                          "pos": {
+                            "x": 0,
+                            "y": -2.4874343547320183,
+                            "z": 8.464054345072295
+                          },
+                          "rot": {
+                            "x": 90,
+                            "y": 0,
+                            "z": 0
+                          },
+                          "scale": 1
+                        },
+                        "material": "m26",
+                        "params": {
+                          "radius": 0.9,
+                          "height": 0.69750287
+                        },
+                        "block": "b118"
+                      }
+                    ],
+                    "params": {
+                      "thickness": 0.05
+                    },
+                    "block": "b120"
+                  }
+                ],
+                "lockPosition": true,
+                "lockParams": true
+              }
+            ],
+            "lockPosition": true,
+            "lockParams": true
+          },
+          {
+            "id": "n104",
+            "kind": "group",
+            "label": "lensholder",
+            "enabled": true,
+            "blend": 0,
+            "transform": {
+              "pos": {
+                "x": 0,
+                "y": 0,
+                "z": 14.012969659987654
+              },
+              "rot": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "scale": 1.6400000000000001
+            },
+            "children": [
+              {
+                "id": "n105",
+                "kind": "object",
+                "type": "code",
+                "label": "box",
+                "enabled": true,
+                "transform": {
+                  "pos": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 4.373827153044355
+                  },
+                  "rot": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "scale": 1
+                },
+                "material": "m12",
+                "params": {
+                  "size": {
+                    "x": 3,
+                    "y": 0.5,
+                    "z": 0.35
+                  },
+                  "rounding": 0.02
+                },
+                "join": "intersect",
+                "lockPosition": true,
+                "lockParams": true,
+                "block": "b116"
+              },
+              {
+                "id": "n106",
+                "kind": "object",
+                "type": "code",
+                "label": "box copy",
+                "enabled": true,
+                "transform": {
+                  "pos": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0.23153584456718646
+                  },
+                  "rot": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "scale": 1
+                },
+                "material": "m12",
+                "params": {
+                  "size": {
+                    "x": 3,
+                    "y": 0.5,
+                    "z": 0.35
+                  },
+                  "rounding": 0.02
+                },
+                "lockPosition": true,
+                "lockParams": true,
+                "block": "b116"
+              },
+              {
+                "id": "n107",
+                "kind": "object",
+                "type": "code",
+                "label": "box copy copy copy",
+                "enabled": true,
+                "transform": {
+                  "pos": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 2.316161291481911
+                  },
+                  "rot": {
+                    "x": 45,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "scale": 0.6900000000000002
+                },
+                "material": "m12",
+                "params": {
+                  "size": {
+                    "x": 4.716416208,
+                    "y": 2,
+                    "z": 2
+                  },
+                  "rounding": 0.02
+                },
+                "join": "subtract",
+                "lockPosition": true,
+                "lockParams": true,
+                "block": "b116"
+              },
+              {
+                "id": "n108",
+                "kind": "object",
+                "type": "code",
+                "label": "cylinder",
+                "enabled": true,
+                "transform": {
+                  "pos": {
+                    "x": 2.5,
+                    "y": 0,
+                    "z": 2.5
+                  },
+                  "rot": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "scale": 1
+                },
+                "material": "m8",
+                "params": {
+                  "radius": 0.24999999999999994,
+                  "height": 5
+                },
+                "lockPosition": true,
+                "lockParams": true,
+                "block": "b118"
+              },
+              {
+                "id": "n109",
+                "kind": "object",
+                "type": "code",
+                "label": "cylinder copy",
+                "enabled": true,
+                "transform": {
+                  "pos": {
+                    "x": -2.5,
+                    "y": 0,
+                    "z": 2.5
+                  },
+                  "rot": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "scale": 1
+                },
+                "material": "m8",
+                "params": {
+                  "radius": 0.24999999999999994,
+                  "height": 5
+                },
+                "lockPosition": true,
+                "lockParams": true,
+                "block": "b118"
+              },
+              {
+                "id": "n110",
+                "kind": "object",
+                "type": "code",
+                "label": "lens",
+                "enabled": true,
+                "transform": {
+                  "pos": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 2.2031824861226994
+                  },
+                  "rot": {
+                    "x": 89.48521938325449,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "scale": 1.1225592364664403
+                },
+                "material": "m111",
+                "params": {
+                  "diameter": 3.3499999999999996,
+                  "thickness": 0.13100000000000026,
+                  "r1": 50,
+                  "r2": 50
+                },
+                "lockPosition": true,
+                "block": "b121"
+              }
+            ],
+            "lockParams": true
+          }
+        ]
+      },
+      {
+        "id": "n44",
+        "kind": "group",
+        "label": "PRISM",
+        "enabled": true,
+        "blend": 0,
+        "transform": {
+          "pos": {
+            "x": 0,
+            "y": 10,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "children": [
+          {
+            "id": "n45",
+            "kind": "group",
+            "label": "pillar",
+            "enabled": true,
+            "blend": 0,
+            "transform": {
+              "pos": {
+                "x": 0,
+                "y": 0,
+                "z": 3
+              },
+              "rot": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "scale": 1
+            },
+            "children": [
+              {
+                "id": "n46",
+                "kind": "object",
+                "type": "code",
+                "label": "cylinder",
+                "enabled": true,
+                "transform": {
+                  "pos": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 5
+                  },
+                  "rot": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "scale": 1
+                },
+                "material": "m12",
+                "params": {
+                  "radius": 1,
+                  "height": 10
+                },
+                "block": "b118"
+              },
+              {
+                "id": "n47",
+                "kind": "object",
+                "type": "code",
+                "label": "cylinder",
+                "enabled": true,
+                "transform": {
+                  "pos": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 10.38533806678002
+                  },
+                  "rot": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "scale": 1
+                },
+                "material": "m1",
+                "params": {
+                  "radius": 0.55,
+                  "height": 3.159080151
+                },
+                "join": "subtract",
+                "joinBlend": 0.043000000000000003,
+                "block": "b118"
+              },
+              {
+                "id": "n48",
+                "kind": "group",
+                "label": "group",
+                "enabled": true,
+                "blend": 0.1,
+                "transform": {
+                  "pos": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "rot": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "scale": 1
+                },
+                "children": [
+                  {
+                    "id": "n49",
+                    "kind": "object",
+                    "type": "code",
+                    "label": "box",
+                    "enabled": true,
+                    "transform": {
+                      "pos": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 0.5018163619788361
+                      },
+                      "rot": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "scale": 1
+                    },
+                    "material": "m12",
+                    "params": {
+                      "size": {
+                        "x": 6,
+                        "y": 3,
+                        "z": 0.5
+                      },
+                      "rounding": 0.1
+                    },
+                    "block": "b116"
+                  },
+                  {
+                    "id": "n50",
+                    "kind": "object",
+                    "type": "code",
+                    "label": "box",
+                    "enabled": true,
+                    "transform": {
+                      "pos": {
+                        "x": -6,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "rot": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "scale": 1
+                    },
+                    "material": "m12",
+                    "params": {
+                      "size": {
+                        "x": 1.75,
+                        "y": 0.75,
+                        "z": 2.332864718
+                      },
+                      "rounding": 0.75
+                    },
+                    "join": "subtract",
+                    "block": "b116"
+                  },
+                  {
+                    "id": "n51",
+                    "kind": "object",
+                    "type": "code",
+                    "label": "box copy",
+                    "enabled": true,
+                    "transform": {
+                      "pos": {
+                        "x": 6,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "rot": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "scale": 1
+                    },
+                    "material": "m12",
+                    "params": {
+                      "size": {
+                        "x": 1.75,
+                        "y": 0.75,
+                        "z": 2.332864718
+                      },
+                      "rounding": 0.75
+                    },
+                    "join": "subtract",
+                    "block": "b116"
+                  },
+                  {
+                    "id": "n52",
+                    "kind": "object",
+                    "type": "code",
+                    "label": "cylinder",
+                    "enabled": true,
+                    "transform": {
+                      "pos": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 10.233614769137711
+                      },
+                      "rot": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "scale": 1
+                    },
+                    "material": "m5",
+                    "params": {
+                      "radius": 0.6,
+                      "height": 4.03
+                    },
+                    "block": "b118"
+                  }
+                ]
+              },
+              {
+                "id": "n53",
+                "kind": "group",
+                "label": "group",
+                "enabled": true,
+                "blend": 0,
+                "transform": {
+                  "pos": {
+                    "x": 0,
+                    "y": 0.5943117922328078,
+                    "z": 0.33013084082080013
+                  },
+                  "rot": {
+                    "x": 0,
+                    "y": 0.533610790581842,
+                    "z": 0
+                  },
+                  "scale": 1
+                },
+                "children": [
+                  {
+                    "id": "n54",
+                    "kind": "object",
+                    "type": "code",
+                    "label": "cylinder copy",
+                    "enabled": true,
+                    "transform": {
+                      "pos": {
+                        "x": 0,
+                        "y": -1.4394890955001065,
+                        "z": 8.464054345072295
+                      },
+                      "rot": {
+                        "x": 90,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "scale": 1
+                    },
+                    "material": "m8",
+                    "params": {
+                      "radius": 0.25,
+                      "height": 1.447172664
+                    },
+                    "block": "b118"
+                  },
+                  {
+                    "id": "n55",
+                    "kind": "group",
+                    "label": "shell",
+                    "enabled": true,
+                    "blend": 0,
+                    "transform": {
+                      "pos": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "rot": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "scale": 1
+                    },
+                    "children": [
+                      {
+                        "id": "n56",
+                        "kind": "object",
+                        "type": "code",
+                        "label": "cylinder",
+                        "enabled": true,
+                        "transform": {
+                          "pos": {
+                            "x": 0,
+                            "y": -2.4874343547320183,
+                            "z": 8.464054345072295
+                          },
+                          "rot": {
+                            "x": 90,
+                            "y": 0,
+                            "z": 0
+                          },
+                          "scale": 1
+                        },
+                        "material": "m26",
+                        "params": {
+                          "radius": 0.9,
+                          "height": 0.69750287
+                        },
+                        "block": "b118"
+                      }
+                    ],
+                    "params": {
+                      "thickness": 0.05
+                    },
+                    "block": "b120"
+                  }
+                ]
+              }
+            ],
+            "lockPosition": true,
+            "lockParams": true
+          },
+          {
+            "id": "n57",
+            "kind": "group",
+            "label": "lensholder",
+            "enabled": true,
+            "blend": 0,
+            "transform": {
+              "pos": {
+                "x": 0,
+                "y": 0,
+                "z": 15.315168750317895
+              },
+              "rot": {
+                "x": 0,
+                "y": 0,
+                "z": 45
+              },
+              "scale": 1
+            },
+            "children": [
+              {
+                "id": "n58",
+                "kind": "object",
+                "type": "code",
+                "label": "box",
+                "enabled": true,
+                "transform": {
+                  "pos": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 4.373827153044355
+                  },
+                  "rot": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "scale": 1
+                },
+                "material": "m12",
+                "params": {
+                  "size": {
+                    "x": 3,
+                    "y": 0.5,
+                    "z": 0.35
+                  },
+                  "rounding": 0.02
+                },
+                "join": "intersect",
+                "lockPosition": true,
+                "lockParams": true,
+                "block": "b116"
+              },
+              {
+                "id": "n59",
+                "kind": "object",
+                "type": "code",
+                "label": "box copy",
+                "enabled": true,
+                "transform": {
+                  "pos": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0.23153584456718646
+                  },
+                  "rot": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "scale": 1
+                },
+                "material": "m12",
+                "params": {
+                  "size": {
+                    "x": 3,
+                    "y": 0.5,
+                    "z": 0.35
+                  },
+                  "rounding": 0.02
+                },
+                "lockPosition": true,
+                "lockParams": true,
+                "block": "b116"
+              },
+              {
+                "id": "n60",
+                "kind": "object",
+                "type": "code",
+                "label": "box copy copy copy",
+                "enabled": true,
+                "transform": {
+                  "pos": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 2.316161291481911
+                  },
+                  "rot": {
+                    "x": 45,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "scale": 0.6900000000000002
+                },
+                "material": "m12",
+                "params": {
+                  "size": {
+                    "x": 4.716416208,
+                    "y": 2,
+                    "z": 2
+                  },
+                  "rounding": 0.02
+                },
+                "join": "subtract",
+                "lockPosition": true,
+                "lockParams": true,
+                "block": "b116"
+              },
+              {
+                "id": "n61",
+                "kind": "object",
+                "type": "code",
+                "label": "cylinder",
+                "enabled": true,
+                "transform": {
+                  "pos": {
+                    "x": 2.5,
+                    "y": 0,
+                    "z": 2.5
+                  },
+                  "rot": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "scale": 1
+                },
+                "material": "m8",
+                "params": {
+                  "radius": 0.24999999999999994,
+                  "height": 5
+                },
+                "lockPosition": true,
+                "lockParams": true,
+                "block": "b118"
+              },
+              {
+                "id": "n62",
+                "kind": "object",
+                "type": "code",
+                "label": "cylinder copy",
+                "enabled": true,
+                "transform": {
+                  "pos": {
+                    "x": -2.5,
+                    "y": 0,
+                    "z": 2.5
+                  },
+                  "rot": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "scale": 1
+                },
+                "material": "m8",
+                "params": {
+                  "radius": 0.24999999999999994,
+                  "height": 5
+                },
+                "lockPosition": true,
+                "lockParams": true,
+                "block": "b118"
+              },
+              {
+                "id": "n65",
+                "kind": "group",
+                "label": "group",
+                "enabled": true,
+                "blend": 0,
+                "transform": {
+                  "pos": {
+                    "x": -0.054214600502388806,
+                    "y": 0.012164929930528423,
+                    "z": 0
+                  },
+                  "rot": {
+                    "x": 0,
+                    "y": 0,
+                    "z": -90
+                  },
+                  "scale": 1
+                },
+                "children": [
+                  {
+                    "id": "n67",
+                    "kind": "object",
+                    "type": "code",
+                    "label": "box",
+                    "enabled": true,
+                    "transform": {
+                      "pos": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 2.3307167494106977
+                      },
+                      "rot": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 45
+                      },
+                      "scale": 1
+                    },
+                    "material": "m41",
+                    "params": {
+                      "size": {
+                        "x": 1.5,
+                        "y": 1.5,
+                        "z": 1.648103943
+                      },
+                      "rounding": 0.02
+                    },
+                    "block": "b116"
+                  },
+                  {
+                    "id": "n68",
+                    "kind": "object",
+                    "type": "code",
+                    "label": "box copy",
+                    "enabled": true,
+                    "transform": {
+                      "pos": {
+                        "x": 0,
+                        "y": 1.462629322396797,
+                        "z": 2.3307167494106977
+                      },
+                      "rot": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "scale": 1
+                    },
+                    "material": "m41",
+                    "params": {
+                      "size": {
+                        "x": 3.392757546,
+                        "y": 1.5,
+                        "z": 1.725106442
+                      },
+                      "rounding": 0.02
+                    },
+                    "join": "subtract",
+                    "block": "b116"
+                  }
+                ]
+              }
+            ],
+            "lockParams": true
+          }
+        ]
+      },
+      {
+        "id": "n69",
+        "kind": "group",
+        "label": "PRISM copy",
+        "enabled": true,
+        "blend": 0,
+        "transform": {
+          "pos": {
+            "x": -15,
+            "y": 10,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "children": [
+          {
+            "id": "n70",
+            "kind": "group",
+            "label": "pillar",
+            "enabled": true,
+            "blend": 0,
+            "transform": {
+              "pos": {
+                "x": 0,
+                "y": 0,
+                "z": 3
+              },
+              "rot": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "scale": 1
+            },
+            "children": [
+              {
+                "id": "n71",
+                "kind": "object",
+                "type": "code",
+                "label": "cylinder",
+                "enabled": true,
+                "transform": {
+                  "pos": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 5
+                  },
+                  "rot": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "scale": 1
+                },
+                "material": "m12",
+                "params": {
+                  "radius": 1,
+                  "height": 10
+                },
+                "block": "b118"
+              },
+              {
+                "id": "n72",
+                "kind": "object",
+                "type": "code",
+                "label": "cylinder",
+                "enabled": true,
+                "transform": {
+                  "pos": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 10.38533806678002
+                  },
+                  "rot": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "scale": 1
+                },
+                "material": "m1",
+                "params": {
+                  "radius": 0.55,
+                  "height": 3.159080151
+                },
+                "join": "subtract",
+                "joinBlend": 0.043000000000000003,
+                "block": "b118"
+              },
+              {
+                "id": "n73",
+                "kind": "group",
+                "label": "group",
+                "enabled": true,
+                "blend": 0.1,
+                "transform": {
+                  "pos": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "rot": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "scale": 1
+                },
+                "children": [
+                  {
+                    "id": "n74",
+                    "kind": "object",
+                    "type": "code",
+                    "label": "box",
+                    "enabled": true,
+                    "transform": {
+                      "pos": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 0.5018163619788361
+                      },
+                      "rot": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "scale": 1
+                    },
+                    "material": "m12",
+                    "params": {
+                      "size": {
+                        "x": 6,
+                        "y": 3,
+                        "z": 0.5
+                      },
+                      "rounding": 0.1
+                    },
+                    "block": "b116"
+                  },
+                  {
+                    "id": "n75",
+                    "kind": "object",
+                    "type": "code",
+                    "label": "box",
+                    "enabled": true,
+                    "transform": {
+                      "pos": {
+                        "x": -6,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "rot": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "scale": 1
+                    },
+                    "material": "m12",
+                    "params": {
+                      "size": {
+                        "x": 1.75,
+                        "y": 0.75,
+                        "z": 2.332864718
+                      },
+                      "rounding": 0.75
+                    },
+                    "join": "subtract",
+                    "block": "b116"
+                  },
+                  {
+                    "id": "n76",
+                    "kind": "object",
+                    "type": "code",
+                    "label": "box copy",
+                    "enabled": true,
+                    "transform": {
+                      "pos": {
+                        "x": 6,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "rot": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "scale": 1
+                    },
+                    "material": "m12",
+                    "params": {
+                      "size": {
+                        "x": 1.75,
+                        "y": 0.75,
+                        "z": 2.332864718
+                      },
+                      "rounding": 0.75
+                    },
+                    "join": "subtract",
+                    "block": "b116"
+                  },
+                  {
+                    "id": "n77",
+                    "kind": "object",
+                    "type": "code",
+                    "label": "cylinder",
+                    "enabled": true,
+                    "transform": {
+                      "pos": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 10.233614769137711
+                      },
+                      "rot": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "scale": 1
+                    },
+                    "material": "m5",
+                    "params": {
+                      "radius": 0.6,
+                      "height": 4.03
+                    },
+                    "block": "b118"
+                  }
+                ]
+              },
+              {
+                "id": "n78",
+                "kind": "group",
+                "label": "group",
+                "enabled": true,
+                "blend": 0,
+                "transform": {
+                  "pos": {
+                    "x": 0,
+                    "y": 0.5943117922328078,
+                    "z": 0.33013084082080013
+                  },
+                  "rot": {
+                    "x": 0,
+                    "y": 0.533610790581842,
+                    "z": 0
+                  },
+                  "scale": 1
+                },
+                "children": [
+                  {
+                    "id": "n79",
+                    "kind": "object",
+                    "type": "code",
+                    "label": "cylinder copy",
+                    "enabled": true,
+                    "transform": {
+                      "pos": {
+                        "x": 0,
+                        "y": -1.4394890955001065,
+                        "z": 8.464054345072295
+                      },
+                      "rot": {
+                        "x": 90,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "scale": 1
+                    },
+                    "material": "m8",
+                    "params": {
+                      "radius": 0.25,
+                      "height": 1.447172664
+                    },
+                    "block": "b118"
+                  },
+                  {
+                    "id": "n80",
+                    "kind": "group",
+                    "label": "shell",
+                    "enabled": true,
+                    "blend": 0,
+                    "transform": {
+                      "pos": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "rot": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "scale": 1
+                    },
+                    "children": [
+                      {
+                        "id": "n81",
+                        "kind": "object",
+                        "type": "code",
+                        "label": "cylinder",
+                        "enabled": true,
+                        "transform": {
+                          "pos": {
+                            "x": 0,
+                            "y": -2.4874343547320183,
+                            "z": 8.464054345072295
+                          },
+                          "rot": {
+                            "x": 90,
+                            "y": 0,
+                            "z": 0
+                          },
+                          "scale": 1
+                        },
+                        "material": "m26",
+                        "params": {
+                          "radius": 0.9,
+                          "height": 0.69750287
+                        },
+                        "block": "b118"
+                      }
+                    ],
+                    "params": {
+                      "thickness": 0.05
+                    },
+                    "block": "b120"
+                  }
+                ]
+              }
+            ],
+            "lockPosition": true,
+            "lockParams": true
+          },
+          {
+            "id": "n82",
+            "kind": "group",
+            "label": "lensholder",
+            "enabled": true,
+            "blend": 0,
+            "transform": {
+              "pos": {
+                "x": 0,
+                "y": 0,
+                "z": 15.315168750317895
+              },
+              "rot": {
+                "x": 0,
+                "y": 0,
+                "z": 135
+              },
+              "scale": 1
+            },
+            "children": [
+              {
+                "id": "n83",
+                "kind": "object",
+                "type": "code",
+                "label": "box",
+                "enabled": true,
+                "transform": {
+                  "pos": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 4.373827153044355
+                  },
+                  "rot": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "scale": 1
+                },
+                "material": "m12",
+                "params": {
+                  "size": {
+                    "x": 3,
+                    "y": 0.5,
+                    "z": 0.35
+                  },
+                  "rounding": 0.02
+                },
+                "join": "intersect",
+                "lockPosition": true,
+                "lockParams": true,
+                "block": "b116"
+              },
+              {
+                "id": "n84",
+                "kind": "object",
+                "type": "code",
+                "label": "box copy",
+                "enabled": true,
+                "transform": {
+                  "pos": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0.23153584456718646
+                  },
+                  "rot": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "scale": 1
+                },
+                "material": "m12",
+                "params": {
+                  "size": {
+                    "x": 3,
+                    "y": 0.5,
+                    "z": 0.35
+                  },
+                  "rounding": 0.02
+                },
+                "lockPosition": true,
+                "lockParams": true,
+                "block": "b116"
+              },
+              {
+                "id": "n85",
+                "kind": "object",
+                "type": "code",
+                "label": "box copy copy copy",
+                "enabled": true,
+                "transform": {
+                  "pos": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 2.316161291481911
+                  },
+                  "rot": {
+                    "x": 45,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "scale": 0.6900000000000002
+                },
+                "material": "m12",
+                "params": {
+                  "size": {
+                    "x": 4.716416208,
+                    "y": 2,
+                    "z": 2
+                  },
+                  "rounding": 0.02
+                },
+                "join": "subtract",
+                "lockPosition": true,
+                "lockParams": true,
+                "block": "b116"
+              },
+              {
+                "id": "n86",
+                "kind": "object",
+                "type": "code",
+                "label": "cylinder",
+                "enabled": true,
+                "transform": {
+                  "pos": {
+                    "x": 2.5,
+                    "y": 0,
+                    "z": 2.5
+                  },
+                  "rot": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "scale": 1
+                },
+                "material": "m8",
+                "params": {
+                  "radius": 0.24999999999999994,
+                  "height": 5
+                },
+                "lockPosition": true,
+                "lockParams": true,
+                "block": "b118"
+              },
+              {
+                "id": "n87",
+                "kind": "object",
+                "type": "code",
+                "label": "cylinder copy",
+                "enabled": true,
+                "transform": {
+                  "pos": {
+                    "x": -2.5,
+                    "y": 0,
+                    "z": 2.5
+                  },
+                  "rot": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "scale": 1
+                },
+                "material": "m8",
+                "params": {
+                  "radius": 0.24999999999999994,
+                  "height": 5
+                },
+                "lockPosition": true,
+                "lockParams": true,
+                "block": "b118"
+              },
+              {
+                "id": "n88",
+                "kind": "group",
+                "label": "group",
+                "enabled": true,
+                "blend": 0,
+                "transform": {
+                  "pos": {
+                    "x": -0.054214600502388806,
+                    "y": 0.012164929930528423,
+                    "z": 0
+                  },
+                  "rot": {
+                    "x": 0,
+                    "y": 0,
+                    "z": -90
+                  },
+                  "scale": 1
+                },
+                "children": [
+                  {
+                    "id": "n89",
+                    "kind": "object",
+                    "type": "code",
+                    "label": "box",
+                    "enabled": true,
+                    "transform": {
+                      "pos": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 2.3307167494106977
+                      },
+                      "rot": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 45
+                      },
+                      "scale": 1
+                    },
+                    "material": "m112",
+                    "params": {
+                      "size": {
+                        "x": 1.5,
+                        "y": 1.5,
+                        "z": 1.648103943
+                      },
+                      "rounding": 0.02
+                    },
+                    "block": "b116"
+                  },
+                  {
+                    "id": "n90",
+                    "kind": "object",
+                    "type": "code",
+                    "label": "box copy",
+                    "enabled": true,
+                    "transform": {
+                      "pos": {
+                        "x": 0,
+                        "y": 1.462629322396797,
+                        "z": 2.3307167494106977
+                      },
+                      "rot": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "scale": 1
+                    },
+                    "material": "m41",
+                    "params": {
+                      "size": {
+                        "x": 3.392757546,
+                        "y": 1.5,
+                        "z": 1.725106442
+                      },
+                      "rounding": 0.02
+                    },
+                    "join": "subtract",
+                    "block": "b116"
+                  }
+                ]
+              }
+            ],
+            "lockParams": true
+          }
+        ]
+      },
+      {
+        "id": "n43",
+        "kind": "object",
+        "type": "light",
+        "label": "disc light",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 0,
+            "y": -15.941146688649445,
+            "z": 17.567498952424685
+          },
+          "rot": {
+            "x": -90,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": null,
+        "params": {
+          "radius": 0.01
+        },
+        "light": {
+          "shape": "disc",
+          "flux": 1000,
+          "luminance": 173121059390.4732,
+          "halfAngle": 14,
+          "colour": {
+            "r": 1,
+            "g": 0,
+            "b": 0
+          }
+        }
+      },
+      {
+        "id": "n114",
+        "kind": "object",
+        "type": "light",
+        "label": "disc light copy",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 0.38652307083629456,
+            "y": -15.941146688649445,
+            "z": 17.567498952424685
+          },
+          "rot": {
+            "x": -90,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": null,
+        "params": {
+          "radius": 0.01
+        },
+        "light": {
+          "shape": "disc",
+          "flux": 1000,
+          "luminance": 173121059390.4732,
+          "halfAngle": 14,
+          "colour": {
+            "r": 0,
+            "g": 1,
+            "b": 0.1843137254901961
+          }
+        }
+      }
+    ]
+  },
+  "functions": "// Functions: WGSL helpers any code node or material in this scene can call.\n// Compiled once, before the materials and the SDF; errors show here at their own lines.\n// e.g. a gyroid, usable in a code node as  C = add_new(C, sd(gyroid(p, 4.0)), MATERIAL);\n//   fn gyroid(p: VEC3, s: f32) -> f32 {\n//       let q = p * s;\n//       return abs(dot(sin(q), cos(q.zxy))) / s - 0.03;\n//   }\n",
+  "envRadius": 200,
+  "liveVisibility": true,
+  "environment": {
+    "envMode": 1,
+    "studioIlluminance": 1000,
+    "studioColor": {
+      "r": 1,
+      "g": 1,
+      "b": 1
+    },
+    "studioTop": 0.5,
+    "sunIlluminance": 100000,
+    "sunDiameter": 0.53,
+    "skyIlluminance": 15000,
+    "uSunAzimuth": 8,
+    "uSunElevation": 90,
+    "uSkyTurbidity": 0.7
+  },
+  "optics": {
+    "maxDist": 1200
+  },
+  "blocks": [
+    {
+      "id": "b115",
+      "label": "repeat",
+      "kind": "group",
+      "code": "// Repeat: copies \"spacing\" apart, \"count\" each way along each axis (0: not along it),\n// so 2 count + 1 per axis -- all for the price of one, which makes it the cheapest\n// thing here. The children must fit in one cell, half a spacing around this group's\n// origin, or the distance is wrong near the cell borders.\np = p - spacing * clamp(round(p / spacing), -count, count);\nC = children(C, p);",
+      "params": {
+        "spacing": {
+          "x": 2,
+          "y": 2,
+          "z": 2
+        },
+        "count": {
+          "x": 2,
+          "y": 2,
+          "z": 0
+        }
+      },
+      "lengths": [
+        "spacing"
+      ],
+      "builtin": "repeat@1"
+    },
+    {
+      "id": "b116",
+      "label": "box",
+      "kind": "object",
+      "code": "// A box: size is the HALF-size along each axis; the rounding stays inside it.\nC = add_new(C, NboxRounded(p, size, rounding), MATERIAL);",
+      "params": {
+        "size": {
+          "x": 0.5,
+          "y": 0.5,
+          "z": 0.5
+        },
+        "rounding": 0.02
+      },
+      "ranges": {
+        "rounding": {
+          "min": 0,
+          "max": 2,
+          "step": 0.005
+        }
+      },
+      "lengths": [
+        "size",
+        "rounding"
+      ],
+      "builtin": "box@1"
+    },
+    {
+      "id": "b117",
+      "label": "cone",
+      "kind": "object",
+      "code": "// A capped cone along z: base radius at the bottom, top radius at the top.\n// No analytic normal (sdCappedCone): the renderer takes one by differences.\nC = add_new(C, sdCappedCone(p, height * 0.5, base, top), MATERIAL);",
+      "params": {
+        "base": 0.5,
+        "top": 0,
+        "height": 1
+      },
+      "ranges": {
+        "base": {
+          "min": 0,
+          "max": 10,
+          "step": 0.01
+        },
+        "top": {
+          "min": 0,
+          "max": 10,
+          "step": 0.01
+        },
+        "height": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "base",
+        "top",
+        "height"
+      ],
+      "builtin": "cone@1"
+    },
+    {
+      "id": "b118",
+      "label": "cylinder",
+      "kind": "object",
+      "code": "// A cylinder along z, centred on this node's origin.\nC = add_new(C, Ncylinder(p, height * 0.5, radius), MATERIAL);",
+      "params": {
+        "radius": 0.5,
+        "height": 1
+      },
+      "ranges": {
+        "radius": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        },
+        "height": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "radius",
+        "height"
+      ],
+      "builtin": "cylinder@1"
+    },
+    {
+      "id": "b119",
+      "label": "disc",
+      "kind": "object",
+      "code": "// A flat disc in the xy plane, no thickness (sdf.js Ndisc), seen from both sides.\nC = add_new(C, Ndisc(p, radius), MATERIAL);",
+      "params": {
+        "radius": 0.5
+      },
+      "ranges": {
+        "radius": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "radius"
+      ],
+      "builtin": "disc@1"
+    },
+    {
+      "id": "b120",
+      "label": "shell",
+      "kind": "group",
+      "code": "// Shell: the children's surface as a skin \"thickness\" thick, hollow inside -- cut it\n// open with a subtract group to see in. Free per step; a Hit of their own, as round.\nvar H = children(emptyHit(r), p);\nH.s = VEC4(H.s.xyz * sign(H.s.w), abs(H.s.w) - thickness * XF_S);\nC = fold(C, H.s, H.m);",
+      "params": {
+        "thickness": 0.05
+      },
+      "ranges": {
+        "thickness": {
+          "min": 0.001,
+          "max": 1,
+          "step": 0.001
+        }
+      },
+      "lengths": [
+        "thickness"
+      ],
+      "builtin": "shell@1"
+    },
+    {
+      "id": "b121",
+      "label": "lens",
+      "kind": "object",
+      "code": "// A spherical lens along z (sdf.js Nlens): r1 the +z face, r2 the -z face; a positive radius\n// bulges out, a negative one is hollowed in, 0 is flat. Its refractive index is its material's --\n// give it a glass. Thin lens: 1/f = (n - 1)(1/r1 + 1/r2).\nC = add_new(C, Nlens(p, diameter, thickness, r1, r2), MATERIAL);",
+      "params": {
+        "diameter": 1,
+        "thickness": 0.2,
+        "r1": 2,
+        "r2": 2
+      },
+      "ranges": {
+        "diameter": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        },
+        "thickness": {
+          "min": 0.001,
+          "max": 10,
+          "step": 0.001
+        },
+        "r1": {
+          "min": -50,
+          "max": 50,
+          "step": 0.01
+        },
+        "r2": {
+          "min": -50,
+          "max": 50,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "diameter",
+        "thickness",
+        "r1",
+        "r2"
+      ],
+      "builtin": "lens@1"
+    }
+  ]
+}

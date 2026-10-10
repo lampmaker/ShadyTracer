@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>D · Canvas</title>
+<link rel="stylesheet" href="mock.css">
+<style>
+    .stage { position: relative; flex: 1; min-height: 0; overflow: hidden; }
+    .stage > [data-chart="picture"] { position: absolute; inset: 0; }
+    /* the tool strip, top centre */
+    .tools { left: 50%; top: 10px; transform: translateX(-50%); display: flex; gap: 2px; padding: 4px; align-items: center; }
+    .tools button { font-size: 13px; padding: 4px 9px; }
+    .tools .vline { height: 20px; margin: 0 4px; }
+    /* the outline, top left, collapsible */
+    .outline { left: 10px; top: 10px; width: 230px; max-height: 45%; overflow: auto; }
+    /* the inspector, right: whatever is selected, with ITS analysis */
+    .inspector { right: 10px; top: 10px; bottom: 44px; width: 380px; display: flex; flex-direction: column; overflow: hidden; }
+    .inspector .body { overflow: auto; flex: 1; }
+    .insp-tabs { display: flex; gap: 2px; padding: 4px 6px; border-bottom: 1px solid var(--line); }
+    .sheet { height: 230px; margin: 6px 8px; }
+    /* cards pinned in the scene: a number that follows an object */
+    .pinned { padding: 5px 8px; font-size: 11.5px; }
+    .pinned .v { font: 600 14px var(--mono); }
+    .pinned::after { content: ""; position: absolute; left: 18px; bottom: -7px; border: 7px solid transparent; border-bottom: 0; border-top-color: rgba(160,175,190,0.35); }
+    /* the render corner, bottom left: the renderer's own controls, folded */
+    .rcorner { left: 10px; bottom: 10px; display: flex; gap: 3px; padding: 3px; align-items: center; font-size: 12px; }
+    .rcorner .num { color: var(--muted); padding: 0 6px; font-size: 11px; }
+    .run { right: 400px; bottom: 10px; display: flex; gap: 4px; padding: 4px; align-items: center; }
+    /* the command palette */
+    .palette { left: 50%; top: 64px; transform: translateX(-50%); width: 520px; max-width: calc(100% - 32px); }
+    .palette input { width: 100%; border: 0; border-bottom: 1px solid var(--line); background: transparent; padding: 10px 12px; font-size: 14px; border-radius: 0; }
+    .palette .item { padding: 5px 12px; display: flex; gap: 10px; font-size: 12.5px; }
+    .palette .item.hi { background: var(--accent-bg); }
+    .palette .item .where { margin-left: auto; color: var(--faint); font-size: 11px; }
+    .palette .item mark { background: none; color: #f0c38e; }
+    .popover { left: 10px; bottom: 48px; width: 300px; padding-bottom: 6px; }
+    @media (max-width: 1000px) { .inspector { width: auto; left: 10px; top: auto; height: 45%; } .outline, .run { display: none; } }
+</style>
+</head>
+<body>
+<div class="app">
+    <div class="banner"><b>D · Canvas</b> <span>The view is the whole window, like Figma. Everything floats over it, and selecting a thing shows its analysis: a detector shows its map, a light its polar diagram. Everything else is one keystroke away in a command palette. The palette and a render popover are both shown open here.</span> <a href="index.html">all four approaches</a></div>
+
+    <div class="stage">
+        <div data-chart="picture" data-rays="1"></div>
+
+        <!-- tools, top centre -->
+        <div class="float tools">
+            <button title="Menu">☰</button><span class="vline"></span>
+            <button class="on" title="Select (V)">↖</button><button title="Move (G)">✥</button><button title="Rotate (R)">⟳</button><button title="Scale (S)">⤢</button><span class="vline"></span>
+            <button title="Add shape, modifier, light, material">＋ Add</button><span class="vline"></span>
+            <button class="on" title="Rays over the picture">✺ Rays</button><button title="Measure: pin a reading">◉</button><button title="Measure: area">▭</button><span class="vline"></span>
+            <button title="Undo">↶</button><button title="Redo">↷</button><span class="vline"></span>
+            <button title="Everything else">⌘K</button>
+        </div>
+
+        <!-- the outline, top left -->
+        <div class="float outline">
+            <div class="h">optics-test <span class="spacer"></span><button title="Scenes">▾</button></div>
+            <div class="tree">
+                <div>☀ LED die <span class="tag src">light</span></div><div>◯ Lens</div><div class="sel">▭ Screen <span class="tag det">detector</span></div>
+                <div>▸ ▦ Housing</div><div>▭ Cut plane <span class="tag lim">limiter</span></div><div>✺ Far field</div><div>▸ Materials</div>
+            </div>
+        </div>
+
+        <!-- cards pinned to objects in the view: the numbers being watched, where the thing is -->
+        <div class="float pinned" style="left:58%;top:60%"><div class="k note">Screen · U0</div><div class="v">0.78 <span class="pm">±.01</span></div></div>
+        <div class="float pinned" style="left:30%;top:22%"><div class="k note">LED die</div><div class="v">100 lm</div></div>
+        <div class="float pinned" style="left:34%;top:40%"><div class="k note">Lens · absorbs</div><div class="v">1.9 lm</div></div>
+
+        <!-- the inspector, right: the SELECTED thing -- here the detector, so its map and its numbers -->
+        <div class="float inspector">
+            <div class="h" style="font-size:12px;text-transform:none;letter-spacing:0;color:var(--ink)">▭ <b>Screen</b> <span class="tag det">detector</span><span class="spacer"></span><button title="Pop out">⧉</button></div>
+            <div data-tabgroup class="col grow" style="min-height:0">
+                <div class="insp-tabs"><button class="on" data-tab="a">Analysis</button><button data-tab="p">Properties</button><button data-tab="m">Material</button></div>
+                <div class="body" data-panel="a">
+                    <div class="scores" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:8px">
+                        <div class="metric goal"><span class="k">U0</span><span class="v">0.78</span><span class="d up">+0.07</span></div>
+                        <div class="metric"><span class="k">E mean</span><span class="v">301</span><span class="d">lx ±2</span></div>
+                        <div class="metric"><span class="k">r50 / r90</span><span class="v">6.2/11.8</span><span class="d">mm</span></div>
+                    </div>
+                    <div class="chart sheet"><div class="ct"><span class="title">E on Screen</span><button class="on">isolux</button><button>ref</button><button>⇩</button></div><div class="cb" data-chart="heat"></div></div>
+                    <div class="chart sheet" style="height:170px"><div class="ct"><span class="title">Profiles</span><button>radial</button><button>encircled</button></div><div class="cb" data-chart="profile"></div></div>
+                    <div class="pad note">Select the LED and this panel shows its polar diagram and I vs γ; select the lens and it shows its properties with what it absorbs; select nothing and it shows the whole scene's flux balance.</div>
+                </div>
+                <div class="body" data-panel="p" hidden>
+                    <div class="prop"><label>position</label><div class="ctl"><input class="num" value="0"><input class="num" value="0"><input class="num" value="40"></div></div>
+                    <div class="prop"><label>width · height</label><div class="ctl"><input class="num" value="60"><input class="num" value="60"></div></div>
+                    <div class="prop"><label>material</label><div class="ctl"><select><option>Screen (detector)</option></select></div></div>
+                </div>
+                <div class="body" data-panel="m" hidden>
+                    <div class="prop"><label>type</label><div class="ctl"><select><option>optics detector</option><option>surface</option><option>glowing surface</option><option>ray limiter</option></select></div></div>
+                    <div class="prop"><label>baseColor</label><div class="ctl"><input type="color" value="#cccccc"></div></div>
+                    <div class="prop"><label>roughness</label><div class="ctl"><input type="range"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- run, bottom right of the view -->
+        <div class="float run"><span class="note" style="padding:0 6px">2 M rays</span><button class="primary">▶ Run analysis</button><button title="Live trace">Live</button></div>
+
+        <!-- the renderer's corner: its controls fold into one strip; its pages open as popovers -->
+        <div class="float rcorner"><button>◉ Picture ▾</button><button>EV 9.2</button><button>☼</button><button>∷</button><button>⤓</button><button>⚙</button><span class="num">412 spp · 18 ms</span></div>
+        <div class="float popover"><div class="h">∷ Sampling <span class="spacer"></span><span class="note" style="text-transform:none;letter-spacing:0">the renderer's page</span></div>
+            <div class="prop"><label>max bounces</label><div class="ctl"><input type="range"><span class="num">12</span></div></div>
+            <div class="prop"><label>NEE · light tracing</label><div class="ctl"><input type="checkbox" checked><input type="checkbox" checked></div></div>
+            <div class="prop"><label>photons per pixel</label><div class="ctl"><input type="range"><span class="num">1.0</span></div></div>
+            <div class="prop"><label>render size</label><div class="ctl"><select><option>fit · 100 %</option></select></div></div></div>
+
+        <!-- the command palette, open -->
+        <div class="float palette">
+            <input value="uni" aria-label="Command">
+            <div class="item hi">Isolux lines: % of E max <span class="where">Screen · chart</span></div>
+            <div class="item">Symmetry: rotational (<mark>uni</mark>form over C) <span class="where">Far field</span></div>
+            <div class="item">Light: <mark>uni</mark>form cone <span class="where">LED die · distribution</span></div>
+            <div class="item">Environment: studio (<mark>uni</mark>form) <span class="where">Render · Light</span></div>
+            <div class="item">Score: U0 (<mark>uni</mark>formity) on Screen <span class="where">Study</span></div>
+            <div class="item">Test: furnace (<mark>uni</mark>form environment) <span class="where">Render · Tests</span></div>
+        </div>
+    </div>
+</div>
+<script type="module">
+import { boot } from './mock.js'
+boot()
+</script>
+</body>
+</html>

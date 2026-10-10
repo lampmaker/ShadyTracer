@@ -1,0 +1,148 @@
+//======================================================================================================================
+// GOLDEN SHADERS -- what codegen made of every document with a CSG group, frozen before the joins moved from
+// the group to its children (roadmap/BUILDER.md, phase 1 of the booleans; 2026-09-30).
+//
+// WHY TEXT FROZEN FROM THE OLD CODEGEN. The v8 upgrade was proven byte-identical by running a new node and an
+// upgraded old one through TODAY's codegen (codegen.test) -- which proves the upgrade builds the right document,
+// but cannot prove a CODEGEN change left an old file's shader alone: both sides go through the new code. Only
+// output captured before the change can. It also keeps the benchmark's rows comparable: bench.test compares
+// scene WGSL byte for byte, and the bench's scenes stay at version 10.
+//
+// WHAT: cases.json (a version 10 document of every CSG case: hard and smooth subtract, intersect, a smooth
+// union of three and of one, an export box, a light and a limiter as first child, CSG inside CSG, code on a CSG
+// group, a relief under a blend, a p_local material on a CSG child, a disabled first child, a disabled middle
+// one, a disabled group, plain groups for contrast), every scenes/*.json and every bench/scenes/*.json. Each
+// with live visibility off and on, fingerprinted: sha256 of the render, pick and optics texts, the uniforms, the
+// tags. cases.json's render texts are kept whole (cases.*.wgsl), so a failure can show the first line that moved.
+//
+// FREEZING (`node golden.mjs --freeze`) rewrites expected.json from the codegen of the moment. Run it only for a
+// change to the shaders that has been agreed; that is the whole point of the file.
+//
+// REFROZEN ONCE, FROM MAIN, when main was merged in (2026-09-30): main had changed codegen (a material's relief)
+// and five scenes. So the reference was frozen in a worktree of main itself (e533131) with only the one earlier
+// change of this branch that alters shader text applied (7ec673c, a light in a CSG group), and the merged branch
+// -- version 14, joins per child -- reproduced it byte for byte: the same proof, against main. cases.*.wgsl did
+// not move.
+//
+// REFROZEN FOR ONE SCENE (2026-10-01), for an agreed change (the user: "fix the noise relief modifier too"): a
+// relief's distance now folds through scene_api's foldRelief, and the noise relief template reads READ_REACH and
+// DIVIDED_ABOVE, so a relief in a smooth blend keeps its fillet. Only scenes/noise.json moved -- its five relief
+// groups take the new template and its one material relief folds through foldRelief, the same arithmetic at the
+// root; its uniforms and tags did not move. Checked line by line against main's codegen before freezing; the other
+// sixteen documents, cases.*.wgsl among them, are as they were.
+//
+// REFROZEN FOR THE THREE DOCUMENTS WITH LIGHTS (2026-10-01), for the light work the user directed (PLAN.md, Lights:
+// L1, L3, L4, L4b, L7), merged with main. A light's case now marks its face (lightTraced), shows its distribution
+// (lightBeam, a beam uniform a light), glows for the camera paths its photons cannot connect to (CLS_LIGHTS), shares
+// its direct paths with its photons (Ray.ltMis), and hands its material to one weight after the switch, which light
+// sampling towards its face is weighed against (lightFace, lightFaceTotal, lightFacePick). Checked line by line
+// against main's codegen (178e91b): every line that left was one of the three a light's case had, and every line
+// that came is light code; the tags did not move. A scene without a light is emitted exactly as before -- its
+// light code comes from the stub (uniforms.schema.js) -- so the fourteen documents without one, cases.json among
+// them (its light sits in a CSG group, not drawn), and cases.*.wgsl are as they were.
+//
+// ONE SCENE ADDED (2026-10-02): main added scenes/demoscene.json (8611305) without a freeze, so codegen.test failed on
+// main itself -- "a scene file added or removed is a refreeze". Frozen when main was merged into the branch with the
+// Points mode and the slotted live chains: its fingerprint under main's codegen (a worktree of 8611305) and under the
+// merged branch's is the same, both modes -- it has no path or profile, which is all the branch's codegen changes --
+// and the freeze added its entry and moved no other: the seventeen documents before it, cases.*.wgsl among them, are
+// as they were.
+//
+// ONE MORE SCENE ADDED (2026-10-02): main added scenes/OpticsBench.json (a959b5c) without a freeze, and codegen.test
+// failed on main itself the same way. Frozen when main was merged into the branch with the performance review: the
+// freeze added its entry, both modes, and moved no other; and a freeze in a worktree of main itself wrote an
+// expected.json identical byte for byte -- that branch changes no codegen.
+//
+// REFROZEN FOR cases.json ALONE (2026-10-03), for an agreed change (the user: a light inside a CSG group is drawn
+// and traced at its transforms, as under a plain group). cases.json's light, `ltlamp`, is the first child of the
+// CSG group `lt`, so it is now drawn: its "not drawn" comment left (behind its visibility, live), and the light came
+// in -- after `lt`'s combine, in `lt`'s frame -- with everything a scene with a light carries (its material id, its
+// face's case in getMaterial2 and the weight after it, lightBeam, LIGHT_FACES and the four light-face functions).
+// Every line that came is light code, and no line of any combine moved (cases.*.wgsl, line by line). The other
+// eighteen documents -- every scene and bench scene -- have no light under a CSG group and did not move.
+//
+// A DOCUMENT ADDED (2026-10-04): the user's scenes/OpticsBench2.json, committed to the repository. Frozen with the
+// rest; the old expected.json and the new one compared key by key: fourteen keys added, all OpticsBench2's (its
+// render, pick and optics texts, uniforms, tags and roles, off and live), none changed and none removed.
+//
+// TWO DOCUMENTS ADDED (2026-10-03, 0.10.1): bench/scenes/OpticsBench.json and OpticsBench2.json, the scaling
+// benchmark's frozen copies (bench/scaling.js). Frozen with the rest: forty lines added, none removed, and each
+// copy's fingerprints the same as its original's in scenes/ -- the same document, the same shaders.
+//
+// REFROZEN FOR SIX DOCUMENTS (2026-10-05, 0.22.0), for the user's step 4 (roadmap/ARCHITECTURE.md: copies compile once),
+// which needs codegen's local point under group code to be the scene-as-data's (codegen.js, the children functions). In
+// a scene whose materials read p_local, a before group's children function now sets XF_P to the point its code hands
+// them, and an after group's counts its Hit as private (XF_SUB). Checked line by line against the codegen of acbb3cc
+// (0.21.7, a worktree of it): in every moved text only those lines came -- the optics benches' and OpticsBench2's
+// shells and the bench Noise library's six relief groups `XF_SUB += 1u;` / `XF_SUB -= 1u;`, the demo's one before group
+// the XF_P pair -- none left, and no uniform or tag moved. scenes/OpticsBench.json, scenes/OpticsBench2.json,
+// scenes/demoscene.json and their bench copies, and bench/scenes/noise.json moved; the other documents, cases.*.wgsl
+// among them, did not.
+//
+// REFROZEN FOR EVERY DOCUMENT (2026-10-07, 0.34.0), for an agreed change (the user: "yes, make dear-only the default and
+// remove the setting"): the builder makes its scenes with a box test only on the nodes dearer than their box (codegen.js,
+// ONLY THE DEAR ONES), no longer on every top-level node. Checked before freezing: with every box (`cull: 'all'`, the
+// bench's) all 44 fingerprints were the ones frozen, byte for byte; with the default, the only lines that left any text
+// were the box tests of the plain shapes (`{ // id: skipped...`, `let bd_`, its `if`, two closing braces -- re-indented
+// whatever was inside) and, where no node kept a box, CULL's; no line came; the only uniforms that left were those
+// nodes' bxlo_/bxhi_, and none came; the pick texts, tags and roles did not move. An optics text moved only where it
+// is the render text itself (no limiter: codegen.js `optics`), and was that text exactly. Every document moved:
+// each has at least one plain shape at its top level.
+//
+// ONE SCENE ADDED (2026-10-09, 0.40.1): the user's scenes/Prism.json (6f1ba56, a dispersive prism lit by a slit light),
+// committed without a freeze. The freeze added its entry, both modes, and moved no other: the 22 documents before it,
+// cases.*.wgsl among them, are as they were (compared key by key against the expected.json before).
+//======================================================================================================================
+import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
+import { createHash } from 'node:crypto'
+import { fileURLToPath } from 'node:url'
+import * as M from '../../../model.js'
+import { generate } from '../../../codegen.js'
+
+const here = new URL('./', import.meta.url)
+const raytracer = new URL('../../../../', import.meta.url)
+
+/** Every document the golden holds, by a name that says where it is: [name, text]. */
+export function documents() {
+    const dir = (rel, filter = f => f.endsWith('.json')) => readdirSync(fileURLToPath(new URL(rel, raytracer))).filter(filter).sort()
+        .map(f => [`${rel}${f}`, readFileSync(new URL(`${rel}${f}`, raytracer), 'utf8')])
+    return [['cases.json', readFileSync(new URL('cases.json', here), 'utf8')], ...dir('scenes/'), ...dir('bench/scenes/')]
+}
+
+const sha = s => createHash('sha256').update(String(s)).digest('hex')
+const sorted = o => JSON.stringify(Object.keys(o || {}).sort().map(k => [k, o[k]]))
+
+/** A document's scene as the builder makes it (model generateArgs, as demo.js and the bench call it), with live
+ *  visibility off or on. */
+export function sceneOf(text, live) {
+    const doc = M.parse(text)
+    doc.liveVisibility = live
+    return generate(...M.generateArgs(doc, { id: 'golden', title: 'golden' }))
+}
+
+/** What is compared: every text and table the renderer is handed. */
+export function fingerprint(scene) {
+    return {
+        wgsl: sha(scene.wgsl), pickWgsl: sha(scene.pickWgsl), opticsWgsl: sha(scene.opticsWgsl), opticsPickWgsl: sha(scene.opticsPickWgsl),
+        uniforms: sha(sorted(scene.uniforms)), tags: sha(JSON.stringify([scene.tags, scene.opticsTags])),
+        roles: sha(JSON.stringify([scene.detectors, scene.passes])),
+    }
+}
+
+export const MODES = { off: false, live: true }
+export const expected = () => JSON.parse(readFileSync(new URL('expected.json', here), 'utf8'))
+export const casesText = mode => readFileSync(new URL(`cases.${mode}.wgsl`, here), 'utf8')
+
+if (process.argv[1] === fileURLToPath(import.meta.url) && process.argv.includes('--freeze')) {
+    const out = {}
+    for (const [name, text] of documents()) {
+        out[name] = {}
+        for (const [mode, live] of Object.entries(MODES)) {
+            const scene = sceneOf(text, live)
+            out[name][mode] = fingerprint(scene)
+            if (name === 'cases.json') writeFileSync(new URL(`cases.${mode}.wgsl`, here), scene.wgsl)
+        }
+    }
+    writeFileSync(new URL('expected.json', here), JSON.stringify(out, null, 1) + '\n')
+    console.log(`froze ${Object.keys(out).length} documents`)
+}
