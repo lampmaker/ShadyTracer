@@ -256,8 +256,12 @@ function infinite() {
             + 'let s = size * 0.5;\nC = add_new(C, sdMenger(p / s, iterations) * s, MATERIAL);',
         params: { size: 3, iterations: 4 }, constants: { iterations: 'u32' }, lengths: ['size'],
         ranges: { size: { min: 0.1, max: 20, step: 0.01 }, iterations: { min: 1, max: 6, step: 1 } } })
-    const forest = group(doc, 'root', 'columns (repeat)', { modifier: 'repeat', params: { spacing: V(8, 8, 8), count: V(20, 20, 0) }, at: [0, 0, 0] })
-    shape(doc, forest.id, 'cylinder', { label: 'column', params: { radius: 0.25, height: 6 }, at: [4, 4, 3], material: lib(doc, 'sandstone') })
+    /* The lattice is offset by half a spacing so no column stands in the sponge -- by moving the GROUP, not the
+       column. Repeat folds space into one cell, half a spacing around the group's origin (modifiers.js); a column
+       placed at (4, 4) in the group stood on that cell's corner, and every copy showed only the quarter of it inside
+       its own cell (the user, 2026-10-10: "only parts of pillars are shown"). */
+    const forest = group(doc, 'root', 'columns (repeat)', { modifier: 'repeat', params: { spacing: V(8, 8, 8), count: V(20, 20, 0) }, at: [4, 4, 0] })
+    shape(doc, forest.id, 'cylinder', { label: 'column', params: { radius: 0.25, height: 6 }, at: [0, 0, 3], material: lib(doc, 'sandstone') })
     return { doc, camera: orbit([0, 0, 1.6], -50, 12, 9) }
 }
 
