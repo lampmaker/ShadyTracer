@@ -15,7 +15,7 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
-## 0.54.2 — 2026-10-10
+## 0.57.1 — 2026-10-10
 
 **The capped torus is where it is put again** (the user: "the capped torus ... does not render"). The builder guesses
 an object's size from its parameters (`builder/bounds.js estimateBox`) and took every number for a length -- the
@@ -30,9 +30,121 @@ number, as before. The shader was never wrong: it compiles, and its JS twin's di
 **What to look at**: drag a capped torus from the library onto the floor in the picture -- it should sit on the floor
 where you let go. Its library picture should fill the tile, and double-clicking it in the tree should frame it close.
 
-**The golden shaders refrozen for Infinite detail** (the user: "refreeze it in this PR"). 0.54.1 moved that scene's
-column without refreezing `builder/test/fixtures/csg-v10/expected.json`, so `codegen.test.mjs` failed on `main`. Only
-its uniforms moved, and only the two transforms 0.54.1 changed.
+## 0.57.0 — 2026-10-10
+
+**Renderer is now Render settings**, both the panel and its menu (the user, 2026-10-10). The panel's id stays
+`renderer`, and the `render.*` command ids stay the same, so a saved layout and a `show:renderer` link in the
+help still find it. Every place that named it was changed too: the status bar's bake line, the Lamps only note in
+the scene's properties, the fast preview's tooltip, the help pages, `PRECISION.md` and `FEATURES.md`.
+
+A layout saved before the rename keeps each tab's title as it was then. The shell now gives a restored panel the
+title the page registers (`lib/shell/shell.js`), so an old layout reads *Render settings* too and keeps its module
+dot. `lib/shell/test/example.check.mjs` restores a layout carrying an old title and checks both; without the fix
+it fails.
+
+**What to look at**:
+- the menu bar reads File, Edit, View, **Render settings**, Analysis, Window, Help;
+- the panel's tab reads **Render settings**, with its dot, including in the layout you had before (reload
+  without resetting it);
+- Help › Contents › Render settings and saving pictures: its link opens the panel.
+
+## 0.56.0 — 2026-10-10
+
+**The help's two tracks are written** (the user: "explanation of SDF, what makes this system different than regular
+cad; how to deal with object, materials, etc. trace settings; optical raytracing; features, limitations. Go deep. ...
+split between regular users and optical designers"). 18 pages, in the Help panel (F1) and on GitHub under `help/`.
+
+**Modelling and rendering**, for anyone making shapes and pictures, with no optics assumed:
+- How shapes are made (distance functions, with the live explainer)
+- How this differs from regular CAD
+- Objects, groups and the tree
+- Shapes from points
+- Parameters and code
+- Materials
+- Light, environment and camera
+- Render settings and saving pictures
+- Projects, files and the library
+- When something is wrong
+
+**Optical design:**
+- Optical design with ShadyTracer
+- Light in numbers (units and colour)
+- Sources
+- Optical materials, detectors and limiters
+- The analysis setup
+- The charts
+- How far to trust the numbers
+- What the optics trace does not do: every known limitation, each with the file that states it.
+
+**Every statement was checked against the code or the repository's own documents first.** Two of those
+documents turned out to be wrong, and are corrected here:
+- **Absorption through a material's thickness** was listed as missing in `FEATURES.md` §3.7 and in the README's *Not
+  there yet*. It has been in since 0.37.0, as a material's colour depth: Beer-Lambert in the picture and in the optics
+  trace, whose totals book what the medium absorbed (`optics/kernels.js` `O_VOL`).
+- **The README's workspace section** still listed four layouts, including Render, which 0.53.0 removed.
+
+Where a number has not been measured, the page says it is typical, or does not give it. The *not yet seen on
+hardware* features (coatings, dispersion, the manifold connection, the far-field and flux-balance checks) are named
+as such.
+
+**What to look at:** read a page or two of each track in the panel. Then:
+- Do the examples, commands and panels the links name open? (Each link is checked to exist, but not that it reads
+  well.)
+- Is anything said about the program that you know to be otherwise?
+
+## 0.55.0 — 2026-10-10
+
+**A Help panel** (the user: "an extensive help / tutorial system will have to be made"). **Help › Contents** or
+**F1** opens it, floating over the work; View lists it too.
+
+**What the panel has:**
+- A contents list on the left, by track: Start, Modelling and rendering, Optical design, Reference. The page being
+  read shows its own headings under its entry.
+- The page on the right, with back, forward, home, and a search over every page.
+- The last page read is opened again next time.
+
+**The pages are markdown** in `help/`, and read the same on GitHub. They are drawn by a renderer of our own
+(`help/markdown.js`), which escapes everything before marking anything up, so a page cannot put HTML into the panel.
+
+**Links in a page can act on the program** (`help/links.js`):
+- open an example (`example:first-steps.json`);
+- run a command (`cmd:analysis.setup`);
+- open a panel and outline it for a moment (`show:properties`), or outline a menu (`show:menu:Analysis`);
+- go to another page or heading.
+
+**An interactive SDF explainer** (`help/widgets.js`, on the page *How shapes are made*):
+- A 2D distance field: inside and outside coloured, a line every 0.25 of distance, the surface white.
+- A ray sphere-traced across it, with each step's circle drawn. Drag its start.
+- Sliders for a blend, a subtraction's blend, rounding, a shell's thickness and a repeat's spacing. The blend is
+  the renderer's own formula (`scene_api.js` `csgUnion`).
+
+**Reference pages made from the program's lists** (`node help/reference.mjs`):
+- every shape and modifier, with the comment its code starts with;
+- every material field, relief and coating preset;
+- every light setting.
+
+Material fields and light settings have no text in the code, so `reference.mjs` holds one description each.
+`help/test/coverage.test.mjs` fails when:
+- a shape, field or setting is added without words;
+- a reference page is not made again;
+- a link goes nowhere, or a page is not listed.
+
+**Pages so far:** *Welcome* (five minutes with the First steps example), *How shapes are made* (distance functions,
+sphere tracing, combining, modifiers, what this is good at and what it is not), and the four reference pages.
+
+**Coming next:** the two tracks' pages (modelling and rendering; optical design, with its limitations in full).
+
+**What to look at:**
+- F1 opens the panel, floating.
+- Welcome's links open First steps, and outline Properties, the Library and the Renderer.
+- On *How shapes are made*, the pictures draw. Drag the white dot: the ray's steps follow. Move a slider: the
+  shape changes.
+- Search finds "sphere tracing".
+- Whether the panel's size, fonts and colours suit the window.
+
+Also, the golden shaders were refrozen for `scenes/infinite-detail.json`. 0.54.1 moved its column, but the shaders
+were not frozen again, so `codegen.test.mjs` failed on main. Only the scene's two uniform hashes change; its shader
+text is the same.
 
 ## 0.54.1 — 2026-10-10
 

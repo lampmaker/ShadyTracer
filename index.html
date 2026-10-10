@@ -12,6 +12,7 @@
     <!-- the keyframe timeline and video export (lib/timeline), and its look in a panel (tools/) -->
     <link rel="stylesheet" href="./lib/timeline/timeline.css">
     <link rel="stylesheet" href="tools/timeline.css">
+    <link rel="stylesheet" href="help/help.css">
     <script src="./lib/dockview/dockview.min.js"></script>
 </head>
 
@@ -88,6 +89,7 @@
         import { installItemEditor, SAMPLE_CHOICES, SAMPLE_SIZES, sampleOf, setSample } from './library/edit.js'
         import { ITEM_FILES, itemUrl } from './library/items/index.js'
         import { installTimeline } from './tools/timeline.js'
+        import { installHelp } from './help/panel.js'
 
         //==============================================================================================================
         // DEVICE AND LAYOUT -- the host's job
@@ -150,7 +152,7 @@
         const container = document.getElementById('container');
         const SHELL = createShell(container, {
             title: `${versionText()} © Matthijs Keuper`, storageKey: 'raytracer.layout', popoutUrl: 'popout.html',
-            menus: ['File', 'Edit', 'View', 'Render', 'Analysis', 'Window', 'Help'],
+            menus: ['File', 'Edit', 'View', 'Render settings', 'Analysis', 'Window', 'Help'],
         });
         window.SHELL = SHELL;
         /* THE PARAMETERS: every setting by a path -- the renderer's (RT.parameters) and the scene's
@@ -180,7 +182,7 @@
              the scene      the sun, the sky or the studio: NOT the renderer's any more. The scene
                             document carries it (model.js ENVIRONMENT), and the scene's
                             Properties show it (its own tree row until 0.52.0) -- so the renderer is told to make no folder
-             its effort     tracing, render size, diagnostics: Renderer
+             its effort     tracing, render size, diagnostics: Render settings (Renderer until 0.57.0)
              a file         saving an image: a floating panel opened from File
              its bench      Tests
            The renderer fills each with the same folders it used to put on its pages (installUI's
@@ -193,7 +195,7 @@
         };
         /* ...IN BOXES, as the Analysis pane's sections are (the user, 2026-10-04; lib/shell/shell.css .shell-boxes): the
            renderer's folders are its boxes (lib/pathtracer/settingsui.js RENDERER_BOXES) */
-        const rendererEl = SHELL.panel({ id: 'renderer', title: 'Renderer', module: 'renderer',
+        const rendererEl = SHELL.panel({ id: 'renderer', title: 'Render settings', module: 'renderer',
             help: 'How hard the renderer works: Quality (Preview: Sketch, Draft · Accurate: Standard, High · Optics), the light sources and how each is traced, bounces and noise, render size; the developer settings behind their switch.' });
         rendererEl.classList.add('shell-boxes');
         const rendererTable = tableIn(rendererEl);
@@ -236,6 +238,10 @@
            filmed offscreen. Registered here with the rest, filled once the parameters have their providers. */
         const timelineEl = SHELL.panel({ id: 'tools.timeline', title: 'Timeline', module: 'app',
             help: 'Keyframes on any live setting -- the camera, a light\'s flux, an object\'s position -- played in the view, and a video rendered frame by frame (⚙ export, RECORD).' });
+        /* THE HELP (help/panel.js): pages to read, with links that open examples, run commands and point at panels.
+           Help › Contents and F1 open it, floating; View lists it too. Filled once the commands exist (below). */
+        const helpEl = SHELL.panel({ id: 'help', title: 'Help', module: 'app',
+            help: 'How to use ShadyTracer: getting started, modelling and rendering, optical design, and a reference of every shape, modifier, material field and light setting.' });
 
         /* THE LAYOUTS: one per stage of the work, in the menu bar's switcher and the View menu. Each is
            where to start; what the user changes from there is kept between visits. Design is also the
@@ -300,6 +306,11 @@
             help: 'Keyframes on any live setting, played in the view, and a video rendered frame by frame',
             run: () => SHELL.isOpen('tools.timeline') ? SHELL.open('tools.timeline')
                 : SHELL.open('tools.timeline', { referencePanel: 'viewport', direction: 'below' }, { height: Math.round(innerHeight * 0.34) }) });
+        /* THE HELP floats over the work, a page to read beside it: its View entry is the page's, so View opens it that way
+           too (Help › Contents and F1 are registered with the help, below) */
+        const openHelp = () => SHELL.isOpen('help') ? SHELL.open('help')
+            : SHELL.open('help', undefined, undefined, { floating: { width: Math.min(900, innerWidth - 80), height: Math.min(680, innerHeight - 80) } });
+        SHELL.command({ id: 'view.help', menu: 'View', group: 'panels.app', label: 'Help', help: 'The help pages', run: openHelp });
         SHELL.standardCommands();
         SHELL.layout.restore();
         SHELL.open('viewport');
@@ -1144,23 +1155,23 @@
             C({ id: 'edit.undo', menu: 'Edit', label: 'Undo', keys: 'Ctrl Z', when: () => !!A()?.canUndo(), run: () => A().undo() });
             C({ id: 'edit.redo', menu: 'Edit', label: 'Redo', keys: 'Ctrl Y', when: () => !!A()?.canRedo(), run: () => A().redo() });
             // the scene's row: its properties hold the environment (tree.js select maps the environment's id to it)
-            C({ id: 'render.environment', menu: 'Render', label: 'Environment (sun, sky, studio)', run: () => { builderTree.select(Model.ENVIRONMENT_ID); SHELL.open('properties'); } });
+            C({ id: 'render.environment', menu: 'Render settings', label: 'Environment (sun, sky, studio)', run: () => { builderTree.select(Model.ENVIRONMENT_ID); SHELL.open('properties'); } });
             /* THE QUALITY PRESETS (lib/pathtracer/quality.js), as the Renderer panel's Quality row sets them, and
                lamps only: the scene's own lights alone, its sun and sky left as they are in the scene */
             for (const q of QUALITY_PRESETS)
-                C({ id: `render.quality.${q.id}`, menu: 'Render', group: 'quality', label: `Quality: ${q.label}`, help: q.help,
+                C({ id: `render.quality.${q.id}`, menu: 'Render settings', group: 'quality', label: `Quality: ${q.label}`, help: q.help,
                     run: () => RT.set(presetValues(q.id)) });
-            C({ id: 'render.lampsOnly', menu: 'Render', group: 'quality', label: 'Lamps only (no sun, sky or studio light): on / off',
+            C({ id: 'render.lampsOnly', menu: 'Render settings', group: 'quality', label: 'Lamps only (no sun, sky or studio light): on / off',
                 help: 'The view lit by the scene\'s own lights; the scene keeps its environment',
                 run: () => RT.set({ lampsOnly: (RT.get().lampsOnly | 0) ? 0 : 1 }) });
-            C({ id: 'render.lightRays', menu: 'Render', group: 'quality', label: 'Lights\' rays (the light objects\' photons): on / off',
+            C({ id: 'render.lightRays', menu: 'Render settings', group: 'quality', label: 'Lights\' rays (the light objects\' photons): on / off',
                 help: 'Off, the camera\'s paths count a light\'s face themselves: noisier through glass, and a point, a ray file or a collimated beam lights nothing',
                 run: () => RT.set({ lightRays: ((RT.get().lightRays ?? 1) | 0) ? 0 : 1 }) });
             /* A CHART OF A KIND, with its own settings (optics/charts.js) -- the menu's only chart entries (the user,
                2026-10-02: a "Map chart" to show beside a "New chart: Map" was one too many). The kind's first chart
                when it is closed, another when it is open; a chart's ⧉ makes one like it. View lists every one. */
-            /* THE ANALYSIS PANE shown and hidden (the user, 2026-10-10): where Design keeps it, a tab beside the
-               Renderer, or left of the picture when the Renderer is not open; hidden, Design is what the Render
+            /* THE ANALYSIS PANE shown and hidden (the user, 2026-10-10): where Design keeps it, a tab beside
+               Render settings, or left of the picture when that is not open; hidden, Design is what the Render
                layout was */
             C({ id: 'analysis.setup', menu: 'Analysis', group: 'setup', label: 'Analysis setup: show / hide',
                 help: 'The Analysis pane: ▶ Run, the sources, detectors and totals every chart is made from',
@@ -1177,6 +1188,30 @@
                 help: 'Every chart there is, open or closed: the one chosen brought to the front',
                 items: () => CHARTS.list().map(c => ({ label: `${SHELL.isOpen(c.id) ? '● ' : ''}${c.title}`, run: () => openChart(c.id),
                     title: SHELL.isOpen(c.id) ? 'Open: brought to the front' : 'Closed: opened beside the other charts' })) });
+            /* THE HELP: its links act on the page through these (help/links.js) -- an example opened as File › Examples
+               does, a command run as its menu entry would, a panel opened and outlined for a moment so the eye finds it */
+            const flash = el => { if (!el) return false; el.classList.add('help-flash'); setTimeout(() => el.classList.remove('help-flash'), 1600); return true };
+            const HELP = window.HELP = installHelp(helpEl, {
+                say: status,
+                openExample: file => examples?.open(file),
+                runCommand: id => {
+                    const c = SHELL.registries.commands.get(id);
+                    if (!c || c.items || !c.when()) return false;
+                    c.run(); return true;
+                },
+                show: target => {
+                    if (target.startsWith('menu:')) {
+                        const name = target.slice(5);
+                        return flash([...document.querySelectorAll('.shell-menu')].find(b => b.textContent.trim() === name));
+                    }
+                    if (!SHELL.registries.panels.has(target)) return false;
+                    SHELL.open(target);
+                    return flash(document.querySelector(`[data-panel="${CSS.escape(target)}"]`));
+                },
+            });
+            C({ id: 'help.contents', menu: 'Help', group: 'help', label: 'Contents', keys: 'F1', run: openHelp,
+                help: 'How to use ShadyTracer: modelling and rendering, optical design, and a reference of every shape and setting' });
+            window.addEventListener('keydown', e => { if (e.key === 'F1') { e.preventDefault(); openHelp(); } });
             C({ id: 'help.layout', menu: 'Help', label: 'Arranging the panels', run: () => SHELL.status(
                 'Drag a tab to dock it anywhere · ⧉ floats a group · ⇱ pops it out to its own window · ⤢ maximises · View reopens a closed panel · View > Reset the layout') });
             /* WHEN THE PICTURE IS WRONG AND NOTHING SAYS WHY (diagnose.js): where its photons went, and

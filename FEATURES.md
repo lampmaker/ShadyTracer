@@ -115,8 +115,8 @@ on the user's own GPU; there is no server.
 
 | feature | status | evidence |
 |---|---|---|
-| **Quality presets**: Sketch, Draft, Standard, High quality, Optics -- buttons at the top of the Renderer panel, Preview (Sketch, Draft) and Accurate (Standard, High), with a line saying what the one in force traces or what Custom changed (0.16.0; a dropdown before); the Render menu; the toolbar's ⚡ fast preview toggles the last fast mode; the measuring views always trace in full | built 2026-10-01, the buttons 2026-10-04; the panel checked headless (`renderer.check.mjs`); `render-modes-cost` not pressed | `lib/pathtracer/quality.js`, `settingsui.js`, `viewtools.js` |
-| **The Renderer panel in boxes** (0.16.0): Quality, Light sources, Paths and noise, Render size, and a developer's Ray marching and Diagnostics, outlined as the Analysis pane's sections; switches as checkboxes; each row's help as its tooltip | built 2026-10-04; checked headless (`renderer.check.mjs`); not seen in the page | `settingsui.js` `RENDERER_BOXES`, `lib/shell/shell.css` `.shell-boxes` |
+| **Quality presets**: Sketch, Draft, Standard, High quality, Optics -- buttons at the top of the Render settings panel, Preview (Sketch, Draft) and Accurate (Standard, High), with a line saying what the one in force traces or what Custom changed (0.16.0; a dropdown before); the Render settings menu; the toolbar's ⚡ fast preview toggles the last fast mode; the measuring views always trace in full | built 2026-10-01, the buttons 2026-10-04; the panel checked headless (`renderer.check.mjs`); `render-modes-cost` not pressed | `lib/pathtracer/quality.js`, `settingsui.js`, `viewtools.js` |
+| **The Render settings panel in boxes** (the Renderer panel until 0.57.0) (0.16.0): Quality, Light sources, Paths and noise, Render size, and a developer's Ray marching and Diagnostics, outlined as the Analysis pane's sections; switches as checkboxes; each row's help as its tooltip | built 2026-10-04; checked headless (`renderer.check.mjs`); not seen in the page | `settingsui.js` `RENDERER_BOXES`, `lib/shell/shell.css` `.shell-boxes` |
 | **Light sources, each switched**: the environment (lamps only), the caustics of the sun and glowing surfaces (`lt`), and the **lights' rays** (`lightRays`, 0.16.0: the light objects' photons, which nothing turned off before), with their photons per pixel | built 2026-10-04; the switch run through `R.trace` without a GPU (`build.test.mjs`); not seen on hardware | `raytrace_main.js` (photon sources), `core/uniforms.schema.js` |
 | **Developer switch**: the settings a user has no reason to move (march, light-sampling shares, the bench's A/B switches, diagnostics) hidden behind one switch at their defaults; one line at the foot of the Quality box (0.16.0) with a count of any that are not, named in its tooltip, and a reset | built 2026-10-01, the line 2026-10-04; checked headless | `settingsui.js`; `gui.dev` in `core/uniforms.schema.js` |
 | **Save a PNG** at any size up to 16384 px, 1–16384 samples, abortable; 8-bit | built | `index.js` `installOutputUI` |
@@ -251,8 +251,8 @@ into batches, so **every number carries a standard error**. Target: LED and lumi
 
 ### 3.7 Physics not yet in the optics trace
 
-All planned, in PLAN.md *The plan from here*: **bulk absorption (Beer–Lambert)** — today a
-coloured transmissive material multiplies once per crossing, whatever its thickness; a
+All planned, in PLAN.md *The plan from here* (**bulk absorption (Beer–Lambert)** was listed here and has been in
+since 0.37.0: a material's colour depth); a
 **reflectance for an LED's own face** (light sent back onto a die is lost); **a light seen through
 its own lens** (shows dark); **air gaps thinner than the surface offset** are jumped (measured:
 reads one slab; workaround: set the tolerance by hand); a **stratified source pick** (a mix's
@@ -303,7 +303,7 @@ measured). (Aspheric and Fresnel lenses are shapes now: *Builder*.)
 | **Layout presets** Design, Analyse, Animate (Render dropped in 0.53.0: Design with the Analysis pane hidden); your own named layouts; the last layout restored | built | |
 | **Command palette** (Ctrl K) that also finds settings and sets them (`name = value`) | built | `lib/shell/paramspanel.js` |
 | **Parameters panel**: every renderer and scene setting by a path, typed exactly, ⌖ jumps to its control | built; Node-tested | `lib/shell/params.js` |
-| Help panel, guided tour, manual | planned — UI_PLAN.md: help is needed because "it is to be released, open source or paid" | UI_PLAN.md |
+| Help panel (F1), its links that open examples, run commands and point at panels; reference pages made from the program's lists; an SDF explainer | built (0.55.0), not yet seen — the tracks' pages are being written; no guided tour yet | help/README.md |
 | A study panel: parameter sweeps and an optimiser | planned (the parameter registry is the groundwork) | UI_PLAN.md |
 
 Also: a stale-cache check that reloads changed files at start-up, and Help › Report, which copies

@@ -102,9 +102,9 @@ the picture; press **Ctrl K** and type what you are looking for.
 - **A menu bar, a dock of 17 panels and a status bar.** Every panel can be dragged, stacked,
   floated, maximised, closed, or **popped out into a window of its own**, for a second monitor
   *preview*.
-- **Four layouts**: *Design* (tree, properties and library beside the picture), *Analyse* (the
-  optics charts), *Animate* (the timeline) and *Render* (the picture large). Save your own named
-  layouts; the last one comes back on the next visit *preview*.
+- **Three layouts**: *Design* (tree, properties and library beside the picture, the Analysis pane a tab
+  that Analysis › Analysis setup shows and hides), *Analyse* (the optics charts) and *Animate* (the
+  timeline). Save your own named layouts; the last one comes back on the next visit *preview*.
 - **Command palette** (Ctrl K or Ctrl Shift P). It finds every command and every setting, and
   `exposure = 2` sets one *preview*.
 - **Parameters panel**: every renderer and scene setting by its path, typed exactly; ⌖ jumps to its
@@ -506,8 +506,8 @@ Planned, in the order the plans give, with more in [`FEATURES.md`](FEATURES.md) 
 [`roadmap/PLAN.md`](roadmap/PLAN.md):
 
 - **IES and EULUMDAT export**, then import as a source.
-- **Absorption through the thickness of a material**, a reflectance for an LED's own face, a light
-  seen through its own lens, thin air gaps, a stratified choice of source.
+- A reflectance for an LED's own face, a light seen through its own lens, thin air gaps, a stratified
+  choice of source. (Absorption through a material's thickness has been in since 0.37.0: its colour depth.)
 - **Point sensors and work-plane grids** in the renderer; a **realistic camera** (f-number, shutter,
   ISO, depth of field).
 - Glowing objects as optics sources with **"set lumens"**; an isocandela map; a pinned reference run
@@ -515,7 +515,7 @@ Planned, in the order the plans give, with more in [`FEATURES.md`](FEATURES.md) 
 - **Spectral bands, dispersion and polarisation**, when a design needs them.
 - **Caustics seen through glass** (SPPM).
 - **More surfaces**: rust, dust, wear, sheen, clear coat, thin film, hair.
-- **A help panel and a manual**; a study panel with parameter sweeps and an optimiser.
+- **The help's pages**: the panel is there (Help › Contents, F1), with a welcome, the SDF explainer and the reference; the two tracks are being written. A study panel with parameter sweeps and an optimiser.
 
 And not planned yet, but asked of a tool like this: **importing meshes or CAD** (investigated: the
 routes per format are in [`roadmap/IMPORT.md`](roadmap/IMPORT.md)),
