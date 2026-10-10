@@ -92,6 +92,10 @@
 // ONE SCENE ADDED (2026-10-09, 0.40.1): the user's scenes/Prism.json (6f1ba56, a dispersive prism lit by a slit light),
 // committed without a freeze. The freeze added its entry, both modes, and moved no other: the 22 documents before it,
 // cases.*.wgsl among them, are as they were (compared key by key against the expected.json before).
+//
+// THE EXAMPLES REPLACED (2026-10-10, 0.51.0): the scenes that were File › Examples moved to test/fixtures/scenes/ and
+// their entries were renamed to match, their fingerprints left as they were -- the same files, so the same shaders,
+// which this test then confirmed. The new examples in scenes/ were added by a freeze that moved no other entry.
 //======================================================================================================================
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
@@ -106,7 +110,7 @@ const raytracer = new URL('../../../../', import.meta.url)
 export function documents() {
     const dir = (rel, filter = f => f.endsWith('.json')) => readdirSync(fileURLToPath(new URL(rel, raytracer))).filter(filter).sort()
         .map(f => [`${rel}${f}`, readFileSync(new URL(`${rel}${f}`, raytracer), 'utf8')])
-    return [['cases.json', readFileSync(new URL('cases.json', here), 'utf8')], ...dir('scenes/'), ...dir('bench/scenes/')]
+    return [['cases.json', readFileSync(new URL('cases.json', here), 'utf8')], ...dir('scenes/'), ...dir('test/fixtures/scenes/'), ...dir('bench/scenes/')]
 }
 
 const sha = s => createHash('sha256').update(String(s)).digest('hex')

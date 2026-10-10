@@ -258,7 +258,9 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
        step for the scenes; the renderer's settings are not in the history (they never were --
        a slider on the Light page is not an undo step either). Returns a line saying what
        happened, for the status. */
-    const load = text => {
+    /* `camera`: the view a scene file comes with (an example's, scenes/index.js) -- the camera that scene is shown from the
+       first time, as a scene's own kept camera is (markShown). A workspace brings its own, and ignores it. */
+    const load = (text, { camera = null } = {}) => {
         const r = P.parse(text)          // throws a ModelError listing every problem; nothing changed
         let said
         /* A SCENE KEEPS A MATERIAL (model.ensureMaterial): one written before that, or by hand, gets the
@@ -278,6 +280,7 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
             const added = P.importScenes(project, docs, P.indexOf(project, current) + 1)
             for (const s of added) M.ensureMaterial(s.doc)
             current = added[0].key
+            if (camera && typeof camera === 'object') cams.set(current, structuredClone(camera))
             said = added.length === 1 ? `added '${doc().title}'` : `added ${added.length} scenes`
         }
         history.commit(P.serialize(project))

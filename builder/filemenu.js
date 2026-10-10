@@ -30,6 +30,30 @@
  * @param prompt    (question, value) => string | null: a new name (window.prompt on the page)
  * @param say       a line for the status bar
  */
+/* THE EXAMPLES' ROWS: by audience, a heading each, and by group a submenu each (0.51.0; the user, 2026-10-10: "grouped
+   in subcategories", and the examples "split between regular users and optical designers"). An audience with one group
+   lists its examples under its heading directly. An example with neither (a list from before, a test's stand-in) is a
+   row of its own. Each row's tooltip is what the example shows. */
+export function exampleRows(list, open) {
+    const row = x => ({ label: x.title, run: () => open(x),
+        title: `${x.description ? `${x.description}. ` : ''}Adds a copy to this project and works on it` })
+    const out = []
+    const audiences = []
+    for (const x of list) if (x.audience && !audiences.includes(x.audience)) audiences.push(x.audience)
+    for (const a of audiences) {
+        if (out.length) out.push({ separator: true })
+        out.push({ header: true, label: a })
+        const of = list.filter(x => x.audience === a)
+        const groups = [...new Set(of.map(x => x.group))]
+        if (groups.length === 1) out.push(...of.map(row))
+        else for (const g of groups) out.push({ label: g, items: of.filter(x => x.group === g).map(row) })
+    }
+    const loose = list.filter(x => !x.audience)
+    if (loose.length && out.length) out.push({ separator: true })
+    out.push(...loose.map(row))
+    return out
+}
+
 export function fileCommands({ BUILDER, ops, examples = null, actions = {}, item = null, prompt = (q, v) => window.prompt(q, v), say = () => { } }) {
     const editing = () => !!item?.active()
     const free = () => !editing()
@@ -69,9 +93,7 @@ export function fileCommands({ BUILDER, ops, examples = null, actions = {}, item
         }
         C({ id: 'file.examples', group: 'scene', label: 'Examples', when: () => { load(); return free() },
             help: 'The bundled scenes: a copy of one goes into this project, and is worked on',
-            items: () => { load(); return list ? list.map(x => ({ label: x.title, title: `Add a copy of '${x.title}' to this project and work on it`,
-                                                                   run: () => examples.open(x.id) }))
-                                             : [{ label: 'loading…', off: true }] } })
+            items: () => { load(); return list ? exampleRows(list, x => examples.open(x.id)) : [{ label: 'loading…', off: true }] } })
     }
     C({ id: 'file.renameScene', group: 'scene', label: 'Rename this scene…', when: free, run: () => {
         const s = cur()

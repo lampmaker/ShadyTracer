@@ -86,9 +86,9 @@ clone made without it).
 - No build step, no dependencies, no network once loaded. Every library is in the repository or
   one of its two submodules.
 
-**First steps in the raytracer.** A first visit starts on *Builder demo*; after that, on your own
+**First steps in the raytracer.** A first visit starts on the *First steps* example; after that, on your own
 project, as you left it -- it is kept in the browser as it changes. The scene's name over the
-**Scene** tree opens the list of your scenes and the **Examples** (the bundled scenes); choose one to
+**Scene** tree opens the list of your scenes, and File › **Examples** the bundled scenes; choose one to
 switch to it. Select an object in the picture and drag its handles;
 change its material in **Properties**; switch the view to **lux on surfaces** with the icons over
 the picture; press **Ctrl K** and type what you are looking for.
@@ -356,21 +356,40 @@ number carries its standard error**.
 
 ### Bundled scenes
 
-The **Examples** in the scene list over the tree; each opens as a copy in your project.
+**File › Examples**, by who they are for and what they show; each opens as a copy in your project, with a camera of its own. They are made in code by `scenes/make.mjs`, which says why each size is what it is; the scenes that were the examples before 0.51.0 are test fixtures now (`test/fixtures/scenes/`).
 
-| scene | unit | what it shows |
-|---|---|---|
-| **Menger cubes** | m | a fractal as code, its depth a compile-time parameter |
-| **Material showcase** | m | glass, mirror, checker, a sphere that glows two colours |
-| **Material test** | m | four materials side by side |
-| **Builder demo** | m | every kind of block the builder writes: CSG, a twisted column, five materials |
-| **Optics test: LED, lens, screen** | cm | a PMMA lens imaging a 2 × 1 mm LED onto a detector screen |
-| **RGBW mixer** | mm | four LEDs, a light guide, a lens and a detector |
-| **Surface materials** | mm | the library's materials under a softbox |
-| **Noise library** | mm | noise patterns and six fractal reliefs; the heaviest scene |
+**Modelling and rendering**
 
-A richer Menger scene and a three-LED optics test are in `scenes/` to open by
-hand.
+| example | group | unit | what it shows |
+|---|---|---|---|
+| **First steps** | Start | mm | Shapes on a table in daylight: one glass, two blended into one |
+| **Shape gallery** | Shapes | mm | Every built-in shape, about 50 mm across |
+| **Combining shapes** | Shapes | mm | Union, subtract and intersect, sharp and blended; a die made the way a die is |
+| **Modifiers** | Shapes | mm | Twist, bend, repeat, mirror, round, shell, displace and relief, each on a plain shape |
+| **From points** | Shapes | mm | An extruded star, a turned wine glass, a pipe along a path, a swept bar |
+| **Parametric part** | Shapes | mm | A heatsink whose fin count, pitch and height are its parameters |
+| **Infinite detail** | Shapes | m | A Menger sponge four levels deep, and columns repeated to the horizon |
+| **Material board** | Materials | mm | The library's materials on 40 mm spheres |
+| **Relief and texture** | Materials | mm | Plaster, stucco, render, stone, hammered metal, leather: reliefs in a raking light |
+| **Glass and liquid** | Materials | mm | A tumbler of water, a green bottle, a flint prism in the sun |
+| **Lighting a room** | Light and camera | m | A room in metres: daylight through a window and a 1500 lm lamp |
+| **Depth of field** | Light and camera | mm | A row of pawns through an open lens, focused on the third |
+| **Animation** | Light and camera | mm | Values marked animated, for the Timeline |
+| **Product shot** | Light and camera | mm | A perfume bottle on a plinth in studio light |
+
+**Optical design**
+
+| example | group | unit | what it shows |
+|---|---|---|---|
+| **LED, lens and screen** | Optical design | mm | An LED, a PMMA lens and a detector: illuminance in lux |
+| **Aspheric condenser** | Optical design | mm | An aspheric lens collimating a small source |
+| **Fresnel or plano-convex** | Optical design | mm | One focal length made two ways, side by side |
+| **Parabolic reflector** | Optical design | mm | A torch's reflector: the far field, intensity and beam angle |
+| **Light guide** | Optical design | mm | Light carried round two bends by total internal reflection |
+| **RGBW colour mixing** | Optical design | mm | Four LEDs and a mixing rod: the colour map |
+| **Dispersion in a prism** | Optical design | mm | White light split by a flint prism at minimum deviation |
+| **Dichroic combiner** | Optical design | mm | Red and blue beams joined by a coated plate |
+| **Office lighting** | Optical design | m | Four LED panels and the work plane's illuminance |
 
 ### Keyboard and mouse
 

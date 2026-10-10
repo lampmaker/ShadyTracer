@@ -19,13 +19,13 @@ import * as M from '../model.js'
 import { generate, isBefore, isAfter } from '../codegen.js'
 import { MODIFIERS, modifierGroup } from '../modifiers.js'
 import { planOf, KIND, FLAG, REC, HEADER, solidsOf } from '../scenedata.js'
-import { SCENE_FILES } from '../../scenes/index.js'
+import { EVERY_SCENE, fixturePath } from '../../test/scenes.mjs'
 import { computeUniformTypes } from '../../lib/pathtracer/core/uniforms.schema.js'
 
 let pass = 0, fail = 0
 const ok = (name, cond, extra = '') => { if (cond) { pass++; return } fail++; console.log(`FAIL  ${name}${extra ? '\n      ' + extra : ''}`) }
-const dir = new URL('../../scenes/', import.meta.url)
-const load = f => M.parse(readFileSync(new URL(f, dir), 'utf8'))
+// a scene by its name in EVERY_SCENE (an example's file, or fixtures/<file>), or a fixture's file by name
+const load = f => M.parse(readFileSync(EVERY_SCENE.find(s => s.name === f)?.path ?? fixturePath(f), 'utf8'))
 const gen = (doc, carry = null) => generate(...M.generateArgs(doc, { id: 'built', data: true, carry }))
 /* everything a kernel's text is made of: the four scene texts and the uniform struct */
 const textOf = s => JSON.stringify([s.wgsl, s.pickWgsl, s.opticsWgsl, s.opticsPickWgsl, computeUniformTypes(s.uniforms)])
@@ -40,7 +40,7 @@ const same = (a, b) => a.length === b.length && a.every((v, i) => Object.is(v, b
 const objects = doc => { const out = []; const go = n => { if (n.kind === 'object' && n.type === 'code') out.push(n); (n.children || []).forEach(go) }; go(doc.root); return out }
 const topObject = doc => doc.root.children.find(n => n.kind === 'object' && n.type === 'code')
 
-for (const file of SCENE_FILES) {
+for (const { name: file } of EVERY_SCENE) {
     const doc = load(file)
     const s = gen(doc)
     const d0 = s.data
@@ -87,7 +87,15 @@ for (const file of SCENE_FILES) {
             'a copy of it added': d => { M.duplicate(d, o.id) },
             'it deleted': d => { M.remove(d, o.id) },
         }
-        if (doc.materials.length > 1) edits['another material'] = d => { const n = M.find(d, o.id).node; n.material = d.materials.find(m => m.id !== n.material).id }
+        /* ANOTHER MATERIAL, one with no relief: a relief is shape, in the SDF, so putting one on is a compile (the examples
+           since 0.51.0 have relief materials beside plain ones, which the scenes before never had) */
+        const plainOther = n => doc.materials.find(m => m.id !== n.material && !m.relief)
+        if (plainOther(o)) edits['another material'] = d => { const n = M.find(d, o.id).node; n.material = plainOther(n).id }
+        /* A COPY OR A DELETE of a shape whose points are compiled in (a path or profile not live) adds those points to the
+           text or takes them out: a compile, as a new block is (model.js "A PATH"). Seen first on the light guide example
+           (0.51.0); the carried blocks (gen's second argument) do not carry points, so a delete is a compile too. */
+        const compiledPoints = Object.values(o.params || {}).some(v => ['path', 'profile'].includes(M.paramKind(v)) && !v?.live)
+        if (compiledPoints) { delete edits['a copy of it added']; delete edits['it deleted'] }
         for (const [what, edit] of Object.entries(edits)) {
             const d = structuredClone(doc)
             edit(d)

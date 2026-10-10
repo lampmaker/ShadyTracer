@@ -327,12 +327,14 @@ closed-form answers on real hardware, and every number carries its error bar.
 
 ## 9. Bundled scenes
 
-The **Examples**, in the scene switcher's list (`scenes/index.js`), each opened as a copy into
-the project: **Demo scene**, **Menger cubes**, **Material showcase**, **Material test**, **Builder demo**,
-**Optics test: LED, lens, screen** (cm), **RGBW mixer** (mm: four LEDs, a light guide, a lens, a detector),
-**Surface materials**, **Noise library**. Not loaded at start since 0.7.0: a first visit starts on Builder demo
-alone, and every later one on the project kept in the browser. Also in the folder, opened by hand: a richer
-Menger scene and a three-LED optics test.
+**File › Examples** (`scenes/index.js`), each opened as a copy into the project with a camera of its own: 23 scenes
+made in code (`scenes/make.mjs`) in real sizes, by audience -- **Modelling and rendering** (Start; Shapes: the gallery,
+combining, modifiers, from points, a parametric part, infinite detail; Materials: the board, relief and texture,
+glass and liquid; Light and camera: a room, depth of field, animation, a product shot) and **Optical design** (an
+LED and lens, an aspheric condenser, Fresnel against plano-convex, a parabolic reflector, a light guide, RGBW mixing,
+a prism's dispersion, a dichroic combiner, office lighting). **Built (0.51.0), not yet seen**: none has been
+rendered on real hardware; the geometry and cameras are reasoned, not looked at. A first visit starts on *First
+steps*. The examples before 0.51.0 are test fixtures (`test/fixtures/scenes/`).
 
 ---
 

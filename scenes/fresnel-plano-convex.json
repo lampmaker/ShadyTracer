@@ -1,0 +1,459 @@
+{
+  "format": "raytracer-scene",
+  "version": 21,
+  "title": "Fresnel or plano-convex",
+  "nextId": 12,
+  "unit": "mm",
+  "materials": [
+    {
+      "id": "m1",
+      "label": "PMMA (acrylic)",
+      "params": {
+        "baseColor": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "metallic": 0,
+        "roughness": 0,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 1,
+        "ior": 1.491,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "abbe": 57,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
+    },
+    {
+      "id": "m2",
+      "label": "screen",
+      "params": {
+        "baseColor": {
+          "r": 0.8,
+          "g": 0.8,
+          "b": 0.8
+        },
+        "metallic": 0,
+        "roughness": 1,
+        "anisotropy": 0,
+        "specular": 0,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   R_local  that frame's rotation to the world, for a direction written in it\n//   S_local  its scale: p_local * S_local is in scene units; metres(x) is x m in them, mm(x) x mm\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe; one marked\n//            as a length is in real mm, whatever the scene's unit -- read the point in mm too:\n//   let q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. brushed along the object's x, for an anisotropy above 0 (or turned: grainAround):\n//   m.tangent = grainAlong(R_local, VEC3(1.0, 0.0, 0.0));\n// e.g. with a length width (mm) and a colour stripe added with +, and q as above:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(q.x / width), 0.5));\n",
+      "type": "detector"
+    }
+  ],
+  "blocks": [
+    {
+      "id": "b4",
+      "label": "lens",
+      "kind": "object",
+      "code": "// A spherical lens along z (sdf.js Nlens): r1 the +z face, r2 the -z face; a positive radius\n// bulges out, a negative one is hollowed in, 0 is flat. Its refractive index is its material's --\n// give it a glass. Thin lens: 1/f = (n - 1)(1/r1 + 1/r2).\nC = add_new(C, Nlens(p, diameter, thickness, r1, r2), MATERIAL);",
+      "params": {
+        "diameter": 1,
+        "thickness": 0.2,
+        "r1": 2,
+        "r2": 2
+      },
+      "ranges": {
+        "diameter": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        },
+        "thickness": {
+          "min": 0.001,
+          "max": 10,
+          "step": 0.001
+        },
+        "r1": {
+          "min": -50,
+          "max": 50,
+          "step": 0.01
+        },
+        "r2": {
+          "min": -50,
+          "max": 50,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "diameter",
+        "thickness",
+        "r1",
+        "r2"
+      ],
+      "builtin": "lens@1"
+    },
+    {
+      "id": "b7",
+      "label": "rectangle",
+      "kind": "object",
+      "code": "// A flat rectangle in the xy plane, no thickness (sdf.js Nrectangle), seen from both sides:\n// a planar optics detector, or a ray limiter across a beam, with that material type.\nC = add_new(C, Nrectangle(p, VEC2(width, height) * 0.5), MATERIAL);",
+      "params": {
+        "width": 1,
+        "height": 1
+      },
+      "ranges": {
+        "width": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        },
+        "height": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "width",
+        "height"
+      ],
+      "builtin": "rectangle@1"
+    },
+    {
+      "id": "b9",
+      "label": "fresnel lens",
+      "kind": "object",
+      "code": "// A Fresnel lens, as (radius, z) turned about z (revolve): a flat back on z = 0 and the curved face of a\n// plano-convex lens of focal length 1.5 in glass of n 1.49, cut into six rings -- edit the points, or work\n// out others. Give it a glass. Straight facets: each ring's face is a cone, not a sphere.\nC = add_new(C, revolve(outline, p), MATERIAL);",
+      "params": {
+        "outline": [
+          [
+            0,
+            0
+          ],
+          [
+            0.5,
+            0
+          ],
+          [
+            0.5,
+            0.025
+          ],
+          [
+            0.4167,
+            0.0918
+          ],
+          [
+            0.4167,
+            0.025
+          ],
+          [
+            0.3333,
+            0.0746
+          ],
+          [
+            0.3333,
+            0.025
+          ],
+          [
+            0.25,
+            0.0611
+          ],
+          [
+            0.25,
+            0.025
+          ],
+          [
+            0.1667,
+            0.0497
+          ],
+          [
+            0.1667,
+            0.025
+          ],
+          [
+            0.0833,
+            0.0394
+          ],
+          [
+            0.0833,
+            0.025
+          ],
+          [
+            0,
+            0.0297
+          ]
+        ]
+      },
+      "lengths": [
+        "outline"
+      ],
+      "builtin": "fresnel lens@1"
+    }
+  ],
+  "root": {
+    "id": "root",
+    "kind": "group",
+    "label": "Fresnel or plano-convex",
+    "enabled": true,
+    "blend": 0,
+    "children": [
+      {
+        "id": "n3",
+        "kind": "object",
+        "type": "code",
+        "label": "plano-convex",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -50,
+            "y": 0,
+            "z": 64.5
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m1",
+        "params": {
+          "diameter": 40,
+          "thickness": 9,
+          "r1": 29.5,
+          "r2": 0
+        },
+        "block": "b4"
+      },
+      {
+        "id": "n5",
+        "kind": "object",
+        "type": "light",
+        "label": "LED A (50 lm)",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -50,
+            "y": 0,
+            "z": 6
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": null,
+        "params": {
+          "width": 1,
+          "height": 1
+        },
+        "light": {
+          "shape": "rectangle",
+          "flux": 50,
+          "colourBy": "cct",
+          "cct": 5000
+        }
+      },
+      {
+        "id": "n6",
+        "kind": "object",
+        "type": "code",
+        "label": "screen A",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -50,
+            "y": 0,
+            "z": 350
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m2",
+        "params": {
+          "width": 90,
+          "height": 90
+        },
+        "block": "b7"
+      },
+      {
+        "id": "n8",
+        "kind": "object",
+        "type": "code",
+        "label": "Fresnel",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 50,
+            "y": 0,
+            "z": 60
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 40
+        },
+        "material": "m1",
+        "params": {
+          "outline": [
+            [
+              0,
+              0
+            ],
+            [
+              0.5,
+              0
+            ],
+            [
+              0.5,
+              0.025
+            ],
+            [
+              0.4167,
+              0.0918
+            ],
+            [
+              0.4167,
+              0.025
+            ],
+            [
+              0.3333,
+              0.0746
+            ],
+            [
+              0.3333,
+              0.025
+            ],
+            [
+              0.25,
+              0.0611
+            ],
+            [
+              0.25,
+              0.025
+            ],
+            [
+              0.1667,
+              0.0497
+            ],
+            [
+              0.1667,
+              0.025
+            ],
+            [
+              0.0833,
+              0.0394
+            ],
+            [
+              0.0833,
+              0.025
+            ],
+            [
+              0,
+              0.0297
+            ]
+          ]
+        },
+        "block": "b9"
+      },
+      {
+        "id": "n10",
+        "kind": "object",
+        "type": "light",
+        "label": "LED B (50 lm)",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 50,
+            "y": 0,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": null,
+        "params": {
+          "width": 1,
+          "height": 1
+        },
+        "light": {
+          "shape": "rectangle",
+          "flux": 50,
+          "colourBy": "cct",
+          "cct": 5000
+        }
+      },
+      {
+        "id": "n11",
+        "kind": "object",
+        "type": "code",
+        "label": "screen B",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 50,
+            "y": 0,
+            "z": 350
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m2",
+        "params": {
+          "width": 90,
+          "height": 90
+        },
+        "block": "b7"
+      }
+    ]
+  },
+  "functions": "// Functions: WGSL helpers any code node or material in this scene can call.\n// Compiled once, before the materials and the SDF; errors show here at their own lines.\n// e.g. a gyroid, usable in a code node as  C = add_new(C, sd(gyroid(p, 4.0)), MATERIAL);\n//   fn gyroid(p: VEC3, s: f32) -> f32 {\n//       let q = p * s;\n//       return abs(dot(sin(q), cos(q.zxy))) / s - 0.03;\n//   }\n",
+  "envRadius": 1500,
+  "environment": {
+    "envMode": 1,
+    "studioIlluminance": 5,
+    "studioTop": 0.5
+  },
+  "optics": {
+    "maxDist": 800
+  }
+}

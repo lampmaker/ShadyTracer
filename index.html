@@ -43,7 +43,7 @@
         import { compileFraction, compileLabel } from "./lib/pathtracer/core/compileprogress.js"
         import { makeParams } from "./lib/shell/params.js"
         import { installParamsPanel, paramsSearch } from "./lib/shell/paramspanel.js"
-        import { SCENE_FILES, FIRST_VISIT, urlOf } from './scenes/index.js'
+        import { EXAMPLES, FIRST_VISIT, example, urlOf } from './scenes/index.js'
         import { benchTest } from './bench/index.js'
         import { scalingTest } from './bench/scaling.js'
         import { sceneDataTest } from './bench/scenedata.js'
@@ -612,7 +612,10 @@
         SHELL.statusRight(modeEl);
         let paintMode = () => { };
         const BUILDER = installBuilder(window, {
-            RT, gpu: WG, project, current: START.workspace.current, cameras: START.workspace.cameras,
+            RT, gpu: WG, project, current: START.workspace.current,
+            // a first visit's scene is an example: seen from that example's camera (scenes/index.js), the rest as kept
+            cameras: START.firstVisit && example(FIRST_VISIT)?.camera
+                ? { ...START.workspace.cameras, [START.workspace.current]: example(FIRST_VISIT).camera } : START.workspace.cameras,
             onScene: (sc, ms) => {
                 status(`${sc.title}  (${ms.toFixed(0)} ms, march kernel `
                     + `${((RT.prog_wvfmarch?.wgsl?.length || 0) / 1024).toFixed(0)} kB)`);
@@ -947,11 +950,11 @@
             /* THE EXAMPLES (scenes/index.js): the bundled scenes, a COPY of one into the project from File › Examples -- the
                same as opening its file (demo.js load: put after the scene being worked on, and worked on). Their
                titles are read from the files when File is first opened. */
+            /* ...by audience and group, each with what it shows (scenes/examples.js, made by scenes/make.mjs), and opened with
+               a camera of its own: an example is a place to look from as much as a scene (0.51.0) */
             examples = {
-                list: async () => (await Promise.all(SCENE_FILES.map(async f => {
-                    try { return { id: f, title: (await readScene(f)).title || f } } catch (e) { console.warn(`[scenes] ${f}:`, e); return null }
-                }))).filter(Boolean),
-                open: async file => openText(await (await fetch(urlOf(file))).text(), file),
+                list: async () => EXAMPLES.map(e => ({ id: e.file, title: e.title, audience: e.audience, group: e.group, description: e.description })),
+                open: async file => openText(await (await fetch(urlOf(file))).text(), file, { camera: example(file)?.camera }),
             };
             /* a file kept as a project of its own and opened -- what the Projects list's Import does (workspace/dialog.js) */
             const importProject = async () => {
@@ -995,7 +998,7 @@
                project being worked on (demo.js load: after the current scene, and worked on). A WORKSPACE file
                becomes a project of its own in the list, and is opened: it replaced the work open before, which
                with the work kept in the browser would be throwing it away (UI_PLAN.md section 10). */
-            const openText = async (text, name = 'file') => {
+            const openText = async (text, name = 'file', { camera = null } = {}) => {
                 try {
                     let kind = null;
                     try { kind = Project.parse(text); } catch { }      // a bad file: load() below says all that is wrong with it
@@ -1003,7 +1006,7 @@
                         await SESSION.importText(text, String(name).replace(/\.json$/i, ''));
                         return status(`opened ${name} as a project of its own (File › Projects…)`);
                     }
-                    status(BUILDER.load(text));
+                    status(BUILDER.load(text, { camera }));
                     builderTree.apply();
                 } catch (e) {
                     // a ModelError lists every problem with the file; the project is unchanged

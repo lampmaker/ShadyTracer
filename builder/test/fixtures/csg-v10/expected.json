@@ -19,7 +19,467 @@
    "roles": "75ddf981e5e5c4adf05c8b5c437f0f060dbb70b84252b96bdab528599b7e2f95"
   }
  },
- "scenes/Menger_cubes.json": {
+ "scenes/animation.json": {
+  "off": {
+   "wgsl": "8995026964c59605798db8820f157d51af9ad63dd116a0f09e5724b64263fd78",
+   "pickWgsl": "fb8909dfecfbfcaf87bb4e508d485aa3d856dced806315b11a99f41e2d6880ef",
+   "opticsWgsl": "8995026964c59605798db8820f157d51af9ad63dd116a0f09e5724b64263fd78",
+   "opticsPickWgsl": "fb8909dfecfbfcaf87bb4e508d485aa3d856dced806315b11a99f41e2d6880ef",
+   "uniforms": "632e27ee8282158159e7e8ee1a186affccc2be66f422a9fb797f338497cf7d09",
+   "tags": "b7f023d435aac6c82197811c70b20d0f4bf7f43f4da7f2744957d2911eb722cd",
+   "roles": "643d5437104296e21d906ecb15b2c96ad278f20cfc4af53b12bb6069bd853726"
+  },
+  "live": {
+   "wgsl": "b0b7ea8d2e02982993e7d5107c3f466dc4ed01109f18d9f1b99a4d6252dadd66",
+   "pickWgsl": "179106089553af5f82c0e625da1177153c61d03b9006ab63bca477264ca228cd",
+   "opticsWgsl": "b0b7ea8d2e02982993e7d5107c3f466dc4ed01109f18d9f1b99a4d6252dadd66",
+   "opticsPickWgsl": "179106089553af5f82c0e625da1177153c61d03b9006ab63bca477264ca228cd",
+   "uniforms": "6de298b5f41872c24edaf3291ae843fa8fbe8f4cdc281bde8ab790c3477b2854",
+   "tags": "b7f023d435aac6c82197811c70b20d0f4bf7f43f4da7f2744957d2911eb722cd",
+   "roles": "643d5437104296e21d906ecb15b2c96ad278f20cfc4af53b12bb6069bd853726"
+  }
+ },
+ "scenes/aspheric-condenser.json": {
+  "off": {
+   "wgsl": "6958af66e3cec5e917b2045e8da667869fef4968798af7ff92fc9f50f065aa74",
+   "pickWgsl": "607b0eb892b01c6a621cfcd58a6ef55477cded55bf802dd3e377b971023b33ef",
+   "opticsWgsl": "6958af66e3cec5e917b2045e8da667869fef4968798af7ff92fc9f50f065aa74",
+   "opticsPickWgsl": "607b0eb892b01c6a621cfcd58a6ef55477cded55bf802dd3e377b971023b33ef",
+   "uniforms": "031309062c2f840e1fc83df5d0b33fa602db7d334c589c245de383351f6965f7",
+   "tags": "bcd2caf87186827e15c4d6862b2a1e48d2821fb4cbae3f40b5c5e66872219bfb",
+   "roles": "16807f85bb7706072229f41fa13d2ed4437e6edab3edac0ec794276bfd3b098d"
+  },
+  "live": {
+   "wgsl": "223946684fc3be647f4e0fd84987fb842478d829d8924a703387a6635c36477d",
+   "pickWgsl": "b85f3d9b2057836e4ad243e2262022614e9e28be9aec8fe334cc7f1a9cc960b0",
+   "opticsWgsl": "223946684fc3be647f4e0fd84987fb842478d829d8924a703387a6635c36477d",
+   "opticsPickWgsl": "b85f3d9b2057836e4ad243e2262022614e9e28be9aec8fe334cc7f1a9cc960b0",
+   "uniforms": "7cb0b97362a5c048f93019aa50304b84d1f9c2929153a447c979ebc5502cc2b4",
+   "tags": "bcd2caf87186827e15c4d6862b2a1e48d2821fb4cbae3f40b5c5e66872219bfb",
+   "roles": "16807f85bb7706072229f41fa13d2ed4437e6edab3edac0ec794276bfd3b098d"
+  }
+ },
+ "scenes/combining-shapes.json": {
+  "off": {
+   "wgsl": "a3c4795f91a6a4d593ec169b8ec8ad2b5a44371849b30b6d4e6717e817146d7d",
+   "pickWgsl": "038f4bdaff2cff1e1807a85b4472fe824611d326028d5389489f2206103a6cf7",
+   "opticsWgsl": "a3c4795f91a6a4d593ec169b8ec8ad2b5a44371849b30b6d4e6717e817146d7d",
+   "opticsPickWgsl": "038f4bdaff2cff1e1807a85b4472fe824611d326028d5389489f2206103a6cf7",
+   "uniforms": "c0f838c5da005f5199c902155a60759abfd2b4da762299d6ea12741fb4d0ee02",
+   "tags": "37e1c106596186120c46988aa289248b84c9b7bef4ed2b325191137049d09717",
+   "roles": "643d5437104296e21d906ecb15b2c96ad278f20cfc4af53b12bb6069bd853726"
+  },
+  "live": {
+   "wgsl": "53889c028393b4b4edc59debd4a6991d39e9cd38613953548520304c50ef1edf",
+   "pickWgsl": "10f518473288a182e15ea0dd51e03ac1f2aa1a417b3da7d29b58d7a2ce192398",
+   "opticsWgsl": "53889c028393b4b4edc59debd4a6991d39e9cd38613953548520304c50ef1edf",
+   "opticsPickWgsl": "10f518473288a182e15ea0dd51e03ac1f2aa1a417b3da7d29b58d7a2ce192398",
+   "uniforms": "70a318832e9ec690fec8802740efc0de9adca6d8345bf34717a5117da5a46d5f",
+   "tags": "37e1c106596186120c46988aa289248b84c9b7bef4ed2b325191137049d09717",
+   "roles": "643d5437104296e21d906ecb15b2c96ad278f20cfc4af53b12bb6069bd853726"
+  }
+ },
+ "scenes/depth-of-field.json": {
+  "off": {
+   "wgsl": "dcfe6f65b7251131e43ddabae020f9841efd9e5e587f7aba9d51a5a4b5a028b0",
+   "pickWgsl": "fba4779cacf5e9e70bf6cd7aaa4fb588133453a859920de6daed1b4c6bd33aac",
+   "opticsWgsl": "dcfe6f65b7251131e43ddabae020f9841efd9e5e587f7aba9d51a5a4b5a028b0",
+   "opticsPickWgsl": "fba4779cacf5e9e70bf6cd7aaa4fb588133453a859920de6daed1b4c6bd33aac",
+   "uniforms": "5e3ebeb60e4b7a170c1db6b823e9fd4676ab3ef0066cd1bb803c758a3b07dfb4",
+   "tags": "30cb4da2d80d681710276bedb064fa3cd810de78668666b6ae4c4fd9f28a06d3",
+   "roles": "643d5437104296e21d906ecb15b2c96ad278f20cfc4af53b12bb6069bd853726"
+  },
+  "live": {
+   "wgsl": "e7491a4af146930fd12aecbc16f85280e14d284ea1caad254291a5487b1a6bea",
+   "pickWgsl": "f8d16aa868b17ddc3d2cce5abd6e0db441adb8e230f2b020cecdd5495fc2f6b2",
+   "opticsWgsl": "e7491a4af146930fd12aecbc16f85280e14d284ea1caad254291a5487b1a6bea",
+   "opticsPickWgsl": "f8d16aa868b17ddc3d2cce5abd6e0db441adb8e230f2b020cecdd5495fc2f6b2",
+   "uniforms": "bf9a725179fdb4871d637d98e26823d391d4e6e3a16346944fdfb08cc3c73e27",
+   "tags": "30cb4da2d80d681710276bedb064fa3cd810de78668666b6ae4c4fd9f28a06d3",
+   "roles": "643d5437104296e21d906ecb15b2c96ad278f20cfc4af53b12bb6069bd853726"
+  }
+ },
+ "scenes/dichroic-combiner.json": {
+  "off": {
+   "wgsl": "66d11f76ec4f3b74b6784dcc001e720ba5e885fe744a267d905e5a6e26fdbcd0",
+   "pickWgsl": "a24e967a03934c22c3449f7129710f4c7ad5a97c0f0e0dd7b30de91bd24d27fd",
+   "opticsWgsl": "66d11f76ec4f3b74b6784dcc001e720ba5e885fe744a267d905e5a6e26fdbcd0",
+   "opticsPickWgsl": "a24e967a03934c22c3449f7129710f4c7ad5a97c0f0e0dd7b30de91bd24d27fd",
+   "uniforms": "7ba6b87e250d82684e4d4d558c61cc001d2d20e4ce13e86ecc12a244d37f24d4",
+   "tags": "f04c08e12612fc1dbcc54b08c37c037e4ebd81fcb163acad0ec6f306f7ca1c34",
+   "roles": "9a42843722f5fa7458d141f36e2bb607b0d7a84e2e6765955627cedb2c4f7d99"
+  },
+  "live": {
+   "wgsl": "c6e1bf5fd97231a3da48d9a13068ddb5bb38f574556979a6cb4595165261e136",
+   "pickWgsl": "2c476689d08a9457943b43fede38f1cd5f9f999179a5d3287c01fdb507632a05",
+   "opticsWgsl": "c6e1bf5fd97231a3da48d9a13068ddb5bb38f574556979a6cb4595165261e136",
+   "opticsPickWgsl": "2c476689d08a9457943b43fede38f1cd5f9f999179a5d3287c01fdb507632a05",
+   "uniforms": "62dc1e2f660bb35e0ea3880a5b6e0ccc1be4132b8c5e10e26bc70143fce623b8",
+   "tags": "f04c08e12612fc1dbcc54b08c37c037e4ebd81fcb163acad0ec6f306f7ca1c34",
+   "roles": "9a42843722f5fa7458d141f36e2bb607b0d7a84e2e6765955627cedb2c4f7d99"
+  }
+ },
+ "scenes/first-steps.json": {
+  "off": {
+   "wgsl": "49becffd579944d28ea777c55fc40081f995b4d617221fddabe9237f48e7a106",
+   "pickWgsl": "71908719c91fa935d2fa567786fd8995527aed73d1d22b72401fb07d5bedec97",
+   "opticsWgsl": "49becffd579944d28ea777c55fc40081f995b4d617221fddabe9237f48e7a106",
+   "opticsPickWgsl": "71908719c91fa935d2fa567786fd8995527aed73d1d22b72401fb07d5bedec97",
+   "uniforms": "b7576d5d3c1a2d869bb175ab05794df44799a04990136ce602232c11351168a4",
+   "tags": "c905a3a8d3ca3ff318494df6b7acfe7d1e7a8e546d78f60a94089b1d63d3d924",
+   "roles": "643d5437104296e21d906ecb15b2c96ad278f20cfc4af53b12bb6069bd853726"
+  },
+  "live": {
+   "wgsl": "fb39d7ab43acbc65ed9cec559629d8545ffa132401a92203595fccdc897faa11",
+   "pickWgsl": "e0495bdfc17c382ceffec47f669ba6130bd4131d04bed973cbca208e012aedb3",
+   "opticsWgsl": "fb39d7ab43acbc65ed9cec559629d8545ffa132401a92203595fccdc897faa11",
+   "opticsPickWgsl": "e0495bdfc17c382ceffec47f669ba6130bd4131d04bed973cbca208e012aedb3",
+   "uniforms": "0d07dc5d1231b7e63874c57c3192dbf92fc380c86a34be13c3ffee2674288087",
+   "tags": "c905a3a8d3ca3ff318494df6b7acfe7d1e7a8e546d78f60a94089b1d63d3d924",
+   "roles": "643d5437104296e21d906ecb15b2c96ad278f20cfc4af53b12bb6069bd853726"
+  }
+ },
+ "scenes/fresnel-plano-convex.json": {
+  "off": {
+   "wgsl": "3bcffabfa8a80cbb7bd1d9567952efe4c51f23f26de22c185af737f625e4c030",
+   "pickWgsl": "5e14651f90f171c1b14da3973147b4c9568498df86ab013cafa0d37f5e7533d3",
+   "opticsWgsl": "3bcffabfa8a80cbb7bd1d9567952efe4c51f23f26de22c185af737f625e4c030",
+   "opticsPickWgsl": "5e14651f90f171c1b14da3973147b4c9568498df86ab013cafa0d37f5e7533d3",
+   "uniforms": "2d972f2cfc7a722174a16f74eb69b0079bae7e4a36b9ae381981a98d99adae12",
+   "tags": "811257b155f64ecc09b4c6247ec793c8e853db966ee7afc57a4e74843c642b31",
+   "roles": "16807f85bb7706072229f41fa13d2ed4437e6edab3edac0ec794276bfd3b098d"
+  },
+  "live": {
+   "wgsl": "56233fda601d6571dfe39e8b4d1cd88706281141442360967ae945907e813266",
+   "pickWgsl": "f32fcbee33adbf5190c609fc028ff4f98c3e88e371b49550d0f8ecb83a6b6c15",
+   "opticsWgsl": "56233fda601d6571dfe39e8b4d1cd88706281141442360967ae945907e813266",
+   "opticsPickWgsl": "f32fcbee33adbf5190c609fc028ff4f98c3e88e371b49550d0f8ecb83a6b6c15",
+   "uniforms": "201631f4f4fbfff2aee94e711b211079d72b284ad82e1b0e698bbf87416b6b0b",
+   "tags": "811257b155f64ecc09b4c6247ec793c8e853db966ee7afc57a4e74843c642b31",
+   "roles": "16807f85bb7706072229f41fa13d2ed4437e6edab3edac0ec794276bfd3b098d"
+  }
+ },
+ "scenes/from-points.json": {
+  "off": {
+   "wgsl": "c4e553ad3c219b49c95bf573a7f4019e51202cf602c32add58fb96f492d176fe",
+   "pickWgsl": "df78a058d62b253bb12b858c7d9be44c2ff5beffca5860388c1116381db3c81b",
+   "opticsWgsl": "c4e553ad3c219b49c95bf573a7f4019e51202cf602c32add58fb96f492d176fe",
+   "opticsPickWgsl": "df78a058d62b253bb12b858c7d9be44c2ff5beffca5860388c1116381db3c81b",
+   "uniforms": "ecd7aa2197b03b798539147fd034a08ecfcced80bf29b8b652101f3351a365bc",
+   "tags": "90f82c7351fdc9eb6a28c4e510ea634cd7c1dc6225e2363745be35609f744d58",
+   "roles": "643d5437104296e21d906ecb15b2c96ad278f20cfc4af53b12bb6069bd853726"
+  },
+  "live": {
+   "wgsl": "aa75a027d72954020b2c28652a94d21faff514c48ae7bb934f04773a275c21fc",
+   "pickWgsl": "f5dcfbe8e2765c87404431486bc88c34b887255063755a0a66eb3101f6e2845b",
+   "opticsWgsl": "aa75a027d72954020b2c28652a94d21faff514c48ae7bb934f04773a275c21fc",
+   "opticsPickWgsl": "f5dcfbe8e2765c87404431486bc88c34b887255063755a0a66eb3101f6e2845b",
+   "uniforms": "c30a16122f378aca32663313c9f525ba310f8bcd8da3fabad0599b7c8d91b173",
+   "tags": "90f82c7351fdc9eb6a28c4e510ea634cd7c1dc6225e2363745be35609f744d58",
+   "roles": "643d5437104296e21d906ecb15b2c96ad278f20cfc4af53b12bb6069bd853726"
+  }
+ },
+ "scenes/glass-liquid.json": {
+  "off": {
+   "wgsl": "22c019bc2619017febb04e7556f3e5bdcd261f652388e35ef4e9e9ac0d3a3436",
+   "pickWgsl": "e0fd6b7c97dd106dbd1605890fe3ed8241955761a987d873167e79e7ce42a992",
+   "opticsWgsl": "22c019bc2619017febb04e7556f3e5bdcd261f652388e35ef4e9e9ac0d3a3436",
+   "opticsPickWgsl": "e0fd6b7c97dd106dbd1605890fe3ed8241955761a987d873167e79e7ce42a992",
+   "uniforms": "98a04712173aed89a2fa4c3a4da98ba46c422bc0cab6bc434f4ae85189d28b52",
+   "tags": "3a03f82c7a9ed03816ef0b8dfcd2b44be999b8ccd779b7a89d7e766fc65435e2",
+   "roles": "643d5437104296e21d906ecb15b2c96ad278f20cfc4af53b12bb6069bd853726"
+  },
+  "live": {
+   "wgsl": "ada01bf4fc9302f521bb867cdf7250319ad1f07d0fc0570f36eaf1e9b3697ab1",
+   "pickWgsl": "428f4134d0b51cf9ef9dd70e156a16d47a0ce783d43cb1f7a112f28e0eb4aaa8",
+   "opticsWgsl": "ada01bf4fc9302f521bb867cdf7250319ad1f07d0fc0570f36eaf1e9b3697ab1",
+   "opticsPickWgsl": "428f4134d0b51cf9ef9dd70e156a16d47a0ce783d43cb1f7a112f28e0eb4aaa8",
+   "uniforms": "2cc5ad33e8b011858596314302c97231cfb57f480c19b4b52c977f4f0b85dd0a",
+   "tags": "3a03f82c7a9ed03816ef0b8dfcd2b44be999b8ccd779b7a89d7e766fc65435e2",
+   "roles": "643d5437104296e21d906ecb15b2c96ad278f20cfc4af53b12bb6069bd853726"
+  }
+ },
+ "scenes/infinite-detail.json": {
+  "off": {
+   "wgsl": "e7091c73825b7cb822b9f8e58ffd2fa42f7d040efb416a6d46084d3dd560e893",
+   "pickWgsl": "c4dee6ca0274db4282af00aac6e52edc5777ebb806073328e2d5845e99dd8bfd",
+   "opticsWgsl": "e7091c73825b7cb822b9f8e58ffd2fa42f7d040efb416a6d46084d3dd560e893",
+   "opticsPickWgsl": "c4dee6ca0274db4282af00aac6e52edc5777ebb806073328e2d5845e99dd8bfd",
+   "uniforms": "6fe2ad32fa0a9a9fb1a3315ce929848f2db3147571964e7525e269d9c138cd60",
+   "tags": "afd8b40b397cf773dda94644465276da4a1c8393119a7ca27973221447556ee3",
+   "roles": "643d5437104296e21d906ecb15b2c96ad278f20cfc4af53b12bb6069bd853726"
+  },
+  "live": {
+   "wgsl": "1abff8473a475451bd35dd3f8f0c098eba95cec0dd93aa88e5d41737ea71ab5c",
+   "pickWgsl": "2f9922e771a371d50e93ac82306d406ce877d3aeca7ad031b8ec8de0dbfd3021",
+   "opticsWgsl": "1abff8473a475451bd35dd3f8f0c098eba95cec0dd93aa88e5d41737ea71ab5c",
+   "opticsPickWgsl": "2f9922e771a371d50e93ac82306d406ce877d3aeca7ad031b8ec8de0dbfd3021",
+   "uniforms": "d373cc548496e63530e9104767be7d452918af935e6530247ec2f5e5442af80e",
+   "tags": "afd8b40b397cf773dda94644465276da4a1c8393119a7ca27973221447556ee3",
+   "roles": "643d5437104296e21d906ecb15b2c96ad278f20cfc4af53b12bb6069bd853726"
+  }
+ },
+ "scenes/led-lens-screen.json": {
+  "off": {
+   "wgsl": "212c61ced5fc5259e02b82ac3f7a58600f0fde93740298447bc245129e37062b",
+   "pickWgsl": "eb681320b8776087af08cc5c02af51592b943c1d8cbd44efd88fb87fefbef01c",
+   "opticsWgsl": "212c61ced5fc5259e02b82ac3f7a58600f0fde93740298447bc245129e37062b",
+   "opticsPickWgsl": "eb681320b8776087af08cc5c02af51592b943c1d8cbd44efd88fb87fefbef01c",
+   "uniforms": "65a27f34046c88d6700097b0f67718b85656125c41699cd6b708f97746c464f0",
+   "tags": "2263d748487e43a0f4d0fbe46acedac92afa412462386443fa471cf9f24298b0",
+   "roles": "9a42843722f5fa7458d141f36e2bb607b0d7a84e2e6765955627cedb2c4f7d99"
+  },
+  "live": {
+   "wgsl": "b15ea6a0abb3f2701212dd48ecf8f545d0d6dcb7a701bae712d918a27eb727df",
+   "pickWgsl": "a9c8a44fa2e65c61d5dfbf8648a3a304b70f22f6d6a42f81d3570867604cfcd5",
+   "opticsWgsl": "b15ea6a0abb3f2701212dd48ecf8f545d0d6dcb7a701bae712d918a27eb727df",
+   "opticsPickWgsl": "a9c8a44fa2e65c61d5dfbf8648a3a304b70f22f6d6a42f81d3570867604cfcd5",
+   "uniforms": "0f88599b71bc399022d2165c34717e70ed67cc3fae3108c731f1e06835483459",
+   "tags": "2263d748487e43a0f4d0fbe46acedac92afa412462386443fa471cf9f24298b0",
+   "roles": "9a42843722f5fa7458d141f36e2bb607b0d7a84e2e6765955627cedb2c4f7d99"
+  }
+ },
+ "scenes/light-guide.json": {
+  "off": {
+   "wgsl": "75083e89a04837fb10778d21e4471881057ff7163343ed4360d7d2b7e1a89942",
+   "pickWgsl": "0ca2b169d92e0aac2b8ec5e4923e4c931be079bb7e89124ae6605d54601a188a",
+   "opticsWgsl": "75083e89a04837fb10778d21e4471881057ff7163343ed4360d7d2b7e1a89942",
+   "opticsPickWgsl": "0ca2b169d92e0aac2b8ec5e4923e4c931be079bb7e89124ae6605d54601a188a",
+   "uniforms": "70b60d328dc15ffd3ea5172bd0e21b1f1cdbe8413ec5e03fb48716d53a1db65a",
+   "tags": "bcd2caf87186827e15c4d6862b2a1e48d2821fb4cbae3f40b5c5e66872219bfb",
+   "roles": "16807f85bb7706072229f41fa13d2ed4437e6edab3edac0ec794276bfd3b098d"
+  },
+  "live": {
+   "wgsl": "3c1131c077a356233e3c7d3db5247a8b06bf620550e229343d610e464f85f2a5",
+   "pickWgsl": "c6349835a5db6ff6014ada41d02074747028f845dfdac40737e36c3889fe95b9",
+   "opticsWgsl": "3c1131c077a356233e3c7d3db5247a8b06bf620550e229343d610e464f85f2a5",
+   "opticsPickWgsl": "c6349835a5db6ff6014ada41d02074747028f845dfdac40737e36c3889fe95b9",
+   "uniforms": "83b578606c132852110f6f44455cc34fd302158871a9cb75f010d40fd7533e95",
+   "tags": "bcd2caf87186827e15c4d6862b2a1e48d2821fb4cbae3f40b5c5e66872219bfb",
+   "roles": "16807f85bb7706072229f41fa13d2ed4437e6edab3edac0ec794276bfd3b098d"
+  }
+ },
+ "scenes/lighting-room.json": {
+  "off": {
+   "wgsl": "8a1edbf83b174a2c0742e4bcd0bc534574388856a92e3e53c51ecd30ff9aa3fb",
+   "pickWgsl": "23db2f8aed7bfa2d92ba6860bb10538b77e91d38f188d02ab1ce0083fa5a0eb1",
+   "opticsWgsl": "8a1edbf83b174a2c0742e4bcd0bc534574388856a92e3e53c51ecd30ff9aa3fb",
+   "opticsPickWgsl": "23db2f8aed7bfa2d92ba6860bb10538b77e91d38f188d02ab1ce0083fa5a0eb1",
+   "uniforms": "3652d524d8de17e908f9ceb5585dfdd0189e08f36c648443ba46c62d1fd4fb99",
+   "tags": "5a27dba0a9e6c7b2b3bc62ebb98d09cf700d40751c091fab4fa64f522b19a82c",
+   "roles": "643d5437104296e21d906ecb15b2c96ad278f20cfc4af53b12bb6069bd853726"
+  },
+  "live": {
+   "wgsl": "3c835071d784549baaa84efdd0af17586bbd40ec71d0c6a50698c891791dcf0d",
+   "pickWgsl": "1495da6c38b32a899809a93d0bf9f8480a951f058663ce4a6470d7adb511a6b2",
+   "opticsWgsl": "3c835071d784549baaa84efdd0af17586bbd40ec71d0c6a50698c891791dcf0d",
+   "opticsPickWgsl": "1495da6c38b32a899809a93d0bf9f8480a951f058663ce4a6470d7adb511a6b2",
+   "uniforms": "78906ca8627e43b8b2b0edd9e1dba7ebdd9f6128bd3af0b380dc64fbdc84f77c",
+   "tags": "5a27dba0a9e6c7b2b3bc62ebb98d09cf700d40751c091fab4fa64f522b19a82c",
+   "roles": "643d5437104296e21d906ecb15b2c96ad278f20cfc4af53b12bb6069bd853726"
+  }
+ },
+ "scenes/material-board.json": {
+  "off": {
+   "wgsl": "d5b88f100a75c9d48eefcc4a5577f9c1d87c92a01d43e062b4ad8ada5412a212",
+   "pickWgsl": "0c56e107a244231d2c997ab30ab17809ccfc40baf1d92fa42a0e30cc10106b18",
+   "opticsWgsl": "d5b88f100a75c9d48eefcc4a5577f9c1d87c92a01d43e062b4ad8ada5412a212",
+   "opticsPickWgsl": "0c56e107a244231d2c997ab30ab17809ccfc40baf1d92fa42a0e30cc10106b18",
+   "uniforms": "23e788f256834675a2f6abdd8115ef09840d3a18049e4bbcfe502c30379e69e7",
+   "tags": "41ef19dcdd0063b49b5c439ccacf7611e75968fb42a17fe33aba6d29a02c2c87",
+   "roles": "643d5437104296e21d906ecb15b2c96ad278f20cfc4af53b12bb6069bd853726"
+  },
+  "live": {
+   "wgsl": "e238d6a646e257278dfffda0797a1b6695fe896f9cdd02c0d5f895ec82017c7a",
+   "pickWgsl": "9ec6c2b84ae9351760a4ed0a2b5f9306f07035f06f6467d70be38764575a5022",
+   "opticsWgsl": "e238d6a646e257278dfffda0797a1b6695fe896f9cdd02c0d5f895ec82017c7a",
+   "opticsPickWgsl": "9ec6c2b84ae9351760a4ed0a2b5f9306f07035f06f6467d70be38764575a5022",
+   "uniforms": "ffb8033d2c668efde333b93a5348115462a902688c8765f290241a923b654bce",
+   "tags": "41ef19dcdd0063b49b5c439ccacf7611e75968fb42a17fe33aba6d29a02c2c87",
+   "roles": "643d5437104296e21d906ecb15b2c96ad278f20cfc4af53b12bb6069bd853726"
+  }
+ },
+ "scenes/modifiers.json": {
+  "off": {
+   "wgsl": "48bb63236fc5de1e16aa3cdf3d71562842abde0c7f0e7b13cbac9c13445b8ac8",
+   "pickWgsl": "8bc96d02f46916cd8d68c0cb1667675f7eb973851bfd4e7a0a2217abfc916493",
+   "opticsWgsl": "48bb63236fc5de1e16aa3cdf3d71562842abde0c7f0e7b13cbac9c13445b8ac8",
+   "opticsPickWgsl": "8bc96d02f46916cd8d68c0cb1667675f7eb973851bfd4e7a0a2217abfc916493",
+   "uniforms": "989a6faad89eddbf17bb755a453e1485f69b9a0cccdab04435c8bfb291ce462c",
+   "tags": "515f4d85dbcc111bf829e364c9ad5a3ec59104c5a33598f766fe21494cb88016",
+   "roles": "643d5437104296e21d906ecb15b2c96ad278f20cfc4af53b12bb6069bd853726"
+  },
+  "live": {
+   "wgsl": "d4171013d4e14321947fd21296a711cbb5e0933aef7c60d5b59cea9d5bb5bb44",
+   "pickWgsl": "48d079bfa032dd5b5f0b28b5a1d57e5e21923632ff3b35a648ea4c77591dbc43",
+   "opticsWgsl": "d4171013d4e14321947fd21296a711cbb5e0933aef7c60d5b59cea9d5bb5bb44",
+   "opticsPickWgsl": "48d079bfa032dd5b5f0b28b5a1d57e5e21923632ff3b35a648ea4c77591dbc43",
+   "uniforms": "f5380a7fab629dd145e18bfa0a162660ab420e0fb44df1e00d04f9da0a2be760",
+   "tags": "515f4d85dbcc111bf829e364c9ad5a3ec59104c5a33598f766fe21494cb88016",
+   "roles": "643d5437104296e21d906ecb15b2c96ad278f20cfc4af53b12bb6069bd853726"
+  }
+ },
+ "scenes/office-lighting.json": {
+  "off": {
+   "wgsl": "cd415788154d7c1bf4367e2b31a6b902b6b42aaf656aeac6a9b8a2200859337a",
+   "pickWgsl": "038bdd9827c1a19cb525cad17b1339cc90d904dd2470cd2a5b64859c8443d47a",
+   "opticsWgsl": "cd415788154d7c1bf4367e2b31a6b902b6b42aaf656aeac6a9b8a2200859337a",
+   "opticsPickWgsl": "038bdd9827c1a19cb525cad17b1339cc90d904dd2470cd2a5b64859c8443d47a",
+   "uniforms": "fe864aba19791ef5276e67d30a613cc98effac6c7a8ac14810ad923855e222a1",
+   "tags": "a6655477b780ed8e71779bf8dd624bec4e4d0a4d7fd11f3222fe0ec194bdfe92",
+   "roles": "9a42843722f5fa7458d141f36e2bb607b0d7a84e2e6765955627cedb2c4f7d99"
+  },
+  "live": {
+   "wgsl": "97b7c09417458da11f6699231192ea40b4b90121d893b898ce5e096fcc805980",
+   "pickWgsl": "80a2823dba7d9077bb3418226a4ec12c8e279dc830df8bbe248f4c70881b7c42",
+   "opticsWgsl": "97b7c09417458da11f6699231192ea40b4b90121d893b898ce5e096fcc805980",
+   "opticsPickWgsl": "80a2823dba7d9077bb3418226a4ec12c8e279dc830df8bbe248f4c70881b7c42",
+   "uniforms": "415327e81c1263ecd9848c14f2e5522ecfb6492ffb5f6bce0d9a6042a08acf62",
+   "tags": "a6655477b780ed8e71779bf8dd624bec4e4d0a4d7fd11f3222fe0ec194bdfe92",
+   "roles": "9a42843722f5fa7458d141f36e2bb607b0d7a84e2e6765955627cedb2c4f7d99"
+  }
+ },
+ "scenes/parabolic-reflector.json": {
+  "off": {
+   "wgsl": "8b6399f6557874218686c5fd9e2d2f0352e2444dca2e72fd7e217395b59396c3",
+   "pickWgsl": "e1571f2f235af96ff4e4bc681c86dadfa2cae76bbf4de6557855a857c5b8ce99",
+   "opticsWgsl": "8b6399f6557874218686c5fd9e2d2f0352e2444dca2e72fd7e217395b59396c3",
+   "opticsPickWgsl": "e1571f2f235af96ff4e4bc681c86dadfa2cae76bbf4de6557855a857c5b8ce99",
+   "uniforms": "c7d610e6f1c8fc42ac0ce9539c35ed7fe6e1289029802a6a0c73c8b7872c72df",
+   "tags": "bcd2caf87186827e15c4d6862b2a1e48d2821fb4cbae3f40b5c5e66872219bfb",
+   "roles": "16807f85bb7706072229f41fa13d2ed4437e6edab3edac0ec794276bfd3b098d"
+  },
+  "live": {
+   "wgsl": "1c5887d990264340760a8d34f41873ede63984a28ef14e331490996152bbe233",
+   "pickWgsl": "b5ae34dad7e188bf08d2829c557ab0499d554dfdf23234a302faa08da130810f",
+   "opticsWgsl": "1c5887d990264340760a8d34f41873ede63984a28ef14e331490996152bbe233",
+   "opticsPickWgsl": "b5ae34dad7e188bf08d2829c557ab0499d554dfdf23234a302faa08da130810f",
+   "uniforms": "e70966d43dbf9a9ac0a20717f942634410d17bd6efba847b7fe2b027d5cccaf0",
+   "tags": "bcd2caf87186827e15c4d6862b2a1e48d2821fb4cbae3f40b5c5e66872219bfb",
+   "roles": "16807f85bb7706072229f41fa13d2ed4437e6edab3edac0ec794276bfd3b098d"
+  }
+ },
+ "scenes/parametric-part.json": {
+  "off": {
+   "wgsl": "5b35598cb16e25261e807e21d3d47e411f035e094e472b67851455bd5fcb3718",
+   "pickWgsl": "c802708f036070113fccc215543ed1b1e11df9a294ce72c10d992b00224c9f00",
+   "opticsWgsl": "5b35598cb16e25261e807e21d3d47e411f035e094e472b67851455bd5fcb3718",
+   "opticsPickWgsl": "c802708f036070113fccc215543ed1b1e11df9a294ce72c10d992b00224c9f00",
+   "uniforms": "105b80912ae63e921e3e139b519dda1751673acb7a81b32d1ee4d35be1565cf0",
+   "tags": "f9a4121742d48c6d52f21ac168084d4613ac524ca38228fae096b8762a2d72ce",
+   "roles": "643d5437104296e21d906ecb15b2c96ad278f20cfc4af53b12bb6069bd853726"
+  },
+  "live": {
+   "wgsl": "fef40d44c225d82fcd9ce17712316c0749790520f18444038ff391efdecafe42",
+   "pickWgsl": "477f7f97a22ce1568f52ea1f82c41f1de7d99a838458c4fa65ee6640f44b12f6",
+   "opticsWgsl": "fef40d44c225d82fcd9ce17712316c0749790520f18444038ff391efdecafe42",
+   "opticsPickWgsl": "477f7f97a22ce1568f52ea1f82c41f1de7d99a838458c4fa65ee6640f44b12f6",
+   "uniforms": "31b358321ed317cc6a59aae568b16744d99ccbbd6313b22c8f85bfbcb68916a8",
+   "tags": "f9a4121742d48c6d52f21ac168084d4613ac524ca38228fae096b8762a2d72ce",
+   "roles": "643d5437104296e21d906ecb15b2c96ad278f20cfc4af53b12bb6069bd853726"
+  }
+ },
+ "scenes/prism-dispersion.json": {
+  "off": {
+   "wgsl": "422f4ca0391f5c3e68d759439f8823410d05938f8267d80ca92a65ce3a977b6e",
+   "pickWgsl": "fdc8845b853cfd525e921702ff89e38ae9593a2149e2cf5e67716671a45f38cd",
+   "opticsWgsl": "422f4ca0391f5c3e68d759439f8823410d05938f8267d80ca92a65ce3a977b6e",
+   "opticsPickWgsl": "fdc8845b853cfd525e921702ff89e38ae9593a2149e2cf5e67716671a45f38cd",
+   "uniforms": "c04eda4c1980412fc41a5cde19bdd064ef0b5a8954e69e12a35ba6d896cac799",
+   "tags": "b256d7e91b978ea3842c67f472d6dd613f0208bf0b45994ad109587f03a8d64e",
+   "roles": "16807f85bb7706072229f41fa13d2ed4437e6edab3edac0ec794276bfd3b098d"
+  },
+  "live": {
+   "wgsl": "6a5e0144804e36fc45e57df83a8b2d8a8ea3441603076eb096af9ab5e31090e1",
+   "pickWgsl": "bf7e719bc9fd3b273556aaf65bc734b5141039b68a77a7e51c241777c524b6be",
+   "opticsWgsl": "6a5e0144804e36fc45e57df83a8b2d8a8ea3441603076eb096af9ab5e31090e1",
+   "opticsPickWgsl": "bf7e719bc9fd3b273556aaf65bc734b5141039b68a77a7e51c241777c524b6be",
+   "uniforms": "eb28a7f94f0584cd05bca00db023e9486887dc1b4fe2ac7b3d99eb34d7c37072",
+   "tags": "b256d7e91b978ea3842c67f472d6dd613f0208bf0b45994ad109587f03a8d64e",
+   "roles": "16807f85bb7706072229f41fa13d2ed4437e6edab3edac0ec794276bfd3b098d"
+  }
+ },
+ "scenes/product-shot.json": {
+  "off": {
+   "wgsl": "5a1ed2e4f000117b2388aed982f900c150b501ae7f50cc58f9bb8d9096e70a1e",
+   "pickWgsl": "e63c34b991896b51fb799e871186fc05dd34a17f1bfc214b697d17388372f1ea",
+   "opticsWgsl": "5a1ed2e4f000117b2388aed982f900c150b501ae7f50cc58f9bb8d9096e70a1e",
+   "opticsPickWgsl": "e63c34b991896b51fb799e871186fc05dd34a17f1bfc214b697d17388372f1ea",
+   "uniforms": "264a10593054bb6d1631cd058f87d9c431e0c6ed2612dd005ad152d61d4130a1",
+   "tags": "144fbbb2fefec648edc8e40ecd6358d77032b56915dd4adbae24959651e29339",
+   "roles": "643d5437104296e21d906ecb15b2c96ad278f20cfc4af53b12bb6069bd853726"
+  },
+  "live": {
+   "wgsl": "b013c047bbb27c91bc2e0ad371e573316e00d7b225efda6d2494d3a6bd2a7e92",
+   "pickWgsl": "9ad7a91f38350d458150cfd7bfcddc693a884b955bf61dec8a0895faf800b273",
+   "opticsWgsl": "b013c047bbb27c91bc2e0ad371e573316e00d7b225efda6d2494d3a6bd2a7e92",
+   "opticsPickWgsl": "9ad7a91f38350d458150cfd7bfcddc693a884b955bf61dec8a0895faf800b273",
+   "uniforms": "710ae534b59f997f7956f3ae051cc1f7a54257dabd2eb6b46948a783dd51b690",
+   "tags": "144fbbb2fefec648edc8e40ecd6358d77032b56915dd4adbae24959651e29339",
+   "roles": "643d5437104296e21d906ecb15b2c96ad278f20cfc4af53b12bb6069bd853726"
+  }
+ },
+ "scenes/relief-texture.json": {
+  "off": {
+   "wgsl": "2b31725ae5386172907657ad252f5afef9352d826b30b8493822facdf218bbde",
+   "pickWgsl": "55f449008c9417cfb812055562fa83fea39e7441ea703e7d5edaa1cdbe6f57a6",
+   "opticsWgsl": "2b31725ae5386172907657ad252f5afef9352d826b30b8493822facdf218bbde",
+   "opticsPickWgsl": "55f449008c9417cfb812055562fa83fea39e7441ea703e7d5edaa1cdbe6f57a6",
+   "uniforms": "0f47eaf3928ac98f3823da8adaad449c09cb1d041a364c87bd2d51545d4a3a72",
+   "tags": "c337fc3034dada4b6eadf7b9ed90913869cd07fb246606729dc89ba9af937fd5",
+   "roles": "643d5437104296e21d906ecb15b2c96ad278f20cfc4af53b12bb6069bd853726"
+  },
+  "live": {
+   "wgsl": "150251417d85e1a06cc82ac11d7e6edd066725c47b4b0e48c06c7ca1b795b9f6",
+   "pickWgsl": "7603d8cee7f1ed562acb0626d2b3b40c0382297cf8878353223abbc874c8a01d",
+   "opticsWgsl": "150251417d85e1a06cc82ac11d7e6edd066725c47b4b0e48c06c7ca1b795b9f6",
+   "opticsPickWgsl": "7603d8cee7f1ed562acb0626d2b3b40c0382297cf8878353223abbc874c8a01d",
+   "uniforms": "a4ee34a80d37bd636ad9f2665e0e47f469ee827663fa5b1eaaf66b6dcdbb7f2d",
+   "tags": "c337fc3034dada4b6eadf7b9ed90913869cd07fb246606729dc89ba9af937fd5",
+   "roles": "643d5437104296e21d906ecb15b2c96ad278f20cfc4af53b12bb6069bd853726"
+  }
+ },
+ "scenes/rgbw-mixing.json": {
+  "off": {
+   "wgsl": "f35f82334ac87208d12e9079dd718ab7c51169a6972539e1d5e95aa5ecc21c51",
+   "pickWgsl": "01a18da67a2952e86a0b1f5a01ad0a472ab2f6c2be544e175f8cbe99d28430a3",
+   "opticsWgsl": "f35f82334ac87208d12e9079dd718ab7c51169a6972539e1d5e95aa5ecc21c51",
+   "opticsPickWgsl": "01a18da67a2952e86a0b1f5a01ad0a472ab2f6c2be544e175f8cbe99d28430a3",
+   "uniforms": "efacb36344d936df0ee265ffc4be2f45afa2439f496780dcacd7ddcf054f6960",
+   "tags": "34acb6340efc25da2616dc5d4cf6e002c52e460b7972d6a4d4fc1b0fde3fc68e",
+   "roles": "16807f85bb7706072229f41fa13d2ed4437e6edab3edac0ec794276bfd3b098d"
+  },
+  "live": {
+   "wgsl": "071585a38212b512946a6aad988997d52856b9d4c96ba6a3833ac9b59ebd8da0",
+   "pickWgsl": "6a81924e3e4fc3771a6b82c7d7e0bd479dcb33ecfbc8c7d07ca30cffaf384c80",
+   "opticsWgsl": "071585a38212b512946a6aad988997d52856b9d4c96ba6a3833ac9b59ebd8da0",
+   "opticsPickWgsl": "6a81924e3e4fc3771a6b82c7d7e0bd479dcb33ecfbc8c7d07ca30cffaf384c80",
+   "uniforms": "e31738093bc8c57c6c609bbd26575d603430011dbe6548f92035b2bf58667ed2",
+   "tags": "34acb6340efc25da2616dc5d4cf6e002c52e460b7972d6a4d4fc1b0fde3fc68e",
+   "roles": "16807f85bb7706072229f41fa13d2ed4437e6edab3edac0ec794276bfd3b098d"
+  }
+ },
+ "scenes/shape-gallery.json": {
+  "off": {
+   "wgsl": "cdadab71dbd0bea4d1983cb0d640cdd7b86ee09ed09add7d43248898ff70aa75",
+   "pickWgsl": "a62bda31781bc8539c69df142080c04c87c593bb4ba70e6452d4cd5514f10d13",
+   "opticsWgsl": "cdadab71dbd0bea4d1983cb0d640cdd7b86ee09ed09add7d43248898ff70aa75",
+   "opticsPickWgsl": "a62bda31781bc8539c69df142080c04c87c593bb4ba70e6452d4cd5514f10d13",
+   "uniforms": "56e01a8f33b7db720e7efd8d17dce504791b84bf55c49c28a41b7263a51d5876",
+   "tags": "d61786d031b830386cad6b78fa0dc2569fb7ac7796214d80eae22e26710e4db1",
+   "roles": "643d5437104296e21d906ecb15b2c96ad278f20cfc4af53b12bb6069bd853726"
+  },
+  "live": {
+   "wgsl": "44fdcc290f55d05ffcdd942871eaeaddc0a512637f721e1e7a163a344ccb548a",
+   "pickWgsl": "5224105b7404427a1945f3cec33d57e37d516c9f250639a64b9321c03823c2be",
+   "opticsWgsl": "44fdcc290f55d05ffcdd942871eaeaddc0a512637f721e1e7a163a344ccb548a",
+   "opticsPickWgsl": "5224105b7404427a1945f3cec33d57e37d516c9f250639a64b9321c03823c2be",
+   "uniforms": "c3c7a76df86df568141d4dc1f77cb706b7024fe09fceb397cdd7731dc7288ce2",
+   "tags": "d61786d031b830386cad6b78fa0dc2569fb7ac7796214d80eae22e26710e4db1",
+   "roles": "643d5437104296e21d906ecb15b2c96ad278f20cfc4af53b12bb6069bd853726"
+  }
+ },
+ "test/fixtures/scenes/Menger_cubes.json": {
   "off": {
    "wgsl": "078f401ab68702e490f46c3d083a930336e2b1a562af9cb91dd8a9437f3e2f1f",
    "pickWgsl": "224215eecb8b1fbb5791f3e809448a7ea0fbc6f0e328347c8eb4d9e696f86eed",
@@ -39,7 +499,7 @@
    "roles": "643d5437104296e21d906ecb15b2c96ad278f20cfc4af53b12bb6069bd853726"
   }
  },
- "scenes/OpticsBench.json": {
+ "test/fixtures/scenes/OpticsBench.json": {
   "off": {
    "wgsl": "6cfa02b1b3890363af80cf11d8ed7d4046212c03d3501703ab45cee6095d7ccb",
    "pickWgsl": "1de65ab1618498c134e9dd10e087ae8d8862660c5c6745334af919a704e25280",
@@ -59,7 +519,7 @@
    "roles": "8ad46f60782921954e4826f43fb7d22dfe1d243facdf877176fcb8f8c5fd1d13"
   }
  },
- "scenes/OpticsBench2.json": {
+ "test/fixtures/scenes/OpticsBench2.json": {
   "off": {
    "wgsl": "268de5f9b82ab7636ef8911cfd003bbd01da2f19367955826b27e2683cabc58b",
    "pickWgsl": "fd4c0b87b769f5bf7f90ad0daaa6944781d2cf94ad6caa590c9f96e304b1f903",
@@ -79,7 +539,7 @@
    "roles": "8ad46f60782921954e4826f43fb7d22dfe1d243facdf877176fcb8f8c5fd1d13"
   }
  },
- "scenes/Optics_test_3 LED.json": {
+ "test/fixtures/scenes/Optics_test_3 LED.json": {
   "off": {
    "wgsl": "7015e29c555877e2ace1b04e080eab479ce1dc27a590a95b56e34d2a458e8b33",
    "pickWgsl": "3e260252a5d48f57836c238796585a94a89a9fd3de66a5f601fc0da25cc26df6",
@@ -99,7 +559,7 @@
    "roles": "9a42843722f5fa7458d141f36e2bb607b0d7a84e2e6765955627cedb2c4f7d99"
   }
  },
- "scenes/Prism.json": {
+ "test/fixtures/scenes/Prism.json": {
   "off": {
    "wgsl": "70fa8fb096c6ac83f577429ac63fea7dd2991dcc46be44b67bbc5ec999f19e18",
    "pickWgsl": "81db9aee59dec156cccd67c53c12be287e8731288d54156e4b666722b8740657",
@@ -119,7 +579,7 @@
    "roles": "643d5437104296e21d906ecb15b2c96ad278f20cfc4af53b12bb6069bd853726"
   }
  },
- "scenes/RGBW_mixer.json": {
+ "test/fixtures/scenes/RGBW_mixer.json": {
   "off": {
    "wgsl": "d533f050bf18331afa944ec83b6d93310175975f17efe74e0c54ddb62d37e21b",
    "pickWgsl": "bc14b3048c32ca3d91f26f3fa4c0cf63e2161a8d72d6b206eb35651658a0f670",
@@ -139,7 +599,7 @@
    "roles": "9a42843722f5fa7458d141f36e2bb607b0d7a84e2e6765955627cedb2c4f7d99"
   }
  },
- "scenes/demo.json": {
+ "test/fixtures/scenes/demo.json": {
   "off": {
    "wgsl": "a76a5bb1898876ee1b244e1c6ed96c0c84509b392167fe3d53267a574e870480",
    "pickWgsl": "6b40ece72c96063eff2db7408ab870e3efd42a72899f63e79fb472435d5c40dd",
@@ -159,7 +619,7 @@
    "roles": "643d5437104296e21d906ecb15b2c96ad278f20cfc4af53b12bb6069bd853726"
   }
  },
- "scenes/demoscene.json": {
+ "test/fixtures/scenes/demoscene.json": {
   "off": {
    "wgsl": "e3af279131965a159664b8773f7634c62b482ecadf8f3b90395cfd93192ff5d8",
    "pickWgsl": "11fbaf672081374d1b47114583d887cf4a5e509adc3ed2032f86acd1afd25131",
@@ -179,7 +639,7 @@
    "roles": "2a78088f75c02f893b9a4dee506e315e9f129f63d280abfbcc4e1c2d297325a7"
   }
  },
- "scenes/materials.json": {
+ "test/fixtures/scenes/materials.json": {
   "off": {
    "wgsl": "81ae16ae11aae3a62d80f1eae15170064899dbdaf34c41aa8a049dc50cdcc022",
    "pickWgsl": "dfc047246339b269af75a4be4cc0ac25ac99e44a587727780a12da6c622652f8",
@@ -199,7 +659,7 @@
    "roles": "643d5437104296e21d906ecb15b2c96ad278f20cfc4af53b12bb6069bd853726"
   }
  },
- "scenes/menger.json": {
+ "test/fixtures/scenes/menger.json": {
   "off": {
    "wgsl": "08e8e315293257e81d4ba88009007e464b636e44089881e8755886b3bb11060c",
    "pickWgsl": "ab2957691b2de2657da3eca021031b28c652cecc7c14c09a802c9197ff837624",
@@ -219,7 +679,7 @@
    "roles": "643d5437104296e21d906ecb15b2c96ad278f20cfc4af53b12bb6069bd853726"
   }
  },
- "scenes/noise.json": {
+ "test/fixtures/scenes/noise.json": {
   "off": {
    "wgsl": "b5351f6dca882e28d6241229961b2d5e440cda30752d7dcfb261a57edc0ff6a6",
    "pickWgsl": "a0f75e2493a536513df64c2bb60f5f837fe2357dc82bdffd690223a049469739",
@@ -239,7 +699,7 @@
    "roles": "643d5437104296e21d906ecb15b2c96ad278f20cfc4af53b12bb6069bd853726"
   }
  },
- "scenes/optics-test.json": {
+ "test/fixtures/scenes/optics-test.json": {
   "off": {
    "wgsl": "8c8d59df3ddbc1924f17cca9bca36857c73ae6ab12e409f1c4d550d25e56454b",
    "pickWgsl": "39af978b515da588a4ad2e77febf27915cc4e037109bdbc6d94f4e769774c5dc",
@@ -259,7 +719,7 @@
    "roles": "9a42843722f5fa7458d141f36e2bb607b0d7a84e2e6765955627cedb2c4f7d99"
   }
  },
- "scenes/showcase.json": {
+ "test/fixtures/scenes/showcase.json": {
   "off": {
    "wgsl": "06780e5afdabf27429bfd9120f8a7f56b60ea5de16139cffa3d64b1c23b3a4a4",
    "pickWgsl": "f7b2c9ffc958c9a5f65ed33307942d63967f5d7888466be921e2b382c4f316d2",
@@ -279,7 +739,7 @@
    "roles": "643d5437104296e21d906ecb15b2c96ad278f20cfc4af53b12bb6069bd853726"
   }
  },
- "scenes/surfaces.json": {
+ "test/fixtures/scenes/surfaces.json": {
   "off": {
    "wgsl": "96a9084189f3d9bbd6e24df276c662515074dfacf9ee89b14517fba8ebd25aec",
    "pickWgsl": "5763a173353f019cb69643f7e78ee20ebf872cdd46a18e084fbd71a8e9e20363",
