@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Library item editor · check</title>
+<!-- EDITING A LIBRARY ITEM, for library/test/edit.check.mjs: the real library panel, tree and editor (library/
+     edit.js) with its strip over a stand-in view, over the real model and project; stand-ins for the builder (no
+     renderer: what the tree and editor ask of it is the project, the current scene, commit and apply), the
+     renderer's settings and the shell's panels. -->
+<link rel="stylesheet" href="../../lib/shell/shell.css">
+<style>html, body { height: 100%; margin: 0; } body { display: flex; } #l, #t { width: 340px; height: 600px; } #v { position: relative; flex: 1; height: 600px; background: #111; overflow: hidden; }</style>
+</head>
+<body>
+<div id="l" class="shell-panel"></div><div id="t" class="shell-panel"></div><div id="v"></div>
+<script type="module">
+import * as M from '../../builder/model.js'
+import * as P from '../../builder/project.js'
+import { installBuilderTree } from '../../builder/tree.js'
+import { createLibrary, memoryBackend } from '../store.js'
+import { installLibraryPanel } from '../panel.js'
+import { installItemEditor } from '../edit.js'
+import { ITEM_FILES, itemUrl } from '../items/index.js'
+
+const home = M.createDoc({ title: 'my scene' })
+M.addObject(home, 'root', { primitive: 'box' })
+const T = { commits: 0, applied: 0, opened: [], said: [], selected: [] }
+const project = P.createProject([home, M.createDoc({ title: 'second' })])
+let current = project.scenes[0].key, E = null
+const R = { values: { envMode: 1, autoExposure: 0 }, camera: { mode: 'orbit', distance: 99 } }
+/* EACH SCENE ITS OWN CAMERA, as builder/demo.js markShown keeps them: apply() leaves the scene it showed with
+   its camera and puts back the one it shows now, before the host's onScene (the item editor's shown) */
+const cams = new Map()
+let shown = current
+const BUILDER = {
+    model: M, projectModel: P, project,
+    get current() { return current }, use(k) { current = k },
+    get doc() { return P.scene(project, current).doc },
+    commit() { T.commits++ }, live() { return false },
+    cameraOf: k => structuredClone(cams.get(k) ?? null),
+    async apply() {
+        T.applied++
+        if (shown !== current) { cams.set(shown, structuredClone(R.camera)); shown = current; if (cams.has(current)) R.camera = structuredClone(cams.get(current)) }
+        E?.shown(); return { ok: true }
+    },
+}
+const RT = { get: () => structuredClone(R.values), set: v => { Object.assign(R.values, v); return [] },
+             settings: () => ({ camera: structuredClone(R.camera) }), applySettings: ({ camera }) => { if (camera) R.camera = camera; return [] } }
+const SHELL = { open: id => T.opened.push(id), isOpen: () => true, dock: { getPanel: () => ({ api: { isVisible: true } }) } }
+const say = t => T.said.push(t)
+const tree = installBuilderTree(document.getElementById('t'), BUILDER, { onStatus: say, onSelect: id => T.selected.push(id),
+    onItem: (what, key) => { if (BUILDER.current !== key) tree.enterScene(key); what === 'save' ? E.save() : E.close() } })
+const library = createLibrary({ model: M, backend: memoryBackend(), files: ITEM_FILES, load: async f => (await fetch(itemUrl(f))).json() })
+E = installItemEditor({ BUILDER, RT, SHELL, library, tree, stage: document.getElementById('v'), say })
+const panel = installLibraryPanel(document.getElementById('l'), { library, say, insert: () => { }, edit: it => E.open(it) })
+window.CHECK = { T, R, BUILDER, E, library, panel, M }
+</script>
+</body>
+</html>

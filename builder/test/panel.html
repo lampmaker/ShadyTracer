@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Builder panel · check</title>
+<!-- THE PROPERTIES PANEL, for builder/test/panel.check.mjs: the real panel (builder/panel.js) in the real
+     PropertyTable over the real model, with a stand-in for the builder (no renderer: what the panel asks of
+     BUILDER is the document, live uniform writes, undo steps and the probe compile). -->
+<link rel="stylesheet" href="../../lib/shell/shell.css">
+<style>html, body { height: 100%; margin: 0; } #t, #t2 { width: 360px; height: 900px; overflow: auto; }</style>
+</head>
+<body>
+<div id="t" class="shell-panel"></div>
+<!-- a second panel WITH the parameter registry (builder/params.js), as the page gives it: its rows offer the animated
+     flag, and the scene row lists the flagged values. Apart from the first, so its icons are in no label the checks
+     above read. -->
+<div id="t2" class="shell-panel"></div>
+<script type="module">
+import * as M from '../model.js'
+import { PropertyTable } from '../../lib/guistuff/propertytable/propertytable.js'
+import { installBuilderPanel } from '../panel.js'
+import { makeParams } from '../../lib/shell/params.js'
+import { sceneParams } from '../params.js'
+
+// a group of a base, a union, and a subtraction with a blend of its own; and one object at the top level
+const doc = M.createDoc({ title: 'panel' })
+M.addGroup(doc, 'root', { id: 'g', label: 'group', blend: 0.1 })
+M.addObject(doc, 'g', { id: 'a', primitive: 'box', label: 'base' })
+M.addObject(doc, 'g', { id: 'b', primitive: 'sphere', label: 'ball' })
+M.addObject(doc, 'g', { id: 'c', primitive: 'cylinder', label: 'hole', join: 'subtract', joinBlend: 0.05 })
+M.addObject(doc, 'root', { id: 'top', primitive: 'sphere', label: 'top' })
+// and a code object with a profile it extrudes (BUILDER.md §6 phase 3)
+M.addObject(doc, 'root', { id: 'pr', label: 'plate', params: { outline: [[0, 0], [1, 0, 0.1], [1, 1], [0, 1]], height: 0.2 },
+    code: 'C = add_new(C, extrude(outline, p, height), MATERIAL);' })
+// and one with a path it sweeps a tube along (phase 4)
+M.addObject(doc, 'root', { id: 'pa', label: 'pipe', params: { route: { path: [[0, 0, 0], [1, 0, 0, 0.2], [1, 1, 0]] }, radius: 0.1 },
+    code: 'C = add_new(C, tube(route, p, radius, 0.0), MATERIAL);' })
+// and a glass material, for its coating (0.39.0)
+M.addMaterial(doc, { id: 'gl', label: 'glass', preset: 'glass' })
+const T = { live: [], commits: [], structure: 0, labels: 0, pushed: [] }
+const BUILDER = {
+    model: M, get doc() { return doc },
+    live(id, k) { T.live.push(`${id}.${k}`); return true },
+    // the values bindings moved (demo.js pushBound), pushed live
+    pushBound(changed) { T.pushed.push(...(changed || []).map(c => `${c.id}.${c.key}`)); return true },
+    commit(k) { T.commits.push(k) },
+    check: async () => ({ messages: [] }),
+}
+const table = new PropertyTable({ container: document.getElementById('t') })
+const panel = installBuilderPanel(table, BUILDER, { onLabel: () => T.labels++, onStructure: () => T.structure++ })
+const P = makeParams()
+P.provide('scene', () => sceneParams(doc, { live: (id, k) => BUILDER.live(id, k), commit: k => BUILDER.commit(k) }))
+const flagPanel = installBuilderPanel(new PropertyTable({ container: document.getElementById('t2') }), BUILDER,
+    { onLabel: () => T.labels++, onStructure: () => T.structure++, params: P })
+window.CHECK = { M, T, doc, panel, table, P, flagPanel }
+</script>
+</body>
+</html>

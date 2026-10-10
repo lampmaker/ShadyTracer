@@ -1,0 +1,307 @@
+{
+  "format": "raytracer-scene",
+  "version": 21,
+  "title": "Material test",
+  "nextId": 5,
+  "materials": [
+    {
+      "id": "white",
+      "label": "White",
+      "params": {
+        "baseColor": {
+          "r": 0.95,
+          "g": 0.95,
+          "b": 0.95
+        },
+        "metallic": 0,
+        "roughness": 0.3,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "abbe": 0
+      },
+      "code": ""
+    },
+    {
+      "id": "ground",
+      "label": "Ground checker",
+      "params": {
+        "baseColor": {
+          "r": 0.12941176470588237,
+          "g": 0.39215686274509803,
+          "b": 0.4666666666666667
+        },
+        "metallic": 0,
+        "roughness": 0.4,
+        "anisotropy": 0,
+        "specular": 0.6,
+        "specularTint": 0.3,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "orange": {
+          "r": 1,
+          "g": 0.4980392156862745,
+          "b": 0
+        },
+        "square": 1000,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "abbe": 0
+      },
+      "code": "// the old palette's ground: a checker in world space, the base colour (petrol) and orange, in\n// squares `square` mm on a side\nlet k = PI / mm(square);\nm.baseColor = mix(m.baseColor, orange, smoothstep(-0.001, 0.001, sin(p.x * k) * sin(p.y * k) * sin(p.z * k)));",
+      "ranges": {
+        "square": {
+          "min": 1,
+          "max": 10000,
+          "step": 1
+        }
+      },
+      "lengths": [
+        "square"
+      ]
+    },
+    {
+      "id": "petrol",
+      "label": "Petrol",
+      "params": {
+        "baseColor": {
+          "r": 0.12941176470588237,
+          "g": 0.39215686274509803,
+          "b": 0.4666666666666667
+        },
+        "metallic": 0,
+        "roughness": 0.5,
+        "anisotropy": 0,
+        "specular": 0.6,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "abbe": 0
+      },
+      "code": ""
+    },
+    {
+      "id": "pmma",
+      "label": "PMMA",
+      "params": {
+        "baseColor": {
+          "r": 0.8,
+          "g": 0.79,
+          "b": 1
+        },
+        "metallic": 0,
+        "roughness": 0,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0.1,
+        "transmission": 1,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "abbe": 0
+      },
+      "code": ""
+    }
+  ],
+  "root": {
+    "id": "root",
+    "kind": "group",
+    "label": "Material test",
+    "enabled": true,
+    "blend": 0,
+    "children": [
+      {
+        "id": "carved",
+        "kind": "object",
+        "type": "code",
+        "label": "Carved box",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "white",
+        "params": {},
+        "block": "b1"
+      },
+      {
+        "id": "floor",
+        "kind": "object",
+        "type": "code",
+        "label": "Ground",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": -2
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "ground",
+        "params": {
+          "size": {
+            "x": 10.01,
+            "y": 10.01,
+            "z": 0.11
+          },
+          "rounding": 0.01
+        },
+        "block": "b2"
+      },
+      {
+        "id": "blob",
+        "kind": "object",
+        "type": "code",
+        "label": "Blob",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 0,
+            "y": -4,
+            "z": 3
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "petrol",
+        "params": {},
+        "block": "b3"
+      },
+      {
+        "id": "glassball",
+        "kind": "object",
+        "type": "code",
+        "label": "Glass sphere",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -6,
+            "y": 0,
+            "z": 0.5
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "pmma",
+        "params": {
+          "radius": 1
+        },
+        "block": "b4"
+      }
+    ]
+  },
+  "functions": "",
+  "unit": "m",
+  "blocks": [
+    {
+      "id": "b1",
+      "label": "Carved box",
+      "kind": "object",
+      "code": "// a rounded box with a ball smoothly cut out of it -- the old NopSmoothSubtract, kept as it was\nvar bx = Nroundedbox(p, VEC3(2.0, 2.0, 2.0), 0.9);\nbx = NopSmoothSubtract(bx, Nsphere(p + VEC3(0.0, 3.0, -2.0), 2.0), 0.05);\nC = add_new(C, bx, MATERIAL);",
+      "params": {}
+    },
+    {
+      "id": "b2",
+      "label": "Ground",
+      "kind": "object",
+      "code": "C = add_new(C, NboxRounded(p, size, rounding), MATERIAL);",
+      "params": {
+        "size": {
+          "x": 10.01,
+          "y": 10.01,
+          "z": 0.11
+        },
+        "rounding": 0.01
+      }
+    },
+    {
+      "id": "b3",
+      "label": "Blob",
+      "kind": "object",
+      "code": "// four spheres, smooth-unioned into a blob -- the old NopSmoothUnion, kept as it was\nvar blob = NopSmoothUnion(Nsphere(p, 0.8), Nsphere(p + VEC3(0.0, -1.0, 0.0), 0.5), 0.3);\nblob = NopSmoothUnion(blob, Nsphere(p + VEC3(-1.0, 0.0, 0.0), 0.5), 0.4);\nblob = NopSmoothUnion(blob, Nsphere(p + VEC3(0.0, 0.0, -1.0), 0.5), 0.4);\nC = add_new(C, blob, MATERIAL);",
+      "params": {}
+    },
+    {
+      "id": "b4",
+      "label": "Glass sphere",
+      "kind": "object",
+      "code": "C = add_new(C, Nsphere(p, radius), MATERIAL);",
+      "params": {
+        "radius": 1
+      }
+    }
+  ]
+}

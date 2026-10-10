@@ -1,0 +1,1196 @@
+{
+  "format": "raytracer-scene",
+  "version": 21,
+  "title": "Noise library",
+  "nextId": 34,
+  "unit": "mm",
+  "materials": [
+    {
+      "id": "m1",
+      "label": "floor",
+      "params": {
+        "baseColor": {
+          "r": 0.35,
+          "g": 0.35,
+          "b": 0.35
+        },
+        "metallic": 0,
+        "roughness": 1,
+        "anisotropy": 0,
+        "specular": 0,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "abbe": 0
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   R_local  that frame's rotation to the world, for a direction written in it\n//   S_local  its scale: p_local * S_local is in scene units, and metres(x) is x m in them\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. brushed along the object's x, for an anisotropy above 0 (or turned: grainAround):\n//   m.tangent = grainAlong(R_local, VEC3(1.0, 0.0, 0.0));\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
+    },
+    {
+      "id": "m3",
+      "label": "softbox",
+      "params": {
+        "baseColor": {
+          "r": 0.8,
+          "g": 0.8,
+          "b": 0.8
+        },
+        "metallic": 0,
+        "roughness": 0.5,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1,
+        "emissive": {
+          "r": 1,
+          "g": 0.95,
+          "b": 0.9
+        },
+        "emissiveLuminance": 20000,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "abbe": 0
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   R_local  that frame's rotation to the world, for a direction written in it\n//   S_local  its scale: p_local * S_local is in scene units, and metres(x) is x m in them\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. brushed along the object's x, for an anisotropy above 0 (or turned: grainAround):\n//   m.tangent = grainAlong(R_local, VEC3(1.0, 0.0, 0.0));\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n",
+      "type": "emitter"
+    },
+    {
+      "id": "m5",
+      "label": "value noise",
+      "params": {
+        "baseColor": {
+          "r": 0.12,
+          "g": 0.22,
+          "b": 0.55
+        },
+        "metallic": 0,
+        "roughness": 0.15,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "second": {
+          "r": 0.9,
+          "g": 0.85,
+          "b": 0.7
+        },
+        "secondRough": 0.8,
+        "size": 8,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "abbe": 0
+      },
+      "code": "// vnoise3: value noise, [-1, 1]. The base colour and roughness where it is low, the second ones\n// where it is high; one cell every `size` mm.\nlet q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\nlet t = 0.5 + 0.5 * vnoise3(q / size, 1u).w;\nm.baseColor = mix(m.baseColor, second, t);\nm.roughness = mix(m.roughness, secondRough, t);",
+      "ranges": {
+        "secondRough": {
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        "size": {
+          "min": 0.5,
+          "max": 200,
+          "step": 0.5
+        }
+      },
+      "lengths": [
+        "size"
+      ]
+    },
+    {
+      "id": "m6",
+      "label": "gradient noise",
+      "params": {
+        "baseColor": {
+          "r": 0.55,
+          "g": 0.12,
+          "b": 0.1
+        },
+        "metallic": 0,
+        "roughness": 0.15,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "second": {
+          "r": 0.95,
+          "g": 0.8,
+          "b": 0.3
+        },
+        "secondRough": 0.8,
+        "size": 8,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "abbe": 0
+      },
+      "code": "// gnoise3: gradient noise, about [-1, 1]: smoother and less grid-bound than value noise. The base\n// colour and roughness where it is low, the second ones where it is high; one cell every `size` mm.\nlet q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\nlet t = 0.5 + 0.5 * gnoise3(q / size, 2u).w;\nm.baseColor = mix(m.baseColor, second, t);\nm.roughness = mix(m.roughness, secondRough, t);",
+      "ranges": {
+        "secondRough": {
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        "size": {
+          "min": 0.5,
+          "max": 200,
+          "step": 0.5
+        }
+      },
+      "lengths": [
+        "size"
+      ]
+    },
+    {
+      "id": "m7",
+      "label": "marble (fbm)",
+      "params": {
+        "baseColor": {
+          "r": 0.92,
+          "g": 0.91,
+          "b": 0.88
+        },
+        "metallic": 0,
+        "roughness": 0.08,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "vein": {
+          "r": 0.25,
+          "g": 0.27,
+          "b": 0.3
+        },
+        "size": 20,
+        "veins": 3,
+        "turbulence": 1.6,
+        "sharpness": 6,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "abbe": 0
+      },
+      "code": "// fbm3: five octaves, bending sine bands into veins -- polished marble. size is the noise's cell\n// in mm; veins how many bands to a cell; turbulence how far it bends them; sharpness how thin.\nlet q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\nlet nz = fbm3(q / size, 3u, 5u, 2.0, 0.5);\nlet v = pow(1.0 - abs(sin(veins * (q.x / size + turbulence * nz.w))), sharpness);\nm.baseColor = mix(m.baseColor, vein, v);",
+      "ranges": {
+        "size": {
+          "min": 1,
+          "max": 500,
+          "step": 0.5
+        },
+        "veins": {
+          "min": 0.1,
+          "max": 20,
+          "step": 0.1
+        },
+        "turbulence": {
+          "min": 0,
+          "max": 5,
+          "step": 0.01
+        },
+        "sharpness": {
+          "min": 1,
+          "max": 30,
+          "step": 0.1
+        }
+      },
+      "lengths": [
+        "size"
+      ]
+    },
+    {
+      "id": "m8",
+      "label": "spots (worley F1)",
+      "params": {
+        "baseColor": {
+          "r": 0.9,
+          "g": 0.9,
+          "b": 0.8
+        },
+        "metallic": 0,
+        "roughness": 0.35,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "spot": {
+          "r": 0.1,
+          "g": 0.35,
+          "b": 0.2
+        },
+        "spacing": 10,
+        "spotRadius": 0.21,
+        "softness": 0.03,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "abbe": 0
+      },
+      "code": "// worley3 F1: the distance to the nearest cell point -- round spots at each point, on the base\n// colour. spacing is the distance between points in mm; spotRadius a spot's size, as a share of it.\nlet q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\nlet w = worley3(q / spacing, 4u);\nm.baseColor = mix(spot, m.baseColor, smoothstep(spotRadius - softness, spotRadius + softness, w.x));",
+      "ranges": {
+        "spacing": {
+          "min": 0.5,
+          "max": 100,
+          "step": 0.5
+        },
+        "spotRadius": {
+          "min": 0,
+          "max": 0.45,
+          "step": 0.01
+        },
+        "softness": {
+          "min": 0,
+          "max": 0.2,
+          "step": 0.005
+        }
+      },
+      "lengths": [
+        "spacing"
+      ]
+    },
+    {
+      "id": "m9",
+      "label": "leather (worley F2 - F1)",
+      "params": {
+        "baseColor": {
+          "r": 0.36,
+          "g": 0.2,
+          "b": 0.1
+        },
+        "metallic": 0,
+        "roughness": 0.45,
+        "anisotropy": 0,
+        "specular": 0.35,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "creaseColor": {
+          "r": 0.12,
+          "g": 0.06,
+          "b": 0.03
+        },
+        "creaseRough": 0.85,
+        "cell": 2.5,
+        "creaseWidth": 0.12,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "abbe": 0
+      },
+      "code": "// worley3 F2 - F1: zero on a cell border -- the creases of grained leather, rougher and darker.\n// The hide is the base colour and roughness; cell is a grain's size in mm.\nlet q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\nlet w = worley3(q / cell, 5u);\nlet crease = 1.0 - smoothstep(0.0, creaseWidth, w.y - w.x);\nm.baseColor = mix(m.baseColor, creaseColor, crease);\nm.roughness = mix(m.roughness, creaseRough, crease);",
+      "ranges": {
+        "creaseRough": {
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        "cell": {
+          "min": 0.2,
+          "max": 20,
+          "step": 0.1
+        },
+        "creaseWidth": {
+          "min": 0.01,
+          "max": 0.5,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "cell"
+      ]
+    },
+    {
+      "id": "m10",
+      "label": "granite (worley cells)",
+      "params": {
+        "baseColor": {
+          "r": 0.85,
+          "g": 0.83,
+          "b": 0.8
+        },
+        "metallic": 0,
+        "roughness": 0.3,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "pink": {
+          "r": 0.75,
+          "g": 0.5,
+          "b": 0.45
+        },
+        "dark": {
+          "r": 0.08,
+          "g": 0.08,
+          "b": 0.09
+        },
+        "grain": 3,
+        "pinkShare": 0.3,
+        "darkShare": 0.3,
+        "edge": 0.15,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "abbe": 0
+      },
+      "code": "// worley3 cell number: each grain its own mineral -- light (the base colour), pink or dark --\n// as in granite. grain is a crystal's size in mm; the shares are how many are pink and dark.\nlet q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\nlet w = worley3(q / grain, 6u);\nlet c = select(select(m.baseColor, pink, w.z < darkShare + pinkShare), dark, w.z < darkShare);\nm.baseColor = c * (1.0 - edge + edge * smoothstep(0.0, 0.1, w.y - w.x));",
+      "ranges": {
+        "grain": {
+          "min": 0.2,
+          "max": 50,
+          "step": 0.1
+        },
+        "pinkShare": {
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        "darkShare": {
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        "edge": {
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "grain"
+      ]
+    },
+    {
+      "id": "m17",
+      "label": "grey",
+      "params": {
+        "baseColor": {
+          "r": 0.6,
+          "g": 0.6,
+          "b": 0.6
+        },
+        "metallic": 0,
+        "roughness": 0.35,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "abbe": 0
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   R_local  that frame's rotation to the world, for a direction written in it\n//   S_local  its scale: p_local * S_local is in scene units, and metres(x) is x m in them\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. brushed along the object's x, for an anisotropy above 0 (or turned: grainAround):\n//   m.tangent = grainAlong(R_local, VEC3(1.0, 0.0, 0.0));\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
+    },
+    {
+      "id": "m30",
+      "label": "rough stone (granite, relief 1.5 mm / 8 mm)",
+      "params": {
+        "baseColor": {
+          "r": 0.85,
+          "g": 0.83,
+          "b": 0.8
+        },
+        "metallic": 0,
+        "roughness": 0.3,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "pink": {
+          "r": 0.75,
+          "g": 0.5,
+          "b": 0.45
+        },
+        "dark": {
+          "r": 0.08,
+          "g": 0.08,
+          "b": 0.09
+        },
+        "grain": 3,
+        "pinkShare": 0.3,
+        "darkShare": 0.3,
+        "edge": 0.15,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "abbe": 0
+      },
+      "code": "// worley3 cell number: each grain its own mineral -- light (the base colour), pink or dark --\n// as in granite. grain is a crystal's size in mm; the shares are how many are pink and dark.\nlet q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\nlet w = worley3(q / grain, 6u);\nlet c = select(select(m.baseColor, pink, w.z < darkShare + pinkShare), dark, w.z < darkShare);\nm.baseColor = c * (1.0 - edge + edge * smoothstep(0.0, 0.1, w.y - w.x));",
+      "relief": {
+        "code": "// Noise relief: bumps up to \"amplitude\" mm high and deep, about \"size\" mm across -- four octaves\n// of gradient noise (lib/pathtracer/core/noise.js), in real millimetres on the object. Four noises\n// per march step near the surface. slope is the MEASURED gradient bound (a quarter of the proved\n// one, NZ_GRAD_LIP, and a quarter the steps); the normal is taken by differences.\nlet peak = nzFbmLip(4u, 1.0, 0.5, 1.0);                 // the octaves' amplitudes summed\nlet n = fbm3(q / size, 1u, 4u, 2.0, 0.5);\nh = amplitude * n.w / peak;\nslope = amplitude / size * nzFbmLip(4u, 2.0, 0.5, NZ_GRAD_LIP_MEASURED) / peak;",
+        "params": {
+          "amplitude": 1.5,
+          "size": 8
+        },
+        "ranges": {
+          "amplitude": {
+            "min": 0,
+            "max": 20,
+            "step": 0.01
+          },
+          "size": {
+            "min": 0.1,
+            "max": 200,
+            "step": 0.1
+          }
+        },
+        "lengths": [
+          "amplitude",
+          "size"
+        ]
+      },
+      "ranges": {
+        "grain": {
+          "min": 0.2,
+          "max": 50,
+          "step": 0.1
+        },
+        "pinkShare": {
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        "darkShare": {
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        "edge": {
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "grain"
+      ]
+    }
+  ],
+  "root": {
+    "id": "root",
+    "kind": "group",
+    "label": "Noise library",
+    "enabled": true,
+    "blend": 0,
+    "children": [
+      {
+        "id": "n2",
+        "kind": "object",
+        "type": "code",
+        "label": "floor",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": -45
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m1",
+        "params": {
+          "size": {
+            "x": 450,
+            "y": 300,
+            "z": 5
+          },
+          "rounding": 2
+        },
+        "block": "b31"
+      },
+      {
+        "id": "n4",
+        "kind": "object",
+        "type": "code",
+        "label": "softbox",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 0,
+            "y": -60,
+            "z": 420
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m3",
+        "params": {
+          "size": {
+            "x": 250,
+            "y": 150,
+            "z": 3
+          },
+          "rounding": 2
+        },
+        "block": "b31"
+      },
+      {
+        "id": "n11",
+        "kind": "object",
+        "type": "code",
+        "label": "sphere: value noise",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -275,
+            "y": 70,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m5",
+        "params": {
+          "radius": 40
+        },
+        "block": "b32"
+      },
+      {
+        "id": "n12",
+        "kind": "object",
+        "type": "code",
+        "label": "sphere: gradient noise",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -165,
+            "y": 70,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m6",
+        "params": {
+          "radius": 40
+        },
+        "block": "b32"
+      },
+      {
+        "id": "n13",
+        "kind": "object",
+        "type": "code",
+        "label": "sphere: marble",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -55,
+            "y": 70,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m7",
+        "params": {
+          "radius": 40
+        },
+        "block": "b32"
+      },
+      {
+        "id": "n14",
+        "kind": "object",
+        "type": "code",
+        "label": "sphere: spots",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 55,
+            "y": 70,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m8",
+        "params": {
+          "radius": 40
+        },
+        "block": "b32"
+      },
+      {
+        "id": "n15",
+        "kind": "object",
+        "type": "code",
+        "label": "sphere: leather",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 165,
+            "y": 70,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m9",
+        "params": {
+          "radius": 40
+        },
+        "block": "b32"
+      },
+      {
+        "id": "n16",
+        "kind": "object",
+        "type": "code",
+        "label": "sphere: granite",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 275,
+            "y": 70,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m10",
+        "params": {
+          "radius": 40
+        },
+        "block": "b32"
+      },
+      {
+        "id": "n18",
+        "kind": "group",
+        "label": "relief 1 mm / 10 mm",
+        "enabled": true,
+        "blend": 0,
+        "transform": {
+          "pos": {
+            "x": -275,
+            "y": -70,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "children": [
+          {
+            "id": "n19",
+            "kind": "object",
+            "type": "code",
+            "label": "sphere",
+            "enabled": true,
+            "transform": {
+              "pos": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "rot": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "scale": 1
+            },
+            "material": "m17",
+            "params": {
+              "radius": 40
+            },
+            "block": "b32"
+          }
+        ],
+        "params": {
+          "amount": 1,
+          "size": 10
+        },
+        "block": "b33"
+      },
+      {
+        "id": "n20",
+        "kind": "group",
+        "label": "relief 3 mm / 25 mm",
+        "enabled": true,
+        "blend": 0,
+        "transform": {
+          "pos": {
+            "x": -165,
+            "y": -70,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "children": [
+          {
+            "id": "n21",
+            "kind": "object",
+            "type": "code",
+            "label": "sphere",
+            "enabled": true,
+            "transform": {
+              "pos": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "rot": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "scale": 1
+            },
+            "material": "m17",
+            "params": {
+              "radius": 40
+            },
+            "block": "b32"
+          }
+        ],
+        "params": {
+          "amount": 3,
+          "size": 25
+        },
+        "block": "b33"
+      },
+      {
+        "id": "n22",
+        "kind": "group",
+        "label": "relief 0.3 mm / 2 mm",
+        "enabled": true,
+        "blend": 0,
+        "transform": {
+          "pos": {
+            "x": -55,
+            "y": -70,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "children": [
+          {
+            "id": "n23",
+            "kind": "object",
+            "type": "code",
+            "label": "sphere",
+            "enabled": true,
+            "transform": {
+              "pos": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "rot": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "scale": 1
+            },
+            "material": "m17",
+            "params": {
+              "radius": 40
+            },
+            "block": "b32"
+          }
+        ],
+        "params": {
+          "amount": 0.3,
+          "size": 2
+        },
+        "block": "b33"
+      },
+      {
+        "id": "n24",
+        "kind": "group",
+        "label": "rough stone: its material carries the relief",
+        "enabled": true,
+        "blend": 0,
+        "transform": {
+          "pos": {
+            "x": 55,
+            "y": -70,
+            "z": -5
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 25
+          },
+          "scale": 1
+        },
+        "children": [
+          {
+            "id": "n25",
+            "kind": "object",
+            "type": "code",
+            "label": "box",
+            "enabled": true,
+            "transform": {
+              "pos": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "rot": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "scale": 1
+            },
+            "material": "m30",
+            "params": {
+              "size": {
+                "x": 35,
+                "y": 35,
+                "z": 35
+              },
+              "rounding": 8
+            },
+            "block": "b31"
+          }
+        ]
+      },
+      {
+        "id": "n26",
+        "kind": "group",
+        "label": "relief 0.4 mm / 2.5 mm, leather",
+        "enabled": true,
+        "blend": 0,
+        "transform": {
+          "pos": {
+            "x": 165,
+            "y": -70,
+            "z": -5
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 25
+          },
+          "scale": 1
+        },
+        "children": [
+          {
+            "id": "n27",
+            "kind": "object",
+            "type": "code",
+            "label": "box",
+            "enabled": true,
+            "transform": {
+              "pos": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "rot": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "scale": 1
+            },
+            "material": "m9",
+            "params": {
+              "size": {
+                "x": 35,
+                "y": 35,
+                "z": 35
+              },
+              "rounding": 8
+            },
+            "block": "b31"
+          }
+        ],
+        "params": {
+          "amount": 0.4,
+          "size": 2.5
+        },
+        "block": "b33"
+      },
+      {
+        "id": "n28",
+        "kind": "group",
+        "label": "relief 2 mm / 30 mm, marble",
+        "enabled": true,
+        "blend": 0,
+        "transform": {
+          "pos": {
+            "x": 275,
+            "y": -70,
+            "z": -5
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 25
+          },
+          "scale": 1
+        },
+        "children": [
+          {
+            "id": "n29",
+            "kind": "object",
+            "type": "code",
+            "label": "box",
+            "enabled": true,
+            "transform": {
+              "pos": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "rot": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "scale": 1
+            },
+            "material": "m7",
+            "params": {
+              "size": {
+                "x": 35,
+                "y": 35,
+                "z": 35
+              },
+              "rounding": 8
+            },
+            "block": "b31"
+          }
+        ],
+        "params": {
+          "amount": 2,
+          "size": 30
+        },
+        "block": "b33"
+      }
+    ]
+  },
+  "functions": "// Functions: WGSL helpers any code node or material in this scene can call.\n// Compiled once, before the materials and the SDF; errors show here at their own lines.\n// e.g. a gyroid, usable in a code node as  C = add_new(C, sd(gyroid(p, 4.0)), MATERIAL);\n//   fn gyroid(p: VEC3, s: f32) -> f32 {\n//       let q = p * s;\n//       return abs(dot(sin(q), cos(q.zxy))) / s - 0.03;\n//   }\n",
+  "environment": {
+    "envMode": 1,
+    "studioIlluminance": 150,
+    "studioTop": 0.5
+  },
+  "blocks": [
+    {
+      "id": "b31",
+      "label": "box",
+      "kind": "object",
+      "code": "// A box: size is the HALF-size along each axis; the rounding stays inside it.\nC = add_new(C, NboxRounded(p, size, rounding), MATERIAL);",
+      "params": {
+        "size": {
+          "x": 0.5,
+          "y": 0.5,
+          "z": 0.5
+        },
+        "rounding": 0.02
+      },
+      "ranges": {
+        "rounding": {
+          "min": 0,
+          "max": 2,
+          "step": 0.005
+        }
+      },
+      "lengths": [
+        "size",
+        "rounding"
+      ],
+      "builtin": "box@1"
+    },
+    {
+      "id": "b32",
+      "label": "sphere",
+      "kind": "object",
+      "code": "// A sphere around this node's origin.\nC = add_new(C, Nsphere(p, radius), MATERIAL);",
+      "params": {
+        "radius": 0.5
+      },
+      "ranges": {
+        "radius": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "radius"
+      ],
+      "builtin": "sphere@1"
+    },
+    {
+      "id": "b33",
+      "label": "relief 1 mm / 10 mm",
+      "kind": "group",
+      "code": "// Noise relief: a rough surface up to \"amount\" high and low, with features about \"size\"\n// across -- four octaves of gradient noise (lib/pathtracer/core/noise.js). Costs four\n// noises per step. The relief steepens the field by at most amount / size times the fBm's\n// bound over its peak, so distances are divided by that: shorter steps, no holes. The bound\n// is the MEASURED one (a quarter of the proved one, and a quarter the steps); for a proof\n// use NZ_GRAD_LIP. The normal is by differences.\n// IN A SHELL: the noise moves the surface by at most NZ_GRAD_VALUE_BOUND x amount (proved,\n// noise.js), so beyond that from the plain shape, the plain distance less it is a safe\n// distance -- no noise, no division. Only points near the surface pay for the noise. The\n// edge is twice that out, so a step from the shell is never shorter than the reach (a ray\n// grazing it would crawl), plus the hit tolerance times (slope + 1): a hit is within\n// slope tolerances of the plain shape's reach and its normal's differences one more, so\n// they never straddle the edge, where the value jumps. Under a smooth blend the edge is\n// farther by READ_REACH, as far as the blend reads the field off its surface (unbounded\n// under group code: no shell there). And foldRelief divides by the slope -- or, in a CSG\n// group (DIVIDED_ABOVE), leaves it to the group, which divides once after the blend: divided\n// before it, the fillet would come out the wrong size.\nvar H = children(emptyHit(r), p);\nlet peak = nzFbmLip(4u, 1.0, 0.5, 1.0);                 // the octaves' amplitudes summed\nlet slope = 1.0 + amount / size * nzFbmLip(4u, 2.0, 0.5, NZ_GRAD_LIP_MEASURED) / peak;\nlet reach = NZ_GRAD_VALUE_BOUND * abs(amount) * XF_S;   // how far the noise can move it\nif (abs(H.s.w) > 2.0 * reach + READ_REACH + (slope + 1.0) * marchEps()) {\n    C = fold(C, VEC4(0.0, 0.0, 0.0, H.s.w - sign(H.s.w) * reach), H.m);\n} else {\n    let n = fbm3(p / size, 1u, 4u, 2.0, 0.5);\n    C = foldRelief(C, H.s.w - amount * n.w / peak * XF_S, H.m, slope, DIVIDED_ABOVE);\n}",
+      "params": {
+        "amount": 1,
+        "size": 10
+      },
+      "ranges": {
+        "amount": {
+          "min": 0,
+          "max": 10,
+          "step": 0.01
+        },
+        "size": {
+          "min": 0.5,
+          "max": 100,
+          "step": 0.1
+        }
+      },
+      "lengths": [
+        "amount",
+        "size"
+      ]
+    }
+  ]
+}

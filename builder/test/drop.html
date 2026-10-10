@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Library drops · check</title>
+<!-- THE TREE AS A DROP TARGET, for builder/test/drop.check.mjs: the real tree over the real model and
+     project, with a stand-in for the builder (no renderer: what the tree asks of BUILDER is the document,
+     the current scene, undo and apply). -->
+<link rel="stylesheet" href="../../lib/shell/shell.css">
+<style>html, body { height: 100%; margin: 0; } #t { width: 360px; height: 600px; }</style>
+</head>
+<body>
+<div id="t" class="shell-panel"></div>
+<script type="module">
+import * as M from '../model.js'
+import * as P from '../project.js'
+import { installBuilderTree } from '../tree.js'
+
+const doc = M.createDoc({ title: 'drop' })
+const red = M.addMaterial(doc, { id: 'red', label: 'red', preset: 'diffuse' })
+red.params.baseColor = { r: 0.8, g: 0.1, b: 0.1 }
+const g = M.addGroup(doc, 'root', { id: 'g', label: 'group' })
+M.addObject(doc, 'g', { id: 'g1', primitive: 'box' }); M.addObject(doc, 'g', { id: 'g2', primitive: 'sphere' })
+M.addLight(doc, 'g', { id: 'gl' })
+M.addObject(doc, 'root', { id: 'a', primitive: 'sphere', label: 'ball' }); M.addObject(doc, 'root', { id: 'b', primitive: 'box', label: 'bee' })
+// the assets a library would hold: a material and a node, taken from another document
+const src = M.createDoc()
+const gold = M.addMaterial(src, { id: 'gold', label: 'gold', preset: 'metal' })
+const cube = M.addObject(src, 'root', { id: 'cube', primitive: 'box', params: { size: { x: 0.5, y: 0.5, z: 0.5 }, rounding: 0 } })
+const T = { commits: 0, applied: 0, status: [], focus: [], selected: null }
+const project = P.createProject([doc])
+let current = project.scenes[0].key
+const BUILDER = {
+    model: M, projectModel: P, project,
+    get current() { return current }, use(k) { current = k },
+    get doc() { return P.scene(project, current).doc },
+    commit() { T.commits++ }, apply() { T.applied++ }, live() { return false },
+}
+// onFocus: a node's row double-clicked (tree.check.mjs) -- the page would bring the camera to it
+const tree = installBuilderTree(document.getElementById('t'), BUILDER, { onStatus: s => T.status.push(s), onStructure: () => { T.applied++ },
+    onSelect: id => { T.selected = id }, onFocus: id => T.focus.push(id) })
+let dragged = null
+tree.acceptLibrary(() => dragged)
+window.CHECK = { M, T, tree, BUILDER, setDragged: it => { dragged = it },
+    material: M.extractAsset(src, gold.id), node: M.extractAsset(src, cube.id) }
+</script>
+</body>
+</html>

@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>B · Workspaces</title>
+<link rel="stylesheet" href="mock.css">
+<style>
+    /* the workspace switcher: the program's top level, one fixed layout per stage of the work */
+    .top { display: flex; align-items: center; gap: 6px; height: 40px; padding: 0 8px; background: var(--raised); border-bottom: 1px solid var(--line); flex: none; }
+    .ws { display: flex; gap: 2px; background: #111417; border: 1px solid var(--line); border-radius: 6px; padding: 2px; }
+    .ws button { padding: 5px 14px; border-radius: 4px; color: var(--muted); display: flex; gap: 6px; align-items: center; }
+    .ws button.on { background: #2b3a48; color: #fff; border-color: #3b5268; }
+    .ws .n { font: 10px var(--mono); color: var(--faint); }
+    .ws button.on .n { color: #9fc6ea; }
+    .top .spacer { flex: 1; }
+    .left { width: 260px; border-right: 1px solid var(--line); flex: none; }
+    .right { width: 300px; border-left: 1px solid var(--line); flex: none; }
+    .view { position: relative; flex: 1; min-width: 0; min-height: 0; }
+    .vt { position: absolute; left: 8px; top: 8px; display: flex; gap: 3px; padding: 3px; flex-wrap: wrap; }
+    .vt button { font-size: 12px; padding: 2px 7px; }
+    .hud { position: absolute; left: 8px; bottom: 8px; font: 11px var(--mono); color: var(--muted); padding: 3px 8px; }
+    .acc { border-bottom: 1px solid var(--line); }
+    .acc > .h { cursor: pointer; }
+    .acc.shut > :not(.h) { display: none; }
+    .dash { display: grid; gap: 8px; padding: 8px; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: auto 1.2fr 1fr; height: 100%; }
+    .dash .metrics { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+    .flow { display: flex; gap: 6px; align-items: center; font-size: 11.5px; color: var(--muted); }
+    .flow b { color: var(--ink); font-weight: 600; }
+    .flow .ar { color: var(--faint); }
+    .report { max-width: 780px; margin: 16px auto; background: #f4f5f6; color: #1c2126; padding: 28px 36px; border-radius: 3px; }
+    .report h2 { margin: 0 0 4px; font-size: 20px; }
+    .report .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+    .report .ph { height: 180px; background: #16191c; border-radius: 2px; position: relative; }
+    .report table { width: 100%; border-collapse: collapse; font: 12px var(--mono); }
+    .report td { border-bottom: 1px solid #d6dbe0; padding: 3px 4px; }
+    @media (max-width: 900px) { .left, .right { display: none; } .dash { grid-template-columns: 1fr; grid-template-rows: none; } .dash .metrics { grid-template-columns: repeat(2, 1fr); } }
+</style>
+</head>
+<body>
+<div class="app" data-tabgroup>
+    <div class="banner"><b>B · Workspaces</b> One fixed layout per stage of the work (Model, Render, Optics, Analyse, Report), switched at the top, like Blender's or Fusion 360's workspaces. Nothing to arrange; each stage shows what it needs. <a href="index.html">all four approaches</a></div>
+
+    <div class="top">
+        <div class="m" style="position:relative"><button data-menu title="Application menu">☰</button><div class="dropdown" hidden>
+            <div>New scene</div><div>Open scene, project or workspace… <kbd>Ctrl O</kbd></div><div>Bundled scenes ▸</div><hr>
+            <div>Save current scene</div><div>Save all scenes <kbd>Ctrl S</kbd></div><div>Save workspace</div><hr>
+            <div>Undo <kbd>Ctrl Z</kbd></div><div>Redo <kbd>Ctrl Y</kbd></div><hr><div>Keyboard shortcuts</div></div></div>
+        <select title="Scene"><option>optics-test</option><option>menger</option><option>showcase</option><option>materials</option><option>demo</option></select>
+        <div class="ws">
+            <button data-tab="model"><span class="n">1</span> Model</button>
+            <button data-tab="render"><span class="n">2</span> Render</button>
+            <button data-tab="optics"><span class="n">3</span> Optics</button>
+            <button class="on" data-tab="analyse"><span class="n">4</span> Analyse</button>
+            <button data-tab="report"><span class="n">5</span> Report</button>
+        </div>
+        <span class="spacer"></span>
+        <span class="note"><span class="dot"></span>render 412 spp · optics 2 M rays, 4.1 s ago</span>
+        <button class="primary">▶ Run analysis</button>
+    </div>
+
+    <!-- ========================= 1 MODEL: build the scene ========================= -->
+    <div class="row grow" data-panel="model">
+        <div class="left panel col">
+            <div class="h">Project <span class="spacer"></span><button>↶</button><button>↷</button><button>＋</button></div>
+            <div class="tree scroll grow">
+                <div>▾ ◧ optics-test <span class="kind">mm</span></div>
+                <div class="i1">☀ LED die <span class="tag src">light</span></div><div class="i1 sel">◯ Lens</div>
+                <div class="i1">▭ Screen <span class="tag det">detector</span></div><div class="i1">▸ ▦ Housing</div>
+                <div class="i1">▾ Materials</div><div class="i2">PMMA</div><div class="i2">Screen <span class="tag det">detector</span></div>
+            </div>
+        </div>
+        <div class="view panel">
+            <div data-chart="picture" style="position:absolute;inset:0"></div>
+            <div class="vt float"><button class="on">✥ Move</button><button>⟳ Rotate</button><button>⤢ Scale</button><span class="vline"></span><button>fast drag</button>
+                <span class="vline"></span><button>＋ Shape ▾</button><button>＋ Modifier ▾</button><button>＋ Light ▾</button></div>
+            <div class="hud float">Lens · click selects · shift-click deeper · double-click deepest · Esc up</div>
+        </div>
+        <div class="right panel col scroll">
+            <div class="h">Lens <span class="spacer"></span><span class="tag">object</span></div>
+            <div class="prop"><label>label</label><div class="ctl"><input value="Lens"></div></div>
+            <div class="prop"><label>material</label><div class="ctl"><select><option>PMMA</option></select></div></div>
+            <div class="prop"><label>position</label><div class="ctl"><input class="num" value="0"><input class="num" value="0"><input class="num" value="12"></div></div>
+            <div class="prop"><label>rotation °</label><div class="ctl"><input class="num" value="0"><input class="num" value="0"><input class="num" value="0"></div></div>
+            <div class="prop"><label>scale</label><div class="ctl"><input type="range"><input class="num" value="1"></div></div>
+            <div class="h">parameters <span class="spacer"></span><button>＋</button></div>
+            <div class="prop"><label>diameter</label><div class="ctl"><input type="range"><input class="num" value="10.0"></div></div>
+            <div class="prop"><label>thickness</label><div class="ctl"><input type="range"><input class="num" value="3.2"></div></div>
+            <div class="prop"><label>front radius</label><div class="ctl"><input type="range"><input class="num" value="8.0"></div></div>
+            <div class="prop"><label>back radius</label><div class="ctl"><input type="range"><input class="num" value="-15.5"></div></div>
+            <div class="h">code</div>
+            <div class="pad"><pre style="margin:0;background:var(--bg);border:1px solid var(--line);padding:6px;font:11px var(--mono);color:var(--muted);height:120px;overflow:auto">return Nlens(p, P.diameter, P.thickness,
+             P.front, P.back);</pre><div style="display:flex;gap:6px;margin-top:4px"><button>Apply (Ctrl Enter)</button><span class="note">compiles clean</span></div></div>
+        </div>
+    </div>
+
+    <!-- ========================= 2 RENDER: the picture ========================= -->
+    <div class="row grow" data-panel="render" hidden>
+        <div class="view panel">
+            <div data-chart="picture" style="position:absolute;inset:0"></div>
+            <div class="vt float"><button class="on">Photographic</button><button>Illuminance (lx)</button><button>Luminance (cd/m²)</button><span class="vline"></span>
+                <button>◉ Pin</button><button>▭ Area</button><button>Clear</button><button>CSV</button></div>
+            <div class="hud float">412 samples averaged · 18.4 ms/sample · 54 samples/s · EV 9.2 metered</div>
+        </div>
+        <!-- the renderer's settings: its own pages, as an accordion -->
+        <div class="right panel col scroll">
+            <div class="acc"><div class="h">◉ View · camera & exposure <span class="spacer"></span>▾</div>
+                <div class="prop"><label>camera</label><div class="ctl"><select><option>orbit</option></select><select><option>perspective</option></select></div></div>
+                <div class="prop"><label>fov</label><div class="ctl"><input type="range"><span class="num">40</span></div></div>
+                <div class="prop"><label>exposure EV100</label><div class="ctl"><input type="range"><span class="num">9.2</span></div></div>
+                <div class="prop"><label>auto exposure</label><div class="ctl"><input type="checkbox" checked> <button>Meter / lock</button></div></div>
+                <div class="prop"><label>tone curve</label><div class="ctl"><select><option>AgX</option></select></div></div>
+                <div class="prop"><label>contrast · sat · bright</label><div class="ctl"><input class="num" value="0"><input class="num" value="0"><input class="num" value="0"></div></div>
+                <div class="prop"><label>false colour</label><div class="ctl"><input class="num" value="0"><input class="num" value="500"><span class="note">bands</span><input class="num" value="0"></div></div>
+            </div>
+            <div class="acc shut"><div class="h">☼ Light · sun, sky, studio <span class="spacer"></span>▸</div></div>
+            <div class="acc shut"><div class="h">∷ Sampling · tracing and render size <span class="spacer"></span>▸</div></div>
+            <div class="acc"><div class="h">⤓ Output · save an image <span class="spacer"></span>▾</div>
+                <div class="prop"><label>size</label><div class="ctl"><input class="num" value="3840"><input class="num" value="2160"></div></div>
+                <div class="prop"><label>samples</label><div class="ctl"><input class="num" value="1024"></div></div>
+                <div class="pad"><button class="primary">Save PNG</button></div></div>
+            <div class="acc shut"><div class="h">⚙ Advanced · normals, diagnostics <span class="spacer"></span>▸</div></div>
+            <div class="acc shut"><div class="h">✓ Tests · the measurement bench <span class="spacer"></span>▸</div></div>
+            <div class="pad note">This whole column is the renderer's (lib/pathtracer). Another host that embeds the renderer gets the same column.</div>
+        </div>
+    </div>
+
+    <!-- ========================= 3 OPTICS: set up and look at the trace ========================= -->
+    <div class="row grow" data-panel="optics" hidden>
+        <div class="left panel col scroll">
+            <div class="h">Sources</div>
+            <div class="pad" style="font-size:12px">☀ <b>LED die</b> · 100 lm · Lambertian · into n 1.49<br><span class="note">rectangle 2 × 1 mm</span></div>
+            <div class="h">Where light is counted</div>
+            <div class="tree"><div>▭ Screen <span class="tag det">detector</span></div><div>▭ Cut plane <span class="tag lim">limiter</span></div>
+                <div>✺ Far field <span class="kind">every escaping ray</span></div><div>▦ Plane at 1 m <span class="kind">from the far field</span></div></div>
+            <div class="h">Far field</div>
+            <div class="prop"><label>from</label><div class="ctl"><select><option>every escaping ray</option><option>rays at detector: Screen</option></select></div></div>
+            <div class="prop"><label>axis</label><div class="ctl"><select><option>LED die</option></select></div></div>
+            <div class="prop"><label>γ step · C step</label><div class="ctl"><select><option>1°</option></select><select><option>5°</option></select></div></div>
+            <div class="prop"><label>symmetry</label><div class="ctl"><select><option>none</option></select></div></div>
+            <div class="h">Maps</div>
+            <div class="prop"><label>cells · smoothing</label><div class="ctl"><input class="num" value="72"><select><option>Gaussian 1.5</option></select></div></div>
+            <div class="h">Limits</div>
+            <div class="prop"><label>max optical distance</label><div class="ctl"><input class="num" value="200"></div></div>
+            <div class="prop"><label>interactions · march steps</label><div class="ctl"><input class="num" value="64"><input class="num" value="2000"></div></div>
+            <div class="prop"><label>tolerance (m)</label><div class="ctl"><input class="num" value="auto"></div></div>
+        </div>
+        <div class="view panel">
+            <div data-chart="picture" data-rays="1" style="position:absolute;inset:0"></div>
+            <div class="vt float"><span class="note" style="padding:0 6px">rays</span><input type="range" style="width:90px"><span class="num">2 000</span>
+                <span class="note" style="padding:0 6px">steps</span><input type="range" style="width:90px"><span class="num">6</span><button class="on">Live</button><button>Trace</button>
+                <span class="vline"></span><button>colour by ▾</button><span class="note">path</span><input type="range" style="width:70px"></div>
+            <div class="hud float">2 000 rays, 6 steps: 38 ms</div>
+        </div>
+        <div class="right panel col scroll">
+            <div class="h">Where the flux went</div>
+            <table class="t"><tr><th></th><th>lm</th></tr><tr><td>emitted</td><td>100.00</td></tr><tr><td>escaped</td><td>11.2 ± .1</td></tr>
+                <tr><td>absorbed</td><td>2.8 ± .0</td></tr><tr><td>on detectors</td><td>86.0 ± .1</td></tr><tr><td>still going</td><td>0.0</td></tr></table>
+            <div class="h">Per object</div>
+            <table class="t"><tr><th></th><th>arriving</th><th>absorbed</th><th>hits</th></tr><tr><td>Lens</td><td>97.1</td><td>1.9</td><td>2 431</td></tr>
+                <tr><td>Screen</td><td>86.0</td><td>–</td><td>1 720</td></tr><tr><td>Housing</td><td>2.1</td><td>0.9</td><td>61</td></tr></table>
+            <div class="h">Per material</div><div class="pad note">PMMA · Screen · Black anodised</div>
+            <div class="pad"><button>Detector hits CSV</button></div>
+        </div>
+    </div>
+
+    <!-- ========================= 4 ANALYSE: the numbers, and the loop ========================= -->
+    <div class="row grow" data-panel="analyse">
+        <!-- the parameters being tuned, pinned from the Model workspace: the "decide" step, beside the numbers -->
+        <div class="left panel col scroll">
+            <div class="h">Tuning <span class="spacer"></span><button title="Add a parameter">＋</button></div>
+            <div class="prop optim"><label>Lens · back radius</label><div class="ctl"><input type="range"><input class="num" value="-15.5"></div></div>
+            <div class="prop optim"><label>Lens · front radius</label><div class="ctl"><input type="range"><input class="num" value="8.0"></div></div>
+            <div class="prop optim"><label>Lens · z</label><div class="ctl"><input type="range"><input class="num" value="12.0"></div></div>
+            <div class="pad"><button class="primary">▶ Run</button> <button>Sweep…</button></div>
+            <div class="h">Runs <span class="spacer"></span><button>pin</button></div>
+            <table class="t"><tr><th>#</th><th>back</th><th>U0</th><th>eff.</th></tr>
+                <tr class="ref"><td>12</td><td>-14.0</td><td>0.71</td><td>.861</td></tr><tr><td>13</td><td>-15.0</td><td>0.75</td><td>.859</td></tr>
+                <tr class="sel"><td>14</td><td>-15.5</td><td>0.78</td><td>.860</td></tr></table>
+            <div class="pad note">The dashed curves in every chart are run 12, the pinned reference.</div>
+        </div>
+        <div class="grow panel">
+            <div class="dash">
+                <div class="metrics">
+                    <div class="metric goal"><span class="k">U0 · Screen (goal ≥ 0.8)</span><span class="v">0.78</span><span class="d up">+0.07 vs #12</span></div>
+                    <div class="metric"><span class="k">E mean · Screen</span><span class="v">301 lx</span><span class="d down">−11 vs #12</span></div>
+                    <div class="metric"><span class="k">efficiency</span><span class="v">86.0 %</span><span class="d">±0.1</span></div>
+                    <div class="metric"><span class="k">I max</span><span class="v">2 410 cd</span><span class="d">±36</span></div>
+                    <div class="metric"><span class="k">beam C0 / C90</span><span class="v">27.9° / 36.1°</span><span class="d up">−1.5°</span></div>
+                    <div class="metric"><span class="k">r50 · r90</span><span class="v">6.2 / 11.8 mm</span><span class="d">Screen</span></div>
+                </div>
+                <div class="chart"><div class="ct"><span class="title">Screen · illuminance</span><button class="on">isolux</button><button>⇩</button></div><div class="cb" data-chart="heat"></div></div>
+                <div class="chart"><div class="ct"><span class="title">Intensity</span><button>C ▾</button><button>log</button><button>⇩</button></div><div class="cb" data-chart="polar"></div></div>
+                <div class="chart"><div class="ct"><span class="title">I vs γ</span><button>±auto</button><button>⇩</button></div><div class="cb" data-chart="cartesian"></div></div>
+                <div class="chart"><div class="ct"><span class="title">Profiles through the peak</span><button>⇩</button></div><div class="cb" data-chart="profile"></div></div>
+                <div class="chart"><div class="ct"><span class="title">Encircled flux</span><button>radial</button><button>⇩</button></div><div class="cb" data-chart="encircled"></div></div>
+                <div class="chart"><div class="ct"><span class="title">U0 against back radius</span><button>⇩</button></div><div class="cb" data-chart="sweep"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================= 5 REPORT: what leaves the program ========================= -->
+    <div class="grow scroll" data-panel="report" hidden style="background:var(--bg)">
+        <div class="report">
+            <h2>Lens test · run 14</h2><div style="color:#56616b;font-size:12px">2 000 000 rays in 8 batches · PMMA lens, back radius −15.5 mm · 2026-09-27</div>
+            <div class="grid">
+                <div class="ph" data-chart="polar"></div><div class="ph" data-chart="heat"></div>
+                <table><tr><td>flux emitted</td><td>100.0 lm</td></tr><tr><td>efficiency</td><td>86.0 %</td></tr><tr><td>I max</td><td>2 410 cd</td></tr>
+                    <tr><td>beam C0 / C90</td><td>27.9° / 36.1°</td></tr><tr><td>U0 on Screen</td><td>0.78</td></tr></table>
+                <div style="font-size:12px;display:flex;flex-direction:column;gap:6px"><b>Export</b><button style="border:1px solid #c5ccd3;color:#1c2126">IES LM-63 (planned)</button>
+                    <button style="border:1px solid #c5ccd3;color:#1c2126">EULUMDAT (planned)</button><button style="border:1px solid #c5ccd3;color:#1c2126">CSV: intensity, map, hits</button>
+                    <button style="border:1px solid #c5ccd3;color:#1c2126">Picture PNG</button></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="status">
+        <span class="flow"><b>Model</b><span class="ar">→</span>Render<span class="ar">→</span>Optics<span class="ar">→</span><b>Analyse</b><span class="ar">→</span>Report</span>
+        <span class="spacer"></span><span>keys 1–5 switch workspace</span><span>optics-test · mm</span>
+    </div>
+</div>
+<script type="module">
+import { boot } from './mock.js'
+boot()
+</script>
+</body>
+</html>

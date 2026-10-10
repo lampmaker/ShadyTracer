@@ -1,0 +1,35 @@
+/* THE TIMELINE PANEL (tools/timeline.js): lib/timeline's editor in the shell's look. Its own sheet
+   (lib/timeline/timeline.css) is loaded first and left as it is -- a vendored copy is changed in
+   CODE_WOOD, never here -- so everything below is an override, scoped to the panel. The lane canvas
+   paints its own greys and is not themable from CSS. */
+.rt-timeline { overflow: hidden; }
+.rt-timeline .tl {
+    --tl-bg: var(--sh-panel); --tl-bar: var(--sh-raised); --tl-fg: var(--sh-ink); --tl-dim: var(--sh-muted);
+    --tl-accent: #d6e1ff; --tl-input: var(--sh-bg); --tl-border: var(--sh-line);
+    font-family: var(--sh-sans);
+}
+/* the grip sets the host's height: right for a strip at the foot of a page, wrong in a dock, whose
+   splitters size the panel */
+.rt-timeline .tl-grip { display: none; }
+.rt-timeline .tl-bar { border-bottom-color: var(--sh-line); }
+.rt-timeline .tl-btn { background: #26303a; }
+.rt-timeline .tl-btn:hover { background: #2f3b47; }
+.rt-timeline .tl-rec { background: #7a3b2e; }
+.rt-timeline .tl-drawer { background: var(--sh-tabs); border-bottom-color: var(--sh-line); }
+.rt-timeline .tl-heads { background: var(--sh-tabs); border-right-color: var(--sh-line); }
+.rt-timeline .tl-head-top { background: var(--sh-bg); }
+.rt-timeline .tl-head { border-bottom-color: var(--sh-line); }
+.rt-timeline .tl-time, .rt-timeline .tl-frame { font-family: var(--sh-mono); }
+.rt-timeline .tl-popup { background: var(--sh-raised); border-color: var(--sh-line); }
+
+/* the export's frame over the picture, while the timeline is on screen: what the video keeps */
+.rt-aspect { position: absolute; z-index: 5; pointer-events: none; box-sizing: border-box;
+    border: 1px dashed rgba(255, 255, 255, 0.55); box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35); }
+.rt-aspect > span { position: absolute; left: 6px; top: 4px; font: 11px var(--sh-mono, monospace);
+    color: rgba(255, 255, 255, 0.8); text-shadow: 0 1px 2px #000; white-space: nowrap; }
+/* wider than the view: the box is the view itself, and the label says the film goes past it */
+.rt-aspect.wider { border-color: rgba(217, 162, 38, 0.7); }
+.rt-aspect.wider > span { color: var(--sh-warn, #d9a226); }
+/* "animated only" beside + track (timeline.js): the Parameters panel's choice, shown while anything is flagged */
+.rt-timeline .rt-tl-only { display: inline-flex; align-items: center; gap: 3px; margin: 0 6px; white-space: nowrap; font-size: 11px; opacity: 0.85; cursor: pointer; }
+.rt-timeline .rt-tl-only input { margin: 0; }

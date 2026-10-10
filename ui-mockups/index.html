@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Raytracer UI Mockups</title>
+<link rel="stylesheet" href="mock.css">
+<style>
+    body { overflow: auto; }
+    main { max-width: 1180px; margin: 0 auto; padding-block: 28px 60px; padding-inline: 20px; display: flex; flex-direction: column; gap: 34px; }
+    h1 { font-size: 24px; margin: 0; text-wrap: balance; }
+    h2 { font-size: 16px; margin: 0 0 10px; color: #fff; }
+    p { margin: 0; max-width: 72ch; color: #c5ced6; }
+    .lede { display: flex; flex-direction: column; gap: 8px; }
+    a { color: #9fc6ea; }
+    /* the loop */
+    .loop { display: flex; gap: 0; align-items: stretch; flex-wrap: wrap; }
+    .step { flex: 1 1 150px; background: var(--raised); border: 1px solid var(--line); padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
+    .step + .step { border-left: 0; }
+    .step b { font-size: 13px; }
+    .step span { font-size: 12px; color: var(--muted); }
+    .step.hot { background: #2a2217; border-color: #6b4a2c; }
+    .back { font-size: 12px; color: var(--muted); margin-top: 6px; }
+    /* the four */
+    .four { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+    .card h3 { margin: 0; font-size: 15px; display: flex; gap: 8px; align-items: baseline; }
+    .card h3 .l { font: 600 13px var(--mono); color: var(--accent); }
+    .card .like { font-size: 11.5px; color: var(--faint); }
+    .card p { font-size: 12.5px; }
+    .card ul { margin: 0; padding-left: 18px; font-size: 12.5px; color: #c5ced6; display: flex; flex-direction: column; gap: 3px; }
+    .card .pro li::marker { content: "+  "; color: var(--good); }
+    .card .con li::marker { content: "−  "; color: var(--bad); }
+    .card .open { margin-top: auto; }
+    .card .open a { display: inline-block; padding: 5px 12px; border: 1px solid #3b6f9c; border-radius: 4px; background: #1f3d59; color: #fff; text-decoration: none; }
+    .tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; }
+    table.w { border-collapse: collapse; width: 100%; font-size: 12px; min-width: 900px; }
+    table.w th, table.w td { padding: 6px 9px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    table.w th { background: var(--raised); color: var(--muted); font-weight: normal; position: sticky; top: 0; }
+    table.w td:first-child { color: var(--ink); white-space: nowrap; }
+    table.w td { color: #c5ced6; }
+    table.w td.now { color: var(--faint); }
+    table.w tr.grp td { background: #13171a; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
+    .score { font-family: var(--mono); letter-spacing: 1px; }
+    .score .f { color: var(--c1); } .score .e { color: #34404a; }
+    .rec { background: #16222c; border: 1px solid #2f4a61; border-radius: 6px; padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; }
+    .rec ol { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 5px; color: #c5ced6; font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+    <section class="lede">
+        <h1>Raytracer UI: four approaches, and the one chosen</h1>
+        <p>Rough mockups of the whole application, laid out four ways. Each one holds everything the program has today
+           (as of 2026-09-27; <a href="../FEATURES.md">FEATURES.md</a> is the inventory now), plus what the roadmap will need: a pinned reference, a study of runs, export.
+           The reasoning is in <a href="../roadmap/UI_PLAN.md">UI_PLAN.md</a>.</p>
+        <p class="note">The charts are the program's own code (polar.js, cartesian.js, heatmap.js, xychart.js) drawing synthetic data. The picture is a sketch,
+           so no GPU is needed. Buttons mostly do nothing; tabs and menus open.</p>
+    </section>
+
+    <section class="rec">
+        <h2>Chosen: E · Shell</h2>
+        <p>A's docking, with presets that give B's simplicity, a real menu bar, pop-out windows for a second monitor,
+           a library of objects and materials, charts that switch between flux and colour, help from every control, and
+           every value addressable by a path for the timeline and a later optimiser. It works: drag, float, pop out,
+           switch layouts, save your own, Ctrl K.</p>
+        <p class="note">The reasoning and the architecture behind it are sections 6 and 7 of <a href="../roadmap/UI_PLAN.md">UI_PLAN.md</a>.</p>
+        <div><a href="e-shell.html" style="display:inline-block;padding:6px 14px;border:1px solid #3b6f9c;border-radius:4px;background:#1f3d59;color:#fff;text-decoration:none">Open E</a></div>
+    </section>
+
+    <section class="rec">
+        <h2>Built: F · Analyse</h2>
+        <p>The charts rearranged, built on the application's own shell, tables and charts: every chart a panel of its own,
+           drawn edge to edge, sized by the dock. One Analysis pane holds the data every chart is made from, the
+           <i>selected</i> chart's own settings (click a chart, as a row in the tree selects an object), and the results as
+           cards. Point at a chart to read it; its siblings follow. Drag on the map to zoom.</p>
+        <div><a href="f-analyse.html" style="display:inline-block;padding:6px 14px;border:1px solid #3b6f9c;border-radius:4px;background:#1f3d59;color:#fff;text-decoration:none">Open F</a></div>
+    </section>
+
+    <section class="rec">
+        <h2>Decided: G · Sections -- B, boxes, built</h2>
+        <p>The Analysis pane's sections (Intensity, Map, Chart, Results) all had the same small muted heading and ran
+           together. The real pane, five times on made-up data: as it is, and four ways to tell the parts apart --
+           A bands across the pane, B a box each, C a coloured rule by role (what goes in, how it is shown, what comes
+           out), D numbered steps in the order of the work.</p>
+        <div><a href="g-sections.html" style="display:inline-block;padding:6px 14px;border:1px solid #3b6f9c;border-radius:4px;background:#1f3d59;color:#fff;text-decoration:none">Open G</a></div>
+    </section>
+
+    <section>
+        <h2>The loop the UI has to serve</h2>
+        <div class="loop">
+            <div class="step"><b>Model</b><span>geometry, materials, lights</span></div>
+            <div class="step"><b>Look</b><span>the picture, rays over it, traced live</span></div>
+            <div class="step"><b>Measure</b><span>detectors, the far field, a plane h away</span></div>
+            <div class="step"><b>Analyse</b><span>E, U0, beam, efficiency, each ± its error</span></div>
+            <div class="step hot"><b>Decide</b><span>change a parameter; compare with the last runs</span></div>
+        </div>
+        <p class="back">…and round again, many times, then Report. The hard case: <b>tune a lens to make a detector's illuminance uniform</b>.
+           That needs the parameter, the detector's map, U0 and what it trades against, the previous runs and a small 3D view all on
+           screen together. Today the parameter is in the Builder page and the map covers the 3D view, and there is no record of previous runs at all.</p>
+    </section>
+
+    <section>
+        <h2>The four</h2>
+        <div class="four">
+            <div class="card">
+                <h3><span class="l">A</span> Workbench</h3><div class="like">like VS Code, an IDE, KiCad</div>
+                <p>A menu bar, an activity bar of modules, and a docking area: every view is a tab you can drag, split and stack. Each tab is labelled with the module it belongs to.</p>
+                <ul class="pro"><li>Any arrangement: parameter, map, runs and view side by side</li><li>The module split is visible in every tab</li><li>Grows without redesign: a new chart is a new tab</li></ul>
+                <ul class="con"><li>A person has to arrange it; a new user sees an IDE</li><li>A docking system is the most work to build</li></ul>
+                <div class="open"><a href="a-workbench.html">Open A</a></div>
+            </div>
+            <div class="card">
+                <h3><span class="l">B</span> Workspaces</h3><div class="like">like Blender's workspaces, Fusion 360</div>
+                <p>Five fixed layouts, one per stage: Model, Render, Optics, Analyse, Report. Each shows only what its stage needs; the Analyse one has the tuning sliders beside the charts.</p>
+                <ul class="pro"><li>Learnable in minutes: the tabs are the process</li><li>Every layout is designed, never messy</li><li>Cheap: fixed grids, no docking</li></ul>
+                <ul class="con"><li>Switching stages to change one thing</li><li>A layout that does not fit a task cannot be changed</li></ul>
+                <div class="open"><a href="b-workspaces.html">Open B</a></div>
+            </div>
+            <div class="card">
+                <h3><span class="l">C</span> Study</h3><div class="like">like a design-of-experiments tool, Grasshopper's Galapagos</div>
+                <p>The loop is the program. A right column holds the goal, the parameters (sent there from any property with ◇), the scores and every run. The view and the scored map share the centre.</p>
+                <ul class="pro"><li>The uniformity case on one screen, with history</li><li>The step to sweep and optimise is already there</li><li>Runs become the report</li></ul>
+                <ul class="con"><li>Rendering a picture is a side show</li><li>Too much for a quick look at a scene</li></ul>
+                <div class="open"><a href="c-study.html">Open C</a></div>
+            </div>
+            <div class="card">
+                <h3><span class="l">D</span> Canvas</h3><div class="like">like Figma, Spline, modern 3D web apps</div>
+                <p>The view is the whole window and everything floats over it. Selecting a thing shows its analysis: a detector shows its map, a light its polar diagram. Numbers can be pinned to objects in the view. Everything else is in a command palette.</p>
+                <ul class="pro"><li>The most picture, the least chrome</li><li>Analysis is attached to what it measures</li><li>A palette finds any of the ~150 settings by name</li></ul>
+                <ul class="con"><li>Floating panels cover the view they float on</li><li>Comparing two things means popping charts out</li></ul>
+                <div class="open"><a href="d-canvas.html">Open D</a></div>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <h2>How each does on what matters</h2>
+        <div class="tablewrap"><table class="w">
+            <tr><th></th><th>A Workbench</th><th>B Workspaces</th><th>C Study</th><th>D Canvas</th></tr>
+            <tr><td>tune and measure on one screen</td><td><span class="score"><span class="f">●●●</span><span class="e">●</span></span> if arranged</td><td><span class="score"><span class="f">●●●</span><span class="e">●</span></span> in Analyse</td><td><span class="score"><span class="f">●●●●</span></span> the point of it</td><td><span class="score"><span class="f">●●</span><span class="e">●●</span></span> one object at a time</td></tr>
+            <tr><td>a first-time user finds things</td><td><span class="score"><span class="f">●●</span><span class="e">●●</span></span></td><td><span class="score"><span class="f">●●●●</span></span></td><td><span class="score"><span class="f">●●●</span><span class="e">●</span></span></td><td><span class="score"><span class="f">●●</span><span class="e">●●</span></span> palette helps</td></tr>
+            <tr><td>looking at the picture</td><td><span class="score"><span class="f">●●●</span><span class="e">●</span></span></td><td><span class="score"><span class="f">●●●●</span></span> Render</td><td><span class="score"><span class="f">●●</span><span class="e">●●</span></span></td><td><span class="score"><span class="f">●●●●</span></span></td></tr>
+            <tr><td>keeps the renderer a separate module</td><td><span class="score"><span class="f">●●●●</span></span> tabs say whose</td><td><span class="score"><span class="f">●●●</span><span class="e">●</span></span> Render column</td><td><span class="score"><span class="f">●●●</span><span class="e">●</span></span> view has its own strip</td><td><span class="score"><span class="f">●●●</span><span class="e">●</span></span> render corner</td></tr>
+            <tr><td>room to grow (sweeps, IES, more charts)</td><td><span class="score"><span class="f">●●●●</span></span></td><td><span class="score"><span class="f">●●</span><span class="e">●●</span></span></td><td><span class="score"><span class="f">●●●</span><span class="e">●</span></span></td><td><span class="score"><span class="f">●●</span><span class="e">●●</span></span></td></tr>
+            <tr><td>cost to build</td><td><span class="score"><span class="f">●</span><span class="e">●●●</span></span> docking</td><td><span class="score"><span class="f">●●●●</span></span> fixed grids</td><td><span class="score"><span class="f">●●●</span><span class="e">●</span></span></td><td><span class="score"><span class="f">●●</span><span class="e">●●</span></span></td></tr>
+        </table></div>
+        <p class="note" style="margin-top:6px">More dots is better; for cost, more dots is cheaper. These are judgements, not measurements.</p>
+    </section>
+
+    <section class="rec">
+        <h2>A recommendation, for you to overrule</h2>
+        <p>They combine better than they compete. The one I would build:</p>
+        <ol>
+            <li><b>A's shell</b>: a menu bar, split panes holding tab stacks, a status bar. Every panel is labelled with the module it belongs to. Tabs can be dragged between stacks; a fully free docking system can come later, if it is ever missed.</li>
+            <li><b>B's workspaces as saved layouts</b> of that shell: Model, Optics, Analyse, Render. A new user gets a designed layout per stage; someone who rearranges a layout keeps it.</li>
+            <li><b>C's study as a panel</b> (parameters, scores, runs), docked in Analyse by default. It is the one new thing the loop needs, and it holds the sweep and the optimiser later.</li>
+            <li><b>D's ideas where they are cheap</b>: a command palette over everything, and an inspector that shows the selected detector's or light's numbers.</li>
+            <li><b>Charts carry their own controls</b>, in a strip on top: planes, log, range, units, pin as reference, export. The Optics panel keeps only what changes the data.</li>
+        </ol>
+    </section>
+
+    <section>
+        <h2>Where everything goes</h2>
+        <div class="tablewrap"><table class="w">
+            <tr><th>what</th><th class="now">today</th><th>A Workbench</th><th>B Workspaces</th><th>C Study</th><th>D Canvas</th></tr>
+            <tr class="grp"><td colspan="6">the renderer (lib/pathtracer): travels with its view</td></tr>
+            <tr><td>Show mode, false colour</td><td class="now">overlay ◉ View</td><td>view toolbar: Picture / Illuminance / Luminance</td><td>Render: view toolbar</td><td>view strip "picture ▾"</td><td>render corner ◉</td></tr>
+            <tr><td>Camera, exposure, tone</td><td class="now">overlay ◉ View</td><td>view toolbar ◉ popover; Render menu</td><td>Render: right accordion</td><td>Render menu → floating window</td><td>render corner popover</td></tr>
+            <tr><td>Light: sun, sky, studio</td><td class="now">overlay ☼</td><td>view toolbar ☼ popover</td><td>Render: accordion</td><td>Render menu</td><td>render corner ☼</td></tr>
+            <tr><td>Sampling, render size</td><td class="now">overlay ∷</td><td>view toolbar ∷ popover</td><td>Render: accordion</td><td>Render menu</td><td>render corner ∷</td></tr>
+            <tr><td>Output: save an image</td><td class="now">overlay ⤓</td><td>File → Save picture; view ⋯</td><td>Render: accordion; Report</td><td>File menu</td><td>render corner ⤓</td></tr>
+            <tr><td>Advanced, TRACE2</td><td class="now">overlay ⚙</td><td>view ⋯</td><td>Render: accordion</td><td>Render menu</td><td>render corner ⚙</td></tr>
+            <tr><td>Tests (22 benches), report</td><td class="now">overlay ✓</td><td>bottom panel tab "Tests"</td><td>Render: accordion</td><td>Render menu</td><td>palette "Test: …"</td></tr>
+            <tr><td>HUD readout, cursor probe</td><td class="now">docked footer</td><td>on the view + status bar</td><td>on the view</td><td>on the view + status bar</td><td>render corner</td></tr>
+            <tr><td>Measure: pin, area, CSV</td><td class="now">bottom-right bar</td><td>view corner bar</td><td>Render: view toolbar</td><td>view strip</td><td>top tools ◉ ▭</td></tr>
+            <tr class="grp"><td colspan="6">the builder (the application)</td></tr>
+            <tr><td>Open, save ×3, + scene, undo, redo</td><td class="now">Builder toolbar</td><td>File, Edit menus; tree header</td><td>☰ menu; scene dropdown</td><td>File, Edit menus</td><td>☰ menu, tools ↶ ↷, palette</td></tr>
+            <tr><td>Tree: scenes, groups, objects, materials</td><td class="now">Builder page</td><td>side panel "Scene"</td><td>Model: left</td><td>left, top</td><td>floating outline</td></tr>
+            <tr><td>Add: 11 shapes, 7 modifiers, 3 lights, 6 materials</td><td class="now">tree "+" menus</td><td>Add menu; tree ＋</td><td>Model: view toolbar ＋</td><td>Add menu</td><td>tools ＋ Add</td></tr>
+            <tr><td>Properties, parameters, dialog</td><td class="now">Builder page</td><td>side panel "Properties"</td><td>Model: right</td><td>left, with ◇ to tune</td><td>inspector: Properties</td></tr>
+            <tr><td>Code editor, Apply</td><td class="now">Builder page</td><td>a tab of its own, beside the view</td><td>Model: right</td><td>inspector, expanded</td><td>inspector, expanded</td></tr>
+            <tr><td>Gizmo: edit, move, rotate, scale, fast drag</td><td class="now">bottom-left bar</td><td>view toolbar ✥; Edit menu</td><td>Model: view toolbar</td><td>view strip</td><td>top tools</td></tr>
+            <tr class="grp"><td colspan="6">optics (lib/pathtracer/optics)</td></tr>
+            <tr><td>Sources list</td><td class="now">Optics folder</td><td>side panel "Optics"</td><td>Optics: left</td><td>tree (lights)</td><td>select a light</td></tr>
+            <tr><td>Rays: count, steps, live, path, colour</td><td class="now">Optics folder</td><td>side panel "Optics"; view ✺ toggle</td><td>Optics: view toolbar</td><td>Optics menu; view "rays"</td><td>tools ✺ Rays popover</td></tr>
+            <tr><td>Far field: from, axis, grid, symmetry</td><td class="now">Intensity folder</td><td>side panel "Optics"</td><td>Optics: left</td><td>Optics menu</td><td>select "Far field"</td></tr>
+            <tr><td>Maps: cells, smoothing</td><td class="now">Analysis folder</td><td>the map chart's strip</td><td>Optics: left</td><td>the map's strip</td><td>the map's strip</td></tr>
+            <tr><td>Limits: interactions, march steps, tolerance, max distance</td><td class="now">Advanced + Rays</td><td>side panel "Optics", folded</td><td>Optics: left, Limits</td><td>Optics menu</td><td>palette</td></tr>
+            <tr><td>Run analysis, ray count</td><td class="now">Analysis folder</td><td>Optics menu F5; status bar</td><td>top bar ▶</td><td>study ▶ Run once</td><td>bottom right ▶</td></tr>
+            <tr><td>Results: flux balance, per object, per material</td><td class="now">under the Optics page</td><td>bottom panel "Results"</td><td>Optics: right</td><td>Optics menu → window</td><td>select nothing: inspector</td></tr>
+            <tr><td>Chart display: planes, log, range, units, isolux</td><td class="now">Intensity / Illuminance folders</td><td>each chart's strip</td><td>each chart's strip</td><td>each chart's strip</td><td>each chart's strip</td></tr>
+            <tr><td>Intensity: polar, I vs γ, numbers</td><td class="now">tab over the picture</td><td>editor tab "Intensity"</td><td>Analyse grid</td><td>centre, bottom</td><td>select the light</td></tr>
+            <tr><td>Illuminance: map, profiles, radial, encircled, numbers</td><td class="now">tab over the picture</td><td>editor tab "Illuminance · Screen"</td><td>Analyse grid</td><td>centre (the scored map)</td><td>select the detector</td></tr>
+            <tr><td>Small detector maps</td><td class="now">under the Optics page</td><td>gone: the map tab</td><td>gone</td><td>gone</td><td>gone</td></tr>
+            <tr><td>CSV: hits, intensity, map</td><td class="now">buttons in folders</td><td>each chart's ⇩; Optics menu</td><td>charts' ⇩; Report</td><td>charts' ⇩; File</td><td>charts' ⇩</td></tr>
+            <tr class="grp"><td colspan="6">new, for the loop</td></tr>
+            <tr><td>Parameters being tuned</td><td class="now">–</td><td>◆ in Properties; Study panel</td><td>Analyse: left "Tuning"</td><td>study column</td><td>inspector ◆</td></tr>
+            <tr><td>Scores and a goal</td><td class="now">–</td><td>Study panel</td><td>Analyse: metrics row</td><td>study column</td><td>cards pinned in the view</td></tr>
+            <tr><td>Runs, pin a reference, sweep</td><td class="now">–</td><td>bottom panel "Runs"; tab "Sweep"</td><td>Analyse: left + sweep chart</td><td>study column + sweep chart</td><td>palette</td></tr>
+            <tr><td>Report, IES / LDT</td><td class="now">–</td><td>File → Export</td><td>Report workspace</td><td>File menu</td><td>☰ menu</td></tr>
+            <tr><td>Everything by name</td><td class="now">–</td><td>command palette (optional)</td><td>–</td><td>–</td><td>⌘K palette</td></tr>
+        </table></div>
+    </section>
+</main>
+</body>
+</html>

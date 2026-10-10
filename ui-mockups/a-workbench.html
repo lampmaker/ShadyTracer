@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A · Workbench</title>
+<link rel="stylesheet" href="mock.css">
+<style>
+    /* the activity bar: one icon per module, each opening its side panel */
+    .activity { width: 44px; background: #13171a; border-right: 1px solid var(--line); display: flex; flex-direction: column; align-items: center;
+                padding-top: 6px; gap: 2px; flex: none; }
+    .activity button { width: 36px; height: 36px; padding: 0; font-size: 16px; color: var(--muted); }
+    .activity button.on { color: #fff; box-shadow: inset 2px 0 0 var(--accent); background: none; border-color: transparent; }
+    .activity .sep { height: 1px; width: 24px; background: var(--line); margin: 6px 0; }
+    .side { width: 290px; border-right: 1px solid var(--line); flex: none; }
+    /* an editor group: a tab strip and what it holds */
+    .group { display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--panel); }
+    .tabs { display: flex; align-items: stretch; background: #13171a; border-bottom: 1px solid var(--line); height: 30px; flex: none; }
+    .tabs button { border-radius: 0; border: 0; border-right: 1px solid var(--line); padding: 0 12px; color: var(--muted); display: flex;
+                   align-items: center; gap: 7px; }
+    .tabs button.on { background: var(--panel); color: #fff; box-shadow: inset 0 2px 0 var(--accent); }
+    .tabs button .x { color: var(--faint); font-size: 11px; }
+    .tabs .spacer { flex: 1; }
+    .tabs .tool { border: 0; color: var(--faint); padding: 0 8px; }
+    .mod { font-size: 10px; letter-spacing: 0.05em; text-transform: uppercase; padding: 0 5px; border-radius: 3px; }
+    .mod.r { background: #243240; color: #9fc6ea; }      /* the renderer's */
+    .mod.o { background: #2c3a26; color: #a9d68c; }      /* the optics module's */
+    .mod.a { background: #3a2f26; color: #e6b98c; }      /* the application's */
+    .view { position: relative; flex: 1; min-height: 0; }
+    .splitter { background: var(--line); flex: none; }
+    .splitter.v { width: 4px; cursor: col-resize; } .splitter.h { height: 4px; cursor: row-resize; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1.25fr 1fr; gap: 6px; padding: 6px; height: 100%; }
+    .grid2 .chart:first-child { grid-row: span 2; }
+    .bottom { height: 190px; border-top: 1px solid var(--line); flex: none; }
+    .vt { position: absolute; left: 8px; top: 8px; display: flex; gap: 3px; flex-wrap: wrap; padding: 3px; }
+    .vt button { font-size: 12px; padding: 2px 7px; }
+    .hud { position: absolute; left: 8px; bottom: 8px; font: 11px var(--mono); color: var(--muted); padding: 3px 8px; }
+    .mbar { position: absolute; right: 8px; bottom: 8px; display: flex; gap: 3px; padding: 3px; }
+    .dropzone { position: absolute; inset: 30% 20%; border: 2px dashed rgba(120,150,175,0.5); border-radius: 6px; display: grid; place-items: center;
+                color: var(--muted); font-size: 12px; pointer-events: none; }
+</style>
+</head>
+<body>
+<div class="app">
+    <div class="banner"><b>A · Workbench</b> A docking layout, like VS Code or an IDE: every view is a tab you can drag, split and stack; each module brings its own panels. <a href="index.html">all four approaches</a></div>
+
+    <!-- THE MENU BAR: the application's. Everything is reachable from here, and most of it also has a
+         place in a panel; a module's menu lists what that module does. -->
+    <div class="menubar">
+        <div class="m"><button data-menu>File</button><div class="dropdown" hidden>
+            <div>New scene</div><div>Open scene, project or workspace… <kbd>Ctrl O</kbd></div><div>Bundled scenes ▸</div><hr>
+            <div>Save current scene</div><div>Save all scenes <kbd>Ctrl S</kbd></div><div>Save workspace (with render settings and camera)</div><hr>
+            <div>Choose ray file (Zemax .DAT)…</div><div>Import IES / LDT… <span class="note">(planned)</span></div><hr>
+            <div>Save picture (PNG): size, samples…</div><div>Export IES / LDT… <span class="note">(planned)</span></div><div>Export report…</div></div></div>
+        <div class="m"><button data-menu>Edit</button><div class="dropdown" hidden>
+            <div>Undo <kbd>Ctrl Z</kbd></div><div>Redo <kbd>Ctrl Y</kbd></div><hr>
+            <div>Copy <kbd>Ctrl C</kbd></div><div>Paste <kbd>Ctrl V</kbd></div><div>Duplicate <kbd>Ctrl D</kbd></div><div>Delete <kbd>Del</kbd></div><hr>
+            <div>Move <kbd>G</kbd></div><div>Rotate <kbd>R</kbd></div><div>Scale <kbd>S</kbd></div><div>Fast drag</div><hr>
+            <div>Edit code… <kbd>Ctrl Enter</kbd> applies</div><div>Scene: unit, WGSL functions, max optical distance…</div></div></div>
+        <div class="m"><button data-menu>Add</button><div class="dropdown" hidden>
+            <div class="sub">Shapes</div><div>sphere · box · cylinder · capsule · torus · cone</div><div>lens · rectangle · disc · plane</div><div>code (WGSL)</div>
+            <div class="sub">Modifiers</div><div>twist · bend · repeat · mirror · round · shell · displace</div>
+            <div class="sub">Lights</div><div>rectangle light · disc light · ray file</div>
+            <div class="sub">Materials</div><div>diffuse · plastic · metal · mirror · glass · glowing</div>
+            <div class="sub">Other</div><div>Group</div><div>Parameter on the selection…</div></div></div>
+        <div class="m"><button data-menu>View</button><div class="dropdown" hidden>
+            <div>Scene</div><div>Properties</div><div>Materials</div><div>Optics</div><div>Study</div><hr>
+            <div>New viewport</div><div>New chart ▸</div><div>Reset layout</div><div>Save layout as…</div></div></div>
+        <div class="m"><button data-menu>Render</button><div class="dropdown" hidden>
+            <div class="sub">from the renderer module</div>
+            <div>Show: photographic · illuminance · luminance</div><div>Camera & exposure…</div><div>Sun, sky & environment…</div>
+            <div>Sampling & render size…</div><div>Output: save an image…</div><div>Advanced & diagnostics…</div><hr>
+            <div>Pause / resume</div><div>Restart accumulation</div><div>Measurement bench (Tests, 22 + Run all)…</div></div></div>
+        <div class="m"><button data-menu>Optics</button><div class="dropdown" hidden>
+            <div class="sub">from the optics module</div>
+            <div>Trace <kbd>T</kbd></div><div>Live trace</div><div>Run analysis <kbd>F5</kbd></div><hr>
+            <div>Intensity chart</div><div>Illuminance chart</div><div>Results table</div><hr>
+            <div>Download detector hits (CSV)</div><div>Download intensity (CSV)</div><div>Download illuminance map (CSV)</div></div></div>
+        <div class="m"><button data-menu>Study</button><div class="dropdown" hidden>
+            <div>Add parameter from selection</div><div>Add score…</div><hr>
+            <div>Run once</div><div>Sweep a parameter…</div><div>Optimise… <span class="note">(later)</span></div><hr><div>Pin current run as reference</div></div></div>
+        <div class="m"><button data-menu>Help</button><div class="dropdown" hidden><div>Keyboard shortcuts</div><div>Documentation</div></div></div>
+    </div>
+
+    <div class="row grow">
+        <!-- THE ACTIVITY BAR -->
+        <div class="activity" data-tabgroup>
+            <button class="on" data-tab="scene" title="Scene">◧</button>
+            <button data-tab="materials" title="Materials">◐</button>
+            <button data-tab="optics" title="Optics">✺</button>
+            <button data-tab="study" title="Study">◆</button>
+            <div class="sep"></div>
+            <button data-tab="render" title="Render settings (the renderer's)">☼</button>
+
+        </div>
+
+        <div class="side panel col" id="side">
+            <!-- side panel: SCENE -->
+            <div class="col grow" data-sidepanel="scene">
+                <div class="h">Project <span class="spacer"></span><button title="Undo">↶</button><button title="Redo">↷</button><button title="Add">＋</button><button title="More">⋯</button></div>
+                <div class="tree">
+                    <div>▸ ◧ menger</div><div>▸ ◧ showcase</div><div>▸ ◧ materials</div><div>▸ ◧ demo</div>
+                    <div>▾ ◧ optics-test <span class="kind">current · mm</span></div>
+                    <div class="i1">☀ LED die <span class="tag src">light</span> <span class="kind">rectangle</span></div>
+                    <div class="i1 sel">◯ Lens <span class="kind">lens · PMMA</span></div>
+                    <div class="i1">▭ Screen <span class="tag det">detector</span></div>
+                    <div class="i1">▸ ▦ Housing <span class="kind">group</span></div>
+                    <div class="i1">▭ Cut plane <span class="tag lim">limiter</span></div>
+                    <div class="i1">▾ Materials</div>
+                    <div class="i2">PMMA <span class="kind">glass</span></div><div class="i2">Screen <span class="tag det">detector</span></div>
+                    <div class="i2">Black anodised <span class="kind">surface</span></div>
+                </div>
+                <div class="hline"></div>
+                <div class="h">Properties · Lens <span class="spacer"></span><span class="mod a">builder</span></div>
+                <div class="scroll grow">
+                    <div class="prop"><label>position</label><div class="ctl"><input class="num" value="0"><input class="num" value="0"><input class="num" value="12"></div></div>
+                    <div class="prop"><label>rotation</label><div class="ctl"><input class="num" value="0"><input class="num" value="0"><input class="num" value="0"></div></div>
+                    <div class="prop"><label>scale</label><div class="ctl"><input class="num" value="1"></div></div>
+                    <div class="prop"><label>diameter</label><div class="ctl"><input type="range" value="50"><input class="num" value="10.0"></div></div>
+                    <div class="prop"><label>centre thickness</label><div class="ctl"><input type="range" value="40"><input class="num" value="3.2"></div></div>
+                    <div class="prop optim"><label>front radius</label><div class="ctl"><input type="range" value="60"><input class="num" value="8.0"></div></div>
+                    <div class="prop optim"><label>back radius</label><div class="ctl"><input type="range" value="45"><input class="num" value="-15.5"></div></div>
+                    <div class="prop"><label>material</label><div class="ctl"><select><option>PMMA</option></select></div></div>
+                    <div class="prop"><label>enabled</label><div class="ctl"><input type="checkbox" checked></div></div>
+                    <div class="h">parameters <span class="spacer"></span><button title="Add a parameter">＋</button></div>
+                    <div class="prop"><label>code</label><div class="ctl"><button>Edit SDF code…</button></div></div>
+                    <div class="pad note">◆ marks a property that is a study parameter. Right-click any property: "Add to study".</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- THE EDITOR AREA: two groups side by side, a bottom panel under both -->
+        <div class="col grow">
+            <div class="row grow">
+                <!-- left group: the renderer's view -->
+                <div class="group grow" data-tabgroup style="flex:1.1">
+                    <div class="tabs">
+                        <button class="on" data-tab="pic"><span class="mod r">view</span> Viewport <span class="x">✕</span></button>
+                        <button data-tab="pic2"><span class="mod r">view</span> Top · ortho <span class="x">✕</span></button>
+                        <span class="spacer"></span><button class="tool" title="Split right">⫴</button><button class="tool" title="More">⋯</button>
+                    </div>
+                    <div class="view" data-panel="pic">
+                        <div data-chart="picture" data-rays="1" style="position:absolute;inset:0"></div>
+                        <!-- THE VIEW'S OWN TOOLBAR: the renderer's controls travel with its view -->
+                        <div class="vt float">
+                            <button class="on">Picture</button><button>Illuminance</button><button>Luminance</button><span class="vline"></span>
+                            <button title="Camera, exposure">◉ EV 9.2</button><button title="Sun & sky">☼</button><button title="Sampling">∷ 1 spp/f</button>
+                            <button title="Output, Advanced, Tests">⋯</button><span class="vline"></span>
+                            <button class="on" title="Optics overlay: rays">✺ rays</button><button title="Selection handles">✥</button>
+                        </div>
+                        <div class="hud float">412 spp · 18.4 ms/sample · 1188×969 · converging</div>
+                        <div class="mbar float"><button title="Pin a reading">⌖</button><button title="Rectangle average">▭</button><button title="Clear">✕</button><button title="CSV">⇩</button></div>
+                    </div>
+                    <div class="view" data-panel="pic2" hidden><div data-chart="picture" data-mode="lux" style="position:absolute;inset:0"></div></div>
+                </div>
+                <div class="splitter v"></div>
+                <!-- right group: the optics module's charts -->
+                <div class="group grow" data-tabgroup style="flex:1">
+                    <div class="tabs">
+                        <button class="on" data-tab="ill"><span class="mod o">optics</span> Illuminance · Screen <span class="x">✕</span></button>
+                        <button data-tab="int"><span class="mod o">optics</span> Intensity <span class="x">✕</span></button>
+                        <button data-tab="sweep"><span class="mod a">study</span> Sweep <span class="x">✕</span></button>
+                        <span class="spacer"></span><button class="tool" title="Split down">⫶</button><button class="tool">⋯</button>
+                    </div>
+                    <div class="view" data-panel="ill">
+                        <div class="grid2">
+                            <div class="chart"><div class="ct"><span class="title">Screen · E</span><button class="on">isolux</button><button>lux / %</button><button>cells 72</button><button>smooth ▾</button><button title="PNG / CSV">⇩</button></div><div class="cb" data-chart="heat"></div></div>
+                            <div class="chart"><div class="ct"><span class="title">Profiles</span><button>x</button><button>y</button><button>pin</button><button>⇩</button></div><div class="cb" data-chart="profile"></div></div>
+                            <div class="chart"><div class="ct"><span class="title">Encircled flux</span><button>radial</button><button class="on">encircled</button><button>⇩</button></div><div class="cb" data-chart="encircled"></div></div>
+                        </div>
+                    </div>
+                    <div class="view" data-panel="int" hidden>
+                        <div class="grid2" style="grid-template-rows:1fr 1fr">
+                            <div class="chart"><div class="ct"><span class="title">Polar</span><button>C 0, 90 ▾</button><button>lin</button><button>log</button><button>cd ▾</button><button>⇩</button></div><div class="cb" data-chart="polar"></div></div>
+                            <div class="chart"><div class="ct"><span class="title">I vs γ</span><button>auto ±</button><button>⇩</button></div><div class="cb" data-chart="cartesian"></div></div>
+                            <div class="chart"><div class="ct"><span class="title">Beam</span></div><div class="cb pad" style="font-size:12px">
+                                <div>I max <span class="num">2 410</span> <span class="pm">± 36 cd</span> at γ 0°</div>
+                                <div>beam C0 <span class="num">27.9°</span> · C90 <span class="num">36.1°</span></div>
+                                <div>field C0 <span class="num">50.4°</span> · C90 <span class="num">65.2°</span></div>
+                                <div>efficiency <span class="num">86.0 %</span></div></div></div>
+                        </div>
+                    </div>
+                    <div class="view" data-panel="sweep" hidden><div class="pad" style="height:100%"><div class="chart" style="height:100%"><div class="ct"><span class="title">U0 and efficiency against back radius</span></div><div class="cb" data-chart="sweep"></div></div></div></div>
+                </div>
+            </div>
+
+            <!-- THE BOTTOM PANEL: tables and logs, under whatever is above -->
+            <div class="group bottom" data-tabgroup>
+                <div class="tabs">
+                    <button class="on" data-tab="runs"><span class="mod a">study</span> Runs</button>
+                    <button data-tab="res"><span class="mod o">optics</span> Results</button>
+                    <button data-tab="log">Log</button>
+                    <button data-tab="tests"><span class="mod r">render</span> Tests</button>
+                    <span class="spacer"></span><button class="tool">⌃</button>
+                </div>
+                <div class="scroll grow" data-panel="runs">
+                    <table class="t">
+                        <tr><th>#</th><th>back radius</th><th>front radius</th><th>rays</th><th>U0 · Screen</th><th>E mean lx</th><th>efficiency</th><th>beam C0</th><th></th></tr>
+                        <tr class="ref"><td>12</td><td>-14.0</td><td>8.0</td><td>2 M</td><td>0.71 ± .01</td><td>312 ± 2</td><td>0.861</td><td>29.4°</td><td class="note">reference</td></tr>
+                        <tr><td>13</td><td>-15.0</td><td>8.0</td><td>2 M</td><td>0.75 ± .01</td><td>305 ± 2</td><td>0.859</td><td>28.7°</td><td></td></tr>
+                        <tr class="sel"><td>14</td><td>-15.5</td><td>8.0</td><td>2 M</td><td>0.78 ± .01</td><td>301 ± 2</td><td>0.860</td><td>27.9°</td><td class="note">current</td></tr>
+                    </table>
+                </div>
+                <div class="scroll grow pad" data-panel="res" hidden>
+                    <table class="t" style="width:auto"><tr><th></th><th>lm</th></tr><tr><td>emitted</td><td>1000.0</td></tr><tr><td>escaped</td><td>112.4 ± 0.6</td></tr>
+                        <tr><td>absorbed</td><td>27.8 ± 0.3</td></tr><tr><td>on detectors</td><td>859.8 ± 0.7</td></tr><tr><td>lost</td><td>0.0</td></tr></table>
+                </div>
+                <div class="scroll grow pad note" data-panel="log" hidden>analysis: 2 000 000 rays in 8 batches, 4.1 s</div>
+                <div class="scroll grow pad note" data-panel="tests" hidden>The renderer's measurement bench: one row per test, Run, results table, copy.</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="status">
+        <span><span class="dot"></span>render 412 spp</span><span>18.4 ms/sample</span><span>optics: 2 M rays · 4.1 s</span>
+        <span class="spacer"></span><span>Lens test · mm</span><span>WebGPU · RTX</span>
+    </div>
+</div>
+<script type="module">
+import { boot } from './mock.js'
+// the side panel would follow the activity bar; only its Scene panel is drawn in this mockup
+boot()
+</script>
+</body>
+</html>

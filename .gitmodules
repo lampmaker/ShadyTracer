@@ -1,0 +1,6 @@
+[submodule "lib/tinywebgpu"]
+	path = lib/tinywebgpu
+	url = https://github.com/lampmaker/tinywebgpu.git
+[submodule "lib/guistuff"]
+	path = lib/guistuff
+	url = https://github.com/lampmaker/GUISTUFF.git

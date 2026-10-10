@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Points mode · check</title>
+<!-- THE POINTS MODE, for builder/test/points.check.mjs: the real overlay (overlay.js, pointsmode.js)
+     over the real builder (demo.js) and the real camera (lib/camera.js, its mouse attached), with a stand-in renderer
+     that compiles nothing and keeps the uniforms it is given, as project.test's does. What the picture shows is the
+     user's to judge: there is no picture here. -->
+<style>
+html, body { margin: 0; background: #000; }
+#stage { position: relative; width: 800px; height: 500px; }
+#c { position: absolute; inset: 0; width: 100%; height: 100%; }
+#bar { position: absolute; left: 8px; top: 8px; z-index: 12; display: flex; gap: 6px; }
+</style>
+</head>
+<body>
+<div id="stage"><canvas id="c" width="800" height="500"></canvas><div id="bar"></div></div>
+<script type="module">
+import * as M from '../model.js'
+import * as P from '../project.js'
+import * as E from '../pointedit.js'
+import { primitiveObject } from '../primitives.js'
+import { installBuilder } from '../demo.js'
+import { installSelectionOverlay } from '../overlay.js'
+import { CAMERA } from '../../lib/camera.js'
+import { projectPoint } from '../../lib/pathtracer/core/genrays.js'
+import { toWorldOf } from '../boxes.js'
+
+const stage = document.getElementById('stage'), canvas = document.getElementById('c')
+const cam = CAMERA({ canvas, aspect: 800 / 500, fov: 40, up: [0, 0, 1] })
+cam.set({ target: [0.4, 0, 0.3] }); cam.set({ azimuth: -60, elevation: 55, distance: 4 })
+let state = {}, compiles = 0
+const given = o => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined))
+const RT = {
+    cam, scene: null,
+    set(values) { const unknown = []; for (const [k, v] of Object.entries(values)) { if (k in state) state[k] = structuredClone(v); else unknown.push(k) } return unknown },
+    get: () => structuredClone(state),
+    settings: () => ({ camera: structuredClone(cam.get()) }),
+    // as lib/pathtracer/index.js applySettings: the mode first and alone, then the pose that mode reads
+    applySettings({ camera } = {}) {
+        if (!camera) return []
+        const { mode, camtype, fov, dimensions, target, azimuth, elevation, distance, pos, up } = camera
+        if (mode) cam.set({ mode })
+        cam.set(given(mode === 'orbit' || mode == null ? { camtype, fov, dimensions, target, azimuth, elevation, distance } : { camtype, fov, dimensions, target, pos, up }))
+        return []
+    },
+    async setScene(s) {
+        compiles++
+        RT.scene = s
+        state = Object.fromEntries(Object.entries(s.uniforms).map(([k, u]) => [k, structuredClone(u.def)]))
+        return 1
+    },
+    size: () => ({ scale: 1 }), setSize: () => true,
+}
+const gpu = { makeCompute: (b, m) => ({ wgsl: `${b}
+${m}`, module: { getCompilationInfo: async () => ({ messages: [] }) }, ready: Promise.resolve() }), makeShader: () => ({ getCompilationInfo: async () => ({ messages: [] }) }) }
+
+const d = M.createDoc({ title: 'points' })
+M.addObject(d, 'root', { id: 'tb', ...primitiveObject('bent tube') })
+M.setPathLive(d, 'tb', 'route', false)           // compiled: the mode compiles it live, and back
+M.setRange(d, 'tb', 'rise', { min: 0.01, max: 1, step: 0.01 })
+M.addObject(d, 'root', { id: 'knob', ...primitiveObject('revolution'), transform: { pos: { x: 2, y: 0, z: 0 }, rot: { x: 0, y: 0, z: 0 }, scale: 1 } })
+M.addObject(d, 'root', { id: 'two', params: { route: { path: [[0, 0, -1], [1, 0, -1]] } }, code: 'C = add_new(C, tube(route, p, 0.05, 0.0), MATERIAL);' })
+M.addObject(d, 'root', { id: 'ball', primitive: 'sphere' })
+// a sweep whose points carry a scale and twist (2026-10-02), off to one side
+M.addObject(d, 'root', { id: 'bar', ...primitiveObject('twisted bar'), transform: { pos: { x: -2, y: 0, z: 0 }, rot: { x: 0, y: 0, z: 0 }, scale: 1 } })
+console.log = () => { }                          // the builder's compile lines
+const B = installBuilder({}, { RT, gpu, project: P.createProject([d]) })
+B.onRestructure = () => { B.apply() }
+await B.apply()
+const picks = []
+const overlay = installSelectionOverlay({ stage, canvas, RT, BUILDER: B, onPick: id => { picks.push(id); overlay.select(id) } })
+// the view's toolbar, stood in for: the host puts the Points mode's legs switch there (index.html, beside the boxes')
+document.getElementById('bar').append(overlay.points.viewPill)
+
+/* where a node's own point is on the stage, worked out here from the camera, not by the overlay */
+const screenOf = (id, local) => {
+    const U = cam.getUniforms(), q = projectPoint(toWorldOf(B.doc, id)(local), U, cam.get().camtype ?? 0)
+    return [(q.x * 0.5 + 0.5) * 800, (0.5 - q.y * 0.5) * 500]
+}
+const list = (id, k) => structuredClone(M.find(B.doc, id).node.params[k])
+window.CHECK = { M, E, B, RT, cam, overlay, picks, screenOf, list,
+    get compiles() { return compiles }, get state() { return state },
+    frame: () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))) }
+</script>
+</body>
+</html>

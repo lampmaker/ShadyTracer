@@ -1,0 +1,491 @@
+{
+ "items": [
+  {
+   "name": "PMMA lens, biconvex Ø 18 mm",
+   "category": "Optics",
+   "tags": [
+    "lens",
+    "pmma",
+    "acrylic"
+   ],
+   "help": "A spherical lens (sdf.js Nlens) in PMMA, n 1.49: its diameter, thickness and two radii are its parameters.",
+   "asset": {
+    "kind": "node",
+    "node": {
+     "id": "lens",
+     "kind": "object",
+     "type": "code",
+     "label": "lens",
+     "enabled": true,
+     "transform": {
+      "pos": {
+       "x": 0,
+       "y": 0,
+       "z": 0
+      },
+      "rot": {
+       "x": 0,
+       "y": 0,
+       "z": 0
+      },
+      "scale": 1
+     },
+     "material": "pmma",
+     "params": {
+      "diameter": 1.8,
+      "thickness": 0.3,
+      "r1": 4,
+      "r2": 4
+     },
+     "code": "// A spherical lens along z (sdf.js Nlens): r1 the +z face, r2 the -z face; a positive radius\n// bulges out, a negative one is hollowed in, 0 is flat. Its refractive index is its material's --\n// give it a glass. Thin lens: 1/f = (n - 1)(1/r1 + 1/r2).\nC = add_new(C, Nlens(p, diameter, thickness, r1, r2), MATERIAL);",
+     "ranges": {
+      "diameter": {
+       "min": 0.01,
+       "max": 10,
+       "step": 0.01
+      },
+      "thickness": {
+       "min": 0.001,
+       "max": 10,
+       "step": 0.001
+      },
+      "r1": {
+       "min": -50,
+       "max": 50,
+       "step": 0.01
+      },
+      "r2": {
+       "min": -50,
+       "max": 50,
+       "step": 0.01
+      }
+     }
+    },
+    "unit": "cm",
+    "materials": [
+     {
+      "id": "pmma",
+      "label": "PMMA (n 1.49)",
+      "params": {
+       "baseColor": {
+        "r": 1,
+        "g": 1,
+        "b": 1
+       },
+       "metallic": 0,
+       "roughness": 0,
+       "anisotropy": 0,
+       "specular": 0.5,
+       "specularTint": 0,
+       "transmission": 1,
+       "ior": 1.49,
+       "emissive": {
+        "r": 1,
+        "g": 1,
+        "b": 1
+       },
+       "emissiveLuminance": 0
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
+     }
+    ]
+   }
+  },
+  {
+   "name": "LED die 2 × 1 mm, 100 lm",
+   "category": "Lights",
+   "tags": [
+    "led",
+    "die",
+    "lambertian"
+   ],
+   "help": "A Lambertian rectangle light, 100 lm, facing -z.",
+   "asset": {
+    "kind": "node",
+    "node": {
+     "id": "die",
+     "kind": "object",
+     "type": "light",
+     "label": "LED die (100 lm)",
+     "enabled": true,
+     "transform": {
+      "pos": {
+       "x": 0,
+       "y": 0,
+       "z": 0
+      },
+      "rot": {
+       "x": 180,
+       "y": 0,
+       "z": 0
+      },
+      "scale": 1
+     },
+     "material": null,
+     "params": {
+      "width": 0.2,
+      "height": 0.1
+     },
+     "light": {
+      "shape": "rectangle",
+      "flux": 100,
+      "luminance": 15915494.30918953
+     }
+    },
+    "unit": "cm",
+    "materials": []
+   }
+  },
+  {
+   "name": "Detector screen Ø 80 mm",
+   "category": "Optics",
+   "tags": [
+    "detector",
+    "screen"
+   ],
+   "help": "A disc of detector material: the Map chart shows the light that lands on it.",
+   "asset": {
+    "kind": "node",
+    "node": {
+     "id": "screenDisc",
+     "kind": "object",
+     "type": "code",
+     "label": "screen",
+     "enabled": true,
+     "transform": {
+      "pos": {
+       "x": 0,
+       "y": 0,
+       "z": 0
+      },
+      "rot": {
+       "x": 0,
+       "y": 0,
+       "z": 0
+      },
+      "scale": 1
+     },
+     "material": "screen",
+     "params": {
+      "radius": 4,
+      "height": 0.1
+     },
+     "code": "// A cylinder along z, centred on this node's origin.\nC = add_new(C, Ncylinder(p, height * 0.5, radius), MATERIAL);",
+     "ranges": {
+      "radius": {
+       "min": 0.01,
+       "max": 10,
+       "step": 0.01
+      },
+      "height": {
+       "min": 0.01,
+       "max": 10,
+       "step": 0.01
+      }
+     }
+    },
+    "unit": "cm",
+    "materials": [
+     {
+      "id": "screen",
+      "label": "screen",
+      "params": {
+       "baseColor": {
+        "r": 0.8,
+        "g": 0.8,
+        "b": 0.8
+       },
+       "metallic": 0,
+       "roughness": 1,
+       "anisotropy": 0,
+       "specular": 0,
+       "specularTint": 0,
+       "transmission": 0,
+       "ior": 1.5,
+       "emissive": {
+        "r": 1,
+        "g": 1,
+        "b": 1
+       },
+       "emissiveLuminance": 0
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n",
+      "type": "detector"
+     }
+    ]
+   }
+  },
+  {
+   "name": "Optics bench: LED, lens, screen",
+   "category": "Assemblies",
+   "tags": [
+    "optics",
+    "test",
+    "led",
+    "lens"
+   ],
+   "help": "The optics test scene as one group: an LED over a PMMA lens, a black board behind it, a detector screen 17 cm below.",
+   "asset": {
+    "kind": "node",
+    "node": {
+     "id": "n1",
+     "kind": "group",
+     "label": "optics bench: LED, lens, screen",
+     "enabled": true,
+     "op": "union",
+     "blend": 0,
+     "transform": {
+      "pos": {
+       "x": 0,
+       "y": 0,
+       "z": 0
+      },
+      "rot": {
+       "x": 0,
+       "y": 0,
+       "z": 0
+      },
+      "scale": 1
+     },
+     "children": [
+      {
+       "id": "screenDisc",
+       "kind": "object",
+       "type": "code",
+       "label": "screen",
+       "enabled": true,
+       "transform": {
+        "pos": {
+         "x": 0,
+         "y": 0,
+         "z": -0.05
+        },
+        "rot": {
+         "x": 0,
+         "y": 0,
+         "z": 0
+        },
+        "scale": 1
+       },
+       "material": "screen",
+       "params": {
+        "radius": 4,
+        "height": 0.1
+       },
+       "code": "// A cylinder along z, centred on this node's origin.\nC = add_new(C, Ncylinder(p, height * 0.5, radius), MATERIAL);",
+       "ranges": {
+        "radius": {
+         "min": 0.01,
+         "max": 10,
+         "step": 0.01
+        },
+        "height": {
+         "min": 0.01,
+         "max": 10,
+         "step": 0.01
+        }
+       }
+      },
+      {
+       "id": "lens",
+       "kind": "object",
+       "type": "code",
+       "label": "lens",
+       "enabled": true,
+       "transform": {
+        "pos": {
+         "x": 0,
+         "y": 0,
+         "z": 10.38
+        },
+        "rot": {
+         "x": 0,
+         "y": 0,
+         "z": 0
+        },
+        "scale": 1
+       },
+       "material": "pmma",
+       "params": {
+        "diameter": 1.8,
+        "thickness": 0.3,
+        "r1": 4,
+        "r2": 4
+       },
+       "code": "// A spherical lens along z (sdf.js Nlens): r1 the +z face, r2 the -z face; a positive radius\n// bulges out, a negative one is hollowed in, 0 is flat. Its refractive index is its material's --\n// give it a glass. Thin lens: 1/f = (n - 1)(1/r1 + 1/r2).\nC = add_new(C, Nlens(p, diameter, thickness, r1, r2), MATERIAL);",
+       "ranges": {
+        "diameter": {
+         "min": 0.01,
+         "max": 10,
+         "step": 0.01
+        },
+        "thickness": {
+         "min": 0.001,
+         "max": 10,
+         "step": 0.001
+        },
+        "r1": {
+         "min": -50,
+         "max": 50,
+         "step": 0.01
+        },
+        "r2": {
+         "min": -50,
+         "max": 50,
+         "step": 0.01
+        }
+       }
+      },
+      {
+       "id": "board",
+       "kind": "object",
+       "type": "code",
+       "label": "black board",
+       "enabled": true,
+       "transform": {
+        "pos": {
+         "x": 0,
+         "y": 0,
+         "z": 16.94
+        },
+        "rot": {
+         "x": 0,
+         "y": 0,
+         "z": 0
+        },
+        "scale": 1
+       },
+       "material": "black",
+       "params": {
+        "radius": 1,
+        "height": 0.1
+       },
+       "code": "// A cylinder along z, centred on this node's origin.\nC = add_new(C, Ncylinder(p, height * 0.5, radius), MATERIAL);",
+       "ranges": {
+        "radius": {
+         "min": 0.01,
+         "max": 10,
+         "step": 0.01
+        },
+        "height": {
+         "min": 0.01,
+         "max": 10,
+         "step": 0.01
+        }
+       }
+      },
+      {
+       "id": "die",
+       "kind": "object",
+       "type": "light",
+       "label": "LED die (100 lm)",
+       "enabled": true,
+       "transform": {
+        "pos": {
+         "x": 0,
+         "y": 0,
+         "z": 16.88
+        },
+        "rot": {
+         "x": 180,
+         "y": 0,
+         "z": 0
+        },
+        "scale": 1
+       },
+       "material": null,
+       "params": {
+        "width": 0.2,
+        "height": 0.1
+       },
+       "light": {
+        "shape": "rectangle",
+        "flux": 100,
+        "luminance": 15915494.30918953
+       }
+      }
+     ]
+    },
+    "unit": "cm",
+    "materials": [
+     {
+      "id": "black",
+      "label": "black",
+      "params": {
+       "baseColor": {
+        "r": 0,
+        "g": 0,
+        "b": 0
+       },
+       "metallic": 0,
+       "roughness": 1,
+       "anisotropy": 0,
+       "specular": 0,
+       "specularTint": 0,
+       "transmission": 0,
+       "ior": 1.5,
+       "emissive": {
+        "r": 1,
+        "g": 1,
+        "b": 1
+       },
+       "emissiveLuminance": 0
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
+     },
+     {
+      "id": "pmma",
+      "label": "PMMA (n 1.49)",
+      "params": {
+       "baseColor": {
+        "r": 1,
+        "g": 1,
+        "b": 1
+       },
+       "metallic": 0,
+       "roughness": 0,
+       "anisotropy": 0,
+       "specular": 0.5,
+       "specularTint": 0,
+       "transmission": 1,
+       "ior": 1.49,
+       "emissive": {
+        "r": 1,
+        "g": 1,
+        "b": 1
+       },
+       "emissiveLuminance": 0
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
+     },
+     {
+      "id": "screen",
+      "label": "screen",
+      "params": {
+       "baseColor": {
+        "r": 0.8,
+        "g": 0.8,
+        "b": 0.8
+       },
+       "metallic": 0,
+       "roughness": 1,
+       "anisotropy": 0,
+       "specular": 0,
+       "specularTint": 0,
+       "transmission": 0,
+       "ior": 1.5,
+       "emissive": {
+        "r": 1,
+        "g": 1,
+        "b": 1
+       },
+       "emissiveLuminance": 0
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n",
+      "type": "detector"
+     }
+    ]
+   }
+  }
+ ]
+}

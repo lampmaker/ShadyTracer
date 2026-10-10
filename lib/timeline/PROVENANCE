@@ -1,0 +1,4 @@
+vendored copy of CODE_WOOD/LIBRARIES/TIMELINE
+source commit: 8f1a90fb4101c857e5bb91f275f4938abb00290a 2026-10-09
+synced:        2026-10-09
+refresh with:  node lib/timeline/sync.mjs [path-to-CODE_WOOD]

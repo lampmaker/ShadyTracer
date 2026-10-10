@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Projects and the File menu · check</title>
+<!-- THE PROJECTS KEPT IN THE BROWSER AND THE FILE MENU, for workspace/test/projects.check.mjs: wired as the
+     application's page wires them (index.html) -- the real store in IndexedDB, the tabs' locks, the autosave, the
+     session, the projects list; the real builder (builder/demo.js), tree, File menu's commands (builder/filemenu.js, run as
+     the menu bar would: lib/shell is checked on its own), the row over the tree, library and item editor -- with
+     a stand-in for the renderer alone: no GPU, so a compile is the stand-in's, and the renderer's settings are a
+     camera and a few values. -->
+<link rel="stylesheet" href="../../lib/shell/shell.css">
+<style>html, body { height: 100%; margin: 0; background: #16191c; } body { display: flex; }
+#s { width: 360px; height: 640px; display: flex; flex-direction: column; } #t { flex: 1; overflow: auto; }
+#v { position: relative; flex: 1; height: 640px; background: #111; overflow: hidden; }</style>
+</head>
+<body>
+<div id="s" class="shell-panel"><div id="sw"></div><div id="t"></div></div><div id="v"></div>
+<script type="module">
+import * as M from '../../builder/model.js'
+import * as P from '../../builder/project.js'
+import { installBuilder } from '../../builder/demo.js'
+import { installBuilderTree } from '../../builder/tree.js'
+import { installProjectRow } from '../../builder/projectrow.js'
+import { fileCommands } from '../../builder/filemenu.js'
+import { createProjectStore, indexedDbProjects } from '../store.js'
+import { createTabs } from '../tabs.js'
+import { createAutosave, recoverAll } from '../autosave.js'
+import { createSession } from '../session.js'
+import { installProjectsDialog } from '../dialog.js'
+import { createLibrary, indexedDbBackend } from '../../library/store.js'
+import { installItemEditor } from '../../library/edit.js'
+
+const T = { applied: [], said: [], downloads: [], nextFile: null, nextName: null, selected: [], files: [] }
+const say = t => T.said.push(t)
+// THE RENDERER, stood in: its settings are values and a camera
+const R = { values: { autoExposure: 0, exposure: 1 }, camera: { mode: 'orbit', azimuth: 40, elevation: 70, distance: 20 } }
+const RT = { scene: null,
+    settings: () => ({ values: structuredClone(R.values), camera: structuredClone(R.camera), size: { mode: 'fit' } }),
+    applySettings: ({ values = {}, camera } = {}) => { Object.assign(R.values, values); if (camera) R.camera = structuredClone(camera); return [] },
+    set: v => { Object.assign(R.values, v); return [] }, get: () => structuredClone(R.values) }
+const demo = () => {
+    const d = P.blankScene('Builder demo')
+    M.addObject(d, 'root', { primitive: 'sphere', label: 'Ball' })
+    M.addObject(d, 'root', { primitive: 'box', label: 'Slab' })
+    return d
+}
+
+const store = createProjectStore({ backend: indexedDbProjects('check.projects') })
+let BUILDER = null, tree = null, E = null, showProject = async () => { }
+let local = null
+try { local = localStorage } catch { }
+const AUTOSAVE = createAutosave({ store, local, say,
+    read: () => ({ revision: BUILDER.revision, project: BUILDER.project,
+        session: { current: BUILDER.current, renderer: RT.settings(), cameras: BUILDER.cameras(), item: E?.remember() ?? null } }),
+    onCreated: m => SESSION.adopt(m) })
+const SESSION = createSession({ store, tabs: createTabs(), autosave: AUTOSAVE, say,
+    firstVisit: async () => P.createProject([demo()]), apply: (w, item) => showProject(w, item) })
+await recoverAll(store, local)
+const START = await SESSION.start()
+BUILDER = installBuilder(window, { RT, gpu: null, project: START.workspace.project, current: START.workspace.current, cameras: START.workspace.cameras,
+    onDoc: () => { tree?.rebuild(); E?.sync() } })
+/* NO GPU: a compile is the stand-in's -- the scene counts as shown, as the end of setScene makes it, and the item
+   editor told, as the page's onScene tells it */
+const shownText = () => ({ id: 'built', wgsl: BUILDER.generate().wgsl })
+RT.scene = shownText()
+BUILDER.apply = async () => { T.applied.push(BUILDER.current); BUILDER.markShown(); RT.scene = shownText(); E?.shown(); return { ok: true } }
+tree = installBuilderTree(document.getElementById('t'), BUILDER, { onStatus: say, onSelect: id => T.selected.push(id),
+    onItem: (what, key) => { if (BUILDER.current !== key) tree.enterScene(key); what === 'save' ? E.save() : E.close() } })
+const library = createLibrary({ model: M, backend: indexedDbBackend('check.library') })
+E = installItemEditor({ BUILDER, RT, SHELL: null, library, tree, stage: document.getElementById('v'), say })
+const dialog = installProjectsDialog({ session: SESSION, say, download: (n, t) => T.downloads.push([n, t]), pickFile: async () => T.nextFile, app: () => 'check' })
+const examples = { list: async () => [{ id: 'menger.json', title: 'Menger cubes' }, { id: 'materials.json', title: 'Material test' }],
+    open: async f => { say(BUILDER.load(await (await fetch(`../../scenes/${f}`)).text())); await tree.apply() } }
+const row = installProjectRow(document.getElementById('sw'), { BUILDER, project: () => SESSION.info(), compile: () => tree.apply() })
+/* THE FILE MENU'S COMMANDS, as the page registers them (index.html), each file call recorded: an import reads
+   T.nextFile -- a scene file joins this project (BUILDER.load, as the page's openText does with one), a project file is
+   kept as a project of its own (SESSION.importText, as the Projects list's Import does); a rename's name is T.nextName */
+const commands = fileCommands({ BUILDER, ops: tree.sceneOps, examples, say, prompt: () => T.nextName,
+    item: { active: () => E.active, save: () => E.save(), close: () => E.close() },
+    actions: {
+        projects: () => dialog.show(), newProject: () => SESSION.create(),
+        open: async () => { T.files.push('open'); const f = T.nextFile; if (f) { say(BUILDER.load(f.text)); await tree.apply() } },
+        saveScene: () => T.files.push('saveScene'), save: () => T.files.push('save'),
+        importProject: async () => { T.files.push('importProject'); const f = T.nextFile; if (f) await SESSION.importText(f.text, f.name.replace(/\.json$/i, '')) },
+        saveWorkspace: () => T.files.push('saveWorkspace'),
+    } })
+/* RUN AS THE MENU BAR RUNS THEM (lib/shell/shell.js showMenu): a greyed row does nothing; a submenu's entry by label */
+const cmd = id => commands.find(c => c.id === id)
+const menu = {
+    labels: () => commands.map(c => c.label),
+    on: id => { const c = cmd(id); try { return c.when ? c.when() !== false : true } catch { return false } },
+    run: id => menu.on(id) ? cmd(id).run() : null,
+    items: id => menu.on(id) ? cmd(id).items() : [],
+    choose: (id, label) => { const x = menu.items(id).find(i => i.label.trim().replace(/^● /, '') === label); return x && !x.off ? x.run() : null },
+}
+showProject = async (w, item) => {
+    BUILDER.replace({ project: w.project, current: w.current, cameras: w.cameras })
+    tree.select(null)
+    RT.applySettings(w.renderer || {})
+    await E.adopt(item)
+    row.refresh()
+    await tree.apply()
+}
+RT.applySettings(START.workspace.renderer || {})
+await E.adopt(START.item)
+AUTOSAVE.since()
+setInterval(() => AUTOSAVE.tick(), 150)          // the page's is a second; a check waits less
+window.addEventListener('pagehide', () => { AUTOSAVE.flush(); AUTOSAVE.tick() })
+window.CHECK = { M, P, T, R, BUILDER, tree, row, menu, dialog, SESSION, AUTOSAVE, E, library, store, START,
+    rows: () => [...document.querySelectorAll('#t .treeview-node')].map(n => n.querySelector('.treeview-label')?.textContent.trim()) }
+</script>
+</body>
+</html>

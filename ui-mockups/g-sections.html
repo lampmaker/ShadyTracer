@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>G · Sections</title>
+<!-- G: the Analysis pane's sections told apart. The REAL pane (optics/page.js) five times over, on the
+     made-up data optics/test/page.check.mjs uses: as it is, and four proposals -- each only a stylesheet
+     over the same elements, so what is shown is what the pane would be. -->
+<link rel="stylesheet" href="../lib/shell/shell.css">
+<style>
+    html, body { height: 100%; margin: 0; background: var(--sh-bg); color: var(--sh-ink); font: 13px/1.4 var(--sh-sans); }
+    .banner { display: flex; gap: 12px; align-items: center; padding: 6px 12px; background: #243240; color: #cfe0ee; border-bottom: 1px solid #34506a; }
+    .banner b { color: #fff; } .banner a { color: #9fc6ea; margin-left: auto; }
+    .row { display: flex; gap: 14px; padding: 12px; height: calc(100% - 32px); box-sizing: border-box; overflow-x: auto; }
+    .col { flex: 0 0 330px; display: flex; flex-direction: column; min-height: 0; }
+    .col h2 { margin: 0; font-size: 14px; color: #fff; display: flex; gap: 8px; align-items: baseline; }
+    .col h2 .l { font: 600 13px var(--sh-mono); color: var(--sh-accent); }
+    .col p { margin: 4px 0 8px; font-size: 12px; color: var(--sh-muted); min-height: 4.2em; }
+    .col .shell-panel { flex: 1; min-height: 0; height: auto; border: 1px solid var(--sh-line); border-radius: 4px; }
+
+    /* WHAT EVERY PROPOSAL SHARES: the folded-away tables (sources, totals, limits) stay quiet -- small muted
+       capitals as now, under a hairline -- so the sections that matter stand out against them */
+    .ana:not(.v-now) .sec-more { margin-top: 14px; border-top: 1px solid var(--sh-line); padding-top: 4px; opacity: 0.85; }
+
+    /* ICONS for the headers, as masks (g.js sets --ic-* from lib/pathtracer/icons.js) */
+    .ana :is(.sec-data .tp-fldv_b, .sec > .shell-head, .hd) { position: relative; }
+    .ana :is(.sec-data .tp-fldv_b, .sec > .shell-head, .hd)::before { content: ''; position: absolute; left: 10px; top: 50%; width: 15px; height: 15px; margin-top: -7.5px;
+                       background: currentColor; -webkit-mask: var(--ic) center / contain no-repeat; mask: var(--ic) center / contain no-repeat; }
+    .ana .sec-data .tp-fldv:nth-child(1) .tp-fldv_b { --ic: var(--ic-polar); }
+    .ana .sec-data .tp-fldv:nth-child(2) .tp-fldv_b { --ic: var(--ic-map); }
+    .ana .sec-chart .shell-head { --ic: var(--ic-image); }
+    .ana .sec-results .shell-head { --ic: var(--ic-table); }
+    .ana.v-now :is(.sec-data .tp-fldv_b, .sec > .shell-head, .hd)::before { display: none; }
+
+    /* A · BANDS: every section opens with a band across the pane -- raised, ruled, its icon and its name in
+       the ink colour, sentence case. Content stays flat on the panel. */
+    .v-bands :is(.sec-data .tp-fldv_b, .sec > .shell-head, .hd) { background: var(--sh-raised) !important; border-block: 1px solid var(--sh-line); color: var(--sh-ink) !important;
+                   font: 600 12.5px var(--sh-sans) !important; text-transform: none !important; letter-spacing: 0 !important;
+                   padding: 7px 10px 7px 33px !important; height: auto !important; min-height: 30px; box-sizing: border-box; }
+    .v-bands .sec-data .tp-fldv, .v-bands .sec-chart, .v-bands .sec-results { margin-top: 12px; }
+    .v-bands .shell-head .name { font-weight: 400; }
+
+    /* B · CARDS: every section a box of its own, a gap between -- the results' cards inside the Results box */
+    .v-cards .sec-data .tp-fldv, .v-cards .sec-chart, .v-cards .sec-results {
+        margin: 8px; border: 1px solid #36404a; border-radius: 7px; background: #1a1e22; overflow: hidden; }
+    .v-cards :is(.sec-data .tp-fldv_b, .sec > .shell-head, .hd) { color: var(--sh-ink) !important; font: 600 12.5px var(--sh-sans) !important; text-transform: none !important;
+                   letter-spacing: 0 !important; padding: 8px 10px 4px 33px !important; height: auto !important; background: transparent !important; }
+    .v-cards .shell-card { background: #22282d; }
+
+    /* C · ROLES: what goes IN (the data: Intensity, Map), how it is SHOWN (the selected chart: the accent,
+       the same as that chart's edge), what comes OUT (results, on a tinted ground). A rule down the left
+       in the role's colour, the heading in it too. */
+    .v-roles { --in: #5fa3b0; --show: var(--sh-accent); --out: #9cbf6e; }
+    .v-roles :is(.sec-data .tp-fldv_b, .sec > .shell-head, .hd) { font: 600 12px var(--sh-sans) !important; text-transform: none !important; letter-spacing: 0.01em !important;
+                   padding: 8px 10px 3px 33px !important; height: auto !important; background: transparent !important; }
+    .v-roles .sec-data .tp-fldv, .v-roles .sec-chart, .v-roles .sec-results { margin: 10px 0 0 6px; border-left: 3px solid var(--c); }
+    .v-roles .sec-data .tp-fldv { --c: var(--in); } .v-roles .sec-chart { --c: var(--show); } .v-roles .sec-results { --c: var(--out); }
+    .v-roles .sec-data .tp-fldv :is(.sec-data .tp-fldv_b, .sec > .shell-head, .hd), .v-roles .sec-chart :is(.sec-data .tp-fldv_b, .sec > .shell-head, .hd), .v-roles .sec-results :is(.sec-data .tp-fldv_b, .sec > .shell-head, .hd) { color: var(--c) !important; }
+    .v-roles .sec-results { background: rgba(156, 191, 110, 0.06); padding-bottom: 4px; }
+    .v-roles .role { font: 10.5px var(--sh-sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--sh-faint); padding: 12px 10px 0; }
+
+    /* D · STEPS: the pane read in the order of the work -- 1 what to measure, 2 run it, 3 the numbers,
+       4 how the chart shows them -- numbered, with a line joining the steps down the left */
+    .v-steps { counter-reset: step; }
+    .v-steps .sec-data .tp-fldv, .v-steps .sec-run, .v-steps .sec-results, .v-steps .sec-chart { position: relative; margin-left: 14px; border-left: 1px solid #36404a; }
+    .v-steps :is(.sec-data .tp-fldv_b, .sec > .shell-head, .hd) { counter-increment: step; }
+    .v-steps :is(.sec-data .tp-fldv_b, .sec > .shell-head, .hd) { font: 600 12.5px var(--sh-sans) !important; text-transform: none !important; letter-spacing: 0 !important; color: var(--sh-ink) !important;
+                   padding: 10px 10px 4px 20px !important; height: auto !important; background: transparent !important; }
+    .v-steps :is(.sec-data .tp-fldv_b, .sec > .shell-head, .hd)::before { content: counter(step); -webkit-mask: none; mask: none; background: #2f4a61; color: #fff; left: -10px; top: 9px; margin: 0;
+                           width: 19px; height: 19px; border-radius: 50%; font: 600 11px/19px var(--sh-sans); text-align: center; }
+    .v-steps .sec-run .shell-runbar { border-bottom: 0; }
+    /* Tweakpane clips its folders: the numbers sit over the line, outside them */
+    .v-steps .sec-data :is(.tp-rotv, .tp-rotv_c, .tp-fldv, .tp-fldv_b) { overflow: visible !important; }
+</style>
+</head>
+<body>
+<div class="banner"><b>G · Sections</b> <span>The Analysis pane, real, on made-up data: as it is, and four ways to tell its sections apart. Each is a stylesheet over the same pane.</span> <a href="index.html">all mockups</a></div>
+<div class="row" id="row"></div>
+<script type="module" src="g.js"></script>
+</body>
+</html>

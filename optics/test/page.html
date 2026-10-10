@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Optics page · check</title>
+<!-- THE OPTICS PAGE WITHOUT A GPU, for optics/test/page.check.mjs: the application's shell, the Analysis
+     pane and the chart panels exactly as index.html makes them (one per chart of the set, more made and
+     taken away through the same hooks), over a made-up scene -- and a
+     stand-in for the optics module whose "analysis" hands over the mockups' far field (ui-mockups/mock.js)
+     and a spot of hits on a screen. Everything the page draws and computes is its own. -->
+<link rel="stylesheet" href="../../lib/dockview/dockview.css">
+<link rel="stylesheet" href="../../lib/shell/shell.css">
+<script src="../../lib/dockview/dockview.min.js"></script>
+<style>html, body { height: 100%; margin: 0; } #app { height: 100%; }</style>
+</head>
+<body>
+<div id="app"></div>
+<script type="module">
+import { createShell } from '../../lib/shell/shell.js'
+import { PropertyTable } from '../../lib/guistuff/propertytable/propertytable.js'
+import { installOpticsPage, chartSet } from '../page.js'
+import { installViewToolbar } from '../../lib/pathtracer/viewtools.js'
+import { FAR } from '../../ui-mockups/mock.js'
+import { makeEstimate } from '../../lib/pathtracer/optics/estimate.js'
+import * as Model from '../../builder/model.js'
+import { cctDuvToXy, xyToXYZ } from '../../lib/pathtracer/core/colorimetry.js'
+
+/* THE SCENE: millimetres, one detector material, one object -- the screen the hits land on (tag 1) */
+const doc = Model.createDoc({ title: 'check' })
+doc.unit = 'mm'
+doc.materials.push({ id: 'm1', type: 'detector', label: 'Screen' })
+doc.root.children.push({ id: 'screen', kind: 'object', label: 'Screen', enabled: true })
+/* the renderer's side: its scene, and -- for Live -- whether a scene is being built or swapped in (sceneBusy) and its
+   compile notices (onCompile), both driven by a check through CHECK.busy and CHECK.compiled() */
+const compileFns = []
+const RT = { scene: { id: 'built', unit: 'mm', opticsTags: ['screen'] }, sceneBusy: () => !!window.CHECK?.busy,
+             onCompile: fn => compileFns.push(fn), resets: () => window.CHECK?.resets ?? 0 }
+const BUILDER = { doc, model: { serialize: d => JSON.stringify(d), setOpticsMaxDist: Model.setOpticsMaxDist } }
+/* its measured box: 60 x 40 mm, in z 0 */
+const SCREEN = [0, 1, 2, 3, 4, 5, 6, 7].map(c => [c & 1 ? 30 : -30, c & 2 ? 20 : -20, c & 4 ? 0.5 : -0.5])
+const boxes = { corners: () => SCREEN }
+
+/* THE HITS of one batch: a warm core in a cooler halo, off centre */
+let seed = 7
+const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296)
+const warm = cctDuvToXy(3000, 0), cool = cctDuvToXy(6500, 0.002)
+const batchHits = () => Array.from({ length: 5000 }, () => {
+    const r = Math.sqrt(-2 * Math.log(rnd() + 1e-12)), t = 2 * Math.PI * rnd(), core = rnd() < 0.55
+    const rr = core ? 5 * Math.sqrt(rnd()) : 4.5 * r, f = Math.min(1, rr / 10)
+    const flux = 0.16 / 5000
+    return { pos: [rr * Math.cos(t) * 1.25 + 3, rr * Math.sin(t), 0], flux, dir: [0, 0, -1], tag: 1,
+             xyz: xyToXYZ(warm[0] + (cool[0] - warm[0]) * f, warm[1] + (cool[1] - warm[1]) * f, flux) }
+})
+const v = x => ({ value: x, se: x * 0.01 })
+const RESULTS = { unit: 'lm', rays: 0, batches: 0, emitted: v(1000), escaped: v(860), absorbed: v(100), lost: v(0), detected: v(40),
+                  detectorHits: 5000, objects: [{ index: 1, name: 'screen', incident: v(40), absorbed: v(0), hits: 5000 }],
+                  materials: [{ index: 2, incident: v(40), absorbed: v(0), hits: 5000 }] }
+/* THE STAND-IN for lib/pathtracer/optics: what the page calls, and an analysis that is the made-up data.
+   runs: analyses begun; done: the last one that finished (its emitted flux is 1000 + its number, so the totals say
+   which run they are of); asked: each run's { rays, batches }; batchMs: a wait per batch, so a check can switch
+   Live off in the middle of a round; traces: the rays traced by the page itself (Live's, between its rounds);
+   living: the rays' own loop, as O.live leaves it, and liveCalls every call */
+const O = {
+    settings: { bounces: 8, marchSteps: 1000, eps: 0, maxDist: 0 }, picture: {}, compiling: false, far: null, _liveLoop: null,
+    runs: 0, done: 0, asked: [], batchMs: 0, traces: 0, living: false, liveCalls: [],
+    lightPicture() { }, setSources() { }, setRayData() { }, dropRayData() { }, setFar(s) { O.farAsked = s }, drawPaths(on, s) { O.pathStyle = { ...O.pathStyle, ...s } },
+    live(on) { O.living = !!on; O.liveCalls.push(!!on) },
+    readPaths: async () => null,
+    readHits: async () => ({ hits: batchHits() }),
+    /* fail: the next run throws this message after its first batch; swap: ...having put another scene in, as the
+       renderer's setScene does before it builds. A batch's reading as index.js hands an estimate one: the made-up
+       numbers, its emitted flux 1000 + the run's number; its far field the mockups'; its hits the spot above */
+    estimate: makeEstimate,
+    run: async ({ rays, batches, onBatch, into }) => {
+        const k = ++O.runs
+        O.asked.push({ rays, batches })
+        const E = into ?? makeEstimate()
+        const far = { mode: FAR.mode, material: 0, nC: FAR.nC, nG: FAR.nG, axis: [0, 0, 1], c0: [1, 0, 0], flux: FAR.flux, emitted: 1000, unit: 'lm' }
+        let r = null
+        for (let b = 1; b <= batches; b++) {
+            if (O.batchMs) await new Promise(res => setTimeout(res, O.batchMs))
+            E.add({ unit: 'lm', rays, emitted: 1000 + k, escaped: 860, absorbed: 100, lost: 0, detected: 40, detectorHits: 5000,
+                    counts: { interactions: 3 * rays }, objects: [{ index: 1, name: 'screen', incident: 40, absorbed: 0, hits: 5000 }],
+                    materials: [{ index: 2, incident: 40, absorbed: 0, hits: 5000 }] }, far)
+            r = { ...E.results(), mode: 'run' }
+            O.far = E.farField()
+            await onBatch(r, b, { hits: () => ({ hits: batchHits() }), last: b === batches })
+            if (O.fail) {
+                const m = O.fail
+                O.fail = null
+                if (O.swap) { O.swap = false; RT.scene = { ...RT.scene } }
+                throw new Error(m)
+            }
+        }
+        O.done = k
+        return r
+    },
+    trace: async () => { O.traces++; return { ...RESULTS } },
+}
+
+const S = createShell(document.getElementById('app'), { title: 'check', menus: ['View'], storageKey: null })
+const pane = S.panel({ id: 'optics', title: 'Analysis', module: 'optics' })
+/* THE CHARTS: kept nowhere (no key), so every run starts from the six */
+const CHARTS = chartSet()
+const el = {}
+const chartPanel = c => (el[c.id] = S.panel({ id: c.id, title: c.title, module: 'optics', help: c.help }))
+for (const c of CHARTS.list()) chartPanel(c)
+const mixEl = S.panel({ id: 'tools.mixing', title: 'Colour mixing', module: 'optics' })
+/* every chart visible at once: the Analyse preset's arrangement, without the picture */
+S.layout.setDefault(() => {
+    S.open('optics')
+    S.open('optics.map', { referencePanel: 'optics', direction: 'right' }, { width: 400 })
+    S.open('optics.polar', { referencePanel: 'optics.map', direction: 'right' })
+    S.open('optics.igamma', { referencePanel: 'optics.polar', direction: 'right' })
+    S.open('optics.profiles', { referencePanel: 'optics.map', direction: 'below' })
+    S.open('optics.rings', { referencePanel: 'optics.polar', direction: 'below' })
+    S.open('optics.encircled', { referencePanel: 'optics.igamma', direction: 'below' })
+    S.open('optics.map')                          // the preset ends on the map, as index.html's Analyse does
+    S.dock.getPanel('optics')?.group?.api?.setSize?.({ width: 330 })
+})
+S.layout.restore()
+const tableIn = e => { const t = new PropertyTable({ container: e }); Object.assign(t.element.style, { fontSize: '13px', width: '100%' }); return t }
+/* A VIEW AND ITS TOOLBAR (lib/pathtracer/viewtools.js), for the rays: their switch and settings are the RAYS group of
+   its analysis drawer (2026-10-02). A corner of the page of its own, over the shell: the layout is the charts'. */
+const viewEl = document.createElement('div')
+Object.assign(viewEl.style, { position: 'fixed', right: '0', bottom: '0', width: '520px', height: '360px', zIndex: '50', background: '#111' })
+document.body.appendChild(viewEl)
+const VIEW = installViewToolbar(viewEl, { PropertyTable, RT })
+installOpticsPage(pane, { RT, WG: null, BUILDER, tableIn, boxes, optics: O, view: VIEW, mixing: { el: mixEl, onVisible: fn => S.onVisible('tools.mixing', fn) }, charts: {
+    set: CHARTS, el, onVisible: (id, fn) => S.onVisible(id, fn),
+    // as index.html: registered, its View entry, to the right of the chart it was made from
+    add: (c, near) => {
+        const e = chartPanel(c)
+        S.standardCommands()
+        S.open(c.id, near && S.isOpen(near) ? { referencePanel: near, direction: 'right' } : { referencePanel: 'optics', direction: 'right' })
+        return e
+    },
+    remove: id => { S.forget(id); delete el[id] },
+} })
+// the document and the model too: a check puts a light in, where the trace cannot take it (the Rays view's note)
+window.CHECK = { S, O, RT, pane, el, mixEl, VIEW, CHARTS, doc, Model, busy: false, compiled: () => compileFns.forEach(f => f({ done: 0, total: 1 })) }
+</script>
+</body>
+</html>
