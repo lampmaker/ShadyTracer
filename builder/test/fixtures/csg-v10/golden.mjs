@@ -96,6 +96,12 @@
 // THE EXAMPLES REPLACED (2026-10-10, 0.54.0): the scenes that were File › Examples moved to test/fixtures/scenes/ and
 // their entries were renamed to match, their fingerprints left as they were -- the same files, so the same shaders,
 // which this test then confirmed. The new examples in scenes/ were added by a freeze that moved no other entry.
+//
+// REFROZEN FOR ONE SCENE (2026-10-10, 0.54.2), for an agreed change (the user: "refreeze it"): 0.54.1 (887690d) made
+// scenes/infinite-detail.json again with its repeated column at its cell's centre, and was merged without a freeze, so
+// main's codegen test failed. Checked before freezing: the scene's uniforms moved in exactly two entries -- xf_n7, the
+// repeat group, now at (4, 4, 0), and xf_n10, its column, no longer offset by (4, 4) -- its texts, tags and roles did
+// not move, and no other document's entry moved (expected.json compared key by key).
 //======================================================================================================================
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'

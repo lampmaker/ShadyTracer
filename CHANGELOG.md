@@ -30,6 +30,10 @@ number, as before. The shader was never wrong: it compiles, and its JS twin's di
 **What to look at**: drag a capped torus from the library onto the floor in the picture -- it should sit on the floor
 where you let go. Its library picture should fill the tile, and double-clicking it in the tree should frame it close.
 
+**The golden shaders refrozen for Infinite detail** (the user: "refreeze it in this PR"). 0.54.1 moved that scene's
+column without refreezing `builder/test/fixtures/csg-v10/expected.json`, so `codegen.test.mjs` failed on `main`. Only
+its uniforms moved, and only the two transforms 0.54.1 changed.
+
 ## 0.54.1 — 2026-10-10
 
 **Infinite detail: the columns are whole again** (the user: "only parts of pillars are shown"). The repeat modifier
