@@ -178,6 +178,10 @@ node bench/test/builds.test.mjs   # which build renders fastest: each bench scen
 node bench/test/boxcost.test.mjs  # what the box tests cost: four scenes with boxes off (no box test in the text), boxes that never cull (every box declared written known and holding everything, never culled through cullDist in f32), and measured -- one scene object for the last two; boxes on the dear nodes only, a box test for exactly those, the others one plain shape -- the builder's text, the two before it every box's; the drift row
 node tools/test/timeline.check.mjs  # the Timeline panel over a stand-in renderer: + track, the frame guide, RECORD's verbs, a GIF recorded and read back by Chromium (optional: playwright)
 node lib/timeline/test/gif.test.mjs                # the GIF writer (lib/timeline, CODE_WOOD's): read back exactly by its own decoder, Pillow and ffmpeg where installed, the centisecond clock
+node help/test/markdown.test.mjs                  # the help's markdown and links: each construct, nothing in a page put into the panel as HTML or a link it would not follow, anchors, a widget's block
+node help/test/coverage.test.mjs                  # the help holds together: every page listed and on disk with its title, every link going somewhere (a page and its heading, an example, a command, a panel); the reference pages as reference.mjs writes them now, every material field and light setting with its words
+node help/test/widgets.test.mjs                   # the SDF explainer's numbers: the shapes exact, the blend the renderer's own, sphere tracing stopping at the surface
+node help/test/panel.check.mjs                    # the Help panel headless: contents, a page link, back and forward, the SDF widgets drawn and redrawn, links handed to the host (an example, a command, a panel), search, the last page (optional: playwright)
 ```
 
 `check-shaders.mjs` does four things and its header explains why each exists:
