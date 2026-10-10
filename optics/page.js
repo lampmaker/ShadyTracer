@@ -635,7 +635,7 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
     // THE CHARTS: one panel each, the canvas filling it, one line of readout
     //==================================================================================================================
     /* EVERY CHART, by id (charts.js chartSet): its kind, its own settings `s`, its panel. The first of each kind
-       always exists; more are made (a chart's ⧉, or Optics › New chart) and taken away (its ✕). */
+       always exists; more are made (a chart's ⧉, or Analysis › New chart) and taken away (its ✕). */
     const SET = charts?.set ?? chartSet()
     const KIND = Object.fromEntries(OPTICS_CHARTS.map(c => [c.key, c]))
     const first = type => SET.list().find(c => c.type === type)
@@ -1080,7 +1080,7 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
     /* the point moved to where a map was pressed, or chosen in one chart's strip: every strip that shows it says so */
     const syncAbout = () => refreshBars('profiles', 'rings', 'encircled')
 
-    /* ANOTHER CHART of a kind: a chart's ⧉ (`like`, its settings copied), or Optics › New chart (the kind's
+    /* ANOTHER CHART of a kind: a chart's ⧉ (`like`, its settings copied), or Analysis › New chart (the kind's
        defaults). The host makes its panel and opens it beside `like`'s, or the first of its kind's. Returns its
        id; null where the host makes no panels. */
     const addChart = (type, like = null) => {
@@ -1413,7 +1413,7 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
     results()
     sayWhen()
     O.drawPaths(false)
-    /* ANOTHER CHART from the host's menu (Optics › New chart): O.addChart('map') -- on the module the page
+    /* ANOTHER CHART from the host's menu (Analysis › New chart): O.addChart('map') -- on the module the page
        returns, because that is what the host keeps (window.OPTICS); its id, or null where no panel is made */
     O.addChart = type => addChart(type)
     return O

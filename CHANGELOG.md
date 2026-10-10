@@ -15,6 +15,28 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.48.0 — 2026-10-10
+
+**The Optics menu is the Analysis menu, and it holds everything about analysis** (the user). In it:
+- **Analysis setup: show / hide** opens or closes the Analysis pane, as a tab beside the Renderer (where Design
+  keeps it), or left of the picture when the Renderer is closed.
+- **New chart: …** for each kind, as before.
+- **Open chart ▸**: every chart there is, a ● on the open ones. View listed them, and a closed chart had no other
+  way back.
+- **Colour mixing**, the optics tool that was in View.
+
+**View no longer lists the Analysis pane or the charts** (`menu: false`, `index.html`); View is the modelling and
+rendering panels and the layouts.
+
+**The Render layout is gone.** It was the picture, the Renderer and the stats: Design with the Analysis pane hidden
+is the same arrangement. A saved arrangement is kept by its panels, not by a preset's name
+(`lib/shell/shell.js` restore), so nothing saved named it.
+
+**What to look at:** the menu bar reads File, Edit, View, Render, Analysis, Window, Help. Analysis › Analysis setup
+closes the Analysis tab beside the Renderer and opens it again in the same place. Close a chart in the Analyse
+layout, then bring it back from Analysis › Open chart ▸. View has no chart entries and no Analysis entry. The layout
+switcher shows Design, Analyse, Animate.
+
 ## 0.46.0 — 2026-10-10
 
 **ShadyTracer has a repository of its own, open source under MIT, and can run from GitHub Pages.** It lived in

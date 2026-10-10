@@ -11,7 +11,7 @@
 // "compare 2D map of intensity and 2D map of CCT". So a chart is an ENTRY here: a kind and its own settings.
 //
 // THE FIRST OF EACH KIND ALWAYS EXISTS, at the kind's own id ('optics.map'): the Analyse preset opens those six,
-// the Optics menu shows them, and a layout saved before this keeps their places. Those can be closed, as any
+// the Analysis menu opens them, and a layout saved before this keeps their places. Those can be closed, as any
 // panel, but not removed. An added one is `<the kind's id>.<n>`, titled "<the kind's title> <n>".
 //
 // KEPT BETWEEN VISITS (localStorage, `key`) because the layout is: a saved layout naming 'optics.map.2' loses it

@@ -341,7 +341,7 @@ it stale: `optics/page.js:1129-1134`); **each chart** is a dock panel of its own
 result without tracing again. **Any number of charts of a kind** (the user, 2026-10-02: the map's
 quantity was one setting for every map, and "compare 2D map of intensity and 2D map of CCT"): a chart is
 an entry of `optics/charts.js` with its own settings, the first of each kind always there at the kind's own
-id, more made from a chart's ⧉ (its settings copied) or Optics › New chart, and kept between
+id, more made from a chart's ⧉ (its settings copied) or Analysis › New chart, and kept between
 visits, because the layout is. The profiles and rings have a quantity of their own; what the maps are made
 of (the detector, its area, cells, smoothing, a zoom) stays one set in the Analysis pane. The same day: on
 a map the button held down moves the point the profiles go through, and Shift-drag zooms. **Live** (the user,
