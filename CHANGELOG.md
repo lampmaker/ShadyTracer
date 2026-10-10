@@ -15,6 +15,33 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.52.0 — 2026-10-10
+
+**The environment is in the scene's properties; the tree has no Environment row** (the user: "just move the
+contents of that to the scene's properties"). A click on the scene's row at the root of the tree shows its
+properties: label, unit, environment radius, and then an **environment** folder holding what the row did (the
+source, sun and sky or studio, and that source's settings), marked ◆ when one of them is animated. No file
+changes: the environment was always the scene document's (`doc.environment`, `builder/model.js`), never a node.
+Render › Environment, a parameter revealed from the palette or the Parameters panel, and the environment's old id
+all select the scene's row (`builder/tree.js` select). A node dropped at the scene's top level is counted among the
+nodes as before; the Materials heading is now the only row that is not one.
+
+**The studio colour can be set.** It always went back to white (the user). Tweakpane sets an object colour's r, g
+and b on the object the binding reads; the row handed it a fresh copy each time, so the change was made on the copy
+and lost. The colour is now bound to an object that stays, written on `change`, as a light's colour already was. The
+same row and the same fault were in the Environment row's folder before this change.
+
+**Every row of the scene's properties has a tooltip** saying what it is and what it does (the user): name, unit,
+radius, each environment setting (`ENVIRONMENT_HELP` in `builder/panel.js`, with typical values such as the noon sun's
+100 000 lx, and the sun's azimuth as a compass bearing from +y), instant hide / show, the functions block, and the
+animated list. `builder/test/panel.check.mjs` fails on any titled row of the scene's properties without one, in the
+studio and in sun and sky, and on any environment setting with no explanation.
+
+**What to look at:** the tree starts with the scene's row and its objects, no Environment row. Click the scene's
+row: Properties shows the environment folder under the radius. Switch Source to studio: the folder redraws with
+the studio's settings. Pick a studio colour: it stays, and the picture takes its hue. Hover each row: a tooltip.
+Render › Environment lands on the same place.
+
 ## 0.50.0 — 2026-10-10
 
 **The library's materials reviewed for real sizes and optical constants, and four relief materials added**
