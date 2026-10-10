@@ -150,7 +150,7 @@
         const container = document.getElementById('container');
         const SHELL = createShell(container, {
             title: `${versionText()} © Matthijs Keuper`, storageKey: 'raytracer.layout', popoutUrl: 'popout.html',
-            menus: ['File', 'Edit', 'View', 'Render', 'Optics', 'Window', 'Help'],
+            menus: ['File', 'Edit', 'View', 'Render', 'Analysis', 'Window', 'Help'],
         });
         window.SHELL = SHELL;
         /* THE PARAMETERS: every setting by a path -- the renderer's (RT.parameters) and the scene's
@@ -210,8 +210,10 @@
         const propsEl = SHELL.panel({ id: 'properties', title: 'Properties', module: 'builder',
             help: 'The selected row\'s settings.' });
         /* THE OPTICS: one Analysis pane and a panel per chart (optics/charts.js, mockup F). The pane keeps the
-           id 'optics' it had as the Optics panel, so a saved layout still has it. */
-        const opticsEl = SHELL.panel({ id: 'optics', title: 'Analysis', module: 'optics',
+           id 'optics' it had as the Optics panel, so a saved layout still has it. NOT IN VIEW, nor are the charts
+           (menu: false): the Analysis menu opens them (the user, 2026-10-10: "remove the chart and analysis views
+           from the view menu") -- the pane by its show / hide, a chart by Open chart ▸. */
+        const opticsEl = SHELL.panel({ id: 'optics', title: 'Analysis', module: 'optics', menu: false,
             help: 'The optics analysis: ▶ Run, the data every chart is made from, the results; below, the sources, totals and limits. Each chart has its own settings on it.' });
         /* COLOUR MIXING, a tool: it sets the scene's lights' fluxes rather than measuring anything, so it is
            a window of its own (View › Colour mixing floats it), not a folder of the Analysis pane */
@@ -222,7 +224,7 @@
            restored. A chart made later is registered when it is made (charts.add, below). */
         const CHARTS = chartSet({ key: 'raytracer.charts' });
         const chartEls = {};
-        const chartPanel = c => (chartEls[c.id] = SHELL.panel({ id: c.id, title: c.title, module: 'optics', help: c.help }));
+        const chartPanel = c => (chartEls[c.id] = SHELL.panel({ id: c.id, title: c.title, module: 'optics', menu: false, help: c.help }));
         for (const c of CHARTS.list()) chartPanel(c);
         const propsTable = tableIn(propsEl);
         /* THE LIBRARY (library/): objects, groups, lights and materials to put in, built in and one's own */
@@ -276,12 +278,10 @@
             O('parameters', { referencePanel: 'properties', direction: 'within' });
             O('properties');
         }, 'Animate and film: the timeline along the bottom, the picture above it, the tree and a setting\'s properties beside.');
-        SHELL.layout.preset('Render', () => {
-            O('viewport');
-            O('renderer', { referencePanel: 'viewport', direction: 'right' }, { width: 330 });
-            O('stats', { referencePanel: 'renderer', direction: 'below' }, { height: 240 });
-            O('renderer');
-        }, 'Make a picture: the picture large, the renderer and the light beside it.');
+        /* NO RENDER LAYOUT (it was the picture, the renderer and the stats): Design with the Analysis pane hidden
+           (Analysis › Analysis setup) is the same arrangement, so it was a second name for one thing (the user,
+           2026-10-10). A saved arrangement is kept by its panels, not by a preset's name (lib/shell/shell.js
+           restore), so nothing saved named it. */
         /* whatever a layout holds, the picture is in it: nothing else can make the canvas. Only when it is
            missing: open() on an open panel brings it to the front, which put the picture over the map
            Analyse had just chosen to show */
@@ -290,7 +290,9 @@
            Optics, Tools and Edit each had an entry that opened a panel View already listed). Two panels open their own
            way, so their View entries are the page's, registered before the shell's (which keeps an entry it finds):
            the colour mixing floats, a tool beside the work; the timeline goes across the foot of the view. */
-        SHELL.command({ id: 'view.tools.mixing', menu: 'View', group: 'panels.optics', label: 'Colour mixing',
+        /* the colour mixing is an optics tool, so it is the Analysis menu's with the pane and the charts; its id stays
+           `view.<panel id>`, which is what keeps the shell from adding a View entry of its own */
+        SHELL.command({ id: 'view.tools.mixing', menu: 'Analysis', group: 'tools', label: 'Colour mixing',
             help: 'Three of the scene\'s lights, a target colour and a total flux: the fluxes that make it',
             run: () => SHELL.isOpen('tools.mixing') ? SHELL.open('tools.mixing')
                 : SHELL.open('tools.mixing', undefined, undefined, { floating: { width: 380, height: 480 } }) });
@@ -1157,10 +1159,24 @@
             /* A CHART OF A KIND, with its own settings (optics/charts.js) -- the menu's only chart entries (the user,
                2026-10-02: a "Map chart" to show beside a "New chart: Map" was one too many). The kind's first chart
                when it is closed, another when it is open; a chart's ⧉ makes one like it. View lists every one. */
+            /* THE ANALYSIS PANE shown and hidden (the user, 2026-10-10): where Design keeps it, a tab beside the
+               Renderer, or left of the picture when the Renderer is not open; hidden, Design is what the Render
+               layout was */
+            C({ id: 'analysis.setup', menu: 'Analysis', group: 'setup', label: 'Analysis setup: show / hide',
+                help: 'The Analysis pane: ▶ Run, the sources, detectors and totals every chart is made from',
+                run: () => SHELL.isOpen('optics') ? SHELL.close('optics')
+                    : SHELL.isOpen('renderer') ? SHELL.open('optics', { referencePanel: 'renderer', direction: 'within' })
+                    : SHELL.open('optics', { referencePanel: 'viewport', direction: 'left' }, { width: 330 }) });
             for (const c of OPTICS_CHARTS)
-                C({ id: `optics.new.${c.key}`, menu: 'Optics', group: 'charts', label: `New chart: ${c.title}`,
+                C({ id: `optics.new.${c.key}`, menu: 'Analysis', group: 'charts', label: `New chart: ${c.title}`,
                     help: 'The first of this kind if it is closed, else another, with settings of its own (a chart\'s ⧉ copies its settings instead)',
                     run: () => SHELL.isOpen(c.id) ? window.OPTICS.addChart(c.key) : openChart(c.id) });
+            /* EVERY CHART THAT EXISTS, to bring one back: View listed them until they left it, and a closed chart
+               had no other way back -- New chart opens the kind's first only while it is closed */
+            C({ id: 'analysis.charts', menu: 'Analysis', group: 'charts', label: 'Open chart',
+                help: 'Every chart there is, open or closed: the one chosen brought to the front',
+                items: () => CHARTS.list().map(c => ({ label: `${SHELL.isOpen(c.id) ? '● ' : ''}${c.title}`, run: () => openChart(c.id),
+                    title: SHELL.isOpen(c.id) ? 'Open: brought to the front' : 'Closed: opened beside the other charts' })) });
             C({ id: 'help.layout', menu: 'Help', label: 'Arranging the panels', run: () => SHELL.status(
                 'Drag a tab to dock it anywhere · ⧉ floats a group · ⇱ pops it out to its own window · ⤢ maximises · View reopens a closed panel · View > Reset the layout') });
             /* WHEN THE PICTURE IS WRONG AND NOTHING SAYS WHY (diagnose.js): where its photons went, and
