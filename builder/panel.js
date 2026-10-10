@@ -604,7 +604,7 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
            and this environment is set aside -- kept, not changed. Said here, where moving the sun would
            otherwise do nothing visible. environment() is the renderer's whole state (RT.get), so it has it. */
         if ((base().lampsOnly | 0) === 1)
-            folder.addBinding({ note: 'Lamps only is on (Renderer): this environment is not lighting the view' }, 'note', { readonly: true, label: '' })
+            folder.addBinding({ note: 'Lamps only is on (Render settings): this environment is not lighting the view' }, 'note', { readonly: true, label: '' })
         for (const [k, sp] of Object.entries(M.ENVIRONMENT)) {
             const { showIf, ...gui } = sp.gui
             if (showIf && !Object.entries(showIf).every(([key, vals]) => vals.includes(now(key) | 0))) continue

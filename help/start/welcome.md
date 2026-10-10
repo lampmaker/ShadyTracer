@@ -36,6 +36,6 @@ Both tracks use the same scenes, the same tree and the same materials.
 | What is in the scene | the **Scene** tree on the left: groups, objects, lights, materials |
 | The selection's settings | [Properties](show:properties), under the tree |
 | Ready-made shapes and materials | the [Library](show:library), a tab beside the tree |
-| How hard the renderer works | the [Renderer](show:renderer) panel on the right |
+| How hard the renderer works | the [Render settings](show:renderer) panel on the right |
 | Measuring light | the **Analysis** menu (optical design) |
 | This help | **Help › Contents**, or **F1** |

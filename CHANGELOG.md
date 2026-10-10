@@ -15,6 +15,24 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.57.0 — 2026-10-10
+
+**Renderer is now Render settings**, both the panel and its menu (the user, 2026-10-10). The panel's id stays
+`renderer`, and the `render.*` command ids stay the same, so a saved layout and a `show:renderer` link in the
+help still find it. Every place that named it was changed too: the status bar's bake line, the Lamps only note in
+the scene's properties, the fast preview's tooltip, the help pages, `PRECISION.md` and `FEATURES.md`.
+
+A layout saved before the rename keeps each tab's title as it was then. The shell now gives a restored panel the
+title the page registers (`lib/shell/shell.js`), so an old layout reads *Render settings* too and keeps its module
+dot. `lib/shell/test/example.check.mjs` restores a layout carrying an old title and checks both; without the fix
+it fails.
+
+**What to look at**:
+- the menu bar reads File, Edit, View, **Render settings**, Analysis, Window, Help;
+- the panel's tab reads **Render settings**, with its dot, including in the layout you had before (reload
+  without resetting it);
+- Help › Contents › Render settings and saving pictures: its link opens the panel.
+
 ## 0.56.0 — 2026-10-10
 
 **The help's two tracks are written** (the user: "explanation of SDF, what makes this system different than regular

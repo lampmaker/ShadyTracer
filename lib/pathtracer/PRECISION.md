@@ -66,7 +66,7 @@ measured on lavapipe (2026-10-07), 0 of 2304 rays differ, plainly, as data and w
 
     marchTol(p) = max(setting, 1 nm, 128 × 2⁻²³ × max(|p.x|, |p.y|, |p.z|))
 
-- **The setting** is Renderer › Ray marching › *Surface tolerance (µm, 0 = auto)*, stored in metres. At 0 it is
+- **The setting** is Render settings › Ray marching › *Surface tolerance (µm, 0 = auto)*, stored in metres. At 0 it is
   **automatic**: 1e-4 of the scene's estimated size, between 10 nm and 1 mm (`photometry.js autoEps`).
 - **The estimated size** is the diagonal of a box around every object, each padded by its largest numeric parameter
   times its scale (`builder/bounds.js estimateBox`). That over-counts: the RGBW mixer's lens is padded by its curvature
@@ -122,7 +122,7 @@ mixer's 10.5 µm.
 ## What to do about a small precise part
 
 1. **Keep it near the origin.** Every number about it is then small, and f32's spacing with it.
-2. **Set the tolerance by hand** (Renderer › Ray marching, µm) to a few hundredths of the part's size, for instance 1 µm
+2. **Set the tolerance by hand** (Render settings › Ray marching, µm) to a few hundredths of the part's size, for instance 1 µm
    for a 0.4 mm sphere. The Render stats say what is in use. Within 6.5 cm of the origin 1 µm is above the floor.
 3. **Coming:** a tolerance per pixel (`roadmap/PLAN.md`, *A tolerance per pixel*), so a close-up gets
    a fine tolerance automatically while the rest of the scene keeps its own.
