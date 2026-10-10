@@ -19,7 +19,7 @@
 //   the map: the button held moves the point and the profiles with it, and does not zoom; Shift-drag zooms
 //     (the map's strip offers the way back), double-click goes back; the point said in the other charts' strips
 //   more charts: the map's ⧉ makes another beside it, its own "shows" (an illuminance map beside a CCT map,
-//     read at the same place); the profiles' own "shows"; Optics › New chart's verb; ✕ takes one away
+//     read at the same place); the profiles' own "shows"; Analysis › New chart's verb; ✕ takes one away
 //   the data: the map switched to the far field on a plane re-shapes the data table and redraws; a map
 //     whose choice that map cannot show says so
 //   colour mixing: not in the Analysis pane; a window of its own, filled when it is opened
@@ -308,7 +308,7 @@ ok('⧉ makes another map', await tool('map', 'Another Map chart')); await p.wai
 st = await state()
 ok('...its own panel, drawn, with its own strip', st.sizes['map.2']?.[0] > 100 && st.sizes['map.2']?.[1] > 100 && st.bars['map.2']?.labels.join() === 'q,isolines',
    JSON.stringify([st.sizes['map.2'], st.bars['map.2']]))
-ok('...named Map 2, in the View menu like any panel', await p.evaluate(() => CHECK.S.registries.panels.get('optics.map.2')?.title === 'Map 2' && CHECK.S.registries.commands.has('view.optics.map.2')))
+ok('...named Map 2, and not in the View menu (Analysis › Open chart lists the charts)', await p.evaluate(() => CHECK.S.registries.panels.get('optics.map.2')?.title === 'Map 2' && !CHECK.S.registries.commands.has('view.optics.map.2')))
 ok('...and it can be removed', st.bars['map.2'].tools.some(t => t.startsWith('Remove Map 2')), st.bars['map.2'].tools.join('|'))
 ok('Map 2 shows CCT', await choose('map.2', 'q', 'CCT')); await p.waitForTimeout(250)
 await p.mouse.move(...(await at('map', 0.45, 0.5))); await p.waitForTimeout(200)
@@ -325,7 +325,7 @@ ok('...CCT', await choose('profiles', 'q', 'CCT')); await p.waitForTimeout(250)
 await p.mouse.move(...(await at('profiles', 0.5, 0.5))); await p.waitForTimeout(150)
 ok('...and read in K', /K/.test((await state()).readouts.profiles), (await state()).readouts.profiles)
 await choose('profiles', 'q', 'Illuminance'); await p.waitForTimeout(150)
-// Optics › New chart (the host's menu calls this), and ✕
+// Analysis › New chart (the host's menu calls this), and ✕
 ok('a new polar diagram from the menu\'s verb', await p.evaluate(() => CHECK.O.addChart('polar') === 'optics.polar.2')); await p.waitForTimeout(400)
 st = await state()
 ok('...drawn, Polar 2, with the defaults in its strip', st.sizes['polar.2']?.[0] > 100 && st.bars['polar.2']?.fields.planes === '0, 90'

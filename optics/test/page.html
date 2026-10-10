@@ -99,11 +99,11 @@ const O = {
 }
 
 const S = createShell(document.getElementById('app'), { title: 'check', menus: ['View'], storageKey: null })
-const pane = S.panel({ id: 'optics', title: 'Analysis', module: 'optics' })
+const pane = S.panel({ id: 'optics', title: 'Analysis', module: 'optics', menu: false })   // as index.html: the Analysis menu's, not View's
 /* THE CHARTS: kept nowhere (no key), so every run starts from the six */
 const CHARTS = chartSet()
 const el = {}
-const chartPanel = c => (el[c.id] = S.panel({ id: c.id, title: c.title, module: 'optics', help: c.help }))
+const chartPanel = c => (el[c.id] = S.panel({ id: c.id, title: c.title, module: 'optics', menu: false, help: c.help }))
 for (const c of CHARTS.list()) chartPanel(c)
 const mixEl = S.panel({ id: 'tools.mixing', title: 'Colour mixing', module: 'optics' })
 /* every chart visible at once: the Analyse preset's arrangement, without the picture */
@@ -128,7 +128,7 @@ document.body.appendChild(viewEl)
 const VIEW = installViewToolbar(viewEl, { PropertyTable, RT })
 installOpticsPage(pane, { RT, WG: null, BUILDER, tableIn, boxes, optics: O, view: VIEW, mixing: { el: mixEl, onVisible: fn => S.onVisible('tools.mixing', fn) }, charts: {
     set: CHARTS, el, onVisible: (id, fn) => S.onVisible(id, fn),
-    // as index.html: registered, its View entry, to the right of the chart it was made from
+    // as index.html: registered (no View entry: Analysis › Open chart lists it), to the right of the chart it was made from
     add: (c, near) => {
         const e = chartPanel(c)
         S.standardCommands()

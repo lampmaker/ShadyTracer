@@ -300,7 +300,7 @@ measured). (Aspheric and Fresnel lenses are shapes now: *Builder*.)
 | feature | status | evidence |
 |---|---|---|
 | **Menu bar, docked panels, status bar**; 17 panels, each can be dragged, stacked, floated, maximised, **popped out to another window** (second monitor) | built | `lib/shell/shell.js`, `index.html` |
-| **Layout presets** Design, Analyse, Animate, Render; your own named layouts; the last layout restored | built | |
+| **Layout presets** Design, Analyse, Animate (Render dropped in 0.53.0: Design with the Analysis pane hidden); your own named layouts; the last layout restored | built | |
 | **Command palette** (Ctrl K) that also finds settings and sets them (`name = value`) | built | `lib/shell/paramspanel.js` |
 | **Parameters panel**: every renderer and scene setting by a path, typed exactly, ⌖ jumps to its control | built; Node-tested | `lib/shell/params.js` |
 | Help panel, guided tour, manual | planned — UI_PLAN.md: help is needed because "it is to be released, open source or paid" | UI_PLAN.md |
