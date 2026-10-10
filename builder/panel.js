@@ -49,6 +49,28 @@ import { makeAfter } from './params.js'
 import { codeOnly } from './codegen.js'
 const EXPORT_CELL = EXPORT_DEFAULTS.cell
 
+/** WHAT EACH ENVIRONMENT SETTING DOES (model.js ENVIRONMENT, the renderer's Lighting schema), said on its row. Every key
+ *  has one (test/panel.check.mjs): a setting added to the schema with none fails there. Numbers are typical values, not
+ *  measurements of this renderer. */
+export const ENVIRONMENT_HELP = {
+    envMode: 'What surrounds the scene. Sun & sky: daylight, a sun you can move and the sky it lights. Studio: an even light '
+        + 'from every direction, brighter above, with no sun and no shadows to speak of -- for showing an object as it is.',
+    studioIlluminance: 'How much light the studio gives, in lux on a level surface facing up. An office is about 500 lx, '
+        + 'an overcast day outdoors 10 000.',
+    studioColor: 'The studio light\'s colour. Only its hue counts: the brightness is the lux above, whatever colour is chosen.',
+    studioTop: 'How much more light comes from above than from the horizon: 0 the same from every direction, 1 twice as much '
+        + 'straight up as at the horizon, and none from straight below.',
+    sunIlluminance: 'The sun\'s light in lux on a surface facing it. A clear day\'s noon sun is about 100 000 lx.',
+    sunDiameter: 'How big the sun looks, in degrees: 0.53 is the real sun. Larger gives softer shadow edges, as a hazy sun does.',
+    skyIlluminance: 'The sky\'s own light, without the sun, in lux on a level surface: about 15 000 on a clear day, more under '
+        + 'thin cloud. It lights the shadows.',
+    uSunAzimuth: 'Which way the sun is, as a compass bearing in degrees: 0 towards the scene\'s +y, 90 towards +x, -90 '
+        + 'towards -x.',
+    uSunElevation: 'How high the sun is, in degrees above the horizon: 90 overhead, 0 on the horizon, below 0 it has set.',
+    // the sun's own colour is fixed (sdf.js sunRadiance, SUN_TINT): only the sky's scattering reads this
+    uSkyTurbidity: 'Haze in the sky: 0 the clearest; higher scatters more, for a hazier, paler sky. The sun\'s own colour does not change.',
+}
+
 export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStructure = () => { }, onApply = () => { }, params = null,
                                                       environment = () => ({}), itemSample = null } = {}) {
     const M = BUILDER.model
@@ -70,6 +92,9 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
     /* A ROW AS A PARAMETER: the registry told when it changed a value. The path is builder/params.js's
        spelling; a row with no entry there (a label, a choice) says nothing. */
     const said = path => { try { params?.changed(path, 'panel') } catch { } }
+    /** A row's tooltip, on its label: what it is and what it does (the user, 2026-10-10: the scene's properties "make
+     *  sure it has tooltips & explanations"). */
+    const rowTip = (b, text) => { const l = b?.element?.querySelector?.('.tp-lblv_l'); if (l) l.title = text; return b }
 
     /* A NUMBER STAYS A NUMBER. Tweakpane's number field evaluates what is typed, and 0/0 is NaN; a NaN then made the
        field's own range NaN (propertytable.js widens a range to hold the value), so nothing typed after could put it
@@ -136,6 +161,7 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
         const paths = M.animatedPaths(doc)
         if (!paths.length) return
         const af = parent.addFolder({ title: `animated · ${paths.length}` })
+        { const t = af.element?.querySelector?.('.tp-fldv_t'); if (t) t.title = 'The values marked animated (◆), wherever they are in the scene: each stays a live value in the baked scene, so the Timeline can move it without a compile' }
         const redraw = () => { const at = shownId; setTimeout(() => { if (shownId === at) show(at) }) }
         const XYZ = ['x', 'y', 'z', 'w']
         for (const path of paths) {
@@ -155,11 +181,12 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
                     : { v: Object.fromEntries(e.get().map((x, i) => [XYZ[i], x])) }
                 b = af.addBinding(H, 'v', opts)
                 if (dims > 1) b.on('change', () => { e.set(XYZ.slice(0, dims).map(c => +H.v[c])); said(path) })
-                if (e.unit) { const l = b.element.querySelector('.tp-lblv_l'); if (l) l.title = `${e.label} (${e.unit})${e.help ? '\n' + e.help : ''}` }
+                { const l = b.element.querySelector('.tp-lblv_l'); if (l) l.title = `${e.label}${e.unit ? ` (${e.unit})` : ''}${e.help ? '\n' + e.help : ''}\nAnimated: kept live in the baked scene, for the Timeline to move` }
             }
             const label = b.element.querySelector('.tp-lblv_l')
             if (!label) continue
             label.prepend(flagIcon(path, on => { if (!on) redraw() }))
+            if (!label.title) label.title = `${path}: flagged animated, but no live value carries it here -- a compile moves it`
             if (e?.reveal) label.appendChild(icon('\u2316', 'Show where this is set', () => { try { e.reveal() } catch (x) { console.warn('[panel]', x.message) } }))
         }
     }
@@ -242,10 +269,17 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
             : node.kind === 'group' ? 'Group' : 'Object'
         // the kind, not the id: the id is internal, and the label -- the name -- is the first row
         folder = table.addFolder({ title })
+        if (node.id === doc.root.id) {
+            const t = folder.element?.querySelector?.('.tp-fldv_t')
+            if (t) t.title = 'The scene\'s own settings: its name, its unit and how far it reaches, what lights it from outside, and '
+                + 'what every object and material in it can call'
+        }
 
         // ---- label: redraws the tree, nothing else
         const L = { label: node.label }
-        folder.addBinding(L, 'label', { label: 'label' }).on('change', ev => {
+        rowTip(folder.addBinding(L, 'label', { label: 'label' }), node.id === doc.root.id
+            ? 'The scene\'s name: the tree\'s top row, File \u203a Switch to scene, and the file it saves as'
+            : 'Its name in the tree. Only a name: nothing refers to it, so it can be anything').on('change', ev => {
             M.rename(doc, node.id, ev.value)
             if (node.id === doc.root.id) doc.title = ev.value
             edited(`${node.id}.label`)
@@ -362,8 +396,11 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
                    `unit`), which is where the march epsilon and the surface offsets are
                    rescaled from. Light does not change: radiance has no length in it. */
                 const U = { unit: BUILDER.doc.unit ?? 'm' }
-                folder.addBinding(U, 'unit', { label: 'unit',
-                    options: Object.fromEntries(Object.keys(M.UNITS).map(u => [u, u])) })
+                rowTip(folder.addBinding(U, 'unit', { label: 'unit',
+                    options: Object.fromEntries(Object.keys(M.UNITS).map(u => [u, u])) }),
+                    'What 1 means in every length of this scene: a metre, a centimetre or a millimetre. Changing it does not '
+                    + 'convert: a sphere of radius 1 stays 1, so the whole scene grows or shrinks by the factor. Light needs no '
+                    + 'change -- a luminance has no length in it. A material\'s own lengths are real mm whatever this is. A compile.')
                     .on('change', ev => {
                         BUILDER.doc.unit = ev.value; edited(null); onStructure()
                         // the radius row's label says the unit (and a default radius is 400 m said in it)
@@ -386,7 +423,10 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
                 /* HIDE WITHOUT RECOMPILING (model.js setLiveVisibility): the eye becomes a uniform
                    written. Changing it recompiles once, so the shader has (or drops) the hidden nodes. */
                 const LV = { live: !!BUILDER.doc.liveVisibility }
-                folder.addBinding(LV, 'live', { label: 'instant hide / show' })
+                rowTip(folder.addBinding(LV, 'live', { label: 'instant hide / show' }),
+                    'On: the eye in the tree hides and shows a thing at once, every object staying in the shader behind a '
+                    + 'switch -- a little slower to draw. Off: hiding one compiles the scene without it, and it costs nothing '
+                    + 'while hidden. Turning this on or off is a compile.')
                     .on('change', ev => { M.setLiveVisibility(BUILDER.doc, ev.value); edited(null); onStructure() })
                 /* The scene's functions block, edited through a holder whose `code` IS
                    doc.functions -- so the code editor, its error box and its undo keying work
@@ -554,6 +594,9 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
     function environmentFolder(parent, doc) {
         const animated = (doc.root.animate || []).some(k => String(k).startsWith('environment/'))
         const folder = parent.addFolder({ title: `environment${animated ? '  \u25C6' : ''}` })
+        const t = folder.element?.querySelector?.('.tp-fldv_t')
+        if (t) t.title = 'What lights the scene from beyond its radius, and what a ray that leaves it sees: the sun and sky, or a '
+            + 'studio\'s even light. Kept in the scene\'s file; every value live, never a compile.'
         const base = () => { try { return environment() || {} } catch { return {} } }
         const now = k => doc.environment?.[k] ?? base()[k] ?? M.ENVIRONMENT[k].def
         const mode = now('envMode') | 0
@@ -566,13 +609,19 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
             const { showIf, ...gui } = sp.gui
             if (showIf && !Object.entries(showIf).every(([key, vals]) => vals.includes(now(key) | 0))) continue
             const vec = String(sp.type).startsWith('vec3')
-            const H = { get v() { const x = now(k); return vec ? { ...x } : x },
-                        set v(x) {
-                            if (!A.environment(doc, k, vec ? { r: +x.r, g: +x.g, b: +x.b } : x, {}, base)) return
-                            said(`scene/environment/${k}`)
-                            if (k === 'envMode' && (x | 0) !== mode) setTimeout(() => { if (shownId === doc.root.id) show(shownId) })
-                        } }
-            flagRow(folder.addBinding(H, 'v', { ...gui }), `scene/environment/${k}`)
+            const put = x => {
+                if (!A.environment(doc, k, vec ? { r: +x.r, g: +x.g, b: +x.b } : x, {}, base)) return
+                said(`scene/environment/${k}`)
+                if (k === 'envMode' && (x | 0) !== mode) setTimeout(() => { if (shownId === doc.root.id) show(shownId) })
+            }
+            /* A COLOUR IS BOUND TO AN OBJECT THAT STAYS, and written on 'change' -- as a light's colour is. Tweakpane sets
+               an object colour's r, g and b on the object the binding reads, and never assigns it: through a getter
+               that handed out a copy each time, the studio colour was changed on the copy and thrown away, and the row
+               went back to white (the user, 2026-10-10). A number is assigned, so its setter is called. */
+            const H = vec ? { v: { ...now(k) } } : { get v() { return now(k) }, set v(x) { put(x) } }
+            const b = rowTip(folder.addBinding(H, 'v', { ...gui }), ENVIRONMENT_HELP[k])
+            if (vec) b.on('change', () => put(H.v))
+            flagRow(b, `scene/environment/${k}`)
         }
     }
 
@@ -1339,8 +1388,9 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
         const key = `${kind}:${codeOnly(node.code).trim() ? 'code' : 'comments'}`
         const open = foldState()[key] ?? !!codeOnly(node.code).trim()
         const cf = folder.addFolder({ title, expanded: open })
-        const head = cf.element.querySelector('.tp-fldv_b')
+        const head = cf.element.querySelector('.tp-fldv_b'), headText = cf.element.querySelector('.tp-fldv_t')
         if (head && names) head.title = names
+        if (headText && names) headText.title = names
         cf.on('fold', ev => keepFold(key, ev.expanded))
         // a stale check may finish after the folder is gone: the title then is nobody's
         const verdict = text => { try { cf.title = text ? `${title} · ${text}` : title } catch { } }
@@ -1348,6 +1398,7 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
             label: title, multiline: true, rows: Math.max(8, Math.min(24, lines(node.code) + 2)),
             highlighting: 'glsl', lineNumbers: true,
         })
+        if (names) rowTip(b, `WGSL: ${names}. Ctrl+Enter applies it.`)
         const box = document.createElement('div')
         Object.assign(box.style, {
             font: '12px/1.35 monospace', whiteSpace: 'pre-wrap', padding: '4px 6px',

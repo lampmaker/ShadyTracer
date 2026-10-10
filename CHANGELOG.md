@@ -26,9 +26,21 @@ Render › Environment, a parameter revealed from the palette or the Parameters 
 all select the scene's row (`builder/tree.js` select). A node dropped at the scene's top level is counted among the
 nodes as before; the Materials heading is now the only row that is not one.
 
+**The studio colour can be set.** It always went back to white (the user). Tweakpane sets an object colour's r, g
+and b on the object the binding reads; the row handed it a fresh copy each time, so the change was made on the copy
+and lost. The colour is now bound to an object that stays, written on `change`, as a light's colour already was. The
+same row and the same fault were in the Environment row's folder before this change.
+
+**Every row of the scene's properties has a tooltip** saying what it is and what it does (the user): name, unit,
+radius, each environment setting (`ENVIRONMENT_HELP` in `builder/panel.js`, with typical values such as the noon sun's
+100 000 lx, and the sun's azimuth as a compass bearing from +y), instant hide / show, the functions block, and the
+animated list. `builder/test/panel.check.mjs` fails on any titled row of the scene's properties without one, in the
+studio and in sun and sky, and on any environment setting with no explanation.
+
 **What to look at:** the tree starts with the scene's row and its objects, no Environment row. Click the scene's
 row: Properties shows the environment folder under the radius. Switch Source to studio: the folder redraws with
-the studio's settings. Render › Environment lands on the same place.
+the studio's settings. Pick a studio colour: it stays, and the picture takes its hue. Hover each row: a tooltip.
+Render › Environment lands on the same place.
 
 ## 0.46.0 — 2026-10-10
 
