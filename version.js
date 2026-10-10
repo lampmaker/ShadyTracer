@@ -25,7 +25,7 @@
 //======================================================================================================================
 
 export const NAME = 'ShadyTracer'
-export const VERSION = '0.48.0'
+export const VERSION = '0.51.0'
 
 let REV = null
 

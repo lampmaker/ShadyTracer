@@ -15,7 +15,7 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
-## 0.48.0 — 2026-10-10
+## 0.51.0 — 2026-10-10
 
 **The Optics menu is the Analysis menu, and it holds everything about analysis** (the user). In it:
 - **Analysis setup: show / hide** opens or closes the Analysis pane, as a tab beside the Renderer (where Design
@@ -36,6 +36,53 @@ is the same arrangement. A saved arrangement is kept by its panels, not by a pre
 closes the Analysis tab beside the Renderer and opens it again in the same place. Close a chart in the Analyse
 layout, then bring it back from Analysis › Open chart ▸. View has no chart entries and no Analysis entry. The layout
 switcher shows Design, Analyse, Animate.
+
+## 0.50.0 — 2026-10-10
+
+**The library's materials reviewed for real sizes and optical constants, and four relief materials added**
+(`library/items/materials.json`).
+
+Reviewed, with what changed and the source:
+- **Glass and clear plastics now disperse.** Each has its Abbe number V_d beside n_d, both from catalogue values
+  (the user asked for realistic values; the numbers are typical published figures, not measured here):
+  - clear, tinted and frosted glass are soda-lime, n_d 1.52, V_d 59;
+  - polycarbonate is n_d 1.586, V_d 30.
+- **Green tinted glass is coloured through its body:** a colour depth of 10 mm (`attenuationDistance`), so a thick
+  part is darker than a thin one. Before, every crossing tinted it the same whatever the thickness. The 10 mm is a
+  choice, not a measurement.
+- **New for optics:**
+  - **flint glass (F2)**: Schott F2, n_d 1.620, V_d 36.4, for prisms;
+  - **PMMA (acrylic)**: n_d 1.491, V_d 57, for LED lenses and light guides.
+- **Finer machining marks.** Brushed aluminium's streaks are 0.3 mm wide (were 0.6) and turned aluminium's are
+  0.2 mm (were 0.4); a lathe's feed is about 0.05-0.3 mm a turn. Real brushing marks are finer still. These are the
+  finest that still read on a 50 mm sample, a choice for the picture.
+- **Leather's grain** is 0.2 mm deep (was 0.4).
+- **Kept as they were:**
+  - granite's 4 mm crystals, marble's veins 50 mm apart, terrazzo's 10 mm chips, wood's 3 mm rings, cork's 2.5 mm
+    granules, galvanised steel's 10 mm spangles and carbon fibre's 2 mm tows;
+  - the PLA's 0.2 mm layers and the hammered metal's 8 mm dents, 0.4 mm deep;
+  - the metals' colours, which are the usual linear reflectances at normal incidence (gold 1.00/0.78/0.34,
+    copper, aluminium, chrome).
+- **Not changed, for the user to decide:** several diffuse colours are bright for what they are. Sandstone, wood
+  and cork are 0.5-0.8 in linear terms, and concrete is 0.56, where such surfaces reflect roughly 0.3-0.45. These
+  are colours, not sizes, and lowering them darkens every scene that uses them.
+
+**New relief materials.** The relief is shape: the silhouette shows it, and it is paid at every march step near
+the object.
+- **white plaster**: a hand-trowelled wall, waves up to 0.3 mm over about 25 mm.
+- **knockdown stucco**: blobs of plaster about 15 mm across, trowelled flat, 1 mm proud. This is new relief code:
+  the noise relief through a smoothstep, so every top is cut level. Its `edge` and `soft` set how much wall
+  shows between the blobs. Its slope bound is the noise relief's times the smoothstep's steepest, 1.5 / soft.
+- **sand-float render**: sand grains about 1.5 mm across, up to 0.3 mm.
+- **orange-peel paint**: gloss paint whose surface waves 0.015 mm over 3 mm, seen only in reflections. That is
+  near the f32 floor far from the origin (`lib/pathtracer/PRECISION.md`), which its help says.
+
+**What to look at:**
+- The Library's Materials: the four new reliefs' thumbnails, and whether each reads as what it is named. The
+  plaster is a judgement of scale.
+- A prism or lens in flint glass, then in PMMA: colour fringes, larger in flint.
+- A thick and a thin block of green tinted glass: the thick one darker.
+- Brushed and turned aluminium: whether the finer streaks still show.
 
 ## 0.47.0 — 2026-10-10
 
