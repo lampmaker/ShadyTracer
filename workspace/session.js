@@ -58,12 +58,14 @@ export function createSession({ store, tabs, autosave, firstVisit, apply = async
             return { id: autosave.id, name: autosave.name ?? null, copy: autosave.copyOf?.name ?? null }
         },
         /**
-         * THE PROJECT A PAGE STARTS ON (above). Resolves to { meta, workspace, item, note }: `workspace` is what to
-         * build the page with -- { project, current, renderer, cameras } -- and `note`, when there is one, what to say.
+         * THE PROJECT A PAGE STARTS ON (above). Resolves to { meta, workspace, item, note, firstVisit }: `workspace` is
+         * what to build the page with -- { project, current, renderer, cameras } -- `note`, when there is one, what to
+         * say, and `firstVisit` true when the project was made just now from the first visit's scene (which the page
+         * then shows from that example's camera).
          */
         async start() {
             const latest = await store.latest()
-            if (!latest) return { ...await made('My project', await firstVisit()),
+            if (!latest) return { ...await made('My project', await firstVisit()), firstVisit: true,
                 note: 'a first visit: a demo scene to start from -- the examples are in File › Examples' }
             try { return await take(latest) } catch (e) {
                 console.error('[projects] could not read', latest.name, e)

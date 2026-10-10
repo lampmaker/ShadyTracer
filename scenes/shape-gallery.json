@@ -1,0 +1,1008 @@
+{
+  "format": "raytracer-scene",
+  "version": 21,
+  "title": "Shape gallery",
+  "nextId": 36,
+  "unit": "mm",
+  "materials": [
+    {
+      "id": "m1",
+      "label": "white",
+      "params": {
+        "baseColor": {
+          "r": 0.85,
+          "g": 0.85,
+          "b": 0.83
+        },
+        "metallic": 0,
+        "roughness": 1,
+        "anisotropy": 0,
+        "specular": 0,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
+    },
+    {
+      "id": "m4",
+      "label": "soft red",
+      "params": {
+        "baseColor": {
+          "r": 0.72,
+          "g": 0.22,
+          "b": 0.19
+        },
+        "metallic": 0,
+        "roughness": 1,
+        "anisotropy": 0,
+        "specular": 0,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
+    },
+    {
+      "id": "m5",
+      "label": "sage green",
+      "params": {
+        "baseColor": {
+          "r": 0.36,
+          "g": 0.52,
+          "b": 0.36
+        },
+        "metallic": 0,
+        "roughness": 1,
+        "anisotropy": 0,
+        "specular": 0,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
+    },
+    {
+      "id": "m6",
+      "label": "sky blue",
+      "params": {
+        "baseColor": {
+          "r": 0.3,
+          "g": 0.5,
+          "b": 0.8
+        },
+        "metallic": 0,
+        "roughness": 1,
+        "anisotropy": 0,
+        "specular": 0,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
+    },
+    {
+      "id": "m7",
+      "label": "satin yellow plastic",
+      "params": {
+        "baseColor": {
+          "r": 0.85,
+          "g": 0.65,
+          "b": 0.1
+        },
+        "metallic": 0,
+        "roughness": 0.45,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
+    }
+  ],
+  "blocks": [
+    {
+      "id": "b3",
+      "label": "plane",
+      "kind": "object",
+      "code": "// The plane z = 0, solid below.\nC = add_new(C, Nplane(p), MATERIAL);",
+      "params": {},
+      "builtin": "plane@1"
+    },
+    {
+      "id": "b9",
+      "label": "sphere",
+      "kind": "object",
+      "code": "// A sphere around this node's origin.\nC = add_new(C, Nsphere(p, radius), MATERIAL);",
+      "params": {
+        "radius": 0.5
+      },
+      "ranges": {
+        "radius": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "radius"
+      ],
+      "builtin": "sphere@1"
+    },
+    {
+      "id": "b11",
+      "label": "box",
+      "kind": "object",
+      "code": "// A box: size is the HALF-size along each axis; the rounding stays inside it.\nC = add_new(C, NboxRounded(p, size, rounding), MATERIAL);",
+      "params": {
+        "size": {
+          "x": 0.5,
+          "y": 0.5,
+          "z": 0.5
+        },
+        "rounding": 0.02
+      },
+      "ranges": {
+        "rounding": {
+          "min": 0,
+          "max": 2,
+          "step": 0.005
+        }
+      },
+      "lengths": [
+        "size",
+        "rounding"
+      ],
+      "builtin": "box@1"
+    },
+    {
+      "id": "b13",
+      "label": "cylinder",
+      "kind": "object",
+      "code": "// A cylinder along z, centred on this node's origin.\nC = add_new(C, Ncylinder(p, height * 0.5, radius), MATERIAL);",
+      "params": {
+        "radius": 0.5,
+        "height": 1
+      },
+      "ranges": {
+        "radius": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        },
+        "height": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "radius",
+        "height"
+      ],
+      "builtin": "cylinder@1"
+    },
+    {
+      "id": "b15",
+      "label": "capsule",
+      "kind": "object",
+      "code": "// A capsule along z: height between the centres of its two end caps.\nC = add_new(C, Ncapsule(p, height * 0.5, radius), MATERIAL);",
+      "params": {
+        "radius": 0.25,
+        "height": 0.5
+      },
+      "ranges": {
+        "radius": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        },
+        "height": {
+          "min": 0,
+          "max": 10,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "radius",
+        "height"
+      ],
+      "builtin": "capsule@1"
+    },
+    {
+      "id": "b17",
+      "label": "torus",
+      "kind": "object",
+      "code": "// A torus in the xy plane: ring is the radius to the tube's centre, tube its own radius.\nC = add_new(C, Ntorus(p, ring, tube), MATERIAL);",
+      "params": {
+        "ring": 0.4,
+        "tube": 0.1
+      },
+      "ranges": {
+        "ring": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        },
+        "tube": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "ring",
+        "tube"
+      ],
+      "builtin": "torus@1"
+    },
+    {
+      "id": "b19",
+      "label": "cone",
+      "kind": "object",
+      "code": "// A capped cone along z: base radius at the bottom, top radius at the top.\n// No analytic normal (sdCappedCone): the renderer takes one by differences.\nC = add_new(C, sdCappedCone(p, height * 0.5, base, top), MATERIAL);",
+      "params": {
+        "base": 0.5,
+        "top": 0,
+        "height": 1
+      },
+      "ranges": {
+        "base": {
+          "min": 0,
+          "max": 10,
+          "step": 0.01
+        },
+        "top": {
+          "min": 0,
+          "max": 10,
+          "step": 0.01
+        },
+        "height": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "base",
+        "top",
+        "height"
+      ],
+      "builtin": "cone@1"
+    },
+    {
+      "id": "b21",
+      "label": "round cone",
+      "kind": "object",
+      "code": "// Two spheres along z, bottom radius at z = -height/2 and top at +height/2, and the cone touching\n// both (shapes.js NroundCone). A height under the radii's difference leaves the bigger sphere.\nC = add_new(C, NroundCone(p, bottom, top, height), MATERIAL);",
+      "params": {
+        "bottom": 0.3,
+        "top": 0.15,
+        "height": 0.55
+      },
+      "ranges": {
+        "bottom": {
+          "min": 0,
+          "max": 10,
+          "step": 0.01
+        },
+        "top": {
+          "min": 0,
+          "max": 10,
+          "step": 0.01
+        },
+        "height": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "bottom",
+        "top",
+        "height"
+      ],
+      "builtin": "round cone@1"
+    },
+    {
+      "id": "b23",
+      "label": "pyramid",
+      "kind": "object",
+      "code": "// A pyramid along z: its base base.x by base.y at z = -height/2, its top top.x by top.y at +height/2 --\n// a top of 0 by 0 is an apex, anything else a frustum (bigger than the base: upside down). shapes.js Nfrustum.\nC = add_new(C, Nfrustum(p, base, top, height), MATERIAL);",
+      "params": {
+        "base": {
+          "x": 1,
+          "y": 1
+        },
+        "top": {
+          "x": 0,
+          "y": 0
+        },
+        "height": 1
+      },
+      "ranges": {
+        "height": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "base",
+        "top",
+        "height"
+      ],
+      "builtin": "pyramid@1"
+    },
+    {
+      "id": "b25",
+      "label": "prism",
+      "kind": "object",
+      "code": "// A prism along z, centred: a regular polygon of sides sides (3 a triangle, 4 a square, ...), radius to its\n// corners, a flat side down -- extruded. sides is live: dragging it needs no compile. shapes.js Nprism.\nC = add_new(C, Nprism(p, sides, radius, height), MATERIAL);",
+      "params": {
+        "sides": 3,
+        "radius": 0.5,
+        "height": 1
+      },
+      "ranges": {
+        "sides": {
+          "min": 3,
+          "max": 12,
+          "step": 1
+        },
+        "radius": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        },
+        "height": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "radius",
+        "height"
+      ],
+      "builtin": "prism@1"
+    },
+    {
+      "id": "b27",
+      "label": "octahedron",
+      "kind": "object",
+      "code": "// A regular octahedron around this node's origin, size from the centre to each of its six vertices.\nC = add_new(C, Noctahedron(p, size), MATERIAL);",
+      "params": {
+        "size": 0.5
+      },
+      "ranges": {
+        "size": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "size"
+      ],
+      "builtin": "octahedron@1"
+    },
+    {
+      "id": "b29",
+      "label": "capped torus",
+      "kind": "object",
+      "code": "// Part of a torus in the xy plane: angle degrees of the ring (360 is all of it), symmetric about +y,\n// its ends rounded. ring is the radius to the tube's centre, tube its own radius.\nC = add_new(C, NcappedTorus(p, ring, tube, angle), MATERIAL);",
+      "params": {
+        "ring": 0.42,
+        "tube": 0.08,
+        "angle": 270
+      },
+      "ranges": {
+        "ring": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        },
+        "tube": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        },
+        "angle": {
+          "min": 0,
+          "max": 360,
+          "step": 1
+        }
+      },
+      "lengths": [
+        "ring",
+        "tube"
+      ],
+      "builtin": "capped torus@1"
+    },
+    {
+      "id": "b31",
+      "label": "link",
+      "kind": "object",
+      "code": "// A chain link in the xy plane: a ring pulled apart along y by span (its straight sides),\n// ring the radius of its rounded ends to the tube's centre, tube its own radius.\nC = add_new(C, Nlink(p, span, ring, tube), MATERIAL);",
+      "params": {
+        "span": 0.36,
+        "ring": 0.25,
+        "tube": 0.07
+      },
+      "ranges": {
+        "span": {
+          "min": 0,
+          "max": 10,
+          "step": 0.01
+        },
+        "ring": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        },
+        "tube": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "span",
+        "ring",
+        "tube"
+      ],
+      "builtin": "link@1"
+    },
+    {
+      "id": "b33",
+      "label": "tube",
+      "kind": "object",
+      "code": "// A hollow cylinder along z, centred: outer and inner radius. An inner radius of 0 makes it solid.\nC = add_new(C, Ntube(p, outer, inner, height), MATERIAL);",
+      "params": {
+        "outer": 0.5,
+        "inner": 0.4,
+        "height": 1
+      },
+      "ranges": {
+        "outer": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        },
+        "inner": {
+          "min": 0,
+          "max": 10,
+          "step": 0.01
+        },
+        "height": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "outer",
+        "inner",
+        "height"
+      ],
+      "builtin": "tube@1"
+    },
+    {
+      "id": "b35",
+      "label": "dome",
+      "kind": "object",
+      "code": "// A dome: the top of a sphere of this radius, height tall, its flat base ON z = 0 -- placed on a board,\n// it sits on it. A height over the radius is more than half a sphere; up to twice the radius.\nC = add_new(C, Ndome(p, radius, height), MATERIAL);",
+      "params": {
+        "radius": 0.5,
+        "height": 0.3
+      },
+      "ranges": {
+        "radius": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        },
+        "height": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "radius",
+        "height"
+      ],
+      "builtin": "dome@1"
+    }
+  ],
+  "root": {
+    "id": "root",
+    "kind": "group",
+    "label": "Shape gallery",
+    "enabled": true,
+    "blend": 0,
+    "children": [
+      {
+        "id": "n2",
+        "kind": "object",
+        "type": "code",
+        "label": "floor",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m1",
+        "params": {},
+        "block": "b3"
+      },
+      {
+        "id": "n8",
+        "kind": "object",
+        "type": "code",
+        "label": "sphere",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -240,
+            "y": 50,
+            "z": 25
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m4",
+        "params": {
+          "radius": 25
+        },
+        "block": "b9"
+      },
+      {
+        "id": "n10",
+        "kind": "object",
+        "type": "code",
+        "label": "box",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -160,
+            "y": 50,
+            "z": 22
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m5",
+        "params": {
+          "size": {
+            "x": 22,
+            "y": 22,
+            "z": 22
+          },
+          "rounding": 3
+        },
+        "block": "b11"
+      },
+      {
+        "id": "n12",
+        "kind": "object",
+        "type": "code",
+        "label": "cylinder",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -80,
+            "y": 50,
+            "z": 25
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m6",
+        "params": {
+          "radius": 22,
+          "height": 50
+        },
+        "block": "b13"
+      },
+      {
+        "id": "n14",
+        "kind": "object",
+        "type": "code",
+        "label": "capsule",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 0,
+            "y": 50,
+            "z": 30
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m7",
+        "params": {
+          "radius": 15,
+          "height": 30
+        },
+        "block": "b15"
+      },
+      {
+        "id": "n16",
+        "kind": "object",
+        "type": "code",
+        "label": "torus",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 80,
+            "y": 50,
+            "z": 7
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m4",
+        "params": {
+          "ring": 20,
+          "tube": 7
+        },
+        "block": "b17"
+      },
+      {
+        "id": "n18",
+        "kind": "object",
+        "type": "code",
+        "label": "cone",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 160,
+            "y": 50,
+            "z": 25
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m5",
+        "params": {
+          "base": 25,
+          "top": 0,
+          "height": 50
+        },
+        "block": "b19"
+      },
+      {
+        "id": "n20",
+        "kind": "object",
+        "type": "code",
+        "label": "round cone",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 240,
+            "y": 50,
+            "z": 20
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m6",
+        "params": {
+          "bottom": 20,
+          "top": 10,
+          "height": 30
+        },
+        "block": "b21"
+      },
+      {
+        "id": "n22",
+        "kind": "object",
+        "type": "code",
+        "label": "pyramid",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -240,
+            "y": -50,
+            "z": 22.5
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m5",
+        "params": {
+          "base": {
+            "x": 50,
+            "y": 50
+          },
+          "top": {
+            "x": 0,
+            "y": 0
+          },
+          "height": 45
+        },
+        "block": "b23"
+      },
+      {
+        "id": "n24",
+        "kind": "object",
+        "type": "code",
+        "label": "prism",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -160,
+            "y": -50,
+            "z": 20
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m6",
+        "params": {
+          "sides": 6,
+          "radius": 25,
+          "height": 40
+        },
+        "block": "b25"
+      },
+      {
+        "id": "n26",
+        "kind": "object",
+        "type": "code",
+        "label": "octahedron",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -80,
+            "y": -50,
+            "z": 28
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m7",
+        "params": {
+          "size": 28
+        },
+        "block": "b27"
+      },
+      {
+        "id": "n28",
+        "kind": "object",
+        "type": "code",
+        "label": "capped torus",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 0,
+            "y": -50,
+            "z": 6
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m4",
+        "params": {
+          "ring": 20,
+          "tube": 6,
+          "angle": 270
+        },
+        "block": "b29"
+      },
+      {
+        "id": "n30",
+        "kind": "object",
+        "type": "code",
+        "label": "link",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 80,
+            "y": -50,
+            "z": 5
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m5",
+        "params": {
+          "span": 14,
+          "ring": 12,
+          "tube": 5
+        },
+        "block": "b31"
+      },
+      {
+        "id": "n32",
+        "kind": "object",
+        "type": "code",
+        "label": "tube",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 160,
+            "y": -50,
+            "z": 22.5
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m6",
+        "params": {
+          "outer": 22,
+          "inner": 17,
+          "height": 45
+        },
+        "block": "b33"
+      },
+      {
+        "id": "n34",
+        "kind": "object",
+        "type": "code",
+        "label": "dome",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 240,
+            "y": -50,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m7",
+        "params": {
+          "radius": 25,
+          "height": 20
+        },
+        "block": "b35"
+      }
+    ]
+  },
+  "functions": "// Functions: WGSL helpers any code node or material in this scene can call.\n// Compiled once, before the materials and the SDF; errors show here at their own lines.\n// e.g. a gyroid, usable in a code node as  C = add_new(C, sd(gyroid(p, 4.0)), MATERIAL);\n//   fn gyroid(p: VEC3, s: f32) -> f32 {\n//       let q = p * s;\n//       return abs(dot(sin(q), cos(q.zxy))) / s - 0.03;\n//   }\n",
+  "envRadius": 3000,
+  "environment": {
+    "envMode": 0,
+    "uSunElevation": 45,
+    "uSunAzimuth": -140
+  }
+}

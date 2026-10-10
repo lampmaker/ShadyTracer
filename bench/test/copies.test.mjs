@@ -32,6 +32,7 @@ import { prog_opt_shade } from '../../lib/pathtracer/optics/kernels.js'
 import { generate } from '../../builder/codegen.js'
 import * as Model from '../../builder/model.js'
 import { SCENE_FILES } from '../../scenes/index.js'
+import { FIXTURE_SCENES, fixtureUrl } from '../../test/fixtures/scenes/index.js'
 import { shorthand, TOKENS, SHORT_TOKENS } from '../../lib/wgsl_shorthand.js'
 
 let pass = 0, fail = 0
@@ -58,7 +59,7 @@ const expected = g => ({
 })
 
 const benchFiles = readdirSync(new URL('../scenes/', import.meta.url)).filter(f => f.endsWith('.json')).sort()
-const sets = [['scenes', SCENE_FILES, f => new URL(`../../scenes/${f}`, import.meta.url)],
+const sets = [['scenes', SCENE_FILES, f => new URL(`../../scenes/${f}`, import.meta.url)], ['fixtures', FIXTURE_SCENES, fixtureUrl],
               ['bench', benchFiles, f => new URL(`../scenes/${f}`, import.meta.url)]]
 const gs = new Set()
 for (const [set, files, url] of sets) {

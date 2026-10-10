@@ -15,6 +15,66 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.54.0 — 2026-10-10
+
+**New examples, grouped by audience and topic, in real sizes** (the user: "replace all example scenes ... SDF's may
+be new to people and I want to be able to demonstrate all the features. consider correct dimensions"; split
+"between regular users and optical designers").
+
+**File › Examples** now has two headings:
+- **Modelling and rendering**, with groups as submenus:
+  - Start: First steps;
+  - Shapes: Shape gallery, Combining shapes, Modifiers, From points, Parametric part, Infinite detail;
+  - Materials: Material board, Relief and texture, Glass and liquid;
+  - Light and camera: Lighting a room, Depth of field, Animation, Product shot.
+- **Optical design**: LED, lens and screen; Aspheric condenser; Fresnel or plano-convex; Parabolic reflector;
+  Light guide; RGBW colour mixing; Dispersion in a prism; Dichroic combiner; Office lighting.
+
+Each row's tooltip says what the example shows. Each example opens with a **camera of its own**
+(`BUILDER.load(text, { camera })`, kept as that scene's camera). A first visit starts on *First steps*, seen from
+its camera.
+
+**Made in code** (`scenes/make.mjs`) through the model's own API, with each size and its reason written beside it:
+- a die 16 mm;
+- a wine glass 210 mm tall, its wall 1.5 mm;
+- a room 4 × 3 × 2.6 m;
+- an LED die 1 × 1 mm of 100 lm;
+- a flint prism at minimum deviation (incidence 54.1°);
+- a plano-convex lens's LED at its front focal point (f − t/n);
+- a dichroic plate's normal halfway between the two beams;
+- a reflector's LED at its focus.
+
+`node scenes/make.mjs` writes the scenes and `scenes/examples.js`, the menu's list. **None has been rendered**:
+the container cannot. The geometry and the cameras are reasoned, not looked at.
+
+**The old examples are test fixtures** (`test/fixtures/scenes/`): the tests were written against them. Every test
+that went over "every bundled scene" now goes over the examples and the fixtures both (`test/scenes.mjs`). The
+golden shaders were frozen again: the old scenes' entries were renamed to their new place, unchanged, and the 23
+examples were added, with no other entry moved. check-shaders builds 5302 kernels (was 3646), all four passes clean
+under naga.
+
+**What the new examples found:**
+- `liveUniformsOf` did not name a component parameter's bound values (0.52.1).
+- `test/scenedata.test.mjs` assumed every material swap and every copy or delete is data alone. Putting on a relief
+  material is a compile, and so is copying or deleting a shape whose points are compiled in. The test now says so
+  rather than demanding otherwise.
+
+**What to look at, every example:**
+- it opens framed, nothing below the floor, nothing intersecting what it should not;
+- the sizes look like the things they are;
+- the light comes from a sensible side.
+
+And these in particular:
+- **Combining shapes**: the die's pips are on its faces (1 on top, 2 on the front, 3 on the right).
+- **From points**: the wine glass is hollow and open at the top.
+- **Parametric part**: changing `fins` in the heatsink's properties changes the fin count.
+- **Glass and liquid**: the bottle is darker where it is thicker.
+- **Lighting a room**: the camera is inside, looking at the window.
+- **Optical design**: each example's detector, under Analysis › Analysis setup ▶ Run, shows a spot, beam or spectrum:
+  - the prism's spectrum is about 3.5 mm across;
+  - the reflector's beam is narrow;
+  - the office's work plane reads in the hundreds of lux.
+
 ## 0.53.0 — 2026-10-10
 
 **The Optics menu is the Analysis menu, and it holds everything about analysis** (the user). In it:

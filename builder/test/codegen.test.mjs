@@ -882,7 +882,7 @@ eq('uniformName', uniformName('n7', 'radius'), 'radius_n7')
 // THE DOCUMENT'S SETTING, through generateArgs -- the one place the builder and the page build from: every
 // node of a live document declares the uniform BUILDER.live('enabled') writes, disabled ones included
 {
-    const doc = Model.parse(readFileSync(new URL('../../scenes/optics-test.json', import.meta.url), 'utf8'))
+    const doc = Model.parse(readFileSync(new URL('../../test/fixtures/scenes/optics-test.json', import.meta.url), 'utf8'))
     Model.setEnabled(doc, 'lens', false)
     const off = generate(...Model.generateArgs(doc, { id: 'built' }))
     eq('a document without the setting: no visibility uniforms', Object.keys(off.uniforms).filter(k => k.startsWith('vis_')).length, 0)
@@ -940,8 +940,9 @@ eq('uniformName', uniformName('n7', 'radius'), 'radius_n7')
        values under every row by name, and the bench's floor was once a node `ground`, which would have
        taken the demo scene's transform for it (xf_ground). */
     const pinned = new Set(t.cases.flatMap(c => Object.keys({ ...t.pin, ...c.set })))
-    const shared = readdirSync(new URL('../../scenes/', import.meta.url)).filter(f => f.endsWith('.json')).flatMap(f => {
-        const s = generate(...Model.generateArgs(Model.parse(readFileSync(new URL(`../../scenes/${f}`, import.meta.url), 'utf8')), { id: 'built' }))
+    // the examples and the scenes that were the examples (test/fixtures/scenes), every file of both folders
+    const shared = ['../../scenes/', '../../test/fixtures/scenes/'].flatMap(d => readdirSync(new URL(d, import.meta.url)).filter(f => f.endsWith('.json')).map(f => d + f)).flatMap(f => {
+        const s = generate(...Model.generateArgs(Model.parse(readFileSync(new URL(f, import.meta.url), 'utf8')), { id: 'built' }))
         return Object.keys(s.uniforms).filter(k => k in t.scene.uniforms && !pinned.has(k)).map(k => `${f}: ${k}`)
     })
     eq('the light bench shares no unpinned uniform with a bundled scene', shared, [])
@@ -1675,7 +1676,7 @@ eq('uniformName', uniformName('n7', 'radius'), 'radius_n7')
    test in any copy and no box uniform, and says so (`unculled`); on, the same document has them. Until 0.29.0 the box
    tests were in the text whatever the setting, each asking UB.cull at every step: whether "off costs nothing" was a guess. */
 {
-    const doc = Model.parse(readFileSync(new URL('../../scenes/demo.json', import.meta.url), 'utf8'))
+    const doc = Model.parse(readFileSync(new URL('../../test/fixtures/scenes/demo.json', import.meta.url), 'utf8'))
     const CALLS = /(?<!fn )\bcullDist\(/g
     const calls = s => ['wgsl', 'pickWgsl', 'opticsWgsl', 'opticsPickWgsl'].reduce((n, k) => n + ((s[k] || '').match(CALLS) || []).length, 0)
     for (const [how, o] of [['codegen', {}], ['as data', { data: true }]]) {

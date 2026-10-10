@@ -1,0 +1,511 @@
+{
+  "format": "raytracer-scene",
+  "version": 21,
+  "title": "Office lighting",
+  "nextId": 16,
+  "unit": "m",
+  "materials": [
+    {
+      "id": "m1",
+      "label": "concrete",
+      "params": {
+        "baseColor": {
+          "r": 0.56,
+          "g": 0.55,
+          "b": 0.52
+        },
+        "metallic": 0,
+        "roughness": 0.9,
+        "anisotropy": 0,
+        "specular": 0.3,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "stain": {
+          "r": 0.42,
+          "g": 0.41,
+          "b": 0.39
+        },
+        "stainSize": 300,
+        "stainAmount": 0.6,
+        "poreSpacing": 10,
+        "poreRadius": 0.15,
+        "poreShare": 0.3,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8
+      },
+      "code": "// Stains: four octaves of noise `stainSize` mm across. Pores: in a `poreShare` of the Worley cells\n// `poreSpacing` mm apart, a hole `poreRadius` of a cell across -- darker, and rough.\nlet q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\nlet st = 0.5 + 0.5 * fbm3(q / stainSize, 11u, 4u, 2.0, 0.5).w;\nlet w = worley3x(q / poreSpacing, 12u);\nlet pore = (1.0 - smoothstep(0.6 * poreRadius, poreRadius, w.x)) * step(1.0 - poreShare, w.z);\nm.baseColor = mix(m.baseColor, stain, stainAmount * smoothstep(0.35, 0.75, st)) * (1.0 - 0.7 * pore);\nm.roughness = mix(m.roughness, 1.0, pore);",
+      "ranges": {
+        "stainSize": {
+          "min": 1,
+          "max": 1000,
+          "step": 1
+        },
+        "stainAmount": {
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        "poreSpacing": {
+          "min": 0.2,
+          "max": 50,
+          "step": 0.1
+        },
+        "poreRadius": {
+          "min": 0,
+          "max": 0.45,
+          "step": 0.01
+        },
+        "poreShare": {
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "stainSize",
+        "poreSpacing"
+      ]
+    },
+    {
+      "id": "m5",
+      "label": "white plaster",
+      "params": {
+        "baseColor": {
+          "r": 0.85,
+          "g": 0.85,
+          "b": 0.83
+        },
+        "metallic": 0,
+        "roughness": 1,
+        "anisotropy": 0,
+        "specular": 0,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n",
+      "relief": {
+        "code": "// Noise relief: bumps up to \"amplitude\" mm high and deep, about \"size\" mm across -- four octaves\n// of gradient noise (lib/pathtracer/core/noise.js), in real millimetres on the object. Four noises\n// per march step near the surface. slope is the MEASURED gradient bound (a quarter of the proved\n// one, NZ_GRAD_LIP, and a quarter the steps); the normal is taken by differences.\nlet peak = nzFbmLip(4u, 1.0, 0.5, 1.0);                 // the octaves' amplitudes summed\nlet n = fbm3(q / size, 1u, 4u, 2.0, 0.5);\nh = amplitude * n.w / peak;\nslope = amplitude / size * nzFbmLip(4u, 2.0, 0.5, NZ_GRAD_LIP_MEASURED) / peak;",
+        "params": {
+          "amplitude": 0.3,
+          "size": 25
+        },
+        "ranges": {
+          "amplitude": {
+            "min": 0,
+            "max": 20,
+            "step": 0.01
+          },
+          "size": {
+            "min": 0.1,
+            "max": 200,
+            "step": 0.1
+          }
+        },
+        "lengths": [
+          "amplitude",
+          "size"
+        ]
+      }
+    },
+    {
+      "id": "m13",
+      "label": "work plane",
+      "params": {
+        "baseColor": {
+          "r": 0.8,
+          "g": 0.8,
+          "b": 0.8
+        },
+        "metallic": 0,
+        "roughness": 1,
+        "anisotropy": 0,
+        "specular": 0,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   R_local  that frame's rotation to the world, for a direction written in it\n//   S_local  its scale: p_local * S_local is in scene units; metres(x) is x m in them, mm(x) x mm\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe; one marked\n//            as a length is in real mm, whatever the scene's unit -- read the point in mm too:\n//   let q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. brushed along the object's x, for an anisotropy above 0 (or turned: grainAround):\n//   m.tangent = grainAlong(R_local, VEC3(1.0, 0.0, 0.0));\n// e.g. with a length width (mm) and a colour stripe added with +, and q as above:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(q.x / width), 0.5));\n",
+      "type": "detector"
+    }
+  ],
+  "blocks": [
+    {
+      "id": "b3",
+      "label": "plane",
+      "kind": "object",
+      "code": "// The plane z = 0, solid below.\nC = add_new(C, Nplane(p), MATERIAL);",
+      "params": {},
+      "builtin": "plane@1"
+    },
+    {
+      "id": "b7",
+      "label": "box",
+      "kind": "object",
+      "code": "// A box: size is the HALF-size along each axis; the rounding stays inside it.\nC = add_new(C, NboxRounded(p, size, rounding), MATERIAL);",
+      "params": {
+        "size": {
+          "x": 0.5,
+          "y": 0.5,
+          "z": 0.5
+        },
+        "rounding": 0.02
+      },
+      "ranges": {
+        "rounding": {
+          "min": 0,
+          "max": 2,
+          "step": 0.005
+        }
+      },
+      "lengths": [
+        "size",
+        "rounding"
+      ],
+      "builtin": "box@1"
+    },
+    {
+      "id": "b15",
+      "label": "rectangle",
+      "kind": "object",
+      "code": "// A flat rectangle in the xy plane, no thickness (sdf.js Nrectangle), seen from both sides:\n// a planar optics detector, or a ray limiter across a beam, with that material type.\nC = add_new(C, Nrectangle(p, VEC2(width, height) * 0.5), MATERIAL);",
+      "params": {
+        "width": 1,
+        "height": 1
+      },
+      "ranges": {
+        "width": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        },
+        "height": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "width",
+        "height"
+      ],
+      "builtin": "rectangle@1"
+    }
+  ],
+  "root": {
+    "id": "root",
+    "kind": "group",
+    "label": "Office lighting",
+    "enabled": true,
+    "blend": 0,
+    "children": [
+      {
+        "id": "n2",
+        "kind": "object",
+        "type": "code",
+        "label": "floor",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m1",
+        "params": {},
+        "block": "b3"
+      },
+      {
+        "id": "n4",
+        "kind": "group",
+        "label": "room",
+        "enabled": true,
+        "blend": 0,
+        "transform": {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "children": [
+          {
+            "id": "n6",
+            "kind": "object",
+            "type": "code",
+            "label": "outside",
+            "enabled": true,
+            "transform": {
+              "pos": {
+                "x": 0,
+                "y": 0,
+                "z": 1.4
+              },
+              "rot": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "scale": 1
+            },
+            "material": "m5",
+            "params": {
+              "size": {
+                "x": 3.1,
+                "y": 2.1,
+                "z": 1.5
+              },
+              "rounding": 0
+            },
+            "block": "b7"
+          },
+          {
+            "id": "n8",
+            "kind": "object",
+            "type": "code",
+            "label": "inside",
+            "enabled": true,
+            "transform": {
+              "pos": {
+                "x": 0,
+                "y": 0,
+                "z": 1.4
+              },
+              "rot": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "scale": 1
+            },
+            "material": "m5",
+            "params": {
+              "size": {
+                "x": 3,
+                "y": 2,
+                "z": 1.4
+              },
+              "rounding": 0
+            },
+            "join": "subtract",
+            "block": "b7"
+          }
+        ]
+      },
+      {
+        "id": "n9",
+        "kind": "object",
+        "type": "light",
+        "label": "LED panel (3600 lm)",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -1.5,
+            "y": -1,
+            "z": 2.79
+          },
+          "rot": {
+            "x": 0,
+            "y": 180,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": null,
+        "params": {
+          "width": 0.6,
+          "height": 0.6
+        },
+        "light": {
+          "shape": "rectangle",
+          "flux": 3600,
+          "colourBy": "cct",
+          "cct": 4000
+        }
+      },
+      {
+        "id": "n10",
+        "kind": "object",
+        "type": "light",
+        "label": "LED panel (3600 lm)",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 1.5,
+            "y": -1,
+            "z": 2.79
+          },
+          "rot": {
+            "x": 0,
+            "y": 180,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": null,
+        "params": {
+          "width": 0.6,
+          "height": 0.6
+        },
+        "light": {
+          "shape": "rectangle",
+          "flux": 3600,
+          "colourBy": "cct",
+          "cct": 4000
+        }
+      },
+      {
+        "id": "n11",
+        "kind": "object",
+        "type": "light",
+        "label": "LED panel (3600 lm)",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -1.5,
+            "y": 1,
+            "z": 2.79
+          },
+          "rot": {
+            "x": 0,
+            "y": 180,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": null,
+        "params": {
+          "width": 0.6,
+          "height": 0.6
+        },
+        "light": {
+          "shape": "rectangle",
+          "flux": 3600,
+          "colourBy": "cct",
+          "cct": 4000
+        }
+      },
+      {
+        "id": "n12",
+        "kind": "object",
+        "type": "light",
+        "label": "LED panel (3600 lm)",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 1.5,
+            "y": 1,
+            "z": 2.79
+          },
+          "rot": {
+            "x": 0,
+            "y": 180,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": null,
+        "params": {
+          "width": 0.6,
+          "height": 0.6
+        },
+        "light": {
+          "shape": "rectangle",
+          "flux": 3600,
+          "colourBy": "cct",
+          "cct": 4000
+        }
+      },
+      {
+        "id": "n14",
+        "kind": "object",
+        "type": "code",
+        "label": "work plane at 0.75 m (detector)",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": 0.75
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m13",
+        "params": {
+          "width": 5.6,
+          "height": 3.6
+        },
+        "block": "b15"
+      }
+    ]
+  },
+  "functions": "// Functions: WGSL helpers any code node or material in this scene can call.\n// Compiled once, before the materials and the SDF; errors show here at their own lines.\n// e.g. a gyroid, usable in a code node as  C = add_new(C, sd(gyroid(p, 4.0)), MATERIAL);\n//   fn gyroid(p: VEC3, s: f32) -> f32 {\n//       let q = p * s;\n//       return abs(dot(sin(q), cos(q.zxy))) / s - 0.03;\n//   }\n",
+  "envRadius": 100,
+  "environment": {
+    "envMode": 1,
+    "studioIlluminance": 0,
+    "studioTop": 0.5
+  },
+  "optics": {
+    "maxDist": 30
+  }
+}

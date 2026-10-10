@@ -48,7 +48,7 @@ const { SCENE_FILES } = await imp('scenes/index.js')
 const { defines, shorthand, TOKENS, SHORT_TOKENS } = await imp('lib/wgsl_shorthand.js')
 const rewrite = shorthand(TOKENS, SHORT_TOKENS)
 
-const sceneDir = args.includes('--bench') ? 'bench/scenes' : 'scenes'
+const sceneDir = args.includes('--bench') ? 'bench/scenes' : 'scenes'      // the examples (the old ones: test/fixtures/scenes)
 const sceneFiles = args.includes('--bench') ? readdirSync(join(repo, sceneDir)).filter(f => f.endsWith('.json')).sort() : SCENE_FILES
 const scenes = sceneFiles.map(file => {
     const doc = Model.parse(readFileSync(join(repo, sceneDir, file), 'utf8'))

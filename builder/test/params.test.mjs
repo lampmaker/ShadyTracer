@@ -8,10 +8,9 @@
 // ever say so -- they would sweep a value that does nothing and report the curve flat.
 //======================================================================================================================
 import { readFileSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
 import * as M from '../model.js'
 import { generate, uniformName, xfName, blendName, paramUniform } from '../codegen.js'
-import { SCENE_FILES } from '../../scenes/index.js'
+import { EVERY_SCENE } from '../../test/scenes.mjs'
 import { sceneParams, makeAfter } from '../params.js'
 import { makeParams } from '../../lib/shell/params.js'
 
@@ -27,10 +26,9 @@ const eq = (name, got, want) => ok(name, JSON.stringify(got) === JSON.stringify(
 //----------------------------------------------------------------------------------------------
 // EVERY BUNDLED SCENE: every live entry writes a uniform the scene declares
 //----------------------------------------------------------------------------------------------
-const dir = fileURLToPath(new URL('../../scenes/', import.meta.url))
 let total = 0
-for (const name of SCENE_FILES) {
-    const doc = M.parse(readFileSync(dir + name, 'utf8'))
+for (const { name, path } of EVERY_SCENE) {
+    const doc = M.parse(readFileSync(path, 'utf8'))
     const calls = []
     const hooks = { live: (id, k) => calls.push(['live', id, k]), commit: k => calls.push(['commit', k]),
                     structure: () => calls.push(['structure']), syncSources: () => { } }

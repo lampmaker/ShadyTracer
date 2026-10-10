@@ -1,0 +1,524 @@
+{
+  "format": "raytracer-scene",
+  "version": 21,
+  "title": "Animation",
+  "nextId": 14,
+  "unit": "mm",
+  "materials": [
+    {
+      "id": "m1",
+      "label": "white",
+      "params": {
+        "baseColor": {
+          "r": 0.85,
+          "g": 0.85,
+          "b": 0.83
+        },
+        "metallic": 0,
+        "roughness": 1,
+        "anisotropy": 0,
+        "specular": 0,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
+    },
+    {
+      "id": "m4",
+      "label": "gold",
+      "params": {
+        "baseColor": {
+          "r": 1,
+          "g": 0.78,
+          "b": 0.34
+        },
+        "metallic": 1,
+        "roughness": 0.12,
+        "anisotropy": 0,
+        "specular": 1,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
+    },
+    {
+      "id": "m8",
+      "label": "glossy red plastic",
+      "params": {
+        "baseColor": {
+          "r": 0.75,
+          "g": 0.08,
+          "b": 0.06
+        },
+        "metallic": 0,
+        "roughness": 0.15,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
+    },
+    {
+      "id": "m11",
+      "label": "wood",
+      "params": {
+        "baseColor": {
+          "r": 0.72,
+          "g": 0.52,
+          "b": 0.32
+        },
+        "metallic": 0,
+        "roughness": 0.55,
+        "anisotropy": 0,
+        "specular": 0.45,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "latewood": {
+          "r": 0.42,
+          "g": 0.25,
+          "b": 0.12
+        },
+        "ring": 3,
+        "lateShare": 0.35,
+        "wobble": 0.4,
+        "wobbleSize": 60,
+        "fibre": 0.15,
+        "fibreAmount": 0.12,
+        "heart": -150,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8
+      },
+      "code": "// Rings about an axis along the object's z -- the heart of the log, `heart` mm along x from the\n// object's origin, so a board cut beside it shows arcs on its face and stripes on its edges --\n// one every `ring` mm: the base colour (earlywood) darkening into latewood over the last\n// `lateShare` of each, then starting again, as a year does. Gradient noise `wobbleSize` mm across\n// (longer along z) bends them by `wobble` rings; fibres `fibre` mm wide and twenty times as long\n// run along z.\nlet q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\nlet bend = gnoise3(q / vec3<f32>(wobbleSize, wobbleSize, 4.0 * wobbleSize), 7u).w;\nlet r = fract(length(q.xy - vec2<f32>(heart, 0.0)) / ring + wobble * bend);\nlet late = smoothstep(1.0 - lateShare, 1.0, r);\nlet fib = 0.5 + 0.5 * vnoise3(q / vec3<f32>(fibre, fibre, 20.0 * fibre), 8u).w;\nm.baseColor = mix(m.baseColor, latewood, late) * (1.0 - fibreAmount + 2.0 * fibreAmount * fib);\nm.roughness = min(1.0, m.roughness + 0.15 * late);",
+      "ranges": {
+        "ring": {
+          "min": 0.3,
+          "max": 30,
+          "step": 0.1
+        },
+        "lateShare": {
+          "min": 0.05,
+          "max": 0.95,
+          "step": 0.01
+        },
+        "wobble": {
+          "min": 0,
+          "max": 3,
+          "step": 0.01
+        },
+        "wobbleSize": {
+          "min": 1,
+          "max": 200,
+          "step": 0.5
+        },
+        "fibre": {
+          "min": 0.02,
+          "max": 2,
+          "step": 0.01
+        },
+        "fibreAmount": {
+          "min": 0,
+          "max": 0.5,
+          "step": 0.01
+        },
+        "heart": {
+          "min": -1000,
+          "max": 1000,
+          "step": 1
+        }
+      },
+      "lengths": [
+        "ring",
+        "wobbleSize",
+        "fibre",
+        "heart"
+      ]
+    }
+  ],
+  "blocks": [
+    {
+      "id": "b3",
+      "label": "plane",
+      "kind": "object",
+      "code": "// The plane z = 0, solid below.\nC = add_new(C, Nplane(p), MATERIAL);",
+      "params": {},
+      "builtin": "plane@1"
+    },
+    {
+      "id": "b6",
+      "label": "twisted bar",
+      "kind": "object",
+      "code": "// A bar swept along a path, turning and narrowing as it goes: after a point's x, y, z and fillet, three\n// more numbers -- the section's scale x, its scale y (scale x's when left off) and its twist in degrees.\n// They change evenly along a straight and hold round a bend: here the bar turns by turn degrees along\n// the first straight, keeps that round the corner, and narrows to 0.6 along the second. The path is\n// LIVE, so turn moves it with no compile. (A tube reads scale x alone: its diameter.)\nC = add_new(C, sweep(route, section, p), MATERIAL);",
+      "params": {
+        "route": {
+          "path": [
+            [
+              -0.6,
+              0,
+              0
+            ],
+            [
+              0.2,
+              0,
+              0,
+              0.25,
+              1,
+              1,
+              "turn"
+            ],
+            [
+              0.2,
+              0.5,
+              0.3,
+              0,
+              0.6,
+              0.6,
+              "turn"
+            ]
+          ],
+          "live": true
+        },
+        "turn": 90,
+        "section": [
+          [
+            -0.12,
+            -0.04,
+            0.02
+          ],
+          [
+            0.12,
+            -0.04,
+            0.02
+          ],
+          [
+            0.12,
+            0.04,
+            0.02
+          ],
+          [
+            -0.12,
+            0.04,
+            0.02
+          ]
+        ]
+      },
+      "ranges": {
+        "turn": {
+          "min": -360,
+          "max": 360,
+          "step": 1
+        }
+      },
+      "lengths": [
+        "route",
+        "section"
+      ],
+      "builtin": "twisted bar@1"
+    },
+    {
+      "id": "b10",
+      "label": "cone",
+      "kind": "object",
+      "code": "// A capped cone along z: base radius at the bottom, top radius at the top.\n// No analytic normal (sdCappedCone): the renderer takes one by differences.\nC = add_new(C, sdCappedCone(p, height * 0.5, base, top), MATERIAL);",
+      "params": {
+        "base": 0.5,
+        "top": 0,
+        "height": 1
+      },
+      "ranges": {
+        "base": {
+          "min": 0,
+          "max": 10,
+          "step": 0.01
+        },
+        "top": {
+          "min": 0,
+          "max": 10,
+          "step": 0.01
+        },
+        "height": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "base",
+        "top",
+        "height"
+      ],
+      "builtin": "cone@1"
+    },
+    {
+      "id": "b13",
+      "label": "cylinder",
+      "kind": "object",
+      "code": "// A cylinder along z, centred on this node's origin.\nC = add_new(C, Ncylinder(p, height * 0.5, radius), MATERIAL);",
+      "params": {
+        "radius": 0.5,
+        "height": 1
+      },
+      "ranges": {
+        "radius": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        },
+        "height": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "radius",
+        "height"
+      ],
+      "builtin": "cylinder@1"
+    }
+  ],
+  "root": {
+    "id": "root",
+    "kind": "group",
+    "label": "Animation",
+    "enabled": true,
+    "blend": 0,
+    "children": [
+      {
+        "id": "n2",
+        "kind": "object",
+        "type": "code",
+        "label": "floor",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m1",
+        "params": {},
+        "block": "b3"
+      },
+      {
+        "id": "n5",
+        "kind": "object",
+        "type": "code",
+        "label": "twisted bar",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -60,
+            "y": 0,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m4",
+        "params": {
+          "route": {
+            "path": [
+              [
+                0,
+                0,
+                5
+              ],
+              [
+                0,
+                0,
+                80,
+                0,
+                1,
+                1,
+                "turn"
+              ]
+            ],
+            "live": true
+          },
+          "turn": 180,
+          "section": [
+            [
+              -12,
+              -4,
+              2
+            ],
+            [
+              12,
+              -4,
+              2
+            ],
+            [
+              12,
+              4,
+              2
+            ],
+            [
+              -12,
+              4,
+              2
+            ]
+          ]
+        },
+        "block": "b6",
+        "animate": [
+          "turn"
+        ]
+      },
+      {
+        "id": "n7",
+        "kind": "group",
+        "label": "spinning top",
+        "enabled": true,
+        "blend": 0,
+        "transform": {
+          "pos": {
+            "x": 60,
+            "y": 0,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "children": [
+          {
+            "id": "n9",
+            "kind": "object",
+            "type": "code",
+            "label": "body",
+            "enabled": true,
+            "transform": {
+              "pos": {
+                "x": 0,
+                "y": 0,
+                "z": 22
+              },
+              "rot": {
+                "x": 180,
+                "y": 0,
+                "z": 0
+              },
+              "scale": 1
+            },
+            "material": "m8",
+            "params": {
+              "base": 25,
+              "top": 2,
+              "height": 30
+            },
+            "block": "b10"
+          },
+          {
+            "id": "n12",
+            "kind": "object",
+            "type": "code",
+            "label": "stem",
+            "enabled": true,
+            "transform": {
+              "pos": {
+                "x": 0,
+                "y": 0,
+                "z": 45
+              },
+              "rot": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "scale": 1
+            },
+            "material": "m11",
+            "params": {
+              "radius": 3,
+              "height": 20
+            },
+            "block": "b13"
+          }
+        ],
+        "animate": [
+          "transform/rotation"
+        ]
+      }
+    ]
+  },
+  "functions": "// Functions: WGSL helpers any code node or material in this scene can call.\n// Compiled once, before the materials and the SDF; errors show here at their own lines.\n// e.g. a gyroid, usable in a code node as  C = add_new(C, sd(gyroid(p, 4.0)), MATERIAL);\n//   fn gyroid(p: VEC3, s: f32) -> f32 {\n//       let q = p * s;\n//       return abs(dot(sin(q), cos(q.zxy))) / s - 0.03;\n//   }\n",
+  "envRadius": 3000,
+  "environment": {
+    "envMode": 0,
+    "uSunElevation": 40,
+    "uSunAzimuth": -140
+  }
+}

@@ -1,0 +1,771 @@
+{
+  "format": "raytracer-scene",
+  "version": 21,
+  "title": "From points",
+  "nextId": 16,
+  "unit": "mm",
+  "materials": [
+    {
+      "id": "m1",
+      "label": "white",
+      "params": {
+        "baseColor": {
+          "r": 0.85,
+          "g": 0.85,
+          "b": 0.83
+        },
+        "metallic": 0,
+        "roughness": 1,
+        "anisotropy": 0,
+        "specular": 0,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
+    },
+    {
+      "id": "m4",
+      "label": "glossy red plastic",
+      "params": {
+        "baseColor": {
+          "r": 0.75,
+          "g": 0.08,
+          "b": 0.06
+        },
+        "metallic": 0,
+        "roughness": 0.15,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
+    },
+    {
+      "id": "m7",
+      "label": "clear glass",
+      "params": {
+        "baseColor": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "metallic": 0,
+        "roughness": 0,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 1,
+        "ior": 1.52,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "abbe": 59,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
+    },
+    {
+      "id": "m10",
+      "label": "copper",
+      "params": {
+        "baseColor": {
+          "r": 0.95,
+          "g": 0.64,
+          "b": 0.54
+        },
+        "metallic": 1,
+        "roughness": 0.18,
+        "anisotropy": 0,
+        "specular": 1,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
+    },
+    {
+      "id": "m13",
+      "label": "brushed aluminium",
+      "params": {
+        "baseColor": {
+          "r": 0.91,
+          "g": 0.92,
+          "b": 0.92
+        },
+        "metallic": 1,
+        "roughness": 0.35,
+        "anisotropy": 0.8,
+        "specular": 1,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "streakWidth": 0.3,
+        "streakLength": 50,
+        "streaks": 0.5,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8
+      },
+      "code": "// Brushed along the object's own x: the strokes turn with the object (R_local).\n// Positive anisotropy is smooth along the strokes and rough across them, so the\n// highlight is drawn out ACROSS the strokes, as on real brushed metal.\nm.tangent = grainAlong(R_local, VEC3(1.0, 0.0, 0.0));\n// The lines: grooves of different depths, each a little rougher or smoother and darker or\n// lighter than the next. streakWidth and streakLength in mm, real size whatever the scene's\n// unit or the object's scale -- so on a metre-sized object seen whole they are too fine to see,\n// as in life. streaks is how much the lines differ, 0 to 1.\nlet q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\nlet s = streaksAlong(q, VEC3(1.0, 0.0, 0.0), streakWidth, streakLength);\nm.roughness = m.roughness * mix(1.0 - 0.6 * streaks, 1.0 + 0.6 * streaks, s);\nm.baseColor = m.baseColor * mix(1.0 - 0.1 * streaks, 1.0, s);",
+      "ranges": {
+        "streakWidth": {
+          "min": 0.05,
+          "max": 5,
+          "step": 0.01
+        },
+        "streakLength": {
+          "min": 1,
+          "max": 500,
+          "step": 1
+        },
+        "streaks": {
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "streakWidth",
+        "streakLength"
+      ]
+    }
+  ],
+  "blocks": [
+    {
+      "id": "b3",
+      "label": "plane",
+      "kind": "object",
+      "code": "// The plane z = 0, solid below.\nC = add_new(C, Nplane(p), MATERIAL);",
+      "params": {},
+      "builtin": "plane@1"
+    },
+    {
+      "id": "b6",
+      "label": "extrusion",
+      "kind": "object",
+      "code": "// An outline in the xy plane, extruded along z, centred: one point per line in outline -- x, y, and a\n// fillet radius to round that corner. Here a plate with a notch, every corner rounded.\nC = add_new(C, extrude(outline, p, height), MATERIAL);",
+      "params": {
+        "outline": [
+          [
+            -0.5,
+            -0.35,
+            0.08
+          ],
+          [
+            0.5,
+            -0.35,
+            0.08
+          ],
+          [
+            0.5,
+            0.35,
+            0.08
+          ],
+          [
+            0.125,
+            0.35,
+            0.035
+          ],
+          [
+            0,
+            0.125,
+            0.05
+          ],
+          [
+            -0.125,
+            0.35,
+            0.035
+          ],
+          [
+            -0.5,
+            0.35,
+            0.08
+          ]
+        ],
+        "height": 0.2
+      },
+      "ranges": {
+        "height": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "outline",
+        "height"
+      ],
+      "builtin": "extrusion@1"
+    },
+    {
+      "id": "b9",
+      "label": "revolution",
+      "kind": "object",
+      "code": "// An outline as (radius, z), turned about z: a knob. The edge along the axis (x = 0) closes the outline\n// and is no surface once revolved.\nC = add_new(C, revolve(outline, p), MATERIAL);",
+      "params": {
+        "outline": [
+          [
+            0,
+            -0.42
+          ],
+          [
+            0.5,
+            -0.42,
+            0.08
+          ],
+          [
+            0.5,
+            0.08
+          ],
+          [
+            0.21,
+            0.25,
+            0.125
+          ],
+          [
+            0.33,
+            0.5,
+            0.08
+          ],
+          [
+            0,
+            0.5
+          ]
+        ]
+      },
+      "lengths": [
+        "outline"
+      ],
+      "builtin": "revolution@1"
+    },
+    {
+      "id": "b12",
+      "label": "bent tube",
+      "kind": "object",
+      "code": "// A tube along a path: one point per line in route -- x, y, z, and a fillet radius to round that corner\n// (none leaves it a sharp corner), and a fifth number to scale the tube's diameter there (it tapers to the\n// next point's) -- each a number or an expression of the parameters, as the last point's\n// rise. The path is LIVE: rise moves it with no compile (below 0.2 the last fillet does not fit, and it draws\n// nothing); untick live once it is right. rounded 1 rounds the two ends, 0 cuts them flat.\nC = add_new(C, tube(route, p, radius, rounded), MATERIAL);",
+      "params": {
+        "route": {
+          "path": [
+            [
+              -0.5,
+              -0.5,
+              0
+            ],
+            [
+              0.5,
+              -0.5,
+              0,
+              0.2
+            ],
+            [
+              0.5,
+              0.5,
+              0,
+              0.2
+            ],
+            [
+              0.5,
+              0.5,
+              "rise"
+            ]
+          ],
+          "live": true
+        },
+        "rise": 0.6,
+        "radius": 0.08,
+        "rounded": 0
+      },
+      "ranges": {
+        "rise": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        },
+        "radius": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        },
+        "rounded": {
+          "min": 0,
+          "max": 1,
+          "step": 1
+        }
+      },
+      "lengths": [
+        "route",
+        "rise",
+        "radius"
+      ],
+      "builtin": "bent tube@1"
+    },
+    {
+      "id": "b15",
+      "label": "twisted bar",
+      "kind": "object",
+      "code": "// A bar swept along a path, turning and narrowing as it goes: after a point's x, y, z and fillet, three\n// more numbers -- the section's scale x, its scale y (scale x's when left off) and its twist in degrees.\n// They change evenly along a straight and hold round a bend: here the bar turns by turn degrees along\n// the first straight, keeps that round the corner, and narrows to 0.6 along the second. The path is\n// LIVE, so turn moves it with no compile. (A tube reads scale x alone: its diameter.)\nC = add_new(C, sweep(route, section, p), MATERIAL);",
+      "params": {
+        "route": {
+          "path": [
+            [
+              -0.6,
+              0,
+              0
+            ],
+            [
+              0.2,
+              0,
+              0,
+              0.25,
+              1,
+              1,
+              "turn"
+            ],
+            [
+              0.2,
+              0.5,
+              0.3,
+              0,
+              0.6,
+              0.6,
+              "turn"
+            ]
+          ],
+          "live": true
+        },
+        "turn": 90,
+        "section": [
+          [
+            -0.12,
+            -0.04,
+            0.02
+          ],
+          [
+            0.12,
+            -0.04,
+            0.02
+          ],
+          [
+            0.12,
+            0.04,
+            0.02
+          ],
+          [
+            -0.12,
+            0.04,
+            0.02
+          ]
+        ]
+      },
+      "ranges": {
+        "turn": {
+          "min": -360,
+          "max": 360,
+          "step": 1
+        }
+      },
+      "lengths": [
+        "route",
+        "section"
+      ],
+      "builtin": "twisted bar@1"
+    }
+  ],
+  "root": {
+    "id": "root",
+    "kind": "group",
+    "label": "From points",
+    "enabled": true,
+    "blend": 0,
+    "children": [
+      {
+        "id": "n2",
+        "kind": "object",
+        "type": "code",
+        "label": "floor",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m1",
+        "params": {},
+        "block": "b3"
+      },
+      {
+        "id": "n5",
+        "kind": "object",
+        "type": "code",
+        "label": "star (extruded)",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -130,
+            "y": 0,
+            "z": 5
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 10
+          },
+          "scale": 1
+        },
+        "material": "m4",
+        "params": {
+          "outline": [
+            [
+              0,
+              40,
+              1.5
+            ],
+            [
+              -9.992,
+              13.753,
+              1
+            ],
+            [
+              -38.042,
+              12.361,
+              1.5
+            ],
+            [
+              -16.168,
+              -5.253,
+              1
+            ],
+            [
+              -23.511,
+              -32.361,
+              1.5
+            ],
+            [
+              0,
+              -17,
+              1
+            ],
+            [
+              23.511,
+              -32.361,
+              1.5
+            ],
+            [
+              16.168,
+              -5.253,
+              1
+            ],
+            [
+              38.042,
+              12.361,
+              1.5
+            ],
+            [
+              9.992,
+              13.753,
+              1
+            ]
+          ],
+          "height": 10
+        },
+        "block": "b6"
+      },
+      {
+        "id": "n8",
+        "kind": "object",
+        "type": "code",
+        "label": "wine glass (turned)",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -30,
+            "y": 30,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m7",
+        "params": {
+          "outline": [
+            [
+              0,
+              0
+            ],
+            [
+              37.5,
+              0,
+              0.5
+            ],
+            [
+              37.5,
+              2,
+              0.8
+            ],
+            [
+              6,
+              5,
+              4
+            ],
+            [
+              2.2,
+              14
+            ],
+            [
+              2.2,
+              92,
+              3
+            ],
+            [
+              20,
+              104,
+              12
+            ],
+            [
+              42,
+              150,
+              25
+            ],
+            [
+              36,
+              210,
+              0.7
+            ],
+            [
+              34.5,
+              210,
+              0.7
+            ],
+            [
+              40.5,
+              150,
+              24
+            ],
+            [
+              18.5,
+              105.5,
+              11
+            ],
+            [
+              0,
+              102
+            ]
+          ]
+        },
+        "block": "b9"
+      },
+      {
+        "id": "n11",
+        "kind": "object",
+        "type": "code",
+        "label": "bent pipe (a tube along a path)",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 70,
+            "y": 20,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m10",
+        "params": {
+          "route": {
+            "path": [
+              [
+                -40,
+                -40,
+                4
+              ],
+              [
+                40,
+                -40,
+                4,
+                20
+              ],
+              [
+                40,
+                40,
+                4,
+                20
+              ],
+              [
+                40,
+                40,
+                70
+              ]
+            ]
+          },
+          "rise": 70,
+          "radius": 4,
+          "rounded": 1
+        },
+        "block": "b12"
+      },
+      {
+        "id": "n14",
+        "kind": "object",
+        "type": "code",
+        "label": "twisted bar (a profile swept)",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 150,
+            "y": -40,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m13",
+        "params": {
+          "route": {
+            "path": [
+              [
+                -60,
+                0,
+                6
+              ],
+              [
+                20,
+                0,
+                6,
+                25,
+                1,
+                1,
+                "turn"
+              ],
+              [
+                20,
+                50,
+                30,
+                0,
+                0.6,
+                0.6,
+                "turn"
+              ]
+            ],
+            "live": true
+          },
+          "turn": 90,
+          "section": [
+            [
+              -12,
+              -4,
+              2
+            ],
+            [
+              12,
+              -4,
+              2
+            ],
+            [
+              12,
+              4,
+              2
+            ],
+            [
+              -12,
+              4,
+              2
+            ]
+          ]
+        },
+        "block": "b15"
+      }
+    ]
+  },
+  "functions": "// Functions: WGSL helpers any code node or material in this scene can call.\n// Compiled once, before the materials and the SDF; errors show here at their own lines.\n// e.g. a gyroid, usable in a code node as  C = add_new(C, sd(gyroid(p, 4.0)), MATERIAL);\n//   fn gyroid(p: VEC3, s: f32) -> f32 {\n//       let q = p * s;\n//       return abs(dot(sin(q), cos(q.zxy))) / s - 0.03;\n//   }\n",
+  "envRadius": 3000,
+  "environment": {
+    "envMode": 0,
+    "uSunElevation": 35,
+    "uSunAzimuth": -140
+  }
+}

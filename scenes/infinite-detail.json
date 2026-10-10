@@ -1,0 +1,445 @@
+{
+  "format": "raytracer-scene",
+  "version": 21,
+  "title": "Infinite detail",
+  "nextId": 12,
+  "unit": "m",
+  "materials": [
+    {
+      "id": "m1",
+      "label": "concrete",
+      "params": {
+        "baseColor": {
+          "r": 0.56,
+          "g": 0.55,
+          "b": 0.52
+        },
+        "metallic": 0,
+        "roughness": 0.9,
+        "anisotropy": 0,
+        "specular": 0.3,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "stain": {
+          "r": 0.42,
+          "g": 0.41,
+          "b": 0.39
+        },
+        "stainSize": 300,
+        "stainAmount": 0.6,
+        "poreSpacing": 10,
+        "poreRadius": 0.15,
+        "poreShare": 0.3,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8
+      },
+      "code": "// Stains: four octaves of noise `stainSize` mm across. Pores: in a `poreShare` of the Worley cells\n// `poreSpacing` mm apart, a hole `poreRadius` of a cell across -- darker, and rough.\nlet q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\nlet st = 0.5 + 0.5 * fbm3(q / stainSize, 11u, 4u, 2.0, 0.5).w;\nlet w = worley3x(q / poreSpacing, 12u);\nlet pore = (1.0 - smoothstep(0.6 * poreRadius, poreRadius, w.x)) * step(1.0 - poreShare, w.z);\nm.baseColor = mix(m.baseColor, stain, stainAmount * smoothstep(0.35, 0.75, st)) * (1.0 - 0.7 * pore);\nm.roughness = mix(m.roughness, 1.0, pore);",
+      "ranges": {
+        "stainSize": {
+          "min": 1,
+          "max": 1000,
+          "step": 1
+        },
+        "stainAmount": {
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        "poreSpacing": {
+          "min": 0.2,
+          "max": 50,
+          "step": 0.1
+        },
+        "poreRadius": {
+          "min": 0,
+          "max": 0.45,
+          "step": 0.01
+        },
+        "poreShare": {
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "stainSize",
+        "poreSpacing"
+      ]
+    },
+    {
+      "id": "m4",
+      "label": "marble",
+      "params": {
+        "baseColor": {
+          "r": 0.92,
+          "g": 0.91,
+          "b": 0.88
+        },
+        "metallic": 0,
+        "roughness": 0.08,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "vein": {
+          "r": 0.25,
+          "g": 0.27,
+          "b": 0.3
+        },
+        "size": 200,
+        "turbulence": 3,
+        "sharpness": 10,
+        "veinSpacing": 50,
+        "cloud": 0.25,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8
+      },
+      "code": "// Veins about `veinSpacing` mm apart, bent by five octaves of noise over `size` mm -- the stone's\n// movement -- by `turbulence` spacings; `sharpness` is how thin a vein is, and `cloud` a soft grey\n// between them, as Carrara has.\nlet q = p_local * S_local / mm(1.0)/size;   // the point in mm, moving with the object\nlet nz = fbm3(q  , 3u, 5u, 2.0, 0.5);\nlet v = pow(1.0 - abs(sin(PI * (q.x / veinSpacing + turbulence * nz.w))), sharpness);\nlet cl = 0.5 + 0.5 * fbm3(q / 0.5 , 4u, 3u, 2.0, 0.5).w;\nm.baseColor = mix(mix(m.baseColor, vein, cloud * cl), vein, v);",
+      "ranges": {
+        "size": {
+          "min": 5,
+          "max": 2000,
+          "step": 5
+        },
+        "turbulence": {
+          "min": 0,
+          "max": 5,
+          "step": 0.01
+        },
+        "sharpness": {
+          "min": 1,
+          "max": 40,
+          "step": 0.1
+        },
+        "veinSpacing": {
+          "min": 2,
+          "max": 500,
+          "step": 1
+        },
+        "cloud": {
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "veinSpacing",
+        "size"
+      ]
+    },
+    {
+      "id": "m9",
+      "label": "sandstone",
+      "params": {
+        "baseColor": {
+          "r": 0.78,
+          "g": 0.63,
+          "b": 0.45
+        },
+        "metallic": 0,
+        "roughness": 0.9,
+        "anisotropy": 0,
+        "specular": 0.3,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "band": {
+          "r": 0.6,
+          "g": 0.4,
+          "b": 0.26
+        },
+        "layer": 8,
+        "warp": 2.5,
+        "size": 120,
+        "grit": 0.3,
+        "gritAmount": 0.1,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8
+      },
+      "code": "// gnoise3 bending layers laid down along the object's z: a layer every `layer` mm, bent by\n// `warp` layers by noise `size` mm across -- and a grit of sand grains `grit` mm across.\nlet q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\nlet g = gnoise3(q / size, 2u).w;\nlet b = 0.5 + 0.5 * sin(2.0 * PI * (q.z / layer + warp * g));\nlet sand = 1.0 - gritAmount + 2.0 * gritAmount * (0.5 + 0.5 * vnoise3(q / grit, 9u).w);\nm.baseColor = mix(m.baseColor, band, b * b) * sand;",
+      "ranges": {
+        "layer": {
+          "min": 0.2,
+          "max": 100,
+          "step": 0.1
+        },
+        "warp": {
+          "min": 0,
+          "max": 3,
+          "step": 0.01
+        },
+        "size": {
+          "min": 0.5,
+          "max": 200,
+          "step": 0.5
+        },
+        "grit": {
+          "min": 0.02,
+          "max": 5,
+          "step": 0.01
+        },
+        "gritAmount": {
+          "min": 0,
+          "max": 0.5,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "layer",
+        "size",
+        "grit"
+      ]
+    }
+  ],
+  "blocks": [
+    {
+      "id": "b3",
+      "label": "plane",
+      "kind": "object",
+      "code": "// The plane z = 0, solid below.\nC = add_new(C, Nplane(p), MATERIAL);",
+      "params": {},
+      "builtin": "plane@1"
+    },
+    {
+      "id": "b6",
+      "label": "Menger sponge",
+      "kind": "object",
+      "code": "// A Menger sponge \"size\" across, \"iterations\" levels deep (iterations is a compile-time constant: the loop\n// bound has to be known to the compiler). sdMenger's sponge is 2 across, so the point is scaled to it.\nlet s = size * 0.5;\nC = add_new(C, sdMenger(p / s, iterations) * s, MATERIAL);",
+      "params": {
+        "size": 3,
+        "iterations": 4
+      },
+      "constants": {
+        "iterations": "u32"
+      },
+      "ranges": {
+        "size": {
+          "min": 0.1,
+          "max": 20,
+          "step": 0.01
+        },
+        "iterations": {
+          "min": 1,
+          "max": 6,
+          "step": 1
+        }
+      },
+      "lengths": [
+        "size"
+      ]
+    },
+    {
+      "id": "b8",
+      "label": "repeat",
+      "kind": "group",
+      "code": "// Repeat: copies \"spacing\" apart, \"count\" each way along each axis (0: not along it),\n// so 2 count + 1 per axis -- all for the price of one, which makes it the cheapest\n// thing here. The children must fit in one cell, half a spacing around this group's\n// origin, or the distance is wrong near the cell borders.\np = p - spacing * clamp(round(p / spacing), -count, count);\nC = children(C, p);",
+      "params": {
+        "spacing": {
+          "x": 2,
+          "y": 2,
+          "z": 2
+        },
+        "count": {
+          "x": 2,
+          "y": 2,
+          "z": 0
+        }
+      },
+      "lengths": [
+        "spacing"
+      ],
+      "builtin": "repeat@1"
+    },
+    {
+      "id": "b11",
+      "label": "cylinder",
+      "kind": "object",
+      "code": "// A cylinder along z, centred on this node's origin.\nC = add_new(C, Ncylinder(p, height * 0.5, radius), MATERIAL);",
+      "params": {
+        "radius": 0.5,
+        "height": 1
+      },
+      "ranges": {
+        "radius": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        },
+        "height": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "radius",
+        "height"
+      ],
+      "builtin": "cylinder@1"
+    }
+  ],
+  "root": {
+    "id": "root",
+    "kind": "group",
+    "label": "Infinite detail",
+    "enabled": true,
+    "blend": 0,
+    "children": [
+      {
+        "id": "n2",
+        "kind": "object",
+        "type": "code",
+        "label": "floor",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m1",
+        "params": {},
+        "block": "b3"
+      },
+      {
+        "id": "n5",
+        "kind": "object",
+        "type": "code",
+        "label": "Menger sponge",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": 1.5
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m4",
+        "params": {
+          "size": 3,
+          "iterations": 4
+        },
+        "block": "b6"
+      },
+      {
+        "id": "n7",
+        "kind": "group",
+        "label": "columns (repeat)",
+        "enabled": true,
+        "blend": 0,
+        "transform": {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "children": [
+          {
+            "id": "n10",
+            "kind": "object",
+            "type": "code",
+            "label": "column",
+            "enabled": true,
+            "transform": {
+              "pos": {
+                "x": 4,
+                "y": 4,
+                "z": 3
+              },
+              "rot": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "scale": 1
+            },
+            "material": "m9",
+            "params": {
+              "radius": 0.25,
+              "height": 6
+            },
+            "block": "b11"
+          }
+        ],
+        "params": {
+          "spacing": {
+            "x": 8,
+            "y": 8,
+            "z": 8
+          },
+          "count": {
+            "x": 20,
+            "y": 20,
+            "z": 0
+          }
+        },
+        "block": "b8"
+      }
+    ]
+  },
+  "functions": "// Functions: WGSL helpers any code node or material in this scene can call.\n// Compiled once, before the materials and the SDF; errors show here at their own lines.\n// e.g. a gyroid, usable in a code node as  C = add_new(C, sd(gyroid(p, 4.0)), MATERIAL);\n//   fn gyroid(p: VEC3, s: f32) -> f32 {\n//       let q = p * s;\n//       return abs(dot(sin(q), cos(q.zxy))) / s - 0.03;\n//   }\n",
+  "envRadius": 400,
+  "environment": {
+    "envMode": 0,
+    "uSunElevation": 25,
+    "uSunAzimuth": -100
+  }
+}

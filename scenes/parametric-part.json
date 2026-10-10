@@ -1,0 +1,410 @@
+{
+  "format": "raytracer-scene",
+  "version": 21,
+  "title": "Parametric part",
+  "nextId": 11,
+  "unit": "mm",
+  "materials": [
+    {
+      "id": "m1",
+      "label": "white",
+      "params": {
+        "baseColor": {
+          "r": 0.85,
+          "g": 0.85,
+          "b": 0.83
+        },
+        "metallic": 0,
+        "roughness": 1,
+        "anisotropy": 0,
+        "specular": 0,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
+    },
+    {
+      "id": "m4",
+      "label": "anodised aluminium",
+      "params": {
+        "baseColor": {
+          "r": 0.15,
+          "g": 0.35,
+          "b": 0.75
+        },
+        "metallic": 1,
+        "roughness": 0.3,
+        "anisotropy": 0,
+        "specular": 1,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8
+      },
+      "code": ""
+    }
+  ],
+  "blocks": [
+    {
+      "id": "b3",
+      "label": "plane",
+      "kind": "object",
+      "code": "// The plane z = 0, solid below.\nC = add_new(C, Nplane(p), MATERIAL);",
+      "params": {},
+      "builtin": "plane@1"
+    },
+    {
+      "id": "b6",
+      "label": "heatsink",
+      "kind": "group",
+      "code": "",
+      "params": {
+        "fins": 9,
+        "pitch": 5,
+        "finHeight": 25,
+        "base": 4,
+        "depth": 40
+      }
+    },
+    {
+      "id": "b8",
+      "label": "box",
+      "kind": "object",
+      "code": "// A box: size is the HALF-size along each axis; the rounding stays inside it.\nC = add_new(C, NboxRounded(p, size, rounding), MATERIAL);",
+      "params": {
+        "size": {
+          "x": 0.5,
+          "y": 0.5,
+          "z": 0.5
+        },
+        "rounding": 0.02
+      },
+      "ranges": {
+        "rounding": {
+          "min": 0,
+          "max": 2,
+          "step": 0.005
+        }
+      },
+      "lengths": [
+        "size",
+        "rounding"
+      ],
+      "builtin": "box@1"
+    }
+  ],
+  "root": {
+    "id": "root",
+    "kind": "group",
+    "label": "Parametric part",
+    "enabled": true,
+    "blend": 0,
+    "children": [
+      {
+        "id": "n2",
+        "kind": "object",
+        "type": "code",
+        "label": "floor",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m1",
+        "params": {},
+        "block": "b3"
+      },
+      {
+        "id": "n5",
+        "kind": "group",
+        "label": "heatsink",
+        "enabled": true,
+        "blend": 0,
+        "transform": {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "children": [
+          {
+            "id": "n7",
+            "kind": "object",
+            "type": "code",
+            "label": "base plate",
+            "enabled": true,
+            "transform": {
+              "pos": {
+                "x": 0,
+                "y": 0,
+                "z": 2
+              },
+              "rot": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "scale": 1
+            },
+            "material": "m4",
+            "params": {
+              "size": {
+                "x": 22.5,
+                "y": 20,
+                "z": 2
+              },
+              "rounding": 0.5
+            },
+            "block": "b8",
+            "bind": {
+              "size.x": "fins * pitch / 2",
+              "size.y": "depth / 2",
+              "size.z": "base / 2",
+              "pos.z": "base / 2"
+            }
+          },
+          {
+            "id": "n9",
+            "kind": "group",
+            "label": "fins (an array)",
+            "enabled": true,
+            "blend": 0,
+            "transform": {
+              "pos": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "rot": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "scale": 1
+            },
+            "children": [
+              {
+                "id": "n10",
+                "kind": "object",
+                "type": "code",
+                "label": "fin",
+                "enabled": true,
+                "transform": {
+                  "pos": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 16.5
+                  },
+                  "rot": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "scale": 1
+                },
+                "material": "m4",
+                "params": {
+                  "size": {
+                    "x": 0.75,
+                    "y": 20,
+                    "z": 12.5
+                  },
+                  "rounding": 0.3
+                },
+                "block": "b8",
+                "bind": {
+                  "size.y": "depth / 2",
+                  "size.z": "finHeight / 2",
+                  "pos.z": "base + finHeight / 2"
+                }
+              }
+            ],
+            "copies": [
+              {
+                "pos": {
+                  "x": -20,
+                  "y": 0,
+                  "z": 0
+                },
+                "rot": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "scale": 1
+              },
+              {
+                "pos": {
+                  "x": -15,
+                  "y": 0,
+                  "z": 0
+                },
+                "rot": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "scale": 1
+              },
+              {
+                "pos": {
+                  "x": -10,
+                  "y": 0,
+                  "z": 0
+                },
+                "rot": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "scale": 1
+              },
+              {
+                "pos": {
+                  "x": -5,
+                  "y": 0,
+                  "z": 0
+                },
+                "rot": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "scale": 1
+              },
+              {
+                "pos": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "rot": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "scale": 1
+              },
+              {
+                "pos": {
+                  "x": 5,
+                  "y": 0,
+                  "z": 0
+                },
+                "rot": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "scale": 1
+              },
+              {
+                "pos": {
+                  "x": 10,
+                  "y": 0,
+                  "z": 0
+                },
+                "rot": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "scale": 1
+              },
+              {
+                "pos": {
+                  "x": 15,
+                  "y": 0,
+                  "z": 0
+                },
+                "rot": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "scale": 1
+              },
+              {
+                "pos": {
+                  "x": 20,
+                  "y": 0,
+                  "z": 0
+                },
+                "rot": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "scale": 1
+              }
+            ],
+            "bind": {
+              "copies.count": "fins",
+              "copies.pitch": "pitch",
+              "copies.along": "x"
+            }
+          }
+        ],
+        "params": {
+          "fins": 9,
+          "pitch": 5,
+          "finHeight": 25,
+          "base": 4,
+          "depth": 40
+        },
+        "block": "b6"
+      }
+    ]
+  },
+  "functions": "// Functions: WGSL helpers any code node or material in this scene can call.\n// Compiled once, before the materials and the SDF; errors show here at their own lines.\n// e.g. a gyroid, usable in a code node as  C = add_new(C, sd(gyroid(p, 4.0)), MATERIAL);\n//   fn gyroid(p: VEC3, s: f32) -> f32 {\n//       let q = p * s;\n//       return abs(dot(sin(q), cos(q.zxy))) / s - 0.03;\n//   }\n",
+  "envRadius": 3000,
+  "environment": {
+    "envMode": 1,
+    "studioIlluminance": 600,
+    "studioTop": 0.6
+  }
+}

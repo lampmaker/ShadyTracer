@@ -4,7 +4,8 @@
 // sceneOps with the scene being worked on, the ends of the list and the last scene greyed and refused, Switch ▸
 // listing every scene with the current one marked and inert, Examples ▸ loading once, everything that switches,
 // adds or opens greyed while a library item is edited -- and no label said twice, the duplicates this replaced.
-import { fileCommands } from '../filemenu.js'
+import { fileCommands, exampleRows } from '../filemenu.js'
+import { EXAMPLES } from '../../scenes/index.js'
 import { makeRegistries } from '../../lib/shell/registry.js'
 
 let pass = 0, fail = 0
@@ -103,6 +104,24 @@ ok('...its Save and Close offered, and Projects and the files to read', on('file
 ok('...one row says Ctrl S at a time', cmds.filter(c => c.keys === 'Ctrl S' && on(c.id)).length === 1)
 by('file.saveItem').run(); ok('...Save: the item saved', last().join() === 'itemSave')
 by('file.closeItem').run(); ok('...Close: the item closed', last().join() === 'itemClose')
+
+// THE EXAMPLES BY AUDIENCE AND GROUP (0.54.0): a heading an audience, a submenu a group, a lone group's examples straight
+// under its heading; each row's tooltip what it shows; a list with no audience (the stand-in above) a row each
+{
+    const opened = []
+    const rows = exampleRows(EXAMPLES.map(e => ({ id: e.file, ...e })), x => opened.push(x.id))
+    const heads = rows.filter(r => r.header).map(r => r.label)
+    ok('Examples: a heading per audience, in order', JSON.stringify(heads) === JSON.stringify([...new Set(EXAMPLES.map(e => e.audience))]), heads.join())
+    const subs = rows.filter(r => r.items)
+    ok('...a submenu per group of an audience with more than one', subs.length > 1 && subs.every(r => Array.isArray(r.items) && r.items.length > 0))
+    const all = rows.flatMap(r => r.items ? r.items : [r]).filter(r => r.run)
+    ok('...every example once, and only them', all.length === EXAMPLES.length && new Set(all.map(r => r.label)).size === EXAMPLES.length)
+    ok('...each with what it shows as its tooltip', all.every(r => /\S/.test(r.title) && EXAMPLES.some(e => r.title.startsWith(e.description))))
+    all[0].run()
+    ok('...a row opens its example', opened[0] === EXAMPLES[0].file, opened.join())
+    const flat = exampleRows([{ id: 'a.json', title: 'A' }, { id: 'b.json', title: 'B' }], () => { })
+    ok('...a list with no audience: a row each, no heading', flat.length === 2 && flat.every(r => r.run && !r.header))
+}
 
 console.log(`${pass} passed, ${fail} failed`)
 if (fail) process.exit(1)

@@ -71,7 +71,7 @@ const library = createLibrary({ model: M, backend: indexedDbBackend('check.libra
 E = installItemEditor({ BUILDER, RT, SHELL: null, library, tree, stage: document.getElementById('v'), say })
 const dialog = installProjectsDialog({ session: SESSION, say, download: (n, t) => T.downloads.push([n, t]), pickFile: async () => T.nextFile, app: () => 'check' })
 const examples = { list: async () => [{ id: 'menger.json', title: 'Menger cubes' }, { id: 'materials.json', title: 'Material test' }],
-    open: async f => { say(BUILDER.load(await (await fetch(`../../scenes/${f}`)).text())); await tree.apply() } }
+    open: async f => { say(BUILDER.load(await (await fetch(`../../test/fixtures/scenes/${f}`)).text())); await tree.apply() } }
 const row = installProjectRow(document.getElementById('sw'), { BUILDER, project: () => SESSION.info(), compile: () => tree.apply() })
 /* THE FILE MENU'S COMMANDS, as the page registers them (index.html), each file call recorded: an import reads
    T.nextFile -- a scene file joins this project (BUILDER.load, as the page's openText does with one), a project file is

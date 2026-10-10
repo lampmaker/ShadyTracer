@@ -15,10 +15,9 @@
 //   - the registry: entries flagged `animated`, shown() and onlyAnimated, the timeline's list following them.
 //======================================================================================================================
 import { readFileSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
 import * as M from '../model.js'
 import * as P from '../project.js'
-import { SCENE_FILES } from '../../scenes/index.js'
+import { EVERY_SCENE } from '../../test/scenes.mjs'
 import { sceneParams } from '../params.js'
 import { liveKeyOfPath, liveUniformsOf, animatedKeys, keptUniforms } from '../animate.js'
 import { generate, uniformName, xfName, blendName } from '../codegen.js'
@@ -150,7 +149,6 @@ const throws = f => { try { f(); return false } catch (e) { return e instanceof 
     }
     const log = console.log, warn = console.warn; console.log = () => { }
     const { installBuilder } = await import('../demo.js')
-    const dir = fileURLToPath(new URL('../../scenes/', import.meta.url))
     let checked = 0
     /* ...AND A COMPONENT: a group whose parameters are bound into what it holds -- a plate's size, an array's count
        and pitch, a fin's height and place (bind.js). No bundled scene had one, and a parameter's bound values were
@@ -168,7 +166,7 @@ const throws = f => { try { f(); return false } catch (e) { return e instanceof 
         M.resolveBindings(d)
         return M.serialize(d)
     }
-    for (const [name, text] of [...SCENE_FILES.map(n => [n, readFileSync(dir + n, 'utf8')]), ['a component (made here)', component()]]) {
+    for (const [name, text] of [...EVERY_SCENE.map(x => [x.name, readFileSync(x.path, 'utf8')]), ['a component (made here)', component()]]) {
         const doc = M.parse(text)
         M.ensureMaterial(doc)
         const B = installBuilder({}, { RT, gpu, project: P.createProject([doc]) })

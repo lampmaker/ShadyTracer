@@ -25,8 +25,10 @@ eq('handles: a .. z, aa, ab .. zz, aaa', [0, 1, 25, 26, 27, 51, 52, 701, 702].ma
 
 // A RECIPE APPLIED UNCHANGED CHANGES NOTHING: every group of every bundled scene and of the golden cases
 {
-    const scenes = fileURLToPath(new URL('../../scenes/', import.meta.url))
-    const docs = [...readdirSync(scenes).filter(f => f.endsWith('.json')).map(f => [f, readFileSync(scenes + f, 'utf8')]),
+    const docs = [...['../../scenes/', '../../test/fixtures/scenes/'].flatMap(d => {
+            const scenes = fileURLToPath(new URL(d, import.meta.url))
+            return readdirSync(scenes).filter(f => f.endsWith('.json')).map(f => [f, readFileSync(scenes + f, 'utf8')])
+        }),
         ['csg-v10/cases.json', readFileSync(new URL('./fixtures/csg-v10/cases.json', import.meta.url), 'utf8')]]
     let groups = 0
     const bad = []

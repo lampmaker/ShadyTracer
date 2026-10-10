@@ -57,7 +57,7 @@ ok('the template is the code mirrored here, line for line', JSON.stringify(lines
         codes.length === 6 && codes.every(c => JSON.stringify(lines(c)) === JSON.stringify(was)), codes.length ? lines(codes[0]).join('\n      ') : 'none')
     // and the bundled Noise library carries the relief as the builder writes it now
     // the file as the builder reads it: a group's code is its block's (model.js version 16)
-    const shipped = Model.parse(readFileSync(new URL('../../scenes/noise.json', import.meta.url), 'utf8'))
+    const shipped = Model.parse(readFileSync(new URL('../../test/fixtures/scenes/noise.json', import.meta.url), 'utf8'))
     const now = []
     const walk2 = n => { const c = Model.codeOf(shipped, n); if (/fbm3\(p \/ size/.test(c)) now.push(c); (n.children || []).forEach(walk2) }
     walk2(shipped.root)

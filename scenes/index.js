@@ -1,32 +1,45 @@
 //======================================================================================================================
-// THE BUNDLED SCENES, THE EXAMPLES: documents in the scene format the builder reads (builder/model.js),
-// listed in this order under File › Examples (builder/filemenu.js), where one opens as a
-// COPY in the project being worked on. They are no longer loaded at start: a page comes back to the
-// project kept in the browser (workspace/), and the nine of them in every project's tree, every visit,
-// were clutter (the user, 2026-10-02; UI_PLAN.md section 10). check-shaders, codegen and the scene
-// tests still compile and check every one of them from this list.
-// The builder's demo is one of them (demo.json); it was built in code once, the only scene that
-// was not a file.
+// THE EXAMPLES: documents in the scene format the builder reads (builder/model.js), listed under File › Examples
+// (builder/filemenu.js) by who they are for and what they show, where one opens as a COPY in the project being worked
+// on, with a camera of its own. They are not loaded at start: a page comes back to the project kept in the browser
+// (workspace/); a first visit's project is FIRST_VISIT alone.
 //
-// Menger cubes, Material showcase and Material test were hand-written WGSL scenes once
-// (menger.js, showcase.js, materials.js, on scenes/common.js's palette), and these are their exact
-// conversions: an offset `p + v` became a position -v (the same arithmetic), the old Nbox --
-// rounded 0.01 OUTSIDE its size -- became a box primitive of size + 0.01 with rounding 0.01, which
-// is the same Nroundedbox call, and the old smooth operators stayed in code nodes because the
-// builder's CSG blends are a different polynomial. Menger's iteration count is a compile-time u32
-// parameter, as its loop bound has to be. The hand-written files are gone; git has them.
+// MADE IN CODE (0.54.0; the user, 2026-10-10: "replace all example scenes ... SDF's may be new to people and I want to
+// be able to demonstrate all the features. consider correct dimensions"): scenes/make.mjs builds each one through the
+// model's API with its sizes and their reasons written out, and writes them and examples.js. The examples before
+// these are test fixtures now (test/fixtures/scenes): the tests were written against them.
 //
-// Adding a scene: select it in the Builder, Save > Current scene, put the file in this folder and
-// add a line here. Its title is the document's own.
+// TWO AUDIENCES, BY GROUPING ONLY (the user's choice): Modelling and rendering, for anyone making pictures and shapes,
+// and Optical design, for whoever measures light. Nothing is hidden from either.
+//
+// check-shaders, codegen and the scene tests compile and check every one of them (test/scenes.mjs).
 //======================================================================================================================
 
-export const SCENE_FILES = ['demoscene.json','menger.json', 'showcase.json', 'materials.json', 'demo.json', 'optics-test.json', 'RGBW_mixer.json', 'surfaces.json', 'noise.json','OpticsBench.json']
+import { EXAMPLES } from './examples.js'
+export { EXAMPLES }
+
+/** Every example's file, in the menu's order. */
+export const SCENE_FILES = EXAMPLES.map(e => e.file)
+
+/** The menu as data: audiences in order, each its groups in order, each its examples. */
+export const exampleMenu = () => {
+    const out = []
+    for (const e of EXAMPLES) {
+        let a = out.find(x => x.audience === e.audience)
+        if (!a) out.push(a = { audience: e.audience, groups: [] })
+        let g = a.groups.find(x => x.group === e.group)
+        if (!g) a.groups.push(g = { group: e.group, examples: [] })
+        g.examples.push(e)
+    }
+    return out
+}
+
+/** An example by its file, or null. */
+export const example = file => EXAMPLES.find(e => e.file === file) ?? null
 
 /* A FIRST VISIT'S SCENE -- nothing kept in the browser yet: a project of this one alone. A LIGHTWEIGHT one (the
-   user, 2026-10-02), since it is the first compile anyone waits for: Builder demo took 5.4-6.2 s on the user's
-   Ampere card (PERFORMANCE.md runs 3-4), against 3.7-4.1 s for Material test, which is a test chart rather than a
-   demo; Demo scene (demoscene.json) has a relief and was never measured. */
-export const FIRST_VISIT = 'demo.json'
+   user, 2026-10-02), since it is the first compile anyone waits for: five shapes, one group, no relief, no code. */
+export const FIRST_VISIT = 'first-steps.json'
 
 /** Where a scene's file is, relative to this module -- so it resolves wherever the page is. */
 export const urlOf = file => new URL(`./${file}`, import.meta.url)
