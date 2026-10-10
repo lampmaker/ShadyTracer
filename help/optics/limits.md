@@ -88,7 +88,7 @@ the scene's origin, not by the unit:
 - **Keep optics near the origin.** A lens 1 m from it cannot have features finer than about 15 µm.
 - **The automatic tolerance is one number for the whole scene**, estimated from the scene's numbers, and errs coarse:
   a 0.4 mm sphere in an RGBW mixer scene was given 10.5 µm, 5 % of its radius. Set it by hand (Analysis ›
-  Advanced, or the renderer's developer settings) when small parts matter.
+  Advanced, or Render settings › Ray marching, a developer's setting) when small parts matter.
 
 ## Not yet confirmed on hardware
 

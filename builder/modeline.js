@@ -34,5 +34,5 @@ export function modeLine({ scene, mode = 'code', showing = true, bakeOn = false,
     const tail = !bakeOn ? '' : baker === 'compiling' ? ' · baking…' : ' · bake after 2 s quiet'
     return { text: `editing · ${mode}${tail}`, baked: false,
              title: `The editing build: ${mode === 'code' ? 'the scene compiled as code, its values uniforms' : `the scene as ${mode}: its nodes as records, an edit that adds no code compiles nothing`}.`
-                  + (bakeOn ? '\nThe bake (Renderer > Performance) compiles it with its values constant once the edits have stood still for 2 s.' : '\nThe bake is off (Renderer > Performance).') + left }
+                  + (bakeOn ? '\nThe bake (Render settings > Performance) compiles it with its values constant once the edits have stood still for 2 s.' : '\nThe bake is off (Render settings > Performance).') + left }
 }

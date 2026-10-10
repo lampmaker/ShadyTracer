@@ -5,7 +5,7 @@ reflecting as it really would. It starts noisy and gets cleaner the longer it st
 
 ## Quality
 
-The [Renderer](show:renderer) panel's **Quality** box has the presets as buttons:
+The [Render settings](show:renderer) panel's **Quality** box has the presets as buttons:
 
 | preset | traces | for |
 |---|---|---|
@@ -25,7 +25,7 @@ which) and back when you switch it off.
 
 - **Light sources**: the environment, and the two kinds of light tracing. Light tracing carries light from the
   lights to the camera, through glass and off mirrors. It finds caustics and lamps hidden behind lenses, which
-  the camera's own paths almost never do. **Render › Lights' rays** switches the light objects' part of it.
+  the camera's own paths almost never do. **Render settings › Lights' rays** switches the light objects' part of it.
 - **Paths and noise**: how many bounces a path may take, and the **firefly clamp**, which caps single very bright
   samples (0 = off). A clamp makes the picture less noisy and a little darker than it should be.
 - **Render size**: fit the view, or a fixed width and height; and a **resolution** of 100 % down to 25 %, which keeps the picture's size on screen, softer, with a quarter of the pixels to trace at 50 %.

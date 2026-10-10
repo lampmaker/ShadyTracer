@@ -16,7 +16,7 @@
 
 - **Exposure**: see [Light, environment and camera](light-camera.md#how-bright-the-picture-is-exposure). A room lit
   by a lamp is far darker than daylight, and the meter has to follow.
-- **Lamps only** is on (Render menu) and the scene has no lamps of its own.
+- **Lamps only** is on (Render settings menu) and the scene has no lamps of its own.
 - **The sun is below the horizon** (elevation under 0) and there is no other light.
 - **Everything is inside something**: a camera inside a closed box sees its inside. Hide groups with the eye to find
   which.

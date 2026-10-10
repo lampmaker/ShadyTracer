@@ -152,7 +152,7 @@
         const container = document.getElementById('container');
         const SHELL = createShell(container, {
             title: `${versionText()} © Matthijs Keuper`, storageKey: 'raytracer.layout', popoutUrl: 'popout.html',
-            menus: ['File', 'Edit', 'View', 'Render', 'Analysis', 'Window', 'Help'],
+            menus: ['File', 'Edit', 'View', 'Render settings', 'Analysis', 'Window', 'Help'],
         });
         window.SHELL = SHELL;
         /* THE PARAMETERS: every setting by a path -- the renderer's (RT.parameters) and the scene's
@@ -182,7 +182,7 @@
              the scene      the sun, the sky or the studio: NOT the renderer's any more. The scene
                             document carries it (model.js ENVIRONMENT), and the scene's
                             Properties show it (its own tree row until 0.52.0) -- so the renderer is told to make no folder
-             its effort     tracing, render size, diagnostics: Renderer
+             its effort     tracing, render size, diagnostics: Render settings (Renderer until 0.57.0)
              a file         saving an image: a floating panel opened from File
              its bench      Tests
            The renderer fills each with the same folders it used to put on its pages (installUI's
@@ -195,7 +195,7 @@
         };
         /* ...IN BOXES, as the Analysis pane's sections are (the user, 2026-10-04; lib/shell/shell.css .shell-boxes): the
            renderer's folders are its boxes (lib/pathtracer/settingsui.js RENDERER_BOXES) */
-        const rendererEl = SHELL.panel({ id: 'renderer', title: 'Renderer', module: 'renderer',
+        const rendererEl = SHELL.panel({ id: 'renderer', title: 'Render settings', module: 'renderer',
             help: 'How hard the renderer works: Quality (Preview: Sketch, Draft · Accurate: Standard, High · Optics), the light sources and how each is traced, bounces and noise, render size; the developer settings behind their switch.' });
         rendererEl.classList.add('shell-boxes');
         const rendererTable = tableIn(rendererEl);
@@ -1155,23 +1155,23 @@
             C({ id: 'edit.undo', menu: 'Edit', label: 'Undo', keys: 'Ctrl Z', when: () => !!A()?.canUndo(), run: () => A().undo() });
             C({ id: 'edit.redo', menu: 'Edit', label: 'Redo', keys: 'Ctrl Y', when: () => !!A()?.canRedo(), run: () => A().redo() });
             // the scene's row: its properties hold the environment (tree.js select maps the environment's id to it)
-            C({ id: 'render.environment', menu: 'Render', label: 'Environment (sun, sky, studio)', run: () => { builderTree.select(Model.ENVIRONMENT_ID); SHELL.open('properties'); } });
+            C({ id: 'render.environment', menu: 'Render settings', label: 'Environment (sun, sky, studio)', run: () => { builderTree.select(Model.ENVIRONMENT_ID); SHELL.open('properties'); } });
             /* THE QUALITY PRESETS (lib/pathtracer/quality.js), as the Renderer panel's Quality row sets them, and
                lamps only: the scene's own lights alone, its sun and sky left as they are in the scene */
             for (const q of QUALITY_PRESETS)
-                C({ id: `render.quality.${q.id}`, menu: 'Render', group: 'quality', label: `Quality: ${q.label}`, help: q.help,
+                C({ id: `render.quality.${q.id}`, menu: 'Render settings', group: 'quality', label: `Quality: ${q.label}`, help: q.help,
                     run: () => RT.set(presetValues(q.id)) });
-            C({ id: 'render.lampsOnly', menu: 'Render', group: 'quality', label: 'Lamps only (no sun, sky or studio light): on / off',
+            C({ id: 'render.lampsOnly', menu: 'Render settings', group: 'quality', label: 'Lamps only (no sun, sky or studio light): on / off',
                 help: 'The view lit by the scene\'s own lights; the scene keeps its environment',
                 run: () => RT.set({ lampsOnly: (RT.get().lampsOnly | 0) ? 0 : 1 }) });
-            C({ id: 'render.lightRays', menu: 'Render', group: 'quality', label: 'Lights\' rays (the light objects\' photons): on / off',
+            C({ id: 'render.lightRays', menu: 'Render settings', group: 'quality', label: 'Lights\' rays (the light objects\' photons): on / off',
                 help: 'Off, the camera\'s paths count a light\'s face themselves: noisier through glass, and a point, a ray file or a collimated beam lights nothing',
                 run: () => RT.set({ lightRays: ((RT.get().lightRays ?? 1) | 0) ? 0 : 1 }) });
             /* A CHART OF A KIND, with its own settings (optics/charts.js) -- the menu's only chart entries (the user,
                2026-10-02: a "Map chart" to show beside a "New chart: Map" was one too many). The kind's first chart
                when it is closed, another when it is open; a chart's ⧉ makes one like it. View lists every one. */
-            /* THE ANALYSIS PANE shown and hidden (the user, 2026-10-10): where Design keeps it, a tab beside the
-               Renderer, or left of the picture when the Renderer is not open; hidden, Design is what the Render
+            /* THE ANALYSIS PANE shown and hidden (the user, 2026-10-10): where Design keeps it, a tab beside
+               Render settings, or left of the picture when that is not open; hidden, Design is what the Render
                layout was */
             C({ id: 'analysis.setup', menu: 'Analysis', group: 'setup', label: 'Analysis setup: show / hide',
                 help: 'The Analysis pane: ▶ Run, the sources, detectors and totals every chart is made from',
