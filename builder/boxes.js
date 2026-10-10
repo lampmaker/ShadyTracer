@@ -220,7 +220,7 @@ export function createBoxes({ sample, doc, ready = () => true, wanted = () => nu
     const measure = async (d, ids) => {
         const keys = new Map(ids.map(id => [id, geometryKey(d, id)])), scene = sceneOf(d)
         // COARSE: the whole scene, grown while a changed object touches the edge
-        let region = estimateBox(d.root)
+        let region = estimateBox(d.root, null, d)
         if (!region) return true
         const size = Math.max(...[0, 1, 2].map(k => region.hi[k] - region.lo[k]), 1e-6)
         region = pad(region, 0.25 * size)
@@ -265,7 +265,7 @@ export function createBoxes({ sample, doc, ready = () => true, wanted = () => nu
             let b = null
             const walk = m => {
                 if (m.enabled === false) return
-                if (m.kind === 'object') b = union(b, union(first.get(m.id) ? boxOfPoints(first.get(m.id).points) : null, estimateBox(d.root, m)))
+                if (m.kind === 'object') b = union(b, union(first.get(m.id) ? boxOfPoints(first.get(m.id).points) : null, estimateBox(d.root, m, d)))
                 for (const c of m.children || []) walk(c)
             }
             walk(n)
@@ -273,9 +273,9 @@ export function createBoxes({ sample, doc, ready = () => true, wanted = () => nu
         }
         /* the document's own guess of where a node is: an object's, or a group's objects' (it has none of its own) */
         const guessOf = n => {
-            if (n?.kind !== 'group') return estimateBox(d.root, n)
+            if (n?.kind !== 'group') return estimateBox(d.root, n, d)
             let b = null
-            const walk = m => { if (m.enabled === false) return; if (m.kind === 'object') b = union(b, estimateBox(d.root, m)); for (const c of m.children || []) walk(c) }
+            const walk = m => { if (m.enabled === false) return; if (m.kind === 'object') b = union(b, estimateBox(d.root, m, d)); for (const c of m.children || []) walk(c) }
             walk(n)
             return b
         }
@@ -286,7 +286,7 @@ export function createBoxes({ sample, doc, ready = () => true, wanted = () => nu
             // the cell its coarse points were found with; for a node no lattice found, the first lattice's, not the grown one's
             const coarseCell = mine ? mine.cell : L0.cell
             const coarse = mine ? boxOfPoints(mine.points) : null
-            const rough = node?.kind === 'group' ? union(coarse, coarse ? null : objectsRough(node)) : union(coarse, estimateBox(d.root, node))
+            const rough = node?.kind === 'group' ? union(coarse, coarse ? null : objectsRough(node)) : union(coarse, estimateBox(d.root, node, d))
             if (!rough) { boxes.set(id, { key: keys.get(id), scene, box: null, cell: coarseCell, open: false }); continue }
             /* REFINED UNTIL THE LATTICE FITS THE OBJECT: the first fine lattice is sized by the coarse cell
                it is padded with, so a 1 mm die in a room got cells bigger than itself. Each pass is laid

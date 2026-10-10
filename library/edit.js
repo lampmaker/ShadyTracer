@@ -84,7 +84,7 @@ export function itemSceneDoc(item, { environment = {} } = {}) {
         const n = Model.insertAsset(doc, item.asset, 'root')
         subject = n.id
         if (n.kind === 'group' && !n.children.length) stage.push(addExampleF(doc, n.id).id)
-        box = estimateBox({ kind: 'group', children: [n] })
+        box = estimateBox({ kind: 'group', children: [n] }, null, doc)
         /* the estimate's bottom (bounds.js): right for the + menu's shapes, a guess for code -- the floor is a
            node like any other, to be moved if it guessed wrong */
         if (box) floor.transform.pos.z = box.lo[2] - 0.004 * diag(box)
@@ -98,7 +98,7 @@ export function itemSceneDoc(item, { environment = {} } = {}) {
 /* A sample stands on z = 0 (studio.js): the floor a hair below, not in its bottom face -- and below the
    deepest its material's relief reaches (materials.js: its amplitude, in mm) */
 function floorUnder(doc, sample, material) {
-    const box = estimateBox({ kind: 'group', children: [sample] })
+    const box = estimateBox({ kind: 'group', children: [sample] }, null, doc)
     const A = material?.relief?.params?.amplitude ?? 0
     return -0.004 * (box ? diag(box) : 1) - A * 0.001 / (Model.UNITS[doc.unit] ?? 1)
 }
@@ -151,7 +151,7 @@ export function itemView(doc) {
     const li = doc.libraryItem
     const id = li.kind === 'material' ? li.sample : li.subject
     const f = id != null ? Model.find(doc, id) : null
-    const box = f ? estimateBox({ kind: 'group', children: [f.node] }) : null
+    const box = f ? estimateBox({ kind: 'group', children: [f.node] }, null, doc) : null
     return box ? framing(box.lo, box.hi) : null
 }
 

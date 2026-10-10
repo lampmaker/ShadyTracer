@@ -788,7 +788,7 @@ export function installBuilderTree(container, BUILDER, { onStatus = () => { }, o
             const n = generic(asset, M.insertAsset(BUILDER.doc, asset, at.mid, nodeIndex(at, index)))
             /* STANDING ON WHAT WAS HIT: its box's middle over the point, its bottom on it -- a node put in at
                the scene's top level, so its transform is the world's */
-            const box = pos && at === top ? estimateBox({ kind: 'group', children: [n] }) : null
+            const box = pos && at === top ? estimateBox({ kind: 'group', children: [n] }, null, BUILDER.doc) : null
             if (box) {
                 n.transform.pos.x += pos[0] - (box.lo[0] + box.hi[0]) / 2
                 n.transform.pos.y += pos[1] - (box.lo[1] + box.hi[1]) / 2

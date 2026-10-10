@@ -138,5 +138,28 @@ for (const camtype of [0, 1]) {
     ok('estimateBox reads a profile\'s named point', !!pb && pb.hi[0] >= 6, JSON.stringify(pb))
 }
 
+// ONLY A SHAPE'S LENGTHS ARE SIZES: the capped torus's angle (270, degrees) was taken for one, and its guess was 540
+// across for a ring of 0.42 -- put in on the picture it stood 270 above the floor (tree.js), the library framed it as a
+// speck. Through the document's block, through toTree's copy, and a prism's sides, an aspheric's conic, a twisted
+// bar's turn likewise; code that lists no lengths is still guessed from every number
+{
+    const d = M.createDoc()
+    for (const k of ['capped torus', 'prism', 'aspheric lens', 'twisted bar']) M.addObject(d, 'root', { primitive: k, id: k.replace(' ', '') })
+    const reachOf = b => Math.max(...b.hi.map(Math.abs), ...b.lo.map(Math.abs))
+    const ct = M.find(d, 'cappedtorus').node
+    const own = B.estimateBox(d.root, ct, d)
+    ok('the capped torus\'s guess is its ring (the largest length), not its angle', !!own && near(reachOf(own), 0.42, 1e-9), JSON.stringify(own))
+    const one = B.estimateBox({ kind: 'group', children: [ct] }, null, d)
+    ok('...as the picture and the library ask for it', !!one && reachOf(one) < 1, JSON.stringify(one))
+    const tree = M.toTree(d)
+    ok('...and through toTree, which carries the lengths', reachOf(B.estimateBox(tree, tree.children[0])) < 1)
+    ok('a prism\'s sides are not a size', reachOf(B.estimateBox(d.root, M.find(d, 'prism').node, d)) <= 1)
+    ok('nor a twisted bar\'s turn', reachOf(B.estimateBox(d.root, M.find(d, 'twistedbar').node, d)) < 2)
+    ok('the scene\'s extent from lengths alone', B.sceneExtent(tree) < 20, String(B.sceneExtent(tree)))
+    const e = M.createDoc()
+    M.addObject(e, 'root', { id: 'c', params: { r: 0.5, n: 7 }, code: 'C = add_new(C, Nsphere(p, r), MATERIAL);' })
+    ok('code that lists no lengths: every number, as before', reachOf(B.estimateBox(e.root, M.find(e, 'c').node, e)) >= 7)
+}
+
 console.log(`${pass} passed, ${fail} failed`)
 process.exit(fail ? 1 : 0)

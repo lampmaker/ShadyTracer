@@ -10,7 +10,7 @@
 // Pure functions over the document, so it is tested in node like model.js.
 //======================================================================================================================
 
-import { find } from './model.js'
+import { find, blockOf } from './model.js'
 import { resolvePath, resolveProfile, pathNames } from './expr.js'
 
 /** A point of a node's frame in its parent's: the inverse of the shader's xfPoint, which undoes
@@ -91,8 +91,9 @@ export function sceneExtent(root) {
 
 /** The same estimate as a world box { lo, hi } -- or null for a scene with no objects. Where the
  *  measured bounds (boxes.js) start looking: only a first guess, which they grow when an object
- *  reaches its edge. `only` (a node) restricts it to that node's own estimate. */
-export function estimateBox(root, only = null) {
+ *  reaches its edge. `only` (a node) restricts it to that node's own estimate. `doc`, when the
+ *  nodes are the document's, is where their blocks are: which of their parameters are lengths. */
+export function estimateBox(root, only = null, doc = null) {
     const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity]
     const grow = (c, r) => { for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], c[k] - r); hi[k] = Math.max(hi[k], c[k] + r) } }
     const size = n => {
@@ -105,10 +106,18 @@ export function estimateBox(root, only = null) {
             return b ? Math.hypot(b[1][0] - b[0][0], b[1][1] - b[0][1], b[1][2] - b[0][2]) / 2 : 0
         }
         let m = 0, reach = 0, grow = 1
+        /* ONLY ITS LENGTHS: the parameters its block says are lengths (model.js; a tree's node carries the list
+           itself, toTree), when it says. The capped torus's angle of 270 (degrees) was taken for a size: its guess
+           was 540 across for a ring of 0.42, so put in on the picture it stood 270 above the floor, out of view, the
+           library framed it as a speck, and a double click framed it from far away. A block that lists none (code
+           written by hand) is guessed from every number, as before. */
+        const L = n.lengths ?? (doc ? blockOf(doc, n)?.lengths : null)
+        const isLength = k => !L?.length || L.includes(k)
         /* a number a path's points name (expr.js) is where a point is -- counted in the path's reach below, and not
            again as a size swept along it: the bent tube's rise of 0.6 would have framed its picture twice as loose */
         const named = new Set(Object.values(P).flatMap(v => v && typeof v === 'object' && Array.isArray(v.path) ? pathNames(v) : []))
         for (const [k, v] of Object.entries(P)) {
+            if (!isLength(k)) continue
             if (typeof v === 'number') { if (!named.has(k)) m = Math.max(m, Math.abs(v)) }
             /* a PATH's points ({ path }, model.js paramKind): how far the line goes, which its fillets' arcs stay
                inside. What is swept along it -- a radius, a profile's reach, the largest of the others -- is ADDED
