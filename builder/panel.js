@@ -258,7 +258,7 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
         shownId = id ?? null
         if (shownId == null) return
         const doc = BUILDER.doc
-        // the environment is the scene's since 0.49.0: its old id (a parameter revealed, a saved selection) shows the scene
+        // the environment is the scene's since 0.52.0: its old id (a parameter revealed, a saved selection) shows the scene
         if (shownId === M.ENVIRONMENT_ID) shownId = doc.root.id
         const mat = M.material(doc, shownId)
         const found = mat ? null : M.find(doc, shownId)
@@ -418,7 +418,7 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
                     () => A.live(BUILDER.doc.root.id, 'envRadius'))
                 const rl = rb.element?.querySelector?.('.tp-lblv_l')
                 if (rl) rl.title = 'Where the scene stops: a ray beyond it sees the sky, and anything placed beyond it is not drawn. In the scene\'s unit.'
-                // ...and what it sees there: the sun and sky, or the studio (a row of the tree of its own until 0.49.0)
+                // ...and what it sees there: the sun and sky, or the studio (a row of the tree of its own until 0.52.0)
                 environmentFolder(folder, doc)
                 /* HIDE WITHOUT RECOMPILING (model.js setLiveVisibility): the eye becomes a uniform
                    written. Changing it recompiles once, so the shader has (or drops) the hidden nodes. */
@@ -590,7 +590,7 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
        own schema -- the labels, ranges and options its Environment panel had -- but kept in the scene.
        Only the chosen source's settings (gui.showIf); choosing another source redraws the folder. Each
        control writes through a holder, so the change goes where the registry's does (makeAfter).
-       A folder of the Scene's since 0.49.0, marked ◆ when one of its values is animated, as its tree row was. */
+       A folder of the Scene's since 0.52.0, marked ◆ when one of its values is animated, as its tree row was. */
     function environmentFolder(parent, doc) {
         const animated = (doc.root.animate || []).some(k => String(k).startsWith('environment/'))
         const folder = parent.addFolder({ title: `environment${animated ? '  \u25C6' : ''}` })

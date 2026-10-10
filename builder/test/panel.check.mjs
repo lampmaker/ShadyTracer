@@ -452,7 +452,7 @@ ok('the unit changed to cm', await set('unit', 'cm') === 'set')
 await p.waitForTimeout(50)
 ok('...and the radius row says so by itself (the panel redrawn), the number kept: the scene reinterpreted, as its shapes',
     (await readRows()).includes('environment radius (cm)') && await p.evaluate(() => CHECK.doc.envRadius) === 2.5, JSON.stringify(await readRows()))
-// THE ENVIRONMENT, in the Scene folder since 0.49.0 (the user, 2026-10-10): its source and its settings after the radius;
+// THE ENVIRONMENT, in the Scene folder since 0.52.0 (the user, 2026-10-10): its source and its settings after the radius;
 // its old id shows the scene; a source chosen redraws it with that source's settings
 {
     const rows = await rowsOf('root'), folders = await p.evaluate(() => [...document.querySelectorAll('.tp-fldv_t')].map(t => t.textContent.trim()))

@@ -8,7 +8,7 @@
 //
 // ONE SCENE, THE CURRENT ONE (project.js), AND ITS ROW AT THE ROOT: its groups and objects under it, and its
 // Materials last. Its environment (the sun and sky, or the studio light: model.js ENVIRONMENT) had a row of its
-// own first until 0.49.0; it is in the scene's own properties now, with the scene's radius beside it (the user,
+// own first until 0.52.0; it is in the scene's own properties now, with the scene's radius beside it (the user,
 // 2026-10-10), so a click on the scene's row shows it.
 // THE SCENE'S ROW IS THE ROOT (the user, 2026-10-05). It went for three days (0.7.0: "it's kind of duplicated,
 // since there is always one scene", the switcher over the tree naming it too), its + and settings moved
@@ -239,7 +239,7 @@ export function rowsFor(project, { current = project.scenes[0]?.key, collapsed =
 
 /** A position among a row's children in the WIDGET -- where a drop landed, where a paste goes -- as a
  *  position among its NODES, which is what model.move and insertAsset count. A scene's row holds a
- *  row that is not a node, Materials, last -- and until 0.49.0 the Environment first; counted in, every
+ *  row that is not a node, Materials, last -- and until 0.52.0 the Environment first; counted in, every
  *  node dropped at a scene's top level would land one place further down than it was shown (the drop
  *  test caught this the moment the Environment row appeared). The back row above an item is not one either. */
 const NOT_NODES = new Set(['materials', 'back'])
@@ -716,7 +716,7 @@ export function installBuilderTree(container, BUILDER, { onStatus = () => { }, o
        follow exactly as they do then. */
     /* A MATERIAL OR THE ENVIRONMENT TOO: the parameter registry reveals any of them (the palette, the
        Parameters panel's ⌖). Only nodes were accepted, and a material asked for did nothing. The environment
-       has no row of its own since 0.49.0 (the user, 2026-10-10: "move the contents of that to the scene's
+       has no row of its own since 0.52.0 (the user, 2026-10-10: "move the contents of that to the scene's
        properties"): its id selects the scene's row, whose properties hold it. */
     const select = id => {
         const doc = BUILDER.doc
