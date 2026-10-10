@@ -9,10 +9,11 @@ same program that makes a picture can also measure one.
 This help has two tracks. Most people want the first.
 
 - **Modelling and rendering**: making shapes and pictures. You will not need any optics: the analysis menus can be
-  ignored entirely.
-  Start with [How shapes are made](../modelling/sdf.md).
+  ignored entirely. Start with [How shapes are made](../modelling/sdf.md), then
+  [How this differs from regular CAD](../modelling/vs-cad.md) if you know CAD.
 - **Optical design**: lenses, reflectors, light guides and LEDs, measured -- illuminance on a detector, intensity
-  in the far field, colour over a screen.
+  in the far field, colour over a screen. Start with [Optical design with ShadyTracer](../optics/overview.md), and
+  read [what it does not do](../optics/limits.md) before you rely on it.
 
 Both tracks use the same scenes, the same tree and the same materials.
 

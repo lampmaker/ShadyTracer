@@ -251,8 +251,8 @@ into batches, so **every number carries a standard error**. Target: LED and lumi
 
 ### 3.7 Physics not yet in the optics trace
 
-All planned, in PLAN.md *The plan from here*: **bulk absorption (Beer–Lambert)** — today a
-coloured transmissive material multiplies once per crossing, whatever its thickness; a
+All planned, in PLAN.md *The plan from here* (**bulk absorption (Beer–Lambert)** was listed here and has been in
+since 0.37.0: a material's colour depth); a
 **reflectance for an LED's own face** (light sent back onto a die is lost); **a light seen through
 its own lens** (shows dark); **air gaps thinner than the surface offset** are jumped (measured:
 reads one slab; workaround: set the tolerance by hand); a **stratified source pick** (a mix's
