@@ -127,6 +127,10 @@ sphere tracing, combining, modifiers, what this is good at and what it is not), 
 - Search finds "sphere tracing".
 - Whether the panel's size, fonts and colours suit the window.
 
+Also, the golden shaders were refrozen for `scenes/infinite-detail.json`. 0.54.1 moved its column, but the shaders
+were not frozen again, so `codegen.test.mjs` failed on main. Only the scene's two uniform hashes change; its shader
+text is the same.
+
 ## 0.54.1 — 2026-10-10
 
 **Infinite detail: the columns are whole again** (the user: "only parts of pillars are shown"). The repeat modifier
