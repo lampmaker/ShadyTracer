@@ -63,7 +63,14 @@ export function liveUniformsOf(doc, id, k, scene = null) {
     // a parameter: its own uniform, and the pieces of every live path or profile that names it (codegen livePointsUpdate)
     const paths = Object.keys(livePointsUpdate(doc, id, k, scene?.pointParams).set)
     const kind = M.paramKind(node.params?.[k])
-    return [...(kind === 'path' || kind === 'profile' ? [] : [uniformName(id, k)]), ...paths, ...byFlux]
+    /* ...AND WHAT IS BOUND TO IT (bind.js): a group's parameter moved resolves its bindings again, and demo.js pushes
+       every value that moved -- a plate's size, a fin's place, an array's copies. They were left out, so this said less
+       than a push writes, which is the one thing it promises (the header; test/animate.test.mjs, which no bundled
+       scene with bindings had exercised -- the heatsink example that is coming did). Whether a picture was ever wrong
+       for it is NOT shown: the bake keeps a flagged parameter's bound uniforms through animatedKeys, which already
+       followed boundFrom. boundFrom is transitive. */
+    const bound = M.boundFrom(doc, id, k).flatMap(r => liveUniformsOf(doc, r.id, r.key, scene))
+    return [...new Set([...(kind === 'path' || kind === 'profile' ? [] : [uniformName(id, k)]), ...paths, ...byFlux, ...bound])]
 }
 
 /** EVERY FLAGGED VALUE'S LIVE KEY, and what moves with it through the bindings: Map(`${id}\n${k}` -> { id, k }). */
