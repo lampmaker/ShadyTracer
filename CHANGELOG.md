@@ -37,6 +37,20 @@ closes the Analysis tab beside the Renderer and opens it again in the same place
 layout, then bring it back from Analysis › Open chart ▸. View has no chart entries and no Analysis entry. The layout
 switcher shows Design, Analyse, Animate.
 
+## 0.52.1 — 2026-10-10
+
+**`liveUniformsOf` names what is bound to a parameter** (`builder/animate.js`). Moving a component's parameter (a
+group parameter that bindings read, `bind.js`) resolves its bindings again, and the live push writes every bound
+value that moved: a plate's size, a fin's place, an array's copies. `liveUniformsOf` named only the parameter's own
+uniform, so it said less than the push writes. That is the one thing it promises, and `test/animate.test.mjs`
+holds it to it. No bundled scene had bindings, so the test never saw the gap; the heatsink example being made found
+it. The test now also runs a component made in the test.
+
+Whether a picture was ever wrong because of this is **not shown**: the bake already kept a flagged parameter's bound
+uniforms, through `animatedKeys`, which followed `boundFrom`. This is a contract fix, not a fix for a seen bug.
+
+**What to look at:** nothing new on screen.
+
 ## 0.52.0 — 2026-10-10
 
 **The environment is in the scene's properties; the tree has no Environment row** (the user: "just move the

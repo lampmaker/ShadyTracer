@@ -152,8 +152,24 @@ const throws = f => { try { f(); return false } catch (e) { return e instanceof 
     const { installBuilder } = await import('../demo.js')
     const dir = fileURLToPath(new URL('../../scenes/', import.meta.url))
     let checked = 0
-    for (const name of SCENE_FILES) {
-        const doc = M.parse(readFileSync(dir + name, 'utf8'))
+    /* ...AND A COMPONENT: a group whose parameters are bound into what it holds -- a plate's size, an array's count
+       and pitch, a fin's height and place (bind.js). No bundled scene had one, and a parameter's bound values were
+       written by a live push without liveUniformsOf naming them (animate.js says what that did and did not do). */
+    const component = () => {
+        const d = M.createDoc({ title: 'component' })
+        const g = M.addGroup(d, 'root', { id: 'hs', params: { fins: 4, pitch: 5, finHeight: 20, base: 3 } })
+        M.addObject(d, g.id, { id: 'plate', primitive: 'box' })
+        M.setBindings(d, 'plate', 'size.x = fins * pitch / 2\nsize.z = base / 2\npos.z = base / 2')
+        const fins = M.addGroup(d, g.id, { id: 'fins' })
+        M.setCopies(d, 'fins', M.copiesRow(4, 5, 'x'))
+        M.setBindings(d, 'fins', 'copies.count = fins\ncopies.pitch = pitch\ncopies.along = x')
+        M.addObject(d, fins.id, { id: 'fin', primitive: 'box' })
+        M.setBindings(d, 'fin', 'size.z = finHeight / 2\npos.z = base + finHeight / 2')
+        M.resolveBindings(d)
+        return M.serialize(d)
+    }
+    for (const [name, text] of [...SCENE_FILES.map(n => [n, readFileSync(dir + n, 'utf8')]), ['a component (made here)', component()]]) {
+        const doc = M.parse(text)
         M.ensureMaterial(doc)
         const B = installBuilder({}, { RT, gpu, project: P.createProject([doc]) })
         B.onRestructure = () => { }
@@ -170,8 +186,11 @@ const throws = f => { try { f(); return false } catch (e) { return e instanceof 
             /* THE SAME VALUE: exactly what it names -- but a flux light's luminance, which follows its size only when the
                size moves (sources.js syncSources) */
             const v0 = e.get()
+            /* ...and but what is bound to it (bind.js), which a push of the value it had leaves alone: nothing bound moved */
             const same = wrote(v0), follows = n => lk.k !== 'light' && M.find(B.doc, lk.id)?.node.type === 'light' && n === uniformName(lk.id, 'emissiveLuminance')
-            if (JSON.stringify(same) !== JSON.stringify(want.filter(n => !follows(n))))
+            const bound = new Set(M.boundFrom(B.doc, lk.id, lk.k).flatMap(r => liveUniformsOf(B.doc, r.id, r.key, RT.scene)))
+            const own = want.filter(n => !follows(n) && (!bound.has(n) || same.includes(n)))
+            if (JSON.stringify(same) !== JSON.stringify(own))
                 bad.push(`${e.path}: wrote ${JSON.stringify(same)}, liveUniformsOf says ${JSON.stringify(want)}`)
             /* ANOTHER VALUE: nothing it does not name -- the direction that matters, since a write the bake made a constant
                would be refused and the picture left as it was (demo.js live stays baked on liveUniformsOf's word) */
