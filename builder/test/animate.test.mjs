@@ -154,7 +154,7 @@ const throws = f => { try { f(); return false } catch (e) { return e instanceof 
     let checked = 0
     /* ...AND A COMPONENT: a group whose parameters are bound into what it holds -- a plate's size, an array's count
        and pitch, a fin's height and place (bind.js). No bundled scene had one, and a parameter's bound values were
-       written by a live push without liveUniformsOf naming them: a baked scene ignored the parameter moving. */
+       written by a live push without liveUniformsOf naming them (animate.js says what that did and did not do). */
     const component = () => {
         const d = M.createDoc({ title: 'component' })
         const g = M.addGroup(d, 'root', { id: 'hs', params: { fins: 4, pitch: 5, finHeight: 20, base: 3 } })
