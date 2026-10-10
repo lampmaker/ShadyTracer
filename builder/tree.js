@@ -6,10 +6,10 @@
 // tree's index path (the old builder addressed nodes by path, and after a delete its selection
 // pointed at whichever node had moved into the gap).
 //
-// ONE SCENE, THE CURRENT ONE (project.js), AND ITS ROW AT THE ROOT: its Environment first (the sun and
-// sky, or the studio light: model.js ENVIRONMENT -- the scene's, so it is a row of the scene), its
-// groups and objects under it, and its Materials last. The Environment row is not a node: it cannot
-// be moved, copied or deleted, and selecting it shows its settings in Properties.
+// ONE SCENE, THE CURRENT ONE (project.js), AND ITS ROW AT THE ROOT: its groups and objects under it, and its
+// Materials last. Its environment (the sun and sky, or the studio light: model.js ENVIRONMENT) had a row of its
+// own first until 0.52.0; it is in the scene's own properties now, with the scene's radius beside it (the user,
+// 2026-10-10), so a click on the scene's row shows it.
 // THE SCENE'S ROW IS THE ROOT (the user, 2026-10-05). It went for three days (0.7.0: "it's kind of duplicated,
 // since there is always one scene", the switcher over the tree naming it too), its + and settings moved
 // beside the switcher as + and ⚙. Asked for back: a click on it shows the scene's settings in Properties,
@@ -75,7 +75,7 @@ import { PRESETS } from './materials.js'
 import { MODIFIERS, modifierGroup } from './modifiers.js'
 import { primitiveObject, shapeMenu } from './primitives.js'
 import { LIGHT_SHAPES } from './lights.js'
-import { ENVIRONMENT_ID, defaultMaterial, lockOf, groupHasCode } from './model.js'
+import { defaultMaterial, lockOf, groupHasCode } from './model.js'
 import { estimateBox } from './bounds.js'
 import { popupMenu } from '../lib/shell/menu.js'
 
@@ -111,7 +111,6 @@ const objectRow = { default: icons.component, allowedChildren: [], svgStyle: { c
 const sceneType = (icon, color) => ({ default: icon, allowedChildren: CHILDREN, addMenu: NODE_MENU, svgStyle: { color },
     defaultToggles: { add: true } })
 const NODE_TYPES = {
-    environment: { default: icons.color, allowedChildren: [], svgStyle: { color: '#e6c877' }, defaultToggles: {} },
     // the widget's own top level: the scene's row (and the back row above an item, which no drop moves)
     root: { allowedChildren: ['scene', 'sceneItem'] },
     scene: sceneType(icons.folder, '#ff8f00'),
@@ -222,7 +221,6 @@ export function rowsFor(project, { current = project.scenes[0]?.key, collapsed =
         return at(doc.root.id, {
             label: doc.title, type: doc.libraryItem ? 'sceneItem' : 'scene', expanded: !collapsed.has(rid(doc.root.id)),
             children: [
-                at(ENVIRONMENT_ID, { label: `Environment${(doc.root.animate || []).some(k => String(k).startsWith('environment/')) ? '  \u25C6' : ''}`, type: 'environment' }),
                 ...doc.root.children.map(c => row(c, doc.root)),
                 at('#materials', { label: 'Materials', type: 'materials', expanded: !collapsed.has(rid('#materials')),
                     children: doc.materials.map(m => at(m.id, {
@@ -240,11 +238,11 @@ export function rowsFor(project, { current = project.scenes[0]?.key, collapsed =
 }
 
 /** A position among a row's children in the WIDGET -- where a drop landed, where a paste goes -- as a
- *  position among its NODES, which is what model.move and insertAsset count. A scene's row holds two
- *  rows that are not nodes, the Environment first and Materials last; counted in, every node dropped
- *  at a scene's top level would land one place further down than it was shown (the drop test caught
- *  this the moment the Environment row appeared). The back row above an item is not one either. */
-const NOT_NODES = new Set(['environment', 'materials', 'back'])
+ *  position among its NODES, which is what model.move and insertAsset count. A scene's row holds a
+ *  row that is not a node, Materials, last -- and until 0.52.0 the Environment first; counted in, every
+ *  node dropped at a scene's top level would land one place further down than it was shown (the drop
+ *  test caught this the moment the Environment row appeared). The back row above an item is not one either. */
+const NOT_NODES = new Set(['materials', 'back'])
 export const nodeIndex = (parentRow, index) => index == null ? index
     : parentRow.children.slice(0, index).filter(r => !NOT_NODES.has(r.type)).length
 
@@ -485,7 +483,7 @@ export function installBuilderTree(container, BUILDER, { onStatus = () => { }, o
             }, { scene, select: keep(scene) })
         }
         /* a material is only ever among Materials (the widget's rule), so a parent that is not Materials is a node's */
-        if (parent.type === 'materials' || parent.type === 'environment') return rebuild()
+        if (parent.type === 'materials') return rebuild()
         edit('move', () => M.move(BUILDER.doc, draggedRow.mid, parent.mid, nodeIndex(parent, place.index)), { scene, select: keep(scene) })
     }
 
@@ -529,7 +527,7 @@ export function installBuilderTree(container, BUILDER, { onStatus = () => { }, o
         return [at.parent, at.index + 1]
     }
     const typing = t => t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)
-    const copyable = row => !!row && !isScene(row) && row.type !== 'materials' && row.type !== 'environment' && row.type !== 'back'
+    const copyable = row => !!row && !isScene(row) && row.type !== 'materials' && row.type !== 'back'
     /* whether a Ctrl+C / V / D is the tree's: not while typing, and not while the Scene panel is not the one showing
        -- a duplicate nobody can see is no edit */
     const ours = e => !typing(e.target) && !!tree && !!container.offsetParent
@@ -608,7 +606,7 @@ export function installBuilderTree(container, BUILDER, { onStatus = () => { }, o
        says it is one (detail 2), and is seen here, on the way down: TreeView stops each row's click from going up.
        THE SAME ROW BOTH TIMES, by its id, not its place: a first click that rebuilds the tree (the back row out of a
        library item) leaves another row under the pointer for the second. Not on the eye, the lock or the other marks:
-       a double-click there is two toggles. Not on a material, the environment, a scene or the back row: nothing to see. */
+       a double-click there is two toggles. Not on a material, a scene or the back row: nothing to see. */
     const presses = [null, null]
     container.addEventListener('pointerdown', e => {
         const el = e.target.closest?.('[data-path]')
@@ -717,11 +715,14 @@ export function installBuilderTree(container, BUILDER, { onStatus = () => { }, o
        bottom of it. The same onSelect a click on the row gives, so the panel and the overlay
        follow exactly as they do then. */
     /* A MATERIAL OR THE ENVIRONMENT TOO: the parameter registry reveals any of them (the palette, the
-       Parameters panel's ⌖). Only nodes were accepted, and a material asked for did nothing. */
+       Parameters panel's ⌖). Only nodes were accepted, and a material asked for did nothing. The environment
+       has no row of its own since 0.52.0 (the user, 2026-10-10: "move the contents of that to the scene's
+       properties"): its id selects the scene's row, whose properties hold it. */
     const select = id => {
         const doc = BUILDER.doc
+        if (id === M.ENVIRONMENT_ID) id = doc.root.id
         const isMat = id != null && !!M.material(doc, id)
-        if (id != null && id !== M.ENVIRONMENT_ID && !isMat && !M.find(doc, id)) return
+        if (id != null && !isMat && !M.find(doc, id)) return
         if (isMat) collapsed.delete(here('#materials'))
         collapsed.delete(here(doc.root.id))             // the scene's row, folded by its chevron
         if (id != null)
@@ -739,7 +740,7 @@ export function installBuilderTree(container, BUILDER, { onStatus = () => { }, o
     const insertAsset = asset => paste(asset, ...pasteTarget(asset.kind))
     const selectedAsset = () => {
         const row = selectedRow()
-        if (!row || isScene(row) || row.type === 'materials' || row.type === 'environment') return null
+        if (!row || isScene(row) || row.type === 'materials') return null
         try {
             const asset = M.extractAsset(BUILDER.doc, row.mid)
             return { asset, name: asset.kind === 'material' ? asset.material.label : asset.node.label }
@@ -760,7 +761,7 @@ export function installBuilderTree(container, BUILDER, { onStatus = () => { }, o
         if (row) scene = row.scene
         if (scene !== BUILDER.current) return null      // the tree holds the scene being worked on, no other
         const top = sceneRow()
-        // a row that is a node of its scene (a group or any object), not a header, a material or the environment
+        // a row that is a node of its scene (a group or any object), not a header or a material
         const isNode = r => !!r && !isScene(r) && r.type !== 'material' && r.mid != null && !!M.find(P.scene(BUILDER.project, scene).doc, r.mid)
         if (asset.kind === 'material') {
             if (!isNode(row)) return paste(asset, top.children.find(r => r.type === 'materials'), undefined)

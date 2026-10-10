@@ -178,8 +178,8 @@
              the view       camera, what it shows, exposure -- the viewport's own toolbar (below, once
                             the renderer exists: lib/pathtracer/viewtools.js)
              the scene      the sun, the sky or the studio: NOT the renderer's any more. The scene
-                            document carries it (model.js ENVIRONMENT), the tree has a row for it,
-                            and Properties shows it -- so the renderer is told to make no folder
+                            document carries it (model.js ENVIRONMENT), and the scene's
+                            Properties show it (its own tree row until 0.52.0) -- so the renderer is told to make no folder
              its effort     tracing, render size, diagnostics: Renderer
              a file         saving an image: a floating panel opened from File
              its bench      Tests
@@ -1138,6 +1138,7 @@
                 C(c);
             C({ id: 'edit.undo', menu: 'Edit', label: 'Undo', keys: 'Ctrl Z', when: () => !!A()?.canUndo(), run: () => A().undo() });
             C({ id: 'edit.redo', menu: 'Edit', label: 'Redo', keys: 'Ctrl Y', when: () => !!A()?.canRedo(), run: () => A().redo() });
+            // the scene's row: its properties hold the environment (tree.js select maps the environment's id to it)
             C({ id: 'render.environment', menu: 'Render', label: 'Environment (sun, sky, studio)', run: () => { builderTree.select(Model.ENVIRONMENT_ID); SHELL.open('properties'); } });
             /* THE QUALITY PRESETS (lib/pathtracer/quality.js), as the Renderer panel's Quality row sets them, and
                lamps only: the scene's own lights alone, its sun and sky left as they are in the scene */
