@@ -356,7 +356,7 @@ number carries its standard error**.
 
 ### Bundled scenes
 
-**File › Examples**, by who they are for and what they show; each opens as a copy in your project, with a camera of its own. They are made in code by `scenes/make.mjs`, which says why each size is what it is; the scenes that were the examples before 0.53.0 are test fixtures now (`test/fixtures/scenes/`).
+**File › Examples**, by who they are for and what they show; each opens as a copy in your project, with a camera of its own. They are made in code by `scenes/make.mjs`, which says why each size is what it is; the scenes that were the examples before 0.54.0 are test fixtures now (`test/fixtures/scenes/`).
 
 **Modelling and rendering**
 

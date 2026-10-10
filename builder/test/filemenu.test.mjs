@@ -105,7 +105,7 @@ ok('...one row says Ctrl S at a time', cmds.filter(c => c.keys === 'Ctrl S' && o
 by('file.saveItem').run(); ok('...Save: the item saved', last().join() === 'itemSave')
 by('file.closeItem').run(); ok('...Close: the item closed', last().join() === 'itemClose')
 
-// THE EXAMPLES BY AUDIENCE AND GROUP (0.53.0): a heading an audience, a submenu a group, a lone group's examples straight
+// THE EXAMPLES BY AUDIENCE AND GROUP (0.54.0): a heading an audience, a submenu a group, a lone group's examples straight
 // under its heading; each row's tooltip what it shows; a list with no audience (the stand-in above) a row each
 {
     const opened = []

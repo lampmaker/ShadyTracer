@@ -93,9 +93,9 @@ drop('a top-level node, up to the first place', 'a', 'g', 'before')
         && rowsFor(project, { current: 's2', collapsed: new Set([top.id]) })[0].expanded === false)
     ok('...with no toggles of its own: its + is its type\'s', top.toggles === undefined)
     ok('...its rows carry its key, and no row of the other scene is there', !!pathOf(rows, 's2:a') && !pathOf(rows, 's1:a'))
-    ok('the Environment first, Materials last', top.children[0].type === 'environment' && top.children.at(-1).type === 'materials')
+    ok('no Environment row (it is in the scene\'s properties since 0.52.0), Materials last', top.children.every(r => r.type !== 'environment') && top.children.at(-1).type === 'materials')
     ok('a current scene that is not there: the first', rowsFor(project, { current: 's9' })[0].scene === 's1')
-    eq('...a node\'s place counted among the nodes, past the Environment', nodeIndex(top, 2), 1)
+    eq('...a node\'s place counted among the nodes, Materials not one', nodeIndex(top, top.children.length), top.children.length - 1)
     eq('a top-level node\'s parent row is the scene\'s', placeOf(rows, 's2:a').parent?.id, top.id)
 }
 
@@ -124,8 +124,8 @@ drop('a top-level node, up to the first place', 'a', 'g', 'before')
     M.addGroup(d, 'root', { id: 'q' })
     M.addObject(d, 'q', { primitive: 'box' }); M.addObject(d, 'q', { primitive: 'sphere' })
     const all = contents(P.createProject([d]))
-    ok('a scene\'s Environment row comes first, and is not a node', all[0].type === 'environment' && all[0].mid === M.ENVIRONMENT_ID && !M.find(d, all[0].mid))
-    const rows = all.filter(r => r.type !== 'environment')
+    ok('a scene\'s first row is a node: no Environment row', !!M.find(d, all[0].mid) && all.every(r => r.mid !== M.ENVIRONMENT_ID))
+    const rows = all
     ok('a group with code says so', rows[0].label.endsWith('· code'), rows[0].label)
     {
         const d = M.createDoc(); M.addMaterial(d, { id: 'st' }); M.setRelief(d, 'st', 'noise')
@@ -182,9 +182,9 @@ drop('a top-level node, up to the first place', 'a', 'g', 'before')
     item.libraryItem = { id: 'mine:x', kind: 'material', from: p.scenes[0].key, stage: [], details: {} }
     let rows = rowsFor(p, { current: e.key })
     ok('while an item is current the tree shows only it, under a row back', rows.length === 2 && rows[0].type === 'back' && rows[0].label === 'back to mine'
-        && rows[1].type === 'sceneItem' && rows[1].label === 'gold' && rows[1].children[0].type === 'environment'
+        && rows[1].type === 'sceneItem' && rows[1].label === 'gold' && rows[1].children.at(-1).type === 'materials'
         && rows.every(r => r.scene === e.key), rows.map(r => r.type).join())
-    eq('...the back row is not counted as a node', nodeIndex({ children: [{ type: 'back' }, { type: 'environment' }, { type: 'code' }, { type: 'code' }] }, 3), 1)
+    eq('...the back row is not counted as a node', nodeIndex({ children: [{ type: 'back' }, { type: 'code' }, { type: 'code' }] }, 2), 1)
     rows = rowsFor(p, { current: p.scenes[0].key })
     ok('...and the scene being worked on otherwise, alone', rows.length === 1 && rows[0].type === 'scene' && rows[0].label === 'mine'
         && rows[0].children.every(r => r.scene === p.scenes[0].key))
@@ -215,7 +215,7 @@ drop('a top-level node, up to the first place', 'a', 'g', 'before')
     const top = contents(P.createProject([d])), g = top.find(r => r.mid === 'g')
     eq('every node row has its lock: a group, its objects, a light', [g.toggles.lock, ...g.children.map(r => r.toggles.lock), top.find(r => r.mid === 'lamp').toggles.lock],
         ['unlocked', 'position locked', 'parameters locked', 'locked', 'locked'])
-    ok('...and nothing else has one: the environment, the materials', top.filter(r => !['g', 'lamp'].includes(r.mid)).every(r => r.toggles?.lock === undefined))
+    ok('...and nothing else has one: the materials', top.filter(r => !['g', 'lamp'].includes(r.mid)).every(r => r.toggles?.lock === undefined))
 }
 
 console.log(fail ? `\n${fail} FAILED, ${pass} passed` : `${pass} assertions pass.`)

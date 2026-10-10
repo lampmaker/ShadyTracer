@@ -30,7 +30,7 @@
  * @param prompt    (question, value) => string | null: a new name (window.prompt on the page)
  * @param say       a line for the status bar
  */
-/* THE EXAMPLES' ROWS: by audience, a heading each, and by group a submenu each (0.53.0; the user, 2026-10-10: "grouped
+/* THE EXAMPLES' ROWS: by audience, a heading each, and by group a submenu each (0.54.0; the user, 2026-10-10: "grouped
    in subcategories", and the examples "split between regular users and optical designers"). An audience with one group
    lists its examples under its heading directly. An example with neither (a list from before, a test's stand-in) is a
    row of its own. Each row's tooltip is what the example shows. */

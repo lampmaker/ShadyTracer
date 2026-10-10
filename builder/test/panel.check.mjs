@@ -452,7 +452,49 @@ ok('the unit changed to cm', await set('unit', 'cm') === 'set')
 await p.waitForTimeout(50)
 ok('...and the radius row says so by itself (the panel redrawn), the number kept: the scene reinterpreted, as its shapes',
     (await readRows()).includes('environment radius (cm)') && await p.evaluate(() => CHECK.doc.envRadius) === 2.5, JSON.stringify(await readRows()))
-ok('the Environment folder has no radius any more', !(await rowsOf('#environment')).some(l => /radius/i.test(l ?? '')), JSON.stringify(await rowsOf('#environment')))
+// THE ENVIRONMENT, in the Scene folder since 0.52.0 (the user, 2026-10-10): its source and its settings after the radius;
+// its old id shows the scene; a source chosen redraws it with that source's settings
+{
+    const rows = await rowsOf('root'), folders = await p.evaluate(() => [...document.querySelectorAll('.tp-fldv_t')].map(t => t.textContent.trim()))
+    ok('the Scene folder holds the environment: its folder, its source after the radius', folders.includes('environment')
+        && rows.indexOf('Source') > rows.indexOf('environment radius (cm)'), JSON.stringify({ rows, folders }))
+    const old = await rowsOf('#environment')
+    ok('...and the environment\'s old id shows the Scene', JSON.stringify(old) === JSON.stringify(rows), JSON.stringify(old))
+    ok('choosing the studio', await set('Source', 'studio') === 'set')
+    await p.waitForTimeout(50)
+    ok('...redraws it with the studio\'s settings', (await readRows()).includes('Studio (lx, horizontal)'), JSON.stringify(await readRows()))
+    /* THE STUDIO COLOUR SET (the user, 2026-10-10: "it always resets to white"): its picker's red field typed, the scene
+       holding it, and the row still showing it once redrawn */
+    const red = v => p.evaluate(v => {
+        const row = [...document.querySelectorAll('.tp-lblv')].find(r => r.querySelector('.tp-lblv_l')?.textContent.trim() === 'Studio colour')
+        const field = row?.querySelectorAll('input')[1]
+        if (v != null && field) { field.value = String(v); field.dispatchEvent(new Event('change', { bubbles: true })) }
+        return field ? Number(field.value) : null
+    }, v)
+    await red(0.25)
+    await p.waitForTimeout(50)
+    ok('the studio colour typed: the scene holds it (to the picker\'s 1/255)', Math.abs((await p.evaluate(() => CHECK.doc.environment.studioColor?.r)) - 0.25) < 0.006,
+        JSON.stringify(await p.evaluate(() => CHECK.doc.environment)))
+    await p.evaluate(() => CHECK.panel.show('root'))
+    ok('...and shows it again, not white, once the panel is redrawn', Math.abs(await red() - 0.25) < 0.006, String(await red()))
+}
+/* EVERY ROW OF THE SCENE'S PROPERTIES SAYS WHAT IT IS (the user, 2026-10-10: "make sure it has tooltips & explanations"):
+   a label with no title, in sun & sky and in the studio, and with a value flagged animated */
+{
+    const untitled = () => p.evaluate(() => { CHECK.panel.show('root')
+        return [...document.querySelectorAll('.tp-lblv_l, .tp-fldv_t')].filter(l => l.textContent.trim() && !l.title).map(l => l.textContent.trim()) })
+    const inStudio = await untitled()
+    ok('every row and folder of the scene\'s properties has a tooltip, in the studio', !inStudio.length, JSON.stringify(inStudio))
+    await set('Source', 'sun')
+    await p.evaluate(() => CHECK.M.setAnimated(CHECK.doc, 'scene/environment/sunIlluminance', true))
+    const inSun = await untitled()
+    ok('...in sun and sky, with a value animated', !inSun.length, JSON.stringify(inSun))
+    await p.evaluate(() => CHECK.M.setAnimated(CHECK.doc, 'scene/environment/sunIlluminance', false))
+    const { ENVIRONMENT_HELP } = await import('../panel.js').catch(() => ({}))
+    const M = await import('../model.js')
+    ok('...and every environment setting has its explanation', !!ENVIRONMENT_HELP && Object.keys(M.ENVIRONMENT).every(k => ENVIRONMENT_HELP[k]),
+        Object.keys(M.ENVIRONMENT).filter(k => !ENVIRONMENT_HELP?.[k]).join(', '))
+}
 
 // AN ARRAY (model.js copies, version 17): a plain group's copies -- made a row, typed, taken away -- each an undo step
 {

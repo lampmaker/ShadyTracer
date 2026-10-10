@@ -1,5 +1,5 @@
 // EVERY SCENE THE TESTS GO OVER: the examples File › Examples opens (scenes/index.js) and the scenes that were the
-// examples before 0.53.0, kept as fixtures (test/fixtures/scenes/index.js). A test that checked "every bundled scene"
+// examples before 0.54.0, kept as fixtures (test/fixtures/scenes/index.js). A test that checked "every bundled scene"
 // checks both: a new example has to compile and hold to the rules as the old ones did, and the old ones still do.
 // { name, url, path }: name as a test prints it, the file's URL, and its path on disk.
 import { fileURLToPath } from 'node:url'

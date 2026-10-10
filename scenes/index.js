@@ -4,7 +4,7 @@
 // on, with a camera of its own. They are not loaded at start: a page comes back to the project kept in the browser
 // (workspace/); a first visit's project is FIRST_VISIT alone.
 //
-// MADE IN CODE (0.53.0; the user, 2026-10-10: "replace all example scenes ... SDF's may be new to people and I want to
+// MADE IN CODE (0.54.0; the user, 2026-10-10: "replace all example scenes ... SDF's may be new to people and I want to
 // be able to demonstrate all the features. consider correct dimensions"): scenes/make.mjs builds each one through the
 // model's API with its sizes and their reasons written out, and writes them and examples.js. The examples before
 // these are test fixtures now (test/fixtures/scenes): the tests were written against them.
