@@ -37,6 +37,19 @@ closes the Analysis tab beside the Renderer and opens it again in the same place
 layout, then bring it back from Analysis › Open chart ▸. View has no chart entries and no Analysis entry. The layout
 switcher shows Design, Analyse, Animate.
 
+## 0.47.0 — 2026-10-10
+
+**The numbers box at the view's top right folds.** It can be large and is not always wanted (the user). A chevron in
+its head (▾) folds it to the head alone — the selection's name and unit — and ▸ opens it again; the choice is
+remembered (`raytracer.builder.edit.readout`). Folded, it still shows what must be read: a refusal or a shape that
+will not hold (a 'bad' note), and the typed entry Enter opens in the Points mode. The chevron is the one part of the
+box that takes the mouse; the rest still lets the picture through, so a handle under it can be grabbed as before
+(`builder/readout.js`; checked in `builder/test/transform.check.mjs`).
+
+**What to look at:** select a shape in Transform mode, click ▾ at the box's top right: the numbers go, the name
+stays, and the box is narrow. Reload: still folded. In Points mode press Enter on a point: the typed entry opens
+in the folded box. Click ▸: the numbers are back.
+
 ## 0.46.0 — 2026-10-10
 
 **ShadyTracer has a repository of its own, open source under MIT, and can run from GitHub Pages.** It lived in

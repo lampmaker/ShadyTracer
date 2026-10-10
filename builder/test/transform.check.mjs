@@ -8,7 +8,7 @@
 // shaft away from the cube still moves; a turned cylinder's cubes sit on its own axes, not the parent's, with "local"
 // off, and its round axes move the radius, its long one the height; a sphere and a group have no cube but the circle,
 // which scales them whole. THE PANEL of numbers at the top right (readout.js): the selection's position, rotation,
-// scale and lengths, letting the mouse through; over a cube, what it would change; while a handle is held, what it has
+// scale and lengths, letting the mouse through, folded to its head by its one button; over a cube, what it would change; while a handle is held, what it has
 // done and the numbers it changed; below the library's strip when there is one. Nothing else ran these: the page needs WebGPU, which this container does not have. How it
 // looks and feels is the user's to judge.
 //
@@ -117,6 +117,21 @@ try {
         eq('...the numbers as the document has them', [rowOf(m, 'position').cells.map(c => c.text), rowOf(m, 'size').cells.map(c => c.text)],
             [['0.0000', '0.0000', '0.0000'], ['0.5000', '0.5000', '0.5000']])
         ok('...and in the page', pn.text.includes('position') && pn.text.includes('0.5000'), pn.text)
+    }
+    // FOLDED to its head by its chevron, the one part of it that takes the mouse; remembered; open again
+    {
+        const fold = () => p.evaluate(() => document.querySelector('.edit-readout .edit-readout-fold').click())
+        const btn = await p.evaluate(() => { const f = document.querySelector('.edit-readout .edit-readout-fold'); return f && getComputedStyle(f).pointerEvents })
+        ok('the panel\'s fold button, taking the mouse while the panel does not', btn === 'auto', btn)
+        await fold(); await frame()
+        const pn = await panel()
+        ok('...folded: the name and unit, none of the numbers, the panel still letting the mouse through',
+            pn && pn.text.includes('box') && !pn.text.includes('position') && pn.events === 'none' && await p.evaluate(() => CHECK.overlay.readout.folded), J(pn))
+        eq('...remembered', await p.evaluate(() => localStorage.getItem('raytracer.builder.edit.readout')), 'folded')
+        await fold(); await frame()
+        const back = await panel()
+        ok('...open again: the numbers back', back?.text.includes('position') && back.text.includes('0.5000'), J(back))
+        eq('...remembered open', await p.evaluate(() => localStorage.getItem('raytracer.builder.edit.readout')), 'open')
     }
     await p.mouse.move(...page((await handle('sx')).cube)); await frame()
     ok('over a cube the cursor says size', await p.evaluate(() => document.getElementById('stage').style.cursor) === 'nwse-resize')
