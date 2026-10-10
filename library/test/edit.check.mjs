@@ -78,7 +78,7 @@ labels = await treeLabels()
 /* the tree shows the scene worked on alone since 0.7.0 (the others are the project menu's): back on the scene before,
    its row the root, with no row of the item's or the back row */
 ok('Close, saved: back to the scene before, the item\'s scene gone, the tree on that scene again',
-    S.cur === 'my scene' && S.items === 0 && labels[0] === 'my scene' && labels.some(l => l.includes('Environment'))
+    S.cur === 'my scene' && S.items === 0 && labels[0] === 'my scene' && labels.some(l => l.includes('Materials'))
     && !labels.some(l => l.includes('back to') || l.includes('floor (not saved)')), labels.join('|'))
 ok('...no strip, the camera and exposure given back', await strip() === null && S.R.camera.distance === 99 && S.R.values.autoExposure === 0, JSON.stringify(S.R))
 

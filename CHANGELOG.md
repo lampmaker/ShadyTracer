@@ -15,6 +15,21 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.49.0 — 2026-10-10
+
+**The environment is in the scene's properties; the tree has no Environment row** (the user: "just move the
+contents of that to the scene's properties"). A click on the scene's row at the root of the tree shows its
+properties: label, unit, environment radius, and then an **environment** folder holding what the row did (the
+source, sun and sky or studio, and that source's settings), marked ◆ when one of them is animated. No file
+changes: the environment was always the scene document's (`doc.environment`, `builder/model.js`), never a node.
+Render › Environment, a parameter revealed from the palette or the Parameters panel, and the environment's old id
+all select the scene's row (`builder/tree.js` select). A node dropped at the scene's top level is counted among the
+nodes as before; the Materials heading is now the only row that is not one.
+
+**What to look at:** the tree starts with the scene's row and its objects, no Environment row. Click the scene's
+row: Properties shows the environment folder under the radius. Switch Source to studio: the folder redraws with
+the studio's settings. Render › Environment lands on the same place.
+
 ## 0.46.0 — 2026-10-10
 
 **ShadyTracer has a repository of its own, open source under MIT, and can run from GitHub Pages.** It lived in

@@ -60,7 +60,7 @@ let r = await p.evaluate(async () => ({ list: (await CHECK.SESSION.list()).map(m
     name: document.querySelector('.shell-sw-name').textContent, menus: document.querySelectorAll('#sw button:not(.shell-sw-play):not(.icon-btn)').length }))
 ok('a first visit: one project, of the demo scene, kept at once', JSON.stringify(r.list) === '[["My project",1,true]]', JSON.stringify(r.list))
 ok('...the row names the project; the tree\'s root is the scene\'s row, its contents under it (since 0.26.0)',
-    r.name === 'My project' && r.rows[0] === 'Builder demo' && r.rows[1] === 'Environment' && r.rows.includes('Ball  · no material'), JSON.stringify(r))
+    r.name === 'My project' && r.rows[0] === 'Builder demo' && r.rows[1] === 'Ball  · no material' && !r.rows.includes('Environment'), JSON.stringify(r))
 ok('...and nothing over the tree is a menu: the scenes and files are File\'s (0.45.0)', r.menus === 0, JSON.stringify(r))
 
 // ---- FILE --------------------------------------------------------------------------------------------------

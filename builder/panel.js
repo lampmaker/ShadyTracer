@@ -231,7 +231,8 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
         shownId = id ?? null
         if (shownId == null) return
         const doc = BUILDER.doc
-        if (shownId === M.ENVIRONMENT_ID) return environmentFolder(doc)
+        // the environment is the scene's since 0.49.0: its old id (a parameter revealed, a saved selection) shows the scene
+        if (shownId === M.ENVIRONMENT_ID) shownId = doc.root.id
         const mat = M.material(doc, shownId)
         const found = mat ? null : M.find(doc, shownId)
         if (!mat && !found) return
@@ -380,6 +381,8 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
                     () => A.live(BUILDER.doc.root.id, 'envRadius'))
                 const rl = rb.element?.querySelector?.('.tp-lblv_l')
                 if (rl) rl.title = 'Where the scene stops: a ray beyond it sees the sky, and anything placed beyond it is not drawn. In the scene\'s unit.'
+                // ...and what it sees there: the sun and sky, or the studio (a row of the tree of its own until 0.49.0)
+                environmentFolder(folder, doc)
                 /* HIDE WITHOUT RECOMPILING (model.js setLiveVisibility): the eye becomes a uniform
                    written. Changing it recompiles once, so the shader has (or drops) the hidden nodes. */
                 const LV = { live: !!BUILDER.doc.liveVisibility }
@@ -546,9 +549,11 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
     /* THE SCENE'S ENVIRONMENT (model.js ENVIRONMENT): the renderer's own sun-and-sky settings, by its
        own schema -- the labels, ranges and options its Environment panel had -- but kept in the scene.
        Only the chosen source's settings (gui.showIf); choosing another source redraws the folder. Each
-       control writes through a holder, so the change goes where the registry's does (makeAfter). */
-    function environmentFolder(doc) {
-        folder = table.addFolder({ title: 'Environment' })
+       control writes through a holder, so the change goes where the registry's does (makeAfter).
+       A folder of the Scene's since 0.49.0, marked ◆ when one of its values is animated, as its tree row was. */
+    function environmentFolder(parent, doc) {
+        const animated = (doc.root.animate || []).some(k => String(k).startsWith('environment/'))
+        const folder = parent.addFolder({ title: `environment${animated ? '  \u25C6' : ''}` })
         const base = () => { try { return environment() || {} } catch { return {} } }
         const now = k => doc.environment?.[k] ?? base()[k] ?? M.ENVIRONMENT[k].def
         const mode = now('envMode') | 0
@@ -565,7 +570,7 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
                         set v(x) {
                             if (!A.environment(doc, k, vec ? { r: +x.r, g: +x.g, b: +x.b } : x, {}, base)) return
                             said(`scene/environment/${k}`)
-                            if (k === 'envMode' && (x | 0) !== mode) setTimeout(() => { if (shownId === M.ENVIRONMENT_ID) show(shownId) })
+                            if (k === 'envMode' && (x | 0) !== mode) setTimeout(() => { if (shownId === doc.root.id) show(shownId) })
                         } }
             flagRow(folder.addBinding(H, 'v', { ...gui }), `scene/environment/${k}`)
         }

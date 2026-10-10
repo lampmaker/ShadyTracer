@@ -452,7 +452,18 @@ ok('the unit changed to cm', await set('unit', 'cm') === 'set')
 await p.waitForTimeout(50)
 ok('...and the radius row says so by itself (the panel redrawn), the number kept: the scene reinterpreted, as its shapes',
     (await readRows()).includes('environment radius (cm)') && await p.evaluate(() => CHECK.doc.envRadius) === 2.5, JSON.stringify(await readRows()))
-ok('the Environment folder has no radius any more', !(await rowsOf('#environment')).some(l => /radius/i.test(l ?? '')), JSON.stringify(await rowsOf('#environment')))
+// THE ENVIRONMENT, in the Scene folder since 0.49.0 (the user, 2026-10-10): its source and its settings after the radius;
+// its old id shows the scene; a source chosen redraws it with that source's settings
+{
+    const rows = await rowsOf('root'), folders = await p.evaluate(() => [...document.querySelectorAll('.tp-fldv_t')].map(t => t.textContent.trim()))
+    ok('the Scene folder holds the environment: its folder, its source after the radius', folders.includes('environment')
+        && rows.indexOf('Source') > rows.indexOf('environment radius (cm)'), JSON.stringify({ rows, folders }))
+    const old = await rowsOf('#environment')
+    ok('...and the environment\'s old id shows the Scene', JSON.stringify(old) === JSON.stringify(rows), JSON.stringify(old))
+    ok('choosing the studio', await set('Source', 'studio') === 'set')
+    await p.waitForTimeout(50)
+    ok('...redraws it with the studio\'s settings', (await readRows()).includes('Studio (lx, horizontal)'), JSON.stringify(await readRows()))
+}
 
 // AN ARRAY (model.js copies, version 17): a plain group's copies -- made a row, typed, taken away -- each an undo step
 {
