@@ -88,12 +88,12 @@ for (const { name: file } of EVERY_SCENE) {
             'it deleted': d => { M.remove(d, o.id) },
         }
         /* ANOTHER MATERIAL, one with no relief: a relief is shape, in the SDF, so putting one on is a compile (the examples
-           since 0.51.0 have relief materials beside plain ones, which the scenes before never had) */
+           since 0.53.0 have relief materials beside plain ones, which the scenes before never had) */
         const plainOther = n => doc.materials.find(m => m.id !== n.material && !m.relief)
         if (plainOther(o)) edits['another material'] = d => { const n = M.find(d, o.id).node; n.material = plainOther(n).id }
         /* A COPY OR A DELETE of a shape whose points are compiled in (a path or profile not live) adds those points to the
            text or takes them out: a compile, as a new block is (model.js "A PATH"). Seen first on the light guide example
-           (0.51.0); the carried blocks (gen's second argument) do not carry points, so a delete is a compile too. */
+           (0.53.0); the carried blocks (gen's second argument) do not carry points, so a delete is a compile too. */
         const compiledPoints = Object.values(o.params || {}).some(v => ['path', 'profile'].includes(M.paramKind(v)) && !v?.live)
         if (compiledPoints) { delete edits['a copy of it added']; delete edits['it deleted'] }
         for (const [what, edit] of Object.entries(edits)) {

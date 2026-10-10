@@ -1,5 +1,5 @@
 //======================================================================================================================
-// THE SCENES THAT WERE THE EXAMPLES until 0.51.0, KEPT AS TEST FIXTURES. File › Examples has a new set (scenes/), made
+// THE SCENES THAT WERE THE EXAMPLES until 0.53.0, KEPT AS TEST FIXTURES. File › Examples has a new set (scenes/), made
 // to show the program to someone new to it (the user, 2026-10-10: "replace all example scenes"). These stay because
 // the tests were written against them: a relief group counted in noise.json, the optics test's lens, the RGBW
 // mixer's units, the demo's build -- and because every scene the tests compile is one more shape of scene that has to

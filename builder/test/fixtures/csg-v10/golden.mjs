@@ -93,7 +93,7 @@
 // committed without a freeze. The freeze added its entry, both modes, and moved no other: the 22 documents before it,
 // cases.*.wgsl among them, are as they were (compared key by key against the expected.json before).
 //
-// THE EXAMPLES REPLACED (2026-10-10, 0.51.0): the scenes that were File › Examples moved to test/fixtures/scenes/ and
+// THE EXAMPLES REPLACED (2026-10-10, 0.53.0): the scenes that were File › Examples moved to test/fixtures/scenes/ and
 // their entries were renamed to match, their fingerprints left as they were -- the same files, so the same shaders,
 // which this test then confirmed. The new examples in scenes/ were added by a freeze that moved no other entry.
 //======================================================================================================================

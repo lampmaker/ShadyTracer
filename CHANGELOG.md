@@ -15,7 +15,7 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
-## 0.51.0 — 2026-10-10
+## 0.53.0 — 2026-10-10
 
 **New examples, grouped by audience and topic, in real sizes** (the user: "replace all example scenes ... SDF's may
 be new to people and I want to be able to demonstrate all the features. consider correct dimensions"; split

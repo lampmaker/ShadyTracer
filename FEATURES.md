@@ -332,9 +332,9 @@ made in code (`scenes/make.mjs`) in real sizes, by audience -- **Modelling and r
 combining, modifiers, from points, a parametric part, infinite detail; Materials: the board, relief and texture,
 glass and liquid; Light and camera: a room, depth of field, animation, a product shot) and **Optical design** (an
 LED and lens, an aspheric condenser, Fresnel against plano-convex, a parabolic reflector, a light guide, RGBW mixing,
-a prism's dispersion, a dichroic combiner, office lighting). **Built (0.51.0), not yet seen**: none has been
+a prism's dispersion, a dichroic combiner, office lighting). **Built (0.53.0), not yet seen**: none has been
 rendered on real hardware; the geometry and cameras are reasoned, not looked at. A first visit starts on *First
-steps*. The examples before 0.51.0 are test fixtures (`test/fixtures/scenes/`).
+steps*. The examples before 0.53.0 are test fixtures (`test/fixtures/scenes/`).
 
 ---
 
