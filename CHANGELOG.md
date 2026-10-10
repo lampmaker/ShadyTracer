@@ -15,6 +15,16 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.54.1 — 2026-10-10
+
+**Infinite detail: the columns are whole again** (the user: "only parts of pillars are shown"). The repeat modifier
+folds space into one cell, half a spacing around its group's origin (`builder/modifiers.js`), and the example put
+its column at (4, 4) m in a group 8 m apart: on the cell's corner, so every copy showed only the quarter of the
+column inside its own cell. The group now sits at (4, 4) and the column at its centre: the same lattice, still
+clear of the sponge, each column whole. Only `scenes/infinite-detail.json` (made again by `scenes/make.mjs`) changed.
+
+**What to look at**: File › Examples › Infinite detail -- round columns, whole, in rows to the horizon.
+
 ## 0.54.0 — 2026-10-10
 
 **New examples, grouped by audience and topic, in real sizes** (the user: "replace all example scenes ... SDF's may
