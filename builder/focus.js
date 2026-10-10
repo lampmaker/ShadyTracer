@@ -51,7 +51,7 @@ export function focusBox(doc, id, boxes = null) {
     let b = null
     const walk = n => {
         if (n.enabled === false) return
-        if (n.kind === 'object' && n.type !== 'export') b = union(b, estimateBox(doc.root, n))
+        if (n.kind === 'object' && n.type !== 'export') b = union(b, estimateBox(doc.root, n, doc))
         for (const c of n.children || []) walk(c)
     }
     walk(node)

@@ -209,7 +209,7 @@ export function studioBatch(items, unit = 'm', n = 1) {
                 })
             }
         } catch (e) { entries.set(itemKey(item), { failed: e?.message ?? String(e) }); continue }
-        const estimate = estimateBox({ kind: 'group', children: [node] }) ?? { lo: [-1, -1, -1], hi: [1, 1, 1] }
+        const estimate = estimateBox({ kind: 'group', children: [node] }, null, doc) ?? { lo: [-1, -1, -1], hi: [1, 1, 1] }
         node.enabled = false
         entries.set(itemKey(item), { id: node.id, estimate, measure: !exact && !estimateIsRight(item), ...(exact ? { box: exact } : {}) })
     }

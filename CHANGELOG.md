@@ -15,6 +15,21 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.57.1 — 2026-10-10
+
+**The capped torus is where it is put again** (the user: "the capped torus ... does not render"). The builder guesses
+an object's size from its parameters (`builder/bounds.js estimateBox`) and took every number for a length -- the
+capped torus's `angle` of 270 (degrees) too. Its guess was 540 across for a ring of 0.42, and that guess decides where
+a shape dropped on the picture stands (its bottom on the point hit: 270 above it, out of view), how the library frames
+its picture (a speck), how a double-click frames it, where the measured boxes start looking, and the scene's size
+for the automatic surface tolerance. The guess now counts only the parameters a shape's block lists as lengths (the
+same list that gives the panel its units): a prism's `sides`, an aspheric lens's conic and coefficients, a twisted
+bar's `turn` and a bent tube's `rounded` are no longer sizes either. Code that lists no lengths is guessed from every
+number, as before. The shader was never wrong: it compiles, and its JS twin's distances check out.
+
+**What to look at**: drag a capped torus from the library onto the floor in the picture -- it should sit on the floor
+where you let go. Its library picture should fill the tile, and double-clicking it in the tree should frame it close.
+
 ## 0.57.0 — 2026-10-10
 
 **Renderer is now Render settings**, both the panel and its menu (the user, 2026-10-10). The panel's id stays

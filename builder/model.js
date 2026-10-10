@@ -2130,6 +2130,8 @@ export function toTree(doc, { keepDisabled = false } = {}) {
         const schema = B ?? node
         if (schema.constants) n.constants = { ...schema.constants }
         if (schema.ranges) n.ranges = structuredClone(schema.ranges)
+        // which of its parameters are lengths: the scene's size is guessed from those alone (bounds.js sceneExtent)
+        if (schema.lengths?.length) n.lengths = [...schema.lengths]
         // which of its profiles are live: codegen writes their pieces as uniforms (a field toTree does not copy is not there)
         if (node.liveProfiles) n.liveProfiles = [...node.liveProfiles]
         return n
