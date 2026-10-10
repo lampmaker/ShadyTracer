@@ -303,7 +303,7 @@ measured). (Aspheric and Fresnel lenses are shapes now: *Builder*.)
 | **Layout presets** Design, Analyse, Animate (Render dropped in 0.53.0: Design with the Analysis pane hidden); your own named layouts; the last layout restored | built | |
 | **Command palette** (Ctrl K) that also finds settings and sets them (`name = value`) | built | `lib/shell/paramspanel.js` |
 | **Parameters panel**: every renderer and scene setting by a path, typed exactly, ⌖ jumps to its control | built; Node-tested | `lib/shell/params.js` |
-| Help panel, guided tour, manual | planned — UI_PLAN.md: help is needed because "it is to be released, open source or paid" | UI_PLAN.md |
+| Help panel (F1), its links that open examples, run commands and point at panels; reference pages made from the program's lists; an SDF explainer | built (0.55.0), not yet seen — the tracks' pages are being written; no guided tour yet | help/README.md |
 | A study panel: parameter sweeps and an optimiser | planned (the parameter registry is the groundwork) | UI_PLAN.md |
 
 Also: a stale-cache check that reloads changed files at start-up, and Help › Report, which copies

@@ -515,7 +515,7 @@ Planned, in the order the plans give, with more in [`FEATURES.md`](FEATURES.md) 
 - **Spectral bands, dispersion and polarisation**, when a design needs them.
 - **Caustics seen through glass** (SPPM).
 - **More surfaces**: rust, dust, wear, sheen, clear coat, thin film, hair.
-- **A help panel and a manual**; a study panel with parameter sweeps and an optimiser.
+- **The help's pages**: the panel is there (Help › Contents, F1), with a welcome, the SDF explainer and the reference; the two tracks are being written. A study panel with parameter sweeps and an optimiser.
 
 And not planned yet, but asked of a tool like this: **importing meshes or CAD** (investigated: the
 routes per format are in [`roadmap/IMPORT.md`](roadmap/IMPORT.md)),

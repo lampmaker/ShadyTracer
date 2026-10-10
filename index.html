@@ -12,6 +12,7 @@
     <!-- the keyframe timeline and video export (lib/timeline), and its look in a panel (tools/) -->
     <link rel="stylesheet" href="./lib/timeline/timeline.css">
     <link rel="stylesheet" href="tools/timeline.css">
+    <link rel="stylesheet" href="help/help.css">
     <script src="./lib/dockview/dockview.min.js"></script>
 </head>
 
@@ -88,6 +89,7 @@
         import { installItemEditor, SAMPLE_CHOICES, SAMPLE_SIZES, sampleOf, setSample } from './library/edit.js'
         import { ITEM_FILES, itemUrl } from './library/items/index.js'
         import { installTimeline } from './tools/timeline.js'
+        import { installHelp } from './help/panel.js'
 
         //==============================================================================================================
         // DEVICE AND LAYOUT -- the host's job
@@ -236,6 +238,10 @@
            filmed offscreen. Registered here with the rest, filled once the parameters have their providers. */
         const timelineEl = SHELL.panel({ id: 'tools.timeline', title: 'Timeline', module: 'app',
             help: 'Keyframes on any live setting -- the camera, a light\'s flux, an object\'s position -- played in the view, and a video rendered frame by frame (⚙ export, RECORD).' });
+        /* THE HELP (help/panel.js): pages to read, with links that open examples, run commands and point at panels.
+           Help › Contents and F1 open it, floating; View lists it too. Filled once the commands exist (below). */
+        const helpEl = SHELL.panel({ id: 'help', title: 'Help', module: 'app',
+            help: 'How to use ShadyTracer: getting started, modelling and rendering, optical design, and a reference of every shape, modifier, material field and light setting.' });
 
         /* THE LAYOUTS: one per stage of the work, in the menu bar's switcher and the View menu. Each is
            where to start; what the user changes from there is kept between visits. Design is also the
@@ -300,6 +306,11 @@
             help: 'Keyframes on any live setting, played in the view, and a video rendered frame by frame',
             run: () => SHELL.isOpen('tools.timeline') ? SHELL.open('tools.timeline')
                 : SHELL.open('tools.timeline', { referencePanel: 'viewport', direction: 'below' }, { height: Math.round(innerHeight * 0.34) }) });
+        /* THE HELP floats over the work, a page to read beside it: its View entry is the page's, so View opens it that way
+           too (Help › Contents and F1 are registered with the help, below) */
+        const openHelp = () => SHELL.isOpen('help') ? SHELL.open('help')
+            : SHELL.open('help', undefined, undefined, { floating: { width: Math.min(900, innerWidth - 80), height: Math.min(680, innerHeight - 80) } });
+        SHELL.command({ id: 'view.help', menu: 'View', group: 'panels.app', label: 'Help', help: 'The help pages', run: openHelp });
         SHELL.standardCommands();
         SHELL.layout.restore();
         SHELL.open('viewport');
@@ -1177,6 +1188,30 @@
                 help: 'Every chart there is, open or closed: the one chosen brought to the front',
                 items: () => CHARTS.list().map(c => ({ label: `${SHELL.isOpen(c.id) ? '● ' : ''}${c.title}`, run: () => openChart(c.id),
                     title: SHELL.isOpen(c.id) ? 'Open: brought to the front' : 'Closed: opened beside the other charts' })) });
+            /* THE HELP: its links act on the page through these (help/links.js) -- an example opened as File › Examples
+               does, a command run as its menu entry would, a panel opened and outlined for a moment so the eye finds it */
+            const flash = el => { if (!el) return false; el.classList.add('help-flash'); setTimeout(() => el.classList.remove('help-flash'), 1600); return true };
+            const HELP = window.HELP = installHelp(helpEl, {
+                say: status,
+                openExample: file => examples?.open(file),
+                runCommand: id => {
+                    const c = SHELL.registries.commands.get(id);
+                    if (!c || c.items || !c.when()) return false;
+                    c.run(); return true;
+                },
+                show: target => {
+                    if (target.startsWith('menu:')) {
+                        const name = target.slice(5);
+                        return flash([...document.querySelectorAll('.shell-menu')].find(b => b.textContent.trim() === name));
+                    }
+                    if (!SHELL.registries.panels.has(target)) return false;
+                    SHELL.open(target);
+                    return flash(document.querySelector(`[data-panel="${CSS.escape(target)}"]`));
+                },
+            });
+            C({ id: 'help.contents', menu: 'Help', group: 'help', label: 'Contents', keys: 'F1', run: openHelp,
+                help: 'How to use ShadyTracer: modelling and rendering, optical design, and a reference of every shape and setting' });
+            window.addEventListener('keydown', e => { if (e.key === 'F1') { e.preventDefault(); openHelp(); } });
             C({ id: 'help.layout', menu: 'Help', label: 'Arranging the panels', run: () => SHELL.status(
                 'Drag a tab to dock it anywhere · ⧉ floats a group · ⇱ pops it out to its own window · ⤢ maximises · View reopens a closed panel · View > Reset the layout') });
             /* WHEN THE PICTURE IS WRONG AND NOTHING SAYS WHY (diagnose.js): where its photons went, and

@@ -15,6 +15,60 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.55.0 — 2026-10-10
+
+**A Help panel** (the user: "an extensive help / tutorial system will have to be made"). **Help › Contents** or
+**F1** opens it, floating over the work; View lists it too.
+
+**What the panel has:**
+- A contents list on the left, by track: Start, Modelling and rendering, Optical design, Reference. The page being
+  read shows its own headings under its entry.
+- The page on the right, with back, forward, home, and a search over every page.
+- The last page read is opened again next time.
+
+**The pages are markdown** in `help/`, and read the same on GitHub. They are drawn by a renderer of our own
+(`help/markdown.js`), which escapes everything before marking anything up, so a page cannot put HTML into the panel.
+
+**Links in a page can act on the program** (`help/links.js`):
+- open an example (`example:first-steps.json`);
+- run a command (`cmd:analysis.setup`);
+- open a panel and outline it for a moment (`show:properties`), or outline a menu (`show:menu:Analysis`);
+- go to another page or heading.
+
+**An interactive SDF explainer** (`help/widgets.js`, on the page *How shapes are made*):
+- A 2D distance field: inside and outside coloured, a line every 0.25 of distance, the surface white.
+- A ray sphere-traced across it, with each step's circle drawn. Drag its start.
+- Sliders for a blend, a subtraction's blend, rounding, a shell's thickness and a repeat's spacing. The blend is
+  the renderer's own formula (`scene_api.js` `csgUnion`).
+
+**Reference pages made from the program's lists** (`node help/reference.mjs`):
+- every shape and modifier, with the comment its code starts with;
+- every material field, relief and coating preset;
+- every light setting.
+
+Material fields and light settings have no text in the code, so `reference.mjs` holds one description each.
+`help/test/coverage.test.mjs` fails when:
+- a shape, field or setting is added without words;
+- a reference page is not made again;
+- a link goes nowhere, or a page is not listed.
+
+**Pages so far:** *Welcome* (five minutes with the First steps example), *How shapes are made* (distance functions,
+sphere tracing, combining, modifiers, what this is good at and what it is not), and the four reference pages.
+
+**Coming next:** the two tracks' pages (modelling and rendering; optical design, with its limitations in full).
+
+**What to look at:**
+- F1 opens the panel, floating.
+- Welcome's links open First steps, and outline Properties, the Library and the Renderer.
+- On *How shapes are made*, the pictures draw. Drag the white dot: the ray's steps follow. Move a slider: the
+  shape changes.
+- Search finds "sphere tracing".
+- Whether the panel's size, fonts and colours suit the window.
+
+Also, the golden shaders were refrozen for `scenes/infinite-detail.json`. 0.54.1 moved its column, but the shaders
+were not frozen again, so `codegen.test.mjs` failed on main. Only the scene's two uniform hashes change; its shader
+text is the same.
+
 ## 0.54.1 — 2026-10-10
 
 **Infinite detail: the columns are whole again** (the user: "only parts of pillars are shown"). The repeat modifier

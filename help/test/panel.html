@@ -1,0 +1,21 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../../lib/shell/shell.css">
+<link rel="stylesheet" href="../help.css">
+<style>html, body { margin: 0; height: 100%; } #h { position: absolute; inset: 0; }</style>
+</head><body><div id="h"></div>
+<script type="module">
+/* THE HELP PANEL alone, with stand-ins for what its links do to the program (index.html gives the real ones): each
+   recorded, for help/test/panel.check.mjs */
+import { installHelp } from '../panel.js'
+// a fresh start on ?fresh; a reload without it keeps what the panel stored (the last page read)
+if (location.search.includes('fresh')) try { localStorage.clear() } catch { }
+const calls = []
+const H = installHelp(document.getElementById('h'), {
+    say: t => calls.push(['say', t]),
+    openExample: f => calls.push(['example', f]),
+    runCommand: id => { calls.push(['cmd', id]); return id !== 'no.such' },
+    show: t => { calls.push(['show', t]); return true },
+})
+window.CHECK = { H, calls }
+</script></body></html>
