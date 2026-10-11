@@ -59,7 +59,7 @@ None of this has been seen in the page or on a card.
 - Draft, Sketch or Optics chosen: moving changes nothing.
 - A false-colour view: neither the word nor ⚡ is shown.
 
-## 0.58.0 — 2026-10-10
+## 0.58.0 — 2026-10-11
 
 **The page stays responsive on a heavy scene** (the user: "when renders take very long the whole UI becomes
 unresponsive"). Before this change, a live frame was always at least one whole sample. It was cut into submissions
@@ -94,6 +94,22 @@ gets the GPU back between the pieces.
 - Drag the camera on the heavy scene and let go. You will see banding while it moves; none should be left a second
   or so after it stops.
 - Save an image should take as long as it did.
+## 0.57.2 — 2026-10-11
+
+**A subtraction's walls wear the cutter's material** (the user: "the material of the host object is also the material
+of the subtracted section ... does not work for the dots on the dice"). A CSG group took the base's material
+everywhere and switched only for a union's nearer child, so a hole cut by a charcoal cutter had white walls. Now each
+part of the surface wears the material of the shape that makes it there, by the same test the join itself uses to
+choose its side: a union's nearer, a subtraction's cutter where `-cutter > what is above`, an intersection's farther
+(the second shape wherever it bounds the result; the user: "change it for intersect as well"). The same in codegen
+(`builder/codegen.js` combine, `MAT_WINS`) and in the scene-as-data walk (`builder/scenedata.js`). Under a blend
+the material changes hard at the blend's middle, as a union's always did. To keep a hole in the base's material,
+give the cutter the base's material. The golden shaders moved by one line per subtract or intersect join, nothing
+else (`builder/test/fixtures/csg-v10`).
+
+**What to look at**: File ▸ Examples ▸ Combining shapes: the die's pips should now be charcoal, in the editing
+build and once baked. Among the examples the die is the only join whose cutter has a material other than its base's
+(read in the scene files), so no other example should look different.
 
 ## 0.57.1 — 2026-10-10
 

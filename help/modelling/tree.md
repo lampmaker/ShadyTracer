@@ -57,6 +57,10 @@ Click a mark to change it. A group's **blend** smooths every join in it, and a c
 its join. A subtraction cuts only what is above it in the same group: to cut one part, put the part and the cutter in
 a group of their own.
 
+Each part of the surface wears the material of the shape that makes it there: a hole has the cutter's material on
+its walls, and an intersection has the second shape's wherever that shape bounds it. To cut a hole in the base's own
+material, give the cutter the base's material.
+
 A group's Properties also show its joins as a **recipe**, text you can read and type:
 
 ```

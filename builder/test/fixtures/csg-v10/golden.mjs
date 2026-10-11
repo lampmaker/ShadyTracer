@@ -96,6 +96,13 @@
 // THE EXAMPLES REPLACED (2026-10-10, 0.54.0): the scenes that were File › Examples moved to test/fixtures/scenes/ and
 // their entries were renamed to match, their fingerprints left as they were -- the same files, so the same shaders,
 // which this test then confirmed. The new examples in scenes/ were added by a freeze that moved no other entry.
+//
+// REFROZEN FOR EVERY DOCUMENT WITH A SUBTRACT OR INTERSECT JOIN (2026-10-11, 0.57.2), for an agreed change (the user:
+// the die's pips took the die's material; "change it for intersect as well"): each child after the base now picks the
+// group's material by its own join's test (codegen.js MAT_WINS), not only a union. Checked before freezing: the only
+// lines that came were `km_<g> = select(km_<g>, C.m, -C.s.w > k_<g>.w);` before each csgSubtract and `..., C.s.w >
+// k_<g>.w);` before each csgIntersect, and no line left (cases.*.wgsl diffed); the 13 documents with such a join moved
+// and the other 33 did not.
 //======================================================================================================================
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
