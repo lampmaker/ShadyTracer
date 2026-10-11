@@ -145,7 +145,8 @@ import { targetsOf, lookupIn, parseBindings, bindingsText as bindText, applyBind
  *  group whose children all join by union with no blend folds each into the scene separately, which
  *  is what every group did before there were others. Any other join, or any blend, and the group
  *  combines its children into ONE shape first, top to bottom from the first (the base), which takes
- *  the base's material -- a union taking the nearer child's (codegen isCsg, children()). The base's
+ *  the material of whichever shape makes the surface there: a union's nearer, an intersection's
+ *  farther, a subtraction's cutter where it carves (codegen isCsg, children(), MAT_WINS). The base's
  *  own join is kept but dormant, as is a join at the top level, which is always a plain union. */
 export const OPS = ['union', 'subtract', 'intersect']
 

@@ -185,6 +185,7 @@ C = add_new(C, Nsphere(p, radius), MATERIAL);
             XF_P = xfp_ccb;
         }
         XF_SUB -= 1u;
+        km_cc = select(km_cc, C.m, -C.s.w > k_cc.w);
         k_cc = csgSubtract(k_cc, C.s, UB.blend_cc);
     }
     C = fold(C, k_cc, km_cc);
@@ -271,6 +272,7 @@ C = add_new(C, Nsphere(p, radius), MATERIAL);
                         XF_P = xfp_hsb;
                     }
                     XF_SUB -= 1u;
+                    km_hs = select(km_hs, C.m, -C.s.w > k_hs.w);
                     k_hs = csgSubtract(k_hs, C.s, UB.blend_hs);
                 }
                 C = fold(C, k_hs, km_hs);
@@ -332,6 +334,7 @@ C = add_new(C, Ncylinder(p, height * 0.5, radius), MATERIAL);
                         XF_P = xfp_ssb;
                     }
                     XF_SUB -= 1u;
+                    km_ss = select(km_ss, C.m, -C.s.w > k_ss.w);
                     k_ss = csgSubtract(k_ss, C.s, UB.blend_ss);
                 }
                 C = fold(C, k_ss, km_ss);
@@ -392,6 +395,7 @@ C = add_new(C, NboxRounded(p, size, rounding), MATERIAL);
                         XF_P = xfp_itb;
                     }
                     XF_SUB -= 1u;
+                    km_it = select(km_it, C.m, C.s.w > k_it.w);
                     k_it = csgIntersect(k_it, C.s, UB.blend_it);
                 }
                 C = fold(C, k_it, km_it);
@@ -574,6 +578,7 @@ C = add_new(C, Nsphere(p, radius), MATERIAL);
                         XF_P = xfp_exb;
                     }
                     XF_SUB -= 1u;
+                    km_ex = select(km_ex, C.m, -C.s.w > k_ex.w);
                     k_ex = csgSubtract(k_ex, C.s, UB.blend_ex);
                 }
                 C = fold(C, k_ex, km_ex);
@@ -635,6 +640,7 @@ C = add_new(C, Ncapsule(p, height * 0.5, radius), MATERIAL);
                         XF_P = xfp_ltb;
                     }
                     XF_SUB -= 1u;
+                    km_lt = select(km_lt, C.m, -C.s.w > k_lt.w);
                     k_lt = csgSubtract(k_lt, C.s, UB.blend_lt);
                 }
                 C = fold(C, k_lt, km_lt);
@@ -696,6 +702,7 @@ C = add_new(C, Ncylinder(p, height * 0.5, radius), MATERIAL);
                         XF_P = xfp_apb;
                     }
                     XF_SUB -= 1u;
+                    km_ap = select(km_ap, C.m, -C.s.w > k_ap.w);
                     k_ap = csgSubtract(k_ap, C.s, UB.blend_ap);
                 }
                 C = fold(C, k_ap, km_ap);
@@ -797,6 +804,7 @@ C = add_new(C, Ncylinder(p, height * 0.5, radius), MATERIAL);
                         XF_P = xfp_outc;
                     }
                     XF_SUB -= 1u;
+                    km_outer = select(km_outer, C.m, -C.s.w > k_outer.w);
                     k_outer = csgSubtract(k_outer, C.s, UB.blend_outer);
                 }
                 C = fold(C, k_outer, km_outer);
@@ -966,6 +974,7 @@ C = add_new(C, Nsphere(p, radius), MATERIAL);
                         XF_P = xfp_plb;
                     }
                     XF_SUB -= 1u;
+                    km_pl = select(km_pl, C.m, C.s.w > k_pl.w);
                     k_pl = csgIntersect(k_pl, C.s, UB.blend_pl);
                 }
                 C = fold(C, k_pl, km_pl);
@@ -1026,6 +1035,7 @@ C = add_new(C, Ncylinder(p, height * 0.5, radius), MATERIAL);
                         XF_P = xfp_disc;
                     }
                     XF_SUB -= 1u;
+                    km_dis = select(km_dis, C.m, -C.s.w > k_dis.w);
                     k_dis = csgSubtract(k_dis, C.s, UB.blend_dis);
                 }
                 C = fold(C, k_dis, km_dis);
@@ -1087,6 +1097,7 @@ C = add_new(C, Ntorus(p, ring, tube), MATERIAL);
                         XF_P = xfp_midc;
                     }
                     XF_SUB -= 1u;
+                    km_mid = select(km_mid, C.m, C.s.w > k_mid.w);
                     k_mid = csgIntersect(k_mid, C.s, UB.blend_mid);
                 }
                 C = fold(C, k_mid, km_mid);

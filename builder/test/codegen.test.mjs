@@ -382,7 +382,12 @@ ok('and none of scenes/common.js\'s override uniforms', !('matColorR' in built.u
         const combines = [...w.matchAll(/k_g = (csg\w+)\(k_g, C\.s, UB\.(\w+)\);/g)].map(m => `${m[1]} ${m[2]}`)
         eq('each child combined by its own join, with its own blend or the group\'s, in order', combines,
             ['csgUnion blend_g', 'csgSubtract jblend_c', 'csgIntersect blend_g', 'csgSubtract jblend_inner'])
-        eq('the nearer child\'s material only where it joins by union', (w.match(/km_g = select\(km_g, C\.m, C\.s\.w < k_g\.w\);/g) || []).length, 1)
+        /* the material of whichever shape makes the surface: a union's nearer, a subtraction's cutter where it carves,
+           an intersection's farther -- each picked just before its combine, by its csg* function's own test. Only
+           a union switched before 0.57.2, and the die's pips in combining-shapes came out the die's white. */
+        eq('each child after the base picks the material by its join\'s test, just before its combine',
+            [...w.matchAll(/km_g = select\(km_g, C\.m, (-?C\.s\.w [<>] k_g\.w)\);\s+k_g = (csg\w+)\(k_g/g)].map(m => `${m[2]} ${m[1]}`),
+            ['csgUnion C.s.w < k_g.w', 'csgSubtract -C.s.w > k_g.w', 'csgIntersect C.s.w > k_g.w', 'csgSubtract -C.s.w > k_g.w'])
         eq('an own blend is a uniform of its own, declared with its value; a child without one has none',
             [g5.uniforms.jblend_c?.def, g5.uniforms.jblend_inner?.def, 'jblend_b' in g5.uniforms], [0.05, 0.03, false])
         ok('a CSG child that is a CSG group has both: its own children\'s blend, and its join\'s',

@@ -387,6 +387,8 @@ export const shapesOf = g => (g?.children || []).filter(c => c.type !== 'export'
 export const isCsg = g => g.csg ?? (g.blend > 0 || shapesOf(g).some((c, i) => i > 0 && (joinOf(c) !== 'union' || c.joinBlend > 0)))
 
 const CSG_FN = { union: 'csgUnion', subtract: 'csgSubtract', intersect: 'csgIntersect' }
+// when the child just combined makes the surface, and so gives the group its material (combine below)
+const MAT_WINS = { union: k => `C.s.w < ${k}.w`, subtract: k => `-C.s.w > ${k}.w`, intersect: k => `C.s.w > ${k}.w` }
 
 //----------------------------------------------------------------------------------------------
 // A GROUP'S CODE -- the one place anything can be done to a group's children: change the point
@@ -1445,8 +1447,11 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
         const first = `first_${g.id}`
         if (liveVisibility) line(d, `var ${first} = true;`)
         const combine = (dd, c) => {
-            // a union takes the nearer child's material; a subtraction or intersection keeps what it has
-            if (joinOf(c) === 'union') line(dd, `${km} = select(${km}, C.m, C.s.w < ${k}.w);`)
+            /* the material of whichever shape makes the surface there, by the same test the join's csg* function
+               picks its side by: a union's nearer, an intersection's farther, a subtraction's cutter where -C.s
+               is the farther. Before 0.57.2 only a union switched, so a subtraction's carved walls kept the base's
+               material (the die's pips in combining-shapes came out white). Hard at the middle of a blend. */
+            line(dd, `${km} = select(${km}, C.m, ${MAT_WINS[joinOf(c)](k)});`)
             line(dd, `${k} = ${CSG_FN[joinOf(c)]}(${k}, C.s, ${blendOf(c)});`)
         }
         shape.forEach((c, i) => {

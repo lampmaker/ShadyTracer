@@ -553,8 +553,8 @@ function pathTo(root, target) {
 //   a frame       p in the node's frame; XF_M, XF_S its frame for add_new; XF_P that point when a material reads p_local
 //                 (wantLocal); XF_SUB the number of private Hits open (a CSG child's surface is not the scene's)
 //   a CSG group   its shapes each into a Hit of their own, combined in order by their joins -- the first shown one is the
-//                 base, a hidden one absent -- then folded in, in the group's own frame, with the base's material
-//                 for a subtraction or intersection and the nearer's for a union
+//                 base, a hidden one absent -- then folded in, in the group's own frame, with the material of
+//                 whichever shape makes the surface there (a union's nearer, an intersection's farther, a subtraction's cutter)
 //   culling       a node the records mark CULLABLE (at the top level: codegen culled there alone), farther from its box
 //                 than cullMargin(): its box distance stands in, and nothing below it is evaluated
 //   a limiter     drawn only by the optics copies (SCN_OPTICS)
@@ -653,8 +653,8 @@ export function evaluatorWGSL({ blocks, befores = 0, afters = 0, subs, stack, ar
         w('            let op = scnU(v0.y);')
         w('            if (top.first != 0u) { top.k = C.s; top.km = C.m; top.first = 0u; }')
         w('            else if (op == 0u) { top.km = select(top.km, C.m, C.s.w < top.k.w); top.k = csgUnion(top.k, C.s, v1.w); }')
-        w('            else if (op == 1u) { top.k = csgSubtract(top.k, C.s, v1.w); }')
-        w('            else { top.k = csgIntersect(top.k, C.s, v1.w); }')
+        w('            else if (op == 1u) { top.km = select(top.km, C.m, -C.s.w > top.k.w); top.k = csgSubtract(top.k, C.s, v1.w); }')
+        w('            else { top.km = select(top.km, C.m, C.s.w > top.k.w); top.k = csgIntersect(top.k, C.s, v1.w); }')
         w('            C = emptyHit(r);          // the next shape alone')
         w(`            i = i + ${REC}u;`)
         w('            continue;')
