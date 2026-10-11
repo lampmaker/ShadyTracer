@@ -297,6 +297,24 @@ try {
     const names2 = async () => (await handles()).map(h => h.name)
     const MOVES = ['x', 'y', 'z', 'xy', 'yz', 'zx', 'view', 'rx', 'ry', 'rz'], SIZES = ['sx', 'sy', 'sz', 'scale']
     {
+        /* A DRAG IS A MOVE FOR AS LONG AS IT IS HELD (RT.interacting, lib/pathtracer/interaction.js; fast while moving,
+           0.59.0): active while the button is down, through a pause longer than the idle time, and over idleMs after
+           the release (100 ms in this harness) */
+        const active = () => p.evaluate(() => CHECK.RT.interacting.active())
+        await p.waitForTimeout(250)
+        const quiet0 = await active()
+        const x = await handle('x'), [A, T] = x.seg, at = [A[0] + (T[0] - A[0]) * 0.85, A[1] + (T[1] - A[1]) * 0.85], u = unit(A, T)
+        await p.mouse.move(...page(at)); await p.mouse.down()
+        await p.mouse.move(...page([at[0] + u[0] * 15, at[1] + u[1] * 15]), { steps: 4 }); await frame()
+        await p.waitForTimeout(300)
+        const held = await active()
+        await p.mouse.up(); await frame()
+        await p.waitForTimeout(300)
+        ok('a drag is a move while it is held, a pause longer than the idle time too, and over once let go',
+            quiet0 === false && held === true && (await active()) === false, J({ quiet0, held }))
+        await p.keyboard.press('Control+z'); await frame()
+    }
+    {
         // A LOCK THAT COMES ON WHILE A HANDLE IS HELD (an undo, a script): the drag writes nothing more
         const x = await handle('x'), [A, T] = x.seg, at = [A[0] + (T[0] - A[0]) * 0.85, A[1] + (T[1] - A[1]) * 0.85], u = unit(A, T)
         const p0 = (await node('bx')).transform.pos

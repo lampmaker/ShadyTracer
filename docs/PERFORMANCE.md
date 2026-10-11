@@ -1086,6 +1086,14 @@ the steps inside the band -- row 11's question.
 
 ### P5 — Trace a fraction of the image's rays
 
+**Built another way in 0.58.0: a sample over several frames** (`raytrace_main.js`, A SAMPLE OVER SEVERAL FRAMES;
+the `sliceMs` setting). The design below came before 0.38.1. Since then every sample reaches every pixel, and a
+sample past the buffer's cap runs in batches that resolve once. So the live loop now cuts a slow sample into more of
+those batches and runs a few a frame. That needs no per-pixel coverage, and light tracing's photons need no scaling:
+each batch carries its share of every stream. The picture changes once a sample, and the frames between it are
+short. Whether that keeps the page usable on the Noise library is the user's to see (CHANGELOG 0.58.0); nothing is
+measured yet. The design as it was:
+
 **Designed 2026-09-29, NOT built** (read in code: `raytrace_main.js:1005` still sets `R.raycount =
 Math.min(R.raybufferSize, Q.w * Q.h)` -- every pixel, every sample). The user's first complaint on the Noise
 library was that **the whole browser stalls** while it renders: at 25% resolution usable enough to measure,

@@ -5,7 +5,8 @@ reflecting as it really would. It starts noisy and gets cleaner the longer it st
 
 ## Quality
 
-The [Render settings](show:renderer) panel's **Quality** box has the presets as buttons:
+The view's toolbar names the preset in force in a word, at the top left (**Standard ▾**). Click it to choose another.
+The [Render settings](show:renderer) panel's **Quality** box has the same presets as buttons:
 
 | preset | traces | for |
 |---|---|---|
@@ -18,8 +19,14 @@ The [Render settings](show:renderer) panel's **Quality** box has the presets as 
 The line under the buttons says what the preset in force traces. If you change a setting by hand, it reads
 **Custom** and says what differs.
 
-**⚡** in the view's toolbar is a fast preview: the picture switches to Draft, Sketch or Optics (the Quality box says
-which) and back when you switch it off.
+**⚡ Fast while moving**, beside it, is on by default. While you orbit the camera, drag an object or a point, or
+move a value, a Standard, High or Custom picture is traced as **Draft**. The full picture comes back a moment after
+you stop.
+- **Sketch instead:** choose it in the same menu, under *While moving*. It is lighter on a heavy scene, but the
+  picture changes more when you stop.
+- **Already light:** Draft, Sketch and Optics are not changed by it.
+- **Saved pictures:** a save is always traced as set.
+- **Turning it off:** click ⚡.
 
 ## The other boxes
 

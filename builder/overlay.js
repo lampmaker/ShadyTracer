@@ -48,9 +48,9 @@
 // picture again. The tree and the panel are not affected. Remembered per browser, in localStorage
 // (a convenience: a browser that refuses storage just starts with editing on).
 //
-// A DRAG RENDERS AT FULL QUALITY. It once dropped the picture to half scale and the photons to a tenth while
+// A DRAG LOWERS NOTHING OF ITS OWN. It once dropped the picture to half scale and the photons to a tenth while
 // a handle was held, behind a "fast drag" switch; the user had it removed (2026-10-02). The renderer's
-// fast preview (the view toolbar's ⚡, Draft or Sketch) is the way to a lighter picture.
+// toolbar's ⚡ is the way to a lighter picture: since 0.59.0 fast while moving, which a drag holds (hold(), below).
 //
 // A 2D CANVAS OVER THE RENDER CANVAS, NOT A PASS IN THE RENDERER. A few lines do not need the GPU,
 // and drawing them here changes no kernel, no uniform and no compile. It sits above the picture and
@@ -507,8 +507,14 @@ export function installSelectionOverlay({ stage, canvas, RT, BUILDER, onPick = (
         hold()
     }
 
-    /** What a held handle needs, whichever it is: the mouse and Escape wherever they go until it is let go. */
+    /** What a held handle needs, whichever it is: the mouse and Escape wherever they go until it is let go -- and the
+     *  renderer told a move is under way for as long (RT.interacting, lib/pathtracer/interaction.js: a full picture
+     *  traced lighter while it lasts, moveFast), so a drag paused without letting go does not go back to it under the
+     *  pointer. Released in end(), however the drag ends. */
+    let moving = null
     const hold = () => {
+        moving?.()
+        try { moving = RT.interacting?.hold?.() ?? null } catch { moving = null }
         addEventListener('mousemove', onMove, true)
         addEventListener('mouseup', onUp, true)
         addEventListener('keydown', onKey, true)
@@ -607,6 +613,7 @@ export function installSelectionOverlay({ stage, canvas, RT, BUILDER, onPick = (
         removeEventListener('keydown', onKey, true)
         // a points drag cut short (another selection, Edit off) still pushes what it wrote and is one undo step
         if (drag?.kind === 'points') points.end(drag.D)
+        moving?.(); moving = null
         drag = null
         hover = null
         stage.style.cursor = ''

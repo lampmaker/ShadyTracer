@@ -39,7 +39,7 @@
         import { defines, TOKENS, SHORT_TOKENS } from "./lib/wgsl_shorthand.js"
         import { createPathTracer } from "./lib/pathtracer/index.js"
         import { installViewToolbar } from "./lib/pathtracer/viewtools.js"
-        import { QUALITY_PRESETS, presetValues } from "./lib/pathtracer/quality.js"
+        import { QUALITY_PRESETS, applyPreset } from "./lib/pathtracer/quality.js"
         import { createShell, busyOverlay } from "./lib/shell/shell.js"
         import { compileFraction, compileLabel } from "./lib/pathtracer/core/compileprogress.js"
         import { makeParams } from "./lib/shell/params.js"
@@ -1160,7 +1160,15 @@
                lamps only: the scene's own lights alone, its sun and sky left as they are in the scene */
             for (const q of QUALITY_PRESETS)
                 C({ id: `render.quality.${q.id}`, menu: 'Render settings', group: 'quality', label: `Quality: ${q.label}`, help: q.help,
-                    run: () => RT.set(presetValues(q.id)) });
+                    run: () => applyPreset(q.id, RT.get(), v => RT.set(v)) });
+            /* FAST WHILE MOVING (0.59.0; quality.js effective, the view's ⚡ and its Quality menu): a full picture traced as
+               Draft or Sketch while the camera, a drag or a live value moves */
+            C({ id: 'render.moveFast', menu: 'Render settings', group: 'quality', label: 'Fast while moving: on / off',
+                help: 'While the camera or an object moves, a full picture is traced as Draft or Sketch, and comes back when it stops',
+                run: () => RT.set({ moveFast: ((RT.get().moveFast ?? 1) | 0) ? 0 : 1 }) });
+            for (const [m, name, help] of [[1, 'Draft', 'the light and the shadows kept'], [2, 'Sketch', 'a flat light, the lightest']])
+                C({ id: `render.moveMode.${name.toLowerCase()}`, menu: 'Render settings', group: 'quality', label: `Fast while moving: as ${name}`,
+                    help: `A move traces as ${name}: ${help}`, run: () => RT.set({ moveFast: 1, moveMode: m }) });
             C({ id: 'render.lampsOnly', menu: 'Render settings', group: 'quality', label: 'Lamps only (no sun, sky or studio light): on / off',
                 help: 'The view lit by the scene\'s own lights; the scene keeps its environment',
                 run: () => RT.set({ lampsOnly: (RT.get().lampsOnly | 0) ? 0 : 1 }) });

@@ -15,6 +15,85 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.59.0 — 2026-10-11
+
+**The quality on the view, and ⚡ is now "fast while moving"** (the user: "the working of the toggle on the viewport
+is a bit unclear; there are 5 modes ... a dropdown to the viewport icons that selects the mode ... use the existing
+button to toggle automatic switching to sketch or draft when editing / moving the viewport").
+
+Before this version, ⚡ flipped the mode between full and the last fast mode it had seen. That was one of five modes,
+it was hidden, and it was forgotten on reload.
+
+**The quality menu.** The toolbar at the top left now names the preset in force in a word (*Standard ▾*). This is
+the one button there with a word, as asked. Its menu holds:
+- the five presets, as the Render settings Quality box has them, with that box's line;
+- *Custom* on the button when your settings are no preset's;
+- a *While moving* row (below).
+
+Choosing the preset already in force restarts nothing. The box, this menu and the Render settings menu now share one
+rule for that (`quality.js applyPreset`).
+
+**⚡ Fast while moving** (setting `moveFast`, on by default) has a choice of **Draft** or **Sketch** (`moveMode`,
+Draft by default; Sketch for a heavy scene, as asked). It is set in the menu, in the Quality box, and by the Render
+settings menu's commands.
+- **When it switches:** while you orbit the camera, drag a gizmo or a point, or move a live value, a Standard, High
+  or Custom picture traces as the chosen mode. The full picture comes back 0.4 s after the last move. A drag held
+  still does not switch back until it is let go.
+- **What it leaves alone:** Draft, Sketch and Optics are already light. Your settings are never written; only what
+  is traced changes. Saves, timeline frames, Tests and `RT.step` always trace as set.
+- **How you can tell:** ⚡ turns amber while it is doing it, and Render stats says *DRAFT WHILE MOVING*.
+- **How it knows something is moving:** told explicitly, by the camera, the builder's live values and its drags
+  (`interaction.js`, `RT.interacting`), never guessed from picture resets. A scene build or the switch itself would
+  otherwise count as a move.
+
+None of this has been seen in the page or on a card.
+
+**What to look at:**
+- The word at the top left follows the Quality box and the box follows the word: choose High in one and look at
+  the other.
+- With Standard or High and ⚡ on: orbit the camera. Does the picture trace as Draft while moving, ⚡ amber, and the
+  full picture come back a moment after you stop?
+- The same while dragging an object's gizmo, a Points handle, or a properties slider.
+- Choose Sketch under *While moving* on a heavy scene. Does orbiting feel lighter?
+- ⚡ off: nothing switches.
+- Draft, Sketch or Optics chosen: moving changes nothing.
+- A false-colour view: neither the word nor ⚡ is shown.
+
+## 0.58.0 — 2026-10-11
+
+**The page stays responsive on a heavy scene** (the user: "when renders take very long the whole UI becomes
+unresponsive"). Before this change, a live frame was always at least one whole sample. It was cut into submissions
+against Windows' two-second watchdog, but every piece went in at once, so a 500 ms sample was 500 ms of GPU in one
+burst, and the browser's own drawing waited behind it. That last part is inferred: it matches the freeze reported here
+and in `PERFORMANCE.md` P5.
+
+Now the live view splits a slow sample into batches and runs a few each frame, about **Render settings › Performance ›
+GPU time a frame** (30 ms by default) at a time. The frame that runs the last batch adds the sample to the picture.
+- **The splitting:** it uses the batches a sample already runs in when it does not fit the ray buffer
+  (`core/photons.js`), with more of them. Each batch is its share of the camera rays and of every photon, so the sum is
+  the same estimate.
+- **What updates:** the menus, panels and camera keep the screen's rate. The picture changes once a sample, as fast as
+  before (its total GPU time is the same) but no faster. Render stats' Samples row reads *a sample over frames: batch
+  k/K*.
+- **Moving the camera:** the sample in progress is not thrown away. It finishes under the new view and replaces the
+  picture, part old view and part new, in bands. The average then starts again from the new view alone. Throwing it
+  away would show nothing at all for as long as a drag lasts.
+- **Fast scenes:** a sample that fits in the time is not split. A frame now holds no more samples than fit, so the
+  sample count the loop had grown on a light scene is no longer handed to a heavy one.
+- **What is unchanged:** Save an image, Tests and `RT.step` trace whole samples. 0 puts the old behaviour back. The
+  setting sits behind the Developer switch, like the rest of that box.
+
+None of this has been seen on a card. Measured: nothing. Read in code: what is above. Inferred: that the browser
+gets the GPU back between the pieces.
+
+**What to look at:**
+- Open the Noise library at 100% resolution with the loop running. Do the panels, sliders and a camera drag stay
+  responsive? Compare with the Developer switch on and GPU time a frame at 0.
+- The picture's brightness and noise should be the same either way. A fast scene (Surface materials) should look and
+  run as before, and Render stats should show no *sample over frames*.
+- Drag the camera on the heavy scene and let go. You will see banding while it moves; none should be left a second
+  or so after it stops.
+- Save an image should take as long as it did.
 ## 0.57.2 — 2026-10-11
 
 **A subtraction's walls wear the cutter's material** (the user: "the material of the host object is also the material
