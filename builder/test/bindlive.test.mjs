@@ -93,6 +93,8 @@ try {
     // ---- codegen
     {
         const RT = standIn(); RT.set({ sceneData: 0 })
+        // the renderer told of a move at every live value (lib/pathtracer/interaction.js: fast while moving)
+        RT.interacting = { n: 0, poke() { RT.interacting.n++ } }
         const B = installBuilder({}, { RT, gpu, project: P.createProject([lens()]) })
         await B.apply()
         let asked = 0
@@ -111,6 +113,7 @@ try {
         // another count: only a compile has the uniforms for it
         M.find(B.doc, 'strip').node.params.count = 5
         got.count = [B.live('strip', 'count'), asked, M.find(B.doc, 'strip').node.copies.length]
+        got.poked = RT.interacting.n
         // the registry: the group's parameters, not what is bound to them
         const paths = sceneParams(B.doc).map(e => e.path)
         got.registry = [paths.includes('scene/lens/diameter'), paths.includes('scene/body/radius'), paths.includes('scene/body/height'),
@@ -145,6 +148,8 @@ ok('codegen: a group\'s parameter moved, the bound radius written as its uniform
     JSON.stringify(got.radius) === JSON.stringify([true, 1.5, 1.5, 0, 0]), JSON.stringify(got.radius))
 ok('codegen: a bound position written into its transform\'s uniform', got.cap[0] === 0.75 && got.cap[1] === 0 && got.cap[2] === 0, JSON.stringify(got.cap))
 ok('codegen: an array\'s pitch from its parameter: the copies\' uniforms, live', JSON.stringify(got.pitch) === JSON.stringify([true, 0]), JSON.stringify(got.pitch))
+ok('every live value tells the renderer a move is under way (RT.interacting.poke: fast while moving), a compile-asking one too',
+    got.poked === 4, `${got.poked}`)
 ok('codegen: its count from its parameter: not live, and a compile asked of the host', JSON.stringify(got.count) === JSON.stringify([false, 1, 5]), JSON.stringify(got.count))
 ok('the registry: the component\'s parameter, not the values bound to it (the rest of the node\'s are there)',
     JSON.stringify(got.registry) === JSON.stringify([true, false, true, false, true]), JSON.stringify(got.registry))

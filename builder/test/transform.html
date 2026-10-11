@@ -27,12 +27,15 @@ import { worldPerPixels } from '../gizmo.js'
 import { CAMERA } from '../../lib/camera.js'
 import { projectPoint } from '../../lib/pathtracer/core/genrays.js'
 import { toWorldOf } from '../boxes.js'
+import { makeInteraction } from '../../lib/pathtracer/interaction.js'
 
 const stage = document.getElementById('stage'), canvas = document.getElementById('c')
 const cam = CAMERA({ canvas, aspect: 800 / 500, fov: 40, up: [0, 0, 1] })
 cam.set({ target: [0, 0, 0] }); cam.set({ azimuth: -60, elevation: 30, distance: 5 })
 let state = {}, compiles = 0
 const RT = {
+    // the renderer's "is the user moving something" (lib/pathtracer/interaction.js), the real one: a drag holds it
+    interacting: makeInteraction({ idleMs: 100 }),
     cam, scene: null,
     set(values) { const unknown = []; for (const [k, v] of Object.entries(values)) { if (k in state) state[k] = structuredClone(v); else unknown.push(k) } return unknown },
     get: () => structuredClone(state),

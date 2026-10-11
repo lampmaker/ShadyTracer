@@ -541,6 +541,9 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
         live(id, k) {
             const animated = animatedKeys(doc()).has(`${id}\n${k}`)
             if (animated) animatedEdits++; else liveEdits++
+            // A MOVE (lib/pathtracer/interaction.js): a value pushed live -- a gizmo, a point, a slider -- traces a full picture
+            // lighter until it stops (moveFast). An animated one too: a timeline playing is a move as long as it plays.
+            try { RT.interacting?.poke?.() } catch { }
             if (applying > 0) missed.set(`${current}\n${id}\n${k}`, [current, id, k])     // see `missed`
             /* THE BAKED SCENE SHOWN (baker.js): its values are constants, so no value can be pushed to it -- the editing
                build back first, through the host's queue (an apply: from the pipeline cache), which builds from the

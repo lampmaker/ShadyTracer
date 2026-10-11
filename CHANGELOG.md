@@ -15,6 +15,50 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.59.0 — 2026-10-11
+
+**The quality on the view, and ⚡ is now "fast while moving"** (the user: "the working of the toggle on the viewport
+is a bit unclear; there are 5 modes ... a dropdown to the viewport icons that selects the mode ... use the existing
+button to toggle automatic switching to sketch or draft when editing / moving the viewport").
+
+Before this version, ⚡ flipped the mode between full and the last fast mode it had seen. That was one of five modes,
+it was hidden, and it was forgotten on reload.
+
+**The quality menu.** The toolbar at the top left now names the preset in force in a word (*Standard ▾*). This is
+the one button there with a word, as asked. Its menu holds:
+- the five presets, as the Render settings Quality box has them, with that box's line;
+- *Custom* on the button when your settings are no preset's;
+- a *While moving* row (below).
+
+Choosing the preset already in force restarts nothing. The box, this menu and the Render settings menu now share one
+rule for that (`quality.js applyPreset`).
+
+**⚡ Fast while moving** (setting `moveFast`, on by default) has a choice of **Draft** or **Sketch** (`moveMode`,
+Draft by default; Sketch for a heavy scene, as asked). It is set in the menu, in the Quality box, and by the Render
+settings menu's commands.
+- **When it switches:** while you orbit the camera, drag a gizmo or a point, or move a live value, a Standard, High
+  or Custom picture traces as the chosen mode. The full picture comes back 0.4 s after the last move. A drag held
+  still does not switch back until it is let go.
+- **What it leaves alone:** Draft, Sketch and Optics are already light. Your settings are never written; only what
+  is traced changes. Saves, timeline frames, Tests and `RT.step` always trace as set.
+- **How you can tell:** ⚡ turns amber while it is doing it, and Render stats says *DRAFT WHILE MOVING*.
+- **How it knows something is moving:** told explicitly, by the camera, the builder's live values and its drags
+  (`interaction.js`, `RT.interacting`), never guessed from picture resets. A scene build or the switch itself would
+  otherwise count as a move.
+
+None of this has been seen in the page or on a card.
+
+**What to look at:**
+- The word at the top left follows the Quality box and the box follows the word: choose High in one and look at
+  the other.
+- With Standard or High and ⚡ on: orbit the camera. Does the picture trace as Draft while moving, ⚡ amber, and the
+  full picture come back a moment after you stop?
+- The same while dragging an object's gizmo, a Points handle, or a properties slider.
+- Choose Sketch under *While moving* on a heavy scene. Does orbiting feel lighter?
+- ⚡ off: nothing switches.
+- Draft, Sketch or Optics chosen: moving changes nothing.
+- A false-colour view: neither the word nor ⚡ is shown.
+
 ## 0.58.0 — 2026-10-10
 
 **The page stays responsive on a heavy scene** (the user: "when renders take very long the whole UI becomes

@@ -24,7 +24,7 @@
 
 ## It is slow
 
-See [How fast it is](rendering.md#how-fast-it-is). Switch **⚡** or **Sketch** on while modelling. Look for a relief
+See [How fast it is](rendering.md#how-fast-it-is). Choose **Sketch** in the view's quality menu while modelling, or keep **⚡** on, with Sketch under *While moving*. Look for a relief
 on a large surface, a noisy modifier, or a shape that many rays graze.
 
 ## It is noisy
