@@ -166,6 +166,7 @@ C = add_new(C, NboxRounded(p, size, rounding), MATERIAL);
         }
         XF_SUB -= 1u;
         if (first_cc) { k_cc = C.s; km_cc = C.m; first_cc = false; } else {
+            km_cc = select(km_cc, C.m, -C.s.w > k_cc.w);
             k_cc = csgSubtract(k_cc, C.s, UB.blend_cc);
         }
     }
@@ -189,6 +190,7 @@ C = add_new(C, Nsphere(p, radius), MATERIAL);
         }
         XF_SUB -= 1u;
         if (first_cc) { k_cc = C.s; km_cc = C.m; first_cc = false; } else {
+            km_cc = select(km_cc, C.m, -C.s.w > k_cc.w);
             k_cc = csgSubtract(k_cc, C.s, UB.blend_cc);
         }
     }
@@ -260,6 +262,7 @@ C = add_new(C, NboxRounded(p, size, rounding), MATERIAL);
                         }
                         XF_SUB -= 1u;
                         if (first_hs) { k_hs = C.s; km_hs = C.m; first_hs = false; } else {
+                            km_hs = select(km_hs, C.m, -C.s.w > k_hs.w);
                             k_hs = csgSubtract(k_hs, C.s, UB.blend_hs);
                         }
                     }
@@ -283,6 +286,7 @@ C = add_new(C, Nsphere(p, radius), MATERIAL);
                         }
                         XF_SUB -= 1u;
                         if (first_hs) { k_hs = C.s; km_hs = C.m; first_hs = false; } else {
+                            km_hs = select(km_hs, C.m, -C.s.w > k_hs.w);
                             k_hs = csgSubtract(k_hs, C.s, UB.blend_hs);
                         }
                     }
@@ -327,6 +331,7 @@ C = add_new(C, NboxRounded(p, size, rounding), MATERIAL);
                         }
                         XF_SUB -= 1u;
                         if (first_ss) { k_ss = C.s; km_ss = C.m; first_ss = false; } else {
+                            km_ss = select(km_ss, C.m, -C.s.w > k_ss.w);
                             k_ss = csgSubtract(k_ss, C.s, UB.blend_ss);
                         }
                     }
@@ -351,6 +356,7 @@ C = add_new(C, Ncylinder(p, height * 0.5, radius), MATERIAL);
                         }
                         XF_SUB -= 1u;
                         if (first_ss) { k_ss = C.s; km_ss = C.m; first_ss = false; } else {
+                            km_ss = select(km_ss, C.m, -C.s.w > k_ss.w);
                             k_ss = csgSubtract(k_ss, C.s, UB.blend_ss);
                         }
                     }
@@ -394,6 +400,7 @@ C = add_new(C, Nsphere(p, radius), MATERIAL);
                         }
                         XF_SUB -= 1u;
                         if (first_it) { k_it = C.s; km_it = C.m; first_it = false; } else {
+                            km_it = select(km_it, C.m, C.s.w > k_it.w);
                             k_it = csgIntersect(k_it, C.s, UB.blend_it);
                         }
                     }
@@ -418,6 +425,7 @@ C = add_new(C, NboxRounded(p, size, rounding), MATERIAL);
                         }
                         XF_SUB -= 1u;
                         if (first_it) { k_it = C.s; km_it = C.m; first_it = false; } else {
+                            km_it = select(km_it, C.m, C.s.w > k_it.w);
                             k_it = csgIntersect(k_it, C.s, UB.blend_it);
                         }
                     }
@@ -602,6 +610,7 @@ C = add_new(C, NboxRounded(p, size, rounding), MATERIAL);
                         }
                         XF_SUB -= 1u;
                         if (first_ex) { k_ex = C.s; km_ex = C.m; first_ex = false; } else {
+                            km_ex = select(km_ex, C.m, -C.s.w > k_ex.w);
                             k_ex = csgSubtract(k_ex, C.s, UB.blend_ex);
                         }
                     }
@@ -625,6 +634,7 @@ C = add_new(C, Nsphere(p, radius), MATERIAL);
                         }
                         XF_SUB -= 1u;
                         if (first_ex) { k_ex = C.s; km_ex = C.m; first_ex = false; } else {
+                            km_ex = select(km_ex, C.m, -C.s.w > k_ex.w);
                             k_ex = csgSubtract(k_ex, C.s, UB.blend_ex);
                         }
                     }
@@ -669,6 +679,7 @@ C = add_new(C, NboxRounded(p, size, rounding), MATERIAL);
                         }
                         XF_SUB -= 1u;
                         if (first_lt) { k_lt = C.s; km_lt = C.m; first_lt = false; } else {
+                            km_lt = select(km_lt, C.m, -C.s.w > k_lt.w);
                             k_lt = csgSubtract(k_lt, C.s, UB.blend_lt);
                         }
                     }
@@ -693,6 +704,7 @@ C = add_new(C, Ncapsule(p, height * 0.5, radius), MATERIAL);
                         }
                         XF_SUB -= 1u;
                         if (first_lt) { k_lt = C.s; km_lt = C.m; first_lt = false; } else {
+                            km_lt = select(km_lt, C.m, -C.s.w > k_lt.w);
                             k_lt = csgSubtract(k_lt, C.s, UB.blend_lt);
                         }
                     }
@@ -739,6 +751,7 @@ C = add_new(C, Ncapsule(p, height * 0.5, radius), MATERIAL);
                         // node apa (code): an optics limiter, not in the picture
                         XF_SUB -= 1u;
                         if (first_ap) { k_ap = C.s; km_ap = C.m; first_ap = false; } else {
+                            km_ap = select(km_ap, C.m, -C.s.w > k_ap.w);
                             k_ap = csgSubtract(k_ap, C.s, UB.blend_ap);
                         }
                     }
@@ -763,6 +776,7 @@ C = add_new(C, Ncylinder(p, height * 0.5, radius), MATERIAL);
                         }
                         XF_SUB -= 1u;
                         if (first_ap) { k_ap = C.s; km_ap = C.m; first_ap = false; } else {
+                            km_ap = select(km_ap, C.m, -C.s.w > k_ap.w);
                             k_ap = csgSubtract(k_ap, C.s, UB.blend_ap);
                         }
                     }
@@ -853,6 +867,7 @@ C = add_new(C, NboxRounded(p, size, rounding), MATERIAL);
                         }
                         XF_SUB -= 1u;
                         if (first_outer) { k_outer = C.s; km_outer = C.m; first_outer = false; } else {
+                            km_outer = select(km_outer, C.m, -C.s.w > k_outer.w);
                             k_outer = csgSubtract(k_outer, C.s, UB.blend_outer);
                         }
                     }
@@ -877,6 +892,7 @@ C = add_new(C, Ncylinder(p, height * 0.5, radius), MATERIAL);
                         }
                         XF_SUB -= 1u;
                         if (first_outer) { k_outer = C.s; km_outer = C.m; first_outer = false; } else {
+                            km_outer = select(km_outer, C.m, -C.s.w > k_outer.w);
                             k_outer = csgSubtract(k_outer, C.s, UB.blend_outer);
                         }
                     }
@@ -1040,6 +1056,7 @@ C = add_new(C, NboxRounded(p, size, rounding), MATERIAL);
                         }
                         XF_SUB -= 1u;
                         if (first_pl) { k_pl = C.s; km_pl = C.m; first_pl = false; } else {
+                            km_pl = select(km_pl, C.m, C.s.w > k_pl.w);
                             k_pl = csgIntersect(k_pl, C.s, UB.blend_pl);
                         }
                     }
@@ -1063,6 +1080,7 @@ C = add_new(C, Nsphere(p, radius), MATERIAL);
                         }
                         XF_SUB -= 1u;
                         if (first_pl) { k_pl = C.s; km_pl = C.m; first_pl = false; } else {
+                            km_pl = select(km_pl, C.m, C.s.w > k_pl.w);
                             k_pl = csgIntersect(k_pl, C.s, UB.blend_pl);
                         }
                     }
@@ -1107,6 +1125,7 @@ C = add_new(C, NboxRounded(p, size, rounding), MATERIAL);
                         }
                         XF_SUB -= 1u;
                         if (first_dis) { k_dis = C.s; km_dis = C.m; first_dis = false; } else {
+                            km_dis = select(km_dis, C.m, -C.s.w > k_dis.w);
                             k_dis = csgSubtract(k_dis, C.s, UB.blend_dis);
                         }
                     }
@@ -1130,6 +1149,7 @@ C = add_new(C, Nsphere(p, radius), MATERIAL);
                         }
                         XF_SUB -= 1u;
                         if (first_dis) { k_dis = C.s; km_dis = C.m; first_dis = false; } else {
+                            km_dis = select(km_dis, C.m, -C.s.w > k_dis.w);
                             k_dis = csgSubtract(k_dis, C.s, UB.blend_dis);
                         }
                     }
@@ -1154,6 +1174,7 @@ C = add_new(C, Ncylinder(p, height * 0.5, radius), MATERIAL);
                         }
                         XF_SUB -= 1u;
                         if (first_dis) { k_dis = C.s; km_dis = C.m; first_dis = false; } else {
+                            km_dis = select(km_dis, C.m, -C.s.w > k_dis.w);
                             k_dis = csgSubtract(k_dis, C.s, UB.blend_dis);
                         }
                     }
@@ -1198,6 +1219,7 @@ C = add_new(C, NboxRounded(p, size, rounding), MATERIAL);
                         }
                         XF_SUB -= 1u;
                         if (first_mid) { k_mid = C.s; km_mid = C.m; first_mid = false; } else {
+                            km_mid = select(km_mid, C.m, C.s.w > k_mid.w);
                             k_mid = csgIntersect(k_mid, C.s, UB.blend_mid);
                         }
                     }
@@ -1221,6 +1243,7 @@ C = add_new(C, Nsphere(p, radius), MATERIAL);
                         }
                         XF_SUB -= 1u;
                         if (first_mid) { k_mid = C.s; km_mid = C.m; first_mid = false; } else {
+                            km_mid = select(km_mid, C.m, C.s.w > k_mid.w);
                             k_mid = csgIntersect(k_mid, C.s, UB.blend_mid);
                         }
                     }
@@ -1245,6 +1268,7 @@ C = add_new(C, Ntorus(p, ring, tube), MATERIAL);
                         }
                         XF_SUB -= 1u;
                         if (first_mid) { k_mid = C.s; km_mid = C.m; first_mid = false; } else {
+                            km_mid = select(km_mid, C.m, C.s.w > k_mid.w);
                             k_mid = csgIntersect(k_mid, C.s, UB.blend_mid);
                         }
                     }
@@ -1289,6 +1313,7 @@ C = add_new(C, NboxRounded(p, size, rounding), MATERIAL);
                         }
                         XF_SUB -= 1u;
                         if (first_off) { k_off = C.s; km_off = C.m; first_off = false; } else {
+                            km_off = select(km_off, C.m, -C.s.w > k_off.w);
                             k_off = csgSubtract(k_off, C.s, UB.blend_off);
                         }
                     }
@@ -1312,6 +1337,7 @@ C = add_new(C, Nsphere(p, radius), MATERIAL);
                         }
                         XF_SUB -= 1u;
                         if (first_off) { k_off = C.s; km_off = C.m; first_off = false; } else {
+                            km_off = select(km_off, C.m, -C.s.w > k_off.w);
                             k_off = csgSubtract(k_off, C.s, UB.blend_off);
                         }
                     }
