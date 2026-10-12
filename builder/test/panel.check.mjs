@@ -336,6 +336,20 @@ await p.evaluate(() => CHECK.panel.show('pa'))                 // redrawn under 
 await p.mouse.move(sbox.x + 50, sbox.y + sbox.h / 2); await p.mouse.move(sbox.x + 60, sbox.y + sbox.h / 2); await p.mouse.up()
 const afterDrag = await p.evaluate(() => CHECK.M.find(CHECK.doc, 'pa').node.params.radius)
 ok('a slider dragged while the panel is redrawn keeps a number, the one it had', Number.isFinite(afterDrag) && afterDrag === midDrag, `${midDrag} -> ${afterDrag}`)
+/* A VALUE OUTSIDE ITS RANGE (the user, 2026-10-12: the RGBW example's 60 mm screen on a rectangle whose range stops at
+   10): the slider widened to reach it, so a small drag from its end moves it a little -- the property table held the
+   range as given, and the first drag wrote 1 over the 5 here */
+const keptR = await p.evaluate(() => { const n = CHECK.M.find(CHECK.doc, 'pa').node; const was = n.params.radius; n.params.radius = 5; return was })
+await rowsOf('pa')
+const wbox = await p.evaluate(() => {
+    const row = [...document.querySelectorAll('.tp-lblv')].find(r => r.querySelector('.tp-lblv_l')?.textContent.trim().replace(/[✎×]/g, '') === 'radius')
+    const sl = row?.querySelector('.tp-sldv_t') || row?.querySelector('.tp-sldv'); const r = sl.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }
+})
+await p.mouse.move(wbox.x + wbox.w - 1, wbox.y + wbox.h / 2); await p.mouse.down(); await p.mouse.move(wbox.x + wbox.w - 4, wbox.y + wbox.h / 2); await p.mouse.up()
+const wideR = await p.evaluate(() => CHECK.M.find(CHECK.doc, 'pa').node.params.radius)
+ok('a value above its range\'s maximum: the slider reaches it, a small drag from its end leaves it near (5 in 0..1)',
+    wideR > 4 && wideR <= 5, String(wideR))
+await p.evaluate(r => { CHECK.M.find(CHECK.doc, 'pa').node.params.radius = r }, keptR)
 await p.evaluate(() => CHECK.M.setRange(CHECK.doc, 'pa', 'radius', null))
 await rowsOf('pa')
 const wasR = await p.evaluate(() => CHECK.M.find(CHECK.doc, 'pa').node.params.radius)

@@ -15,6 +15,19 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.59.1 — 2026-10-12
+
+**A parameter's slider reaches its value** (the user: "Screen size is 60 but max for the size property was set
+to 10. so dragging the scene changes it immediately"). A parameter's range is its block's (the rectangle's width
+and height stop at 10), and the property table widens a range to its value only when none is given -- so the RGBW
+mixing example's 60 mm screen showed a slider pinned at its end, and the first drag wrote 10 over 60. The builder
+panel now widens a parameter's range to hold its value as the row is drawn (`fitRange`, builder/panel.js), a
+vector by its components, and the animated list's rows likewise; the block's range itself is not changed.
+The general fix belongs in the property table (GUISTUFF, `bindingPrepper`), which is a pull request there first.
+
+**What to look at:** the RGBW colour mixing example, the screen's width and height: the slider at its right end
+at 60, and a small drag moving it by a little, not to 10.
+
 ## 0.59.0 — 2026-10-11
 
 **The quality on the view, and ⚡ is now "fast while moving"** (the user: "the working of the toggle on the viewport

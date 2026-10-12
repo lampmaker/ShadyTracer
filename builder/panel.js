@@ -171,8 +171,9 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
                 b = af.addBinding({ v: e ? `${e.label}: compile-time now` : `${path}: not in the scene` }, 'v', { readonly: true, label: '' })
             } else {
                 const dims = e.dims | 0 || 1
+                const r = dims === 1 && !e.options ? fitRange({ min: e.min, max: e.max }, e.get()) : e
                 const opts = { label: String(e.label ?? path), ...(e.options ? { options: e.options } : {}),
-                               ...(dims === 1 && e.min != null ? { min: e.min } : {}), ...(dims === 1 && e.max != null ? { max: e.max } : {}),
+                               ...(dims === 1 && r.min != null ? { min: r.min } : {}), ...(dims === 1 && r.max != null ? { max: r.max } : {}),
                                ...(dims === 1 && e.step != null ? { step: e.step } : {}),
                                // no range: open, as typedOpts says why (a range of PropertyTable's own clamps a negative to 0)
                                ...(dims === 1 && !e.options && e.min == null && e.max == null ? { min: -Infinity } : {}) }
@@ -810,10 +811,22 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
        its value (propertytable.js bindingPrepper), so a negative a4 typed in became 0 -- as did any parameter a person
        added without a range. A minimum of -Infinity alone is a range given, and an open one: a field, no slider. */
     const typedOpts = range => range.step != null ? {} : range.min == null && range.max == null ? { min: -Infinity, format: asTyped } : { format: asTyped }
+    /* A RANGE WIDENED TO HOLD ITS VALUE: a range is a slider's reach, not a limit on the value. The RGBW mixing
+       example's screen is 60 mm wide on a rectangle whose range stops at 10 (its block's), and the property table
+       widens a range only when none is given (propertytable.js bindingPrepper) -- so the slider stood at its end and
+       the first drag wrote 10 over the 60 (the user, 2026-10-12). Widened as drawn, never written back: the block's
+       range stays what it says. A vector widens by its largest and smallest component. */
+    function fitRange(range, v) {
+        const nums = typeof v === 'number' ? [v] : v && typeof v === 'object' ? Object.values(v).filter(x => typeof x === 'number') : []
+        const finite = nums.filter(Number.isFinite)
+        if (!finite.length) return range
+        const lo = Math.min(...finite), hi = Math.max(...finite)
+        return { ...range, ...(range.min != null && lo < range.min ? { min: lo } : {}), ...(range.max != null && hi > range.max ? { max: hi } : {}) }
+    }
     function paramRow(pf, owner, k, typeGui, editable, consts) {
         /* the range: the owner's own, else its type's -- so parameters are sliders, not
-           bare numbers */
-        const range = owner.ranges?.[k] || typeGui[k] || {}
+           bare numbers -- widened to hold the value (fitRange) */
+        const range = fitRange(owner.ranges?.[k] || typeGui[k] || {}, owner.params[k])
         const name = `${k}${unitSuffix(owner, k)}`
         // a node's "lock parameters" (LOCKED ROWS above); a material or a relief has none
         /* ...and a value BOUND to its component's parameters (model.js version 18): held, its expression on the label --
