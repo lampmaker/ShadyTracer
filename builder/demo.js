@@ -136,6 +136,12 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
        an edit, and every glance would be an undo step. A workspace saves them. Keyed by scene key, which a
        restore can hand to another scene (an undone + Scene, made again): pruned to the project's keys then. */
     let cams = new Map(Object.entries(initialCameras || {}).filter(([k, c]) => P.scene(project, k) && c && typeof c === 'object'))
+    /* ...AND THE SCENE THE RENDERER STARTS ON TOO. markShown puts a camera back only when the scene shown changes,
+       and at the start it does not: the renderer was made on `current`, so `shown` starts as it. A first visit's
+       example camera (index.html, scenes/index.js) was handed in here and never applied -- the page opened on the
+       renderer's default, 20 of the scene's unit from the origin, 20 mm into a tabletop scene (the user, 2026-10-13:
+       "the camera is not right on a first open, it must be further away"). */
+    if (cams.has(current)) RT.applySettings?.({ camera: structuredClone(cams.get(current)) })
     const prune = () => { for (const k of cams.keys()) if (!P.scene(project, k)) cams.delete(k) }
     /** The renderer shows the current scene now: the one it showed keeps its camera, this one's comes back. */
     const markShown = () => {

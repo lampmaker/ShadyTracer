@@ -15,6 +15,23 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.59.2 — 2026-10-13
+
+**A first visit opens on the example's camera** (the user: "the camera is not right on a first open, it must be further
+away"). The first visit's scene, *First steps*, comes with a camera of its own (scenes/make.mjs: 330 mm out, 25° above
+the table), and the page handed it to the builder -- which puts a scene's camera back only when the scene shown
+*changes*, and at the start it does not. So the page opened on the renderer's default, 20 of the scene's unit from the
+origin: 20 mm, inside the tabletop scene. The builder now applies the starting scene's kept camera once, as it is made
+(builder/demo.js). A return visit was not affected (the saved renderer settings carry the camera).
+
+**Render stats: Speed and Picture on top, the warnings at the bottom** (the user: the remarks change all the time, so
+the blocks under them kept jumping). The rows are Speed, Picture, Under the cursor, then the warnings
+(core/utilities.js statsRows).
+
+**What to look at:** open the page in a fresh profile (or a private window, nothing kept): *First steps* should be seen
+whole, from above and to the side, not from inside it. In Render stats, the Speed block should stay put as the
+warnings (Draft, flushed, photons short) come and go below it.
+
 ## 0.59.1 — 2026-10-12
 
 **A parameter's slider reaches its value** (the user: "Screen size is 60 but max for the size property was set
