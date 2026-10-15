@@ -559,6 +559,26 @@ evaluates f towards the face and queues the connection (`mfConnect`). The split:
 refraction into air -> camera, marked `TAG_LENS_ONE` on either side; the camera's rays leave it that,
 with or without a lens, and the lens's photons leave it their share (`lensOwned`, `lensHit`).
 
+**Through glass and mirrors, the photon map (0.60.0; `core/sppm.js`).** The rest of that class -- a floor in air behind a
+glass pane, lit through it and seen through it (the user's picture, 2026-10-15: black through the pane but for the lens's
+specks), a ball's caustic seen through the ball, a beam's spot seen in a mirror -- is gathered: probabilistic progressive
+photon mapping (Knaus & Zwicker 2011). With the setting on (Renderer › Light sources › *Seen through glass and mirrors
+(photon map)*, off by default), a sample traces its photons first (`photons.js planBatches`'s `first`), and a kernel of its
+own between the surface kernel and shade (`wavefront.js prog_sppm`) STORES every photon that has passed a delta event where
+it lands on a surface with an evaluable lobe (the lens's photon field 0, `TAG_PASSED`), in a hash table of linked lists
+two radii a cell; then the sample's camera rays, each one that has seen only delta events since the eye (its field 1)
+GATHERS there, `f Phi / (pi r^2)` over the evaluable lobes for the photons within r, over n^2 of the medium it is in, and
+the camera's path leaves the class as it does for the lens (`lensOwned`; the lens's photons stand down). The radius is
+`sppmRadius` pixels at the distance in focus at the first sample and shrinks every sample after (`r_k^2 = r_1^2 prod (i +
+alpha)/(i + 1)`, alpha 2/3): a little blurred at first, consistent as the samples are averaged. The manifold connection
+keeps its part; a merged path counts only if the camera alone could have made it (`b_c + b_p - 1 <= maxbounce`). In Draft
+and Optics too, where the camera's path ends at the surface it gathers on, so the map adds what nothing there counts
+(Optics stores every one of the lights' photons). Not in Sketch, the illuminance view or an orthographic camera.
+What it costs: a second wavefront chain a sample, and 40 bytes a photon (`sppmCapacity`, 2 M: 80 MB) -- neither measured
+on a card. Not covered: a light no camera path can meet (collimated, or no face) lighting a surface straight, seen through
+glass; and with dispersive glass the camera's wavelength and the photon's are drawn apart, so a spectrum seen through a
+prism is mixed (inferred, not measured).
+
 ### Emissive surfaces as lights
 
 **Nothing is declared.** Any surface whose material emits — the showcase's orange/petrol sphere,
@@ -643,8 +663,8 @@ sunmis 1), and nothing is counted twice. What is left out is the bounce light.
   No sun photons, no light samples, and an emissive *material* only glows: the rays are the lights'.
   The camera side counts a light's face where it meets it (straight on, or past a mirror, glass,
   near-mirror gloss), the photons what lands on the evaluable lobes, so nothing is counted twice.
-  Not seen: a beam's spot looked at in a mirror or through a lens -- that is a connection through a
-  delta, which no photon can make (as in Draft).
+  A beam's spot looked at in a mirror or through a lens is a connection through a delta, which no photon
+  can make (as in Draft): seen only with the photon map on (0.60.0, above), which gathers it there.
 
 **No MIS between a light's photons and the camera in a fast mode.** The lights' direct paths are
 shared by the balance heuristic in full (`Ray.ltMis`, PLAN.md L4b), which assumes the camera's path

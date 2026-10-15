@@ -465,6 +465,18 @@ code, a look each.
   Open: a face showing D twice gives one image; two refractions (a ball's caustic seen through it) and mirrors stay the
   lens's; a coated face is crossed at plain Fresnel; the cost a photon (about 100 to 300 scene looks) is the user's to
   measure.
+- **The photon map -- built (0.60.0), not yet seen** (the user, 2026-10-15: a glass slab before a lamp, rendered with an
+  aperture, black through the slab but for specks: "I want optics to show realistic light of the parts behind it"; asked
+  for SPPM over a two-face manifold). Probabilistic progressive photon mapping (`core/sppm.js`): a sample's photons first,
+  stored past a delta event where they land; its camera rays, past delta events only, gather them there over a radius that
+  shrinks every sample. It owns the lens's class (the lens's photons stand down; the manifold keeps its part) in the full
+  renderer, and adds the same in Draft and Optics, whose camera paths end where they gather. Checked: `sppm.test.mjs`
+  (0.9969 and 1.0032 of the camera's own sum through a slab with air under it and one lying on the floor, blocks within
+  3.3 %), `sppm.gpu.mjs` (the whole renderer on lavapipe: the floor through a slab by the camera's own paths, the map, the
+  lens's photons, a lens, Draft -- each within its error bar). Bench `sppm`. Open: what it costs a sample on a card (a
+  second wavefront chain) and its memory; a collimated beam lighting a surface seen through glass (a source no camera path
+  can meet, `ltMis < 0`: store from its first surface); the learned photon map credited by gathers; an orthographic camera
+  and the illuminance view; dispersive glass, whose camera wavelength and photon wavelength are drawn apart (inferred).
 - **Polarisation** -- unpolarised Fresnel per interface is -0.3% on a slab's transmission at 45
   degrees and -3% at 70 (optics-refraction's `vs polar.`). Matters for beam splitters and near
   Brewster. Stokes vector + frame: +28 bytes a ray (112 -> 144), the one item here that costs memory.
@@ -822,9 +834,9 @@ Found along the way, parked on purpose. Each says what is known and what would s
    of them connect (uniform: 0.37%). The NEE-off pair read -0.84 / -0.67%, about one standard
    error of a 3.44-degree sun found by chance, and probably correlated (same random sequence).
 2. ~~Press `emitters`~~ **done**, above.
-3. **SPPM**, for what light tracing cannot do: caustics seen through glass or in a mirror.
-   Sized in an earlier session; large. (Transmissive shadow rays, which used to be here, are
-   superseded: they removed the shadow without making the caustic.)
+3. ~~**SPPM**, for what light tracing cannot do: caustics seen through glass or in a mirror.~~ **Built (0.60.0)**, as
+   probabilistic progressive photon mapping (C, *The photon map*); not yet seen on a card. (Transmissive shadow rays,
+   which used to be here, are superseded: they removed the shadow without making the caustic.)
 4. **`claude/path-regularization` is undecided.** The branch is no longer on origin (checked
    2026-09-24); its two commits are unmerged, and whether they still exist anywhere is for the user
    to say. The bench came back non-monotonic: `off`

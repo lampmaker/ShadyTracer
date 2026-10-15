@@ -15,6 +15,55 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.60.0 — 2026-10-15
+
+**Seen through glass: the photon map.** Your picture (Standard/High, an aperture): a lamp, a glass slab standing before
+a white floor and wall -- and through the slab, black with white specks. The floor and wall behind the slab, lit by the
+lamp *through* the slab and seen *through* it, are light → glass → surface → glass → eye, and nothing drew that but by
+chance (read in code): light sampling cannot aim through glass, a photon's connection to the camera is a straight line
+the slab blocks, the manifold connection (0.44.0) takes only a surface *inside* the glass with one refraction to the
+eye, and with an aperture the whole class belonged to the lens's photons -- one must leave the slab and happen to cross
+the lens: the specks. In Optics nothing drew it at all. You chose photon mapping, the roadmap's open item since the lens.
+- **The setting:** Renderer › Light sources › *Seen through glass and mirrors (photon map)*, **off by default** until you
+  have seen it (its cost is not measured). In the full renderer, Draft and Optics; not in Sketch, the illuminance view or
+  an orthographic camera. Developer: *Photon map: radius (pixels)* (3) and *photons (millions)* (2).
+- **How** (`core/sppm.js`; probabilistic progressive photon mapping, Knaus & Zwicker 2011): each sample traces its photons
+  first; every one that has passed glass or a mirror is stored where it lands on a diffuse or glossy surface. Then the
+  sample's camera rays: one that has met only glass or mirrors since the eye gathers the photons stored within a radius of
+  where it lands, through the surface's BSDF. The radius starts at 3 pixels at the distance in focus and shrinks every
+  sample, so the light through the glass is a little soft at first and sharpens as samples come in. A beam's spot seen in
+  a mirror, a ball's caustic seen through the ball and a lens's image of a lit floor are the same class and come with it.
+- **How it splits the light:** it owns the lens's class (lens.js), by the same bookkeeping: the camera's paths leave it
+  that light, the lens's photons stand down (an aperture now only gives depth of field there), the manifold connection
+  keeps its part. In Draft and Optics a camera path ends at the surface it gathers on, so the map adds light nothing else
+  there counts -- in Optics the lights' rays.
+- **What it costs (inferred, not measured):** a sample is two wavefront chains while it is on (the photons, then the
+  camera's rays: a camera ray must not gather before the sample's photons have landed), a kernel between the surface
+  kernel and shade, and 40 bytes a photon -- 80 MB at the default two million, plus 4 MB. Render stats says how many it
+  held and its radius, and warns if a sample had more photons than it holds.
+- **Not covered:** a light no camera path can meet (a collimated beam, or one with no face) lighting a surface straight,
+  seen through glass; and dispersive glass (an Abbe number): the camera's wavelength and the photon's are drawn apart, so a
+  spectrum seen through a prism is mixed (inferred).
+- **Checked here** (none of it on a card like yours, and no picture seen): `sppm.test.mjs` (no GPU): through a slab with
+  air under it -- your case, two faces each way -- the map's picture over 48 samples is 0.9969 of the camera's own sum,
+  and 1.0032 through a slab lying on the floor, blocks within 3.3 %; the grid against brute force; a gather in glass
+  without its 1/n² planted and caught. `sppm.gpu.mjs` (the whole renderer on Dawn over lavapipe, 32 × 32): the floor
+  seen through a slab, region mean against the camera's own paths -- the map 0.978 ± 0.025 (1.014 ± 0.027 in an earlier
+  run), through a 6 cm lens 0.958 ± 0.024, the lens's photons 0.77 ± 0.33; Draft 0 without the map and 0.929 ± 0.025 of
+  the full picture with it (Draft leaves out the bounce light); the floor beside the slab unchanged within 2 %.
+  `build.test.mjs`: the kernel's place, the photons' batches first, the map emptied once a sample, the radius per
+  sample. check-shaders' four passes, naga included: 5450 kernels.
+
+**What to look at:**
+1. Your slab scene, Standard or High: Light sources › *Seen through glass and mirrors* on. The floor and wall behind the
+   slab, seen through it: lit, and smooth after a few samples (soft at first), as bright as the light through the glass
+   should make them -- compare the floor seen past the slab's edge. With the aperture and without: the same light.
+2. The same scene in **Optics**: the lamp's light on the floor and wall behind the slab, through it.
+3. Render stats › Picture: *Photon map* -- millions stored and the radius in mm, shrinking. A *PHOTON MAP FULL* warning
+   means raise *photons (millions)*.
+4. Its cost on your card: Render stats › *Per sample* with it on and off. Then bench **`sppm`** (Tests): rows 1, 2 and 3
+   one meanLuma, rows 4 and 5 one meanLuma; `secs` is the cost.
+
 ## 0.59.2 — 2026-10-13
 
 **A first visit opens on the example's camera** (the user: "the camera is not right on a first open, it must be further
