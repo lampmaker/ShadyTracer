@@ -108,7 +108,6 @@ mixer's 10.5 µm.
 | normal step | 1 × | surface kernel (forward differences), pick (central) | larger: the curvature shows; finer than the floor: f32 noise |
 | leaving a surface | 10 × | a bounce, a ray moving away | the next march must not find the surface it left |
 | two steps off | 20 × | shadow rays' start and end, the camera connection's lift, the medium beyond, an emitter's photon and probe | from an estimated normal, so twice a bounce's |
-| manifold connection | 1 × (8, 20, 100) | surface kernel, its walk (`core/manifold.js`), taken at D | hit tests and convergence 1 ×; the normal's step 8 × (f32 rounding read by its differences); the checks 20 ×; the differences' span 100 × |
 | optics source start | 2 × | a light's ray off its exact face | two hit tests suffice off an exact flat face; twenty put rays inside a lightguide 0.2 mm in front of a die |
 | emitter aim margin | 10 × | light sampling's sphere round an emitter | a hit is within one tolerance of the surface |
 | scene: its tolerance | 1 × | a relief's band, a user's code that asks for it | the scene's code, in its unit |

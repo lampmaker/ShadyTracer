@@ -442,41 +442,35 @@ code, a look each.
   3. **The exact method for the optics trace** -- a source's spectrum (an LED's SPD, Planck, a Zemax file's own
      wavelength: optRays' unused 4th word), watts as watts, X Y Z from the CMFs at the detector, R(λ) and n(λ) per
      ray; and a true-colour detector map.
-- **The camera's lens -- built (0.43.0), not yet seen** (the user, 2026-10-09: "a more realistic camera model that
-  has a lens with certain diameter, and that could work in parallel"). Why: the floor inside the user's prism, lit by
-  the slit light through the glass and seen through the glass, is light -> glass -> diffuse -> glass -> eye, which
-  neither side could make with a pinhole (0.40.1 says why). A thin lens (aperture, focus; `core/lens.js`) is an area a
-  photon can pass through: photons count light -> delta+ -> D -> delta+ -> lens, the camera leaves them exactly that
-  class (sun disc, emitters, light faces), every other path as before. Depth of field comes with it. Only in the full
-  renderer, the photographic and luminance views, a perspective camera. Checked: `lens.test.mjs` (camera rays, photons
-  through the lens and connections agree on a toy scene, measured 1.005 / 0.994 / 1.001 at ten times the committed
-  samples), `lens.gpu.mjs` (the WGSL on Dawn: genrays, the class, a lens hit's pixel and weight, a connection through
-  the lens, a hit shaded in prog_shade's phases). Bench `lens` (same mean, light tracing on and off, per lens).
-  Open: the noise of that class is a photon's chance of crossing a small lens -- the next question is the user's
-  (2026-10-09): could something like NEE, aimed at the camera, do better? A camera inside a medium (under water) gets
-  no lens photons: a photon's last leg is tested against the lens in air only.
-- **The manifold connection -- built (0.44.0), not yet seen** (the user, 2026-10-09: "picture is noisy; I'd like to try
-  the manifold"). That NEE: a photon landing on a surface inside a medium is joined to the camera through ONE refraction,
-  the face's point found by Newton (`core/manifold.js`; Hanika et al. 2015), its weight ltConnect's with the refraction's
-  Jacobian. It owns light -> delta+ -> D in a medium -> one refraction into air -> the camera; the camera's rays and the
-  lens's photons leave it that (TAG_LENS_ONE). Works with a pinhole. Solved in the surface kernel one look at a time.
-  Checked: `manifold.test.mjs` (camera rays vs the connection on a slab and a dome, 0.997 and 0.999 of the sum),
-  `manifold.gpu.mjs` (the walk, the surface kernel on a builder scene, shade's half, on Dawn). Bench `manifold`.
-  Open: a face showing D twice gives one image; two refractions (a ball's caustic seen through it) and mirrors stay the
-  lens's; a coated face is crossed at plain Fresnel; the cost a photon (about 100 to 300 scene looks) is the user's to
-  measure.
-- **The photon map -- built (0.60.0), not yet seen** (the user, 2026-10-15: a glass slab before a lamp, rendered with an
-  aperture, black through the slab but for specks: "I want optics to show realistic light of the parts behind it"; asked
-  for SPPM over a two-face manifold). Probabilistic progressive photon mapping (`core/sppm.js`): a sample's photons first,
-  stored past a delta event where they land; its camera rays, past delta events only, gather them there over a radius that
-  shrinks every sample. It owns the lens's class (the lens's photons stand down; the manifold keeps its part) in the full
-  renderer, and adds the same in Draft and Optics, whose camera paths end where they gather. Checked: `sppm.test.mjs`
-  (0.9969 and 1.0032 of the camera's own sum through a slab with air under it and one lying on the floor, blocks within
-  3.3 %), `sppm.gpu.mjs` (the whole renderer on lavapipe: the floor through a slab by the camera's own paths, the map, the
-  lens's photons, a lens, Draft -- each within its error bar). Bench `sppm`. Open: what it costs a sample on a card (a
-  second wavefront chain) and its memory; a collimated beam lighting a surface seen through glass (a source no camera path
-  can meet, `ltMis < 0`: store from its first surface); the learned photon map credited by gathers; an orthographic camera
-  and the illuminance view; dispersive glass, whose camera wavelength and photon wavelength are drawn apart (inferred).
+- **The camera's lens -- built (0.43.0), not yet seen; its photons removed (0.61.0)** (the user, 2026-10-09: "a more
+  realistic camera model that has a lens with certain diameter, and that could work in parallel"). A thin lens (aperture,
+  focus; `core/lens.js`): depth of field, and connections to a point of its disc. Until 0.61.0 it was also an area a
+  photon could pass through -- photons counted light -> delta+ -> D -> delta+ -> lens, the camera left them that class --
+  which counted the class only when a photon happened to cross the disc: the specks in the user's picture of
+  2026-10-15. The photon map owns that class now, and the lens's photons went with the map on by default. Checked:
+  `lens.test.mjs` (camera rays and connections through the lens agree on a toy scene), `lens.gpu.mjs` (genrays, the
+  class's steps, a connection through the lens, a hit shaded in prog_shade's phases, on Dawn).
+- **The manifold connection -- built (0.44.0), never seen, removed (0.61.0)** (the user, 2026-10-09: "I'd like to try
+  the manifold"). A photon landing on a surface inside a medium joined to the camera through ONE refraction, the face's
+  point found by Newton (Hanika et al. 2015), in the surface kernel. The photon map gathers that light and the rest of
+  the class (two refractions, mirrors), so it went: 12.7k characters of WGSL out of the surface kernel and 16 bytes out
+  of every shade-queue item (~2.10 M -> ~2.16 M rays in the ray budget). In git history before 0.61.0
+  (`core/manifold.js`, its two tests and its bench) if a one-refraction case ever needs it again.
+- **The photon map -- built (0.60.0), seen (2026-10-15), on by default (0.61.0)** (the user, 2026-10-15: a glass slab
+  before a lamp, rendered with an aperture, black through the slab but for specks: "I want optics to show realistic light
+  of the parts behind it"; asked for SPPM over a two-face manifold; on their card: "this looks really good").
+  Probabilistic progressive photon mapping (`core/sppm.js`): a sample's photons first, stored past a delta event where
+  they land; its camera rays, past delta events only, gather them there over a radius that shrinks every sample. It owns
+  the class in the full renderer, and adds the same in Draft and Optics, whose camera paths end where they gather. 0.61.0:
+  on by default; a light no camera path can meet (`ltMis < 0`: collimated, or no face) stored at every surface its
+  photons land on and gathered through every lobe; IDLE where no camera ray gathers in a whole sample (a probe every 16
+  traces; a new size, mode or scene at once), and not run without photons. Checked: `sppm.test.mjs` (0.9969 and 1.0032 of
+  the camera's own sum through a slab with air under it and one lying on the floor, blocks within 3.3 %; a collimated beam
+  under a slab 1.0002 of its closed form), `sppm.gpu.mjs` (the whole renderer on lavapipe: the floor through a slab by the
+  camera's own paths, the map, through a lens, Draft -- each within its error bar; the idle skip), `build.test.mjs` (the
+  idle skip's every rule). Bench `sppm`. Open: what it costs a sample on a card (a second wavefront chain) and its memory;
+  the learned photon map credited by gathers; an orthographic camera and the illuminance view; dispersive glass, whose
+  camera wavelength and photon wavelength are drawn apart (inferred).
 - **Polarisation** -- unpolarised Fresnel per interface is -0.3% on a slab's transmission at 45
   degrees and -3% at 70 (optics-refraction's `vs polar.`). Matters for beam splitters and near
   Brewster. Stokes vector + frame: +28 bytes a ray (112 -> 144), the one item here that costs memory.
@@ -835,7 +829,7 @@ Found along the way, parked on purpose. Each says what is known and what would s
    error of a 3.44-degree sun found by chance, and probably correlated (same random sequence).
 2. ~~Press `emitters`~~ **done**, above.
 3. ~~**SPPM**, for what light tracing cannot do: caustics seen through glass or in a mirror.~~ **Built (0.60.0)**, as
-   probabilistic progressive photon mapping (C, *The photon map*); not yet seen on a card. (Transmissive shadow rays,
+   probabilistic progressive photon mapping (C, *The photon map*); seen on the user's card, on by default since 0.61.0. (Transmissive shadow rays,
    which used to be here, are superseded: they removed the shadow without making the caustic.)
 4. **`claude/path-regularization` is undecided.** The branch is no longer on origin (checked
    2026-09-24); its two commits are unmerged, and whether they still exist anywhere is for the user

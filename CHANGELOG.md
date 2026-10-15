@@ -15,6 +15,55 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.61.0 — 2026-10-15
+
+**The photon map on by default, a collimated beam seen through glass, and the two things it made redundant removed.**
+You saw the photon map on your card ("this looks really good") and chose: on by default, a beam through glass, and away
+with the lens's photons and the manifold connection.
+- **On by default** (Light sources › *Seen through glass and mirrors*). **Idle where it adds nothing**: a gather marks the
+  map (`SPPM_LOOKED`), and a whole sample in which no camera ray looked through glass or a mirror at a surface makes the
+  traces after run without it -- one wavefront chain, the camera keeping that light, the same picture as with the setting
+  off -- with a probe every 16 traces to look again. A new size, mode or scene starts it at once; **a camera move does
+  not** (a drag in a scene without glass would otherwise pay for it every frame), so glass turned into view is picked up
+  by the next probe, the picture correct and noisier until then. With no photons (the caustics and the lights' rays off)
+  it does not run at all. A sample spread over several frames keeps the choice it began with. Render stats › Picture:
+  *Photon map: idle* and why.
+- **A collimated beam (or a light with no face) seen through glass.** No camera path can meet such a light, so its light
+  reaches the picture only through its photons, and a surface it lights seen through glass was nobody's (read in code: the
+  map stored only photons that had passed glass). Its photons are now stored at every surface they land on, glass passed
+  or not, and gathered through every lobe, as its connections are (`sppm.js` `sppmUnmet`, `SPPM_ALL`).
+- **Removed: the lens's photons (0.43.0)**, which counted the light behind glass only when a photon happened to cross the
+  aperture -- the specks in your picture. The map counts it through any aperture or none. **The aperture stays**: depth of
+  field, and connections to a point of the lens.
+- **Removed: the manifold connection (0.44.0)**, never seen on a card: a photon on a surface *inside* glass joined to the
+  camera through one refraction, by Newton's method in the surface kernel. The map gathers that too. Its setting
+  (*Seen through glass (manifold)*) is gone; a workspace that has it says so in the console and ignores it. What it frees
+  (measured from the kernels' text and the structs, not their speed): 12.7k characters of WGSL in the surface kernel (the
+  demo scene's inlined to 53.6k with it), 16 of every shade-queue item's 288 bytes (272 now: the ray budget holds ~2.16 M
+  rays in flight where it held ~2.10 M), and a bit of the ray's tag (16, kept free for a flag).
+- **Kept as they measured:** the benchmark's rows start with the map off (`tests.js` BENCH_BASE: every run before was
+  without it), and the `lt`, `emitters` and `small-caustic` tests pin it off (they measure light tracing's own split). The
+  library's thumbnails are rendered without it, as before (its studio is a second renderer; the map there would be a
+  second 80 MB). The save panel's batch count reckons with the photons' own batch. The `lens` and `manifold` tests are
+  gone; `sppm`'s lens rows cover an aperture with the map.
+- **Checked here** (none on a card like yours, no picture seen): `sppm.test.mjs`: a collimated beam under a slab, seen
+  through it, 1.0002 of its closed form (T ρΦ / (Aπ)), blocks within 0.4 %; the gates for a light no camera path can meet;
+  the slab cases as before (0.9969, 1.0032). `sppm.gpu.mjs` (Dawn over lavapipe): the gates' WGSL against the JS in the full
+  renderer, Draft and Optics; the floor through a slab, the map 1.018 ± 0.025 of the camera's own paths, through a 6 cm
+  lens 0.955 ± 0.029, Draft 0.979 ± 0.024; looking through the slab the map stays on, looking at the floor beside it alone
+  it goes idle (one batch a sample). `build.test.mjs`: every rule of the idle skip on a stand-in device. `lens.gpu.mjs`:
+  the class step by step, what the camera leaves the map, a hit shaded in shade's phases with the map on and off.
+  `structs.gpu.mjs`: the shade item 272. check-shaders' four passes, naga included.
+
+**What to look at:**
+1. Your slab scene with **default settings**: the floor and wall behind the slab lit through it, without touching a
+   setting. With the aperture: the same light, now only blurred by the depth of field -- no specks.
+2. **A scene with no glass or mirror in view**: Render stats › Picture says *Photon map: idle*, and *Per sample* as before
+   the map (compare with the map switched off). Turn the camera to look through glass: within 16 frames the light
+   behind it comes in and the line shows photons stored.
+3. **A collimated light (a beam) on a floor, seen through a glass pane**: the beam's spot on the floor through the pane.
+4. If your workspace was saved while trying 0.60.0 with the map off, it opens with it off: switch it on once.
+
 ## 0.60.0 — 2026-10-15
 
 **Seen through glass: the photon map.** Your picture (Standard/High, an aperture): a lamp, a glass slab standing before

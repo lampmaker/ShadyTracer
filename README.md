@@ -513,8 +513,6 @@ Planned, in the order the plans give, with more in [`FEATURES.md`](FEATURES.md) 
 - Glowing objects as optics sources with **"set lumens"**; an isocandela map; a pinned reference run
   and a datasheet overlay under the charts.
 - **Spectral bands, dispersion and polarisation**, when a design needs them.
-- **Caustics seen through glass**: built as the photon map (0.60.0, Renderer › Light sources, off by default), not yet
-  seen on a card; a collimated beam lighting a surface seen through glass is still missing.
 - **More surfaces**: rust, dust, wear, sheen, clear coat, thin film, hair.
 - **The help's pages**: the panel is there (Help › Contents, F1), with a welcome, the SDF explainer and the reference; the two tracks are being written. A study panel with parameter sweeps and an optimiser.
 

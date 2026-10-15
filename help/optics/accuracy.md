@@ -39,9 +39,10 @@ Some optics features have passed every test that can run without a graphics card
 on one (`FEATURES.md` lists each with its status):
 
 - **coatings** (0.39.0);
-- **dispersion** (0.40.0);
-- **the manifold connection** (0.44.0), which joins light landing on a surface inside glass to the camera, through
-  one refraction.
+- **dispersion** (0.40.0).
+
+(The manifold connection, 0.44.0, was on this list until 0.61.0 removed it: the photon map, seen on a card and on by
+default, draws the light behind and inside glass.)
 
 ## Good practice
 

@@ -565,7 +565,7 @@ ok('no anisotropy or glass row: the Noise library has neither', (noise.materials
     const runs = {}
     cam.set({ aperture: 0.7, focus: 9 })                               // the user's lens, which no row may keep
     const lens0 = { aperture: cam.get().aperture, focus: cam.get().focus }
-    try { for (const id of ['small-caustic', 'small-emitter', 'lens']) { log.length = 0; runs[id] = { ...(await runner.run(TESTS.find(t => t.id === id))), log: [...log] } } }
+    try { for (const id of ['small-caustic', 'small-emitter', 'sppm']) { log.length = 0; runs[id] = { ...(await runner.run(TESTS.find(t => t.id === id))), log: [...log] } } }
     finally { console.log = say; console.warn = warn }
     const grids = e => derive(e.state, { unit: e.scene.unit, envRadius: e.scene.envRadius })
     {
@@ -600,16 +600,17 @@ ok('no anisotropy or glass row: the Noise library has neither', (noise.materials
         ok('...read by the disc\'s sensors', rows.every(r => Array.isArray(r.discRatio) && r.discRatio.length === 4))
     }
     {
-        // THE LENS ROW (0.43.0): each lens's two rows on one camera, light tracing on then off; the pinhole as a pinhole
-        const { rows, log } = runs.lens, T = TESTS.find(t => t.id === 'lens')
-        const steps = log.filter(e => e.step).slice(1)                  // the first is the mask pass's
-        ok('lens: a row per case, each read inside the mask, on the ball scene', rows.length === 5 && steps.length === 5
-            && rows.every(r => r.masked) && steps.every(e => e.scene.id === 'bench-ball-cm-r5'), `${rows.length} rows, ${steps.length} steps`)
-        ok('...each with the aperture its label names, focused on the target, light tracing as labelled', steps.every((e, i) => {
-            const L = T.cases[i].label, mm = +(/lens (\d+) mm/.exec(L)?.[1] ?? 0)
-            return Math.abs(e.camera.aperture - mm / 10) < 1e-12 && e.camera.focus === 0 && e.state.lt === (/light tracing off/.test(L) ? 0 : 1)
-        }), steps.map(e => `${e.camera?.aperture}/${e.state.lt}`).join(' '))
-        ok('...the mask pass from the test\'s camera, a pinhole', log.find(e => e.mask)?.camera.aperture === 0)
+        // THE LENS ROWS (the lens bench's from 0.43.0, sppm's since 0.61.0 removed that bench): each row's own camera, a
+        // lens only where its label names one, the map and light tracing as labelled
+        const { rows, log } = runs.sppm, T = TESTS.find(t => t.id === 'sppm')
+        const steps = log.filter(e => e.step)
+        ok('sppm: a row per case, on the pane scene', rows.length === 5 && steps.length === 5
+            && steps.every(e => e.scene.id === 'bench-pane-m'), `${rows.length} rows, ${steps.length} steps`)
+        ok('...each with the aperture its label names, focused on the target, the map and light tracing as labelled', steps.every((e, i) => {
+            const L = T.cases[i].label, cm = +(/lens (\d+) cm/.exec(L)?.[1] ?? 0)
+            return Math.abs(e.camera.aperture - cm / 100) < 1e-12 && e.camera.focus === 0 && e.state.sppm === (/photon map on/.test(L) ? 1 : 0)
+                && e.state.lt === (/light tracing off/.test(L) ? 0 : 1)
+        }), steps.map(e => `${e.camera?.aperture}/${e.state.sppm}/${e.state.lt}`).join(' '))
         ok('small-caustic: every row a pinhole, the user\'s lens notwithstanding', runs['small-caustic'].log.filter(e => e.step).every(e => e.camera.aperture === 0))
         ok('...and the user\'s lens put back after each test', cam.get().aperture === lens0.aperture && cam.get().focus === lens0.focus, JSON.stringify(cam.get()))
     }
