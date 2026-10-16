@@ -15,6 +15,30 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.61.1 — 2026-10-16
+
+**The page's start: "Cannot access 'building' before initialization"** (your console, every page load on 0.61.0).
+- **The cause (read in code):**
+  - The camera is made inside the renderer's own start, and its constructor reports a change once. So the renderer's
+    first update runs before the rest of its start has (`lib/pathtracer/index.js`, `camera.js` `syncOrbitPose`).
+  - Since the photon map went on by default, that update finds the settings' kernel options different from the
+    engine's starting ones (the map off). It starts the job that builds them.
+  - The job's first step asked `building()`, which was declared further down and was not yet there. The job died with
+    that error.
+  - It had not happened before because every kernel option's default had matched the engine's start.
+  - In 0.60.0 it happened only with the map switched on.
+- **What it cost (read in code):** most likely only the error. The options were set before the job started, and the
+  first build reads them, so the map's kernel was built anyway.
+- **The fix:** the state the job reads is declared before the job can start. The job now waits for the first build, as
+  it does for any other.
+- **Why the tests missed it (measured here):**
+  - The one test that starts the renderer with a real camera built it at once, before node reports a rejected promise.
+  - A check now starts it as the page does: a real camera, the defaults, a task's turn before the first build. It saw
+    the error on 0.61.0 and passes now (`build.test.mjs`).
+
+**What to look at:** reload the page. The console has no `building` error, and Render stats › Picture shows the photon
+map (photons stored, or *idle*).
+
 ## 0.61.0 — 2026-10-15
 
 **The photon map on by default, a collimated beam seen through glass, and the two things it made redundant removed.**
