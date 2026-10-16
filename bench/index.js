@@ -68,11 +68,14 @@ export const CAMERAS = {
     demo: { ...VIEW, target: [-1.939, 2.721, 0.681], distance: 30.877 },     // m
     Menger_cubes: { ...VIEW, target: [-0.042, 0.309, 0.091], distance: 50.229 },   // m
     materials: { ...VIEW, target: [-3.5, -1.5, 1.25], distance: 6.729 },     // m
+    /* mm: from the front, where its light sheet comes from, 28 degrees down onto the plates, the prism and the floor
+       behind them (bench/dichroics.js, 0.61.2; BENCH.dichroics.view(1) shows it) */
+    dichroics: { mode: 'orbit', camtype: 0, fov: 40, azimuth: -100, elevation: 62, target: [70, 220, 25], distance: 400 },
 }
 
 export const BENCH_FILES = {
     noise: 'noise.json', surfaces: 'surfaces.json', showcase: 'showcase.json', demo: 'demo.json',
-    Menger_cubes: 'Menger_cubes.json', materials: 'materials.json',
+    Menger_cubes: 'Menger_cubes.json', materials: 'materials.json', dichroics: 'dichroics.json',
 }
 /** Where a frozen scene is, relative to this module: a URL in the page, a file URL in node. */
 export const benchUrl = file => new URL(`./scenes/${file}`, import.meta.url)

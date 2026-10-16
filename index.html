@@ -54,6 +54,7 @@
         import { buildsTest } from './bench/builds.js'
         import { animatedTest } from './bench/animated.js'
         import { boxCostTest } from './bench/boxcost.js'
+        import { dichroicsTest } from './bench/dichroics.js'
         import { installBuilder } from './builder/demo.js'
         import { createBaker } from './builder/baker.js'
         import { modeLine } from './builder/modeline.js'
@@ -603,6 +604,22 @@
                     return window.RTTESTS.run(rows.length ? { ...t, cases: rows.map(n => t.cases[n - 1]) } : t);
                 },
             };
+            /* WHERE A GLASS-AND-LIGHT SCENE'S TIME GOES (bench/dichroics.js, 0.61.2): the dichroics scene baked, lit by its own
+               light's photons, the photon map on and off, at two sizes -- a button of its own, and
+               BENCH.dichroics.view(n) / .run(...rows) */
+            let dichroics = null;
+            const prepareDichroics = () => dichroics ??= dichroicsTest(async url => { const r = await fetch(url); if (!r.ok) throw new Error(`${url}: ${r.status}`); return r.text() })
+                .catch(e => { dichroics = null; throw e; });
+            window.RTTESTS?.addTest?.({ id: 'dichroics', title: 'Where a glass-and-light scene\'s time goes (dichroics: the photon map, the light\'s photons, two sizes)', prepare: prepareDichroics });
+            window.BENCH.dichroics = {
+                view: async n => window.RTTESTS.view(await prepareDichroics(), n),
+                run: async (...rows) => {
+                    const t = await prepareDichroics();
+                    const missing = rows.filter(n => !t.cases[n - 1]);
+                    if (missing.length) throw new Error(`BENCH.dichroics.run: no row ${missing.join(', ')} (rows 1-${t.cases.length})`);
+                    return window.RTTESTS.run(rows.length ? { ...t, cases: rows.map(n => t.cases[n - 1]) } : t);
+                },
+            };
         }
         /* THE LIGHT BENCH (builder/lightbench.js, light-vs-emitter): a light against the same surface made an
            emissive object. Its scene too is a builder document, so the page hands it in the same way. */
@@ -724,7 +741,9 @@
                 }
                 if (Object.keys(vals).length) RT.set(vals, false);
             };
-            BUILDER.afterLive = () => pushCull();
+            /* ...and the lights' photons start from where the lights are now, in the same frame as the geometry that moved
+               with them (optics/page.js O.followScene, 0.61.4): they followed a half-second tick, and lagged a drag */
+            BUILDER.afterLive = () => { pushCull(); window.OPTICS?.followScene?.(); };
             // a live change a compile must make (a path's pieces changed shape: builder/demo.js liveValue), in the queue
             BUILDER.onRestructure = reapply;
             /* WHAT GOES UNCULLED, from the console: each top-level node without a box and why (boxes.js cullReport).

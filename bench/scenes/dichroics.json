@@ -1,0 +1,1325 @@
+{
+  "format": "raytracer-scene",
+  "version": 21,
+  "app": "0.61.1+7256423",
+  "title": "Spectraal raster",
+  "nextId": 84,
+  "unit": "mm",
+  "materials": [
+    {
+      "id": "m1",
+      "label": "slate floor",
+      "params": {
+        "baseColor": {
+          "r": 0.3,
+          "g": 0.3,
+          "b": 0.32
+        },
+        "metallic": 0,
+        "roughness": 0.7,
+        "anisotropy": 0,
+        "specular": 0.3,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": "// Material code: runs once per hit, after the fields above are put into m.\n",
+      "relief": {
+        "code": "// Noise relief: bumps up to \"amplitude\" mm high and deep, about \"size\" mm across -- four octaves\n// of gradient noise (lib/pathtracer/core/noise.js), in real millimetres on the object. Four noises\n// per march step near the surface. slope is the MEASURED gradient bound (a quarter of the proved\n// one, NZ_GRAD_LIP, and a quarter the steps); the normal is taken by differences.\nlet peak = nzFbmLip(4u, 1.0, 0.5, 1.0);                 // the octaves' amplitudes summed\nlet n = fbm3(q / size, 1u, 4u, 2.0, 0.5);\nh = amplitude * n.w / peak;\nslope = amplitude / size * nzFbmLip(4u, 2.0, 0.5, NZ_GRAD_LIP_MEASURED) / peak;",
+        "params": {
+          "amplitude": 0.49999999999999994,
+          "size": 8
+        },
+        "ranges": {
+          "amplitude": {
+            "min": 0,
+            "max": 20,
+            "step": 0.01
+          },
+          "size": {
+            "min": 0.1,
+            "max": 200,
+            "step": 0.1
+          }
+        },
+        "lengths": [
+          "amplitude",
+          "size"
+        ]
+      }
+    },
+    {
+      "id": "m2",
+      "label": "gallery wall",
+      "params": {
+        "baseColor": {
+          "r": 0.8,
+          "g": 0.78,
+          "b": 0.74
+        },
+        "metallic": 0,
+        "roughness": 1,
+        "anisotropy": 0,
+        "specular": 0,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
+    },
+    {
+      "id": "m3",
+      "label": "silver mirror",
+      "params": {
+        "baseColor": {
+          "r": 0.96,
+          "g": 0.96,
+          "b": 0.97
+        },
+        "metallic": 1,
+        "roughness": 0.02,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
+    },
+    {
+      "id": "m4",
+      "label": "dichroic 430 nm (reflects shorter)",
+      "params": {
+        "baseColor": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "metallic": 0,
+        "roughness": 0,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 1,
+        "ior": 1.52,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 1,
+        "coatLow": 1,
+        "coatHigh": 0,
+        "coatEdge": 430,
+        "coatWidth": 25,
+        "coatIndex": 1.8,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
+    },
+    {
+      "id": "m5",
+      "label": "dichroic 470 nm (reflects shorter)",
+      "params": {
+        "baseColor": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "metallic": 0,
+        "roughness": 0,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 1,
+        "ior": 1.52,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 1,
+        "coatLow": 1,
+        "coatHigh": 0,
+        "coatEdge": 470,
+        "coatWidth": 25,
+        "coatIndex": 1.8,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
+    },
+    {
+      "id": "m6",
+      "label": "dichroic 480 nm (reflects shorter)",
+      "params": {
+        "baseColor": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "metallic": 0,
+        "roughness": 0,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 1,
+        "ior": 1.52,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 1,
+        "coatLow": 1,
+        "coatHigh": 0,
+        "coatEdge": 480,
+        "coatWidth": 25,
+        "coatIndex": 1.8,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
+    },
+    {
+      "id": "m7",
+      "label": "dichroic 510 nm (reflects shorter)",
+      "params": {
+        "baseColor": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "metallic": 0,
+        "roughness": 0,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 1,
+        "ior": 1.52,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 1,
+        "coatLow": 1,
+        "coatHigh": 0,
+        "coatEdge": 510,
+        "coatWidth": 25,
+        "coatIndex": 1.8,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
+    },
+    {
+      "id": "m8",
+      "label": "dichroic 520 nm (reflects shorter)",
+      "params": {
+        "baseColor": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "metallic": 0,
+        "roughness": 0,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 1,
+        "ior": 1.52,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 1,
+        "coatLow": 1,
+        "coatHigh": 0,
+        "coatEdge": 520,
+        "coatWidth": 25,
+        "coatIndex": 1.8,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
+    },
+    {
+      "id": "m9",
+      "label": "dichroic 530 nm (reflects shorter)",
+      "params": {
+        "baseColor": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "metallic": 0,
+        "roughness": 0,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 1,
+        "ior": 1.52,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 1,
+        "coatLow": 1,
+        "coatHigh": 0,
+        "coatEdge": 530,
+        "coatWidth": 25,
+        "coatIndex": 1.8,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
+    },
+    {
+      "id": "m10",
+      "label": "dichroic 550 nm (reflects shorter)",
+      "params": {
+        "baseColor": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "metallic": 0,
+        "roughness": 0,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 1,
+        "ior": 1.52,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 1,
+        "coatLow": 1,
+        "coatHigh": 0,
+        "coatEdge": 550,
+        "coatWidth": 25,
+        "coatIndex": 1.8,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
+    },
+    {
+      "id": "m11",
+      "label": "dichroic 560 nm (reflects shorter)",
+      "params": {
+        "baseColor": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "metallic": 0,
+        "roughness": 0,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 1,
+        "ior": 1.52,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 1,
+        "coatLow": 1,
+        "coatHigh": 0,
+        "coatEdge": 560,
+        "coatWidth": 25,
+        "coatIndex": 1.8,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
+    },
+    {
+      "id": "m12",
+      "label": "dichroic 570 nm (reflects shorter)",
+      "params": {
+        "baseColor": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "metallic": 0,
+        "roughness": 0,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 1,
+        "ior": 1.52,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 1,
+        "coatLow": 1,
+        "coatHigh": 0,
+        "coatEdge": 570,
+        "coatWidth": 25,
+        "coatIndex": 1.8,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
+    },
+    {
+      "id": "m13",
+      "label": "dichroic 580 nm (reflects shorter)",
+      "params": {
+        "baseColor": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "metallic": 0,
+        "roughness": 0,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 1,
+        "ior": 1.52,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 1,
+        "coatLow": 1,
+        "coatHigh": 0,
+        "coatEdge": 580,
+        "coatWidth": 25,
+        "coatIndex": 1.8,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
+    },
+    {
+      "id": "m14",
+      "label": "dichroic 590 nm (reflects shorter)",
+      "params": {
+        "baseColor": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "metallic": 0,
+        "roughness": 0,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 1,
+        "ior": 1.52,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 1,
+        "coatLow": 1,
+        "coatHigh": 0,
+        "coatEdge": 590,
+        "coatWidth": 25,
+        "coatIndex": 1.8,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
+    },
+    {
+      "id": "m15",
+      "label": "dichroic 600 nm (reflects shorter)",
+      "params": {
+        "baseColor": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "metallic": 0,
+        "roughness": 0,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 1,
+        "ior": 1.52,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 1,
+        "coatLow": 1,
+        "coatHigh": 0,
+        "coatEdge": 600,
+        "coatWidth": 25,
+        "coatIndex": 1.8,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
+    },
+    {
+      "id": "m16",
+      "label": "dichroic 610 nm (reflects shorter)",
+      "params": {
+        "baseColor": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "metallic": 0,
+        "roughness": 0,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 1,
+        "ior": 1.52,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 1,
+        "coatLow": 1,
+        "coatHigh": 0,
+        "coatEdge": 610,
+        "coatWidth": 25,
+        "coatIndex": 1.8,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
+    },
+    {
+      "id": "m17",
+      "label": "dichroic 620 nm (reflects shorter)",
+      "params": {
+        "baseColor": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "metallic": 0,
+        "roughness": 0,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 1,
+        "ior": 1.52,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 1,
+        "coatLow": 1,
+        "coatHigh": 0,
+        "coatEdge": 620,
+        "coatWidth": 25,
+        "coatIndex": 1.8,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
+    },
+    {
+      "id": "m18",
+      "label": "dichroic 630 nm (reflects shorter)",
+      "params": {
+        "baseColor": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "metallic": 0,
+        "roughness": 0,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 1,
+        "ior": 1.52,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 1,
+        "coatLow": 1,
+        "coatHigh": 0,
+        "coatEdge": 630,
+        "coatWidth": 25,
+        "coatIndex": 1.8,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
+    },
+    {
+      "id": "m19",
+      "label": "dichroic 640 nm (reflects shorter)",
+      "params": {
+        "baseColor": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "metallic": 0,
+        "roughness": 0,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 1,
+        "ior": 1.52,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 1,
+        "coatLow": 1,
+        "coatHigh": 0,
+        "coatEdge": 640,
+        "coatWidth": 25,
+        "coatIndex": 1.8,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
+    },
+    {
+      "id": "m20",
+      "label": "dichroic 650 nm (reflects shorter)",
+      "params": {
+        "baseColor": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "metallic": 0,
+        "roughness": 0,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 1,
+        "ior": 1.52,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 1,
+        "coatLow": 1,
+        "coatHigh": 0,
+        "coatEdge": 650,
+        "coatWidth": 25,
+        "coatIndex": 1.8,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
+    },
+    {
+      "id": "m21",
+      "label": "dichroic 660 nm (reflects shorter)",
+      "params": {
+        "baseColor": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "metallic": 0,
+        "roughness": 0,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 1,
+        "ior": 1.52,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 1,
+        "coatLow": 1,
+        "coatHigh": 0,
+        "coatEdge": 660,
+        "coatWidth": 25,
+        "coatIndex": 1.8,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
+    },
+    {
+      "id": "m22",
+      "label": "dichroic 670 nm (reflects shorter)",
+      "params": {
+        "baseColor": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "metallic": 0,
+        "roughness": 0,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 1,
+        "ior": 1.52,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 1,
+        "coatLow": 1,
+        "coatHigh": 0,
+        "coatEdge": 670,
+        "coatWidth": 25,
+        "coatIndex": 1.8,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
+    },
+    {
+      "id": "m23",
+      "label": "dichroic 680 nm (reflects shorter)",
+      "params": {
+        "baseColor": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "metallic": 0,
+        "roughness": 0,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 1,
+        "ior": 1.52,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 1,
+        "coatLow": 1,
+        "coatHigh": 0,
+        "coatEdge": 680,
+        "coatWidth": 25,
+        "coatIndex": 1.8,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
+    }
+  ],
+  "blocks": [
+    {
+      "id": "b24",
+      "label": "box",
+      "kind": "object",
+      "code": "// A box: size is the HALF-size along each axis; the rounding stays inside it.\nC = add_new(C, NboxRounded(p, size, rounding), MATERIAL);",
+      "params": {
+        "size": {
+          "x": 0.5,
+          "y": 0.5,
+          "z": 0.5
+        },
+        "rounding": 0.02
+      },
+      "ranges": {
+        "rounding": {
+          "min": 0,
+          "max": 2,
+          "step": 0.005
+        }
+      },
+      "lengths": [
+        "size",
+        "rounding"
+      ],
+      "builtin": "box@1"
+    },
+    {
+      "id": "b25",
+      "label": "plane",
+      "kind": "object",
+      "code": "// The plane z = 0, solid below.\nC = add_new(C, Nplane(p), MATERIAL);",
+      "params": {},
+      "builtin": "plane@1"
+    },
+    {
+      "id": "b83",
+      "label": "prism",
+      "kind": "object",
+      "code": "// A prism along z, centred: a regular polygon of sides sides (3 a triangle, 4 a square, ...), radius to its\n// corners, a flat side down -- extruded. sides is live: dragging it needs no compile. shapes.js Nprism.\nC = add_new(C, Nprism(p, sides, radius, height), MATERIAL);",
+      "params": {
+        "sides": 3,
+        "radius": 0.5,
+        "height": 1
+      },
+      "ranges": {
+        "sides": {
+          "min": 3,
+          "max": 12,
+          "step": 1
+        },
+        "radius": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        },
+        "height": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "radius",
+        "height"
+      ],
+      "builtin": "prism@1"
+    }
+  ],
+  "root": {
+    "id": "root",
+    "kind": "group",
+    "label": "Spectraal raster",
+    "enabled": true,
+    "blend": 0,
+    "children": [
+      {
+        "id": "n76",
+        "kind": "object",
+        "type": "code",
+        "label": "floor",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m1",
+        "params": {},
+        "block": "b25",
+        "lockPosition": true,
+        "lockParams": true
+      },
+      {
+        "id": "n77",
+        "kind": "object",
+        "type": "code",
+        "label": "wall behind (top exits)",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 120,
+            "y": 365,
+            "z": 60
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m2",
+        "params": {
+          "size": {
+            "x": 310,
+            "y": 5,
+            "z": 60
+          },
+          "rounding": 0
+        },
+        "block": "b24",
+        "lockPosition": true,
+        "lockParams": true
+      },
+      {
+        "id": "n78",
+        "kind": "object",
+        "type": "code",
+        "label": "wall right (right exits)",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 365,
+            "y": 120,
+            "z": 60
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m2",
+        "params": {
+          "size": {
+            "x": 5,
+            "y": 310,
+            "z": 60
+          },
+          "rounding": 0
+        },
+        "block": "b24",
+        "lockPosition": true,
+        "lockParams": true
+      },
+      {
+        "id": "n79",
+        "kind": "object",
+        "type": "light",
+        "label": "white sheet from the left",
+        "enabled": false,
+        "transform": {
+          "pos": {
+            "x": -150,
+            "y": 0,
+            "z": 27
+          },
+          "rot": {
+            "x": 0,
+            "y": 92,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": null,
+        "params": {
+          "width": 50,
+          "height": 1.5
+        },
+        "light": {
+          "shape": "rectangle",
+          "flux": 20,
+          "colourBy": "cct",
+          "cct": 6500,
+          "distribution": "collimated",
+          "luminance": 84882.63631567753
+        }
+      },
+      {
+        "id": "n80",
+        "kind": "object",
+        "type": "light",
+        "label": "white sheet from the front",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 0,
+            "y": -150,
+            "z": 27
+          },
+          "rot": {
+            "x": -88,
+            "y": 180,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": null,
+        "params": {
+          "width": 0.5,
+          "height": 50
+        },
+        "light": {
+          "shape": "rectangle",
+          "flux": 20,
+          "colourBy": "cct",
+          "cct": 2830,
+          "luminance": 254647.90894703256,
+          "halfAngle": 0.5,
+          "distribution": "collimated"
+        }
+      },
+      {
+        "id": "n75",
+        "kind": "group",
+        "label": "mirror grid 7x7",
+        "enabled": true,
+        "blend": 0,
+        "transform": {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "children": [
+          {
+            "id": "n67",
+            "kind": "object",
+            "type": "code",
+            "label": "680 nm [5,6]",
+            "enabled": true,
+            "transform": {
+              "pos": {
+                "x": 44.981687027408796,
+                "y": 170.12525864334384,
+                "z": 30
+              },
+              "rot": {
+                "x": -45,
+                "y": -90,
+                "z": 93.48075193919294
+              },
+              "scale": 1
+            },
+            "material": "m23",
+            "params": {
+              "size": {
+                "x": 30,
+                "y": 17,
+                "z": 1
+              },
+              "rounding": 0
+            },
+            "block": "b24"
+          },
+          {
+            "id": "n68",
+            "kind": "object",
+            "type": "code",
+            "label": "630 nm [6,0]",
+            "enabled": true,
+            "transform": {
+              "pos": {
+                "x": 6.207039930138869,
+                "y": 240,
+                "z": 30
+              },
+              "rot": {
+                "x": -45,
+                "y": -90,
+                "z": 0
+              },
+              "scale": 1
+            },
+            "material": "m23",
+            "params": {
+              "size": {
+                "x": 30,
+                "y": 17,
+                "z": 1
+              },
+              "rounding": 0
+            },
+            "block": "b24"
+          },
+          {
+            "id": "n69",
+            "kind": "object",
+            "type": "code",
+            "label": "640 nm [6,1]",
+            "enabled": true,
+            "transform": {
+              "pos": {
+                "x": 40,
+                "y": 240,
+                "z": 30
+              },
+              "rot": {
+                "x": -45,
+                "y": -90,
+                "z": 6.92455336768337
+              },
+              "scale": 1.3290102592391684
+            },
+            "material": "m19",
+            "params": {
+              "size": {
+                "x": 30,
+                "y": 17,
+                "z": 1
+              },
+              "rounding": 0
+            },
+            "block": "b24"
+          },
+          {
+            "id": "n70",
+            "kind": "object",
+            "type": "code",
+            "label": "650 nm [6,2]",
+            "enabled": true,
+            "transform": {
+              "pos": {
+                "x": 80,
+                "y": 240,
+                "z": 30
+              },
+              "rot": {
+                "x": -45,
+                "y": -90,
+                "z": -10.576411622515627
+              },
+              "scale": 1
+            },
+            "material": "m5",
+            "params": {
+              "size": {
+                "x": 30,
+                "y": 17,
+                "z": 1
+              },
+              "rounding": 0
+            },
+            "block": "b24"
+          },
+          {
+            "id": "n71",
+            "kind": "object",
+            "type": "code",
+            "label": "660 nm [6,3]",
+            "enabled": true,
+            "transform": {
+              "pos": {
+                "x": 120,
+                "y": 240,
+                "z": 30
+              },
+              "rot": {
+                "x": -45,
+                "y": -90,
+                "z": 60.19454346222952
+              },
+              "scale": 1
+            },
+            "material": "m8",
+            "params": {
+              "size": {
+                "x": 30,
+                "y": 17,
+                "z": 1
+              },
+              "rounding": 0
+            },
+            "block": "b24"
+          },
+          {
+            "id": "n72",
+            "kind": "object",
+            "type": "code",
+            "label": "670 nm [6,4]",
+            "enabled": true,
+            "transform": {
+              "pos": {
+                "x": 56.085144132803606,
+                "y": 305.9221538028056,
+                "z": 30
+              },
+              "rot": {
+                "x": -45,
+                "y": -90,
+                "z": 0.32837370062006865
+              },
+              "scale": 1
+            },
+            "material": "m6",
+            "params": {
+              "size": {
+                "x": 30,
+                "y": 17,
+                "z": 1
+              },
+              "rounding": 0
+            },
+            "block": "b24"
+          },
+          {
+            "id": "n73",
+            "kind": "object",
+            "type": "code",
+            "label": "680 nm [6,5]",
+            "enabled": true,
+            "transform": {
+              "pos": {
+                "x": 7.668572927208176,
+                "y": 314.5646001982402,
+                "z": 30
+              },
+              "rot": {
+                "x": -45,
+                "y": -90,
+                "z": 167.44718450908465
+              },
+              "scale": 1
+            },
+            "material": "m17",
+            "params": {
+              "size": {
+                "x": 30,
+                "y": 17,
+                "z": 1
+              },
+              "rounding": 0
+            },
+            "block": "b24"
+          },
+          {
+            "id": "n74",
+            "kind": "object",
+            "type": "code",
+            "label": "silver [6,6]",
+            "enabled": true,
+            "transform": {
+              "pos": {
+                "x": -69.87278079075878,
+                "y": 319.6376809548955,
+                "z": 30
+              },
+              "rot": {
+                "x": -45,
+                "y": -90,
+                "z": 27.91262640312295
+              },
+              "scale": 1
+            },
+            "material": "m3",
+            "params": {
+              "size": {
+                "x": 30,
+                "y": 17,
+                "z": 1
+              },
+              "rounding": 0
+            },
+            "block": "b24"
+          }
+        ]
+      },
+      {
+        "id": "n82",
+        "kind": "object",
+        "type": "code",
+        "label": "prism",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 107.85755723594723,
+            "y": 127.72263925983202,
+            "z": 26.039879979556247
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 50.16974014698751
+        },
+        "material": "m4",
+        "params": {
+          "sides": 5,
+          "radius": 0.521513909,
+          "height": 1.027182747
+        },
+        "block": "b83"
+      }
+    ]
+  },
+  "functions": "// Functions: WGSL helpers any code node or material in this scene can call.\n// Compiled once, before the materials and the SDF; errors show here at their own lines.\n// e.g. a gyroid, usable in a code node as  C = add_new(C, sd(gyroid(p, 4.0)), MATERIAL);\n//   fn gyroid(p: VEC3, s: f32) -> f32 {\n//       let q = p * s;\n//       return abs(dot(sin(q), cos(q.zxy))) / s - 0.03;\n//   }\n",
+  "envRadius": 3000,
+  "environment": {
+    "envMode": 1,
+    "studioIlluminance": 2,
+    "studioTop": 0.4
+  },
+  "optics": {
+    "maxDist": 15000
+  }
+}

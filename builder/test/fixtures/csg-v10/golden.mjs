@@ -103,6 +103,9 @@
 // lines that came were `km_<g> = select(km_<g>, C.m, -C.s.w > k_<g>.w);` before each csgSubtract and `..., C.s.w >
 // k_<g>.w);` before each csgIntersect, and no line left (cases.*.wgsl diffed); the 13 documents with such a join moved
 // and the other 33 did not.
+//
+// A DOCUMENT ADDED (2026-10-16, 0.61.2): bench/scenes/dichroics.json, the dichroics bench's frozen scene (bench/dichroics.js).
+// No codegen change: the freeze added its entry and moved no other document's (expected.json's diff is that entry alone).
 //======================================================================================================================
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'

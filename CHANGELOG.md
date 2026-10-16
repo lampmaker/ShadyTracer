@@ -15,6 +15,136 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.61.4 — 2026-10-16
+
+**A light's photons follow a move in the same frame as the object.** You saw it in `Reflector.json`, dragging the lamp
+group up and down: the object kept up at about 15 fps, but its light updated a few times a second and lagged behind.
+
+**The cause (read in code):**
+- The reflector and the lamp's face are uniforms, written at every step of a drag.
+- The picture's photons start from a source table the Optics page reads off the document. It read it on a half-second
+  tick (`optics/page.js`), or once a round of the live rays while those were shown.
+- So between reads, the photons left from where the lamp had been while its reflector had moved. Many started behind the
+  reflector's new place and were stopped by it. That is likely the missing rays you saw (inferred).
+
+**The fix:**
+- After every live change, the host's `afterLive` hook (index.html) now reads the table again (`OPTICS.followScene`).
+  That covers a gizmo drag, a slider and the timeline.
+- So the photons start from the light's new place in the same frame as the geometry moved with it.
+- A table is about 0.03 ms of CPU: measured on this laptop's CPU, `sourceTable` on three scenes.
+
+**Not fixed, possibly still seen (inferred):**
+- While the photon map runs, a sample is its photons first and its camera rays after (two batches).
+- If a sample is slower than `sliceMs` (Developer › Performance), the live view spreads it over two frames. Its photons
+  are then traced a frame before its camera rays, so the light can still trail the geometry by one frame.
+- Render stats' "batch k/K" says whether that is happening.
+
+**What to look at:** `Reflector.json`, drag the lamp group up and down. The light on the floor should move with the
+reflector, not after it, and not thin out while it moves.
+
+## 0.61.3 — 2026-10-16
+
+**The photon map no longer darkens what it lights.** Your first dichroics bench run showed the map losing light: 1792
+gathers a sample cut at 1280 x 720, and a third of its stores dropped at 1920 x 1080. Both were bias, not noise.
+
+**How dark (measured here, on Dawn, an RTX 3080 Laptop):**
+- The dichroics scene, with its own light's photons and the bench's camera.
+- Over the pixels the map lights, against an exact map (no capacity reached, no gather cut), 0.61.2 read **0.355** of
+  the light at 1280 x 720 and **0.274** at 1920 x 1080. The beam lines seen through the plates were about a third of
+  their brightness.
+- The cause, counted there: the collimated sheet lays its photons in lines. One cell's list held 8,315 records, and a
+  gather stopped at 512.
+
+**The fix** (`core/sppm.js`, *Neither full nor cut*). Both parts are exact in expectation, and noisier only where they
+act:
+- **A sample that would overfill the map keeps each store with a probability, its power divided by it.** The
+  probability is the capacity's fill over what the sample before asked. It is 1 while everything fits. Render stats ›
+  Picture says "% kept".
+- **A cell too full to walk is subsampled, not cut.** Each record also goes on one of 32 sub-lists of its cell, drawn at
+  random, and the cell is counted. A gather walks a cell's whole list while it fits its share of the budget. Past that
+  it walks m of the sub-lists, weighing each record found by 32/m.
+- A hard cap still bounds a thread's time, and a gather that reaches it is counted (the *cut* columns).
+- A record is 44 bytes now (from 40), and the lists 12 MiB.
+
+**Checked:**
+- **The CPU twin:** the subsampled gather, the kept stores and both together average to the exact sum over 300 trials
+  each.
+- **The whole renderer on Dawn:** the slab test with room for 200 records (41% kept) and a gather budget of 8 reads the
+  camera's own picture within its error bar.
+- **dichroics on Dawn,** over the map's pixels against the exact map:
+
+  | | 1280 x 720 | 1920 x 1080 |
+  |---|---|---|
+  | new (two or three seeds) | 0.965, 1.000 | 0.884, 0.891, 0.903 |
+  | a second exact run | 0.978 | 0.894 |
+  | 0.61.2 | 0.355 | 0.274 |
+
+  The new map is within the run-to-run spread. Both sizes read 0 overflow and 0 cut.
+- **Not measured: what it costs on your card.** It walks more records where it used to stop.
+
+**Also:**
+- The dichroics bench's map columns are read only from a trace that ran the map. Row 4 showed another trace's numbers.
+- A `map kept` column on the bench, and a `kept` column on the `sppm` row.
+
+**What to look at:**
+- **dichroics, through the plates:** the beam lines on the floor should be clearly **brighter** than on 0.61.2 (about
+  three times, inferred from the Dawn runs). At 1920 x 1080 more so.
+- **Render stats › Picture:** "Photon map ... % kept" at 1920 x 1080. No *PHOTON MAP* warning.
+- **Tests › dichroics again:** `map cut` and `dropped` at 0, and the `sppm` column for the new cost.
+
+## 0.61.2 — 2026-10-16
+
+**Render speed on a glass-and-light scene: work whose answer was exactly 0 skipped, and a bench to time the rest.** You
+asked whether render speed can improve with nothing lost from the picture, on `dichroics.json`. The whole of the
+audit, and what to measure next, is in `docs/PERFORMANCE.md` (STATUS 2026-10-16).
+
+**Skipped (read in code: each multiplied by a value that is exactly 0 there):**
+- **No connection or light sample at a surface with nothing to evaluate:** a mirror, clear glass, a dichroic, i.e. every
+  lobe a delta and no base (`materials_pbr.js` `lobesNone`). A light's photons connect at every surface they land on,
+  the plates included. Before, each built the lobes (a coating's 41 exp and log) and evaluated them for a 0. The light
+  sample still draws its random numbers, so nothing after it moves.
+- **No BSDF density for a delta event,** which reads it only to give weight 1. **No `envPdf` below the surface.**
+- **Four albedo-table reads that nothing used,** each an atomic load: a dielectric's metal term, a coated lobe's
+  average, the isotropic reads under an anisotropic lobe, and a base with no weight.
+- **The photon map's gate in alpha, as the BSDF decides** (`sppm.js` `sppmEvaluable`). It compared roughness with the
+  alpha floors. So the scene's silver mirror (roughness 0.02, alpha 4e-4, a delta) stored every photon of the sheet that
+  landed on it, and every camera ray seen through glass gathered there, all for an f of 0.
+- **No photon stored at the bounce cap.** No gather can count it: a gathering ray has at least two bounces.
+- **`prog_sppm` asks the ray first.** Most rays leave on their tag alone, before the hit's material is read.
+
+**Exact, measured here.** On Dawn, on an RTX 3080 Laptop (Ampere, D3D12), `ltConnect` and the shade bounce were run on
+2,448 fixed rays (17 materials, 6 kinds of ray, 10 settings, lens on and off), one fixed seed each. Every output word was
+identical to 0.61.1, the random-number state after each call included. Moving the early-out before the lens's draw
+changed 1,440 of them, so the check can see a slip. The changes to the photon map change what it stores, not what it
+gathers: `sppm.gpu.mjs` now holds `lobesEval` to exactly 0 wherever either gate skips work (396 materials, both floors),
+and `sppm.test.mjs` checks by brute force that a record is stored exactly when some gather could count it.
+**Not measured: how much time any of it saves.**
+
+**Instruments:**
+- **Tests > dichroics** (`bench/dichroics.js`; `BENCH.dichroics.view(n)` / `.run(...)`): the frozen scene, baked, under
+  its studio light, lit by its own light's photons. It is the first bench row with the photon map on and with a builder
+  light's photons. Its rows:
+  - the map on and off at 1280 x 720 and at 1920 x 1080 (at 720p the map makes one wavefront chain two);
+  - NEE off, and the lights' rays off;
+  - the step cache;
+  - the editing build;
+  - row 1 again.
+
+  Its columns add the map's photons, dropped and **cut**.
+- **Bench rows can bring a light's photons** (`opticsLight`, as image rows could), a size of their own, and a test's
+  own readings.
+- **The light's photon kernel is timed as `opt_photons`.** It was "other".
+- **The `sppm` image row has a `cut` column:** gathers stopped at 512 records. Above 0 the floor seen through glass reads
+  **dark** there, a bias, not noise. That may be happening on this scene (inferred: a 20 lm sheet piles its photons into
+  narrow strips).
+
+**What to look at:**
+- **dichroics at 100% and in Draft, before and after:** the same picture.
+- **Tests > dichroics**, pasted back. Read `sppm`, `opt_photons`, `occlude` and `march`; rows 1-2 against 5-6; and
+  `map cut`.
+- **The `sppm` row's `cut` column.**
+- **Live view:** Developer › GPU time a frame at 0, 15, 30 and 60, and whether "batch k/K" climbs.
+
 ## 0.61.1 — 2026-10-16
 
 **The page's start: "Cannot access 'building' before initialization"** (your console, every page load on 0.61.0).

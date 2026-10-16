@@ -13,6 +13,136 @@ true?"). A plan built on inferences written as facts was reverted (commit fdc333
 it had called one scene's slow render "this architecture's full-resolution cost", which the user's
 own numbers contradict.
 
+## STATUS (2026-10-16) — a glass-and-light scene: what it runs, what went (0.61.2), what to measure next
+
+The user asked (2026-10-16) whether render speed can be improved without losing anything of the picture, on
+`scenes/dichroics.json`: seven dichroic plates, a mirror and a prism under one collimated light sheet, a relief floor,
+the studio light. **Nothing about such a scene had been measured**: no bench row loaded it, and every bench row ran with
+the photon map off (`tests.js` BENCH_BASE) and without a builder light's photons (the page lights only its own scene:
+`optics/page.js` O.picture.applies). A code audit (read in code throughout; 61 candidates, each checked against the code a
+second time) found what follows.
+
+**How a sample of it is traced** (read in code):
+- **Light chains.**
+  - The studio light means no sun: no sun photons, no `lt_build`.
+  - There are no emitters.
+  - The light's photons are the only ones. It is collimated, so they connect to the camera at every surface they land on
+    and are stored in the photon map at every evaluable one (`sppm.js` sppmUnmet).
+- **Every light sample is a cosine-weighted studio direction.** A collimated face has weight 0.
+- **The photon map never idles here,** because the floor is seen through the plates. Its photons-first plan makes a
+  1280 x 720 sample **two wavefront chains where one would hold it** (`photons.js` planInOrder). At 1920 x 1080 it is two
+  either way.
+- **Each chain is the worst-case budget:** 24 iterations of 9 passes, plus 12 shadow rounds of 3. That is at least 504
+  compute passes a sample (`raytrace_main.js`).
+- **Within 1 mm of the floor, every march step evaluates the relief's fBm.**
+
+**Gone in 0.61.2: work whose result was exactly 0** (exact, measured, see the CHANGELOG):
+- `ltConnect` and the light sample at a surface with no evaluable lobe: a mirror, clear glass, a dichroic.
+- The BSDF density at a delta event.
+- `envPdf` below the surface.
+- Four albedo-table reads nothing used.
+- The photon map's gate compared roughness with alpha floors, so the 0.02 mirror stored and gathered for an f of 0.
+- Photons stored at maxbounce, which no gather can accept.
+- `prog_sppm` reading the hit's material before the ray's own gates.
+
+How much time any of it saves is **not measured**.
+
+**The instrument: Tests > dichroics** (`bench/dichroics.js`). The frozen scene, baked and lit by its own light's photons.
+- **The rows:** the map on and off at 1280 x 720 and at 1920 x 1080, NEE off, the lights' rays off, the step cache, and
+  the editing build.
+- **The per-kernel columns** include `opt_photons` (timed as "other" before 0.61.2) and `sppm`.
+- **The map's counts:** stored, dropped, and **cut**.
+- The `sppm` image row has a `cut` column too.
+
+**MEASURED: Tests > dichroics, its first run** (the user's card, `ShadyTracer 0.61.2 · 7256423
+(claude/inspiring-darwin-vspz6x) · nvidia ampere`, Chrome 155, 2026-10-16). Each row is the median of 23-64 timed samples.
+Row 9 (row 1 again) read +0.38%, so the run held still.
+
+| row | ms/sample | gpu | march | surface | shade | occlude | sppm | map M | dropped | map cut | batches |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 baked, as it is (map on) | 196.0 | 181.8 | 110.4 | 13.9 | 19.1 | 20.2 | 16.2 | 1.332 | 0 | **1792** | 2 |
+| 2 photon map off | 173.3 (-11.6%) | 164.1 | 104.2 | 13.1 | 21.2 | 21.7 | - | - | - | - | 1 |
+| 3 NEE off | 179.6 (-8.3%) | 166.2 | 111.1 | 13.9 | 17.6 | 5.8 | 16.4 | 1.330 | 0 | 1733 | 2 |
+| 4 the lights' rays off | **67.2 (-65.7%)** | 60.7 | **29.8** | 4.5 | 9.0 | 16.6 | (stale) | | | | 1 |
+| 5 1920 x 1080, map on | 382.2 | 374.7 | 233.3 | 31.6 | 41.6 | 38.7 | 27.1 | 2.000 | **993 823** | **3578** | 2 |
+| 6 1920 x 1080, map off | 369.0 | 362.4 | 235.6 | 29.3 | 47.7 | 44.5 | - | - | - | - | 2 |
+| 7 the step cache filled once | 198.6 (+1.4%) | 183.3 | 112.8 | | | | | | | | 2 |
+| 8 codegen (the editing build) | 226.8 (+15.7%) | 213.2 | 133.4 | | | | | | | | 2 |
+
+`opt_photons` read 0.3 ms. Gaps between passes were 0.1-0.2 ms, and wall - gpu about 14 ms. Row 4's map columns are a
+reading left over from another trace: the map ran no photons there (batches 1). Read from it:
+- **The light's photons are two thirds of a sample** (196 - 67 = 129 ms), and mostly **march** (110 - 30 = 80 ms).
+  - The wavefront log puts the photons' chain at about 118 ms of GPU against the camera's 58.
+  - In its first iteration (32 march steps) 471 000 of the 922 000 photons met no surface, and no photon's path
+    ended in the first three.
+  - Inferred (read in the scene, not measured): the sheet starts 27 mm above the floor and points 2 degrees down
+    (`axis.z` -0.035). Sphere tracing a ray that runs down onto a plane at 2 degrees closes about 3% of its height a
+    step, so it takes on the order of 100 steps to come down from 27 mm.
+- **The photon map is wrong, not only slow, at this scene's settings.**
+  - At 1280 x 720, 1792 gathers a sample were cut at 512 records.
+  - At 1920 x 1080 it dropped 993 823 of its stores past the 2 M capacity, a third of them, and cut 3578 gathers.
+  - Both make the floor seen through the plates darker than it is: a bias that does not average away.
+  - The collimated light's photons are stored at every surface they land on, about 1.44 stores a photon here.
+- **What the map costs:** 22.7 ms a sample at 720p, of which the sppm kernel is 16.2 ms; 13.2 ms at 1080p.
+- **The step cache buys nothing here** (+1.4%, within noise). **The bake buys 13.6%** against codegen.
+- **NEE costs 16.4 ms** of 196.
+- **Not the cost:** the worst-case iteration budget. Gaps are 0.1 ms, and the drained tail is 21 ms of the photon chain,
+  most of that photons genuinely still bouncing.
+
+**Next, each gated by a reading from that test** (inferred, every one, until the numbers come back):
+1. **The photon map's cut and overflow -- DONE in 0.61.3.** The user's run read both above 0.
+   - **Measured on Dawn** (an RTX 3080 Laptop): over the pixels the map lights, against an exact map, 0.61.2 read 0.355
+     of the light at 1280 x 720 and 0.274 at 1920 x 1080.
+   - The densest list held 8,315 records.
+   - **The fix** (`sppm.js` NEITHER FULL NOR CUT): stores kept with a probability when a sample would overfill the map,
+     and full cells walked by random sub-lists. Both are exact in expectation.
+   - It reads within the run-to-run spread of the exact map at both sizes (0.884-1.000, the exact map's own second run
+     0.894-0.978). Overflow and cut were 0 on Dawn.
+   - **Its cost on a card is not measured:** re-run Tests > dichroics.
+2. **Slicing's batch count (the live view only).**
+   - What the code does: a sample slower than sliceMs (30) is cut into K batches, and each batch runs the whole
+     24-iteration chain. K is sized from frame times that include that fixed cost (`raytrace_main.js` A SAMPLE OVER
+     SEVERAL FRAMES).
+   - The hypothesis: K climbs toward its cap.
+   - The test: Developer › GPU time a frame at 0, 15, 30 and 60, interleaved, and whether "batch k/K" climbs.
+   - If it does: estimate the per-batch fixed cost on its own, `K = ceil(W / (sliceMs - a))`, at most twice the last
+     sample's K.
+3. **The second chain.**
+   - The test: rows 1 against 2 (720p) beside rows 5 against 6 (1080p).
+   - If the 720p gap is clearly larger, a deferred gather lets photons and camera rays share one chain. That is the same
+     expectation with a different noise.
+4. **The occlusion kernel on a distance-only scene text,** if `occlude` is a large share: no transforms' normals or
+   materials at a shadow ray's steps. Codegen would make it for scenes that cannot emit.
+5. **Pass folds, then one compute pass per chain,** only if `iteration-cost` (with `envMode: 1` pinned) shows the
+   off-GPU cost of an iteration still matters.
+6. **The relief:**
+   - the measured 11.2 bound instead of the summed 17.2 (row 11 of the benchmark, still unseen);
+   - a directional bound on a plain plane;
+   - an analytic half-space test for the floor in occlusion.
+
+   Each needs a ray-end check on Dawn and the user's eye. The scene keeps its own copy of the relief code.
+7. **Variance trades, each judged on effic with meanLuma holding:**
+   - Russian roulette for photons past their first scatter;
+   - roulette for shadow rays;
+   - the studio's share of light samples;
+   - Draft's seek rays in a scene that cannot emit.
+8. **The step cache** (off by default):
+   - a bake swap restarts the picture with it on (`index.html` pushStepBox);
+   - moveFast refills it at every move's start and end (renderMode, nee and lt in its key);
+   - the photon map's idle key resets on a Sketch round trip.
+
+   Fix these before any default changes. Its cell (about 3.2 mm here) is wider than the relief's 1 mm band, so it cannot
+   help near the floor (read in code).
+
+**Rejected, so they are not proposed again** (each changes the estimator or biases it):
+- fewer iterations or shadow rounds, or a shorter budget for photons, all against the user's choice of 2026-10-03;
+- a photon map one sample late, which reads the emitter list and radius of another sample;
+- turning the map or NEE off for a scene;
+- folding `prog_sppm` into shade, which is at the 8 storage bindings;
+- an allow-list step-cache key;
+- dropping stepscale;
+- thinning the stored photons as a fix for the cut, which keeps the brightest first landings capped.
+
 ## STATUS (2026-10-02) — measure first
 
 **Which scene is the hard one -- corrected.** This file, and the first version of the benchmark, said

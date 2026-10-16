@@ -1416,5 +1416,13 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
     /* ANOTHER CHART from the host's menu (Analysis › New chart): O.addChart('map') -- on the module the page
        returns, because that is what the host keeps (window.OPTICS); its id, or null where no panel is made */
     O.addChart = type => addChart(type)
+    /* THE PICTURE'S LIGHTS FOLLOW A MOVE AT ONCE (0.61.4): the host calls this after every live change (index.html,
+       BUILDER.afterLive: a gizmo's drag, a slider, the timeline). The lights' photons start from the source table this
+       reads off the document, and it was read only by the half-second tick above, or by the live rays' rounds while they
+       were shown: a lamp group dragged moved its reflector and its face every frame (uniforms) while its photons kept
+       starting where it had been up to half a second before -- the light lagging the object, updating a few times a
+       second, its photons leaving from behind the reflector's new place (the user, 2026-10-16, Reflector.json).
+       A table is about 0.03 ms of the CPU (measured on the user's laptop, three scenes). */
+    O.followScene = () => { followScene() }
     return O
 }
