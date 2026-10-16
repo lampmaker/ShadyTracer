@@ -1,7 +1,9 @@
 # Media: dust in the air, and what comes after it
 
-**STATUS (2026-10-16).** Phase 1 (a haze box, physical dust in the full renderer) is **built, 0.62.0, NOT yet seen on
-hardware**. Phases 2 to 4 are open. How phase 1 works is `lib/pathtracer/README.md` § *Dust in the air*, and
+**STATUS (2026-10-16).** Phase 1 (a haze box, physical dust in the full renderer) is **built, 0.62.0, and seen working
+on hardware by the user** ("the dust works in the images. I tried various scenes", 2026-10-16). Its `haze` bench row's
+first press measured nothing: the test's camera orbited the view's own target and looked at sky (fixed in 0.62.1, not yet
+pressed again). Phases 2 to 4 are open. How phase 1 works is `lib/pathtracer/README.md` § *Dust in the air*, and
 `lib/pathtracer/core/haze.js`'s header.
 
 ## The ask

@@ -15,13 +15,15 @@ order of that work): `ARCHITECTURE.md`, beside this file (2026-10-04). **Media**
 photon map, scattering inside materials, an Optics-view beam view -- has its own: `MEDIA.md`, beside this file
 (2026-10-16).
 
-## Dust in the air: a haze box — built 2026-10-16 (0.62.0), NOT yet seen
+## Dust in the air: a haze box — built 2026-10-16 (0.62.0), seen working by the user
 
 The user (2026-10-16): "dust particles in the air. Should be realistic and a way to visualise rays", perhaps only in a
 box "so it does not add scattering in transparent materials". Decided with the user: a haze box node, physical dust in
 the full renderer first, real units. How it works: `lib/pathtracer/README.md` § *Dust in the air*; the phases after it:
 `MEDIA.md`. Checked without a GPU (`haze.test.mjs`, `hazebox.test.mjs`, build.test, check-shaders with naga) and on
-Dawn over lavapipe (`haze.gpu.mjs`: a furnace, sunlit dust against the integral, the splits); **not seen on hardware.**
+Dawn over lavapipe (`haze.gpu.mjs`: a furnace, sunlit dust against the integral, the splits). **Seen on hardware** by the
+user, in pictures of several scenes (2026-10-16). The `haze` bench row's first press looked at sky (its camera had no
+target; 0.62.1), and is to be pressed again.
 
 **What to look at** (the user, on hardware): `MEDIA.md` § *Phase 1*, *What to look at* -- the example *Beam in dusty
 air*, Standard and Draft, the box moved and stretched live, and the `haze` bench row pasted back.

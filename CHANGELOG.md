@@ -15,6 +15,31 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.62.1 — 2026-10-16
+
+**The `haze` test looked at the sky, not the dust.** Your first press read 1.0000 with no noise on every row, the
+control included, while the dust worked in your pictures. The test's camera named no target, so it orbited the point
+your view was looking at. That point is in your scene's unit: a builder scene's 40 mm is 40 m in the test's metre
+scene, so the camera looked at sky 40 m above the dust box. In node, with the view's target at [0, 0, 40], every row read
+exactly the environment's 1000, a black sphere included.
+
+**What changed:**
+- **Every test camera now names its target**: the origin, which each was written for. Four had none (the floor, oblique,
+  furnace and disc cameras), used by 13 tests. The furnace test's control would have read 1.000 the same way; the floor
+  tests are probably unaffected (an endless floor reads the same anywhere), which is inferred, not measured. The runner
+  already put your view's target back after a test that names one.
+- **`haze` has a second control:** a black sphere without a box, as the furnace test has. It reads well below 1 only if
+  the picture holds the furnace at all; the albedo-0.5 dust says whether the dust does anything.
+- **`runwatch.test.mjs`** fails on any test camera, or row camera, without a target.
+
+**Measured** (in node, Dawn over lavapipe, 32x32, through the real test runner, the view first on a millimetre scene with
+its target 40 mm up): the black sphere 0.257 and the albedo-0.5 dust 0.424; the dust rows 0.9998-1.0040 at 128 samples.
+That small picture cannot rule out a bias of a few tenths of a percent. Afterwards the view's target, distance and scene
+were back as before.
+
+**What to look at:** press `haze` again, from any scene. Both CONTROL rows well below 1; the dust rows near 1.000 with
+noise above 0. Whether they hold to 1.000 at your size is the question this row asks.
+
 ## 0.62.0 — 2026-10-16
 
 **Dust in the air: a haze box.** You asked for dust particles in the air, realistic and a way to see rays, perhaps only
