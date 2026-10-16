@@ -1,0 +1,401 @@
+{
+  "format": "raytracer-scene",
+  "version": 22,
+  "title": "Beam in dusty air",
+  "nextId": 14,
+  "unit": "mm",
+  "materials": [
+    {
+      "id": "m1",
+      "label": "grey",
+      "params": {
+        "baseColor": {
+          "r": 0.3,
+          "g": 0.3,
+          "b": 0.3
+        },
+        "metallic": 0,
+        "roughness": 1,
+        "anisotropy": 0,
+        "specular": 0,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   R_local  that frame's rotation to the world, for a direction written in it\n//   S_local  its scale: p_local * S_local is in scene units; metres(x) is x m in them, mm(x) x mm\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe; one marked\n//            as a length is in real mm, whatever the scene's unit -- read the point in mm too:\n//   let q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. brushed along the object's x, for an anisotropy above 0 (or turned: grainAround):\n//   m.tangent = grainAlong(R_local, VEC3(1.0, 0.0, 0.0));\n// e.g. with a length width (mm) and a colour stripe added with +, and q as above:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(q.x / width), 0.5));\n"
+    },
+    {
+      "id": "m5",
+      "label": "PMMA (acrylic)",
+      "params": {
+        "baseColor": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "metallic": 0,
+        "roughness": 0,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 1,
+        "ior": 1.491,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "abbe": 57,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
+    },
+    {
+      "id": "m10",
+      "label": "white",
+      "params": {
+        "baseColor": {
+          "r": 0.85,
+          "g": 0.85,
+          "b": 0.83
+        },
+        "metallic": 0,
+        "roughness": 1,
+        "anisotropy": 0,
+        "specular": 0,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
+    }
+  ],
+  "blocks": [
+    {
+      "id": "b3",
+      "label": "plane",
+      "kind": "object",
+      "code": "// The plane z = 0, solid below.\nC = add_new(C, Nplane(p), MATERIAL);",
+      "params": {},
+      "builtin": "plane@1"
+    },
+    {
+      "id": "b7",
+      "label": "lens",
+      "kind": "object",
+      "code": "// A spherical lens along z (sdf.js Nlens): r1 the +z face, r2 the -z face; a positive radius\n// bulges out, a negative one is hollowed in, 0 is flat. Its refractive index is its material's --\n// give it a glass. Thin lens: 1/f = (n - 1)(1/r1 + 1/r2).\nC = add_new(C, Nlens(p, diameter, thickness, r1, r2), MATERIAL);",
+      "params": {
+        "diameter": 1,
+        "thickness": 0.2,
+        "r1": 2,
+        "r2": 2
+      },
+      "ranges": {
+        "diameter": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        },
+        "thickness": {
+          "min": 0.001,
+          "max": 10,
+          "step": 0.001
+        },
+        "r1": {
+          "min": -50,
+          "max": 50,
+          "step": 0.01
+        },
+        "r2": {
+          "min": -50,
+          "max": 50,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "diameter",
+        "thickness",
+        "r1",
+        "r2"
+      ],
+      "builtin": "lens@1"
+    },
+    {
+      "id": "b9",
+      "label": "box",
+      "kind": "object",
+      "code": "// A box: size is the HALF-size along each axis; the rounding stays inside it.\nC = add_new(C, NboxRounded(p, size, rounding), MATERIAL);",
+      "params": {
+        "size": {
+          "x": 0.5,
+          "y": 0.5,
+          "z": 0.5
+        },
+        "rounding": 0.02
+      },
+      "ranges": {
+        "rounding": {
+          "min": 0,
+          "max": 2,
+          "step": 0.005
+        }
+      },
+      "lengths": [
+        "size",
+        "rounding"
+      ],
+      "builtin": "box@1"
+    },
+    {
+      "id": "b12",
+      "label": "rectangle",
+      "kind": "object",
+      "code": "// A flat rectangle in the xy plane, no thickness (sdf.js Nrectangle), seen from both sides:\n// a planar optics detector, or a ray limiter across a beam, with that material type.\nC = add_new(C, Nrectangle(p, VEC2(width, height) * 0.5), MATERIAL);",
+      "params": {
+        "width": 1,
+        "height": 1
+      },
+      "ranges": {
+        "width": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        },
+        "height": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "width",
+        "height"
+      ],
+      "builtin": "rectangle@1"
+    }
+  ],
+  "root": {
+    "id": "root",
+    "kind": "group",
+    "label": "Beam in dusty air",
+    "enabled": true,
+    "blend": 0,
+    "children": [
+      {
+        "id": "n2",
+        "kind": "object",
+        "type": "code",
+        "label": "floor",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m1",
+        "params": {},
+        "block": "b3"
+      },
+      {
+        "id": "n4",
+        "kind": "object",
+        "type": "light",
+        "label": "LED (100 lm)",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -250,
+            "y": 0,
+            "z": 100
+          },
+          "rot": {
+            "x": 0,
+            "y": 90,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": null,
+        "params": {
+          "width": 1,
+          "height": 1
+        },
+        "light": {
+          "shape": "rectangle",
+          "flux": 100,
+          "colourBy": "cct",
+          "cct": 5000
+        }
+      },
+      {
+        "id": "n6",
+        "kind": "object",
+        "type": "code",
+        "label": "PMMA lens",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -205,
+            "y": 0,
+            "z": 100
+          },
+          "rot": {
+            "x": 0,
+            "y": 90,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m5",
+        "params": {
+          "diameter": 25,
+          "thickness": 6,
+          "r1": 40,
+          "r2": 40
+        },
+        "block": "b7"
+      },
+      {
+        "id": "n8",
+        "kind": "object",
+        "type": "code",
+        "label": "PMMA block (clear inside)",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": 100
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m5",
+        "params": {
+          "size": {
+            "x": 40,
+            "y": 60,
+            "z": 60
+          },
+          "rounding": 1
+        },
+        "block": "b9"
+      },
+      {
+        "id": "n11",
+        "kind": "object",
+        "type": "code",
+        "label": "screen",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 230,
+            "y": 0,
+            "z": 100
+          },
+          "rot": {
+            "x": 0,
+            "y": 90,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m10",
+        "params": {
+          "width": 160,
+          "height": 160
+        },
+        "block": "b12"
+      },
+      {
+        "id": "n13",
+        "kind": "object",
+        "type": "haze",
+        "label": "dust",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -10,
+            "y": 0,
+            "z": 100
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": null,
+        "params": {
+          "size": {
+            "x": 560,
+            "y": 220,
+            "z": 200
+          }
+        },
+        "haze": {
+          "mfp": 0.3,
+          "g": 0.7
+        }
+      }
+    ]
+  },
+  "functions": "// Functions: WGSL helpers any code node or material in this scene can call.\n// Compiled once, before the materials and the SDF; errors show here at their own lines.\n// e.g. a gyroid, usable in a code node as  C = add_new(C, sd(gyroid(p, 4.0)), MATERIAL);\n//   fn gyroid(p: VEC3, s: f32) -> f32 {\n//       let q = p * s;\n//       return abs(dot(sin(q), cos(q.zxy))) / s - 0.03;\n//   }\n",
+  "envRadius": 2000,
+  "environment": {
+    "envMode": 1,
+    "studioIlluminance": 2,
+    "studioTop": 0.5
+  },
+  "optics": {
+    "maxDist": 1200
+  }
+}

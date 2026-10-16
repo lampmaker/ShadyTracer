@@ -95,6 +95,8 @@ const NODE_MENU = [
     { label: 'Lights', items: Object.entries(LIGHT_SHAPES).map(([k, s]) => ({ label: s.label, type: 'light', value: `light:${k}` })) },
     /* the part of the scene a 3MF / STL export takes (exportbox.js): draws nothing */
     { label: 'Export box (3MF / STL)', type: 'export', value: 'export' },
+    /* dust in the air inside it (hazebox.js, the renderer's core/haze.js): draws nothing; one a scene */
+    { label: 'Haze box (dust in the air)', type: 'haze', value: 'haze' },
     /* everything above and more -- a lens in its glass, an LED, one's own -- in the Library panel */
     { label: 'From the library…', type: 'library', value: 'library' },
 ]
@@ -202,7 +204,7 @@ export function rowsFor(project, { current = project.scenes[0]?.key, collapsed =
         const handles = new Map()
         const handleIn = (g, id) => { if (!handles.has(g)) handles.set(g, handlesOf(g)); return handles.get(g).get(id) }
         const joinOn = (n, parent) => {
-            if (!parent || parent === doc.root || n.type === 'light' || n.type === 'export') return { toggle: null, mark: '', own: '' }
+            if (!parent || parent === doc.root || n.type === 'light' || n.type === 'export' || n.type === 'haze') return { toggle: null, mark: '', own: '' }
             const base = baseOf(parent)?.id === n.id, how = base ? 'base' : joinOf(n)
             if (!isCsg(parent)) return { toggle: how, mark: '', own: '' }
             return { toggle: how, mark: `${GLYPH[how]} ${handleIn(parent, n.id)}  `, own: !base && n.joinBlend != null ? `  · blend ${n.joinBlend}` : '' }
@@ -215,7 +217,7 @@ export function rowsFor(project, { current = project.scenes[0]?.key, collapsed =
                 ? at(n.id, { label: `${j.mark}${groupNote(n) ? `${n.label}  · ${groupNote(n)}` : n.label}${j.own}${anim(n)}`,
                     type: 'group', expanded: !collapsed.has(rid(n.id)),
                     toggles: { enabled: n.enabled, lock: lockToggle(n), join: j.toggle }, children: n.children.map(c => row(c, n)) })
-                : at(n.id, { label: `${j.mark}${n.label}  · ${n.type === 'export' ? 'export' : matLabel(n.material)}${j.own}${anim(n)}`,
+                : at(n.id, { label: `${j.mark}${n.label}  · ${n.type === 'export' ? 'export' : n.type === 'haze' ? 'haze' : matLabel(n.material)}${j.own}${anim(n)}`,
                     type: n.type, toggles: { enabled: n.enabled, lock: lockToggle(n), join: j.toggle } })
         }
         return at(doc.root.id, {
@@ -380,6 +382,9 @@ export function installBuilderTree(container, BUILDER, { onStatus = () => { }, o
         /* an export box draws nothing, but declares uniforms (its transform, its size), so it applies */
         if (value === 'export')
             return edit('add export box', () => M.addExportBox(doc(), parentRow.mid), { scene, select: n => n.id })
+        /* a haze box draws nothing either, but its presence is the kernels' text (core/haze.js): it applies */
+        if (value === 'haze')
+            return edit('add haze box', () => M.addHazeBox(doc(), parentRow.mid), { scene, select: n => n.id })
         const prim = typeof value === 'string' && value.startsWith('prim:') ? primitiveObject(value.slice(5)) : null
         // wearing the scene's default material (model.defaultMaterial: the first surface in its list)
         edit(`add ${prim ? prim.label : 'code'}`, () => M.addObject(doc(), parentRow.mid,
@@ -769,7 +774,7 @@ export function installBuilderTree(container, BUILDER, { onStatus = () => { }, o
                 const doc = BUILDER.doc
                 const targets = []
                 M.walk({ root: M.find(doc, row.mid).node }, x => {
-                    if (x.kind === 'object' && x.type !== 'light' && x.type !== 'export') targets.push(x.id)
+                    if (x.kind === 'object' && x.type !== 'light' && x.type !== 'export' && x.type !== 'haze') targets.push(x.id)
                 })
                 if (!targets.length) throw new Error('nothing there takes a material (a light has its own)')
                 // the one already there if it is the same: a material dropped on five objects is one material

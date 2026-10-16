@@ -119,6 +119,26 @@
    "roles": "9a42843722f5fa7458d141f36e2bb607b0d7a84e2e6765955627cedb2c4f7d99"
   }
  },
+ "scenes/dusty-beam.json": {
+  "off": {
+   "wgsl": "e09efd96a106297dfa419283851464b812de5729d5088370fd52dbb64960805f",
+   "pickWgsl": "89b2e94ff58ca66e24bad87977562a6e96b28de3c5555178f7ccc7a89b09d2b7",
+   "opticsWgsl": "e09efd96a106297dfa419283851464b812de5729d5088370fd52dbb64960805f",
+   "opticsPickWgsl": "89b2e94ff58ca66e24bad87977562a6e96b28de3c5555178f7ccc7a89b09d2b7",
+   "uniforms": "fdede1b7034c36bf023331a67f916dc3babac0f27c357eeaf2b27cb4e8b8435b",
+   "tags": "feae92a49e63bbae9c54d68b8e0f375db7eb13061a9f52e5e6a4edf16428ca4e",
+   "roles": "643d5437104296e21d906ecb15b2c96ad278f20cfc4af53b12bb6069bd853726"
+  },
+  "live": {
+   "wgsl": "0a04151b793e48491704f546af5827cf0b0b11dd6a1c217cc0fc8f83c2200154",
+   "pickWgsl": "df43feb8fc5d698bb257ed88776ca5c60709dae686020a1080cc835031bb0098",
+   "opticsWgsl": "0a04151b793e48491704f546af5827cf0b0b11dd6a1c217cc0fc8f83c2200154",
+   "opticsPickWgsl": "df43feb8fc5d698bb257ed88776ca5c60709dae686020a1080cc835031bb0098",
+   "uniforms": "ce7dcc144ce4fba8b5d6b9a2778e6a17374d41906e9e2d3cc5719a9c572dd281",
+   "tags": "feae92a49e63bbae9c54d68b8e0f375db7eb13061a9f52e5e6a4edf16428ca4e",
+   "roles": "643d5437104296e21d906ecb15b2c96ad278f20cfc4af53b12bb6069bd853726"
+  }
+ },
  "scenes/first-steps.json": {
   "off": {
    "wgsl": "49becffd579944d28ea777c55fc40081f995b4d617221fddabe9237f48e7a106",

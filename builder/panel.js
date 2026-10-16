@@ -45,6 +45,7 @@ import { recipeOf, parseRecipe, applyRecipe } from './recipe.js'
 import { RAYFILES, rayBox } from '../optics/rayfiles.js'
 import { UNITS } from '../lib/pathtracer/core/photometry.js'
 import { exportGrid, gridProblem, EXPORT_DEFAULTS } from './exportbox.js'
+import { visibilityOf, HAZE_G_MAX } from './hazebox.js'
 import { makeAfter } from './params.js'
 import { codeOnly } from './codegen.js'
 const EXPORT_CELL = EXPORT_DEFAULTS.cell
@@ -456,6 +457,13 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
             exportFolder(folder, node)
             return
         }
+        // ---- a haze box: where it is, how big, and its dust (hazebox.js; the renderer's core/haze.js)
+        if (node.type === 'haze') {
+            transform(folder, node)
+            paramsFolder(folder, node, ['size'], {}, false)
+            hazeFolder(folder, node)
+            return
+        }
 
         // ---- material: structural
         // not a material: the shader's built-in grey for an object wearing none (model.ensureMaterial says why it was renamed)
@@ -745,6 +753,33 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
        The export runs against the renderer (BUILDER.exportPrint), which has to be showing this
        scene; it downloads the file and says what it made. One at a time. */
     let exporting = false
+    /* A HAZE BOX'S DUST (hazebox.js): its mean free path in real metres whatever the scene's unit, its albedo, its g --
+       live, as the renderer's own uniforms (makeAfter's haze, demo.js pushHaze). The visibility beside the mean free path
+       is the number a weather report gives (Koschmieder), and the scale note is why a small scene shows little. */
+    function hazeFolder(folder, node) {
+        const doc = BUILDER.doc
+        const S = M.hazeSettings(node)
+        const V = { mfp: S.mfp, albedo: { ...S.albedo }, g: S.g }
+        const f = folder.addFolder({ title: 'dust in the air' })
+        const vis = { get text() { const m = M.hazeSettings(node).mfp
+            return `visibility ${visibilityOf(m) < 1 ? `${(visibilityOf(m) * 100).toPrecision(3)} cm` : `${visibilityOf(m).toPrecision(3)} m`}; `
+                + 'only the air inside scatters (not glass or solids). Real room dust is tens of metres; a small scene shows a beam '
+                + 'best looking into the light, or with less other light.' } }
+        let visLine = null
+        const put = patch => {
+            if (!A.haze(doc, node, patch)) return
+            for (const k of Object.keys(patch)) said(`scene/${node.id}/haze/${k}`)
+            try { visLine?.refresh() } catch { }
+        }
+        f.addBinding(V, 'mfp', { label: 'mean free path (m)', min: 0.001, max: 1000, step: 0.001 })
+            .on('change', ev => put({ mfp: Math.max(0.001, +ev.value || S.mfp) }))
+        visLine = f.addBinding(vis, 'text', { readonly: true, label: '', multiline: true, rows: 3 })
+        f.addBinding(V, 'albedo', { label: 'albedo (colour)', color: { type: 'float' } })
+            .on('change', () => put({ albedo: { r: Math.min(1, Math.max(0, V.albedo.r)), g: Math.min(1, Math.max(0, V.albedo.g)), b: Math.min(1, Math.max(0, V.albedo.b)) } }))
+        f.addBinding(V, 'g', { label: 'g (forward scattering)', min: -HAZE_G_MAX, max: HAZE_G_MAX, step: 0.01 })
+            .on('change', ev => put({ g: Math.min(HAZE_G_MAX, Math.max(-HAZE_G_MAX, +ev.value || 0)) }))
+    }
+
     function exportFolder(folder, node) {
         const doc = BUILDER.doc
         const E = M.exportOf(node)
@@ -1347,7 +1382,7 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
        combine then reads another uniform) and a slider, live by makeAfter's joinBlend. Nothing at the top
        level, which is always a plain union, nor for a light or an export box, which are not shapes of it. */
     function joinControls(folder, doc, node, parent) {
-        if (!parent || parent === doc.root || node.type === 'light' || node.type === 'export') return
+        if (!parent || parent === doc.root || node.type === 'light' || node.type === 'export' || node.type === 'haze') return
         const base = shapesOf(parent)[0] === node
         const again = () => setTimeout(() => { if (shownId === node.id) show(node.id) })
         const J = { join: node.join ?? 'union' }

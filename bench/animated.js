@@ -39,7 +39,7 @@ export const ANIMATED = 4
 export function animatedObjects(doc, S, n = ANIMATED) {
     const out = []
     Model.walk(doc, node => {
-        if (out.length >= n || node === doc.root || node.kind !== 'object' || node.type === 'light' || node.type === 'export') return
+        if (out.length >= n || node === doc.root || node.kind !== 'object' || node.type === 'light' || node.type === 'export' || node.type === 'haze') return
         if (node.enabled === false || !node.transform) return
         if (S.wgsl.includes(`UB.${xfName(node.id)}`)) out.push(node)
     })

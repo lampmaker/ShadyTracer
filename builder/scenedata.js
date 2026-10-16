@@ -143,7 +143,7 @@ const afterKind = n => isAfter(n, { straight: false })
    material's relief, and a CSG group with either anywhere below it -- the predicate, for planOf and for recordsOf (which
    checks a tree against a plan) */
 function compiledOf(tree, reliefMaterials, wantLocal = false) {
-    const reliefObject = n => n.kind === 'object' && reliefMaterials.has(n.material) && NODE_TYPES[n.type] && n.type !== 'light' && n.type !== 'export'
+    const reliefObject = n => n.kind === 'object' && reliefMaterials.has(n.material) && NODE_TYPES[n.type] && n.type !== 'light' && n.type !== 'export' && n.type !== 'haze'
     const coded = n => hasCode(n) && !native(n, wantLocal, reliefMaterials)
     const special = new Set()          // groups with code or a relief object somewhere below
     const mark = n => {
@@ -364,7 +364,7 @@ export function recordsOf(tree, plan, { boxes = null, materialIndex, lightMateri
             return
         }
         if (n.kind === 'object') {
-            if (n.type === 'export') return
+            if (n.type === 'export' || n.type === 'haze') return      // boxes, not shapes: the haze is the renderer's (scene.haze)
             if (n.type === 'light') {
                 if (!hasFace(n.light) || !lightIndex.has(n.id)) return
                 face(n, here, on)

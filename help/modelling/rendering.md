@@ -40,6 +40,40 @@ you stop.
 The **Developer** switch at the foot of the Quality box shows the rest: ray marching, performance, diagnostics.
 Each row has a tooltip.
 
+## Dust in the air
+
+A **haze box** (the **+** menu, *Haze box*) fills the air inside it with dust. Light that crosses it is partly
+scattered and partly absorbed, as in a dusty room, fog or a stage's haze. Beams from lamps and lenses show in it, and
+so do the sun's shafts and a lamp's glow. Whatever is seen through it, or lit through it, is dimmer. The example
+*Beam in dusty air* (File › Examples) shows an LED's beam through a lens.
+
+- **Only the air inside scatters.** Glass, water and solids inside the box stay clear, so a lens in a dusty box
+  still looks like glass.
+- **Real units.** The **mean free path** is in metres, whatever the scene's unit: how far light goes, on average,
+  before it meets a particle. The **albedo** is the share a particle scatters rather than absorbs. **g** sets the
+  direction: real dust scatters mostly forward, so a beam is brightest when you look into it. The panel shows the
+  **visibility** beside the mean free path. See [Haze box settings](../reference/haze.md).
+- **One box a scene.** Its outline shows when it is selected; stretch it with the Transform gizmo's cubes.
+
+**What a small scene can show.** Physical dust is faint at the size of a lamp. A beam a centimetre or two across,
+seen from the side in dust with a 10 m mean free path, is thousands of times dimmer than the spot it lights on a white
+wall. Dust dense enough to show the beam brightly also dims it over a short distance. That is physics, not a setting
+to fix. Beams show best:
+- looking into the light, or close to it;
+- in a dim room;
+- with denser dust: try a mean free path of a fraction of a metre.
+
+**Where it is traced.**
+- **Standard and High:** in full. Light can scatter many times, and the lights' rays light the dust.
+- **Draft:** light scattered once, straight from the sun, sky and lamps.
+- **Sketch and Optics:** leave the dust out.
+- **Light seen through glass:** a beam in dust seen *through* a lens or a window is only found by the camera's own
+  paths, so it is noisy.
+- **The Optics page's numbers** do not include the dust yet; its run bar says so.
+
+Each time light meets a particle it counts as one bounce. A very dense box makes paths that run out of bounces, which
+shows as dimming. Raise **Paths and noise › max bounces** if it matters.
+
 ## How fast it is
 
 [Render stats](show:stats) shows the samples per second and what a sample costs. What makes a scene slow:

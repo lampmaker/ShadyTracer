@@ -17,7 +17,8 @@ import { HELP, PAGES, HOME } from '../index.js'
 import { renderMarkdown } from '../markdown.js'
 import { kindOf, linksIn } from '../links.js'
 import { WIDGETS } from '../widgets.js'
-import { referencePages, FIELD_HELP, LIGHT_HELP } from '../reference.mjs'
+import { referencePages, FIELD_HELP, LIGHT_HELP, HAZE_HELP } from '../reference.mjs'
+import { HAZE_DEFAULTS } from '../../builder/hazebox.js'
 import { EXAMPLES } from '../../scenes/index.js'
 import { FIELDS } from '../../builder/materials.js'
 import { LIGHT_DEFAULTS } from '../../builder/lights.js'
@@ -80,6 +81,8 @@ ok('every material field has its words', Object.keys(FIELDS).every(k => FIELD_HE
 ok('...and no words for a field there is not', Object.keys(FIELD_HELP).every(k => k in FIELDS), Object.keys(FIELD_HELP).filter(k => !(k in FIELDS)).join(', '))
 ok('every light setting has its words', Object.keys(LIGHT_DEFAULTS).every(k => LIGHT_HELP[k]), Object.keys(LIGHT_DEFAULTS).filter(k => !LIGHT_HELP[k]).join(', '))
 ok('...and no words for a setting there is not', Object.keys(LIGHT_HELP).every(k => k in LIGHT_DEFAULTS))
+ok('every haze box setting has its words', Object.keys(HAZE_DEFAULTS).every(k => HAZE_HELP[k]), Object.keys(HAZE_DEFAULTS).filter(k => !HAZE_HELP[k]).join(', '))
+ok('...and no words for a haze setting there is not', Object.keys(HAZE_HELP).every(k => k in HAZE_DEFAULTS))
 ok('every shape and modifier\'s reference entry has text (its code\'s first comment)', !/###? [^\n]+\n\n\n/.test(read('reference/shapes.md') + read('reference/modifiers.md')))
 
 console.log(`help coverage: ${pass} passed, ${fail} failed`)

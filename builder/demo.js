@@ -50,6 +50,7 @@ import * as P from './project.js'
 import { syncSources } from './sources.js'
 import { lightRGBObject, beamOf } from './lights.js'
 import { runExport } from './exportbox.js'
+import { hazeOf } from './hazebox.js'
 import { stamp } from '../version.js'
 import { baked } from './bake.js'
 import { animatedKeys, keptUniforms, liveUniformsOf } from './animate.js'
@@ -98,7 +99,9 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
        uniform is pushed and nothing compiles. Otherwise the caller has to apply. Returns 'live'
        or 'structural'. */
     /* WHAT A SCENE SAYS ABOUT ITSELF THAT IS NOT TEXT and the engine takes live (RT.updateScene) */
-    const sceneSelf = scene => ({ envRadius: scene.envRadius, unit: scene.unit, extent: scene.extent })
+    /* ...its haze box too (hazebox.js; core/haze.js): its values; whether there is one is text, which the engine refuses
+       to change here (an undo that adds or takes one away compiles: its comment is in the shader) */
+    const sceneSelf = scene => ({ envRadius: scene.envRadius, unit: scene.unit, extent: scene.extent, haze: scene.haze ?? null })
     const sync = () => {
         const scene = build()
         if (RT.scene?.id !== 'built' || scene.wgsl !== RT.scene.wgsl) return 'structural'
@@ -238,6 +241,20 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
     const pushEnvironment = () => {
         const env = doc().environment
         if (env && current === shown) RT.set(structuredClone(env))
+    }
+    /* THE HAZE BOX (hazebox.js; the renderer's core/haze.js), from the document, after any live value -- its own, or a
+       group's above it, which moves it -- into the scene the engine holds (RT.updateScene): uniforms, no compile.
+       Whether, and taken: true when there is nothing to change. Only for a scene shown with one: whether there is one is
+       the shader's text, a compile, which the caller makes when this is refused. */
+    let hazeShown = null
+    const pushHaze = d => {
+        if (!RT.scene?.haze || !RT.updateScene) return false
+        const h = hazeOf(d)
+        const sig = JSON.stringify(h)
+        if (sig === hazeShown && sig === JSON.stringify(RT.scene.haze)) return true
+        const ok = !!h && RT.updateScene({ haze: h }).length === 0
+        if (ok) hazeShown = sig
+        return ok
     }
     const pushSources = () => {
         const d = doc()
@@ -638,6 +655,11 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
             }
             const f = M.find(doc, id)
             if (!f || RT.scene?.id !== 'built') return false
+            /* THE HAZE BOX: moved and sized with whatever moved or sized it (its size uniform is declared as an export
+               box's is, and written below like any parameter); its settings are no uniform of the scene's -- the
+               engine's own (core/haze.js) -- so they are taken here or not at all */
+            const hazeTook = pushHaze(doc)
+            if (f.node.type === 'haze' && k === 'haze') return hazeTook
             if (!RT.scene.writeData) return nodeLive(doc, f, id, k, !!doc.liveVisibility)
             /* THE SCENE SHOWN IS DATA: a node's frame, visibility, parameters and joins are in its records, made again
                whole and written (pushData); what is still a uniform -- a light's look, everything in a compiled subtree --

@@ -61,6 +61,9 @@ for (const { name, path } of EVERY_SCENE) {
             }
             // the environment's settings are the renderer's own (model.js ENVIRONMENT), not scene uniforms
             if (id === M.ENVIRONMENT_ID) { if (!(k in M.ENVIRONMENT)) bad.push(`${e.path}: '${k}' is not an environment setting`); continue }
+            /* ...and a haze box's dust (hazebox.js, 0.62.0): the renderer's own uniforms, from the scene's `haze` (core/haze.js,
+               demo.js pushHaze) -- so the scene generated must carry that box */
+            if (k === 'haze') { if (M.find(doc, id)?.node.type !== 'haze' || g.haze?.id !== id) bad.push(`${e.path}: no haze box '${id}' in the scene`); continue }
             const want = k === 'transform' ? [xfName(id)] : k === 'blend' ? [blendName(id)]
                 : k === 'light' ? (M.hasFace(M.find(doc, id)?.node.light) ? [uniformName(id, 'emissive'), uniformName(id, 'emissiveLuminance')] : [])
                 : [paramUniform(id, k)]               // a node's, a material's, or its relief's (<id>#relief)

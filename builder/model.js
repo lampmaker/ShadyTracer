@@ -118,7 +118,11 @@ export const FORMAT = 'raytracer-scene'
 /* 21: DISPERSION (0.40.0; materials.js abbe, core/spectral.js): a material's Abbe number. Every material has the field;
    version 20 files get it at 0, one index at every wavelength, which is what they rendered (v20to21). A builder of 20
    refuses a file of 21 rather than render the prism without its rainbow. */
-export const VERSION = 21
+/* 22: A HAZE BOX (0.62.0; hazebox.js, lib/pathtracer/core/haze.js): an object of type 'haze', dust in the air inside
+   it -- a size, and `haze` over HAZE_DEFAULTS (mean free path, albedo, g). One a scene. Version 21 files have none:
+   nothing to change. A builder of 21 refuses a file of 22 (an object type it does not know), rather than drop the box
+   on its first save. */
+export const VERSION = 22
 /** The most copies an array has: each is a walk of its children at every step near them, until a BVH can tell which
  *  copies are near (call 4: chosen, not measured). */
 export const ARRAY_MAX = 16
@@ -131,6 +135,13 @@ export { LIGHT_SHAPES, LIGHT_DEFAULTS, lightOf, hasFace, lightRGB, lightDisplayR
 import { LIGHT_SHAPES, LIGHT_DEFAULTS, lightProblems, rotationTowards } from './lights.js'
 export { EXPORT_PARAMS, EXPORT_DEFAULTS, exportOf } from './exportbox.js'
 import { EXPORT_PARAMS, EXPORT_DEFAULTS, exportProblems } from './exportbox.js'
+export { HAZE_PARAMS, HAZE_DEFAULTS, hazeSettings } from './hazebox.js'
+import { HAZE_PARAMS, HAZE_DEFAULTS, hazeProblems, hazeNode } from './hazebox.js'
+/** The object types that are boxes rather than shapes (an export box, a haze box): no material, no code, no join -- a
+ *  size in their own frame and settings of their own. */
+export const BOX_TYPES = Object.freeze(['export', 'haze'])
+const isBoxType = t => BOX_TYPES.includes(t)
+const BOX_WORDS = { export: 'export box', haze: 'haze box' }
 
 /** The units a scene may be in -- the renderer's own table, so the two cannot disagree. */
 export { UNITS, ENV_RADIUS_DEFAULT_M } from '../lib/pathtracer/core/photometry.js'
@@ -638,8 +649,8 @@ function joinProblems(n) {
     const p = []
     if (n.join !== undefined && !OPS.includes(n.join)) p.push(`'${n.id}': join must be one of ${OPS.join(', ')}`)
     if (n.joinBlend !== undefined && !(Number.isFinite(n.joinBlend) && n.joinBlend >= 0)) p.push(`'${n.id}': joinBlend must be a number >= 0`)
-    if ((n.join !== undefined || n.joinBlend !== undefined) && (n.type === 'light' || n.type === 'export'))
-        p.push(`'${n.id}': a ${n.type === 'light' ? 'light' : 'export box'} is not one of its group's shapes, so it has no join`)
+    if ((n.join !== undefined || n.joinBlend !== undefined) && (n.type === 'light' || isBoxType(n.type)))
+        p.push(`'${n.id}': a ${n.type === 'light' ? 'light' : BOX_WORDS[n.type]} is not one of its group's shapes, so it has no join`)
     return p
 }
 /** How a node joins what is above it in its group: union, subtract or intersect (version 14). Refused
@@ -724,6 +735,7 @@ export function addObject(doc, parentId, { primitive, type, label, material: mat
     const parent = groupOf(doc, parentId)
     if (type === 'light') throw new ModelError('a light is added with addLight')
     if (type === 'export') throw new ModelError('an export box is added with addExportBox')
+    if (type === 'haze') throw new ModelError('a haze box is added with addHazeBox')
     if (type !== undefined && !NODE_TYPES[type])
         throw new ModelError(`unknown object type '${type}' (a shape is a primitive now: { primitive: '${type}' })`)
     let B = blockId != null ? block(doc, blockId) : null
@@ -891,7 +903,7 @@ const checkOwner = (doc, owner, id = owner.id) => {
         return
     }
     const bad = material(doc, owner.id) ? materialProblems(owner) : owner.kind === 'group' ? groupProblems(owner)
-        : owner.type === 'export' ? exportProblems(owner) : null
+        : owner.type === 'export' ? exportProblems(owner) : owner.type === 'haze' ? hazeProblems(owner) : null
     if (bad) { if (bad.length) throw new ModelError(bad) }
     else checkParams(owner)
 }
@@ -1333,7 +1345,7 @@ export const defaultMaterial = doc => doc.materials.find(m => typeOf(m) === 'sur
 export function wearDefault(doc, node) {
     const m = defaultMaterial(doc)
     if (m) walkNode(node, n => {
-        if (n.kind === 'object' && n.type !== 'light' && n.type !== 'export' && n.material == null) n.material = m.id
+        if (n.kind === 'object' && n.type !== 'light' && !isBoxType(n.type) && n.material == null) n.material = m.id
     })
     return node
 }
@@ -1974,6 +1986,36 @@ export function setExport(doc, id, patch) {
     return doc
 }
 
+/** A HAZE BOX (hazebox.js, version 22): dust in the air inside it, for the renderer (core/haze.js). Draws nothing.
+ *  `size` its edges in its own frame; `settings` over HAZE_DEFAULTS (mfp m, albedo {r, g, b}, g). One a scene. */
+export function addHazeBox(doc, parentId, { id, label, transform, size, ...settings } = {}, index) {
+    const parent = groupOf(doc, parentId)
+    if (hazeNode(doc)) throw new ModelError(`this scene has a haze box already ('${hazeNode(doc).id}'): one a scene`)
+    const node = {
+        id: checkNewId(doc, id), kind: 'object', type: 'haze', label: label ?? 'haze box', enabled: true,
+        transform: structuredClone(transform ?? identity()), material: null,
+        params: { size: { ...HAZE_PARAMS.size, ...(size || {}) } },
+    }
+    if (Object.keys(settings).length) node.haze = structuredClone(settings)
+    const bad = hazeProblems(node)
+    if (bad.length) throw new ModelError(bad)
+    insert(parent.children, node, index)
+    return node
+}
+/** Change a haze box's settings: `patch` over what it has; a setting at its default is dropped. */
+export function setHaze(doc, id, patch) {
+    const { node } = must(doc, id)
+    if (node.type !== 'haze') throw new ModelError(`'${id}' is not a haze box`)
+    const next = { ...(node.haze || {}), ...structuredClone(patch) }
+    for (const [k, v] of Object.entries(next))
+        if (v === undefined || JSON.stringify(v) === JSON.stringify(HAZE_DEFAULTS[k])) delete next[k]
+    const bad = hazeProblems({ ...node, haze: next })
+    if (bad.length) throw new ModelError(bad)
+    if (Object.keys(next).length) node.haze = next
+    else delete node.haze
+    return doc
+}
+
 /*======================================================================================================================
   THE ENVIRONMENT -- the sun and sky, or the studio light -- is the scene's (UI_PLAN.md section 8): a room
   keeps its sun. It was a renderer setting saved with the workspace, so a scene opened on its own came
@@ -2127,6 +2169,7 @@ export function toTree(doc, { keepDisabled = false } = {}) {
         if (node.transform) n.transform = structuredClone(node.transform)
         if (node.type === 'light') n.light = structuredClone(node.light)
         else if (node.type === 'export') n.export = structuredClone(node.export ?? {})
+        else if (node.type === 'haze') n.haze = structuredClone(node.haze ?? {})
         else n.code = B ? B.code : node.code
         const schema = B ?? node
         if (schema.constants) n.constants = { ...schema.constants }
@@ -2187,7 +2230,7 @@ export function validate(doc) {
     const p = []
     if (!doc || typeof doc !== 'object') return ['not an object']
     if (doc.format !== FORMAT) p.push(`format is '${doc.format}', expected '${FORMAT}'`)
-    if (doc.version !== VERSION) p.push(`version ${doc.version} is not one this builder reads (it reads ${VERSION}, and upgrades 1 to 20 and the optics branch's 9 to 13)`)
+    if (doc.version !== VERSION) p.push(`version ${doc.version} is not one this builder reads (it reads ${VERSION}, and upgrades 1 to ${VERSION - 1} and the optics branch's 9 to 13)`)
     if (!Number.isInteger(doc.nextId) || doc.nextId < 1) p.push('nextId must be a positive integer')
     if (!Array.isArray(doc.materials)) p.push('materials must be a list')
     if (!doc.root || doc.root.kind !== 'group') p.push('root must be a group')
@@ -2226,6 +2269,7 @@ export function validate(doc) {
         if (B.kind !== kind) return p.push(`'${n.id}': block '${n.block}' is ${B.kind === 'group' ? 'a group\'s' : 'an object\'s'} code`)
         p.push(...userProblems(n, B))
     }
+    let hazeSeen = 0                       // one haze box a scene (version 22)
     const walkCheck = (n, where) => {
         if (!n || typeof n !== 'object') { p.push(`${where}: not a node`); return }
         seeId(n.id, where)
@@ -2259,7 +2303,7 @@ export function validate(doc) {
             else {
                 const bad = Object.keys(n.params).filter(k => !PARAM.test(k) || RESERVED_PARAMS.includes(k))
                 if (bad.length) p.push(`'${n.id}': parameter name(s) not valid in WGSL: ${bad.join(', ')}`)
-                if (n.type === 'light' || n.type === 'export') p.push(...profileProblems(n))
+                if (n.type === 'light' || isBoxType(n.type)) p.push(...profileProblems(n))
             }
             if (n.type === 'light') {
                 p.push(...lightProblems(n))
@@ -2267,6 +2311,10 @@ export function validate(doc) {
             } else if (n.type === 'export') {
                 p.push(...exportProblems(n))
                 if (n.light !== undefined) p.push(`'${n.id}': light settings on an export box`)
+            } else if (n.type === 'haze') {
+                p.push(...hazeProblems(n))
+                if (n.light !== undefined || n.export !== undefined) p.push(`'${n.id}': light or export settings on a haze box`)
+                if (hazeSeen++) p.push(`'${n.id}': a second haze box -- one a scene`)
             } else {
                 // version 16: its code and its parameters' schema are its block's, its values its own
                 if (typeof n.block !== 'string') p.push(`'${n.id}': a code node names its block (version 16)`)
@@ -2275,9 +2323,9 @@ export function validate(doc) {
                     p.push(`'${n.id}': its ${k} is its block's since version 16, not its own`)
                 if (n.light !== undefined) p.push(`'${n.id}': light settings on a code node`)
             }
-            if ((n.type === 'light' || n.type === 'export') && n.block !== undefined) p.push(`'${n.id}': a ${n.type === 'light' ? 'light' : 'export box'} has no block`)
+            if ((n.type === 'light' || isBoxType(n.type)) && n.block !== undefined) p.push(`'${n.id}': a ${n.type === 'light' ? 'light' : BOX_WORDS[n.type]} has no block`)
             if (n.detector !== undefined) p.push(`'${n.id}': detector is a material's type`)
-            if (n.type === 'light' || n.type === 'export') {
+            if (n.type === 'light' || isBoxType(n.type)) {
                 p.push(...constantProblems(n))
                 p.push(...rangesProblems(n))
                 p.push(...lengthsProblems(n))
@@ -2339,6 +2387,7 @@ export function upgrade(doc) {
     if (d.version === 18) d = v18to19(d)
     if (d.version === 19) d = v19to20(d)
     if (d.version === 20) d = v20to21(d)
+    if (d.version === 21) d.version = 22          // nothing to change: haze boxes are new
     return d
 }
 
@@ -2440,7 +2489,7 @@ export function upgradeJoins(node) {
     const go = g => {
         if (!g || g.kind !== 'group') return
         if ('op' in g && OPS.includes(g.op)) {
-            const shapes = (g.children || []).filter(c => c && c.type !== 'export' && c.type !== 'light')
+            const shapes = (g.children || []).filter(c => c && !isBoxType(c.type) && c.type !== 'light')
             if (g.op !== 'union') for (const c of shapes.slice(1)) c.join = g.op
             delete g.op
         }

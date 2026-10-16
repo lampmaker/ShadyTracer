@@ -148,7 +148,7 @@ async function count(label, file, cam) {
     ok(`${label}: the root a plain union (so the scene's distance is the least of its top-level nodes')`, !isCsg(doc.root) && !(doc.root.blend > 0))
     const S = generate(...M.generateArgs(doc, { id: 'built' }))
     const B = await measure(doc, S)
-    const tops = (doc.root.children || []).filter(n => n.enabled !== false && n.type !== 'export')
+    const tops = (doc.root.children || []).filter(n => n.enabled !== false && n.type !== 'export' && n.type !== 'haze')
     const N = tops.length
     const evals = []
     for (const n of tops) evals.push(await nodeEvaluator(doc, n))
