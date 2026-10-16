@@ -15,6 +15,27 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.61.5 — 2026-10-16
+
+**The shell's browser check passes again.** `node lib/shell/test/example.check.mjs` failed one row: "a value set
+elsewhere shows".
+
+**The cause (read in code, and seen in its run):**
+- The check writes `scene/disc/radius = 2.5` through the parameter registry. Then it filters the Parameters panel by
+  "radius" and reads the first field.
+- That only works while the disc is the only setting matching "radius". Since 0.60.0 the renderer's
+  `Tracing › Photon map: radius (pixels)` matches too.
+- `find` (`lib/shell/params.js`) gives both labels the same score, then sorts by path, and `renderer/` comes before
+  `scene/`. So the photon map's row came first.
+- In Chromium the first field read `3` (the photon map's radius). The disc's row, second, read `2.5`.
+- Neither the shell nor the check had changed since 0.59.0. The value did reach the panel; the check was reading the
+  wrong row.
+
+**The fix:** the check now finds the row by what it is: `radius` under the `Disc` heading. On a failure it prints every
+row it saw.
+
+**Nothing in the application changed,** so there is nothing to look at on the card.
+
 ## 0.61.4 — 2026-10-16
 
 **A light's photons follow a move in the same frame as the object.** You saw it in `Reflector.json`, dragging the lamp
