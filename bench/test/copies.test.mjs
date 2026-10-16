@@ -28,7 +28,7 @@
 //              misWeight 5: the medium vertex's light sample and its phase function's draw, no BSDF copy of their own.
 import { readFileSync, readdirSync } from 'node:fs'
 import { inlineStats } from '../wgslgraph.js'
-import { prog_surface, prog_shade, prog_occlude } from '../../lib/pathtracer/core/wavefront.js'
+import { prog_march, prog_surface, prog_shade, prog_occlude } from '../../lib/pathtracer/core/wavefront.js'
 import { prog_pick } from '../../lib/pathtracer/core/pick.js'
 import { prog_opt_shade } from '../../lib/pathtracer/optics/kernels.js'
 import { generate } from '../../builder/codegen.js'
@@ -58,7 +58,9 @@ const expected = g => ({
     occlude: { SDF: 1, getMaterial2: 1, sceneAt: 1, materialAt: 1, calcNormals_fast: 0, ...NONE },
     opt_shade: { SDF: 4 + 2 * g, getMaterial2: 2, sceneAt: 4, materialAt: 2, calcNormals_fast: 2, ...BSDF, probeProcess: 0, processMaterial: 1 },
     pick: { SDF: 1, getMaterial2: 0, sceneAt: 1, materialAt: 0, calcNormals_fast: 0, makeLobes: 0, lobesEval: 0, lobesPdf: 0, misWeight: 0, ltEvalBsdf: 0 },
-    surface_haze: { SDF: 1, getMaterial2: 1, sceneAt: 1, materialAt: 1, calcNormals_fast: 0, ...NONE },
+    // the march, and with the haze (0.62.2: a leg's collision drawn and reached there): the scene's distance, once
+    march: { SDF: 1, getMaterial2: 0, sceneAt: 1, materialAt: 0, calcNormals_fast: 0, ...NONE },
+    march_haze: { SDF: 1, getMaterial2: 0, sceneAt: 1, materialAt: 0, calcNormals_fast: 0, ...NONE },
     shade_haze: { SDF: 0, getMaterial2: 0, sceneAt: 0, materialAt: 0, calcNormals_fast: 0, ...BSDF, misWeight: 5, probeProcess: 0, processMaterial: 0 },
     occlude_haze: { SDF: 1, getMaterial2: 1, sceneAt: 1, materialAt: 1, calcNormals_fast: 0, ...NONE },
 })
@@ -75,7 +77,8 @@ for (const [set, files, url] of sets) {
         gs.add(g)
         const got = { surface: await graph(() => prog_surface(spy, scene, 64)), shade: await graph(() => prog_shade(spy, scene, 64)), occlude: await graph(() => prog_occlude(spy, scene, 64)),
                       opt_shade: await graph(() => prog_opt_shade(spy, scene, 64)), pick: await graph(() => prog_pick(spy, scene)),
-                      surface_haze: await graph(() => prog_surface(spy, scene, 64, { haze: 1 })), shade_haze: await graph(() => prog_shade(spy, scene, 64, { haze: 1 })),
+                      march: await graph(() => prog_march(spy, scene, 64)), march_haze: await graph(() => prog_march(spy, scene, 64, { haze: 1 })),
+                      shade_haze: await graph(() => prog_shade(spy, scene, 64, { haze: 1 })),
                       occlude_haze: await graph(() => prog_occlude(spy, scene, 64, { haze: 1 })) }
         for (const [kernel, want] of Object.entries(expected(g))) {
             const have = Object.fromEntries(Object.keys(want).map(t => [t, got[kernel].copies[t]]))

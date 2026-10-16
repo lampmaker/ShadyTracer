@@ -23,7 +23,8 @@ the full renderer first, real units. How it works: `lib/pathtracer/README.md` §
 `MEDIA.md`. Checked without a GPU (`haze.test.mjs`, `hazebox.test.mjs`, build.test, check-shaders with naga) and on
 Dawn over lavapipe (`haze.gpu.mjs`: a furnace, sunlit dust against the integral, the splits). **Seen on hardware** by the
 user, in pictures of several scenes (2026-10-16). The `haze` bench row's first press looked at sky (its camera had no
-target; 0.62.1), and is to be pressed again.
+target; 0.62.1). Its second press found 0.04 % of the dust's light lost (a collision placed inside the sphere when a
+leg had escaped to the 400 m radius); 0.62.2 draws the collision as a leg starts instead, and is to be pressed again.
 
 **What to look at** (the user, on hardware): `MEDIA.md` § *Phase 1*, *What to look at* -- the example *Beam in dusty
 air*, Standard and Draft, the box moved and stretched live, and the `haze` bench row pasted back.

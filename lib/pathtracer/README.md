@@ -688,15 +688,19 @@ channel, and a Henyey-Greenstein phase function of asymmetry g (|g| ≤ 0.95). O
 index is not 1 never sees the haze, so glass and water inside the box stay clear. Nothing beyond the scene's radius
 scatters either. That keeps the sun's photons, which start on it, and a camera path escaping along the same line
 seeing the same haze. The values are DERIVED uniforms (`hazeC/U/V/W/A`, metres), live through `RT.updateScene`.
-Whether there is a box is the kernels' text: the surface, shade and occlusion kernels carry the code only for a scene
+Whether there is a box is the kernels' text: the march, shade and occlusion kernels carry the code only for a scene
 with one (`wavefrontKernels`). Without one they are the text they were.
 
-**Free flight after the march, not in it** (the user's own sketch: "if a ray has moved XX, random chance it met a
-particle; move back YY"). The Ray has no word left for a distance drawn ahead. But once the march ends a leg, the leg is
-known: (ltot − absLtot)/n back from pos. So the surface kernel draws the collision on the leg's stretch inside the box,
-t = t0 − ln(1 − u)/σ_t. If t lands before the stretch ends, it moves the ray back there as `RAY_SCATTER` and asks the
-scene nothing (`hazeLeg`, its own random stream). A collision is weighed by the albedo; passing, by 1, since its
-probability is the transmittance. The photon map's kernel takes only `RAY_ACTIVE`, so a photon that collided is not
+**Free flight, drawn as a leg starts** (the user's own sketch: "if a ray has moved XX, random chance it met a particle;
+move back YY"). A path ray's `tmax` was free: it is a shadow ray's and a probe's field. So at a leg's first march pass,
+where the ray is, the march draws the collision on the line's stretch inside the box, t = t0 − ln(1 − u)/σ_t, and keeps
+the ltot it falls at in `tmax` (`hazeDraw`, its own random stream; −1 for none). The march stops the ray when it gets
+there: moved back along its last step, `RAY_SCATTER`, handed to shade as a hit (`hazeAt`). A surface met first ends the
+leg as it would have. Shade starts every leg it writes on with `tmax` 0. A collision is weighed by the albedo; passing,
+by 1, since its probability is the transmittance. (0.62.0 drew it after the march, in the surface kernel, from the leg
+made again from where it ended. A leg that escaped ended at the scene's radius, 400 m by default, where f32 put the
+start a few steps off, and a collision just past a bounce landed inside the solid: the `haze` row's furnace lost 4e-4
+of its light on the user's card. 0.62.2 moved it here.) The photon map's kernel takes only `RAY_ACTIVE`, so a photon that collided is not
 stored at a surface it never reached. Shade makes the point a vertex (`mediumVertex`):
 - a **photon** connects to the camera through the phase function (`ltConnectMedium`: the splat flux × p × G/A_px with
   the volume's footprint G = dist/z³, the surface's without its |n·v|), under the rule a surface's connection has;

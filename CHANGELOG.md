@@ -15,6 +15,42 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.62.2 — 2026-10-16
+
+**Dust no longer loses a few paths in ten thousand.** Your second `haze` press (0.62.1) measured properly: both
+controls well below 1 (0.152 and 0.431). But the dust's rows read 0.9990-0.9994 against 0.9998 for the box hidden. That
+is 3-8e-4 of the light lost even with NEE off, where an albedo-1 path brings back exactly the sky or nothing.
+
+**What was wrong:** 0.62.0 decided a collision after the march, in the surface kernel, from the leg made again from
+where it ended (`A = pos - dir * len`). A leg that escaped ended at the scene's radius, 400 m unless the scene gives one.
+There f32's steps are 30 µm, so the start came out a few of them off, and a collision just past a bounce on the sphere
+could land inside it. The path scattered from in there was lost. Measured in node (Dawn over lavapipe, the row's own
+scene, NEE off), which ruled out the other causes:
+
+| change | light lost |
+|---|---|
+| the 400 m radius | 3.5e-4 |
+| a 5 m radius, the tolerance the same | 0.08e-4 |
+| the bounce cap at 400, or the step budget at 4000 | no change |
+| a smaller surface tolerance (0.1 mm) | 7.8e-4 (worse) |
+
+**What changed:**
+- **The collision is drawn as a leg starts, where the ray is.** A path ray's `tmax` was free (a shadow ray's and a
+  probe's field). The march draws the distance on a leg's first pass and keeps it there (`hazeDraw`), and stops the ray
+  when it gets there, moved back along its last step (`hazeAt`). Shade starts every leg it writes on with `tmax` 0.
+- **The haze's code moved from the surface kernel to the march.** The surface kernel has none now, and the march without
+  a box is the text it was.
+- **`haze.gpu.mjs` has the row's own furnace, with its sphere, at the 400 m radius, NEE off.** 0.62.1's kernels lost
+  3.9e-4 there, these 0.00e-4. The file's earlier furnace had no solid in it; a version with a sphere in this file's own
+  scene lost only 0.5e-4 on the old kernels, and why it lost less is not known.
+
+**Measured** (node, the row's scene, 32x32, NEE off): 0 lost at the automatic tolerance (3.5e-4 before), 0.6e-4 at a
+0.1 mm tolerance (7.8e-4 before). The albedo-0.5 control still reads 0.42.
+
+**What to look at:** press `haze` again. The dust rows should now read what the no-box row reads (0.9998 on your card:
+the furnace's own), not 0.04 % under it. Both controls stay well below 1. Then *Beam in dusty air* again, to see
+that nothing else changed.
+
 ## 0.62.1 — 2026-10-16
 
 **The `haze` test looked at the sky, not the dust.** Your first press read 1.0000 with no noise on every row, the

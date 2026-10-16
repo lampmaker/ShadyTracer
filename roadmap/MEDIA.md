@@ -2,8 +2,10 @@
 
 **STATUS (2026-10-16).** Phase 1 (a haze box, physical dust in the full renderer) is **built, 0.62.0, and seen working
 on hardware by the user** ("the dust works in the images. I tried various scenes", 2026-10-16). Its `haze` bench row's
-first press measured nothing: the test's camera orbited the view's own target and looked at sky (fixed in 0.62.1, not yet
-pressed again). Phases 2 to 4 are open. How phase 1 works is `lib/pathtracer/README.md` § *Dust in the air*, and
+first press measured nothing: the test's camera orbited the view's own target and looked at sky (fixed in 0.62.1). The
+second press (0.62.1) measured: both controls well below 1, and the dust's rows 0.03-0.08 % under the box hidden -- paths
+lost to a collision placed inside the sphere, which 0.62.2 fixes (the collision drawn as a leg starts, in the march; not
+yet pressed again). Phases 2 to 4 are open. How phase 1 works is `lib/pathtracer/README.md` § *Dust in the air*, and
 `lib/pathtracer/core/haze.js`'s header.
 
 ## The ask
@@ -50,7 +52,8 @@ What is in it, briefly (the README has the rest):
 - **Builder:** a `haze` node (`builder/hazebox.js`, scene format 22), one a scene, a box like the export box.
 - **Scene:** codegen hands it over as `scene.haze`, in the world, in the scene's unit.
 - **Engine:** DERIVED uniforms, and the kernels' code only for a scene with a box.
-- **The collision:** decided in the surface kernel after the march, the ray moved back (`RAY_SCATTER`).
+- **The collision:** drawn as a leg starts and kept in the ray's `tmax`; the march stops the ray there (`RAY_SCATTER`).
+  0.62.0 decided it after the march, from the leg made again from its far end, which lost light (0.62.2: see below).
 - **The vertex:** made in shade, with the photon's connection, the camera's light sample by MIS, and the phase draw.
 - **Shadow rays:** dimmed by the haze from their vertex.
 - **The photon map:** to it a point in the dust is EV_OTHER.
