@@ -15,6 +15,23 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.62.3 — 2026-10-16
+
+**The `haze` row's baseline, from your third press** (0.62.2 · 565fdcb, Pascal, 819x1031). Against the no-box row
+(999.768):
+- the hidden box reads +0.0002 %;
+- the dust with NEE off reads +0.002 %. Its paths bring back the sky or nothing, so this row is nearly noise-free, and
+  0.62.1 had read it −0.042 %;
+- with NEE on, +0.024 % at g 0.6, +0.015 % at 0, −0.010 % at −0.5. That is about 3, 2 and 1 of relSE/√pixels (0.008 %),
+  an estimate that takes the pixels as independent;
+- the controls read 0.152 and 0.4315.
+
+Written into the row's note, `docs/TESTING.md` (answered), `roadmap/MEDIA.md` and `PLAN.md`. Nothing in the renderer
+changed.
+
+**What to look at:** nothing new. *Beam in dusty air* is still worth a look after 0.62.2's change to where the
+collision is decided, if you haven't yet.
+
 ## 0.62.2 — 2026-10-16
 
 **Dust no longer loses a few paths in ten thousand.** Your second `haze` press (0.62.1) measured properly: both

@@ -4,8 +4,9 @@
 on hardware by the user** ("the dust works in the images. I tried various scenes", 2026-10-16). Its `haze` bench row's
 first press measured nothing: the test's camera orbited the view's own target and looked at sky (fixed in 0.62.1). The
 second press (0.62.1) measured: both controls well below 1, and the dust's rows 0.03-0.08 % under the box hidden -- paths
-lost to a collision placed inside the sphere, which 0.62.2 fixes (the collision drawn as a leg starts, in the march; not
-yet pressed again). Phases 2 to 4 are open. How phase 1 works is `lib/pathtracer/README.md` § *Dust in the air*, and
+lost to a collision placed inside the sphere, which 0.62.2 fixes (the collision drawn as a leg starts, in the march). The third
+press (0.62.2) answers it: the dust with NEE off within 0.002 % of no box, with NEE on within 0.024 %, both controls well
+below 1 (docs/TESTING.md has the row). Phases 2 to 4 are open. How phase 1 works is `lib/pathtracer/README.md` § *Dust in the air*, and
 `lib/pathtracer/core/haze.js`'s header.
 
 ## The ask
