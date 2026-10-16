@@ -564,8 +564,13 @@ they land on, glass passed or not, and gathered through every lobe (`SPPM_ALL`):
 IDLE (0.61.0): a gather marks the map's header; a whole sample in which no camera ray gathered makes the traces after run
 without it, one chain, until a probe every 16 traces (`SPPM_PROBE`) or a new size, mode or scene -- so a scene with no
 glass in view does not pay for it (Render stats: *Photon map: idle*). It does not run at all without photons.
-What it costs: a second wavefront chain a sample while it runs, and 40 bytes a photon (`sppmCapacity`, 2 M: 80 MB) --
-neither measured on a card. Not covered: with dispersive glass the camera's wavelength and the photon's are drawn apart,
+NEITHER FULL NOR CUT (0.61.3): a sample that would overfill the map keeps each store with the probability that fits, its
+power over it, and a cell too full to walk is walked by some of its 32 sub-lists, each record found weighing what the
+others would have -- both exact in expectation, where the stores past the capacity were dropped and the gathers cut at 512
+records. On the dichroics bench's scene, at 1280 x 720, that had the light the map brings through the plates at about a
+third of what it is (measured on Dawn, an RTX 3080 Laptop, against an exact map: `docs/PERFORMANCE.md`).
+What it costs: on the dichroics bench (the user's card, Ampere, 2026-10-16) 22.7 ms of a 196 ms sample at 1280 x 720, its
+own kernel 16.2 of them; and 44 bytes a photon (`sppmCapacity`, 2 M: 88 MB) and 12 MiB of lists. Not covered: with dispersive glass the camera's wavelength and the photon's are drawn apart,
 so a spectrum seen through a prism is mixed (inferred, not measured).
 
 ### Emissive surfaces as lights
