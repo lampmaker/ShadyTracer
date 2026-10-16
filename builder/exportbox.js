@@ -110,11 +110,12 @@ export function exportGrid(doc, id, { cell } = {}) {
 }
 
 /** The box's eight corners in the world, for drawing it (overlay.js): corner c has x from bit 0,
- *  y from bit 1, z from bit 2. And its twelve edges, as corner pairs. */
+ *  y from bit 1, z from bit 2. And its twelve edges, as corner pairs. A haze box's too (hazebox.js): the same
+ *  `size` in the same frame. */
 export function boxCorners(doc, id) {
     const chain = lineage(doc, id)
     const node = chain[0]
-    if (!node || node.type !== 'export') return null
+    if (!node || (node.type !== 'export' && node.type !== 'haze')) return null
     const frames = framesTo(doc, id)
     const s = node.params?.size || EXPORT_PARAMS.size
     return [0, 1, 2, 3, 4, 5, 6, 7].map(c => frames.reduce((q, t) => toParent(t, q),

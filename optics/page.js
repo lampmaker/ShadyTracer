@@ -133,6 +133,9 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
     const dataTable = tableIn(dataEl)
     const table = tableIn(lowerEl)
     const say = t => { noteEl.textContent = t; noteEl.title = t }
+    /* A HAZE BOX (0.62.0; builder/hazebox.js) is the picture's alone: this trace (optics/kernels.js) has a chain of its own
+       and does not see the dust yet, so a run over a scene with one says so where its result is read */
+    const hazeNote = () => RT.scene?.haze ? 'the haze box is not traced here: these numbers are without its dust (the picture has it)' : ''
 
     /* rays: the look -- traced and drawn, so few enough to retrace on every change.
        steps: how many interactions each follows. count x times: the analysis's rays (TIMES). */
@@ -1277,8 +1280,8 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
         const resume = await pauseRays()
         try {
             await analysis()
-            // the run bar says how many and when; its tooltip how long -- the status line has nothing to add
-            say('')
+            // the run bar says how many and when; its tooltip how long -- the status line has nothing to add but the dust's absence
+            say(hazeNote())
         } catch (e) {
             console.error('[optics]', e)
             say(`analysis failed: ${e.message}`)
@@ -1361,7 +1364,7 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
     const ACC = { est: null }
     const liveRounds = async () => {
         const resume = await pauseRays()
-        say('')
+        say(hazeNote())
         try {
             while (LIVE.on) {
                 const waiting = sceneBusy()

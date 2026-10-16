@@ -11,7 +11,24 @@ sheen, thin film, hair) have a phased plan of their own: `SURFACES.md`, beside t
 1b done and measured, 1c and 2 built. **Performance** (compile time on structural edits, render speed,
 a browser starved by heavy scenes) has its own too: `PERFORMANCE.md`, in `../docs/`. Each opens with a
 STATUS section. **Where the scene should go** (data, rays answered by objects, shading without geometry, and the
-order of that work): `ARCHITECTURE.md`, beside this file (2026-10-04).
+order of that work): `ARCHITECTURE.md`, beside this file (2026-10-04). **Media** -- dust in the air, then a volume
+photon map, scattering inside materials, an Optics-view beam view -- has its own: `MEDIA.md`, beside this file
+(2026-10-16).
+
+## Dust in the air: a haze box — built 2026-10-16 (0.62.0), seen working by the user
+
+The user (2026-10-16): "dust particles in the air. Should be realistic and a way to visualise rays", perhaps only in a
+box "so it does not add scattering in transparent materials". Decided with the user: a haze box node, physical dust in
+the full renderer first, real units. How it works: `lib/pathtracer/README.md` § *Dust in the air*; the phases after it:
+`MEDIA.md`. Checked without a GPU (`haze.test.mjs`, `hazebox.test.mjs`, build.test, check-shaders with naga) and on
+Dawn over lavapipe (`haze.gpu.mjs`: a furnace, sunlit dust against the integral, the splits). **Seen on hardware** by the
+user, in pictures of several scenes (2026-10-16). The `haze` bench row's first press looked at sky (its camera had no
+target; 0.62.1). Its second press found 0.04 % of the dust's light lost (a collision placed inside the sphere when a
+leg had escaped to the 400 m radius); 0.62.2 draws the collision as a leg starts instead. The third press answers the row: the dust with NEE off within 0.002 %
+of no box, with NEE on within 0.024 % (docs/TESTING.md).
+
+**What to look at** (the user, on hardware): `MEDIA.md` § *Phase 1*, *What to look at* -- the example *Beam in dusty
+air*, Standard and Draft, the box moved and stretched live, and the `haze` bench row pasted back.
 
 ## Quality presets, Draft and Sketch, lamps only, the Developer switch — built 2026-10-01, NOT yet seen
 

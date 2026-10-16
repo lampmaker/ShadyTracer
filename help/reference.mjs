@@ -2,7 +2,7 @@
 //
 // THE REFERENCE PAGES, MADE FROM THE PROGRAM'S OWN LISTS: every shape (builder/primitives.js), every modifier
 // (builder/modifiers.js), every material field, relief and coating (builder/materials.js), every light setting
-// (builder/lights.js). A shape's or a modifier's text is the comment its code starts with -- what its properties panel
+// (builder/lights.js), every haze box setting (builder/hazebox.js). A shape's or a modifier's text is the comment its code starts with -- what its properties panel
 // shows -- so it is written once. Material fields and light settings have no text of their own in the code; theirs is
 // below, one a key, and test/coverage.test.mjs fails on a key with none. So a shape, modifier, field or setting
 // added to the program without words fails the tests, rather than shipping undocumented -- the "second caller" this
@@ -15,6 +15,7 @@ import { PRIMITIVES, SHAPE_GROUPS } from '../builder/primitives.js'
 import { MODIFIERS } from '../builder/modifiers.js'
 import { FIELDS, FIELD_LABELS, COAT_PRESETS, RELIEFS, PRESETS } from '../builder/materials.js'
 import { LIGHT_SHAPES, LIGHT_DEFAULTS } from '../builder/lights.js'
+import { HAZE_DEFAULTS, HAZE_G_MAX, KOSCHMIEDER } from '../builder/hazebox.js'
 
 /** WHAT EACH MATERIAL FIELD DOES -- read in builder/materials.js FIELDS and lib/pathtracer/core/materials_pbr.js. */
 export const FIELD_HELP = {
@@ -53,6 +54,16 @@ export const LIGHT_HELP = {
     twoSided: 'Both faces emit; otherwise only the front (+z), and the back is black.',
     transparent: 'Light and the camera pass through the face, which glows over what is behind it -- a sheet of light rather than a lamp\'s body.',
     emitN: 'The index of what the face emits into: 1 in air, about 1.41 for an LED die in silicone. It changes how the light refracts as it leaves.',
+}
+
+/** WHAT EACH HAZE BOX SETTING DOES -- read in builder/hazebox.js (its header lists them) and lib/pathtracer/core/haze.js. */
+export const HAZE_HELP = {
+    mfp: 'The mean free path, in real metres whatever the scene\'s unit: how far light goes, on average, before it meets a particle. Smaller is denser. '
+        + `Visibility -- the distance at which a dark object fades to 2 % contrast, a weather report's number -- is ${KOSCHMIEDER.toFixed(2)} of these: `
+        + 'clear air\'s is tens of kilometres; the dust a sunbeam shows indoors, or a stage\'s haze, far less (rough figures: '
+        + 'the right value is a measurement, or the one that looks right). The panel shows the visibility beside it.',
+    albedo: 'What a particle scatters of the light it meets, per channel; the rest it absorbs. 1 is white dust, 0 a black soot that only dims.',
+    g: `How the particles scatter (Henyey-Greenstein's g): 0 evenly in every direction, towards 1 forward -- real dust and haze are about 0.6 to 0.8, so a beam looks brightest looking into it -- towards -1 back. Held within ±${HAZE_G_MAX}.`,
 }
 
 const firstComment = code => String(code ?? '').split('\n').filter(l => /^\s*\/\//.test(l)).map(l => l.replace(/^\s*\/\/\s?/, '')).join(' ')
@@ -113,12 +124,24 @@ function lights() {
     return s
 }
 
+function haze() {
+    let s = HEAD('Haze box settings', 'A haze box (the **+** menu, *Haze box*) fills the air inside it with dust that scatters and absorbs light: '
+        + 'beams show in it, the sun\'s shafts, a lamp\'s glow; what is seen through it is dimmer. Only the air inside scatters -- glass, '
+        + 'water and solids inside the box stay clear. Its size is its `size` parameter, in the scene\'s unit (the Transform gizmo\'s cubes '
+        + 'stretch it); one a scene. See [Render settings](../modelling/rendering.md#dust-in-the-air) for how it is drawn and what a small '
+        + 'scene can show.')
+    s += '\n| setting | starts at | does |\n|---|---|---|\n'
+    for (const [k, v] of Object.entries(HAZE_DEFAULTS)) s += `| ${k} | ${cell(value(v))} | ${cell(HAZE_HELP[k] ?? '')} |\n`
+    return s
+}
+
 /** Every reference page: { file (under help/): text }. */
 export const referencePages = () => ({
     'reference/shapes.md': shapes(),
     'reference/modifiers.md': modifiers(),
     'reference/materials.md': materials(),
     'reference/lights.md': lights(),
+    'reference/haze.md': haze(),
 })
 
 if (import.meta.url === `file://${process.argv[1]}`) {

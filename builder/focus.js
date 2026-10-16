@@ -40,7 +40,7 @@ export function focusBox(doc, id, boxes = null) {
     const f = id != null && find(doc, id)
     if (!f || f.node === doc.root) return null
     const node = f.node
-    if (node.type === 'export') {
+    if (node.type === 'export' || node.type === 'haze') {
         const c = boxCorners(doc, id)
         return c ? { ...boxOf(c), open: false, measured: true } : null
     }
@@ -51,7 +51,7 @@ export function focusBox(doc, id, boxes = null) {
     let b = null
     const walk = n => {
         if (n.enabled === false) return
-        if (n.kind === 'object' && n.type !== 'export') b = union(b, estimateBox(doc.root, n, doc))
+        if (n.kind === 'object' && n.type !== 'export' && n.type !== 'haze') b = union(b, estimateBox(doc.root, n, doc))
         for (const c of n.children || []) walk(c)
     }
     walk(node)

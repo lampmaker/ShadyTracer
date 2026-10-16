@@ -41,6 +41,7 @@ export const HELP = [
         { id: 'ref-modifiers', file: 'reference/modifiers.md', title: 'Modifiers' },
         { id: 'ref-materials', file: 'reference/materials.md', title: 'Material fields' },
         { id: 'ref-lights', file: 'reference/lights.md', title: 'Light settings' },
+        { id: 'ref-haze', file: 'reference/haze.md', title: 'Haze box settings' },
     ] },
 ]
 

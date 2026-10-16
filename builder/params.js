@@ -60,7 +60,7 @@ export function sceneParams(doc, hooks = {}) {
             const r = owner.ranges?.[k] || gui(k) || {}
             /* a length is in the scene's unit (model.js setLength); a light's size and an export box's
                always are -- shown beside it, as the position's is. A relief's are real millimetres. */
-            const length = M.isLength(owner, k) || owner.type === 'light' || owner.type === 'export'
+            const length = M.isLength(owner, k) || owner.type === 'light' || owner.type === 'export' || owner.type === 'haze'
             const base = { path: `scene/${owner.id}/${k}`, label: `${where} › ${gui(k).label ?? k}`, group: `scene · ${where}`,
                            reveal: reveal(owner.reveal ?? owner.id), kind: constant ? 'structural' : 'live',
                            ...(length ? { unit: owner.unit ?? unit } : {}) }
@@ -144,6 +144,7 @@ export function sceneParams(doc, hooks = {}) {
         }
         transform(node, where)
         if (node.type === 'export') { params(node, free(node, ['size']), where); return }
+        if (node.type === 'haze') { params(node, free(node, ['size']), where); haze(node, where); return }
         if (node.type === 'light') {
             if (M.hasFace(node.light)) params(node, free(node, Object.keys(node.params || {})), where)
             light(node, where)
@@ -179,6 +180,17 @@ export function sceneParams(doc, hooks = {}) {
         if (L.distribution !== 'collimated')
             add('halfAngle', { label: 'cone half angle', unit: '°', min: 0.5, max: 90, step: 0.5, get: () => M.lightOf(node).halfAngle }, x => ({ halfAngle: x }))
         add('emitN', { label: 'emits into n', min: 1, max: 3, step: 0.001, get: () => M.lightOf(node).emitN }, x => ({ emitN: x }))
+    }
+    // ---- a haze box's settings (hazebox.js): the renderer's own uniforms, live (demo.js pushHaze)
+    function haze(node, where) {
+        const add = (key, e, patch) => out.push({ path: `scene/${node.id}/haze/${key}`, label: `${where} › ${e.label ?? key}`,
+            group: `scene · ${where}`, reveal: reveal(node.id), ...e,
+            set: (x, o = {}) => H.haze(doc, node, patch(x), o) })
+        add('mfp', { label: 'mean free path', unit: 'm', min: 0.001, get: () => M.hazeSettings(node).mfp }, x => ({ mfp: Math.max(0.001, x) }))
+        add('albedo', { label: 'albedo', dims: 3, min: 0, max: 1, get: () => toArray(M.hazeSettings(node).albedo) },
+            x => ({ albedo: { r: Math.min(1, Math.max(0, x[0])), g: Math.min(1, Math.max(0, x[1])), b: Math.min(1, Math.max(0, x[2])) } }))
+        add('g', { label: 'g (forward scattering)', min: -0.95, max: 0.95, step: 0.01, get: () => M.hazeSettings(node).g },
+            x => ({ g: Math.min(0.95, Math.max(-0.95, x)) }))
     }
     // ---- the scene's environment (model.js ENVIRONMENT): every setting, whichever source is chosen,
     //      since a timeline may well move the sun of a scene shown in the studio light for now
@@ -247,6 +259,14 @@ export function makeAfter({ live = () => { }, commit = () => { }, structure = ()
             syncSources()
             live(node.id, 'light')
             if (!o.quiet) commit(`${node.id}.light`)
+            return true
+        },
+        /** a haze box's settings (hazebox.js): through the model, which checks them, then to the renderer live */
+        haze(doc, node, patch, o = {}) {
+            if (!Object.keys(patch).length) return false
+            try { M.setHaze(doc, node.id, patch) } catch (e) { console.warn('[builder]', e.message); return false }
+            live(node.id, 'haze')
+            if (!o.quiet) commit(`${node.id}.haze`)
             return true
         },
     }

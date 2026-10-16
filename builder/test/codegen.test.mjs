@@ -437,8 +437,8 @@ ok('and none of scenes/common.js\'s override uniforms', !('matColorR' in built.u
         ok(`${key}: ranges only for numbers`, !unranged.length, unranged.join(', '))
         ok(`${key}: in a group the menu and the library know`, SHAPE_GROUPS.some(g => g.key === def.group), String(def.group))
     }
-    eq('code is the only kind of shape; a light and an export box are the other object types (their shapes have to stay known)',
-        Object.keys(NODE_TYPES).sort(), ['code', 'export', 'light'])
+    eq('code is the only kind of shape; a light, an export box and a haze box are the other object types (their shapes have to stay known)',
+        Object.keys(NODE_TYPES).sort(), ['code', 'export', 'haze', 'light'])
 
     /* A NEW PRIMITIVE AND A VERSION 8 NODE OF THE SAME TYPE COMPILE ALIKE. The upgrade gives an old
        file the code its type emitted (model.js v8to9); the library is where new ones start. Apart
@@ -1856,7 +1856,7 @@ eq('uniformName', uniformName('n7', 'radius'), 'radius_n7')
     const old = JSON.parse(JSON.stringify(d)); old.version = 20
     for (const m of old.materials) delete m.params.abbe
     const up = Model.upgrade(old)
-    eq('a version 20 file is upgraded to 21', up.version, 21)
+    eq('a version 20 file is upgraded to 21, and on to the current version', up.version, Model.VERSION)
     ok('...every material with Abbe 0, its other fields as they were', up.materials.every(m => m.params.abbe === 0)
         && up.materials.every((m, i) => Object.entries(old.materials[i].params).every(([k, v]) => JSON.stringify(m.params[k]) === JSON.stringify(v))))
     ok('...and validates', Model.validate(up).length === 0, Model.validate(up).join('; '))

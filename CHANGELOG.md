@@ -15,7 +15,7 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
-## 0.61.5 — 2026-10-16
+## 0.62.4 — 2026-10-16
 
 **The shell's browser check passes again.** `node lib/shell/test/example.check.mjs` failed one row: "a value set
 elsewhere shows".
@@ -35,6 +35,145 @@ elsewhere shows".
 row it saw.
 
 **Nothing in the application changed,** so there is nothing to look at on the card.
+
+## 0.62.3 — 2026-10-16
+
+**The `haze` row's baseline, from your third press** (0.62.2 · 565fdcb, Pascal, 819x1031). Against the no-box row
+(999.768):
+- the hidden box reads +0.0002 %;
+- the dust with NEE off reads +0.002 %. Its paths bring back the sky or nothing, so this row is nearly noise-free, and
+  0.62.1 had read it −0.042 %;
+- with NEE on, +0.024 % at g 0.6, +0.015 % at 0, −0.010 % at −0.5. That is about 3, 2 and 1 of relSE/√pixels (0.008 %),
+  an estimate that takes the pixels as independent;
+- the controls read 0.152 and 0.4315.
+
+Written into the row's note, `docs/TESTING.md` (answered), `roadmap/MEDIA.md` and `PLAN.md`. Nothing in the renderer
+changed.
+
+**What to look at:** nothing new. *Beam in dusty air* is still worth a look after 0.62.2's change to where the
+collision is decided, if you haven't yet.
+
+## 0.62.2 — 2026-10-16
+
+**Dust no longer loses a few paths in ten thousand.** Your second `haze` press (0.62.1) measured properly: both
+controls well below 1 (0.152 and 0.431). But the dust's rows read 0.9990-0.9994 against 0.9998 for the box hidden. That
+is 3-8e-4 of the light lost even with NEE off, where an albedo-1 path brings back exactly the sky or nothing.
+
+**What was wrong:** 0.62.0 decided a collision after the march, in the surface kernel, from the leg made again from
+where it ended (`A = pos - dir * len`). A leg that escaped ended at the scene's radius, 400 m unless the scene gives one.
+There f32's steps are 30 µm, so the start came out a few of them off, and a collision just past a bounce on the sphere
+could land inside it. The path scattered from in there was lost. Measured in node (Dawn over lavapipe, the row's own
+scene, NEE off), which ruled out the other causes:
+
+| change | light lost |
+|---|---|
+| the 400 m radius | 3.5e-4 |
+| a 5 m radius, the tolerance the same | 0.08e-4 |
+| the bounce cap at 400, or the step budget at 4000 | no change |
+| a smaller surface tolerance (0.1 mm) | 7.8e-4 (worse) |
+
+**What changed:**
+- **The collision is drawn as a leg starts, where the ray is.** A path ray's `tmax` was free (a shadow ray's and a
+  probe's field). The march draws the distance on a leg's first pass and keeps it there (`hazeDraw`), and stops the ray
+  when it gets there, moved back along its last step (`hazeAt`). Shade starts every leg it writes on with `tmax` 0.
+- **The haze's code moved from the surface kernel to the march.** The surface kernel has none now, and the march without
+  a box is the text it was.
+- **`haze.gpu.mjs` has the row's own furnace, with its sphere, at the 400 m radius, NEE off.** 0.62.1's kernels lost
+  3.9e-4 there, these 0.00e-4. The file's earlier furnace had no solid in it; a version with a sphere in this file's own
+  scene lost only 0.5e-4 on the old kernels, and why it lost less is not known.
+
+**Measured** (node, the row's scene, 32x32, NEE off): 0 lost at the automatic tolerance (3.5e-4 before), 0.6e-4 at a
+0.1 mm tolerance (7.8e-4 before). The albedo-0.5 control still reads 0.42.
+
+**What to look at:** press `haze` again. The dust rows should now read what the no-box row reads (0.9998 on your card:
+the furnace's own), not 0.04 % under it. Both controls stay well below 1. Then *Beam in dusty air* again, to see
+that nothing else changed.
+
+## 0.62.1 — 2026-10-16
+
+**The `haze` test looked at the sky, not the dust.** Your first press read 1.0000 with no noise on every row, the
+control included, while the dust worked in your pictures. The test's camera named no target, so it orbited the point
+your view was looking at. That point is in your scene's unit: a builder scene's 40 mm is 40 m in the test's metre
+scene, so the camera looked at sky 40 m above the dust box. In node, with the view's target at [0, 0, 40], every row read
+exactly the environment's 1000, a black sphere included.
+
+**What changed:**
+- **Every test camera now names its target**: the origin, which each was written for. Four had none (the floor, oblique,
+  furnace and disc cameras), used by 13 tests. The furnace test's control would have read 1.000 the same way; the floor
+  tests are probably unaffected (an endless floor reads the same anywhere), which is inferred, not measured. The runner
+  already put your view's target back after a test that names one.
+- **`haze` has a second control:** a black sphere without a box, as the furnace test has. It reads well below 1 only if
+  the picture holds the furnace at all; the albedo-0.5 dust says whether the dust does anything.
+- **`runwatch.test.mjs`** fails on any test camera, or row camera, without a target.
+
+**Measured** (in node, Dawn over lavapipe, 32x32, through the real test runner, the view first on a millimetre scene with
+its target 40 mm up): the black sphere 0.257 and the albedo-0.5 dust 0.424; the dust rows 0.9998-1.0040 at 128 samples.
+That small picture cannot rule out a bias of a few tenths of a percent. Afterwards the view's target, distance and scene
+were back as before.
+
+**What to look at:** press `haze` again, from any scene. Both CONTROL rows well below 1; the dust rows near 1.000 with
+noise above 0. Whether they hold to 1.000 at your size is the question this row asks.
+
+## 0.62.0 — 2026-10-16
+
+**Dust in the air: a haze box.** You asked for dust particles in the air, realistic and a way to see rays, perhaps only
+inside a box so transparent materials stay clear. Decided with you: a haze box node, physical dust in the full renderer
+first, real units.
+
+**What it is:**
+- **+ › Haze box.** The air inside it scatters and absorbs light. It has a **mean free path** in metres, how far light
+  goes on average before it meets a particle (the panel shows the visibility beside it). It has an **albedo** (what a
+  particle scatters rather than absorbs) and **g** (0 even, towards 1 forward: real dust about 0.6 to 0.8).
+- **Only the air inside scatters.** Glass, water and solids inside the box stay clear.
+- **What shows in it:** light beams, the sun's shafts, a lamp's glow. What is seen or lit through the box is dimmer.
+- **One box a scene.** It draws a dashed outline when selected; move and stretch it with the gizmo. Its values are live
+  (no compile).
+- **Help:** Help › Render settings › *Dust in the air*, and the reference page *Haze box settings*.
+
+**How it is traced** (`lib/pathtracer/core/haze.js`; README § *Dust in the air*):
+- **Your own sketch is the method.** "The ray has moved XX: a random chance it met a particle; move it back YY" is
+  free-flight sampling, exactly. After the march, the surface kernel draws where on the leg the ray met a particle and
+  moves it back there.
+- **"Scatter towards the camera" is light tracing's connection.** The lights' and the sun's photons connect to the
+  camera from a point in the dust: that is how a lamp's beam behind a lens shows.
+- **The camera's paths** sample the lights from a point in the dust, weighed against the phase function's own draw
+  (MIS). Light can scatter many times.
+- **Shadow rays** are dimmed by the dust they cross.
+- **Modes:** Standard and High trace all of it; Draft, single scattering. Sketch and the Optics view leave the dust
+  out. The illuminance view's camera sees through it; the light reaching the surface does not.
+
+**What it cannot do yet** (`roadmap/MEDIA.md`, the phases after this one):
+- A beam seen through glass or in a mirror is found only by chance, so it is noisy. A volume photon map is next.
+- No scattering inside materials yet.
+- The Optics page's numbers do not include the dust; its status line says so.
+- At a lamp's scale, physical dust is faint. A 1 cm beam in dust with a 10 m mean free path is about 1/10 000 of the
+  spot it lights (inferred, the arithmetic is in the help). The example uses dense dust in a dim room.
+
+**Files and kernels:**
+- Scene files are now **version 22**: a new object type. Older files open unchanged; a builder of 0.61 cannot open a
+  file of 22.
+- Without a haze box, every kernel's code is what it was, byte for byte. Only the uniform block they all share has
+  five more vec4s, as the step cache's grid and the photon map's do; that is one cache miss after this update.
+
+**Checked here:**
+- On the CPU (`haze.test.mjs`): a collimated beam seen side on against its closed form, light sampling from the air by
+  MIS, and an albedo-1 slab.
+- On Dawn over lavapipe (`haze.gpu.mjs`, 2026-10-16):
+  - a furnace read 0.997 to 1.002, and albedo 0.5 read 0.48;
+  - sunlit dust in Draft read 0.996 to 1.010 of the integral;
+  - with light sampling off it read 0.997 to 1.002 of on (a 60 degree sun, 2048 samples);
+  - a box inside a glass block changed nothing, 1.0000 ± 0.0011;
+  - dust under a glass slab gave one mean with the sun's photons and the photon map on and off;
+  - a mirror's photons connecting from the dust gave the camera's own picture.
+- check-shaders with naga: 6124 kernels.
+
+**What to look at:**
+1. File › Examples › *Beam in dusty air* (Optical design), Standard. The beam from the lens shows in the dust,
+   brightest looking into it, and dims along its length. The PMMA block in it is clear inside. The spot on the
+   screen is dimmer than with the box hidden.
+2. The same in Draft: the beam, without the dust's glow around it.
+3. Drag the box, stretch it, change its mean free path, colour and g: live, no compile.
+4. Press **Tests › haze** and paste it back: ratio 1 on every row but the control. `secs` says what the dust costs.
 
 ## 0.61.4 — 2026-10-16
 

@@ -716,6 +716,20 @@ ok('...and a conic typed to four places kept on its slider (its step\'s rounding
     ok('...taken off: written, and the panel without its values', (await P()).coating === 0 && !VALUES.some(l => rows.includes(l)), JSON.stringify(rows))
 }
 
+// A HAZE BOX (0.62.0; builder/hazebox.js): where it is, its size, and its dust -- live, the renderer's own uniforms
+rows = await rowsOf('hz')
+ok('a haze box shows its size and its dust (mean free path, albedo, g), no material and no join',
+    ['size', 'mean free path (m)', 'albedo (colour)', 'g (forward scattering)'].every(l => rows.includes(l)) && !rows.includes('material') && !rows.includes('join'),
+    JSON.stringify(rows))
+before = await state()
+ok('setting its mean free path', await set('mean free path (m)', 4) === 'set')
+s = await state()
+const hzNow = await p.evaluate(() => CHECK.M.hazeSettings(CHECK.M.find(CHECK.doc, 'hz').node))
+ok('...reaches the document, live (its dust), with its undo step and no compile', hzNow.mfp === 4 && s.live.at(-1) === 'hz.haze'
+    && s.commits.at(-1) === 'hz.haze' && s.structure === before.structure, JSON.stringify([hzNow, s.live.slice(-2), s.commits.slice(-2)]))
+const visText = await p.evaluate(() => [...document.querySelectorAll('textarea')].map(t => t.value).find(v => v.startsWith('visibility')) ?? '')
+ok('...and the visibility beside it follows: 3.912 x 4 m, 15.6 m', /^visibility 15\.6 m/.test(visText), visText)
+
 ok('no page errors', !errs.length, errs.join('\n'))
 await b.close(); server.close()
 console.log(failed ? `${failed} FAILED` : 'builder panel: all passed')

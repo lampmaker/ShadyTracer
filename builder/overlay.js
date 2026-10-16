@@ -344,8 +344,9 @@ export function installSelectionOverlay({ stage, canvas, RT, BUILDER, onPick = (
         g.clip()
 
         /* AN EXPORT BOX HAS A BOX, unlike every other object (NO BOX above): it is known exactly and
-           draws nothing in the picture, so its outline is the only way to see what will be printed */
-        if (geo.node.type === 'export') {
+           draws nothing in the picture, so its outline is the only way to see what will be printed. A haze box
+           too (hazebox.js): the dust shows only where light crosses it */
+        if (geo.node.type === 'export' || geo.node.type === 'haze') {
             const C = boxCorners(BUILDER.doc, geo.node.id)
             g.beginPath()
             g.strokeStyle = COLOR.box
