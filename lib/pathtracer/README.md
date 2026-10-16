@@ -534,30 +534,39 @@ the first surface while photons run -- those paths are the photons', or shared w
 a third strategy there needs a three-way weight -- and not through glass: a shadow ray stops at any
 surface, so a die inside its dome is still found from outside by chance.
 
-**Through the camera's lens (0.43.0; `core/lens.js`).** A pinhole is a point no photon can find, so
-light -> glass -> diffuse -> glass -> eye was nobody's: a connection is a straight line from a point in
-air, and a camera path would have to aim through the second glass at the light. With an aperture the
-camera is a thin lens -- a disc at camPos, square to the axis, focused at a distance -- and its rays
-start on the disc and pass the pinhole's ray at the focus plane; connections go to a point of the disc.
-A photon that has passed a delta event, scattered by an evaluable lobe (D), and passed a delta event
-again is tested against the disc on its every segment in air, and adds Phi / (A_px A_L cos^4) where it
-crosses (`lensHit`). The camera's paths leave that class -- delta from the eye, D, delta, then the
-light -- to them, by the same `EV_*` both sides read; each side keeps its place in a two-bit field of
-the tag (`LENS_PH_SHIFT`, `LENS_CAM_SHIFT`, `lensStep`). The sun's and emitters' photons walk on past
-D for it, through delta events only, connecting no more. Off in the fast modes and the illuminance
-view (`lensSplit`), where neither side is what the split assumes.
+**The camera's lens (0.43.0; `core/lens.js`).** With an aperture the camera is a thin lens -- a disc at camPos, square
+to the axis, focused at a distance -- and its rays start on the disc and pass the pinhole's ray at the focus plane:
+depth of field. Connections (`ltConnect`) go to a point of the disc, the footprint measured from there. From 0.43.0 to
+0.60.0 the lens was also a way for light to find the camera: a photon that crossed the disc after glass, a diffuse
+surface and glass again added itself where it crossed (`lensHit`), and the camera's paths left it that class. It counted
+the class only when a photon happened to cross the disc -- the white specks in the user's picture of 2026-10-15 -- and
+went in 0.61.0, when the photon map (below) went on by default and owned the class through any aperture or none.
+**The manifold connection (0.44.0 to 0.60.0)** went with it: a photon landing on a surface *inside* glass joined to the
+camera through one refraction, found by Newton's method on the face in the surface kernel (12.7k characters of WGSL
+there, and 16 bytes of every shade-queue item). The map gathers that light too, through any chain of glass and mirrors.
 
-**Through the glass itself, the manifold connection (0.44.0; `core/manifold.js`).** A photon that lands
-on a surface inside a medium (D in glass: the floor under a prism) is joined to the camera through one
-refraction: the point on the face where light from D, bent by Snell, reaches the camera (or a point of
-its lens) is found by Newton's method over the camera ray's two angles, the Jacobian by central
-differences on the face. Its splat is ltConnect's with the straight line's G replaced by the
-refraction's: T / n^2 / (cos^3 |det dp/dw| A_px). The SURFACE KERNEL solves it (it holds the scene) as
-a walk of trips, one look at the scene each through its one `sceneAt` -- a second call would be a
-second copy of the scene in the kernel -- and leaves the answer beside the hit (`Surface.mf`); shade
-evaluates f towards the face and queues the connection (`mfConnect`). The split: it owns D -> one
-refraction into air -> camera, marked `TAG_LENS_ONE` on either side; the camera's rays leave it that,
-with or without a lens, and the lens's photons leave it their share (`lensOwned`, `lensHit`).
+**Through glass and mirrors, the photon map (0.60.0, on by default since 0.61.0; `core/sppm.js`).** The class light ->
+delta+ -> D -> delta+ -> eye -- a floor in air behind a glass pane, lit through it and seen through it (the user's picture,
+2026-10-15), a ball's caustic seen through the ball, a beam's spot seen in a mirror -- is gathered: probabilistic
+progressive photon mapping (Knaus & Zwicker 2011). A sample traces its photons first (`photons.js planBatches`'s
+`first`), and a kernel of its own between the surface kernel and shade (`wavefront.js prog_sppm`) STORES every photon that
+has passed a delta event where it lands on a surface with an evaluable lobe (its field of the tag 0, `TAG_PASSED`), in a
+hash table of linked lists two radii a cell; then the sample's camera rays, each one that has seen only delta events
+since the eye (its field 1) GATHERS there, `f Phi / (pi r^2)` over the evaluable lobes for the photons within r, over n^2
+of the medium it is in, and the camera's path leaves the class to the map (`lensOwned`; the class is named for the lens
+that owned it first). The radius is `sppmRadius` pixels at the distance in focus at the first sample and shrinks every
+sample after (`r_k^2 = r_1^2 prod (i + alpha)/(i + 1)`, alpha 2/3): a little blurred at first, consistent as the samples
+are averaged. A merged path counts only if the camera alone could have made it (`b_c + b_p - 1 <= maxbounce`). In Draft
+and Optics too, where the camera's path ends at the surface it gathers on, so the map adds what nothing there counts
+(Optics stores every one of the lights' photons). Not in Sketch, the illuminance view or an orthographic camera.
+A LIGHT NO CAMERA PATH CAN MEET (0.61.0: collimated, or no face; `Ray.ltMis < 0`) has its photons stored at every surface
+they land on, glass passed or not, and gathered through every lobe (`SPPM_ALL`): a beam on a floor seen through glass.
+IDLE (0.61.0): a gather marks the map's header; a whole sample in which no camera ray gathered makes the traces after run
+without it, one chain, until a probe every 16 traces (`SPPM_PROBE`) or a new size, mode or scene -- so a scene with no
+glass in view does not pay for it (Render stats: *Photon map: idle*). It does not run at all without photons.
+What it costs: a second wavefront chain a sample while it runs, and 40 bytes a photon (`sppmCapacity`, 2 M: 80 MB) --
+neither measured on a card. Not covered: with dispersive glass the camera's wavelength and the photon's are drawn apart,
+so a spectrum seen through a prism is mixed (inferred, not measured).
 
 ### Emissive surfaces as lights
 
@@ -643,8 +652,8 @@ sunmis 1), and nothing is counted twice. What is left out is the bounce light.
   No sun photons, no light samples, and an emissive *material* only glows: the rays are the lights'.
   The camera side counts a light's face where it meets it (straight on, or past a mirror, glass,
   near-mirror gloss), the photons what lands on the evaluable lobes, so nothing is counted twice.
-  Not seen: a beam's spot looked at in a mirror or through a lens -- that is a connection through a
-  delta, which no photon can make (as in Draft).
+  A beam's spot looked at in a mirror or through a lens is a connection through a delta, which no photon
+  can make (as in Draft): the photon map (above, on by default since 0.61.0) gathers it there.
 
 **No MIS between a light's photons and the camera in a fast mode.** The lights' direct paths are
 shared by the balance heuristic in full (`Ray.ltMis`, PLAN.md L4b), which assumes the camera's path

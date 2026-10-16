@@ -304,8 +304,11 @@ export async function createStudio({ gpu, size = STUDIO.size, samples = STUDIO.s
     await RT.init()
     // THE LIGHT: the sun and sky, the sun a key light beside the camera; exposure metered, so a dark item and
     // a glowing one both read
+    /* ...AND NO PHOTON MAP (0.61.0, on by default since): a second renderer's map is a second 80 MB, and a thumbnail is a
+       few samples of an item seen whole, not through glass -- the pictures stay what they were (THUMB_VERSION unmoved).
+       To give the studio the map: drop sppm here and raise THUMB_VERSION, so every thumbnail is drawn again. */
     RT.set({ envMode: 0, sunIlluminance: 100000, skyIlluminance: 15000, uSkyTurbidity: 1.5,
-             uSunElevation: STUDIO.sunElevation, uSunAzimuth: sunAzimuthFor(STUDIO.azimuth), autoExposure: 1 }, false)
+             uSunElevation: STUDIO.sunElevation, uSunAzimuth: sunAzimuthFor(STUDIO.azimuth), autoExposure: 1, sppm: 0 }, false)
 
     /* ONE AT A TIME: a picture and a live view share the renderer */
     let chain = Promise.resolve()

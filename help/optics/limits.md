@@ -93,5 +93,5 @@ the scene's origin, not by the unit:
 ## Not yet confirmed on hardware
 
 `FEATURES.md` lists every feature with its status. These optics features pass every test that runs without a
-graphics card but have not yet been seen on one: **coatings**, **dispersion**, **the manifold connection**, and the
-**far-field** and **flux-balance** checks. See [How far to trust the numbers](accuracy.md).
+graphics card but have not yet been seen on one: **coatings**, **dispersion**, and the **far-field** and
+**flux-balance** checks. See [How far to trust the numbers](accuracy.md).
