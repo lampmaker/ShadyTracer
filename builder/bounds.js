@@ -138,8 +138,8 @@ export function estimateBox(root, only = null, doc = null) {
     }
     const visit = (n, frames) => {
         const here = n !== root && n.transform ? [n.transform, ...frames] : frames
-        // an export box is not in the picture, and a big one would make the tolerance coarse for nothing
-        if (n.kind === 'object' && n.type !== 'export' && (!only || n === only)) {
+        // an export box is not in the picture, and a big one would make the tolerance coarse for nothing -- nor a haze box
+        if (n.kind === 'object' && n.type !== 'export' && n.type !== 'haze' && (!only || n === only)) {
             const toWorld = p => here.reduce((q, t) => toParent(t, q), p)
             const scale = here.reduce((s, t) => s * (t.scale ?? 1), 1)
             grow(toWorld([0, 0, 0]), size(n) * scale)

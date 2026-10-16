@@ -680,6 +680,51 @@ preset costs.
 furnace's uniform light at zero in the bag, NEE aimed at the emitters (`neeEmitShare` 0.95). The
 scene's environment is not touched, so the builder's Environment shows and keeps it.
 
+### Dust in the air: a haze box (0.62.0; `core/haze.js`)
+
+**A homogeneous participating medium in the air inside one box**, the scene's (`scene.haze`, from the builder's haze
+box: `builder/hazebox.js`). It has a grey extinction σ_t = 1/mfp (the mean free path, in real metres), an albedo per
+channel, and a Henyey-Greenstein phase function of asymmetry g (|g| ≤ 0.95). Only air scatters: a ray whose medium's
+index is not 1 never sees the haze, so glass and water inside the box stay clear. Nothing beyond the scene's radius
+scatters either. That keeps the sun's photons, which start on it, and a camera path escaping along the same line
+seeing the same haze. The values are DERIVED uniforms (`hazeC/U/V/W/A`, metres), live through `RT.updateScene`.
+Whether there is a box is the kernels' text: the surface, shade and occlusion kernels carry the code only for a scene
+with one (`wavefrontKernels`). Without one they are the text they were.
+
+**Free flight after the march, not in it** (the user's own sketch: "if a ray has moved XX, random chance it met a
+particle; move back YY"). The Ray has no word left for a distance drawn ahead. But once the march ends a leg, the leg is
+known: (ltot − absLtot)/n back from pos. So the surface kernel draws the collision on the leg's stretch inside the box,
+t = t0 − ln(1 − u)/σ_t. If t lands before the stretch ends, it moves the ray back there as `RAY_SCATTER` and asks the
+scene nothing (`hazeLeg`, its own random stream). A collision is weighed by the albedo; passing, by 1, since its
+probability is the transmittance. The photon map's kernel takes only `RAY_ACTIVE`, so a photon that collided is not
+stored at a surface it never reached. Shade makes the point a vertex (`mediumVertex`):
+- a **photon** connects to the camera through the phase function (`ltConnectMedium`: the splat flux × p × G/A_px with
+  the volume's footprint G = dist/z³, the surface's without its |n·v|), under the rule a surface's connection has;
+- a **camera path** samples a light (`mediumNee`: processMaterial's three-way pick with no normal; the sky drawn from
+  a uniform sphere, `envPdfM`) and weighs it by the power heuristic against the phase function's own draw. `prevPdf`
+  and `vtxLtot` are left for the emitter and face MIS to recover the point;
+- every **shadow ray** carries the haze it crosses, computed in shade over the true segment from the vertex
+  (`hazeShadow`). An emitter ray gets its haze in the occlusion kernel, where its length is known.
+
+**The splits.** A medium vertex is EV_EVAL to the light-tracing and lights' splits: CLS_LIGHTS and CLS_CAND at the
+first vertex. A camera path whose first vertex is in the air leaves a light's face to the photons; its ltMis is 0, so
+the face's direct-path share does not apply, and the photon's medium connection keeps weight 1. To the photon map it
+is EV_OTHER: both fields go out. Counted as the map's D, a camera path through glass, dust and glass would hand the
+light it reaches to a map that stores no photons in the air, and lose it. `haze.gpu.mjs` holds that: the photon map
+on against off over dust under a glass slab.
+
+**Modes.** Standard and High trace it in full; Draft does single scattering, its path ending at the first point in
+the dust. Sketch and the Optics view have density 0 (`hazeUniforms`). In the illuminance view the camera's first leg
+passes and its photons' connections are not dimmed; light reaching the surface is. The Optics page's trace has its own
+chain and does not see the dust; its status line says so.
+
+**What it does not do yet** (`roadmap/MEDIA.md`): light scattered in dust and seen *through* glass or in a mirror is
+the camera's alone, found by chance, so it is noisy; a volume photon map is the next phase. Nor is there scattering
+inside materials, or a thin-limit beam view for the Optics view. **Checked** on the CPU (`haze.test.mjs`: a beam's
+closed form, the MIS, an albedo-1 slab) and on Dawn over lavapipe (`haze.gpu.mjs`, 2026-10-16). There a furnace read
+0.997–1.002, sunlit dust in Draft 0.996–1.010 of the integral, and the splits within their error bars. **Not seen on
+hardware**: the `haze` bench row, and the example *Beam in dusty air*.
+
 ### Path guiding was removed
 
 It learned, per 16³ cell, a 64-bin histogram of which directions saw sky, and the diffuse

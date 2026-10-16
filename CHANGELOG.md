@@ -15,6 +15,67 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.62.0 — 2026-10-16
+
+**Dust in the air: a haze box.** You asked for dust particles in the air, realistic and a way to see rays, perhaps only
+inside a box so transparent materials stay clear. Decided with you: a haze box node, physical dust in the full renderer
+first, real units.
+
+**What it is:**
+- **+ › Haze box.** The air inside it scatters and absorbs light. It has a **mean free path** in metres, how far light
+  goes on average before it meets a particle (the panel shows the visibility beside it). It has an **albedo** (what a
+  particle scatters rather than absorbs) and **g** (0 even, towards 1 forward: real dust about 0.6 to 0.8).
+- **Only the air inside scatters.** Glass, water and solids inside the box stay clear.
+- **What shows in it:** light beams, the sun's shafts, a lamp's glow. What is seen or lit through the box is dimmer.
+- **One box a scene.** It draws a dashed outline when selected; move and stretch it with the gizmo. Its values are live
+  (no compile).
+- **Help:** Help › Render settings › *Dust in the air*, and the reference page *Haze box settings*.
+
+**How it is traced** (`lib/pathtracer/core/haze.js`; README § *Dust in the air*):
+- **Your own sketch is the method.** "The ray has moved XX: a random chance it met a particle; move it back YY" is
+  free-flight sampling, exactly. After the march, the surface kernel draws where on the leg the ray met a particle and
+  moves it back there.
+- **"Scatter towards the camera" is light tracing's connection.** The lights' and the sun's photons connect to the
+  camera from a point in the dust: that is how a lamp's beam behind a lens shows.
+- **The camera's paths** sample the lights from a point in the dust, weighed against the phase function's own draw
+  (MIS). Light can scatter many times.
+- **Shadow rays** are dimmed by the dust they cross.
+- **Modes:** Standard and High trace all of it; Draft, single scattering. Sketch and the Optics view leave the dust
+  out. The illuminance view's camera sees through it; the light reaching the surface does not.
+
+**What it cannot do yet** (`roadmap/MEDIA.md`, the phases after this one):
+- A beam seen through glass or in a mirror is found only by chance, so it is noisy. A volume photon map is next.
+- No scattering inside materials yet.
+- The Optics page's numbers do not include the dust; its status line says so.
+- At a lamp's scale, physical dust is faint. A 1 cm beam in dust with a 10 m mean free path is about 1/10 000 of the
+  spot it lights (inferred, the arithmetic is in the help). The example uses dense dust in a dim room.
+
+**Files and kernels:**
+- Scene files are now **version 22**: a new object type. Older files open unchanged; a builder of 0.61 cannot open a
+  file of 22.
+- Without a haze box, every kernel's code is what it was, byte for byte. Only the uniform block they all share has
+  five more vec4s, as the step cache's grid and the photon map's do; that is one cache miss after this update.
+
+**Checked here:**
+- On the CPU (`haze.test.mjs`): a collimated beam seen side on against its closed form, light sampling from the air by
+  MIS, and an albedo-1 slab.
+- On Dawn over lavapipe (`haze.gpu.mjs`, 2026-10-16):
+  - a furnace read 0.997 to 1.002, and albedo 0.5 read 0.48;
+  - sunlit dust in Draft read 0.996 to 1.010 of the integral;
+  - with light sampling off it read 0.997 to 1.002 of on (a 60 degree sun, 2048 samples);
+  - a box inside a glass block changed nothing, 1.0000 ± 0.0011;
+  - dust under a glass slab gave one mean with the sun's photons and the photon map on and off;
+  - a mirror's photons connecting from the dust gave the camera's own picture.
+- check-shaders with naga: 6124 kernels.
+
+**What to look at:**
+1. File › Examples › *Beam in dusty air* (Optical design), Standard. The beam from the lens shows in the dust,
+   brightest looking into it, and dims along its length. The PMMA block in it is clear inside. The spot on the
+   screen is dimmer than with the box hidden.
+2. The same in Draft: the beam, without the dust's glow around it.
+3. Drag the box, stretch it, change its mean free path, colour and g: live, no compile.
+4. Press **Tests › haze** and paste it back: ratio 1 on every row but the control. `secs` says what the dust costs.
+
 ## 0.61.4 — 2026-10-16
 
 **A light's photons follow a move in the same frame as the object.** You saw it in `Reflector.json`, dragging the lamp

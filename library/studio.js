@@ -166,7 +166,7 @@ export const DEFAULT_PREVIEW = SAMPLE_SHAPES.sphere
 export function addSample(doc, item, materialId, parentId = 'root', index) {
     const n = Model.insertAsset(doc, item?.preview ?? DEFAULT_PREVIEW, parentId, index)
     Model.walk({ root: n }, x => {
-        if (x.kind === 'object' && x.type !== 'light' && x.type !== 'export' && x.material == null) x.material = materialId
+        if (x.kind === 'object' && x.type !== 'light' && x.type !== 'export' && x.type !== 'haze' && x.material == null) x.material = materialId
     })
     return n
 }
@@ -203,7 +203,7 @@ export function studioBatch(items, unit = 'm', n = 1) {
                     exact = EXAMPLE_BOX[mod] ?? null
                 }
                 Model.walk({ root: node }, x => {
-                    if (x.kind === 'object' && x.type !== 'light' && x.type !== 'export' && x.material == null) x.material = white.id
+                    if (x.kind === 'object' && x.type !== 'light' && x.type !== 'export' && x.type !== 'haze' && x.material == null) x.material = white.id
                     // a light shown lit, whatever it was given as: its colour kept, its brightness the studio's
                     if (x.type === 'light' && x.light) { x.light.luminance = STUDIO.lightLuminance; x.light.flux = null }
                 })

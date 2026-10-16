@@ -290,6 +290,25 @@ export const EXAMPLES = [
   }
  },
  {
+  "file": "dusty-beam.json",
+  "title": "Beam in dusty air",
+  "audience": "Optical design",
+  "group": "Optical design",
+  "description": "An LED's beam through a lens, seen in dust; a PMMA block in it stays clear",
+  "camera": {
+   "mode": "orbit",
+   "target": [
+    0,
+    0,
+    100
+   ],
+   "azimuth": -55,
+   "elevation": 75,
+   "distance": 750,
+   "dimensions": 750
+  }
+ },
+ {
   "file": "aspheric-condenser.json",
   "title": "Aspheric condenser",
   "audience": "Optical design",

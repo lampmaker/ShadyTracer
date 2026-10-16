@@ -24,6 +24,8 @@
 //   occlude    SDF 1, getMaterial2 1: an emitter's point captured on a trip of the march's own call.
 //   opt_shade  the same BSDF through processMaterial's wrapper; localPoint looked, two calcNormals_fast, SDF 4 + 2g.
 //   pick       SDF 1: the march, the capture and the six central differences are trips of one loop.
+//   ..._haze   (0.62.0; core/haze.js, a scene with a haze box) the surface and occlusion kernels as without; shade with
+//              misWeight 5: the medium vertex's light sample and its phase function's draw, no BSDF copy of their own.
 import { readFileSync, readdirSync } from 'node:fs'
 import { inlineStats } from '../wgslgraph.js'
 import { prog_surface, prog_shade, prog_occlude } from '../../lib/pathtracer/core/wavefront.js'
@@ -56,6 +58,9 @@ const expected = g => ({
     occlude: { SDF: 1, getMaterial2: 1, sceneAt: 1, materialAt: 1, calcNormals_fast: 0, ...NONE },
     opt_shade: { SDF: 4 + 2 * g, getMaterial2: 2, sceneAt: 4, materialAt: 2, calcNormals_fast: 2, ...BSDF, probeProcess: 0, processMaterial: 1 },
     pick: { SDF: 1, getMaterial2: 0, sceneAt: 1, materialAt: 0, calcNormals_fast: 0, makeLobes: 0, lobesEval: 0, lobesPdf: 0, misWeight: 0, ltEvalBsdf: 0 },
+    surface_haze: { SDF: 1, getMaterial2: 1, sceneAt: 1, materialAt: 1, calcNormals_fast: 0, ...NONE },
+    shade_haze: { SDF: 0, getMaterial2: 0, sceneAt: 0, materialAt: 0, calcNormals_fast: 0, ...BSDF, misWeight: 5, probeProcess: 0, processMaterial: 0 },
+    occlude_haze: { SDF: 1, getMaterial2: 1, sceneAt: 1, materialAt: 1, calcNormals_fast: 0, ...NONE },
 })
 
 const benchFiles = readdirSync(new URL('../scenes/', import.meta.url)).filter(f => f.endsWith('.json')).sort()
@@ -69,7 +74,9 @@ for (const [set, files, url] of sets) {
         const g = inlineStats(rewrite(`${(await prog_opt_shade(spy, scene, 64)).body}`), 'getMaterial2', ['SDF']).copies.SDF
         gs.add(g)
         const got = { surface: await graph(() => prog_surface(spy, scene, 64)), shade: await graph(() => prog_shade(spy, scene, 64)), occlude: await graph(() => prog_occlude(spy, scene, 64)),
-                      opt_shade: await graph(() => prog_opt_shade(spy, scene, 64)), pick: await graph(() => prog_pick(spy, scene)) }
+                      opt_shade: await graph(() => prog_opt_shade(spy, scene, 64)), pick: await graph(() => prog_pick(spy, scene)),
+                      surface_haze: await graph(() => prog_surface(spy, scene, 64, { haze: 1 })), shade_haze: await graph(() => prog_shade(spy, scene, 64, { haze: 1 })),
+                      occlude_haze: await graph(() => prog_occlude(spy, scene, 64, { haze: 1 })) }
         for (const [kernel, want] of Object.entries(expected(g))) {
             const have = Object.fromEntries(Object.keys(want).map(t => [t, got[kernel].copies[t]]))
             ok(`${set}/${file} ${kernel}: the copies are what they are meant to be (g ${g})`,

@@ -397,6 +397,28 @@ function ledLens() {
     return { doc, camera: orbit([0, 0, 120], -60, 15, 450) }
 }
 
+/* A BEAM IN DUSTY AIR (0.62.0): the first optics bench's LED and PMMA lens, turned to shine along +x, inside a haze box
+   -- dust in the air (builder/hazebox.js; the renderer's lib/pathtracer/core/haze.js). The beam shows where the dust
+   scatters it towards the camera, brightest looking into it (g 0.7, as real dust and haze scatter forward), and dims
+   along its length; a PMMA block in the beam stays clear inside (only the air in the box scatters), and the spot on the
+   screen beyond is dimmer for the dust it crossed. A dim room, so the beam is what the eye finds.
+   THE DUST IS DENSE: a mean free path of 0.3 m, thick smoke or a stage's haze (a rough figure). A beam a couple of
+   centimetres across, seen from the side in thin dust (a mean free path of 10 m), is thousands of times dimmer than the
+   spot it lights (the help's scale note); here about a two-hundredth (inferred, the same arithmetic), and still about 200
+   times the dim room's walls (inferred). Not seen yet. */
+function dustyBeam() {
+    const doc = scene('Beam in dusty air', { radius: 2000, env: STUDIO(2, 0.5) })
+    M.setOpticsMaxDist(doc, 1200)
+    floor(doc, own(doc, 'grey', 'diffuse', { baseColor: RGB(0.3, 0.3, 0.3) }))
+    light(doc, 'root', 'rectangle', { label: 'LED (100 lm)', at: [-250, 0, 100], towards: [1, 0, 0], params: { width: 1, height: 1 }, flux: 100, colourBy: 'cct', cct: 5000 })
+    // the bench's lens (biconvex, r 40 mm both faces, f 40.7 mm), 45 mm in front of the LED: the beam converges slowly
+    shape(doc, 'root', 'lens', { label: 'PMMA lens', params: { diameter: 25, thickness: 6, r1: 40, r2: 40 }, at: [-205, 0, 100], rot: [0, 90, 0], material: lib(doc, 'PMMA (acrylic)') })
+    shape(doc, 'root', 'box', { label: 'PMMA block (clear inside)', params: { size: V(40, 60, 60), rounding: 1 }, at: [0, 0, 100], material: lib(doc, 'PMMA (acrylic)') })
+    shape(doc, 'root', 'rectangle', { label: 'screen', params: { width: 160, height: 160 }, at: [230, 0, 100], rot: [0, 90, 0], material: lib(doc, 'white') })
+    M.addHazeBox(doc, 'root', { label: 'dust', size: V(560, 220, 200), transform: T([-10, 0, 100]), mfp: 0.3, g: 0.7 })
+    return { doc, camera: orbit([0, 0, 100], -55, 15, 750) }
+}
+
 /* AN ASPHERIC CONDENSER: one aspheric surface collimates a point at its focus exactly -- the primitive's own design
    (shapes.js: a light on the axis one diameter beyond the curved face's vertex comes out parallel in glass of n 1.5),
    made 30 mm across. A small LED at the focus, a detector 300 mm on: the spot stays about the lens's size. */
@@ -557,6 +579,7 @@ export const EXAMPLES = [
     ] },
     { audience: 'Optical design', group: 'Optical design', items: [
         ['led-lens-screen.json', ledLens, 'An LED, a PMMA lens and a detector: illuminance in lux'],
+        ['dusty-beam.json', dustyBeam, 'An LED\'s beam through a lens, seen in dust; a PMMA block in it stays clear'],
         ['aspheric-condenser.json', aspheric, 'An aspheric lens collimating a small source'],
         ['fresnel-plano-convex.json', fresnel, 'One focal length made two ways, side by side'],
         ['parabolic-reflector.json', reflector, 'A torch\'s reflector: the far field, intensity and beam angle'],

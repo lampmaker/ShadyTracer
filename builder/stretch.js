@@ -20,6 +20,7 @@
 import { PRIMITIVES } from './primitives.js'
 import { LIGHT_SHAPES } from './lights.js'
 import { EXPORT_STRETCH } from './exportbox.js'
+import { HAZE_STRETCH } from './hazebox.js'
 import { codeOnly } from './codegen.js'
 import { inRange, tidy } from './pointedit.js'
 
@@ -41,6 +42,7 @@ export function stretchOf(node) {
     if (!node || node.kind !== 'object') return null
     const map = node.type === 'light' ? LIGHT_SHAPES[node.light?.shape]?.stretch
         : node.type === 'export' ? EXPORT_STRETCH
+        : node.type === 'haze' ? HAZE_STRETCH
         : typeof node.code === 'string' ? BY_CODE.get(textOf(node.code)) : null
     if (!map) return null
     const out = {}

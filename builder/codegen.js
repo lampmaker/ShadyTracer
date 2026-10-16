@@ -54,6 +54,7 @@ import { planOf, recordsOf, evaluatorWGSL, lightFacesWGSL, slotRead, attachData,
 import { plainShapeOf } from './plainshape.js'
 import { BODY_MARKER } from './validate.js'
 import { matrixOf } from './transform.js'
+import { hazeOf } from './hazebox.js'
 
 /* COMPONENT ORDER IS DECLARED, NOT INHERITED FROM THE OBJECT LITERAL. The old builder took
    the TYPE from the sorted key list and the VALUE from Object.values() in insertion order, so
@@ -319,6 +320,12 @@ export const NODE_TYPES = {
         params: {},
         body: () => '',
     },
+    /** A HAZE BOX (hazebox.js, version 22): dust in the air inside it -- the renderer's (lib/pathtracer/core/haze.js),
+     *  handed over as the scene's `haze`. Not geometry: emitted as a comment, as an export box is. */
+    haze: {
+        params: {},
+        body: () => '',
+    },
     /** Whatever the user typed. `p` is the sample point, `C` the Hit being folded into, and
      *  the node's own parameters are in scope under their bare names. */
     code: {
@@ -377,7 +384,7 @@ export const joinOf = c => c?.join ?? 'union'
 /** The children of a group that are its SHAPES: a light (drawn after a CSG group's combine, outside it:
  *  emitScene collectLights) and an export box (draws nothing) are not, and are left out of the combine
  *  (children() below). */
-export const shapesOf = g => (g?.children || []).filter(c => c.type !== 'export' && c.type !== 'light')
+export const shapesOf = g => (g?.children || []).filter(c => c.type !== 'export' && c.type !== 'haze' && c.type !== 'light')
 
 /** Does this group combine its children into one shape (and so need the CSG path)? Not when every
  *  shape after the first joins by union with no blend of its own and the group has none: each child
@@ -1312,9 +1319,10 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
            tinywebgpu refuses a name the pipeline does not declare. A limiter outside the optics
            copies, a ray file (no geometry), a light that cannot be drawn where it says. */
         const L = node.type === 'light' ? lightOfId.get(node.id) : null
-        if (hidden(node) || (node.type === 'light' && !L) || node.type === 'export') {
+        if (hidden(node) || (node.type === 'light' && !L) || node.type === 'export' || node.type === 'haze') {
             if (node.transform) uniforms[xfName(node.id)] = { type: 'mat4x4<f32>', def: matrixOf(node.transform) }
             const why = node.type === 'export' ? 'an export box: draws nothing'
+                : node.type === 'haze' ? 'a haze box: draws nothing (the renderer\'s dust, scene.haze)'
                 : node.type !== 'light' ? 'an optics limiter, not in the picture'
                 : warpedLights.has(node.id) ? 'a light inside group code: not drawn' : 'a ray file: no geometry'
             line(d, `// node ${node.id} (${node.type}): ${why}`)
@@ -1568,7 +1576,7 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
         return !terms.length ? '0.0' : `1.25 * ${terms.length > 1 ? `(${terms.join(' + ')})` : terms[0]}`
     }
     const wrapped = n => n.kind === 'object' && reliefOf.has(n.material) && NODE_TYPES[n.type]
-        && !hidden(n) && n.type !== 'light' && n.type !== 'export'
+        && !hidden(n) && n.type !== 'light' && n.type !== 'export' && n.type !== 'haze'
     const chains = (n, chain, coded) => {
         if (n.kind !== 'group') {
             if (chain.length && wrapped(n)) { reliefChain.set(n.id, chain); reliefTops.add(chain[0].g.id) }
@@ -1717,7 +1725,7 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
        THE BOUND AGAINST |d|: fold keeps the nearest surface by |d| (inside a glass, d is negative), and the
        march steps by |d|, so a skipped node limits the step whenever its bound is nearer than that. A bound
        is always above the margin, so it never passes the march's hit test and is never shaded. */
-    const drawsNothing = n => n.kind === 'object' && (!NODE_TYPES[n.type] || hidden(n) || n.type === 'export'
+    const drawsNothing = n => n.kind === 'object' && (!NODE_TYPES[n.type] || hidden(n) || n.type === 'export' || n.type === 'haze'
         || (n.type === 'light' && !lightOfId.get(n.id)))
     /* ONLY THE DEAR ONES (cull 'dear': Tests > boxcost's fourth row in 0.33.8; THE BUILDER'S WAY since 0.34.0, the user,
        2026-10-07: "yes, make dear-only the default and remove the setting"). Measured on the user's Pascal (Tests >
@@ -1899,6 +1907,8 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
     e.raw('}')
     }
 
+    // the haze box in the world, if the scene has one (the tree is the root group here)
+    const haze = hazeOf({ root: tree })
     /* `wgsl` for the scene contract is the materials onwards -- the same place the three
        hand-written scenes put there, since the kernels prepend the engine prelude themselves
        and would otherwise see it twice. `body` is the whole file, which is what the probe
@@ -1911,6 +1921,9 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
         /* ...and where it stops, in that unit (model.js envRadius): the renderer reads it off the scene it
            has, like the unit. null is the renderer's 400 m, as every scene before 0.9.0 had. */
         envRadius: tree.envRadius ?? null,
+        /* ...and its haze box (hazebox.js hazeOf: in the world, in that unit; the renderer's core/haze.js), only when it
+           has one: whether it does decides the kernels' text (sceneTextOf), so a scene without one says nothing */
+        ...(haze ? { haze } : {}),
         wgsl: e.lines.slice(preludeLines).join('\n'),
         uniforms,
         body: e.wgsl,

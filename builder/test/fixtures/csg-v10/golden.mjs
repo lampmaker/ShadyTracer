@@ -106,6 +106,10 @@
 //
 // A DOCUMENT ADDED (2026-10-16, 0.61.2): bench/scenes/dichroics.json, the dichroics bench's frozen scene (bench/dichroics.js).
 // No codegen change: the freeze added its entry and moved no other document's (expected.json's diff is that entry alone).
+//
+// A DOCUMENT ADDED (2026-10-16, 0.62.0): scenes/dusty-beam.json, the haze box's example (scenes/make.mjs). Codegen learnt
+// the haze box (a comment and its transform's uniform, as an export box; the scene's `haze` beside the text), and the
+// freeze added that entry and moved no other document's -- every one before it emits what it did.
 //======================================================================================================================
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
