@@ -716,8 +716,6 @@ ok('...and a conic typed to four places kept on its slider (its step\'s rounding
     ok('...taken off: written, and the panel without its values', (await P()).coating === 0 && !VALUES.some(l => rows.includes(l)), JSON.stringify(rows))
 }
 
-ok('no page errors', !errs.length, errs.join('\n'))
-await b.close(); server.close()
 // A HAZE BOX (0.62.0; builder/hazebox.js): where it is, its size, and its dust -- live, the renderer's own uniforms
 rows = await rowsOf('hz')
 ok('a haze box shows its size and its dust (mean free path, albedo, g), no material and no join',
@@ -732,5 +730,7 @@ ok('...reaches the document, live (its dust), with its undo step and no compile'
 const visText = await p.evaluate(() => [...document.querySelectorAll('textarea')].map(t => t.value).find(v => v.startsWith('visibility')) ?? '')
 ok('...and the visibility beside it follows: 3.912 x 4 m, 15.6 m', /^visibility 15\.6 m/.test(visText), visText)
 
+ok('no page errors', !errs.length, errs.join('\n'))
+await b.close(); server.close()
 console.log(failed ? `${failed} FAILED` : 'builder panel: all passed')
 process.exit(failed ? 1 : 0)
