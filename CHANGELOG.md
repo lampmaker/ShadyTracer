@@ -41,8 +41,7 @@ for the Analysis pane in the same literal colours.
   pane's Intensity and Map take them from the table. The Analysis results' box, which is not a table's, reads the same
   properties.
 - `settingsui.js` `boxIcon(name)` now only names an icon's markup.
-- The submodule moves to GUISTUFF `claude/propertytable-boxes` (lampmaker/GUISTUFF#11), and to its merge once
-  merged. That also brings
+- The submodule moves to GUISTUFF main at d7a8f89, the merge of lampmaker/GUISTUFF#11. That also brings
   `bindingPrepper` widening a given range to hold its value (GUISTUFF 15be4e1, the general fix 0.59.1 asked for;
   `fitRange` here already did it for the builder's parameters). `builder/test/params.test.mjs` had held the old
   behaviour (a range of 0 to 10 kept for a value of 250). It now checks the new one: kept while it holds the value,
