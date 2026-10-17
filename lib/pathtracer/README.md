@@ -807,7 +807,7 @@ light through its glass.
 ### `maxaverages` is an EMA window; 0, the default, is the true mean
 
 It defaulted to 10 "so an interactive view forgets the frames from before the camera moved". A
-move restarts the picture now (`moveAverages` 0), as every edit does, so all the 10 still did was
+move restarts the picture now (always since 0.65.0, when `moveAverages` went), as every edit does, so all the 10 still did was
 stop a still view converging past about 21 samples' worth -- hidden by the tone curve, plain in the
 false-colour views. Set to N it is still an EMA of N: a 500-sample save would be an N-sample image,
 which is why `saveImage` and the test bench pin it to 0 whatever it is.

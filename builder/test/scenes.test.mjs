@@ -37,7 +37,7 @@ for (const { name, path } of EVERY_SCENE) {
     if (SCENE_FILES.includes(name)) titles.push(doc.title)
     const g = generate(M.toTree(doc), { id: 'built', title: doc.title })
     ok(`${s.file} generates an SDF`, g.wgsl.includes('fn SDF(r: Ray) -> Hit'))
-    const read = [...g.body.matchAll(/UB\.(\w+)/g)].map(m => m[1]).filter(n => /_/.test(n) && !/^(normallimit)$/.test(n))
+    const read = [...g.body.matchAll(/UB\.(\w+)/g)].map(m => m[1]).filter(n => /_/.test(n))
     const missing = [...new Set(read)].filter(n => !(n in g.uniforms))
     ok(`${s.file}: every node or material uniform it reads is declared`, !missing.length, missing.join(', '))
     /* AND EVERY DEFAULT REACHES THE GPU AS ITSELF, through the renderer's own state and writer.

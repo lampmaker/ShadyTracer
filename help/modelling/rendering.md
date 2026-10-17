@@ -19,6 +19,25 @@ The [Render settings](show:renderer) panel's **Quality** box has the same preset
 The line under the buttons says what the preset in force traces. If you change a setting by hand, it reads
 **Custom** and says what differs.
 
+**What each one traces, side by side.** A camera path is a ray followed from the camera into the scene. *Stops at the
+first matte surface* means it ends at the first diffuse or glossy surface it meets, after any mirrors, clear or frosted
+glass and near-mirror metal on the way.
+
+| | Sketch | Draft | Standard | High | Optics |
+|---|---|---|---|---|---|
+| camera paths | stop at the first matte surface | stop at the first matte surface | up to 10 bounces | up to 24 bounces | stop at the first matte surface |
+| light there | a fixed flat light, no shadows | sun, sky and lamps, with shadows | everything, bounce light too | everything, bounce light too | the flat light, dimmed |
+| caustics (sun, glowing surfaces) | off | as set | on | on, twice the photons | off |
+| lights' rays | off | as set | on | on, twice the photons | on, to the first matte surface |
+| seen through glass (photon map) | off | as set | on | on | as set |
+| dust in the air | off | light scattered once | in full | in full | off |
+| dispersion | as set | as set | on | on | as set |
+
+**Why Draft can be little faster than Standard.** Draft leaves out only the camera's bounce light. The photons of the
+caustics and of the lights' rays, and the photon map, still run in full, and on a scene with lamps behind lenses
+they can be most of a sample. Turn them off in **Light sources** to see what they cost, or run Tests ›
+render-modes-cost on the scene.
+
 **⚡ Fast while moving**, beside it, is on by default. While you orbit the camera, drag an object or a point, or
 move a value, a Standard, High or Custom picture is traced as **Draft**. The full picture comes back a moment after
 you stop.
@@ -35,6 +54,9 @@ you stop.
   the camera's own paths almost never do. **Lights' rays** (Render settings › Light sources) switches the light objects' part of it.
 - **Paths and noise**: how many bounces a path may take, and the **firefly clamp**, which caps single very bright
   samples (0 = off). A clamp makes the picture less noisy and a little darker than it should be.
+  **Dispersion** (ticked by default): glass with an Abbe number splits white light into its colours where it
+  refracts. Untick it and every glass bends all colours alike: no colour fringes, and none of the colour noise they
+  take to settle. Standard and High tick it again. The Optics page always traces dispersion.
 - **Render size**: fit the view, or a fixed width and height; and a **resolution** of 100 % down to 25 %, which keeps the picture's size on screen, softer, with a quarter of the pixels to trace at 50 %.
 
 The **Developer** switch at the foot of the Quality box shows the rest: ray marching, performance, diagnostics.

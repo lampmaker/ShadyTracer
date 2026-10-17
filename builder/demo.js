@@ -205,8 +205,8 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
     /* THE SCENE AS DATA (scenedata.js, PERFORMANCE.md P3) while the renderer's developer setting says so (sceneData) and
        the device has a ninth storage binding a stage: shade had nine with the scene's buffer (check-shaders' note), and
        tinywebgpu asks for what the adapter offers, which can be the spec's 8. Since 0.20.8 shade holds no scene and no
-       kernel has more than 8 (check-shaders notes none); the gate is kept until data mode is run on an adapter of 8. Off: codegen, as before. A developer's
-       until the bench says the evaluator is not slower (PERFORMANCE.md call 5). */
+       kernel has more than 8 (check-shaders notes none); the gate is kept until data mode is run on an adapter of 8. Off: codegen, as before. On by
+       default since 0.65.0 (the user: "Scene as data -> normally on"); the bake below still compiles codegen's text. */
     const dataMode = () => (RT.get?.()?.sceneData | 0) === 1 && (gpu?.device?.limits?.maxStorageBuffersPerShaderStage ?? 8) >= 9
     /* (The candidate grid and exact hits, sceneGrid and sceneExact, went in 0.41.0: roadmap/ARCHITECTURE.md, Removed in
        0.41.0. As data, every record is walked, culled by its box.) */

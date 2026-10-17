@@ -15,6 +15,69 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.65.0 — 2026-10-17
+
+**A dispersion switch, three developer settings gone, the scene as data on by default, and the presets side by side**
+(you: "an overview/table of the differences between the render quality settings", "dispersion on/off", "the keep on
+move may be removed", "Fast normals ... just remove it", "Normal limit: same", "Scene as data -> normally on").
+
+**Dispersion**, a row of its own in Render settings › Paths and noise, ticked by default.
+- **Unticked:** every glass refracts at its index for the d line, as if its Abbe number were 0. No ray draws a
+  wavelength, so there are no colour fringes, and none of the colour noise they carry.
+- **Where it applies:** the camera's paths, every photon, and so the photon map, all from one place in the shade kernel
+  (`materials_pbr.js` `processMaterial_advanced`).
+- **A uniform, not a kernel option:** switching it compiles nothing.
+- **The picture only, as you chose:** the Optics page's trace always traces dispersion as each material sets it
+  (`optics/index.js`). A number measured there never depends on a render setting.
+- **Presets:** off is less than the full picture, so it reads **Custom** ("Dispersion off (every glass at n_d)
+  (Standard: as each glass sets it)"), and Standard or High ticks it again. Draft, Sketch and Optics leave it as set.
+- **Stored the other way round,** as `dispersionOff` with 0 meaning on. A uniform a bag leaves out reads 0
+  (tinywebgpu writes only what it is given into a zeroed buffer), so a GPU test naming only what it checks still
+  traces dispersion.
+- **Tested on the software GPU** (`dispersion.gpu.mjs`, lavapipe in the container), with a second pass switched off:
+  - a fresh ray on Abbe-28 glass draws no wavelength, reflects white and refracts along Snell at n_d;
+  - a ray already holding a wavelength keeps its tag and meets the glass at n_d.
+  - 48 checks pass. No picture was looked at.
+
+**Gone, with their rows** (a saved workspace that has them opens with a console line naming them ignored, once):
+- **Keep on move** (`moveAverages`): a reset always restarts the picture. 0, the restart, was already its default.
+- **Fast Normals** (`fastnormals`): the SDF's own normal is always used where it gives one, and the normal by
+  differences (three more looks at the scene) only where it gives none.
+  - On was the default. Off cost 4.3 times the frame (cost-sweep's first run, Pascal).
+  - What it diagnosed, a primitive's own normal, `shapes.test.mjs` checks against the gradient.
+  - The `fastnormals 0` row left cost-sweep.
+- **Normal Limit** (`normallimit`): add_new's backface test keeps its default of 1 as a constant. At 1 no unit or zero
+  normal fails it, only a NaN one, as before. Read in code: no picture changes.
+
+**The scene as data is on by default** (`sceneData` 1): an edit that adds no code writes a buffer instead of compiling.
+- **What it costs is the editing build's.** Measured on your Pascal (Tests › overhead, 0.22.19), the march as data was
+  1.4 to 8.6 times codegen's on those rows.
+- **A still picture is the bake's either way:** the bake compiles codegen's text with its values constants, and swaps it
+  in once the edits stop.
+- **On a device with 8 storage bindings a stage it stays codegen,** as before.
+- **Your own workspace keeps the 0 it saved,** as with the bake in 0.35.0. Tick it once, or use Developer › Reset.
+
+**The presets, side by side,** in the help (Render settings and saving pictures, *Quality*): what each traces, and why
+Draft can be little faster than Standard. Read in code, not measured:
+- Draft leaves out only the camera's bounce light. It keeps the sun's and the lights' photons, the photon map's second
+  chain of iterations, and Standard's 24 wavefront iterations a sample (`raytrace_main.js`; the mode is never read there).
+- What those cost was measured once elsewhere. On dichroics (Ampere, 0.61.2), the lights' rays alone were 65.7 % of a
+  sample.
+
+**Tests › render-modes-cost** (never run yet):
+- Two more rows: Draft without the photon map, and Draft without the lights' rays.
+- Every row now with the photon map on, as the page traces. Every other bench row still starts with it off.
+
+**What to look at:**
+- **A prism or dichroic scene,** Dispersion unticked: refracted light white, no fringes, the colour noise in glass gone.
+  The Quality line reads Custom. Ticked, or Standard chosen: as before.
+- **Render settings:** no Keep on move in Paths and noise. With Developer on, no Fast Normals or Normal Limit in Ray
+  marching.
+- **The console on the first load:** the removed settings named as ignored, if your workspace had them.
+- **The scene as data:** on in a new workspace (Developer › Performance); a structural edit shows without a compile.
+- **Tests › render-modes-cost,** on a scene where Draft feels no faster than Standard. Paste the report: its rows say
+  how much of a Draft sample is the photons'.
+
 ## 0.64.0 — 2026-10-17
 
 **The Properties panel in boxes, like Render settings, and the boxes are the property table's own now** (you:
