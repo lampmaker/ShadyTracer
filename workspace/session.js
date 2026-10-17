@@ -47,7 +47,7 @@ export function createSession({ store, tabs, autosave, firstVisit, apply = async
         const m = await store.create({ name, project, session: { current: project.scenes[0].key, ...session } })
         await tabs.claim(m.id)
         autosave.target({ id: m.id, name: m.name })
-        return { meta: m, workspace: { project, current: project.scenes[0].key, renderer: {}, cameras: {}, ...session }, item: null }
+        return { meta: m, workspace: { project, current: project.scenes[0].key, renderer: {}, ...session }, item: null }
     }
     const blank = () => P.createProject([P.blankScene()])
 
@@ -59,7 +59,7 @@ export function createSession({ store, tabs, autosave, firstVisit, apply = async
         },
         /**
          * THE PROJECT A PAGE STARTS ON (above). Resolves to { meta, workspace, item, note, firstVisit }: `workspace` is
-         * what to build the page with -- { project, current, renderer, cameras } -- `note`, when there is one, what to
+         * what to build the page with -- { project, current, renderer } (each scene with its view) -- `note`, when there is one, what to
          * say, and `firstVisit` true when the project was made just now from the first visit's scene (which the page
          * then shows from that example's camera).
          */

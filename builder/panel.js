@@ -72,8 +72,34 @@ export const ENVIRONMENT_HELP = {
     uSkyTurbidity: 'Haze in the sky: 0 the clearest; higher scatters more, for a hazier, paler sky. The sun\'s own colour does not change.',
 }
 
+/* THE VIEW'S ROWS' TOOLTIPS (0.66.0): the scene row's camera and exposure folders, the popovers' fields */
+export const CAMERA_HELP = {
+    mode: 'orbit: the camera turns about its target (drag to turn, wheel to come closer). fps: it stands where it is and looks about.',
+    camtype: 'Perspective, as an eye or a lens sees; or orthographic, parallel: sizes do not shrink with distance, as a drawing.',
+    azimuth: 'Which way round the target the camera stands, in degrees, from +x towards +y.',
+    elevation: 'How high it looks from, in degrees from straight above: 90 is level, 0 looks straight down.',
+    distance: 'How far from the target, in the scene\'s unit.',
+    fov: 'The field of view, in degrees across the picture\'s height: smaller is a longer lens.',
+    dimensions: 'The parallel view\'s width, in the scene\'s unit.',
+    aperture: 'The lens\'s diameter, in the scene\'s unit: 0 is a pinhole, everything sharp; larger blurs what is off the focus.',
+    focus: 'The distance in focus, in the scene\'s unit: 0 is the target\'s.',
+    target: 'What the camera looks at, in the scene\'s unit.',
+    position: 'Where the camera stands, in the scene\'s unit.',
+}
+export const EXPOSURE_HELP = {
+    exposureEV: 'The exposure when auto exposure is off, as a camera\'s EV at ISO 100: 15 is a sunlit scene, 12 overcast, 7 an office, 2 a candle-lit room.',
+    autoExposure: 'On: the picture is metered as it builds up, as a camera\'s meter would. Off: the EV above.',
+    exposureComp: 'Auto exposure\'s correction, in stops: + brighter, - darker.',
+    aeSpeed: 'How fast auto exposure follows the picture: the share of the way it goes each frame.',
+    aeHeadroom: 'How many stops above white the brightest part of the picture may be before auto exposure darkens it.',
+    toneMap: 'How light above white is brought into the picture: PBR Neutral keeps hues; AgX and the filmic curves look like a camera\'s; none clips.',
+    contrast: 'More or less contrast, after the tone curve.',
+    saturation: 'More or less colour, after the tone curve.',
+    brightness: 'Lighter or darker, after the tone curve.',
+}
+
 export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStructure = () => { }, onApply = () => { }, params = null,
-                                                      environment = () => ({}), itemSample = null } = {}) {
+                                                      environment = () => ({}), itemSample = null, view = null } = {}) {
     const M = BUILDER.model
     // the selection's own box, and the boxes of its categories after it (show says why they are apart)
     let folder = null, boxes = [], shownId = null
@@ -126,7 +152,9 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
        undo step; the tree is redrawn for its mark. The registry's entries are read once per panel drawn. */
     let entries = null
     const entryOf = path => {
-        if (!entries) { entries = new Map(); try { for (const e of params?.list?.('scene') || []) entries.set(e.path, e) } catch { } }
+        /* ...the scene's, and its view's: the camera and the exposure are the renderer's entries, at the renderer's paths
+           (lib/pathtracer/params.js), which a timeline track names; the flag is the scene's (model.js setAnimated) */
+        if (!entries) { entries = new Map(); try { for (const pre of ['scene', 'view/camera', 'view/exposure']) for (const e of params?.list?.(pre) || []) entries.set(e.path, e) } catch { } }
         return entries.get(path)
     }
     const FLAG_TIP = {
@@ -224,8 +252,20 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
     const clear = () => {
         endDrag()
         for (const f of [...boxes, folder]) try { f?.dispose() } catch { }
-        folder = null; boxes = []; rechecks.clear(); entries = null
+        folder = null; boxes = []; rechecks.clear(); entries = null; viewFolders.length = 0
     }
+
+    /* THE VIEW'S FOLDERS FOLLOW THE VIEW (0.66.0): a drag in the picture, the popover, a timeline -- the renderer tells
+       (view.watch), and an open folder is refreshed once a frame at most; a folded one costs nothing */
+    const viewFolders = []
+    let following = 0
+    view?.watch?.(() => {
+        if (following || !viewFolders.length) return
+        following = (globalThis.requestAnimationFrame ?? (f => setTimeout(f, 16)))(() => {
+            following = 0
+            for (const f of viewFolders) if (f.expanded) try { f.refresh() } catch { }
+        })
+    })
 
     /* WHAT A MATERIAL ITEM IS SHOWN ON, while it is edited (library/edit.js): one of the studio's sample
        shapes at one of its sizes, or "its own" once changed by hand. The host hands the hook in --
@@ -475,8 +515,24 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
                     () => A.live(BUILDER.doc.root.id, 'envRadius'))
                 const rl = rb.element?.querySelector?.('.tp-lblv_l')
                 if (rl) rl.title = 'Where the scene stops: a ray beyond it sees the sky, and anything placed beyond it is not drawn. In the scene\'s unit.'
+                /* THE SCENE'S SURFACE TOLERANCE (model.js setTolerance, 0.66.0): the Renderer panel's row in um until then,
+                   one for every scene. Live, as the radius (RT.updateScene), and one undo step a drag. What that row
+                   learned holds here: A BOX TO TYPE INTO, NO RANGE (the user, 2026-10-08: "dont make it a slider, just a
+                   number I can type in") -- a min alone is a box -- and NO STEP, which Tweakpane takes as a rounding of what
+                   is typed (0.000001 became 0: uniforms.schema.js eps); the format only shows it, to six figures. */
+                const TL = { get tolerance() { return M.toleranceOf(BUILDER.doc) },
+                             set tolerance(v) { if (Number.isFinite(v) && v >= 0) M.setTolerance(BUILDER.doc, v) } }
+                rowTip(bind(folder, TL, 'tolerance', { label: `surface tolerance (${unitName()}, 0 = auto)`, min: 0,
+                    format: v => String(+(+v).toPrecision(6)) }, () => A.live(BUILDER.doc.root.id, 'tolerance')),
+                    'How close a ray must come to a surface to have hit it, in the scene\'s unit. 0 is automatic: 1e-4 of the '
+                    + 'scene\'s size, at most 1 mm (Render stats > Picture says the one in use). Set it finer for a thin gap '
+                    + '-- a liquid against its glass, a coating on a lens -- or for a small part in a large scene. Saved with the '
+                    + 'scene; the optics trace uses it too.')
                 // ...and what it sees there: the sun and sky, or the studio (a row of the tree of its own until 0.52.0)
                 environmentFolder(folder, doc)
+                // ...and how it is looked at: its camera and its exposure (model.js VIEW, 0.66.0)
+                cameraFolder(folder, doc)
+                exposureFolder(folder, doc)
                 /* HIDE WITHOUT RECOMPILING (model.js setLiveVisibility): the eye becomes a uniform
                    written. Changing it recompiles once, so the shader has (or drops) the hidden nodes. */
                 const LV = { live: !!BUILDER.doc.liveVisibility }
@@ -655,6 +711,55 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
        Only the chosen source's settings (gui.showIf); choosing another source redraws the folder. Each
        control writes through a holder, so the change goes where the registry's does (makeAfter).
        A folder of the Scene's since 0.52.0, marked ◆ when one of its values is animated, as its tree row was. */
+    /* THE SCENE'S VIEW, ITS CAMERA AND ITS EXPOSURE (model.js VIEW; the user, 2026-10-17: "the scene main property field
+       contains collapsible segments for camera and exposure ... This is also where these parameters could be flagged as
+       animated"). The values are the scene's, the controls the view's: these are the popovers' own fields -- the camera's
+       bindings (lib/pathtracer/params.js camBindings, through the host's view.cameraBindings), the exposure's schema
+       entries -- so a change here is the change the popover makes, the scene keeps it the same way (demo.js keepView),
+       and it is no undo step either: looking is not an edit. Only while the scene is the one shown: the renderer's camera
+       is the scene before's until its compile ends. Folded until opened; remembered. */
+    const viewFolder = (parent, doc, key, title, tip) => {
+        const animated = (doc.root.animate || []).some(k => String(k).startsWith(`view/${key}/`))
+        const f = parent.addFolder({ title: `${title}${animated ? '  \u25C6' : ''}`, expanded: !!foldState()[`scene.${key}`] })
+        f.on('fold', ev => keepFold(`scene.${key}`, ev.expanded))
+        const t = f.element?.querySelector?.('.tp-fldv_t')
+        if (t) t.title = tip
+        if (BUILDER.showing === false) {
+            f.addBinding({ note: 'Shown once the scene is: its compile has not ended' }, 'note', { readonly: true, label: '' })
+            return null
+        }
+        viewFolders.push(f)
+        return f
+    }
+    function cameraFolder(parent, doc) {
+        const binds = (() => { try { return view?.cameraBindings?.() || [] } catch { return [] } })()
+        if (!binds.length) return
+        const f = viewFolder(parent, doc, 'camera', 'camera', 'Where the scene is seen from, kept with the scene: the camera popover over the '
+            + 'picture, here. Moving the camera is no undo step. ◇ flags a value for the Timeline.')
+        if (!f) return
+        const shown = (() => { try { return view?.cameraShown?.() || {} } catch { return {} } })()
+        const redraw = () => setTimeout(() => { if (shownId === doc.root.id) show(shownId) })
+        for (const [k, target, options] of binds) {
+            const b = rowTip(f.addBinding(target, k, options), CAMERA_HELP[k] ?? k)
+            if (shown[k] === false) b.hidden = true
+            if (k === 'mode' || k === 'camtype') b.on('change', redraw)
+            flagRow(b, `view/camera/${k}`)
+        }
+    }
+    function exposureFolder(parent, doc) {
+        if (!view?.exposure) return
+        const f = viewFolder(parent, doc, 'exposure', 'exposure', 'How bright the picture is made, kept with the scene: the exposure popover '
+            + 'over the picture, here. No undo step. ◇ flags a value for the Timeline.')
+        if (!f) return
+        for (const [k, sp] of Object.entries(M.VIEW_EXPOSURE)) {
+            const { showIf: _, help: __, dev: ___, ...gui } = sp.gui
+            const H = { get v() { try { return view.exposure()[k] ?? sp.def } catch { return sp.def } },
+                        set v(x) { try { view.setExposure(k, x); said(`view/exposure/${k}`) } catch (e) { console.warn('[panel] exposure', e) } } }
+            const b = rowTip(f.addBinding(H, 'v', { ...gui }), EXPOSURE_HELP[k] ?? gui.label ?? k)
+            flagRow(b, `view/exposure/${k}`)
+        }
+    }
+
     function environmentFolder(parent, doc) {
         const animated = (doc.root.animate || []).some(k => String(k).startsWith('environment/'))
         const folder = parent.addFolder({ title: `environment${animated ? '  \u25C6' : ''}` })
@@ -662,7 +767,8 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
         if (t) t.title = 'What lights the scene from beyond its radius, and what a ray that leaves it sees: the sun and sky, or a '
             + 'studio\'s even light. Kept in the scene\'s file; every value live, never a compile.'
         const base = () => { try { return environment() || {} } catch { return {} } }
-        const now = k => doc.environment?.[k] ?? base()[k] ?? M.ENVIRONMENT[k].def
+        // the scene's, whole (model.js environmentOf: what it leaves out is the default it is shown with), else the renderer's
+        const now = k => (M.environmentOf(doc) ?? base())[k] ?? M.ENVIRONMENT[k].def
         const mode = now('envMode') | 0
         /* LAMPS ONLY (the renderer's, lib/pathtracer/quality.js): the view is lit by the scene's own lights
            and this environment is set aside -- kept, not changed. Said here, where moving the sun would

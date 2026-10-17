@@ -81,20 +81,20 @@
  },
  "scenes/depth-of-field.json": {
   "off": {
-   "wgsl": "dcfe6f65b7251131e43ddabae020f9841efd9e5e587f7aba9d51a5a4b5a028b0",
-   "pickWgsl": "fba4779cacf5e9e70bf6cd7aaa4fb588133453a859920de6daed1b4c6bd33aac",
-   "opticsWgsl": "dcfe6f65b7251131e43ddabae020f9841efd9e5e587f7aba9d51a5a4b5a028b0",
-   "opticsPickWgsl": "fba4779cacf5e9e70bf6cd7aaa4fb588133453a859920de6daed1b4c6bd33aac",
-   "uniforms": "5e3ebeb60e4b7a170c1db6b823e9fd4676ab3ef0066cd1bb803c758a3b07dfb4",
+   "wgsl": "14615a21a515f4e2f00e1a99ab15c065b0efa102e302b8f70ba4a8e78c622422",
+   "pickWgsl": "bce07a6a498bcc6f9cbc22da8dc405fca7292a117c7810b14e79257921d60457",
+   "opticsWgsl": "14615a21a515f4e2f00e1a99ab15c065b0efa102e302b8f70ba4a8e78c622422",
+   "opticsPickWgsl": "bce07a6a498bcc6f9cbc22da8dc405fca7292a117c7810b14e79257921d60457",
+   "uniforms": "86a42db2d01b1eabc0c9172212944eb5fd0d020265b0bea911ad06147aaced60",
    "tags": "30cb4da2d80d681710276bedb064fa3cd810de78668666b6ae4c4fd9f28a06d3",
    "roles": "643d5437104296e21d906ecb15b2c96ad278f20cfc4af53b12bb6069bd853726"
   },
   "live": {
-   "wgsl": "e7491a4af146930fd12aecbc16f85280e14d284ea1caad254291a5487b1a6bea",
-   "pickWgsl": "f8d16aa868b17ddc3d2cce5abd6e0db441adb8e230f2b020cecdd5495fc2f6b2",
-   "opticsWgsl": "e7491a4af146930fd12aecbc16f85280e14d284ea1caad254291a5487b1a6bea",
-   "opticsPickWgsl": "f8d16aa868b17ddc3d2cce5abd6e0db441adb8e230f2b020cecdd5495fc2f6b2",
-   "uniforms": "bf9a725179fdb4871d637d98e26823d391d4e6e3a16346944fdfb08cc3c73e27",
+   "wgsl": "a2770855b80ef716bfcd806120c7d3729e81419a779c1de2c9bee2059f6dae21",
+   "pickWgsl": "ea4f285b96855bf3a5c600c1e9149816413c5d0f48320f70745140a010412995",
+   "opticsWgsl": "a2770855b80ef716bfcd806120c7d3729e81419a779c1de2c9bee2059f6dae21",
+   "opticsPickWgsl": "ea4f285b96855bf3a5c600c1e9149816413c5d0f48320f70745140a010412995",
+   "uniforms": "15700079b9bcdfe6ff8362c0979004d2e67d71350d788fc741464206a483a853",
    "tags": "30cb4da2d80d681710276bedb064fa3cd810de78668666b6ae4c4fd9f28a06d3",
    "roles": "643d5437104296e21d906ecb15b2c96ad278f20cfc4af53b12bb6069bd853726"
   }

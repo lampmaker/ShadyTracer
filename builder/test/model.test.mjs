@@ -1436,5 +1436,136 @@ throws('another version is refused, not guessed at',
     ok('the scene\'s estimate holds every copy', b && b.lo[0] <= -4.4 && b.hi[0] >= 4.4, JSON.stringify(b))
 }
 
+//----------------------------------------------------------------------------------------------
+// THE VIEW (0.66.0): the scene's camera and exposure, whole when read; its surface tolerance;
+// its environment whole when shown
+//----------------------------------------------------------------------------------------------
+{
+    const d = M.createDoc({ title: 'view' })
+    const v0 = M.sceneViewOf(d)
+    ok('a scene with no view has no camera: the builder shows it from the camera there is', v0.camera === null)
+    eq('...and the whole exposure, at the schema\'s defaults', v0.exposure,
+        Object.fromEntries(Object.entries(M.VIEW_EXPOSURE).map(([k, sp]) => [k, sp.def])))
+    // an example's camera as it was (scenes/examples.js before 0.66.0): no field of view, no projection, no lens
+    M.setView(d, { camera: { mode: 'orbit', target: [0, -20, 25], azimuth: -60, elevation: 65, distance: 330, dimensions: 330 } })
+    const c = M.sceneViewOf(d).camera
+    eq('a camera that leaves settings out has the defaults for them, never the last scene\'s',
+        [c.fov, c.camtype, c.aperture, c.focus, c.distance, c.target], [40, 0, 0, 0, 330, [0, -20, 25]])
+    eq('...and its exposure is still whole', Object.keys(M.sceneViewOf(d).exposure).sort(), Object.keys(M.VIEW_EXPOSURE).sort())
+    M.setView(d, { exposure: { exposureEV: 9, autoExposure: 0 } })
+    eq('an exposure set is over the defaults', [M.sceneViewOf(d).exposure.exposureEV, M.sceneViewOf(d).exposure.autoExposure, M.sceneViewOf(d).exposure.toneMap],
+        [9, 0, M.VIEW_EXPOSURE.toneMap.def])
+    eq('...and the camera kept', M.sceneViewOf(d).camera.distance, 330)
+    // what the renderer's camera hands out has more than the scene keeps
+    M.setView(d, { camera: { distance: 120, aspect: 1.7, near: 0.01, far: 4000, orthoDims: [1, 1, 1], position: [1, 2, 3] } })
+    eq('only a camera\'s own settings are kept: the aspect and the planes are the canvas\'s', Object.keys(d.view.camera).sort(),
+        ['azimuth', 'dimensions', 'distance', 'elevation', 'mode', 'target'])
+    eq('a sound document round-trips its view', M.parse(M.serialize(d)).view, d.view)
+    // refused, and nothing changed
+    const before = JSON.stringify(d.view)
+    throws('a distance of 0 is refused', () => M.setView(d, { camera: { distance: 0 } }), /view\.camera\.distance/)
+    throws('a mode that is not orbit or fps', () => M.setView(d, { camera: { mode: 'walk' } }), /view\.camera\.mode/)
+    throws('a target that is not three numbers', () => M.setView(d, { camera: { target: [0, 1] } }), /view\.camera\.target/)
+    throws('an EV beyond its range', () => M.setView(d, { exposure: { exposureEV: 99 } }), /view\.exposure\.exposureEV/)
+    throws('a tone curve that is not one', () => M.setView(d, { exposure: { toneMap: 42 } }), /view\.exposure\.toneMap/)
+    eq('...each refusal changed nothing', JSON.stringify(d.view), before)
+    ok('a file with a view key it does not know is refused', M.validate({ ...M.createDoc(), view: { shots: [] } }).some(p => /view\.shots/.test(p)))
+    ok('...and a camera setting it does not know', M.validate({ ...M.createDoc(), view: { camera: { iso: 100 } } }).some(p => /view\.camera\.iso/.test(p)))
+    M.setView(d, { camera: null, exposure: null })
+    ok('both taken away: no view at all', !('view' in d))
+    // a camera kept by a scene in one unit, seen from a scene in another: the same place in metres
+    const mm = { mode: 'orbit', target: [0, -20, 25], azimuth: -60, elevation: 65, distance: 330, dimensions: 330, aperture: 8, focus: 0, fov: 40 }
+    const inM = M.cameraInUnit(mm, 'mm', 'm')
+    eq('330 mm is 0.33 m, not 330 m: target, distance, width and lens scaled', [inM.target, inM.distance, inM.dimensions, inM.aperture],
+        [[0, -0.02, 0.025], 0.33, 0.33, 0.008])
+    eq('...the angles and the field are not lengths', [inM.azimuth, inM.elevation, inM.fov], [-60, 65, 40])
+    eq('...the same unit is a copy', M.cameraInUnit(mm, 'cm', 'cm'), mm)
+
+    // THE TOLERANCE, in the scene's unit, 0 automatic
+    const t = M.createDoc()
+    eq('no tolerance is the automatic one', M.toleranceOf(t), 0)
+    M.setTolerance(t, 0.002)
+    eq('set, in the scene\'s unit, and saved', M.parse(M.serialize(t)).tolerance, 0.002)
+    M.setTolerance(t, 0)
+    ok('0 is the automatic one again: nothing saved', !('tolerance' in t))
+    throws('a negative tolerance is refused', () => M.setTolerance(t, -1), /tolerance/)
+    ok('...and one in a file', M.validate({ ...M.createDoc(), tolerance: 'fine' }).some(p => /tolerance/.test(p)))
+
+    // THE ENVIRONMENT WHOLE: a scene that names three settings is shown with the rest at their defaults
+    const e = M.createDoc()
+    ok('a scene with no environment shows the renderer\'s: none', M.environmentOf(e) === null)
+    M.setEnvironment(e, { envMode: 0, uSunElevation: 35, uSunAzimuth: -140 })
+    const env = M.environmentOf(e)
+    eq('...one with three settings is shown with every one', Object.keys(env).sort(), Object.keys(M.ENVIRONMENT).sort())
+    eq('...its own as they are, the rest the defaults', [env.uSunElevation, env.uSkyTurbidity], [35, M.ENVIRONMENT.uSkyTurbidity.def])
+
+    // ANIMATED: the view's values flagged on the root, by the renderer's registry paths
+    const a = M.createDoc()
+    M.setAnimated(a, 'view/camera/azimuth', true)
+    M.setAnimated(a, 'view/exposure/exposureEV', true)
+    M.setAnimated(a, 'scene/environment/uSunElevation', true)
+    eq('kept on the root as the registry names them', a.root.animate, ['view/camera/azimuth', 'view/exposure/exposureEV', 'environment/uSunElevation'])
+    eq('listed first: the view, then the environment', M.animatedPaths(a), ['view/camera/azimuth', 'view/exposure/exposureEV', 'scene/environment/uSunElevation'])
+    ok('read back', M.isAnimated(a, 'view/camera/azimuth') && !M.isAnimated(a, 'view/camera/fov'))
+    throws('the camera\'s mode is a word, not a value a curve passes through', () => M.setAnimated(a, 'view/camera/mode', true), /not a value/)
+    throws('...nor its target, three numbers at once', () => M.setAnimated(a, 'view/camera/target', true), /not a value/)
+    throws('...nor an exposure setting that is not one', () => M.setAnimated(a, 'view/exposure/iso', true), /not a value/)
+    M.setAnimated(a, 'view/camera/azimuth', false)
+    eq('unflagged', M.animatedPaths(a), ['view/exposure/exposureEV', 'scene/environment/uSunElevation'])
+    // a node may be called camera: its values are scene/camera/..., the view's view/camera/...
+    const n = M.createDoc()
+    M.addObject(n, 'root', { id: 'camera', primitive: 'sphere' })
+    M.setAnimated(n, 'scene/camera/radius', true)
+    eq('a node called camera keeps its own flag, apart from the view\'s', [n.root.animate, M.find(n, 'camera').node.animate], [undefined, ['radius']])
+}
+
+//----------------------------------------------------------------------------------------------
+// THE TIMELINE (0.67.0): the Timeline panel's keys and the film's settings, the scene's, whole
+// when read -- lib/timeline's load keeps whatever an object leaves out, so a scene handed over
+// as it is would get the last scene's fps (the camera's carry-over again)
+//----------------------------------------------------------------------------------------------
+{
+    const d = M.createDoc({ title: 'timeline' })
+    eq('a scene with no timeline is shown the defaults, whole', M.sceneTimelineOf(d),
+        { fps: 30, duration: 8, tracks: [], export: { width: 1920, height: 1080, samples: 64, from: 0, to: 0, filename: 'raytracer' } })
+    ok('...and has none in its file', !('timeline' in d))
+    eq('...as no document at all (nothing shown)', M.sceneTimelineOf(null), M.sceneTimelineOf(d))
+    // lib/timeline's own as the panel hands it over: toJSON, and every export setting, the encoder's too
+    const tracks = [{ prop: 'scene/n4/radius', interp: 'linear', keys: [{ t: 0, v: 1 }, { t: 2, v: 3, ease: 'in' }] },
+                    { prop: 'view/camera/target', interp: 'spline', keys: [{ t: 1, v: [0, 0.5, 1] }] }]
+    M.setTimeline(d, { fps: 24, duration: 4, tracks,
+        export: { width: 640, height: 480, samples: 16, format: 'mp4', bitrate: 12, filename: 'turn', from: 0.5, to: 3, stream: true } })
+    eq('kept: its fps, duration and tracks', [d.timeline.fps, d.timeline.duration, d.timeline.tracks], [24, 4, tracks])
+    eq('...and of the export settings the film\'s alone: the encoder\'s are the person\'s', d.timeline.export,
+        { width: 640, height: 480, samples: 16, from: 0.5, to: 3, filename: 'turn' })
+    ok('...a copy: the panel going on with its tracks changes nothing kept', (tracks[0].keys.push({ t: 3, v: 9 }), d.timeline.tracks[0].keys.length === 2))
+    eq('a sound document round-trips its timeline', M.parse(M.serialize(d)).timeline, d.timeline)
+    // a timeline that names its fps and nothing else: the rest the defaults, never what was there
+    const e = M.setTimeline(M.createDoc(), { fps: 12 })
+    eq('a scene that leaves things out is shown with the defaults for them', M.sceneTimelineOf(e),
+        { fps: 12, duration: 8, tracks: [], export: { width: 1920, height: 1080, samples: 64, from: 0, to: 0, filename: 'raytracer' } })
+    M.setTimeline(e, { fps: 25, duration: 2 })
+    eq('...and is set WHOLE: what the next one leaves out is gone, not merged', e.timeline, { fps: 25, duration: 2 })
+    // refused, and nothing changed
+    const before = JSON.stringify(d.timeline)
+    throws('an fps of 0 is refused', () => M.setTimeline(d, { fps: 0 }), /timeline\.fps/)
+    throws('a duration that is not a number', () => M.setTimeline(d, { duration: 'long' }), /timeline\.duration/)
+    throws('a track that is not a list', () => M.setTimeline(d, { tracks: {} }), /timeline\.tracks/)
+    throws('a track with no path', () => M.setTimeline(d, { tracks: [{ interp: 'linear', keys: [] }] }), /tracks\[0\]\.prop/)
+    throws('two tracks on one parameter', () => M.setTimeline(d, { tracks: [tracks[1], tracks[1]] }), /second track on 'view\/camera\/target'/)
+    throws('an interpolation lib/timeline has not', () => M.setTimeline(d, { tracks: [{ prop: 'a', interp: 'bezier', keys: [] }] }), /interp/)
+    throws('a key before 0', () => M.setTimeline(d, { tracks: [{ prop: 'a', interp: 'step', keys: [{ t: -1, v: 0 }] }] }), /keys\[0\]\.t/)
+    throws('a key whose value is a word', () => M.setTimeline(d, { tracks: [{ prop: 'a', interp: 'step', keys: [{ t: 0, v: 'red' }] }] }), /keys\[0\]\.v/)
+    throws('an ease that is not one', () => M.setTimeline(d, { tracks: [{ prop: 'a', interp: 'step', keys: [{ t: 0, v: 0, ease: 'bounce' }] }] }), /ease/)
+    throws('a film of half a pixel', () => M.setTimeline(d, { export: { width: 0.5 } }), /timeline\.export\.width/)
+    throws('no samples', () => M.setTimeline(d, { export: { samples: 0 } }), /timeline\.export\.samples/)
+    eq('...each refusal changed nothing', JSON.stringify(d.timeline), before)
+    ok('a key with no ease (null, as lib/timeline\'s own) is sound', M.validate({ ...M.createDoc(), timeline: { tracks: [{ prop: 'a', interp: 'smooth', keys: [{ t: 0, v: 1, ease: null }] }] } }).length === 0)
+    ok('a file with a timeline key it does not know is refused', M.validate({ ...M.createDoc(), timeline: { loop: true } }).some(p => /timeline\.loop/.test(p)))
+    ok('...and an export setting that is no film\'s', M.validate({ ...M.createDoc(), timeline: { export: { bitrate: 12 } } }).some(p => /timeline\.export\.bitrate/.test(p)))
+    M.setTimeline(d, null)
+    ok('taken away: no timeline at all', !('timeline' in d))
+}
+
 console.log(fail ? `\n${fail} FAILED, ${pass} passed` : `${pass} assertions pass.`)
 process.exit(fail ? 1 : 0)

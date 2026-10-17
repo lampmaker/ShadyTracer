@@ -41,7 +41,8 @@ result into a luminaire and see where the light goes.
 - **An LED's own face does not reflect**: light sent back onto a die is lost, where a real die returns part of it.
 - **A light seen through its own lens** shows dark.
 - **Air gaps thinner than the surface offset are jumped**. Two slabs closer than the tolerance read as one (measured).
-  The workaround is to set the *surface tolerance* (Analysis › Advanced) by hand, smaller than the gap.
+  The workaround is to set the scene's *surface tolerance* (its Properties) by hand, smaller than the gap; or the
+  optics trace's own (Analysis › Advanced), for the trace alone.
 - **Polarisation is not traced.** Fresnel reflection uses unpolarised light. Against a polarised trace a slab reads
   −0.3 % at 45° and −3 % at 70° (measured).
 - **The choice of source is not stratified**: with several sources of different colours, part of a mix's colour noise
@@ -87,8 +88,9 @@ the scene's origin, not by the unit:
 
 - **Keep optics near the origin.** A lens 1 m from it cannot have features finer than about 15 µm.
 - **The automatic tolerance is one number for the whole scene**, estimated from the scene's numbers, and errs coarse:
-  a 0.4 mm sphere in an RGBW mixer scene was given 10.5 µm, 5 % of its radius. Set it by hand (Analysis ›
-  Advanced, or Render settings › Ray marching, a developer's setting) when small parts matter.
+  a 0.4 mm sphere in an RGBW mixer scene was given 10.5 µm, 5 % of its radius. Set it by hand when small parts matter:
+  the scene's *surface tolerance* (its Properties, saved with the scene), or Analysis › Advanced for the optics trace
+  alone.
 
 ## Not yet confirmed on hardware
 

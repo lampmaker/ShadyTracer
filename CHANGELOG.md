@@ -15,7 +15,9 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
-## 0.65.0 — 2026-10-17
+## 0.68.0 — 2026-10-17
+
+**(Built as 0.65.0; renumbered when merged with main, which took 0.65.0 to 0.67.1.)**
 
 **A dispersion switch, three developer settings gone, the scene as data on by default, and the presets side by side**
 (you: "an overview/table of the differences between the render quality settings", "dispersion on/off", "the keep on
@@ -77,6 +79,201 @@ Draft can be little faster than Standard. Read in code, not measured:
 - **The scene as data:** on in a new workspace (Developer › Performance); a structural edit shows without a compile.
 - **Tests › render-modes-cost,** on a scene where Draft feels no faster than Standard. Paste the report: its rows say
   how much of a Draft sample is the photons'.
+
+## 0.67.1 — 2026-10-17
+
+**A scene card dragged or clicked while the cards redraw is no longer lost** (you: "fix the flaky card-drag check").
+`projects.check`'s card drag failed about one run in two, on `main` too. It had two causes, and one of them is the
+application's.
+
+**The strip** (`builder/scenestrip.js`) redraws its cards whenever what they show changes: a picture taken, a compile
+begun or ended, any edit, found by its look four times a second. A card replaced under the mouse lost what the mouse was
+doing with it. Measured headless in Chromium (Playwright 1.56.1, in the container):
+- A card dragged onto another, with the cards redrawn between the move and the release, gave 0 of 6 reordered. Each try
+  was on a fresh page. Not redrawn, 6 of 6 reordered.
+- A click on another card, redrawn between its press and its release, chose nothing 6 times of 6.
+
+Now, from a press on a card, the redraw waits. It is made at the release, once the click is made. If the press started a
+drag, it is made when the drag is over, since a drag swallows the release. With that, 6 of 6 of each. A redraw just
+after the press, before the drag starts, lost nothing even before (6 of 6).
+
+**The check** (`workspace/test/projects.check.mjs`):
+- **Drags by the mouse itself**: press on whatever card is under it, move, release. Playwright's `dragAndDrop` finds the
+  card first and presses after. A card redrawn in between had its press held back by Playwright: a `pointerdown` and
+  no `mousedown`, then a drag Playwright started and did not follow. Measured with the strip redrawn on the hover, in
+  four sets of 6 tries: 6, 4, 4 and 2 reordered. Every failure was that one, on the old strip and this one. In the check, the redraw was the scene removed just before the
+  drag, which the strip's next look draws.
+- **Waits for what it needs**: for the cards to show the project's scenes before a drag, and for the order after it,
+  not a fixed 100 ms.
+- **New steps** redraw the cards in the middle of a drag, and between a click's press and its release. They fail on
+  the old strip.
+- Run 10 times in a row: every run passed.
+
+**What to look at:**
+- Drag a card onto another just after an edit, or while a picture of a scene is coming in. It goes before the other,
+  and the cards show the new order once you let go.
+- Click another card just as its picture arrives. It is chosen, and shows in Properties.
+- Hold the mouse down on a card. The cards do not change under it until you let go: a picture arriving then appears
+  on the release.
+
+## 0.67.0 — 2026-10-17
+
+**Each scene keeps its own timeline.** You asked whether the animation timeline's settings could be part of a scene,
+and agreed to the defaults proposed: no undo step, the film's settings the scene's and the encoder's yours, a duplicate
+bringing its timeline.
+
+**What was wrong (read in code):**
+- The Timeline was one for the whole page, in the browser's storage (`raytracer.timeline`, `tools/timeline.js`). It
+  was not in the scene, the project, a scene file or an example, and switching scenes kept it.
+- A track names what it moves by the node's id, and ids repeat between scenes: `n1`, `n2` … in each
+  (`builder/model.js` newId). A track on one scene's `n4` stayed live in another scene with an `n4` that has a
+  parameter of the same name, and playing it moved that object. Not tried: nothing in the code stopped it.
+- A camera's lengths are in the scene's unit, so a camera distance keyed at 20 was 20 mm in one scene and 20 m in
+  the next.
+
+**Now:**
+- **The scene's file holds its timeline** (`builder/model.js` TIMELINE): the fps, the duration, the tracks and their
+  keys, and the film's size, renders per frame, from and to, and file name. A scene file, a duplicate, a project and a
+  workspace each come with it. The scene format's version does not move, as for the view in 0.66.0: an older builder
+  carries the field along unread.
+- **Shown with its scene**, at the moment the camera and exposure change hands (`builder/demo.js` markShown), and
+  whole: what a scene leaves out is the default (30 fps, 8 s, 1920 × 1080, 64 renders a frame, no tracks), never the
+  last scene's. Playback stops on a switch. The playhead stays, and nothing is applied to the scene until you move it
+  or press play.
+- **Written as it changes** into the scene shown. It is no undo step (it never was), and an undo leaves it as it is.
+  It is saved as an edit is, though: within the second, and a second tab's copy is made by it (`BUILDER.saveRevision`).
+  A scene deleted from its card and brought back with Ctrl+Z has its timeline again.
+- **Format, bitrate and "to disk" are yours, not the scene's**: kept in this browser (`raytracer.timeline.export`), the
+  same in every scene.
+- **Your timeline from before this goes to the first scene shown after the update**, if that scene has no tracks of
+  its own, and is then removed from the browser's storage. Where no scene of the project is shown (the safe start), it
+  waits for the next start.
+- **A scene shown while a video records**: the recording goes on with its own timeline, and the scene's comes in
+  when it ends.
+- **SAVE… and LOAD…** in the export drawer still write and read a `.timeline.json`. A file loaded becomes the scene's
+  timeline.
+- **A library item being edited is a scene of its own while open**, so it starts with an empty timeline, and the
+  scene you came from has its own back when you leave. Keys set in an item's scene are not saved with the item: the
+  library keeps its objects (read in code: `library/edit.js` save).
+
+**Tested without a GPU:** the model (the field's checks, whole when read, the film's settings only), the project (out
+of the history, carried across a restore, in a duplicate and a scene file), the builder over a stand-in renderer
+(handed over as each scene is shown, kept into the scene shown during a compile, no undo step, saved, a deleted
+scene's back), and the Timeline panel in headless Chromium (kept, another scene whole, the encoder's settings kept, a
+scene shown while recording, a reload, the old timeline taken once).
+
+**What to look at** (in the browser):
+1. Key a value in one scene (the camera's azimuth), then open another: its Timeline is empty, at 30 fps and 8 s. Go
+   back: your keys are there.
+2. Give one scene a square film and another 1920 × 1080: the frame over the picture follows the scene. Choose PNG as
+   the format: it stays PNG in every scene.
+3. Reload: both keep their timelines. Export a scene file and open it: the timeline comes with it.
+4. Your timeline from before this update should be in the first scene you see after it. Say if it went to another
+   scene, or nowhere.
+5. Set keys, then Ctrl+Z an edit: the keys stay.
+
+## 0.66.0 — 2026-10-17
+
+**Each scene keeps its own camera, exposure and surface tolerance** (you: "switching between scenes almost always causes
+the camera and exposure to be wrong"; the information "should belong to the scenes").
+
+**What was wrong (read in code):**
+- The builder kept a camera per scene beside the documents. It put back only the fields it had. An example's camera
+  has no field of view, projection or lens, so those stayed as the last scene left them: the next example after
+  *Depth of field* kept its open lens (inferred from the code; not seen).
+- A scene with no kept camera (a file opened, a duplicate) took the live camera's numbers in its own unit: 330 mm
+  became 330 m.
+- The exposure was one for the whole project. Nothing on a switch changed it, and the meter eased over from the last
+  scene's EV.
+- A surface tolerance typed in Render settings › Ray marching was one number, in metres, for every scene, example,
+  library item and new project. The automatic one was already right per scene: 1e-4 of each scene's size,
+  recomputed when it is swapped in.
+- Each example's environment named three settings. Sun and sky brightness, the sun's size, the turbidity and the
+  studio's colour were whatever the scene before had.
+
+**Now:**
+- **The scene's file holds its view**: the camera with every setting, its lens too, and the exposure with every
+  setting (`builder/model.js` VIEW). It is written as it changes, and put back whole when the scene is shown. A scene
+  file, an example, a duplicate and *Copy to* all come with it. Moving the camera or the exposure is still no undo
+  step, and an undo never moves the camera.
+- **The meter starts again on a switch**, so a dim room shown after a street meters at once.
+- **The scene row's Properties** have two folders, **camera** and **exposure**, folded until you open one, and
+  remembered. They hold the popovers' own fields and follow a drag in the picture. **◇** flags a camera or exposure
+  value for the Timeline: the + track then offers it beside the scene's flagged values. Before, flagging any scene
+  value hid the camera and exposure from that list.
+- **The surface tolerance is the scene's**: *surface tolerance* on the scene row, after the radius, in the scene's
+  unit, 0 automatic. It is live, one undo step, and saved with the scene. The Ray marching row is gone; its box still
+  says the tolerance in use. The optics trace follows it too.
+- **A scene's environment is shown whole**: what it leaves out is the default, never the last scene's.
+- **Old projects and workspaces are read into this**: each scene gets its kept camera and the project's exposure, and a
+  typed tolerance goes to the scene being worked on. A scene with no camera at all is seen from the camera there is,
+  converted to its unit.
+- **A scene deleted from its card and brought back with Ctrl+Z (0.63.0) comes back with its view.** Undo snapshots hold
+  no view, so the builder keeps the last view of every scene by its key, as the old per-scene cameras were kept.
+
+**Every example reviewed** (worked out from each file's sizes, nothing rendered):
+- **Office lighting** opened from outside the room: the camera was at y −2.35 m, behind the outer wall (−2.1 m), looking
+  at its unlit outside. It now stands inside, 1.8 m from the work plane, with a 70° field of view.
+- **Lighting a room**: a 40° field at 1.4 m showed about 1 × 1.8 m of a 4 × 3 m room. It is 65° now.
+- **Glass and liquid**: the water sits 10 µm inside its glass, under an automatic tolerance of 80 µm, so the march could
+  not tell the two apart. The scene now sets 2 µm.
+- **Parabolic reflector**: the automatic tolerance was 0.47 mm, set by the detector wall 2 m away, against a 1 mm wall,
+  a 1 mm LED and an 8 mm focal length. The far field was traced with it too. The scene now sets 5 µm.
+- **Every example's file is whole**: a camera at 40°, perspective, a pinhole (Depth of field keeps its 8 mm lens), the
+  default exposure (auto), every environment setting. The other twenty frame their subject by the same arithmetic.
+
+**What to look at** (on your card):
+1. Open *Depth of field*, then any other example: nothing is blurred.
+2. Set a manual EV in a sunlit scene, switch to a dim one and back: each keeps its own. Switching should meter at
+   once, not fade over a second or two.
+3. A mm scene and an m scene in one project: the camera is right in both, and right after a reload too. Delete one
+   from its card, Ctrl+Z, open it: it is seen from its own camera.
+4. The scene row: open **camera**, orbit in the picture, and its numbers follow. Flag the field of view (◇): the
+   Timeline's + track offers it.
+5. Type a surface tolerance in one scene; it is not in the next scene or in a new one. Render stats › Picture says
+   "the scene's own".
+6. **Each example, in the menu's order**: framed and lit as before, with nothing inherited from the one before.
+   - *Office lighting* from inside the room.
+   - *Lighting a room* at 65°: say if it is too wide.
+   - *Glass and liquid*: the water's edge against the glass.
+   - *Parabolic reflector*: its far-field beam angle, if you have a reading from before.
+7. **The three bright subjects in a dark room**: *LED, lens and screen*, *Beam in dusty air* and *Dispersion in a
+   prism*. By my arithmetic the meter sets for the room and the subject sits 7 to 20 stops over it, so the prism's
+   spectrum is probably white rather than a rainbow (inferred). Set each until its subject reads and paste the EV or
+   the compensation: it goes into that example's file.
+
+## 0.65.0 — 2026-10-17
+
+**The library's checker is a wave now, so its edges soften and its squares shrink to dots** (you: "the checker
+material, use a smoothstep and sin function instead. that makes it possible to soften the edges or draw small
+circles").
+
+**The checker** (`library/items/materials.json`):
+- It was `floor` and odd or even: a hard edge, nothing to turn. Now it is s = cos(x) cos(y) cos(z), each a full period
+  over two squares, so s is +1 or -1 at a cube's centre and 0 where two cubes meet. The second colour is where s is
+  above `level`, through a `smoothstep` `softness` wide either side of it.
+- **Two new parameters.** `softness` (0 to 1): 0 the hard edge it had, 1 as soft as the wave itself. `level` (-1 to 1):
+  0 the checker; towards 1, round dots of the second colour shrinking in alternate squares (a dot of radius r at
+  level = cos(180° r / square), on a face through cube centres); towards -1, dots of the base colour in the others.
+  Both start at 0, which is the checker it was, sharp.
+- **Cos, not sin, and the squares move by half a square.** A cube's centre is now at the object's origin. With sin the
+  floor's plane z = 0 would lie where two cubes meet: s = 0 all over, and the floor of *Depth of field* would show no
+  squares. With cos the floor, and a box whose half-sizes are whole squares (the library's preview box: half-sizes of
+  20 mm on 10 mm squares), have faces through centres.
+- **What it costs: a face where two cubes meet shows no squares.** A flat face half a square off a centre (a 30 mm
+  cube on 10 mm squares: its faces at 15 mm) is at s = 0 all over, because a smooth pattern is halfway between its two
+  colours there; `floor` picked a side. Changing `square` for that object moves it off. Read from the code, not seen.
+- *Depth of field* (`scenes/depth-of-field.json`) carries the new checker: made again by `node scenes/make.mjs`, which
+  changed nothing else. A checker already in a project keeps its old code; put it in again from the library for this
+  one. The test fixtures keep theirs (they are frozen).
+- The golden shaders (`builder/test/fixtures/csg-v10`) refrozen for that one scene: its texts lost the old checker's
+  four lines and gained the new one's and its two parameters' aliases, nothing else; no other document moved.
+
+**What to look at:**
+- The Library's checker: its picture redrawn, the preview box's faces in squares.
+- *Depth of field*: the floor still a checker, each pawn standing on a square's centre.
+- The checker on an object: `softness` blurring the edges; `level` at about 0.7 giving dots half a square across, and
+  at -0.7 the reverse.
 
 ## 0.64.0 — 2026-10-17
 

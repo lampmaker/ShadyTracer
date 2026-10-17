@@ -163,6 +163,7 @@ export const OPS = ['union', 'subtract', 'intersect']
 
 export { identity, matrixOf } from './transform.js'
 import { identity, matrixOf } from './transform.js'
+import { INTERPS, EASES } from '../lib/timeline/timeline.js'
 
 /** Parameter names that would collide with what codegen declares for every node:
  *  `xf_<id>` (the transform), `blend_<id>` (a group's blend), `bxlo_<id>` / `bxhi_<id>` (a top-level
@@ -1614,13 +1615,21 @@ export function setLock(doc, id, which, on) {
    <rest> -- `animate: ['radius', 'transform/position']` on a node or a material; a material's relief's on the
    material, as '#relief/<parameter>' (a relief's fields are a closed list, reliefProblems: a builder that did not know
    the flag would refuse the whole file, not lose the flag; and setRelief drops them with the relief); the environment's
-   on the root, as 'environment/<setting>'. Relative, so a copy -- duplicated, pasted, put in the library -- keeps them
-   as it keeps a lock, under its new id.
+   on the root, as 'environment/<setting>'; the view's camera and exposure (0.66.0, VIEW above) on the root too, as the
+   registry names them, 'view/camera/<setting>' and 'view/exposure/<setting>' -- the renderer's paths (lib/pathtracer/
+   params.js), which a saved timeline track names, and which no node id can take (a node `camera` is scene/camera/...).
+   Relative, so a copy -- duplicated, pasted, put in the library -- keeps them as it keeps a lock, under its new id.
    As the locks: present or absent, no format version -- a builder that does not know them loses the flag and
    nothing of the shape. What a flag is worth in the shader is the bake's to say (animate.js liveUniformsOf). */
 const ANIMATE_PATH = /^scene\/([^/]+)\/(.+)$/
+/* THE VIEW'S VALUES a flag can name: the camera's numbers the registry has (lib/pathtracer/params.js settingsParams --
+   not its mode, a word, nor its target and position, three numbers at once) and every exposure setting */
+const VIEW_FLAG = /^view\/(camera|exposure)\/([^/]+)$/
+const CAMERA_FLAGS = ['camtype', 'azimuth', 'elevation', 'distance', 'fov', 'dimensions', 'aperture', 'focus']
 /* path -> { owner, key }: where a flag is kept, or null for a path that names nothing of this scene */
 function animateSlot(doc, path) {
+    const v = VIEW_FLAG.exec(String(path ?? ''))
+    if (v) return (v[1] === 'camera' ? CAMERA_FLAGS.includes(v[2]) : v[2] in VIEW_EXPOSURE) ? { owner: doc.root, key: v[0] } : null
     const m = ANIMATE_PATH.exec(String(path ?? ''))
     if (!m) return null
     const [, at, key] = m
@@ -1662,11 +1671,12 @@ export function setAnimated(doc, path, on) {
     else delete s.owner.animate
     return doc
 }
-/** EVERY FLAGGED PATH, in the order the scene row lists them: the environment's, the nodes' in tree order, then the
- *  materials' and their reliefs'. A flag naming what is no longer there (a parameter removed by hand in a file) is
- *  listed all the same: the list says so, and unflagging it is how it goes. */
+/** EVERY FLAGGED PATH, in the order the scene row lists them: the view's, the environment's, the nodes' in tree order,
+ *  then the materials' and their reliefs'. A flag naming what is no longer there (a parameter removed by hand in a
+ *  file) is listed all the same: the list says so, and unflagging it is how it goes. */
 export function animatedPaths(doc) {
     const out = []
+    for (const k of flagsOf(doc.root)) if (k.startsWith('view/')) out.push(k)
     for (const k of flagsOf(doc.root)) if (k.startsWith('environment/')) out.push(`scene/${k}`)
     walk(doc, n => { if (n !== doc.root) for (const k of flagsOf(n)) out.push(`scene/${n.id}/${k}`) })
     for (const m of doc.materials) {
@@ -2085,6 +2095,262 @@ export function setEnvironment(doc, values) {
     doc.environment = next
     return doc
 }
+/** THE WHOLE ENVIRONMENT a scene that has one is shown under: its own settings over the defaults (0.66.0). The bundled
+ *  examples name three settings each (scenes/make.mjs SUN, STUDIO), and the builder pushed only what a scene named, so
+ *  the sun's and the sky's illuminance, the sun's size, the turbidity and the studio's colour were whatever the scene
+ *  shown before had left -- the same carry-over as the camera's (VIEW below). A scene without one is null: it still
+ *  shows what the renderer has, as every scene saved before 0.52.0 did. */
+export const environmentOf = doc => doc.environment
+    ? { ...Object.fromEntries(Object.entries(ENVIRONMENT).map(([k, sp]) => [k, structuredClone(sp.def)])), ...structuredClone(doc.environment) }
+    : null
+
+/*======================================================================================================================
+  THE VIEW -- how the scene is looked at: its camera and its exposure (0.66.0; the user, 2026-10-17: "Camera settings
+  and exposure can vary per scene ... the information should belong to the scenes. Because switching between scenes
+  almost always causes the camera and exposure to be wrong").
+
+  `doc.view = { camera, exposure }`. The controls stay the view's (the camera and exposure popovers over the picture,
+  and the scene row's folders); the values are the scene's, saved with it, so a scene file, an example, a duplicate and
+  a scene copied to another project each come with the way it is seen. Until 0.66.0 the builder kept a camera per
+  scene beside the documents (demo.js) -- saved only in a workspace and the browser's project, with no exposure at
+  all -- and put back only the fields it had: an example's camera has no field of view, so it kept the last scene's.
+
+  WHOLE WHEN READ (sceneViewOf): whatever a scene leaves out is the default, never what the scene before had. The camera's
+  defaults are the page's start (index.html Q: 20 units off, the 40 degree field), the exposure's the schema's.
+
+  NOT AN EDIT (demo.js): looking is not editing, so a camera moved or an exposure changed is no undo step, and the
+  history's snapshots leave the view out (project.js historyText). Lengths are the scene's unit, as every length here.
+
+  No version change, as the environment's (above): a builder of 22 that predates it carries it along unread.
+======================================================================================================================*/
+/** Each exposure setting's schema entry, by its uniform name: the Exposure group's, the ones with a control. */
+export const VIEW_EXPOSURE = Object.freeze(Object.fromEntries(Object.entries(UniformGroups.Exposure).filter(([, sp]) => sp.gui)))
+/** A camera's settings and what each may be: lib/camera.js get() and RT.applySettings name them so. pos and up are a
+ *  free (fps) camera's; an orbit is its target, azimuth, elevation and distance. */
+const pt3 = v => Array.isArray(v) && v.length === 3 && v.every(Number.isFinite)
+export const VIEW_CAMERA = Object.freeze({
+    mode: v => v === 'orbit' || v === 'fps' || 'must be orbit or fps',
+    camtype: v => v === 0 || v === 1 || 'must be 0 (perspective) or 1 (orthographic)',
+    fov: v => (Number.isFinite(v) && v > 0 && v < 180) || 'must be a number of degrees between 0 and 180',
+    dimensions: v => (Number.isFinite(v) && v > 0) || 'must be a number > 0 (the parallel view\'s width)',
+    target: v => pt3(v) || 'must be [x, y, z]',
+    azimuth: v => Number.isFinite(v) || 'must be a number (degrees)',
+    elevation: v => Number.isFinite(v) || 'must be a number (degrees from straight up)',
+    distance: v => (Number.isFinite(v) && v > 0) || 'must be a number > 0',
+    pos: v => pt3(v) || 'must be [x, y, z]',
+    up: v => pt3(v) || 'must be [x, y, z]',
+    aperture: v => (Number.isFinite(v) && v >= 0) || 'must be a number >= 0 (0 a pinhole)',
+    focus: v => (Number.isFinite(v) && v >= 0) || 'must be a number >= 0 (0 the target\'s distance)',
+})
+/* THE CAMERA A SCENE LEAVING ONE OUT HAS: the page's start (index.html Q, and the renderer's up), a pinhole */
+export const CAMERA_DEFAULTS = Object.freeze({ mode: 'orbit', camtype: 0, fov: 40, dimensions: 10, target: [0, 0, 0],
+    azimuth: 40, elevation: 70, distance: 20, up: [0, 0, 1], aperture: 0, focus: 0 })
+/* the camera's lengths: what a unit's change, or a camera from a scene in another unit, scales */
+const CAMERA_LENGTHS = ['dimensions', 'target', 'distance', 'pos', 'aperture', 'focus']
+
+function viewProblems(view) {
+    if (!view || typeof view !== 'object' || Array.isArray(view)) return ['view must be an object']
+    const p = []
+    for (const k of Object.keys(view)) if (k !== 'camera' && k !== 'exposure') p.push(`view.${k}: not part of a view (camera, exposure)`)
+    const c = view.camera
+    if (c !== undefined) {
+        if (!c || typeof c !== 'object' || Array.isArray(c)) p.push('view.camera must be an object')
+        else for (const [k, v] of Object.entries(c)) {
+            const check = VIEW_CAMERA[k]
+            if (!check) { p.push(`view.camera.${k}: not a camera setting`); continue }
+            const ok = check(v)
+            if (ok !== true) p.push(`view.camera.${k} ${ok}`)
+        }
+    }
+    const e = view.exposure
+    if (e !== undefined) {
+        if (!e || typeof e !== 'object' || Array.isArray(e)) p.push('view.exposure must be an object')
+        else for (const [k, v] of Object.entries(e)) {
+            const sp = VIEW_EXPOSURE[k]
+            if (!sp) { p.push(`view.exposure.${k}: not an exposure setting`); continue }
+            if (!Number.isFinite(v)) { p.push(`view.exposure.${k} must be a number`); continue }
+            const g = sp.gui
+            if (g.options && !Object.values(g.options).includes(v)) p.push(`view.exposure.${k} must be one of ${Object.values(g.options).join(', ')}`)
+            else if ((g.min !== undefined && v < g.min) || (g.max !== undefined && v > g.max)) p.push(`view.exposure.${k} must be within ${g.min ?? '-∞'} .. ${g.max ?? '∞'}`)
+        }
+    }
+    return p
+}
+/** A camera with only the settings VIEW_CAMERA knows, copied: what the renderer's camera hands out has more (its
+ *  aspect, its near and far planes), which are the canvas's and the renderer's, not the scene's. */
+export const cameraSettings = c => c && typeof c === 'object'
+    ? Object.fromEntries(Object.keys(VIEW_CAMERA).filter(k => c[k] !== undefined).map(k => [k, structuredClone(c[k])])) : null
+/** An exposure with only the Exposure group's settings, copied (RT.get() hands out every setting at once). */
+export const exposureSettings = e => e && typeof e === 'object'
+    ? Object.fromEntries(Object.keys(VIEW_EXPOSURE).filter(k => e[k] !== undefined).map(k => [k, e[k]])) : null
+/**
+ * THE VIEW A SCENE IS SHOWN WITH, whole: { camera, exposure }. The camera is the scene's with every setting it leaves
+ * out at CAMERA_DEFAULTS -- or null for a scene that has none, which the builder shows from the camera there is,
+ * converted to its unit (demo.js). The exposure is always whole: the scene's over the schema's defaults.
+ */
+export function sceneViewOf(doc) {
+    const c = doc?.view?.camera
+    const camera = c ? { ...structuredClone(CAMERA_DEFAULTS), ...cameraSettings(c) } : null
+    const exposure = { ...Object.fromEntries(Object.entries(VIEW_EXPOSURE).map(([k, sp]) => [k, sp.def])), ...exposureSettings(doc?.view?.exposure) }
+    return { camera, exposure }
+}
+/** Set the scene's view: `camera` and `exposure` each over what it has, checked first (a refusal changes nothing).
+ *  Only the settings each knows are kept; null for either takes it away. */
+export function setView(doc, { camera, exposure } = {}) {
+    const next = structuredClone(doc.view || {})
+    if (camera === null) delete next.camera
+    else if (camera !== undefined) next.camera = { ...(next.camera || {}), ...cameraSettings(camera) }
+    if (exposure === null) delete next.exposure
+    else if (exposure !== undefined) next.exposure = { ...(next.exposure || {}), ...exposureSettings(exposure) }
+    const bad = viewProblems(next)
+    if (bad.length) throw new ModelError(bad)
+    if (Object.keys(next).length) doc.view = next
+    else delete doc.view
+    return doc
+}
+/** A camera's lengths said in another unit: one kept by a scene in `from` seen from a scene in `to`, the same place in
+ *  metres. 330 mm stays 0.33 m, rather than becoming 330 m. */
+export function cameraInUnit(camera, from, to) {
+    if (!camera) return camera
+    const f = (UNITS[from] ?? 1) / (UNITS[to] ?? 1)
+    const out = structuredClone(camera)
+    if (f === 1) return out
+    const s = v => Number((v * f).toPrecision(12))
+    for (const k of CAMERA_LENGTHS) if (out[k] !== undefined) out[k] = Array.isArray(out[k]) ? out[k].map(s) : s(out[k])
+    return out
+}
+
+/*======================================================================================================================
+  THE TIMELINE -- how the scene moves: the Timeline panel's keys and the film it records (0.67.0; the user, 2026-10-17:
+  "make the settings for the animation timeline part of a scene").
+
+  `doc.timeline = { fps, duration, tracks, export }`: the `timeline` of lib/timeline's own file (timeline.js toJSON),
+  and of its export settings the film's (TIMELINE_FILM): its size, samples, range and name. The encoder's -- format,
+  bitrate, written to disk as it goes -- are the person's, not the scene's, and stay in the browser (tools/timeline.js).
+
+  WHY THE SCENE'S. Until 0.67.0 one timeline was the page's, in the browser's storage, whatever scene was shown:
+  - a track names what it moves by its registry path, and a node's is its id (builder/params.js), which is unique
+    only within its document (newId: n1, n2 ... in every scene). A track on one scene's n4 found another scene's n4
+    with a parameter of the same name and moved it (read in code: tools/timeline.js liveRegistry asks only whether
+    the path is there);
+  - a camera's lengths are in the scene's unit (CAMERA_LENGTHS): a distance keyed at 20 was 20 mm in one scene, 20 m in
+    the next;
+  - which values are animated (setAnimated) was already the scene's, and the keys that go with them were not.
+
+  WHOLE WHEN READ (sceneTimelineOf): what a scene leaves out is the default, never the last scene's. lib/timeline's
+  load keeps the fps, the duration and any export setting a file does not name (timeline.js fromJSON `o.fps > 0`,
+  sequencer.js load `k in obj.export`), so a scene handed over as it is would get the scene before's -- the camera's
+  carry-over of 0.66.0 again.
+
+  NOT AN UNDO STEP, as the view is not (project.js OUTSIDE_HISTORY): the timeline has never had an undo, and a
+  snapshot of the whole project at every key dragged would cost what an edit costs for nothing anyone asked for. But
+  SAVED as an edit is (demo.js keepTimeline): keys are work, so a timeline changed is written with the project within
+  the second, and a second tab's copy is made by it (workspace/autosave.js).
+
+  A TRACK ON A PATH THE SCENE DOES NOT HAVE IS KEPT, as lib/timeline keeps it ("(unknown)" in its header): a node
+  deleted and brought back by an undo has its track again.
+
+  No version change, as the view's and the environment's: a builder of 22 that predates it carries it along unread.
+======================================================================================================================*/
+/** The film's settings a scene keeps, and what each may be: lib/timeline's export settings (sequencer.js S), as its
+ *  export menu sets them (export-ui.js). */
+export const TIMELINE_FILM = Object.freeze({
+    width: v => (Number.isInteger(v) && v >= 1) || 'must be a whole number of pixels >= 1',
+    height: v => (Number.isInteger(v) && v >= 1) || 'must be a whole number of pixels >= 1',
+    samples: v => (Number.isInteger(v) && v >= 1) || 'must be a whole number >= 1 (renders a frame)',
+    from: v => (Number.isFinite(v) && v >= 0) || 'must be a number of seconds >= 0',
+    to: v => (Number.isFinite(v) && v >= 0) || 'must be a number of seconds >= 0 (0 the whole duration)',
+    filename: v => typeof v === 'string' || 'must be text',
+})
+/* THE TIMELINE A SCENE LEAVING ONE OUT HAS: what the panel started with before it was the scene's (tools/timeline.js
+   until 0.67.0), and lib/timeline's own range of 0 to 0, the whole duration */
+export const TIMELINE_DEFAULTS = Object.freeze({ fps: 30, duration: 8, tracks: Object.freeze([]),
+    export: Object.freeze({ width: 1920, height: 1080, samples: 64, from: 0, to: 0, filename: 'raytracer' }) })
+
+const keyValue = v => Number.isFinite(v) || (Array.isArray(v) && v.length > 0 && v.every(Number.isFinite))
+function timelineProblems(t) {
+    if (!t || typeof t !== 'object' || Array.isArray(t)) return ['timeline must be an object']
+    const p = []
+    for (const k of Object.keys(t)) if (!['fps', 'duration', 'tracks', 'export'].includes(k)) p.push(`timeline.${k}: not part of a timeline (fps, duration, tracks, export)`)
+    if (t.fps !== undefined && !(Number.isFinite(t.fps) && t.fps > 0)) p.push('timeline.fps must be a number > 0 (frames a second)')
+    if (t.duration !== undefined && !(Number.isFinite(t.duration) && t.duration > 0)) p.push('timeline.duration must be a number > 0 (seconds)')
+    if (t.tracks !== undefined) {
+        if (!Array.isArray(t.tracks)) p.push('timeline.tracks must be a list')
+        else {
+            const seen = new Set()
+            t.tracks.forEach((k, i) => {
+                const at = `timeline.tracks[${i}]`
+                if (!k || typeof k !== 'object' || Array.isArray(k)) { p.push(`${at} must be an object`); return }
+                if (typeof k.prop !== 'string' || !k.prop) p.push(`${at}.prop must be a parameter's path`)
+                else if (seen.has(k.prop)) p.push(`${at}: a second track on '${k.prop}' (one a parameter)`)
+                else seen.add(k.prop)
+                if (!INTERPS.includes(k.interp)) p.push(`${at}.interp must be one of ${INTERPS.join(', ')}`)
+                if (!Array.isArray(k.keys)) { p.push(`${at}.keys must be a list`); return }
+                k.keys.forEach((x, j) => {
+                    if (!x || typeof x !== 'object' || Array.isArray(x)) { p.push(`${at}.keys[${j}] must be an object`); return }
+                    if (!(Number.isFinite(x.t) && x.t >= 0)) p.push(`${at}.keys[${j}].t must be a number of seconds >= 0`)
+                    if (!keyValue(x.v)) p.push(`${at}.keys[${j}].v must be a number or a list of numbers`)
+                    if (x.ease != null && !EASES.includes(x.ease)) p.push(`${at}.keys[${j}].ease must be one of ${EASES.join(', ')}`)
+                })
+            })
+        }
+    }
+    const e = t.export
+    if (e !== undefined) {
+        if (!e || typeof e !== 'object' || Array.isArray(e)) p.push('timeline.export must be an object')
+        else for (const [k, v] of Object.entries(e)) {
+            const check = TIMELINE_FILM[k]
+            if (!check) { p.push(`timeline.export.${k}: not a setting of the film (${Object.keys(TIMELINE_FILM).join(', ')})`); continue }
+            const ok = check(v)
+            if (ok !== true) p.push(`timeline.export.${k} ${ok}`)
+        }
+    }
+    return p
+}
+/** The film's settings of an export's, copied: lib/timeline's hold the encoder's too (format, bitrate, stream). */
+export const filmSettings = e => e && typeof e === 'object'
+    ? Object.fromEntries(Object.keys(TIMELINE_FILM).filter(k => e[k] !== undefined).map(k => [k, e[k]])) : null
+/** THE TIMELINE A SCENE IS SHOWN WITH, whole: its own over TIMELINE_DEFAULTS, the film's settings each over theirs. A
+ *  copy: what the panel does to it is not the scene's until it is kept (setTimeline). */
+export function sceneTimelineOf(doc) {
+    const t = doc?.timeline ?? {}
+    return { fps: t.fps ?? TIMELINE_DEFAULTS.fps, duration: t.duration ?? TIMELINE_DEFAULTS.duration,
+             tracks: structuredClone(t.tracks ?? []), export: { ...TIMELINE_DEFAULTS.export, ...filmSettings(t.export) } }
+}
+/** Set the scene's timeline, WHOLE (the panel hands over all of it at every change): its fps, duration and tracks as
+ *  given, and of its export settings the film's. Checked first: a refusal changes nothing. Null takes it away. */
+export function setTimeline(doc, t) {
+    if (t == null) { delete doc.timeline; return doc }
+    if (!t || typeof t !== 'object' || Array.isArray(t)) throw new ModelError(['timeline must be an object'])
+    const next = {}
+    for (const k of ['fps', 'duration', 'tracks']) if (t[k] !== undefined) next[k] = structuredClone(t[k])
+    const film = filmSettings(t.export)
+    if (film && Object.keys(film).length) next.export = film
+    const bad = timelineProblems(next)
+    if (bad.length) throw new ModelError(bad)
+    doc.timeline = next
+    return doc
+}
+
+/*======================================================================================================================
+  THE SCENE'S SURFACE TOLERANCE (0.66.0): how close a ray must come to a surface to have hit it, in the scene's unit,
+  0 or absent the renderer's automatic one (a share of the scene's size: lib/pathtracer/core/photometry.js autoEps).
+  It was a renderer setting in metres, one for every scene: a value typed for a 25 cm optic was the one a 4 m room, an
+  example and a library item were traced with. It is a property of the scene's geometry -- a 10 um gap between a
+  liquid and its glass, a 1 mm reflector wall -- so it is saved with the scene, and an edit to it is an undo step,
+  as the radius is. The renderer takes it as its `eps`, in metres (demo.js sceneSelf, index.js updateScene).
+======================================================================================================================*/
+const toleranceProblems = v => Number.isFinite(v) && v >= 0 ? [] : ['tolerance must be a number >= 0 (in the scene\'s unit; 0 = automatic)']
+/** The tolerance the scene sets, in its unit; 0 for the automatic one. */
+export const toleranceOf = doc => doc.tolerance ?? 0
+/** Set the scene's tolerance, in its unit; 0, null or undefined is the automatic one. Checked first. */
+export function setTolerance(doc, v) {
+    if (v == null || v === 0) { delete doc.tolerance; return doc }
+    const bad = toleranceProblems(v)
+    if (bad.length) throw new ModelError(bad)
+    doc.tolerance = v
+    return doc
+}
 
 /** HIDING WITHOUT RECOMPILING (codegen's liveVisibility), saved with the scene: every node stays in the
  *  shader behind a uniform, so the eye in the tree is a uniform written. Off by default: the shader then
@@ -2187,6 +2453,8 @@ export function toTree(doc, { keepDisabled = false } = {}) {
     root.unit = doc.unit ?? 'm'
     // where the scene stops, in that unit (codegen hands it to the renderer); absent is the renderer's default
     if (doc.envRadius !== undefined) root.envRadius = doc.envRadius
+    // ...and how close a ray must come, in that unit (setTolerance); absent is the renderer's automatic one
+    if (doc.tolerance !== undefined) root.tolerance = doc.tolerance
     return root
 }
 
@@ -2245,6 +2513,9 @@ export function validate(doc) {
     }
     if (doc.environment !== undefined) p.push(...environmentProblems(doc.environment))
     if (doc.envRadius !== undefined) p.push(...envRadiusProblems(doc.envRadius))
+    if (doc.view !== undefined) p.push(...viewProblems(doc.view))
+    if (doc.timeline !== undefined) p.push(...timelineProblems(doc.timeline))
+    if (doc.tolerance !== undefined) p.push(...toleranceProblems(doc.tolerance))
     if (doc.liveVisibility !== undefined && typeof doc.liveVisibility !== 'boolean') p.push('liveVisibility must be true or false')
     if (p.length) return p
 

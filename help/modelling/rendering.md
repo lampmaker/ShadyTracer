@@ -123,3 +123,7 @@ Mark a value **animated** (◆ beside it in Properties), and it stays live in th
 [Timeline](cmd:view.tools.timeline) can move it without leaving the bake. In the Timeline, **+ track** keys any live
 setting over time: the camera, the sun, a light's flux, an object's position. **RECORD** renders every frame offscreen
 at the export size, as an MP4 or a ZIP of PNG frames (an animated GIF as well). Try [Animation](example:animation.json).
+
+Each scene has its own timeline, saved in its file: its tracks and keys, the frame rate and length, and the video's
+size, renders per frame, range and name. Opening another scene shows that scene's timeline. The format, the bitrate and
+writing to disk are your own settings, the same in every scene. Keys are not undo steps: Ctrl+Z leaves them as they are.

@@ -1,8 +1,8 @@
 //======================================================================================================================
 // THE EXAMPLES: documents in the scene format the builder reads (builder/model.js), listed under File › Examples
 // (builder/filemenu.js) by who they are for and what they show, where one opens as a COPY in the project being worked
-// on, with a camera of its own. They are not loaded at start: a page comes back to the project kept in the browser
-// (workspace/); a first visit's project is FIRST_VISIT alone.
+// on, seen as its file says (its view: the camera and the exposure, builder/model.js VIEW). They are not loaded at
+// start: a page comes back to the project kept in the browser (workspace/); a first visit's project is FIRST_VISIT alone.
 //
 // MADE IN CODE (0.54.0; the user, 2026-10-10: "replace all example scenes ... SDF's may be new to people and I want to
 // be able to demonstrate all the features. consider correct dimensions"): scenes/make.mjs builds each one through the

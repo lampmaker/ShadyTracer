@@ -42,6 +42,9 @@ does. **◐** in the view's toolbar has the **exposure**: metered automatically 
 by hand in EV. The **tone curve** turns the light into the picture's colours: PBR Neutral by default, or AgX, ACES,
 Reinhard, Hable, clip.
 
+The exposure belongs to the scene, as the camera does (below): a sunlit street and a dim room in one project each keep
+their own.
+
 A picture that is all white or all black usually means one of these:
 
 - a light far too bright or too dim;
@@ -61,8 +64,22 @@ A picture that is all white or all black usually means one of these:
 
 [Depth of field](example:depth-of-field.json) is a row of pawns, focused on the third.
 
-Each scene keeps its own camera. Switching scenes brings each one's view back, and an example opens with the view it
-was made for.
+Each scene keeps its own **camera and exposure**, saved in its file. Switching scenes brings each one's view back
+whole, with nothing left over from the scene before: no open lens, field of view or exposure. An example, a duplicate
+and a scene sent to someone open with the view they were saved with. Moving the camera or changing the exposure is
+not an undo step: looking is not editing.
+
+The same settings are in the **scene's own Properties** (click the scene's row at the top of the tree), in two folders,
+**camera** and **exposure**, folded until you open them. There, a **◇** before a value flags it for the
+[Timeline](cmd:view.tools.timeline): a flagged camera or exposure value is offered by the Timeline's **+ track** alongside
+the scene's own flagged values.
+
+## The surface tolerance
+
+How close a ray must come to a surface to count as hitting it is the scene's too: **surface tolerance** in the scene's
+Properties, after its radius, in the scene's unit. At 0, the default, it is automatic: 1e-4 of the scene's size, at
+most 1 mm. Set it finer when a thin gap matters (a liquid against its glass, a coating on a lens) or a small part sits
+in a large scene. Render stats › Picture says the one in use. The optics trace uses it too.
 
 ## Looking at the light itself
 

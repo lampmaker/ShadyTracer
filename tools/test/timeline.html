@@ -5,8 +5,9 @@
 <title>Timeline tool · check</title>
 <!-- THE TIMELINE TOOL WITHOUT A GPU, for tools/test/timeline.check.mjs: the shell, a viewport panel and the
      Timeline panel as index.html makes them, over a stand-in renderer that keeps a log of the offscreen verbs
-     it is asked for and paints each frame in a colour of the value the timeline set. Everything the tool and
-     lib/timeline do is their own. -->
+     it is asked for and paints each frame in a colour of the value the timeline set, and two scenes that each keep
+     their timeline through the builder's own model (builder/model.js TIMELINE), shown as the builder shows them.
+     Everything the tool and lib/timeline do is their own. -->
 <link rel="stylesheet" href="../../lib/dockview/dockview.css">
 <link rel="stylesheet" href="../../lib/shell/shell.css">
 <link rel="stylesheet" href="../../lib/timeline/timeline.css">
@@ -20,6 +21,7 @@
 import { createShell, busyOverlay } from '../../lib/shell/shell.js'
 import { makeParams } from '../../lib/shell/params.js'
 import { installTimeline } from '../timeline.js'
+import * as M from '../../builder/model.js'
 
 const SHELL = createShell(document.getElementById('app'), { title: 'check', storageKey: null, menus: ['View', 'Tools'] })
 const stage = SHELL.panel({ id: 'viewport', title: 'Viewport', renderer: 'always', closable: false })
@@ -47,7 +49,10 @@ const RT = {
     invalidate: () => { log.push('invalidate'); dirty = 1 },
     async beginOffscreen({ width, height }) { log.push(`begin ${width}x${height}`); OFF = { w: width, h: height } },
     // the option logged too: a frame's samples are meant to overlap (inFlight 2), and only within the frame
-    async renderFrame(n, onProgress, signal, o) { log.push(`render ${n}${o?.inFlight === 2 ? ' in flight' : ''} flux=${S.flux}${dirty ? '' : ' (not invalidated)'}`); dirty = 0 },
+    async renderFrame(n, onProgress, signal, o) {
+        log.push(`render ${n}${o?.inFlight === 2 ? ' in flight' : ''} flux=${S.flux}${dirty ? '' : ' (not invalidated)'}`); dirty = 0
+        await window.CHECK?.duringRender?.()          // a scene shown while it records (the check sets it)
+    },
     async grabFrame() {
         const c = new OffscreenCanvas(OFF.w, OFF.h), g = c.getContext('2d')
         g.fillStyle = `rgb(${Math.round(S.flux / 4)}, 0, 0)`; g.fillRect(0, 0, OFF.w, OFF.h)
@@ -55,9 +60,16 @@ const RT = {
     },
     async endOffscreen() { log.push('end'); OFF = null },
 }
+/* THE SCENES, standing in for the builder's (builder/demo.js keepTimeline, markShown): each keeps its timeline in its
+   document through the model, into the one shown; show(key) is a scene shown, its timeline handed to the panel whole */
+const scenes = { a: M.createDoc({ title: 'A' }), b: M.setTimeline(M.createDoc({ title: 'B' }), { fps: 12 }) }
+let shownKey = 'a'
+const scene = { timeline: () => M.sceneTimelineOf(scenes[shownKey]),
+                keep: t => { try { M.setTimeline(scenes[shownKey], t); return true } catch (e) { console.warn(e.message); return false } } }
 const TL = installTimeline(timelineEl, { PARAMS, RT, stage, busy: busyOverlay(stage, { delay: 0 }),
-    progress: job => SHELL.progress('video', job), onVisible: fn => SHELL.onVisible('tools.timeline', fn) })
-window.CHECK = { SHELL, TL, S, log, stage, PARAMS }
+    progress: job => SHELL.progress('video', job), onVisible: fn => SHELL.onVisible('tools.timeline', fn), scene, local: localStorage })
+const show = k => { shownKey = k; TL.showScene(M.sceneTimelineOf(scenes[k])) }
+window.CHECK = { SHELL, TL, S, log, stage, PARAMS, scenes, show }
 </script>
 </body>
 </html>

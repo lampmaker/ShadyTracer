@@ -25,7 +25,8 @@
 //
 // IT FOLLOWS BY LOOKING, four times a second, as the row before it did: the project, its scenes (counted again only
 // when the builder's revision moves), the open one, its picture, whether it is compiled. An undo, a project opened from
-// the Project panel, a picture arriving -- each reaches it without a hook. refresh() for at once.
+// the Project panel, a picture arriving -- each reaches it without a hook. refresh() for at once. Never under the mouse:
+// from a press on a card until it is let go, the redraw waits (0.67.1, `held`).
 //
 //   const S = installSceneStrip(host, { BUILDER, ops: tree.sceneOps, tree, project, picture, onSelect, openProject, examples, item, compile, exportScene, say })
 //   S.refresh()    S.select(key | null)    S.selected()
@@ -148,6 +149,17 @@ export function installSceneStrip(host, { BUILDER, ops, tree = null, project = (
 
     // ---- THE CARDS: drawn when what they show changes; a selection only moves a class
     let sig = '', counted = '', list = []
+    /* NOT WHILE A CARD IS HELD (0.67.1): the cards are replaced when what they show changes -- a picture taken, a compile
+       begun or ended, any edit, found by the 250 ms look below -- and a card replaced under the mouse lost what the mouse
+       was doing with it. Measured headless in Chromium: a card dragged onto another with the cards redrawn between the
+       move and the release, 0 of 6 reordered, each on a fresh page (not redrawn, 6 of 6); a click on another card
+       redrawn between its press and its release, 6 of 6 chose nothing. The check's drags right after an edit failed about
+       one run in two on redraws like these (and on one of the test tool's own: projects.check.mjs). So from a press on a
+       card the redraw waits -- until the release, once its click is made; when the press started a drag, until the drag
+       is over, since a drag swallows the release -- and is made then: 6 of 6 of each. A press whose release never came (a
+       drag the browser lost) is let go by the next release anywhere. */
+    let held = false
+    const release = () => { if (held) { held = false; refresh() } }
     const card = c => {
         const d = el('div', `shell-scene-card${c.here ? ' here' : ''}`)
         d.dataset.key = c.key
@@ -197,7 +209,7 @@ export function installSceneStrip(host, { BUILDER, ops, tree = null, project = (
         fold.textContent = folded ? '▸' : '▾'
         fold.title = folded ? 'Show the scenes' : 'Fold the scenes away'
         count.textContent = `· ${list.length} scene${list.length === 1 ? '' : 's'}${folded && here ? ` · ${here.title}` : ''}`
-        if (now !== sig) {
+        if (now !== sig && !held) {
             sig = now
             cards.hidden = folded
             cards.replaceChildren(...(folded ? [] : list.map(card)))
@@ -229,6 +241,12 @@ export function installSceneStrip(host, { BUILDER, ops, tree = null, project = (
 
     // ---- DRAGS: a card among the cards reorders; a tree row on a card is copied there (Shift: moved)
     const clearMarks = () => { for (const d of cards.querySelectorAll('.drop, .dropline')) d.classList.remove('drop', 'dropline') }
+    cards.addEventListener('mousedown', e => {
+        if (!e.target.closest?.('.shell-scene-card')) return
+        held = true
+        // the release: in the press's own document (the panel may be in a window of its own), let go once its click is made
+        e.target.ownerDocument.addEventListener('mouseup', () => setTimeout(release, 0), { capture: true, once: true })
+    })
     cards.addEventListener('dragstart', e => {
         const d = e.target.closest?.('.shell-scene-card')
         if (!d || item()) { e.preventDefault(); return }
@@ -246,7 +264,8 @@ export function installSceneStrip(host, { BUILDER, ops, tree = null, project = (
         else if (row && d.dataset.key !== BUILDER.current) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; d.classList.add('drop') }
     })
     cards.addEventListener('dragleave', e => { if (!cards.contains(e.relatedTarget)) clearMarks() })
-    cards.addEventListener('dragend', clearMarks)
+    // the drag over, dropped anywhere: the redraw it held made now -- dropped on a card, in the order the drop has made
+    cards.addEventListener('dragend', () => { clearMarks(); release() })
     cards.addEventListener('drop', e => {
         const d = e.target.closest?.('.shell-scene-card')
         clearMarks()
