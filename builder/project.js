@@ -132,22 +132,33 @@ const uniqueTitle = (p, t) => {
    (demo.js), never by undo's snapshots or the start-up copy, which are the project itself */
 export const serialize = (p, { app } = {}) => JSON.stringify(M.withApp(p, app), null, 2)
 
-/* THE HISTORY'S TEXT (demo.js): the project without any scene's view (model.js VIEW). Looking is not an edit: a
-   snapshot that held the camera would make an undo move it back to where it was at that edit, and a commit after an
-   orbit -- harmless by history.js's rule, nothing changed -- would record the orbit as a step. restore() gives each
-   scene the view it has now back (carryViews). */
-export const historyText = p => serialize({ ...p, scenes: p.scenes.map(s => {
-    const { view: _, ...doc } = s.doc
-    return { ...s, doc }
-}) })
-/** Each scene of `next` with the view the scene of the same key has in `from` -- or, for a scene `from` does not have
- *  (one an undo brings back), the one `memory` (Map by key) kept for it; or none (shown from the camera there is,
- *  converted, as a scene without one is). */
-export function carryViews(next, from, memory = null) {
+/* WHAT A SCENE HAS THAT NO UNDO STEP HOLDS: its view (model.js VIEW) and its timeline (model.js TIMELINE, 0.67.0).
+   One list, read by every place that leaves them out or puts them back -- the history's text, a restore (carryOutside),
+   the builder's memory of a scene taken out and its comparison of a scene before and after a step (demo.js) -- so a
+   third such part is one word here, not a fourth place found missing. */
+export const OUTSIDE_HISTORY = Object.freeze(['view', 'timeline'])
+/** A scene's document without what no undo step holds (OUTSIDE_HISTORY), a shallow copy. */
+export const withoutOutside = doc => Object.fromEntries(Object.entries(doc).filter(([k]) => !OUTSIDE_HISTORY.includes(k)))
+/** What a scene's document has of OUTSIDE_HISTORY, copied: { view, timeline }, each only when it has one. */
+export const outsideOf = doc => Object.fromEntries(OUTSIDE_HISTORY.filter(k => doc?.[k] !== undefined).map(k => [k, structuredClone(doc[k])]))
+/* THE HISTORY'S TEXT (demo.js): the project without any scene's view or timeline (OUTSIDE_HISTORY). Looking is not an
+   edit: a snapshot that held the camera would make an undo move it back to where it was at that edit, and a commit
+   after an orbit -- harmless by history.js's rule, nothing changed -- would record the orbit as a step. A timeline is
+   no undo step either (model.js TIMELINE): an undo of an edit made after a key was set would take the key away.
+   restore() gives each scene what it has now back (carryOutside). */
+export const historyText = p => serialize({ ...p, scenes: p.scenes.map(s => ({ ...s, doc: withoutOutside(s.doc) })) })
+/** Each scene of `next` with the view and the timeline (OUTSIDE_HISTORY) the scene of the same key has in `from` --
+ *  or, for one `from` does not have them for (a scene an undo brings back), what `memory` (Map by key, of outsideOf)
+ *  kept for it; or none: shown from the camera there is, converted, as a scene without one is, and with the default
+ *  timeline. Each part on its own: a scene with a view and no timeline of its own takes a kept timeline. */
+export function carryOutside(next, from, memory = null) {
     for (const s of next.scenes) {
-        const v = scene(from, s.key)?.doc.view ?? memory?.get?.(s.key)
-        if (v) s.doc.view = structuredClone(v)
-        else delete s.doc.view
+        const was = scene(from, s.key)?.doc, kept = memory?.get?.(s.key)
+        for (const k of OUTSIDE_HISTORY) {
+            const v = was?.[k] ?? kept?.[k]
+            if (v) s.doc[k] = structuredClone(v)
+            else delete s.doc[k]
+        }
     }
     return next
 }

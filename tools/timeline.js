@@ -29,9 +29,45 @@
 // THE VIEW IS COVERED WHILE IT RECORDS. The live camera and the recording's are one camera: an orbit in
 // the viewport mid-recording would move the film. A busy card over the picture takes the pointer, and
 // says how far it has got.
+//
+// THE TIMELINE IS THE SCENE'S (0.67.0; builder/model.js TIMELINE says why): its keys, its fps and duration and
+// the film's size, samples, range and name are in the scene's file. The host hands the panel each scene's as it
+// is shown (showScene, from the builder's markShown) and is handed it back at every change (`scene.keep`). Until
+// then it was the page's, in the browser's storage (`raytracer.timeline`), whatever scene was shown; that one is
+// given once to the scene shown at the first start with this (adoptLegacy). lib/timeline is unchanged: its
+// load() and its onSettings, which it calls at every edit (sequencer.js `changed`), are all this needs.
+// THE ENCODER'S SETTINGS ARE THE PERSON'S: the format, the bitrate and writing to disk as it goes are how this
+// browser films, not what the scene is, so the export settings last used are kept here (PREFS_KEY) and a scene's
+// film settings go over them.
 //======================================================================================================================
 
 import { makeSequencer } from '../lib/timeline/sequencer.js'
+
+/* the export settings last used, the encoder's among them (the header) */
+export const PREFS_KEY = 'raytracer.timeline.export'
+/* the page's one timeline, before it was the scene's: { app: 'timeline', version, timeline, export } (sequencer.js) */
+export const LEGACY_KEY = 'raytracer.timeline'
+/* the browser's, where it may be read: a page whose site data is blocked throws at the mere name */
+const storage = () => { try { return globalThis.localStorage ?? null } catch { return null } }
+const readJSON = (local, k) => { try { const v = JSON.parse(local?.getItem(k) ?? 'null'); return v && typeof v === 'object' ? v : null } catch { return null } }
+
+/** THE PAGE'S TIMELINE BEFORE 0.67.0, given to the scene shown at the first start with this (the default the user
+ *  agreed to, 2026-10-17, as 0.66.0 gave a typed tolerance to the scene worked on): loaded into the panel through `load` --
+ *  which keeps it into the scene, as any timeline loaded is -- when that scene has no tracks of its own. Taken out of
+ *  the browser's storage once it is the scene's, or once the scene shown has tracks of its own and so did not want it;
+ *  left while no scene could take it (`keep` false: none shown), for the next start. Pure but for `local`: the node
+ *  test drives it. Returns what became of it: 'none' | 'kept' | 'not kept' | 'scene has its own'. */
+export function adoptLegacy({ local, scene, load, keep }) {
+    const old = readJSON(local, LEGACY_KEY)
+    if (!old?.timeline || typeof old.timeline !== 'object') return 'none'
+    let r
+    if (scene.timeline().tracks.length) r = 'scene has its own'
+    else { load(old); r = keep() ? 'kept' : 'not kept' }
+    if (r !== 'not kept') try { local.removeItem(LEGACY_KEY) } catch { }
+    console.log(`[timeline] the page's timeline from before 0.67.0: ${r === 'kept' ? 'it is the scene\'s now'
+        : r === 'scene has its own' ? 'not used, the scene shown has tracks of its own' : 'kept for the next start: no scene is shown to take it'}`)
+    return r
+}
 
 /** PARAMS as the timeline's registry, with the structural entries left out (see the header). Pure:
  *  the node test drives it with a toy provider. Everything is asked of PARAMS afresh each call, since
@@ -71,8 +107,13 @@ export function liveRegistry(P) {
  * @param busy      busyOverlay(stage) from lib/shell: a card over the picture, or null to take it away
  * @param progress  a job's bar in the status bar: progress({ label, done, total }) or progress(null)
  * @param onVisible (fn) => told whether the panel is on screen
+ * @param scene     where the timeline lives: { timeline() -> the scene shown's, whole (builder/model.js
+ *                  sceneTimelineOf), keep(t) -> whether it was kept }; null keeps nothing (a page with no scenes)
+ * @param local     localStorage, or a stand-in: the export settings last used (PREFS_KEY), and the page's timeline
+ *                  from before 0.67.0 (adoptLegacy)
  */
-export function installTimeline(el, { PARAMS, RT, stage, busy = () => { }, progress = () => { }, onVisible = () => { } }) {
+export function installTimeline(el, { PARAMS, RT, stage, busy = () => { }, progress = () => { }, onVisible = () => { },
+                                      scene = null, local = storage() }) {
     el.classList.add('rt-timeline')
     const registry = liveRegistry(PARAMS)
     let recording = false, frame = 0, frames = 0
@@ -105,11 +146,27 @@ export function installTimeline(el, { PARAMS, RT, stage, busy = () => { }, progr
     }
     new ResizeObserver(drawGuide).observe(stage)
 
-    const seq = makeSequencer({
+    /* EVERY CHANGE KEPT: into the scene (scene.keep: the timeline and the film's settings, which the model picks out of
+       the export's), and the export settings into this browser's (PREFS_KEY), the encoder's with them. Not while a
+       scene's own is being loaded (showScene): that is no change, and while the panel held the last scene's it would
+       be written into this one. Not before the sequencer is made either: it tells its settings once while it is. */
+    let seq = null, loading = false, unkept = false
+    const keep = () => {
+        if (loading || !seq) return false
+        try { local?.setItem(PREFS_KEY, JSON.stringify(seq.settings)) } catch { }
+        if (!scene) return false
+        const ok = scene.keep({ ...seq.timeline.toJSON(), export: { ...seq.settings } })
+        // said once until one is kept again: the builder says why the model refused one (demo.js keepTimeline)
+        if (!ok && !unkept) console.warn('[timeline] this change is not kept in any scene: no scene of the project is shown, or the scene refused it')
+        unkept = !ok
+        return ok
+    }
+    seq = makeSequencer({
         host: el, registry,
-        storageKey: 'raytracer.timeline',
-        defaults: { timeline: { fps: 30, duration: 8 }, export: { width: 1920, height: 1080, samples: 64, filename: 'raytracer' } },
-        onSettings: s => { S = s; drawGuide() },
+        /* NO storageKey: the scene keeps the timeline (the header). lib/timeline's defaults only until the scene's own
+           are loaded below (showScene), and the encoder's settings last used before them. */
+        defaults: { timeline: { fps: 30, duration: 8 } },
+        onSettings: s => { S = s; drawGuide(); keep() },
         /* THE LIVE SIZE, when the export menu's "canvas size" asks for the picture outside a recording:
            the sequencer calls grab() for its width and height then, synchronously. The renderer's
            grabFrame throws outside an offscreen render -- as a rejected promise nobody awaits. */
@@ -134,8 +191,38 @@ export function installTimeline(el, { PARAMS, RT, stage, busy = () => { }, progr
             busy(null); progress(null)
             await RT.endOffscreen()
             drawGuide()
+            // a scene shown while it recorded: its timeline now, before lib/timeline puts the values at the playhead back
+            if (waiting) { const t = waiting; waiting = null; showScene(t) }
         },
     })
+
+    /* A SCENE'S TIMELINE INTO THE PANEL, whole (the model's sceneTimelineOf: lib/timeline's load keeps what an object
+       leaves out). The playback stops: it was moving the last scene's values. The playhead stays where it was and
+       nothing is sought: a seek writes the timeline's values into the scene, and showing a scene is no edit of it.
+       WHILE IT RECORDS, the frames are the recording's own: the scene's comes in when it ends (end above).
+       The encoder's settings stay as they are: the scene has only the film's. */
+    let waiting = null
+    const showScene = t => {
+        if (!t) return
+        if (seq.recording) { waiting = t; return }
+        seq.ui.pause()
+        loading = true
+        try { seq.load({ timeline: { fps: t.fps, duration: t.duration, tracks: t.tracks }, export: { ...t.export } }) }
+        finally { loading = false }
+        unkept = false
+        seq.ui.fitView()
+    }
+    /* THE EXPORT SETTINGS LAST USED, then the scene shown's over them, then the page's old timeline if the scene has
+       none (adoptLegacy). Loaded once: from here the scene's come with each scene shown. */
+    const prefs = readJSON(local, PREFS_KEY) ?? readJSON(local, LEGACY_KEY)?.export
+    if (prefs) { loading = true; try { seq.load({ export: prefs }) } finally { loading = false } }
+    if (scene) {
+        showScene(scene.timeline())
+        const old = adoptLegacy({ local, scene, keep, load: o => { loading = true; try { seq.load(o) } finally { loading = false } } })
+        // not kept anywhere: the panel holds what the scene has, not a timeline no scene does
+        if (old === 'not kept') showScene(scene.timeline())
+    }
+    seq.showScene = showScene
     /* THE GRIP IS FOR A PANEL AT THE BOTTOM OF A PAGE: it sets the host's height. In a dock the panel's
        size is the dock's, and a height set on the element would only fight it (hidden in timeline.css). */
 

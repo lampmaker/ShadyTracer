@@ -368,13 +368,14 @@
            for its card -- a database of their own, or memory where the browser refuses storage */
         const PICS = window.PICS = createScenePics({ backend: storeNote ? memoryPics() : indexedDbPics() });
         let showProject = async () => { };            // the page's, once the builder exists (below)
-        /* WHAT IS SAVED, looked at once a second (workspace/autosave.js): the builder's revision and scenes, and the
+        /* WHAT IS SAVED, looked at once a second (workspace/autosave.js): the builder's revision (saveRevision: its edits
+           and every timeline kept, which is saved as an edit is but no undo step: builder/model.js TIMELINE) and scenes, and the
            session -- the scene being worked on, the renderer's settings but what each scene has of its own (the
            camera, the exposure, the tolerance: project.js rendererSettings), every scene's view as it is now (written
            between the project's writes: BUILDER.views), the item editor's memory. Read only once the builder exists:
            the ticks start at the end of the page. */
         const AUTOSAVE = createAutosave({ store: PROJECTS, local: localStore, say: t => SHELL.status(t),
-            read: () => ({ revision: BUILDER.revision, project: BUILDER.project,
+            read: () => ({ revision: BUILDER.saveRevision, project: BUILDER.project,
                 session: { current: BUILDER.current, renderer: Project.rendererSettings(RT.settings()), views: BUILDER.views(), item: window.ITEM_EDITOR?.remember?.() ?? null } }),
             onCreated: m => SESSION.adopt(m) });
         const SESSION = window.SESSION = createSession({ store: PROJECTS, tabs: createTabs(), autosave: AUTOSAVE, say: t => SHELL.status(t),
@@ -1254,9 +1255,13 @@
         }
 
         /* THE TIMELINE (tools/timeline.js): the parameters' live entries over time, and RECORD films them
-           through the renderer's offscreen verbs, with the view covered meanwhile. TIMELINE in the console. */
+           through the renderer's offscreen verbs, with the view covered meanwhile. TIMELINE in the console.
+           THE SCENE'S (0.67.0, builder/model.js TIMELINE): the panel holds the timeline of the scene shown, handed over
+           as each is shown (the builder's markShown, with its view), and writes it back into that scene at each change. */
         window.TIMELINE = installTimeline(timelineEl, { PARAMS, RT, stage, busy: busyOverlay(stage, { delay: 0 }),
-            progress: job => SHELL.progress('video', job), onVisible: fn => SHELL.onVisible('tools.timeline', fn) });
+            progress: job => SHELL.progress('video', job), onVisible: fn => SHELL.onVisible('tools.timeline', fn),
+            scene: { timeline: () => BUILDER.timeline(), keep: t => BUILDER.keepTimeline(t) }, local: localStore });
+        BUILDER.onTimeline = t => window.TIMELINE.showScene(t);
 
         /* THE MEASURE TOOL: pinned readings and a rectangle's average over the picture, and the
            false colour's legend (lib/pathtracer/measure). Reads nothing until something is placed. */

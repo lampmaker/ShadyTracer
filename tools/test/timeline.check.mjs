@@ -12,8 +12,12 @@
 //     traced, the values the frame's time says, a grab each, end once, a file downloaded, the view
 //     covered while it ran and uncovered after
 //   RECORD (GIF): offered in the menu, a .gif downloaded, Chromium's decoder reading each frame's colour
+//   each scene its own timeline (0.67.0): a change kept into the scene shown, the encoder's settings this
+//     browser's; another scene shown: its timeline whole (the defaults where it has none, never the last one's),
+//     playback stopped, nothing written for being shown; a scene shown while it records comes in once it ends
 //   another scene: + track lists the new scene's parameters, a track on the old one reads (unknown)
 //   closed: a closed panel stops playing
+//   a reload: the encoder's settings come back; the page's timeline from before 0.67.0 given to the scene, once
 // Whether the real renderer films what it should is the user's to see.
 //
 // OPTIONAL, AND LOUD ABOUT IT, as lib/shell/test/example.check.mjs is: it needs Playwright's Chromium.
@@ -133,6 +137,60 @@ try {
             `\n      got  ${JSON.stringify(gif)}\n      want ${JSON.stringify(wantGif)}`)
     }
 
+    // ---- each scene its own timeline (0.67.0, builder/model.js TIMELINE) -------------------------------------
+    const FPS = '[data-panel="tools.timeline"] .tl-bar input[title="frames per second"]'
+    const typeFps = v => p.evaluate(([sel, v]) => { const i = document.querySelector(sel); i.value = String(v); i.dispatchEvent(new Event('change')) }, [FPS, v])
+    await typeFps(24)
+    await p.evaluate(() => {
+        const f = [...document.querySelectorAll('[data-panel="tools.timeline"] .tl-export .tl-sel')].find(s => [...s.options].some(o => o.value === 'png'))
+        f.value = 'png'; f.dispatchEvent(new Event('change'))
+    })
+    const a1 = await p.evaluate(() => ({ kept: CHECK.scenes.a.timeline, prefs: JSON.parse(localStorage.getItem('raytracer.timeline.export')) }))
+    // the whole panel as it is, the film the RECORD above set (64 x 36) with it
+    ok('a change in the panel is kept into the scene shown: the fps typed, its track, the film\'s size', a1.kept?.fps === 24
+        && a1.kept.tracks.some(k => k.prop === 'scene/lamp/light/flux' && k.keys.length === 2) && a1.kept.export?.width === 64, JSON.stringify(a1.kept))
+    ok('...the encoder\'s settings are this browser\'s, not the scene\'s', !('format' in (a1.kept?.export ?? {})) && a1.prefs?.format === 'png', JSON.stringify(a1))
+    const state = () => ({ fps: CHECK.TL.timeline.fps, dur: CHECK.TL.timeline.duration, tracks: CHECK.TL.timeline.tracks.length,
+        size: [CHECK.TL.settings.width, CHECK.TL.settings.height], format: CHECK.TL.settings.format,
+        field: document.querySelector('[data-panel="tools.timeline"] .tl-bar input[title="frames per second"]').value,
+        guide: CHECK.stage.querySelector('.rt-aspect')?.textContent ?? '', heads: document.querySelectorAll('.tl-head-name').length })
+    const b1 = await p.evaluate(state => {
+        CHECK.TL.ui.play()
+        const was = CHECK.TL.ui.playing
+        CHECK.show('b')
+        return { was, playing: CHECK.TL.ui.playing, ...eval(state)(), keptB: CHECK.scenes.b.timeline }
+    }, `(${state})`)
+    ok('another scene shown: its timeline, WHOLE -- its fps, and the defaults for what it leaves out, never the last scene\'s',
+        b1.fps === 12 && b1.dur === 8 && b1.tracks === 0 && b1.heads === 0 && b1.size.join() === '1920,1080' && b1.field === '12', JSON.stringify(b1))
+    ok('...the frame over the picture is its film\'s', /1920×1080/.test(b1.guide), b1.guide)
+    ok('...the encoder\'s settings as they were', b1.format === 'png', b1.format)
+    ok('...the playback stopped: it was moving the last scene\'s values', b1.was && !b1.playing, JSON.stringify(b1))
+    ok('...and nothing written into it for being shown', JSON.stringify(b1.keptB) === '{"fps":12}', JSON.stringify(b1.keptB))
+    await typeFps(20)
+    const a2 = await p.evaluate(state => {
+        const keptB = CHECK.scenes.b.timeline.fps, keptA = CHECK.scenes.a.timeline.fps
+        CHECK.show('a')
+        return { keptA, keptB, ...eval(state)() }
+    }, `(${state})`)
+    ok('a change in the other scene is its own', a2.keptB === 20 && a2.keptA === 24, JSON.stringify(a2))
+    ok('back to the first: its own again, its track and its film', a2.fps === 24 && a2.tracks === 1 && a2.size.join() === '64,36' && a2.format === 'png', JSON.stringify(a2))
+    // A SCENE SHOWN WHILE IT RECORDS: the frames are the recording's own, the scene's timeline comes in when it ends
+    const rec = await p.evaluate(async () => {
+        Object.assign(CHECK.TL.settings, { format: 'png', width: 64, height: 36, samples: 2, from: 0, to: 0 })
+        CHECK.log.length = 0
+        let during = null
+        CHECK.duringRender = () => { CHECK.duringRender = null; CHECK.show('b'); during = { fps: CHECK.TL.timeline.fps, recording: CHECK.TL.recording } }
+        await CHECK.TL.record()
+        const flux = CHECK.log.filter(l => l.startsWith('render')).map(l => +/flux=([\d.]+)/.exec(l)[1])
+        const after = CHECK.TL.timeline.fps, keptA = CHECK.scenes.a.timeline.fps, keptB = CHECK.scenes.b.timeline.fps
+        CHECK.show('a')
+        return { during, flux, after, keptA, keptB }
+    })
+    ok('a scene shown while it records: the recording goes on with its own timeline, every frame (A\'s track: 0 rising)',
+        rec.during?.fps === 24 && rec.during.recording && rec.flux.length === Math.round(0.3 * 24) && rec.flux[0] === 0 && rec.flux.every((f, i) => !i || f > rec.flux[i - 1]), JSON.stringify(rec))
+    ok('...the shown scene\'s timeline in the panel once it ends', rec.after === 20, JSON.stringify(rec))
+    ok('...and neither scene\'s written by it', rec.keptA === 24 && rec.keptB === 20, JSON.stringify(rec))
+
     // ---- another scene: the + track list follows it -------------------------------------------------
     // the list was filled once and kept the first scene's parameters (the user, 2026-09-29)
     await p.evaluate(() => CHECK.PARAMS.provide('scene', () => [
@@ -159,6 +217,28 @@ try {
         return { was, now: CHECK.TL.ui.playing, guide: !!CHECK.stage.querySelector('.rt-aspect') }
     })
     ok('closing the panel stops the playback and takes the frame away', closed.was && !closed.now && !closed.guide, JSON.stringify(closed))
+
+    // LOAD… in the export drawer: a timeline file loaded becomes the scene shown's (sequencer.js load, as loadFile calls it)
+    const loaded = await p.evaluate(() => {
+        CHECK.show('b')
+        CHECK.TL.load({ app: 'timeline', version: 1, timeline: { fps: 9, duration: 1, tracks: [] }, export: { width: 100, height: 50 } })
+        return { b: CHECK.scenes.b.timeline, a: CHECK.scenes.a.timeline.fps }
+    })
+    ok('a timeline file loaded is the scene shown\'s', loaded.b?.fps === 9 && loaded.b.duration === 1 && loaded.b.export?.width === 100 && loaded.a === 24, JSON.stringify(loaded))
+
+    // ---- a reload: the encoder's settings come back; the page's old timeline given to the scene shown, once -----------
+    await p.reload(); await p.waitForTimeout(800)
+    const r1 = await p.evaluate(() => ({ format: CHECK.TL.settings.format, fps: CHECK.TL.timeline.fps, keptA: CHECK.scenes.a.timeline ?? null }))
+    ok('a reload: the encoder\'s settings this browser last used, over a scene that has none', r1.format === 'png' && r1.fps === 30 && r1.keptA === null, JSON.stringify(r1))
+    await p.evaluate(() => localStorage.setItem('raytracer.timeline', JSON.stringify({ app: 'timeline', version: 1,
+        timeline: { fps: 7, duration: 5, tracks: [{ prop: 'scene/lamp/light/flux', interp: 'step', keys: [{ t: 1, v: 500 }] }] },
+        export: { width: 300, height: 200, samples: 3, format: 'png', filename: 'old' } })))
+    await p.reload(); await p.waitForTimeout(800)
+    const r2 = await p.evaluate(() => ({ fps: CHECK.TL.timeline.fps, tracks: CHECK.TL.timeline.tracks.length, keptA: CHECK.scenes.a.timeline,
+        legacy: localStorage.getItem('raytracer.timeline') }))
+    ok('the page\'s timeline from before 0.67.0: given to the scene shown at the start, its film with it', r2.fps === 7 && r2.tracks === 1
+        && r2.keptA?.fps === 7 && r2.keptA.export?.width === 300 && r2.keptA.export.filename === 'old', JSON.stringify(r2))
+    ok('...and once: gone from the browser\'s storage', r2.legacy === null, String(r2.legacy))
 
     ok('no page errors', errs.length === 0, errs.join(' | '))
 } finally {

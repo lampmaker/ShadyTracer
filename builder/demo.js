@@ -24,13 +24,16 @@
 //                     BUILDER.use(key) to change it (the next apply() shows it)
 //   BUILDER.replace({ project, current })  another project altogether (one kept in the browser,
 //                     workspace/): its own history from here, nothing to undo into the last
-//   BUILDER.revision  raised by every recorded edit, undo, redo, load and replace: what the browser's
-//                     autosave looks at (workspace/autosave.js)
+//   BUILDER.revision  raised by every recorded edit, undo, redo, load and replace: what the bake waits
+//                     to see stand still (baker.js); BUILDER.saveRevision, it and a timeline kept, what the
+//                     browser's autosave looks at (workspace/autosave.js)
 //   BUILDER.saveScene()      download the current scene (the format of scenes/*.json)
 //   BUILDER.save()           download every scene, as a project
 //   BUILDER.saveWorkspace()  every scene, which is current, and the renderer's own settings
 //                            (quality, sampling, size; each scene's camera and exposure are its own)
 //   BUILDER.views()   every scene's view { key: view } (model.js VIEW): what the browser's session keeps
+//   BUILDER.timeline()   the scene shown's timeline, whole (model.js TIMELINE); keepTimeline(t) writes it,
+//                     and BUILDER.onTimeline(t), the host's, is told the next scene's as it is shown
 //   BUILDER.exportPrint(id, '3mf' | 'stl')  export box `id`'s contents for a printer (exportbox.js)
 //   BUILDER.open()    pick a file, any of the three -- it says which it is: a scene or a project
 //                     is ADDED to the open scenes, a workspace replaces everything;
@@ -92,6 +95,9 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
        -- a recorded edit, an undo, a redo, a load, another project -- so it serializes the scenes only when they
        may have changed, and never misses a change made through any of the places that edit */
     let revision = 0
+    /* ...AND A TIMELINE KEPT (keepTimeline): written with the project as an edit is, but no undo step and nothing the
+       bake waits out -- a key set changes no shader -- so counted apart from `revision`, which those two read */
+    let timelineKept = 0
 
     /* A RESTORED PROJECT, and what the renderer needs to follow it. AN EDIT INSIDE A SCENE: the scene the step
        changed becomes current -- undoing an edit made in another scene shows that scene, rather than changing
@@ -141,13 +147,19 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
         return 'live'
     }
     let shown = current           // the scene RT is showing, whatever is current
-    /* THE VIEW OF A SCENE TAKEN OUT, by its key: what an undo that brings it back gives it (a card's Delete, "Ctrl+Z
-       brings it back"). The history's text holds no view (historyText), and a project restored from it gets the views
-       of the scenes it shares with the one before (carryViews) -- not of one the step had taken out. The cameras kept
-       beside the documents until this, by the same key, were kept until a restore pruned them, so an undone delete
-       had its camera back; this keeps that. Every scene's, as it is: at each commit, load, restore and view kept. */
-    const viewMemory = new Map()
-    const remember = () => { for (const s of project.scenes) if (s.doc.view) viewMemory.set(s.key, structuredClone(s.doc.view)) }
+    /* THE VIEW AND THE TIMELINE OF A SCENE TAKEN OUT, by its key: what an undo that brings it back gives it (a card's
+       Delete, "Ctrl+Z brings it back"). The history's text holds neither (historyText, OUTSIDE_HISTORY), and a project
+       restored from it gets those of the scenes it shares with the one before (carryOutside) -- not of one the step had
+       taken out. The cameras kept beside the documents until 0.66.0, by the same key, were kept until a restore pruned
+       them, so an undone delete had its camera back; this keeps that. Every scene's, as it is: at each commit, load,
+       restore, view kept and timeline kept. Each part over what was kept of it: a scene with no timeline yet keeps the
+       one it had. */
+    const outsideMemory = new Map()
+    const memorize = (key, d) => {
+        const o = P.outsideOf(d)
+        if (Object.keys(o).length) outsideMemory.set(key, { ...outsideMemory.get(key), ...o })
+    }
+    const remember = () => { for (const s of project.scenes) memorize(s.key, s.doc) }
     remember()
     /* EACH SCENE ITS OWN VIEW: its camera and its exposure (model.js VIEW; the user, 2026-09-30: "switching between
        scenes stores and restores camera setting", and 2026-10-17: "the information should belong to the scenes").
@@ -174,7 +186,7 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
                 if (why !== viewRefused) console.warn(viewRefused = why)
             }
         }
-        if (d.view) viewMemory.set(shown, structuredClone(d.view))
+        memorize(shown, d)
     }
     RT.watchView?.(keepView)
     /* THE UNIT OF THE SCENE THE CAMERA WAS LAST IN: what a scene with no camera of its own converts it from (markShown) */
@@ -200,16 +212,36 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
         const camera = v.camera ?? (live ? M.cameraInUnit(live, cameraUnit, d.unit ?? 'm') : undefined)
         cameraUnit = d.unit ?? 'm'
         RT.applyView?.({ camera, exposure: v.exposure }, { fresh: true })
+        /* ...AND ITS TIMELINE (model.js TIMELINE), whole too: the host's panel loads it (tools/timeline.js showScene).
+           Said here, where the view changes hands, so the keys and the camera they move always belong to one scene. */
+        try { BUILDER.onTimeline?.(M.sceneTimelineOf(d)) } catch (e) { console.warn('[builder] onTimeline', e) }
     }
-    /* a scene's text as the history holds it: without its view, which a snapshot does not have (historyText) */
-    const editText = d => { const { view: _, ...rest } = d; return M.serialize(rest) }
+    /* THE TIMELINE KEPT, into the scene the renderer SHOWS, as its view is (keepView): the one the panel was handed
+       (markShown) and whose picture the keys move. Refused as one reason is said once, not at every key. */
+    let timelineRefused = null
+    const keepTimeline = t => {
+        const d = shown != null ? P.scene(project, shown)?.doc : null
+        if (!d) return false
+        try { M.setTimeline(d, t) }
+        catch (e) {
+            const why = `[builder] the timeline of '${d.title}' not kept: ${e.message}`
+            if (why !== timelineRefused) console.warn(timelineRefused = why)
+            return false
+        }
+        memorize(shown, d)
+        timelineKept++
+        return true
+    }
+    /* a scene's text as the history holds it: without its view or its timeline, which a snapshot does not have
+       (historyText) */
+    const editText = d => M.serialize(P.withoutOutside(d))
     const restore = (text, step = null, dir = 'undo') => {
         if (text == null) return null
         const before = new Map(project.scenes.map(s => [s.key, editText(s.doc)]))
         const at = P.indexOf(project, current), was = current
         remember()
         // each scene's view is the one it has now, or had when it was taken out: an undo is no move of the camera
-        project = P.carryViews(P.parse(text).project, project, viewMemory)
+        project = P.carryOutside(P.parse(text).project, project, outsideMemory)
         revision++
         const differs = s => before.get(s.key) !== editText(s.doc)
         const here = P.scene(project, current)
@@ -353,7 +385,7 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
             /* its scenes' views are in them, and none of the old project's: the keys are the file's now. What the
                renderer shows is the old project's scene until the next apply, so nothing is "shown" */
             shown = null
-            viewMemory.clear()
+            outsideMemory.clear()
             const unknown = RT.applySettings?.(r.workspace.renderer) || []
             if (unknown.length) console.warn(`[builder] workspace settings this renderer does not have, ignored: ${unknown.join(', ')}`)
             said = `opened a workspace of ${project.scenes.length} scene(s)`
@@ -528,9 +560,25 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
         get project() { return project },
         /** One more for every state the project has been in (see `revision` above). */
         get revision() { return revision },
+        /** WHAT THE AUTOSAVE LOOKS AT (workspace/autosave.js): `revision`, and one more for every timeline kept -- saved
+         *  as an edit is, so a key set is in the project within the second and makes a second tab's copy, without
+         *  being an undo step or an edit the bake waits out (`timelineKept` above). */
+        get saveRevision() { return `${revision}.${timelineKept}` },
         /** Every scene's view: { key: view }, what the browser's session keeps between the project's writes. The one
          *  shown is written as it changes (keepView), so this is it as it is now. */
         views: () => P.viewsOf(project),
+        /** THE TIMELINE OF THE SCENE SHOWN, whole (model.js sceneTimelineOf): the one the panel holds, as the camera is.
+         *  The defaults while the renderer shows none of the project's (a workspace just opened, the safe start), when
+         *  nothing is kept (keepTimeline). */
+        timeline() {
+            const d = shown != null ? P.scene(project, shown)?.doc : null
+            return M.sceneTimelineOf(d ?? null)
+        },
+        /** Keep `t` (lib/timeline's { fps, duration, tracks, export }) as the scene shown's timeline: whole, the film's
+         *  export settings only (model.js setTimeline). False when none is shown or the model refused it. */
+        keepTimeline,
+        /** The host's: told the timeline of each scene as it is shown (markShown), whole. */
+        onTimeline: null,
         /** ANOTHER PROJECT ALTOGETHER -- one kept in the browser, opened from the list (workspace/session.js): its
          *  scenes, each with its view, and the one to work on. Its own undo history from here: undoing into the
          *  project before would write that one's scenes into this one. The renderer still shows the last
@@ -540,7 +588,7 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
             project = next
             current = P.scene(project, cur) ? cur : project.scenes[0].key
             shown = null; editing = null; missed.clear()
-            viewMemory.clear(); remember()          // another project's keys: none of the last one's views
+            outsideMemory.clear(); remember()       // another project's keys: none of the last one's views or timelines
             history.reset(P.historyText(project))
             revision++
             onDoc(doc())
@@ -826,7 +874,7 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
         reset() {
             const was = current
             project = P.parse(startup).project; current = project.scenes[0].key
-            viewMemory.clear()          // the startup project's keys are handed out again from here
+            outsideMemory.clear()          // the startup project's keys are handed out again from here
             history.commit(P.historyText(project), null, { scenes: 'reset', was, current }); revision++; remember(); onDoc(doc()); return doc()
         },
         /** Break it on purpose. This is the demonstration, not a convenience. */
