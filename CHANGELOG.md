@@ -15,6 +15,42 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.67.1 — 2026-10-17
+
+**A scene card dragged or clicked while the cards redraw is no longer lost** (you: "fix the flaky card-drag check").
+`projects.check`'s card drag failed about one run in two, on `main` too. It had two causes, and one of them is the
+application's.
+
+**The strip** (`builder/scenestrip.js`) redraws its cards whenever what they show changes: a picture taken, a compile
+begun or ended, any edit, found by its look four times a second. A card replaced under the mouse lost what the mouse was
+doing with it. Measured headless in Chromium (Playwright 1.56.1, in the container):
+- A card dragged onto another, with the cards redrawn between the move and the release, gave 0 of 6 reordered. Each try
+  was on a fresh page. Not redrawn, 6 of 6 reordered.
+- A click on another card, redrawn between its press and its release, chose nothing 6 times of 6.
+
+Now, from a press on a card, the redraw waits. It is made at the release, once the click is made. If the press started a
+drag, it is made when the drag is over, since a drag swallows the release. With that, 6 of 6 of each. A redraw just
+after the press, before the drag starts, lost nothing even before (6 of 6).
+
+**The check** (`workspace/test/projects.check.mjs`):
+- **Drags by the mouse itself**: press on whatever card is under it, move, release. Playwright's `dragAndDrop` finds the
+  card first and presses after. A card redrawn in between had its press held back by Playwright: a `pointerdown` and
+  no `mousedown`, then a drag Playwright started and did not follow. Measured with the strip redrawn on the hover, in
+  four sets of 6 tries: 6, 4, 4 and 2 reordered. Every failure was that one, on the old strip and this one. In the check, the redraw was the scene removed just before the
+  drag, which the strip's next look draws.
+- **Waits for what it needs**: for the cards to show the project's scenes before a drag, and for the order after it,
+  not a fixed 100 ms.
+- **New steps** redraw the cards in the middle of a drag, and between a click's press and its release. They fail on
+  the old strip.
+- Run 10 times in a row: every run passed.
+
+**What to look at:**
+- Drag a card onto another just after an edit, or while a picture of a scene is coming in. It goes before the other,
+  and the cards show the new order once you let go.
+- Click another card just as its picture arrives. It is chosen, and shows in Properties.
+- Hold the mouse down on a card. The cards do not change under it until you let go: a picture arriving then appears
+  on the release.
+
 ## 0.67.0 — 2026-10-17
 
 **Each scene keeps its own timeline.** You asked whether the animation timeline's settings could be part of a scene,

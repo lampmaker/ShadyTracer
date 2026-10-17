@@ -158,13 +158,65 @@ r = await p.evaluate(() => { const was = CHECK.BUILDER.undo(); return { was, tit
 ok('...an undo brings it back and stays on the scene worked on: nothing to compile', JSON.stringify(r.titles) === '["Builder demo","Lens v2","Lens v2 copy"]'
     && r.cur === 'Builder demo' && r.was === 'live', JSON.stringify(r))
 await p.evaluate(() => CHECK.tree.sceneOps.remove(CHECK.BUILDER.project.scenes[2].key))
-// DRAGGED, the cards reorder
-await p.dragAndDrop(`${card('Lens v2')} .shell-scene-title`, `${card('Builder demo')} .shell-scene-title`)
-await p.waitForTimeout(100)
+/* DRAGGED, the cards reorder -- by the mouse itself, pressed on whatever card is under it (0.67.1). Playwright's
+   dragAndDrop finds the card first and presses after, and a card redrawn in between (here: the remove just above, drawn
+   by the strip's next look) has the press held back as one another element would receive: a pointerdown and no
+   mousedown, then a drag that Playwright starts and does not follow, so no drop. Measured headless, the strip redrawn
+   on the hover, four sets of 6: 6, 4, 4 and 2 reordered, every failure that one, on the old strip and the new. A user's
+   press has no such step. The drag waits for the cards to
+   show the project's scenes, and the order is waited for as an order: a fixed 100 ms was no wait for anything. */
+const shown = () => p.waitForFunction(() => [...document.querySelectorAll('.shell-scene-card .shell-scene-title')].map(e => e.textContent).join()
+    === CHECK.BUILDER.project.scenes.map(s => s.doc.title).join(), null, { timeout: 3000 }).catch(() => { })
+const centre = async sel => {               // a card redrawn while it is measured is measured again
+    for (let i = 0; i < 20; i++) {
+        const b = await p.locator(sel).boundingBox({ timeout: 1000 }).catch(() => null)
+        if (b) return { x: b.x + b.width / 2, y: b.y + b.height / 2 }
+        await p.waitForTimeout(50)
+    }
+    throw new Error(`${sel}: not on the page`)
+}
+const drag = async (from, to, during = null) => {
+    await shown()
+    const a = await centre(`${card(from)} .shell-scene-title`), z = await centre(`${card(to)} .shell-scene-title`)
+    await p.mouse.move(a.x, a.y)
+    await p.mouse.down()
+    await p.mouse.move(z.x, z.y, { steps: 5 })
+    if (during) await p.evaluate(during)
+    await p.mouse.up()
+}
+const order = want => p.waitForFunction(w => JSON.stringify(CHECK.BUILDER.project.scenes.map(s => s.doc.title)) === w, JSON.stringify(want),
+    { timeout: 3000 }).catch(() => { })
+await drag('Lens v2', 'Builder demo')
+await order(['Lens v2', 'Builder demo'])
 ok('a card dragged onto another: before it', JSON.stringify(await titles()) === '["Lens v2","Builder demo"]', JSON.stringify(await titles()))
-await p.dragAndDrop(`${card('Builder demo')} .shell-scene-title`, `${card('Lens v2')} .shell-scene-title`)
-await p.waitForTimeout(100)
+await drag('Builder demo', 'Lens v2')
+await order(['Builder demo', 'Lens v2'])
 ok('...and back', JSON.stringify(await titles()) === '["Builder demo","Lens v2"]', JSON.stringify(await titles()))
+/* ...AND WHEN THE CARDS ARE REDRAWN UNDER THE MOUSE (0.67.1): the strip redraws them when what they show changes -- an
+   edit, a picture taken -- and a card replaced under a drag was a drag lost, and under a click a click lost
+   (scenestrip.js `held`). Redrawn between the move and the release: 0 drags of 6 reordered before; between the press
+   and the release, 6 clicks of 6 chose nothing. */
+await drag('Lens v2', 'Builder demo', () => CHECK.strip.refresh())
+await order(['Lens v2', 'Builder demo'])
+ok('a card dragged while the cards are redrawn: it still goes before the other', JSON.stringify(await titles()) === '["Lens v2","Builder demo"]', JSON.stringify(await titles()))
+await shown()
+ok('...and the redraw it held is made once the drag is over: the cards in the new order',
+    (await p.$$eval('.shell-scene-card .shell-scene-title', e => e.map(x => x.textContent))).join() === 'Lens v2,Builder demo')
+await drag('Builder demo', 'Lens v2', () => CHECK.strip.refresh())
+await order(['Builder demo', 'Lens v2'])
+ok('...and back', JSON.stringify(await titles()) === '["Builder demo","Lens v2"]', JSON.stringify(await titles()))
+{
+    await shown()
+    const at = await centre(`${card('Lens v2')} .shell-scene-title`)
+    await p.mouse.move(at.x, at.y)
+    await p.mouse.down()
+    await p.evaluate(() => CHECK.strip.refresh())
+    await p.mouse.up()
+    await p.waitForFunction(() => CHECK.strip.selected() != null, null, { timeout: 2000 }).catch(() => { })
+    r = await p.evaluate(() => ({ sel: CHECK.strip.selected(), want: CHECK.BUILDER.project.scenes[1].key }))
+    ok('a card clicked while the cards are redrawn: chosen', r.sel === r.want, JSON.stringify(r))
+    await p.evaluate(() => CHECK.strip.select(null))
+}
 // FOLDED: one line, which names the open scene
 await p.click('.shell-scenes-fold')
 r = { line: await line(), shown: await p.$eval('.shell-scenes-cards', e => !e.hidden && e.offsetHeight > 0) }
