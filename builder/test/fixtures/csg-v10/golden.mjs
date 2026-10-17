@@ -110,6 +110,13 @@
 // A DOCUMENT ADDED (2026-10-16, 0.62.0): scenes/dusty-beam.json, the haze box's example (scenes/make.mjs). Codegen learnt
 // the haze box (a comment and its transform's uniform, as an export box; the scene's `haze` beside the text), and the
 // freeze added that entry and moved no other document's -- every one before it emits what it did.
+//
+// REFROZEN FOR ONE SCENE (2026-10-17, 0.65.0), for an agreed change (the user: "the checker material, use a smoothstep
+// and sin function instead"): the library's checker is a wave with a softness and a level, and scenes/depth-of-field.json
+// carries it (scenes/make.mjs). No codegen change. Checked before freezing, its texts old against new, both modes: the
+// only lines that left were the old checker's four, the only lines that came were the new checker's and the aliases of
+// its two new parameters (`let softness = UB.softness_m1;`, `let level = UB.level_m1;`), and its uniforms gained exactly
+// those two. The freeze changed that scene's entries alone, key by key; the other 47 documents did not move.
 //======================================================================================================================
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
