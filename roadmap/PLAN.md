@@ -15,6 +15,29 @@ order of that work): `ARCHITECTURE.md`, beside this file (2026-10-04). **Media**
 photon map, scattering inside materials, an Optics-view beam view -- has its own: `MEDIA.md`, beside this file
 (2026-10-16).
 
+## Each scene its own camera, exposure and tolerance — built 2026-10-17 (0.66.0), NOT yet seen
+
+The user (2026-10-17): camera settings and exposure "can vary per scene ... the information should belong to the
+scenes. Because switching between scenes almost always causes the camera and exposure to be wrong"; collapsible camera
+and exposure segments on the scene's row, where they could be flagged animated; and what the surface tolerance does on a
+switch. Decided with the user: the whole Exposure group per scene; the tolerance a scene setting; the environment pushed
+whole too; no undo step for a camera or an exposure change. And "review every single example scene".
+
+**What was wrong (read in code):** the builder kept a camera per scene beside the documents and put back only the fields
+it had (an example's has no field of view, no projection, no lens: those were the last scene's); the exposure was one for
+the project; a tolerance typed in the Renderer panel was every scene's; an example named three of its environment's
+settings, the rest the last scene's. **The fix:** `doc.view` (`builder/model.js` VIEW), whole when read; written as it
+changes into the scene shown (`demo.js` keepView, the renderer's `watchView`); out of the history (`project.js`
+historyText); old projects read into it (`adoptViews`). `doc.tolerance`, the scene's, carried as `UB.epsAuto`
+(`photometry.js` sceneEps), so the optics trace follows it. The environment pushed whole (`model.js` environmentOf).
+The review of the 24 examples (sizes, cameras, tolerances, worked from the files; nothing rendered): Office lighting's
+camera stood outside the room, behind its wall; Lighting a room's field was 40 degrees at 1.4 m (65 now); Glass and
+liquid's water sits 10 um inside its glass under an 80 um tolerance (2 um now); the parabolic reflector's tolerance was
+0.47 mm, set by its 2 m wall (5 um now). Checked without a GPU: model, project, store, scenes, animate, edit tests;
+panel, projects, item editor and renderer checks headless. **Not seen on hardware.**
+
+**What to look at** (the user, on hardware): CHANGELOG.md, 0.66.0.
+
 ## Dust in the air: a haze box — built 2026-10-16 (0.62.0), seen working by the user
 
 The user (2026-10-16): "dust particles in the air. Should be realistic and a way to visualise rays", perhaps only in a

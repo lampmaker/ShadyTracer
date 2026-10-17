@@ -197,7 +197,8 @@ export function sceneParams(doc, hooks = {}) {
     const base = () => { try { return hooks.environment?.() || {} } catch { return {} } }
     for (const [k, sp] of Object.entries(M.ENVIRONMENT)) {
         const vec = String(sp.type).startsWith('vec3')
-        const now = () => doc.environment?.[k] ?? base()[k] ?? sp.def
+        // the scene's whole environment (model.js environmentOf: what it leaves out is the default), else the renderer's
+        const now = () => (M.environmentOf(doc) ?? base())[k] ?? sp.def
         const { label = k, min, max, step, options } = sp.gui
         out.push({ path: `scene/environment/${k}`, label: `Environment › ${label}`, group: 'scene · Environment',
                    reveal: reveal(M.ENVIRONMENT_ID), min, max, step, options, dims: vec ? 3 : 1,
@@ -209,6 +210,17 @@ export function sceneParams(doc, hooks = {}) {
     const flagged = new Set(M.animatedPaths(doc))           // once: an entry each asking the tree would be entries x nodes
     for (const e of out) if (e.kind !== 'structural' && flagged.has(e.path)) e.animated = true
     return out
+}
+
+/**
+ * THE VIEW'S ENTRIES AS THE SCENE FLAGS THEM (0.66.0): the renderer's camera and exposure entries (lib/pathtracer/
+ * params.js view/camera, view/exposure) marked `animated` where the scene being edited flags them (model.js
+ * setAnimated, kept on its root at the renderer's own paths). Unmarked, they left the timeline's + track and the
+ * Parameters panel whenever any scene value was flagged (lib/shell/params.js onlyAnimated). The others as they are.
+ */
+export function viewEntriesFlagged(entries, doc) {
+    const flagged = new Set((doc?.root?.animate || []).filter(k => String(k).startsWith('view/')))
+    return flagged.size ? entries.map(e => flagged.has(e.path) ? { ...e, animated: true } : e) : entries
 }
 
 /**

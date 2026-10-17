@@ -23,28 +23,40 @@ import { ITEM_FILES, itemUrl } from '../items/index.js'
 
 const home = M.createDoc({ title: 'my scene' })
 M.addObject(home, 'root', { primitive: 'box' })
+// its view its own (builder/model.js VIEW, 0.66.0): looked at from 99 off, the exposure set by hand
+M.setView(home, { camera: { mode: 'orbit', distance: 99 }, exposure: { autoExposure: 0 } })
 const T = { commits: 0, applied: 0, opened: [], said: [], selected: [] }
 const project = P.createProject([home, M.createDoc({ title: 'second' })])
 let current = project.scenes[0].key, E = null
 const R = { values: { envMode: 1, autoExposure: 0 }, camera: { mode: 'orbit', distance: 99 } }
-/* EACH SCENE ITS OWN CAMERA, as builder/demo.js markShown keeps them: apply() leaves the scene it showed with
-   its camera and puts back the one it shows now, before the host's onScene (the item editor's shown) */
-const cams = new Map()
+/* EACH SCENE ITS OWN VIEW (builder/model.js VIEW, 0.66.0), as builder/demo.js markShown keeps it: apply() leaves the
+   scene it showed with the view it had and puts back the whole view of the one it shows now, before the host's onScene
+   (the item editor's shown) */
+const viewNow = () => ({ camera: structuredClone(R.camera), exposure: { autoExposure: R.values.autoExposure } })
 let shown = current
 const BUILDER = {
     model: M, projectModel: P, project,
     get current() { return current }, use(k) { current = k },
     get doc() { return P.scene(project, current).doc },
     commit() { T.commits++ }, live() { return false },
-    cameraOf: k => structuredClone(cams.get(k) ?? null),
+    cameraOf: k => structuredClone(P.scene(project, k)?.doc.view?.camera ?? null),
     async apply() {
         T.applied++
-        if (shown !== current) { cams.set(shown, structuredClone(R.camera)); shown = current; if (cams.has(current)) R.camera = structuredClone(cams.get(current)) }
+        if (shown !== current) {
+            const left = P.scene(project, shown)?.doc
+            if (left) M.setView(left, viewNow())
+            shown = current
+            const v = M.sceneViewOf(P.scene(project, current).doc)
+            if (v.camera) R.camera = v.camera
+            R.values.autoExposure = v.exposure.autoExposure
+        }
         E?.shown(); return { ok: true }
     },
 }
 const RT = { get: () => structuredClone(R.values), set: v => { Object.assign(R.values, v); return [] },
-             settings: () => ({ camera: structuredClone(R.camera) }), applySettings: ({ camera }) => { if (camera) R.camera = camera; return [] } }
+             settings: () => ({ camera: structuredClone(R.camera) }), applySettings: ({ camera }) => { if (camera) R.camera = camera; return [] },
+             // the view as the real renderer takes it (lib/pathtracer/index.js): the camera only in the fields given
+             applyView: ({ camera, exposure } = {}) => { if (camera) Object.assign(R.camera, structuredClone(camera)); if (exposure) Object.assign(R.values, exposure) } }
 const SHELL = { open: id => T.opened.push(id), isOpen: () => true, dock: { getPanel: () => ({ api: { isVisible: true } }) } }
 const say = t => T.said.push(t)
 const tree = installBuilderTree(document.getElementById('t'), BUILDER, { onStatus: say, onSelect: id => T.selected.push(id),

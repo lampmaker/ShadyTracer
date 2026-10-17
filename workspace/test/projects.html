@@ -37,11 +37,16 @@ import { installItemEditor } from '../../library/edit.js'
 
 const T = { applied: [], said: [], downloads: [], nextFile: null, selected: [], files: [], cards: [], opened: [], work: 0, removed: [] }
 const say = t => T.said.push(t)
-// THE RENDERER, stood in: its settings are values and a camera
+// THE RENDERER, stood in: its settings are values and a camera; its view (0.66.0) the camera and the exposure, put back
+// as the real one puts them back -- the camera only in the fields given (lib/pathtracer/index.js applyCamera)
 const R = { values: { autoExposure: 0, exposure: 1 }, camera: { mode: 'orbit', azimuth: 40, elevation: 70, distance: 20 } }
+const watchers = new Set(), told = () => watchers.forEach(f => f())
 const RT = { scene: null,
     settings: () => ({ values: structuredClone(R.values), camera: structuredClone(R.camera), size: { mode: 'fit' } }),
-    applySettings: ({ values = {}, camera } = {}) => { Object.assign(R.values, values); if (camera) R.camera = structuredClone(camera); return [] },
+    applySettings: ({ values = {}, camera } = {}) => { Object.assign(R.values, values); if (camera) Object.assign(R.camera, structuredClone(camera)); told(); return [] },
+    view: () => ({ camera: structuredClone(R.camera), exposure: { autoExposure: R.values.autoExposure ?? 1 } }),
+    applyView: ({ camera, exposure } = {}) => { if (camera) Object.assign(R.camera, structuredClone(camera)); if (exposure) Object.assign(R.values, exposure); told() },
+    watchView: f => (watchers.add(f), () => watchers.delete(f)),
     set: v => { Object.assign(R.values, v); return [] }, get: () => structuredClone(R.values) }
 const demo = () => {
     const d = P.blankScene('Builder demo')
@@ -56,13 +61,13 @@ let local = null
 try { local = localStorage } catch { }
 const AUTOSAVE = createAutosave({ store, local, say,
     read: () => ({ revision: BUILDER.revision, project: BUILDER.project,
-        session: { current: BUILDER.current, renderer: RT.settings(), cameras: BUILDER.cameras(), item: E?.remember() ?? null } }),
+        session: { current: BUILDER.current, renderer: P.rendererSettings(RT.settings()), views: BUILDER.views(), item: E?.remember() ?? null } }),
     onCreated: m => SESSION.adopt(m) })
 const SESSION = createSession({ store, tabs: createTabs(), autosave: AUTOSAVE, say,
     firstVisit: async () => P.createProject([demo()]), apply: (w, item) => showProject(w, item) })
 await recoverAll(store, local)
 const START = await SESSION.start()
-BUILDER = installBuilder(window, { RT, gpu: null, project: START.workspace.project, current: START.workspace.current, cameras: START.workspace.cameras,
+BUILDER = installBuilder(window, { RT, gpu: null, project: START.workspace.project, current: START.workspace.current,
     onDoc: () => { tree?.rebuild(); E?.sync(); strip?.refresh() } })           // as the page's onDoc
 /* NO GPU: a compile is the stand-in's -- the scene counts as shown, as the end of setScene makes it, and the item
    editor told, as the page's onScene tells it */
@@ -120,7 +125,7 @@ const menu = {
     choose: (id, label) => { const x = menu.items(id).find(i => i.label === label); return x && !x.off ? x.run() : null },
 }
 showProject = async (w, item) => {
-    BUILDER.replace({ project: w.project, current: w.current, cameras: w.cameras })
+    BUILDER.replace({ project: w.project, current: w.current })
     tree.select(null)
     RT.applySettings(w.renderer || {})
     await E.adopt(item)
@@ -132,7 +137,7 @@ await E.adopt(START.item)
 AUTOSAVE.since()
 setInterval(() => AUTOSAVE.tick(), 150)          // the page's is a second; a check waits less
 window.addEventListener('pagehide', () => { AUTOSAVE.flush(); AUTOSAVE.tick() })
-window.CHECK = { M, P, T, R, BUILDER, tree, strip, view, menu, pics, importFile, SESSION, AUTOSAVE, E, library, store, START,
+window.CHECK = { M, P, T, R, RT, BUILDER, tree, strip, view, menu, pics, importFile, SESSION, AUTOSAVE, E, library, store, START,
     rows: () => [...document.querySelectorAll('#t .treeview-node')].map(n => n.querySelector('.treeview-label')?.textContent.trim()) }
 </script>
 </body>

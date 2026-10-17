@@ -89,24 +89,56 @@ throws('and so is broken JSON', () => P.parse('{'), /JSON/)
 }
 
 {
-    // a workspace: the project, the current scene, and the renderer's settings, whatever they are
-    const settings = { values: { sunIlluminance: 90000, tint: [1, 0.9, 0.8] }, camera: { mode: 'orbit', azimuth: 12 } }
+    // a workspace: the project, the current scene, and the renderer's settings, whatever they are -- but what each
+    // scene has of its own (0.66.0): the camera, the exposure and the tolerance are in the scenes (model.js VIEW)
+    const settings = { values: { sunIlluminance: 90000, tint: [1, 0.9, 0.8], exposureEV: 9, eps: 0 }, camera: { mode: 'orbit', azimuth: 12 }, size: { mode: 'fit' } }
     const w = P.parse(P.serializeWorkspace(p, p.scenes[1].key, settings)).workspace
     ok('a workspace round-trips its project', w && P.serialize(w.project) === P.serialize(p))
     eq('and which scene was current', w.current, p.scenes[1].key)
-    eq('and the renderer settings, as they were given', w.renderer, settings)
+    eq('and the renderer settings, without the camera, the exposure or the tolerance', w.renderer,
+        { size: { mode: 'fit' }, values: { sunIlluminance: 90000, tint: [1, 0.9, 0.8] } })
     const lost = JSON.parse(P.serializeWorkspace(p, 's999', {}))
     eq('a current scene it does not have falls back to the first', P.parse(JSON.stringify(lost)).workspace.current, p.scenes[0].key)
     const noRenderer = JSON.parse(P.serializeWorkspace(p, 's1')); noRenderer.renderer = 3
     throws('renderer settings that are not an object are refused', () => P.parse(JSON.stringify(noRenderer)), /renderer settings/)
     const badInside = JSON.parse(P.serializeWorkspace(p, 's1')); badInside.project.scenes[0].doc.nextId = 0
     throws('and so is a workspace whose project is unsound', () => P.parse(JSON.stringify(badInside)), /nextId/)
-    // each scene's camera (demo.js keeps one per scene): kept for the scenes it has, and optional
-    const cams = { [p.scenes[0].key]: { mode: 'orbit', distance: 7 }, s999: { distance: 1 }, [p.scenes[1].key]: 3 }
-    eq('a workspace keeps each scene\'s camera, for scenes it has', P.parse(P.serializeWorkspace(p, 's1', {}, cams)).workspace.cameras,
-        { [p.scenes[0].key]: { mode: 'orbit', distance: 7 } })
-    const old = JSON.parse(P.serializeWorkspace(p, 's1', {})); delete old.cameras
-    eq('...and one written before there were any opens with none', P.parse(JSON.stringify(old)).workspace.cameras, {})
+    ok('...and writes no cameras beside the scenes: each scene\'s is in it', !('cameras' in JSON.parse(P.serializeWorkspace(p, 's1', settings))))
+    /* A WORKSPACE WRITTEN BEFORE 0.66.0: each scene's camera beside the project, one exposure and one tolerance in its
+       renderer settings -- read into the scenes (project.js adoptViews) */
+    const before = JSON.parse(P.serializeWorkspace(P.createProject([M.createDoc({ title: 'P' }), Object.assign(M.createDoc({ title: 'Q' }), { unit: 'mm' })]), 's2', {}))
+    before.cameras = { s1: { mode: 'orbit', distance: 7, aspect: 1.5 }, s999: { distance: 1 }, s2: 3 }
+    before.renderer = { values: { exposureEV: 9, autoExposure: 0, toneMap: 2, eps: 2e-6, maxbounce: 12 }, camera: { mode: 'orbit', distance: 20 } }
+    const ow = P.parse(JSON.stringify(before)).workspace
+    const [op, oq] = ow.project.scenes.map(s => s.doc)
+    eq('an old workspace\'s camera goes into its scene, with only a camera\'s own settings', op.view?.camera, { mode: 'orbit', distance: 7 })
+    ok('...none for a scene it gave none (or no object)', !oq.view?.camera)
+    eq('...its exposure into every scene: it was every scene\'s', [op.view?.exposure, oq.view?.exposure],
+        [{ exposureEV: 9, autoExposure: 0, toneMap: 2 }, { exposureEV: 9, autoExposure: 0, toneMap: 2 }])
+    eq('...its typed tolerance into the scene being worked on, in its unit (2 um in mm)', [op.tolerance, oq.tolerance], [undefined, 0.002])
+    eq('...and the renderer\'s settings are what is left', ow.renderer, { values: { maxbounce: 12 } })
+    ok('...no cameras left beside them', !('cameras' in ow))
+    // A SESSION'S VIEWS (workspace/store.js workspaceText): newer than the documents, so they win
+    const sess = JSON.parse(P.serializeWorkspace(P.createProject([M.setView(M.createDoc({ title: 'R' }), { camera: { distance: 3 } })]), 's1', {}))
+    sess.views = { s1: { camera: { distance: 5 }, exposure: { exposureEV: 4 } } }
+    eq('a session\'s view is the one a scene comes back with', P.parse(JSON.stringify(sess)).workspace.project.scenes[0].doc.view,
+        { camera: { distance: 5 }, exposure: { exposureEV: 4 } })
+    sess.views = { s1: { camera: { distance: -1 } } }
+    eq('...one that is not sound is left out, and the project still opens', P.parse(JSON.stringify(sess)).workspace.project.scenes[0].doc.view, { camera: { distance: 3 } })
+}
+{
+    // THE HISTORY'S TEXT holds no view: looking is not an edit (project.js historyText)
+    const h = P.createProject([M.setView(M.createDoc({ title: 'H' }), { camera: { distance: 3 }, exposure: { exposureEV: 4 } })])
+    ok('the history\'s text has no view', !P.historyText(h).includes('"view"') && P.serialize(h).includes('"view"'))
+    const back = P.carryViews(P.parse(P.historyText(h)).project, h)
+    eq('...and a snapshot restored gets each scene\'s view back by its key', back.scenes[0].doc.view, h.scenes[0].doc.view)
+    const dup = P.duplicateScene(h, 's1')
+    eq('a duplicate comes with the view', dup.doc.view, h.scenes[0].doc.view)
+    ok('...and a scene file too', JSON.parse(P.serializeScene(h, 's1')).view?.camera?.distance === 3)
+    eq('a new scene comes with the close view, whole', M.sceneViewOf(P.blankScene()).camera,
+        { ...M.CAMERA_DEFAULTS, ...P.NEW_SCENE_CAMERA })
+    eq('the renderer\'s settings as a project keeps them', P.rendererSettings({ values: { exposureEV: 1, contrast: 0.2, eps: 1e-5, maxbounce: 3 }, camera: {}, size: { scale: 1 } }),
+        { size: { scale: 1 }, values: { maxbounce: 3 } })
 }
 {
     // importing: scenes from a file join the open project, after a given scene, with titles kept apart
@@ -211,62 +243,146 @@ throws('and so is broken JSON', () => P.parse('{'), /JSON/)
     } finally { console.warn = warn; console.log = log }
 }
 
+/* A STAND-IN RENDERER WITH A VIEW (0.66.0, lib/pathtracer/index.js view, applyView, watchView): it puts a camera back
+   ONLY IN THE FIELDS IT IS GIVEN, as the real one does (applyCamera) -- the stand-in these tests had replaced the whole
+   camera, so a camera put back without its field of view, which kept the last scene's, could not fail them. A drag
+   (move) tells its watchers, as the camera's onChange does. */
+const standIn = (cam0, exposure0 = { exposureEV: 15, autoExposure: 1 }) => {
+    const R = { cam: structuredClone(cam0), exposure: structuredClone(exposure0), fresh: 0 }
+    const watchers = new Set(), tell = () => watchers.forEach(f => f())
+    R.RT = {
+        view: () => ({ camera: structuredClone(R.cam), exposure: structuredClone(R.exposure) }),
+        applyView: ({ camera, exposure } = {}, { fresh = false } = {}) => {
+            if (camera) Object.assign(R.cam, structuredClone(camera))
+            if (exposure) Object.assign(R.exposure, exposure)
+            if (fresh) R.fresh++
+            tell()
+        },
+        watchView: f => (watchers.add(f), () => watchers.delete(f)),
+        settings: () => ({ values: { maxbounce: 10, eps: 0, ...R.exposure }, camera: structuredClone(R.cam), size: { mode: 'fit' } }),
+        applySettings: () => [],
+    }
+    R.move = patch => { Object.assign(R.cam, patch); tell() }
+    return R
+}
 {
-    /* EACH SCENE ITS OWN CAMERA (the user, 2026-09-30): kept when a scene is left, put back when it is shown
-       again (demo.js markShown, which apply() calls after setScene) -- over a stand-in renderer's camera */
+    /* EACH SCENE ITS OWN VIEW (the user, 2026-09-30 and 2026-10-17): its camera and its exposure, in its document,
+       written as they change into the scene shown, put back whole when it is shown again (demo.js markShown, which
+       apply() calls after setScene) */
     const { installBuilder } = await import('../demo.js')
-    let cam = { mode: 'orbit', distance: 5, azimuth: 30 }
+    const R = standIn({ mode: 'orbit', distance: 5, azimuth: 30, fov: 25, aperture: 8, focus: 0 })
     let saved = null
-    const RT = { settings: () => ({ camera: structuredClone(cam) }), applySettings: s => { if (s.camera) cam = structuredClone(s.camera); return [] } }
     const realDoc = globalThis.document
     globalThis.document = { createElement: () => ({ click() { } }) }
     const realURL = URL.createObjectURL
     URL.createObjectURL = blob => { saved = blob; return 'blob:x' }
     const log = console.log; console.log = () => { }
     try {
-        const B = installBuilder({}, { RT, project: P.createProject([M.createDoc({ title: 'A' }), M.createDoc({ title: 'B' }), M.createDoc({ title: 'C' })]) })
+        // B: an example's camera as examples.js had it -- no field of view, no lens; C none at all
+        const docB = M.setView(M.createDoc({ title: 'B' }), { camera: { mode: 'orbit', target: [0, 0, 0], azimuth: -60, elevation: 65, distance: 330, dimensions: 330 },
+                                                            exposure: { exposureEV: 9, autoExposure: 0 } })
+        const B = installBuilder({}, { RT: R.RT, project: P.createProject([M.createDoc({ title: 'A' }), docB, M.createDoc({ title: 'C' })]) })
         const [a, b, c] = B.project.scenes.map(s => s.key)
+        eq('the scene the renderer starts on keeps the view there is, and has it now', B.cameraOf(a)?.distance, 5)
+        R.move({ distance: 6 })
+        eq('a move is written into the scene shown, as it happens', B.cameraOf(a)?.distance, 6)
+        ok('...and is no edit: nothing to undo, no revision', !B.canUndo && B.revision === 0)
+        ok('...an edit after it records no move either', !B.commit() && !B.canUndo)
         B.use(b); B.markShown()
-        eq('a scene shown for the first time keeps the view as it is', cam.distance, 5)
-        cam.distance = 150                          // looked at B from elsewhere
+        eq('B shown: its camera', [R.cam.distance, R.cam.azimuth], [330, -60])
+        eq('...WHOLE: what it leaves out is the default, not what A was seen with (A\'s field of view, its open lens)',
+            [R.cam.fov, R.cam.aperture, R.cam.camtype], [40, 0, 0])
+        eq('...and its exposure', [R.exposure.exposureEV, R.exposure.autoExposure], [9, 0])
+        ok('...the meter started again: another picture', R.fresh === 1)
+        R.move({ distance: 150 })                       // looked at B from elsewhere
         B.use(a); B.markShown()
-        eq('back to A: the camera A was left with', cam.distance, 5)
+        eq('back to A: the camera A was left with, its own field and lens', [R.cam.distance, R.cam.fov, R.cam.aperture], [6, 25, 8])
+        eq('...and A\'s exposure, the defaults: it set none', [R.exposure.exposureEV, R.exposure.autoExposure], [15, 1])
         B.use(b); B.markShown()
-        eq('back to B: B\'s', cam.distance, 150)
-        eq('...which the builder can say', [B.cameraOf(a)?.distance, B.cameraOf(c)], [5, null])
+        eq('back to B: B\'s', R.cam.distance, 150)
+        eq('...which the builder can say', [B.cameraOf(a)?.distance, B.cameraOf(b)?.distance, B.cameraOf(c)], [6, 150, null])
+        const n = R.fresh
         B.markShown()
-        eq('marking the scene already showing changes nothing', cam.distance, 150)
+        ok('marking the scene already showing changes nothing', R.cam.distance === 150 && R.fresh === n)
+        // an undo is no move of the camera
+        M.addObject(B.doc, 'root', { primitive: 'sphere' }); B.commit()
+        R.move({ distance: 77 })
+        B.undo()
+        eq('an undo leaves the camera where it is, and the scene keeps it', [R.cam.distance, B.cameraOf(b)?.distance], [77, 77])
         B.saveWorkspace('w.json')
-        const text = await saved.text()
-        eq('a workspace saves each scene\'s camera, the one showing as it is', Object.fromEntries(Object.entries(JSON.parse(text).cameras).map(([k, v]) => [k, v.distance])),
-            { [a]: 5, [b]: 150 })
-        cam.distance = 1
+        const text = await saved.text(), file = JSON.parse(text)
+        eq('a workspace has each scene\'s view in it, the one showing as it is', file.project.scenes.map(s => s.doc.view?.camera?.distance), [6, 77, undefined])
+        ok('...and no camera or exposure among the renderer\'s settings', !file.renderer.camera && !('exposureEV' in file.renderer.values) && !('eps' in file.renderer.values)
+            && file.renderer.values.maxbounce === 10, JSON.stringify(file.renderer))
+        eq('the views the session keeps', Object.keys(B.views()), [a, b])
+        R.move({ distance: 1 })
         B.load(text); B.markShown()
-        eq('opened again, its current scene is seen from where it was', cam.distance, 150)
+        eq('opened again, its current scene is seen from where it was', R.cam.distance, 77)
         B.use(a); B.markShown()
-        eq('...and so is the other', cam.distance, 5)
+        eq('...and so is the other', R.cam.distance, 6)
     } finally { globalThis.document = realDoc; URL.createObjectURL = realURL; console.log = log }
 }
 {
-    /* A NEW SCENE IS SEEN FROM CLOSE BY (the user, 2026-10-02), the first time it is shown: a scene blankScene made,
-       and only that -- an empty scene loaded keeps the view, as above */
+    /* A SCENE DELETED AND BROUGHT BACK BY UNDO keeps its view (a card's "Delete (Ctrl+Z brings it back)"): the history's
+       text holds no view, so the project restored from it takes each scene's from the one before (carryViews) -- and a
+       scene the step had taken out from the builder's memory of it, by key, as the cameras kept beside the documents
+       until this branch were kept until a restore pruned them */
     const { installBuilder } = await import('../demo.js')
-    let cam = { mode: 'orbit', distance: 150, azimuth: 30 }
-    const RT = { settings: () => ({ camera: structuredClone(cam) }), applySettings: s => { if (s.camera) cam = structuredClone(s.camera); return [] } }
+    const R = standIn({ mode: 'orbit', distance: 5, azimuth: 30 })
     const log = console.log; console.log = () => { }
     try {
-        const B = installBuilder({}, { RT, project: P.createProject([M.createDoc({ title: 'A' })]) })
+        const kept = M.setView(M.createDoc({ title: 'kept' }), { camera: { mode: 'orbit', distance: 42, azimuth: -10 }, exposure: { exposureEV: 7 } })
+        const B = installBuilder({}, { RT: R.RT, project: P.createProject([M.createDoc({ title: 'A' }), kept]) })
+        const [a, k] = B.project.scenes.map(s => s.key)
+        // a scene never shown, deleted from its card: a change to the list of scenes, which stays on A
+        P.removeScene(B.project, k); B.commit(null, { scenes: 'delete', was: a })
+        ok('deleted', !P.scene(B.project, k))
+        B.undo()
+        eq('undone: it is back, with its camera and its exposure', [B.cameraOf(k)?.distance, P.scene(B.project, k)?.doc.view?.exposure?.exposureEV], [42, 7])
+        eq('...and A still the one worked on (undo stays put)', B.current, a)
+        B.use(k); B.markShown()
+        eq('shown, it is seen from its own camera', R.cam.distance, 42)
+        // shown and moved, then deleted and brought back: the camera it was left with
+        R.move({ distance: 43 })
+        B.use(a); B.markShown()
+        P.removeScene(B.project, k); B.commit(null, { scenes: 'delete', was: a })
+        B.undo()
+        eq('one moved before it was deleted comes back as it was left', B.cameraOf(k)?.distance, 43)
+    } finally { console.log = log }
+}
+{
+    /* A SCENE WITH NO CAMERA OF ITS OWN (a scene file written before 0.66.0): seen from the camera there is, SAID IN ITS
+       UNIT -- 330 mm from a mm scene is 0.33 m in a metre scene, not 330 m */
+    const { installBuilder } = await import('../demo.js')
+    const R = standIn({ mode: 'orbit', target: [0, -20, 25], distance: 330, dimensions: 330, azimuth: 30 })
+    const log = console.log; console.log = () => { }
+    try {
+        const mm = Object.assign(M.createDoc({ title: 'mm' }), { unit: 'mm' })
+        const B = installBuilder({}, { RT: R.RT, project: P.createProject([mm, M.createDoc({ title: 'm' })]) })
+        const [, m] = B.project.scenes.map(s => s.key)
+        B.use(m); B.markShown()
+        eq('a metre scene with no camera, after a millimetre one: the same place, in metres', [R.cam.distance, R.cam.dimensions, R.cam.target], [0.33, 0.33, [0, -0.02, 0.025]])
+        eq('...and that is its camera now', B.cameraOf(m)?.distance, 0.33)
+    } finally { console.log = log }
+}
+{
+    /* A NEW SCENE IS SEEN FROM CLOSE BY (the user, 2026-10-02): its document comes with the close view (project.js
+       blankScene, 0.66.0) -- an empty scene loaded keeps the view, as above */
+    const { installBuilder } = await import('../demo.js')
+    const R = standIn({ mode: 'orbit', distance: 150, azimuth: 30 })
+    const log = console.log; console.log = () => { }
+    try {
+        const B = installBuilder({}, { RT: R.RT, project: P.createProject([M.createDoc({ title: 'A' })]) })
         const a = B.project.scenes[0].key
         const n = P.newScene(B.project).key
         B.use(n); B.markShown()
-        eq('a new scene starts at the new scene\'s camera', [cam.distance, cam.azimuth, cam.elevation, cam.target],
+        eq('a new scene starts at the new scene\'s camera', [R.cam.distance, R.cam.azimuth, R.cam.elevation, R.cam.target],
             [P.NEW_SCENE_CAMERA.distance, 40, 70, [0, 0, 0]])
-        cam.distance = 9
+        R.move({ distance: 9 })
         B.use(a); B.markShown()
-        eq('A keeps its own', cam.distance, 150)
+        eq('A keeps its own', R.cam.distance, 150)
         B.use(n); B.markShown()
-        eq('back to the new one: the camera it was left with, not the start again', cam.distance, 9)
-        ok('...and the mark is spent', !P.takeFresh(B.project.scenes.find(s => s.key === n).doc))
+        eq('back to the new one: the camera it was left with, not the start again', R.cam.distance, 9)
     } finally { console.log = log }
 }
 {
@@ -318,7 +434,18 @@ ${m}`, module: { getCompilationInfo: async () => ({ messages: [] }) }, ready: Pr
         hold = false; release()
         await compiling
         got.replayed = RT.scene.envRadius
+        /* ...AND ITS SURFACE TOLERANCE (0.66.0, model.js setTolerance): the same road, and an undo is the same shader */
+        got.tolCompiled = RT.scene.tolerance
+        M.setTolerance(B.doc, 0.002)
+        got.tolTook = B.live(root, 'tolerance')
+        got.tolLive = RT.scene.tolerance
+        B.commit('root.tolerance')
+        got.tolSync = B.undo()
+        got.tolUndone = RT.scene.tolerance
     } finally { console.log = log }
+    eq('a scene that sets no tolerance compiles with none: the automatic one', got.tolCompiled, null)
+    eq('a tolerance set live reaches the scene the renderer holds, without a compile', [got.tolTook, got.tolLive], [true, 0.002])
+    eq('...and an undone one goes back live: the automatic one again', [got.tolSync, got.tolUndone], ['live', null])
     eq('the compiled scene carries the new scene\'s radius', got.compiled, 25)
     eq('a radius set live reaches the scene the renderer holds, without a compile', [got.took, got.live, got.same], [true, 40, true])
     eq('an undone radius is the same shader, and goes back live', [got.sync, got.undone], ['live', 25])

@@ -7,7 +7,7 @@
      PropertyTable over the real model, with a stand-in for the builder (no renderer: what the panel asks of
      BUILDER is the document, live uniform writes, undo steps and the probe compile). -->
 <link rel="stylesheet" href="../../lib/shell/shell.css">
-<style>html, body { height: 100%; margin: 0; } #t, #t2 { width: 360px; height: 900px; overflow: auto; }</style>
+<style>html, body { height: 100%; margin: 0; } #t, #t2, #t3 { width: 360px; height: 900px; overflow: auto; }</style>
 </head>
 <body>
 <div id="t" class="shell-panel"></div>
@@ -15,12 +15,19 @@
      flag, and the scene row lists the flagged values. Apart from the first, so its icons are in no label the checks
      above read. -->
 <div id="t2" class="shell-panel"></div>
+<!-- a third WITH A VIEW (0.66.0): the scene row's camera and exposure folders, over a real camera (lib/camera.js) and the
+     exposure's own state, handed in as the page hands them (index.html: RT.cameraBindings, RT.view, RT.applyView,
+     RT.watchView), and the renderer's entries in its registry, as the page provides them -->
+<div id="t3" class="shell-panel"></div>
 <script type="module">
 import * as M from '../model.js'
 import { PropertyTable } from '../../lib/guistuff/propertytable/propertytable.js'
 import { installBuilderPanel } from '../panel.js'
 import { makeParams } from '../../lib/shell/params.js'
-import { sceneParams } from '../params.js'
+import { sceneParams, viewEntriesFlagged } from '../params.js'
+import { CAMERA } from '../../lib/camera.js'
+import { camBindings, settingsParams, CAM_FIELDS } from '../../lib/pathtracer/params.js'
+import { UniformGroups, createUniformState } from '../../lib/pathtracer/core/uniforms.schema.js'
 
 // a group of a base, a union, and a subtraction with a blend of its own; and one object at the top level
 const doc = M.createDoc({ title: 'panel' })
@@ -39,9 +46,11 @@ M.addObject(doc, 'root', { id: 'pa', label: 'pipe', params: { route: { path: [[0
 M.addMaterial(doc, { id: 'gl', label: 'glass', preset: 'glass' })
 // and a haze box, for its dust (0.62.0)
 M.addHazeBox(doc, 'root', { id: 'hz', label: 'dust' })
-const T = { live: [], commits: [], structure: 0, labels: 0, pushed: [] }
+const T = { live: [], commits: [], structure: 0, labels: 0, pushed: [], showing: true }
 const BUILDER = {
     model: M, get doc() { return doc },
+    // whether the renderer shows this scene (demo.js): its camera is the scene's only then
+    get showing() { return T.showing },
     live(id, k) { T.live.push(`${id}.${k}`); return true },
     // the values bindings moved (demo.js pushBound), pushed live
     pushBound(changed) { T.pushed.push(...(changed || []).map(c => `${c.id}.${c.key}`)); return true },
@@ -54,7 +63,18 @@ const P = makeParams()
 P.provide('scene', () => sceneParams(doc, { live: (id, k) => BUILDER.live(id, k), commit: k => BUILDER.commit(k) }))
 const flagPanel = installBuilderPanel(new PropertyTable({ container: document.getElementById('t2'), boxes: true }), BUILDER,
     { onLabel: () => T.labels++, onStructure: () => T.structure++, params: P })
-window.CHECK = { M, T, doc, panel, table, P, flagPanel }
+const watchers = new Set(), tell = () => watchers.forEach(f => f())
+const cam = CAMERA({ aspect: 1.5, fov: 40, up: [0, 0, 1], onChange: tell })
+cam.set({ mode: 'orbit', azimuth: 40, elevation: 70, distance: 20, fov: 40 })
+const exposure = createUniformState(UniformGroups.Exposure)
+const view = { cameraBindings: () => camBindings(cam), cameraShown: () => cam.getControlVisibility({ camtype: cam.get().camtype, mode: cam.get().mode }),
+    exposure: () => ({ ...exposure.values }), setExposure: (k, v) => { exposure.values[k] = v; tell() }, watch: f => (watchers.add(f), () => watchers.delete(f)) }
+const P3 = makeParams()
+P3.provide('scene', () => sceneParams(doc, { live: (id, k) => BUILDER.live(id, k), commit: k => BUILDER.commit(k) }))
+P3.provide('renderer', () => viewEntriesFlagged(settingsParams({ Exposure: exposure }, { update: () => tell(), cam, camFields: CAM_FIELDS }), doc))
+const viewPanel = installBuilderPanel(new PropertyTable({ container: document.getElementById('t3') }), BUILDER,
+    { onLabel: () => T.labels++, onStructure: () => T.structure++, params: P3, view })
+window.CHECK = { M, T, doc, panel, table, P, flagPanel, cam, exposure, P3, viewPanel }
 </script>
 </body>
 </html>

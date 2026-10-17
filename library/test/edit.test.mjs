@@ -138,6 +138,8 @@ ok('the studio\'s light keeps the settings it does not name', studioEnvironment(
     // a scene of the user's, lit their way and looked at their way
     const home = M.createDoc({ title: 'my scene' })
     M.addObject(home, 'root', { primitive: 'box' })
+    // ...its view its own (builder/model.js VIEW, 0.66.0): looked at from 99 off at 60 degrees, the exposure set by hand
+    M.setView(home, { camera: { mode: 'orbit', distance: 99, fov: 60 }, exposure: { autoExposure: 0 } })
     const other = M.createDoc({ title: 'lit' })
     M.setEnvironment(other, { envMode: 1 })
     const R = { values: { envMode: 1, sunIlluminance: 3, skyIlluminance: 4, autoExposure: 0 }, camera: { mode: 'orbit', distance: 99, fov: 60 } }
@@ -147,7 +149,17 @@ ok('the studio\'s light keeps the settings it does not name', studioEnvironment(
         set: v => { Object.assign(R.values, structuredClone(v)); return [] },
         settings: () => ({ camera: structuredClone(R.camera) }),
         applySettings: ({ camera }) => { if (camera) R.camera = structuredClone(camera); return [] },
+        /* THE VIEW (0.66.0) as the real renderer gives and takes it (lib/pathtracer/index.js): the camera put back only
+           in the fields given, and whoever keeps it told */
+        view: () => ({ camera: structuredClone(R.camera), exposure: { autoExposure: R.values.autoExposure } }),
+        applyView: ({ camera, exposure } = {}) => {
+            if (camera) Object.assign(R.camera, structuredClone(camera))
+            if (exposure) Object.assign(R.values, structuredClone(exposure))
+            watchers.forEach(f => f())
+        },
+        watchView: f => (watchers.add(f), () => watchers.delete(f)),
     }
+    const watchers = new Set()
     let E = null
     // apply(), as the real one ends: the scene marked shown (its camera back), its environment pushed, the host's onScene
     const applied = () => { B.markShown(); if (B.doc.environment) RT.set(B.doc.environment); E.shown() }
@@ -177,7 +189,7 @@ ok('the studio\'s light keeps the settings it does not name', studioEnvironment(
     ok('...one undo step', B.canUndo)
     ok('...its material selected', T.selected === B.doc.libraryItem.subject)
     ok('...not unsaved', E.active && !E.dirty)
-    ok('...the view framed on it with the studio\'s field of view, exposure metered, the studio\'s sun',
+    ok('...the view framed on it with the studio\'s field of view, exposure metered, the studio\'s sun -- its scene\'s own view',
         // in the scene's millimetres: the studio's framing of its sample (a 20 mm sphere, its own) is 7.5 radii away
         R.camera.fov === 30 && Math.abs(R.camera.distance - 7.5 * mine.preview.node.params.radius) < 1 && R.values.autoExposure === 1 && R.values.envMode === 0, JSON.stringify([R.camera, R.values]))
     {
