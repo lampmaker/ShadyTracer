@@ -44,7 +44,9 @@ for the Analysis pane in the same literal colours.
 - The submodule moves to GUISTUFF `claude/propertytable-boxes` (lampmaker/GUISTUFF#11), and to its merge once
   merged. That also brings
   `bindingPrepper` widening a given range to hold its value (GUISTUFF 15be4e1, the general fix 0.59.1 asked for;
-  `fitRange` here already did it for the builder's parameters).
+  `fitRange` here already did it for the builder's parameters). `builder/test/params.test.mjs` had held the old
+  behaviour (a range of 0 to 10 kept for a value of 250). It now checks the new one: kept while it holds the value,
+  widened when it does not, and the caller's own bounds never moved.
 
 **What the move changed, measured headless (Chromium, every computed style and position of the Render settings test
 page's seven boxes, before against after):**

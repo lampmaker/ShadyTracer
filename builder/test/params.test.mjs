@@ -175,12 +175,18 @@ ok('the bundled scenes have parameters at all', total > 50, `${total}`)
 // THE PANEL'S NUMBER FIELDS (lib/guistuff PropertyTable, vendored): a min alone is a field unbounded above.
 // `!options.min` read a min of 0 as no range given and capped the field at max(its value when drawn, 100):
 // a light's flux could not be raised past what it was (the user, 2026-09-28). Fixed in GUISTUFF itself.
+// A RANGE GIVEN, WIDENED TO HOLD ITS VALUE (GUISTUFF 15be4e1, pinned since 0.63.0; 0.59.1's general fix): a range is
+// the slider's reach, and a 60 mm screen on a width range that stops at 10 was written 10 at its first drag. Only a
+// bound given moves, and on a copy -- a caller's options object, shared by every row of a kind, is left as it was.
 {
     const { PropertyTable } = await import('../../lib/guistuff/propertytable/propertytable.js')
-    const prep = o => PropertyTable.prototype.bindingPrepper.call({}, { v: 250 }, 'v', o).options
+    const prep = (o, v = 250) => PropertyTable.prototype.bindingPrepper.call({}, { v }, 'v', o).options
     eq('a flux field (min 0, no max) has no ceiling', prep({ min: 0 }).max, undefined)
     eq('...a field with no range at all still gets the default, widened to hold its value', [prep({}).min, prep({}).max], [0, 250])
-    eq('...and a range given is left as given', [prep({ min: 0, max: 10 }).min, prep({ min: 0, max: 10 }).max], [0, 10])
+    eq('...a range given that holds its value is left as given', [prep({ min: 0, max: 10 }, 5).min, prep({ min: 0, max: 10 }, 5).max], [0, 10])
+    const shared = { min: 0, max: 10 }
+    eq('...one that does not is widened to hold it', [prep(shared).min, prep(shared).max], [0, 250])
+    eq('...on a copy: the range handed in is as it was', [shared.min, shared.max], [0, 10])
 }
 
 //----------------------------------------------------------------------------------------------
