@@ -14,7 +14,7 @@
 //   a PROJECT    every scene, in order ("all scenes")                        serialize
 //   a WORKSPACE  a project, which scene was current, and the renderer's own  serializeWorkspace
 //                settings -- quality, sampling, size -- as the host hands them over. Not the camera, the
-//                exposure or the surface tolerance since 0.65.0: each scene has its own (model.js VIEW,
+//                exposure or the surface tolerance since 0.66.0: each scene has its own (model.js VIEW,
 //                setTolerance), in its document; a workspace written before is read into the scenes
 //                (workspaceOf, adoptViews).
 // What a file MEANS is the caller's (demo.js load): a scene or a project is added to the open
@@ -61,7 +61,7 @@ export function addScene(p, doc, index) {
 export const NEW_SCENE = Object.freeze({ unit: 'cm', envRadius: 25 })
 /* ...and seen from close by (model.js VIEW): the page's start angle (index.html camera), 4 units off -- a 1-unit shape
    a third of the view's height at the 40 degree field -- rather than wherever the scene before left the camera, 20 m
-   off or 150 mm. dimensions is the parallel view's width. In the document since 0.65.0, as every scene's camera is: it
+   off or 150 mm. dimensions is the parallel view's width. In the document since 0.66.0, as every scene's camera is: it
    was held beside it, for the first time the scene was shown, and a new scene saved before it was shown had none. */
 export const NEW_SCENE_CAMERA = Object.freeze({ mode: 'orbit', target: [0, 0, 0], azimuth: 40, elevation: 70, distance: 4, dimensions: 3 })
 export const blankScene = (title = 'New scene') => {
@@ -152,7 +152,7 @@ export function carryViews(next, from, memory = null) {
     return next
 }
 
-/* THE RENDERER'S SETTINGS AS A PROJECT KEEPS THEM (0.65.0): everything the renderer hands over (RT.settings) but what
+/* THE RENDERER'S SETTINGS AS A PROJECT KEEPS THEM (0.66.0): everything the renderer hands over (RT.settings) but what
    the scenes have of their own now -- the camera, the exposure (model.js VIEW_EXPOSURE) and the surface tolerance
    (`eps`). Saved, they were put back over the scene shown at every start (index.html applySettings), one scene's
    camera over another's, and one exposure and one tolerance for all. */
@@ -162,7 +162,7 @@ export function rendererSettings(s) {
     return { ...rest, values: Object.fromEntries(Object.entries(values || {}).filter(([k]) => !(k in M.VIEW_EXPOSURE) && k !== 'eps')) }
 }
 /**
- * WHAT A PROJECT KEPT BESIDE ITS SCENES, PUT INTO THEM (0.65.0): `views` { key: view } -- the browser's session, newer
+ * WHAT A PROJECT KEPT BESIDE ITS SCENES, PUT INTO THEM (0.66.0): `views` { key: view } -- the browser's session, newer
  * than the documents it was written beside (the project's record is written only when an edit moves the revision; the
  * session every second: workspace/autosave.js) -- and, from a project or a workspace written before, `cameras`
  * { key: camera }, each scene's kept camera, and `renderer`, whose exposure was every scene's and whose tolerance
@@ -194,7 +194,7 @@ export const WORKSPACE_FORMAT = 'raytracer-workspace'
 export const WORKSPACE_VERSION = 1
 /** The project, the key of the scene being worked on, and the renderer's settings -- without what the scenes have of
  *  their own (rendererSettings): each scene's camera and exposure are in its document (model.js VIEW). A workspace
- *  written before 0.65.0 had `cameras` beside the project; workspaceOf still reads them into the scenes. */
+ *  written before 0.66.0 had `cameras` beside the project; workspaceOf still reads them into the scenes. */
 export const serializeWorkspace = (p, current, renderer = {}, { app } = {}) => JSON.stringify(
     M.withApp({ format: WORKSPACE_FORMAT, version: WORKSPACE_VERSION, current, renderer: rendererSettings(renderer), project: p }, app), null, 2)
 /** THE PROJECT AS A FILE HOLDS IT: without the scenes of library items being edited (library/edit.js) --
@@ -272,7 +272,7 @@ function workspaceOf(raw) {
     /* a current scene the project does not have is the first one: the file is still worth opening */
     const current = scene(project, raw.current) ? raw.current : project.scenes[0].key
     /* WHAT IT KEPT BESIDE ITS SCENES, into them (adoptViews): the browser session's views (store.js workspaceText), and a
-       workspace's from before 0.65.0 -- each scene's camera (optional: one written before 0.7.0 had none), and the
+       workspace's from before 0.66.0 -- each scene's camera (optional: one written before 0.7.0 had none), and the
        exposure and tolerance its renderer settings held for every scene. What is left of those is the renderer's. */
     adoptViews(project, { views: raw.views, cameras: raw.cameras, renderer: raw.renderer, current })
     return { project, current, renderer: rendererSettings(raw.renderer) }

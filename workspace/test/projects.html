@@ -37,7 +37,7 @@ import { installItemEditor } from '../../library/edit.js'
 
 const T = { applied: [], said: [], downloads: [], nextFile: null, selected: [], files: [], cards: [], opened: [], work: 0, removed: [] }
 const say = t => T.said.push(t)
-// THE RENDERER, stood in: its settings are values and a camera; its view (0.65.0) the camera and the exposure, put back
+// THE RENDERER, stood in: its settings are values and a camera; its view (0.66.0) the camera and the exposure, put back
 // as the real one puts them back -- the camera only in the fields given (lib/pathtracer/index.js applyCamera)
 const R = { values: { autoExposure: 0, exposure: 1 }, camera: { mode: 'orbit', azimuth: 40, elevation: 70, distance: 20 } }
 const watchers = new Set(), told = () => watchers.forEach(f => f())

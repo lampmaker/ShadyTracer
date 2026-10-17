@@ -72,7 +72,7 @@ export const ENVIRONMENT_HELP = {
     uSkyTurbidity: 'Haze in the sky: 0 the clearest; higher scatters more, for a hazier, paler sky. The sun\'s own colour does not change.',
 }
 
-/* THE VIEW'S ROWS' TOOLTIPS (0.65.0): the scene row's camera and exposure folders, the popovers' fields */
+/* THE VIEW'S ROWS' TOOLTIPS (0.66.0): the scene row's camera and exposure folders, the popovers' fields */
 export const CAMERA_HELP = {
     mode: 'orbit: the camera turns about its target (drag to turn, wheel to come closer). fps: it stands where it is and looks about.',
     camtype: 'Perspective, as an eye or a lens sees; or orthographic, parallel: sizes do not shrink with distance, as a drawing.',
@@ -255,7 +255,7 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
         folder = null; boxes = []; rechecks.clear(); entries = null; viewFolders.length = 0
     }
 
-    /* THE VIEW'S FOLDERS FOLLOW THE VIEW (0.65.0): a drag in the picture, the popover, a timeline -- the renderer tells
+    /* THE VIEW'S FOLDERS FOLLOW THE VIEW (0.66.0): a drag in the picture, the popover, a timeline -- the renderer tells
        (view.watch), and an open folder is refreshed once a frame at most; a folded one costs nothing */
     const viewFolders = []
     let following = 0
@@ -515,7 +515,7 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
                     () => A.live(BUILDER.doc.root.id, 'envRadius'))
                 const rl = rb.element?.querySelector?.('.tp-lblv_l')
                 if (rl) rl.title = 'Where the scene stops: a ray beyond it sees the sky, and anything placed beyond it is not drawn. In the scene\'s unit.'
-                /* THE SCENE'S SURFACE TOLERANCE (model.js setTolerance, 0.65.0): the Renderer panel's row in um until then,
+                /* THE SCENE'S SURFACE TOLERANCE (model.js setTolerance, 0.66.0): the Renderer panel's row in um until then,
                    one for every scene. Live, as the radius (RT.updateScene), and one undo step a drag. What that row
                    learned holds here: A BOX TO TYPE INTO, NO RANGE (the user, 2026-10-08: "dont make it a slider, just a
                    number I can type in") -- a min alone is a box -- and NO STEP, which Tweakpane takes as a rounding of what
@@ -530,7 +530,7 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
                     + 'scene; the optics trace uses it too.')
                 // ...and what it sees there: the sun and sky, or the studio (a row of the tree of its own until 0.52.0)
                 environmentFolder(folder, doc)
-                // ...and how it is looked at: its camera and its exposure (model.js VIEW, 0.65.0)
+                // ...and how it is looked at: its camera and its exposure (model.js VIEW, 0.66.0)
                 cameraFolder(folder, doc)
                 exposureFolder(folder, doc)
                 /* HIDE WITHOUT RECOMPILING (model.js setLiveVisibility): the eye becomes a uniform

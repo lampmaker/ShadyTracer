@@ -332,7 +332,7 @@ ok('Ctrl+C puts the row on the system clipboard, marked as ours', r.marked, JSON
 ok('...and Ctrl+V pastes it from there, in another scene', r.added === 1 && r.cur === 'Lens v2', JSON.stringify(r))
 
 // ---- A RELOAD ----------------------------------------------------------------------------------------------
-// turned as a move turns it: through the renderer, which tells whoever keeps the view (0.65.0: the scene's, demo.js keepView)
+// turned as a move turns it: through the renderer, which tells whoever keeps the view (0.66.0: the scene's, demo.js keepView)
 await p.evaluate(() => { CHECK.RT.applyView({ camera: { distance: 7.5 } }) })
 await settle(p)
 const before = await p.evaluate(() => ({ titles: CHECK.BUILDER.project.scenes.map(s => s.doc.title), cur: CHECK.BUILDER.doc.title,

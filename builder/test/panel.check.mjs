@@ -466,8 +466,8 @@ ok('the unit changed to cm', await set('unit', 'cm') === 'set')
 await p.waitForTimeout(50)
 ok('...and the radius row says so by itself (the panel redrawn), the number kept: the scene reinterpreted, as its shapes',
     (await readRows()).includes('environment radius (cm)') && await p.evaluate(() => CHECK.doc.envRadius) === 2.5, JSON.stringify(await readRows()))
-/* THE SCENE'S SURFACE TOLERANCE (0.65.0, model.js setTolerance): after the radius, in its unit, 0 the automatic one; live,
-   one undo step. What the Renderer panel's row held there (lib/pathtracer/test/renderer.check.mjs until 0.65.0): a box and
+/* THE SCENE'S SURFACE TOLERANCE (0.66.0, model.js setTolerance): after the radius, in its unit, 0 the automatic one; live,
+   one undo step. What the Renderer panel's row held there (lib/pathtracer/test/renderer.check.mjs until 0.66.0): a box and
    not a slider, nothing rounded that is typed -- 0.000001 once became 0 -- and a value above 100 kept */
 {
     const TOL = 'surface tolerance (cm, 0 = auto)'
@@ -766,7 +766,7 @@ ok('...reaches the document, live (its dust), with its undo step and no compile'
 const visText = await p.evaluate(() => [...document.querySelectorAll('textarea')].map(t => t.value).find(v => v.startsWith('visibility')) ?? '')
 ok('...and the visibility beside it follows: 3.912 x 4 m, 15.6 m', /^visibility 15\.6 m/.test(visText), visText)
 
-/* THE SCENE'S VIEW (0.65.0, model.js VIEW): the third panel, given a view as the page gives it. Its scene row has a camera
+/* THE SCENE'S VIEW (0.66.0, model.js VIEW): the third panel, given a view as the page gives it. Its scene row has a camera
    and an exposure folder, folded until opened and remembered so; their rows are the popovers' and write the renderer's
    camera and exposure (which the scene keeps: demo.js keepView); an open folder follows a move made elsewhere; a value
    the registry has gets ◇, and flagging it puts the view's path on the root; a scene not shown yet says so */

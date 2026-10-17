@@ -138,7 +138,7 @@ ok('the studio\'s light keeps the settings it does not name', studioEnvironment(
     // a scene of the user's, lit their way and looked at their way
     const home = M.createDoc({ title: 'my scene' })
     M.addObject(home, 'root', { primitive: 'box' })
-    // ...its view its own (builder/model.js VIEW, 0.65.0): looked at from 99 off at 60 degrees, the exposure set by hand
+    // ...its view its own (builder/model.js VIEW, 0.66.0): looked at from 99 off at 60 degrees, the exposure set by hand
     M.setView(home, { camera: { mode: 'orbit', distance: 99, fov: 60 }, exposure: { autoExposure: 0 } })
     const other = M.createDoc({ title: 'lit' })
     M.setEnvironment(other, { envMode: 1 })
@@ -149,7 +149,7 @@ ok('the studio\'s light keeps the settings it does not name', studioEnvironment(
         set: v => { Object.assign(R.values, structuredClone(v)); return [] },
         settings: () => ({ camera: structuredClone(R.camera) }),
         applySettings: ({ camera }) => { if (camera) R.camera = structuredClone(camera); return [] },
-        /* THE VIEW (0.65.0) as the real renderer gives and takes it (lib/pathtracer/index.js): the camera put back only
+        /* THE VIEW (0.66.0) as the real renderer gives and takes it (lib/pathtracer/index.js): the camera put back only
            in the fields given, and whoever keeps it told */
         view: () => ({ camera: structuredClone(R.camera), exposure: { autoExposure: R.values.autoExposure } }),
         applyView: ({ camera, exposure } = {}) => {

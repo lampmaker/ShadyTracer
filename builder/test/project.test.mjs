@@ -90,7 +90,7 @@ throws('and so is broken JSON', () => P.parse('{'), /JSON/)
 
 {
     // a workspace: the project, the current scene, and the renderer's settings, whatever they are -- but what each
-    // scene has of its own (0.65.0): the camera, the exposure and the tolerance are in the scenes (model.js VIEW)
+    // scene has of its own (0.66.0): the camera, the exposure and the tolerance are in the scenes (model.js VIEW)
     const settings = { values: { sunIlluminance: 90000, tint: [1, 0.9, 0.8], exposureEV: 9, eps: 0 }, camera: { mode: 'orbit', azimuth: 12 }, size: { mode: 'fit' } }
     const w = P.parse(P.serializeWorkspace(p, p.scenes[1].key, settings)).workspace
     ok('a workspace round-trips its project', w && P.serialize(w.project) === P.serialize(p))
@@ -104,7 +104,7 @@ throws('and so is broken JSON', () => P.parse('{'), /JSON/)
     const badInside = JSON.parse(P.serializeWorkspace(p, 's1')); badInside.project.scenes[0].doc.nextId = 0
     throws('and so is a workspace whose project is unsound', () => P.parse(JSON.stringify(badInside)), /nextId/)
     ok('...and writes no cameras beside the scenes: each scene\'s is in it', !('cameras' in JSON.parse(P.serializeWorkspace(p, 's1', settings))))
-    /* A WORKSPACE WRITTEN BEFORE 0.65.0: each scene's camera beside the project, one exposure and one tolerance in its
+    /* A WORKSPACE WRITTEN BEFORE 0.66.0: each scene's camera beside the project, one exposure and one tolerance in its
        renderer settings -- read into the scenes (project.js adoptViews) */
     const before = JSON.parse(P.serializeWorkspace(P.createProject([M.createDoc({ title: 'P' }), Object.assign(M.createDoc({ title: 'Q' }), { unit: 'mm' })]), 's2', {}))
     before.cameras = { s1: { mode: 'orbit', distance: 7, aspect: 1.5 }, s999: { distance: 1 }, s2: 3 }
@@ -243,7 +243,7 @@ throws('and so is broken JSON', () => P.parse('{'), /JSON/)
     } finally { console.warn = warn; console.log = log }
 }
 
-/* A STAND-IN RENDERER WITH A VIEW (0.65.0, lib/pathtracer/index.js view, applyView, watchView): it puts a camera back
+/* A STAND-IN RENDERER WITH A VIEW (0.66.0, lib/pathtracer/index.js view, applyView, watchView): it puts a camera back
    ONLY IN THE FIELDS IT IS GIVEN, as the real one does (applyCamera) -- the stand-in these tests had replaced the whole
    camera, so a camera put back without its field of view, which kept the last scene's, could not fail them. A drag
    (move) tells its watchers, as the camera's onChange does. */
@@ -351,7 +351,7 @@ const standIn = (cam0, exposure0 = { exposureEV: 15, autoExposure: 1 }) => {
     } finally { console.log = log }
 }
 {
-    /* A SCENE WITH NO CAMERA OF ITS OWN (a scene file written before 0.65.0): seen from the camera there is, SAID IN ITS
+    /* A SCENE WITH NO CAMERA OF ITS OWN (a scene file written before 0.66.0): seen from the camera there is, SAID IN ITS
        UNIT -- 330 mm from a mm scene is 0.33 m in a metre scene, not 330 m */
     const { installBuilder } = await import('../demo.js')
     const R = standIn({ mode: 'orbit', target: [0, -20, 25], distance: 330, dimensions: 330, azimuth: 30 })
@@ -367,7 +367,7 @@ const standIn = (cam0, exposure0 = { exposureEV: 15, autoExposure: 1 }) => {
 }
 {
     /* A NEW SCENE IS SEEN FROM CLOSE BY (the user, 2026-10-02): its document comes with the close view (project.js
-       blankScene, 0.65.0) -- an empty scene loaded keeps the view, as above */
+       blankScene, 0.66.0) -- an empty scene loaded keeps the view, as above */
     const { installBuilder } = await import('../demo.js')
     const R = standIn({ mode: 'orbit', distance: 150, azimuth: 30 })
     const log = console.log; console.log = () => { }
@@ -434,7 +434,7 @@ ${m}`, module: { getCompilationInfo: async () => ({ messages: [] }) }, ready: Pr
         hold = false; release()
         await compiling
         got.replayed = RT.scene.envRadius
-        /* ...AND ITS SURFACE TOLERANCE (0.65.0, model.js setTolerance): the same road, and an undo is the same shader */
+        /* ...AND ITS SURFACE TOLERANCE (0.66.0, model.js setTolerance): the same road, and an undo is the same shader */
         got.tolCompiled = RT.scene.tolerance
         M.setTolerance(B.doc, 0.002)
         got.tolTook = B.live(root, 'tolerance')

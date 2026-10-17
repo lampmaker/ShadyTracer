@@ -109,7 +109,7 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
     /* WHAT A SCENE SAYS ABOUT ITSELF THAT IS NOT TEXT and the engine takes live (RT.updateScene) */
     /* ...its haze box too (hazebox.js; core/haze.js): its values; whether there is one is text, which the engine refuses
        to change here (an undo that adds or takes one away compiles: its comment is in the shader) */
-    /* ...and its surface tolerance (0.65.0, model.js setTolerance): an undone tolerance is the scene's again */
+    /* ...and its surface tolerance (0.66.0, model.js setTolerance): an undone tolerance is the scene's again */
     const sceneSelf = scene => ({ envRadius: scene.envRadius, unit: scene.unit, extent: scene.extent, haze: scene.haze ?? null,
                                   tolerance: scene.tolerance ?? null })
     const sync = () => {
@@ -151,7 +151,7 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
     remember()
     /* EACH SCENE ITS OWN VIEW: its camera and its exposure (model.js VIEW; the user, 2026-09-30: "switching between
        scenes stores and restores camera setting", and 2026-10-17: "the information should belong to the scenes").
-       IN THE DOCUMENT since 0.65.0: kept beside the documents until then, in a map saved only with a workspace and the
+       IN THE DOCUMENT since 0.66.0: kept beside the documents until then, in a map saved only with a workspace and the
        browser's project -- a scene file, a duplicate and an example had none -- and with the camera alone, put back
        only in the fields it had: an example's has no field of view, so the next one opened kept the last one's, and
        a scene shown after Depth of field kept its open lens. The exposure was one for every scene.
@@ -189,7 +189,7 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
     }
     /** The renderer shows the current scene now: this one's view comes back, whole -- every setting it leaves out the
      *  default, never the last scene's (model.js sceneViewOf). One with no camera of its own (a scene file written before
-     *  0.65.0, a scene an undo brought back) is seen from the camera there is, said in its unit: 330 mm from a mm scene
+     *  0.66.0, a scene an undo brought back) is seen from the camera there is, said in its unit: 330 mm from a mm scene
      *  is 0.33 m in a metre scene, not 330 m. The meter starts again: another picture (RT.applyView fresh). */
     const markShown = () => {
         if (shown === current) return
@@ -294,7 +294,7 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
        source that changed goes to the renderer too, or 100 lm on a sheet made twice as big would
        quietly become 200 */
     /* THE SCENE'S ENVIRONMENT (model.js ENVIRONMENT) is renderer settings by their own names: set whenever the scene
-       showing is (re)applied or restored -- WHOLE (0.65.0, model.js environmentOf): what it leaves out is the default,
+       showing is (re)applied or restored -- WHOLE (0.66.0, model.js environmentOf): what it leaves out is the default,
        not what the scene shown before had (an example names three settings). A scene without one leaves the
        renderer's as they were. */
     const pushEnvironment = () => {
@@ -692,7 +692,7 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
                during a compile are replayed into the scene that compiled (`missed`), as a parameter's are. */
             if (id === doc.root.id && k === 'envRadius')
                 return RT.scene?.id === 'built' && !!RT.updateScene && RT.updateScene({ envRadius: doc.envRadius ?? null }).length === 0
-            // ...AND ITS SURFACE TOLERANCE (0.65.0, model.js setTolerance), the same way
+            // ...AND ITS SURFACE TOLERANCE (0.66.0, model.js setTolerance), the same way
             if (id === doc.root.id && k === 'tolerance')
                 return RT.scene?.id === 'built' && !!RT.updateScene && RT.updateScene({ tolerance: doc.tolerance ?? null }).length === 0
             if (RT.scene?.id === 'built') pushSources()

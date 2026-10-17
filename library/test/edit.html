@@ -23,13 +23,13 @@ import { ITEM_FILES, itemUrl } from '../items/index.js'
 
 const home = M.createDoc({ title: 'my scene' })
 M.addObject(home, 'root', { primitive: 'box' })
-// its view its own (builder/model.js VIEW, 0.65.0): looked at from 99 off, the exposure set by hand
+// its view its own (builder/model.js VIEW, 0.66.0): looked at from 99 off, the exposure set by hand
 M.setView(home, { camera: { mode: 'orbit', distance: 99 }, exposure: { autoExposure: 0 } })
 const T = { commits: 0, applied: 0, opened: [], said: [], selected: [] }
 const project = P.createProject([home, M.createDoc({ title: 'second' })])
 let current = project.scenes[0].key, E = null
 const R = { values: { envMode: 1, autoExposure: 0 }, camera: { mode: 'orbit', distance: 99 } }
-/* EACH SCENE ITS OWN VIEW (builder/model.js VIEW, 0.65.0), as builder/demo.js markShown keeps it: apply() leaves the
+/* EACH SCENE ITS OWN VIEW (builder/model.js VIEW, 0.66.0), as builder/demo.js markShown keeps it: apply() leaves the
    scene it showed with the view it had and puts back the whole view of the one it shows now, before the host's onScene
    (the item editor's shown) */
 const viewNow = () => ({ camera: structuredClone(R.camera), exposure: { autoExposure: R.values.autoExposure } })

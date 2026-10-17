@@ -1614,7 +1614,7 @@ export function setLock(doc, id, which, on) {
    <rest> -- `animate: ['radius', 'transform/position']` on a node or a material; a material's relief's on the
    material, as '#relief/<parameter>' (a relief's fields are a closed list, reliefProblems: a builder that did not know
    the flag would refuse the whole file, not lose the flag; and setRelief drops them with the relief); the environment's
-   on the root, as 'environment/<setting>'; the view's camera and exposure (0.65.0, VIEW above) on the root too, as the
+   on the root, as 'environment/<setting>'; the view's camera and exposure (0.66.0, VIEW above) on the root too, as the
    registry names them, 'view/camera/<setting>' and 'view/exposure/<setting>' -- the renderer's paths (lib/pathtracer/
    params.js), which a saved timeline track names, and which no node id can take (a node `camera` is scene/camera/...).
    Relative, so a copy -- duplicated, pasted, put in the library -- keeps them as it keeps a lock, under its new id.
@@ -2094,7 +2094,7 @@ export function setEnvironment(doc, values) {
     doc.environment = next
     return doc
 }
-/** THE WHOLE ENVIRONMENT a scene that has one is shown under: its own settings over the defaults (0.65.0). The bundled
+/** THE WHOLE ENVIRONMENT a scene that has one is shown under: its own settings over the defaults (0.66.0). The bundled
  *  examples name three settings each (scenes/make.mjs SUN, STUDIO), and the builder pushed only what a scene named, so
  *  the sun's and the sky's illuminance, the sun's size, the turbidity and the studio's colour were whatever the scene
  *  shown before had left -- the same carry-over as the camera's (VIEW below). A scene without one is null: it still
@@ -2104,13 +2104,13 @@ export const environmentOf = doc => doc.environment
     : null
 
 /*======================================================================================================================
-  THE VIEW -- how the scene is looked at: its camera and its exposure (0.65.0; the user, 2026-10-17: "Camera settings
+  THE VIEW -- how the scene is looked at: its camera and its exposure (0.66.0; the user, 2026-10-17: "Camera settings
   and exposure can vary per scene ... the information should belong to the scenes. Because switching between scenes
   almost always causes the camera and exposure to be wrong").
 
   `doc.view = { camera, exposure }`. The controls stay the view's (the camera and exposure popovers over the picture,
   and the scene row's folders); the values are the scene's, saved with it, so a scene file, an example, a duplicate and
-  a scene copied to another project each come with the way it is seen. Until 0.65.0 the builder kept a camera per
+  a scene copied to another project each come with the way it is seen. Until 0.66.0 the builder kept a camera per
   scene beside the documents (demo.js) -- saved only in a workspace and the browser's project, with no exposure at
   all -- and put back only the fields it had: an example's camera has no field of view, so it kept the last scene's.
 
@@ -2220,7 +2220,7 @@ export function cameraInUnit(camera, from, to) {
 }
 
 /*======================================================================================================================
-  THE SCENE'S SURFACE TOLERANCE (0.65.0): how close a ray must come to a surface to have hit it, in the scene's unit,
+  THE SCENE'S SURFACE TOLERANCE (0.66.0): how close a ray must come to a surface to have hit it, in the scene's unit,
   0 or absent the renderer's automatic one (a share of the scene's size: lib/pathtracer/core/photometry.js autoEps).
   It was a renderer setting in metres, one for every scene: a value typed for a 25 cm optic was the one a 4 m room, an
   example and a library item were traced with. It is a property of the scene's geometry -- a 10 um gap between a

@@ -15,7 +15,7 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
-## 0.65.0 — 2026-10-17
+## 0.66.0 — 2026-10-17
 
 **Each scene keeps its own camera, exposure and surface tolerance** (you: "switching between scenes almost always causes
 the camera and exposure to be wrong"; the information "should belong to the scenes").
@@ -84,6 +84,39 @@ the camera and exposure to be wrong"; the information "should belong to the scen
    prism*. By my arithmetic the meter sets for the room and the subject sits 7 to 20 stops over it, so the prism's
    spectrum is probably white rather than a rainbow (inferred). Set each until its subject reads and paste the EV or
    the compensation: it goes into that example's file.
+
+## 0.65.0 — 2026-10-17
+
+**The library's checker is a wave now, so its edges soften and its squares shrink to dots** (you: "the checker
+material, use a smoothstep and sin function instead. that makes it possible to soften the edges or draw small
+circles").
+
+**The checker** (`library/items/materials.json`):
+- It was `floor` and odd or even: a hard edge, nothing to turn. Now it is s = cos(x) cos(y) cos(z), each a full period
+  over two squares, so s is +1 or -1 at a cube's centre and 0 where two cubes meet. The second colour is where s is
+  above `level`, through a `smoothstep` `softness` wide either side of it.
+- **Two new parameters.** `softness` (0 to 1): 0 the hard edge it had, 1 as soft as the wave itself. `level` (-1 to 1):
+  0 the checker; towards 1, round dots of the second colour shrinking in alternate squares (a dot of radius r at
+  level = cos(180° r / square), on a face through cube centres); towards -1, dots of the base colour in the others.
+  Both start at 0, which is the checker it was, sharp.
+- **Cos, not sin, and the squares move by half a square.** A cube's centre is now at the object's origin. With sin the
+  floor's plane z = 0 would lie where two cubes meet: s = 0 all over, and the floor of *Depth of field* would show no
+  squares. With cos the floor, and a box whose half-sizes are whole squares (the library's preview box: half-sizes of
+  20 mm on 10 mm squares), have faces through centres.
+- **What it costs: a face where two cubes meet shows no squares.** A flat face half a square off a centre (a 30 mm
+  cube on 10 mm squares: its faces at 15 mm) is at s = 0 all over, because a smooth pattern is halfway between its two
+  colours there; `floor` picked a side. Changing `square` for that object moves it off. Read from the code, not seen.
+- *Depth of field* (`scenes/depth-of-field.json`) carries the new checker: made again by `node scenes/make.mjs`, which
+  changed nothing else. A checker already in a project keeps its old code; put it in again from the library for this
+  one. The test fixtures keep theirs (they are frozen).
+- The golden shaders (`builder/test/fixtures/csg-v10`) refrozen for that one scene: its texts lost the old checker's
+  four lines and gained the new one's and its two parameters' aliases, nothing else; no other document moved.
+
+**What to look at:**
+- The Library's checker: its picture redrawn, the preview box's faces in squares.
+- *Depth of field*: the floor still a checker, each pawn standing on a square's centre.
+- The checker on an object: `softness` blurring the edges; `level` at about 0.7 giving dots half a square across, and
+  at -0.7 the reverse.
 
 ## 0.64.0 — 2026-10-17
 

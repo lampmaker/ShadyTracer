@@ -30,7 +30,7 @@
 // otherwise make a saved item look saved when the library holds the newer one, or the reverse.
 //
 // LEAVING puts back the lighting the user had (a scene without an environment of its own would keep the
-// studio's sun otherwise). The camera and the exposure are the scene's (builder/model.js VIEW, 0.65.0): an item's
+// studio's sun otherwise). The camera and the exposure are the scene's (builder/model.js VIEW, 0.66.0): an item's
 // scene is made seen as its picture is -- framed on the item from the studio's angle, its exposure metered -- and
 // every scene the builder shows comes with its own (demo.js markShown), so going back is going back to how that
 // scene was seen. The exposure mode was forced on here and put back on leaving until then, the one scene switch that
@@ -93,7 +93,7 @@ export function itemSceneDoc(item, { environment = {} } = {}) {
     doc.libraryItem = { id: item.id, kind: isMat ? 'material' : 'node', unit: item.asset.unit ?? null,
         subject, sample, stage, stageMaterials: [floorMat.id],
         details: { category: item.category ?? 'Mine', tags: [...(item.tags || [])], help: item.help ?? '' } }
-    /* SEEN AS ITS PICTURE IS (0.65.0, builder/model.js VIEW): framed on the item from the studio's angle, the exposure
+    /* SEEN AS ITS PICTURE IS (0.66.0, builder/model.js VIEW): framed on the item from the studio's angle, the exposure
        metered -- the view the editor gave it the first time it was shown, now the scene's own from the start */
     const f = itemView(doc)
     Model.setView(doc, { camera: f ? studioCamera(f) : undefined, exposure: { autoExposure: 1 } })
@@ -379,7 +379,7 @@ export function installItemEditor({ BUILDER, RT, SHELL = null, library, tree, st
          *  project kept. An item gone from the library since stays unsaved: Save keeps it as a new one. */
         async adopt(memory = null) {
             asking = false; lastText = null
-            // a memory kept before 0.65.0 has an exposure mode too: the item's scene has its own now
+            // a memory kept before 0.66.0 has an exposure mode too: the item's scene has its own now
             home = { env: memory?.home?.env ? structuredClone(memory.home.env) : envNow() }
             libraryWasShowing = !!memory?.libraryWasShowing
             inItem = itemDoc()?.libraryItem?.id ?? null

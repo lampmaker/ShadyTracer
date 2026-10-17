@@ -15,7 +15,7 @@ order of that work): `ARCHITECTURE.md`, beside this file (2026-10-04). **Media**
 photon map, scattering inside materials, an Optics-view beam view -- has its own: `MEDIA.md`, beside this file
 (2026-10-16).
 
-## Each scene its own camera, exposure and tolerance — built 2026-10-17 (0.65.0), NOT yet seen
+## Each scene its own camera, exposure and tolerance — built 2026-10-17 (0.66.0), NOT yet seen
 
 The user (2026-10-17): camera settings and exposure "can vary per scene ... the information should belong to the
 scenes. Because switching between scenes almost always causes the camera and exposure to be wrong"; collapsible camera
@@ -36,7 +36,7 @@ liquid's water sits 10 um inside its glass under an 80 um tolerance (2 um now); 
 0.47 mm, set by its 2 m wall (5 um now). Checked without a GPU: model, project, store, scenes, animate, edit tests;
 panel, projects, item editor and renderer checks headless. **Not seen on hardware.**
 
-**What to look at** (the user, on hardware): CHANGELOG.md, 0.65.0.
+**What to look at** (the user, on hardware): CHANGELOG.md, 0.66.0.
 
 ## Dust in the air: a haze box — built 2026-10-16 (0.62.0), seen working by the user
 
