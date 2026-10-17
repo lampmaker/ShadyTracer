@@ -75,7 +75,8 @@ export const ENVIRONMENT_HELP = {
 export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStructure = () => { }, onApply = () => { }, params = null,
                                                       environment = () => ({}), itemSample = null } = {}) {
     const M = BUILDER.model
-    let folder = null, shownId = null
+    // the selection's own box, and the boxes of its categories after it (show says why they are apart)
+    let folder = null, boxes = [], shownId = null
 
     /* A BINDING WHOSE CHANGE REACHES US FROM EVERY CONTROL IT HAS. PropertyTable gives a vec3
        a '+' that opens per-component sliders, and those report through binding._onChange --
@@ -161,7 +162,10 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
     function animatedFolder(parent, doc) {
         const paths = M.animatedPaths(doc)
         if (!paths.length) return
-        const af = parent.addFolder({ title: `animated · ${paths.length}` })
+        /* the panel's first box, above the scene's own (its folder is the table's: show), so that what a timeline moves
+           stays at the top of the scene as the user asked; Tweakpane's `index` puts it there */
+        const at = table.children.findIndex(c => c.element === parent.element)
+        const af = parent.addFolder({ title: `animated · ${paths.length}`, ...(at >= 0 ? { index: at } : {}) })
         { const t = af.element?.querySelector?.('.tp-fldv_t'); if (t) t.title = 'The values marked animated (◆), wherever they are in the scene: each stays a live value in the baked scene, so the Timeline can move it without a compile' }
         const redraw = () => { const at = shownId; setTimeout(() => { if (shownId === at) show(at) }) }
         const XYZ = ['x', 'y', 'z', 'w']
@@ -210,14 +214,18 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
     const doc0 = table.container?.ownerDocument ?? globalThis.document
     let pointer = { x: 0, y: 0 }, dragIn = false
     doc0?.addEventListener('mousemove', e => { pointer = { x: e.clientX, y: e.clientY } }, true)
-    doc0?.addEventListener('mousedown', e => { dragIn = !!folder?.element?.contains(e.target) }, true)
+    doc0?.addEventListener('mousedown', e => { dragIn = [folder, ...boxes].some(f => f?.element?.contains(e.target)) }, true)
     doc0?.addEventListener('mouseup', () => { dragIn = false }, true)
     const endDrag = () => {
         if (!dragIn) return
         dragIn = false
         try { doc0.dispatchEvent(new MouseEvent('mouseup', { clientX: pointer.x, clientY: pointer.y, bubbles: true })) } catch { }
     }
-    const clear = () => { endDrag(); try { folder?.dispose() } catch { } folder = null; rechecks.clear(); entries = null }
+    const clear = () => {
+        endDrag()
+        for (const f of [...boxes, folder]) try { f?.dispose() } catch { }
+        folder = null; boxes = []; rechecks.clear(); entries = null
+    }
 
     /* WHAT A MATERIAL ITEM IS SHOWN ON, while it is edited (library/edit.js): one of the studio's sample
        shapes at one of its sizes, or "its own" once changed by hand. The host hands the hook in --
@@ -308,6 +316,16 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
             : node.kind === 'group' ? 'Group' : 'Object'
         // the kind, not the id: the id is internal, and the label -- the name -- is the first row
         folder = table.addFolder({ title })
+        /* EVERY CATEGORY A BOX OF ITS OWN, as the Render settings' are (the user, 2026-10-17: "a similar layout as the
+           render settings: collapsible categories are boxed"). The boxes are the table's (`boxes`, its host's: GUISTUFF
+           draws them, in the shell's colours), and a table boxes its top-level folders -- so a folder a helper puts in
+           the selection's (parameters, code, copies, coating, environment, ...) is made the table's instead, after the
+           selection's own box. The helpers are as they were, each handed the selection's folder. What they add to a
+           category is in its box, folders and all (a relief's parameters and its code, set in). Only an order changes:
+           a row a helper adds after a category -- a group's position after its recipe, the scene's unit after its
+           animated values -- is in the selection's box, above every category. The animated values are still the
+           scene's first: their box goes above the scene's own (animatedFolder). */
+        folder.addFolder = params => { const f = table.addFolder(params); boxes.push(f); return f }
         if (node.id === doc.root.id) {
             const t = folder.element?.querySelector?.('.tp-fldv_t')
             if (t) t.title = 'The scene\'s own settings: its name, its unit and how far it reaches, what lights it from outside, and '

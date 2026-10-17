@@ -15,6 +15,56 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.64.0 — 2026-10-17
+
+**The Properties panel in boxes, like Render settings, and the boxes are the property table's own now** (you:
+"a similar layout as the render settings: collapsible categories are boxed ... a feature/option of used library so
+a style change gets applied consistently").
+
+**Properties** (`builder/panel.js` `show`):
+- The selection's own box comes first: Object, Group, Material or Scene, with its name, join, material, position and
+  the other rows of its kind.
+- Then each category is a box of its own: parameters, from parameters, code, block, copies, recipe, coating, relief,
+  environment, functions, a light's emission, dust in the air, export for printing.
+- A folder inside a category stays a small heading, set in, as in Render settings (a relief's parameters and its code).
+- **One order changes.** A row that came after a category now sits in the selection's box, above every category: a
+  group's position (which came after its recipe) and the scene's unit and radius (which came after its animated values).
+- The scene's animated values stay at the top: their box goes above the Scene box.
+- Category titles stay as they were, in lower case ("parameters", "code"), but now in the box title's style rather
+  than small capitals.
+
+**One look, from one place.** The boxes were rules in `lib/shell/shell.css` over Tweakpane's classes, with a second copy
+for the Analysis pane in the same literal colours.
+- GUISTUFF's `PropertyTable` now draws them: `new PropertyTable({ boxes: true })` boxes every top-level folder, and
+  `addFolder({ icon })` puts an icon before a box's title.
+- The shell gives the colours once, as `--pt-box-*` on `.shell-panel`. Render settings, Properties and the Analysis
+  pane's Intensity and Map take them from the table. The Analysis results' box, which is not a table's, reads the same
+  properties.
+- `settingsui.js` `boxIcon(name)` now only names an icon's markup.
+- The submodule moves to GUISTUFF main at d7a8f89, the merge of lampmaker/GUISTUFF#11. That also brings
+  `bindingPrepper` widening a given range to hold its value (GUISTUFF 15be4e1, the general fix 0.59.1 asked for;
+  `fitRange` here already did it for the builder's parameters). `builder/test/params.test.mjs` had held the old
+  behaviour (a range of 0 to 10 kept for a value of 250). It now checks the new one: kept while it holds the value,
+  widened when it does not, and the caller's own bounds never moved.
+
+**What the move changed, measured headless (Chromium, every computed style and position of the Render settings test
+page's seven boxes, before against after):**
+- Nothing in Render settings, except the folds' indent strip inside a box, which is now `display: none`. It was
+  already 0 wide: the shell's unitless `--tp-base-border-radius: 0` makes Tweakpane's `max(var(--bs-br), 4px)` invalid.
+- **A box no longer clips what it holds** (the old rules had `overflow: hidden`). A colour picker opened in a box's last
+  rows (a material's colour, a light's) would have been cut off at its border. In GUISTUFF's demo, headless, the picker
+  now reaches past the box's border and is what the pointer meets there.
+- The Analysis pane's Intensity and Map boxes get Render settings' 4 px at their foot (inferred from the rules: their
+  copy had none).
+
+**What to look at:**
+- Properties, for an object, a group, a material, a light and the scene: one box for the selection, then a box for each
+  category, in the Render settings' colours.
+- A material's colour picker, opened: whole, not cut off.
+- Another scene's card chosen over the tree (0.63.0's "Scene, not open"): its Properties are one box.
+- Render settings and the Analysis pane: unchanged.
+- In a popped-out Properties or Render settings window: still boxed.
+
 ## 0.63.0 — 2026-10-17
 
 **C′, built: the project and its scenes over the tree, a Project panel, and a File menu of five rows.** You chose mockup

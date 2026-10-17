@@ -656,6 +656,22 @@ ok('...and a conic typed to four places kept on its slider (its step\'s rounding
     const listed = fr.find(r => /top › radius/.test(r.label ?? ''))
     ok('the scene\'s row lists it, ◆ before it', listed?.flag === '◆' && fr.findIndex(r => r === listed) < fr.findIndex(r => /^unit/.test(r.label ?? '')),
        JSON.stringify(fr.map(r => r.label)))
+    /* IN BOXES (0.64.0): the animated values' box first, above the scene's own -- its name, unit, radius, instant hide --
+       then a box a category; every one the table's, and drawn again the same */
+    const sceneBoxes = () => p.evaluate(() => [...document.querySelectorAll('#t2 .tp-rotv_c > .tp-fldv')].map(f => [
+        f.querySelector(':scope > .tp-fldv_b .tp-fldv_t').textContent.trim(), f.classList.contains('pt-box'),
+        [...f.querySelectorAll(':scope > .tp-fldv_c > .tp-lblv .tp-lblv_l')].map(l => l.textContent.trim().replace(/^[◇◆]/, ''))]))
+    let SB = await sceneBoxes()
+    ok('...in boxes: the animated values\' first, then the scene\'s own with its rows, then environment and functions',
+       JSON.stringify(SB.map(b => b[0].replace(/\s+◆$/, ''))) === '["animated · 1","Scene","environment","functions"]' && SB.every(b => b[1])
+       && ['label', 'unit', 'instant hide / show'].every(l => SB[1][2].includes(l)) && SB[1][2].some(l => l.startsWith('environment radius')), JSON.stringify(SB))
+    await p.evaluate(() => CHECK.flagPanel.show(CHECK.doc.root.id))
+    ok('...drawn again: the same boxes, none left over', JSON.stringify(await sceneBoxes()) === JSON.stringify(SB), JSON.stringify(await sceneBoxes()))
+    await p.evaluate(() => CHECK.flagPanel.show('g'))
+    SB = await sceneBoxes()
+    ok('...a group: its own box first, its position in it, its recipe and its code each a box after', SB[0]?.[0] === 'Group'
+       && SB[0][2].some(l => l.startsWith('position')) && SB.slice(1).some(b => b[0] === 'recipe') && SB.at(-1)?.[0].startsWith('group code'), JSON.stringify(SB))
+    await p.evaluate(() => CHECK.flagPanel.show(CHECK.doc.root.id))
     const live0 = (await state()).live.length
     const typed = await p.evaluate(() => {
         const row = [...document.querySelectorAll('#t2 .tp-lblv')].find(r => /top › radius/.test(r.querySelector('.tp-lblv_l')?.textContent ?? ''))

@@ -86,7 +86,7 @@ const RAYS_MAX = 5e7
 
 /**
  * @param host      the Analysis pane's element (it scrolls)
- * @param tableIn   el -> a property table in it, in the host's style
+ * @param tableIn   (el, opts) -> a property table in it, in the host's style; opts the table's own (`boxes`)
  * @param charts    { set, el: { [id]: the chart panel's element }, onVisible(id, fn(seen)),
  *                  add(chart, nearId) -> element, remove(id) } -- the host's panels, one per chart of `set`
  *                  (charts.js chartSet; without one, the six kinds' first alone). `add` registers a panel for a
@@ -120,17 +120,17 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
     const lowerEl = document.createElement('div')
     /* EACH SECTION A BOX OF ITS OWN (mockup G, B -- the user's choice, 2026-09-27): every heading was the
        same small muted capitals and Intensity, Map, the chart and the results ran together. The data's
-       two are its table's folders; the results' is wrapped here; what folds away stays plain below, which
-       is what makes it read as "more" (lib/shell/shell.css .shell-ana). */
+       two are its table's folders, boxes as the property table draws them (`boxes`, the Render settings' and
+       Properties' look); the results' is wrapped here, in the same colours (lib/shell/shell.css .shell-ana);
+       what folds away stays plain below, which is what makes it read as "more". */
     const secResults = div('ana-sec ana-results')
     secResults.append(resHead, cardsEl, resNote)
     dataEl.className = 'ana-data'; lowerEl.className = 'ana-more'
     host.classList.add('shell-ana')
     host.append(runbar, noteEl, dataEl, secResults, lowerEl)
-    // the headings' icons, as masks the stylesheet puts before each (a popped-out window keeps them: inline)
-    for (const n of ['polar', 'map', 'table'])
-        host.style.setProperty(`--ic-${n}`, `url("data:image/svg+xml,${encodeURIComponent(icon(n).outerHTML.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"'))}")`)
-    const dataTable = tableIn(dataEl)
+    // the results' heading icon, as a mask the stylesheet puts before it (a popped-out window keeps it: inline)
+    host.style.setProperty('--ic-table', `url("data:image/svg+xml,${encodeURIComponent(icon('table').outerHTML.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"'))}")`)
+    const dataTable = tableIn(dataEl, { boxes: true })
     const table = tableIn(lowerEl)
     const say = t => { noteEl.textContent = t; noteEl.title = t }
     /* A HAZE BOX (0.62.0; builder/hazebox.js) is the picture's alone: this trace (optics/kernels.js) has a chain of its own
@@ -601,7 +601,7 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
         dataKey = key
         for (const c of [...dataTable.children]) c.dispose()
         const reshape = () => requestAnimationFrame(() => buildData())
-        const fi = dataTable.addFolder({ title: 'Intensity' })
+        const fi = dataTable.addFolder({ title: 'Intensity', icon: icon('polar').outerHTML })
         fi.addBinding(F, 'from', { label: 'from', options: fromOptions() }).on('change', farChanged)
         fi.addBinding(F, 'light', { label: 'axis', options: lightOptions(), min: -1 }).on('change', () => { farChanged(); reshape() })
         /* a custom axis: three numbers, by commas or spaces, not all 0 -- anything else said, and the field put back */
@@ -616,7 +616,7 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
         fi.addBinding(F, 'dC', { label: 'C step', options: DC }).on('change', farChanged)
         fi.addBinding(F, 'unit', { label: 'unit', options: { 'cd': 'cd', 'cd/klm': 'cd/klm' } }).on('change', farRead)
         fi.addBinding(F, 'rot', { label: 'rotational symmetry' }).on('change', farRead)
-        const fm = dataTable.addFolder({ title: 'Map' })
+        const fm = dataTable.addFolder({ title: 'Map', icon: icon('map').outerHTML })
         fm.addBinding(IL, 'src', { label: 'of', options: sourceOptions() }).on('change', () => { IL.zoom = null; mapChanged(); reshape() })
         if (isPlane()) {
             fm.addBinding(IL, 'h', { label: 'distance (m)', min: 0.001 }).on('change', done(mapChanged))

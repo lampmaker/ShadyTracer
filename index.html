@@ -194,18 +194,19 @@
              its bench      Tests
            The renderer fills each with the same folders it used to put on its pages (installUI's
            `sections`); only where they sit is new. */
-        // the tables take the shell's font and colours (shell.css themes Tweakpane inside a panel)
-        const tableIn = el => {
-            const t = new PropertyTable({ container: el });
+        /* the tables take the shell's font and colours (shell.css themes Tweakpane inside a panel). `opts` are the
+           table's own: `boxes`, its top-level folders drawn as boxes -- by the property table (GUISTUFF), in the
+           colours shell.css gives its --pt-box-* properties, so every panel in boxes has the one look */
+        const tableIn = (el, opts = {}) => {
+            const t = new PropertyTable({ container: el, ...opts });
             Object.assign(t.element.style, { fontSize: '13px', width: '100%' });
             return t;
         };
-        /* ...IN BOXES, as the Analysis pane's sections are (the user, 2026-10-04; lib/shell/shell.css .shell-boxes): the
-           renderer's folders are its boxes (lib/pathtracer/settingsui.js RENDERER_BOXES) */
+        /* ...IN BOXES, as the Analysis pane's sections are (the user, 2026-10-04): the renderer's folders are its boxes
+           (lib/pathtracer/settingsui.js RENDERER_BOXES) */
         const rendererEl = SHELL.panel({ id: 'renderer', title: 'Render settings', module: 'renderer',
             help: 'How hard the renderer works: Quality (Preview: Sketch, Draft · Accurate: Standard, High · Optics), the light sources and how each is traced, bounces and noise, render size; the developer settings behind their switch.' });
-        rendererEl.classList.add('shell-boxes');
-        const rendererTable = tableIn(rendererEl);
+        const rendererTable = tableIn(rendererEl, { boxes: true });
         const testsTable = tableIn(SHELL.panel({ id: 'tests', title: 'Tests', module: 'renderer',
             help: 'The measurement bench: one row per test with a known answer, and a report to copy.' }));
         // no View entry: File › Save picture… opens it, floating (menu: false, lib/shell/shell.js standard)
@@ -241,7 +242,8 @@
         const chartEls = {};
         const chartPanel = c => (chartEls[c.id] = SHELL.panel({ id: c.id, title: c.title, module: 'optics', menu: false, help: c.help }));
         for (const c of CHARTS.list()) chartPanel(c);
-        const propsTable = tableIn(propsEl);
+        // in boxes, as Render settings (builder/panel.js show: the selection's, then one a category)
+        const propsTable = tableIn(propsEl, { boxes: true });
         /* THE LIBRARY (library/): objects, groups, lights and materials to put in, built in and one's own */
         const libraryEl = SHELL.panel({ id: 'library', title: 'Library', module: 'builder',
             help: 'Things to put into the scene: shapes, modifiers, lights, materials, assemblies, and your own. Double-click one to put it in at the selection; ＋ keeps the selection.' });
