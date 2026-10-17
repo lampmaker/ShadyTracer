@@ -192,6 +192,18 @@ ok('...and its saves and ⧉ at the end: the map\'s CSVs and picture', ['Save th
    .every(t => st.bars.map.tools.some(x => x.startsWith(t))) && st.bars.polar.tools.some(x => x.startsWith('Save the intensity table')), JSON.stringify(st.bars.map.tools))
 ok('the Analysis pane has no chart\'s settings, nor a Chart section', !['shows', 'C planes', 'isolines', 'about', 'view'].some(l => st.labels.includes(l))
    && !st.heads.some(h => /^Chart/.test(h)), JSON.stringify([st.labels, st.heads]))
+// THE SECTIONS' BOXES (0.63.0): the data's two the property table's (`boxes`), with their icons; the results' box the
+// pane's own, in the same colours; what folds away below them not boxed
+const boxes = await p.evaluate(() => {
+    const data = [...document.querySelectorAll('.ana-data .tp-rotv_c > .tp-fldv')]
+    const res = getComputedStyle(document.querySelector('.ana-results')), one = data[0] && getComputedStyle(data[0])
+    return { data: data.map(f => [f.querySelector('.tp-fldv_t').textContent.trim(), f.classList.contains('pt-box'), f.classList.contains('pt-icon')]),
+             same: !!one && ['borderTopColor', 'backgroundColor', 'borderTopLeftRadius'].every(k => res[k] === one[k]),
+             more: [...document.querySelectorAll('.ana-more .tp-fldv')].some(f => f.classList.contains('pt-box')) }
+})
+ok('the data\'s folders are boxes with their icons, the results\' box in their colours, what folds away plain',
+   JSON.stringify(boxes.data) === '[["Intensity",true,true],["Map",true,true]]' && boxes.same && !boxes.more, JSON.stringify(boxes))
+
 // THE RAY COUNT (the user, 2026-10-04): a number and a multiplier, 1 × 1M at first
 const count = () => p.evaluate(() => ({ n: document.querySelector('.shell-runbar .count').value, x: document.querySelector('.shell-runbar .times').selectedOptions[0].textContent }))
 ok('the rays to trace: a number times a multiplier, 1 × 1M', JSON.stringify(await count()) === JSON.stringify({ n: '1', x: '× 1M' }), JSON.stringify(await count()))

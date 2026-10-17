@@ -5,8 +5,8 @@
 // shown in mm whatever the scene's unit and live under the relief's own owner (<id>#relief), its code editor
 // listing the errors reported against the relief; none takes it away. A library item's scene row: its category,
 // tags and help, each an undo step. The scene's functions editor lists its own errors -- it stopped at
-// "checking..." for good, because it compared the row shown with the holder's id ('functions'). The order of a
-// material's rows (its relief last) and the code editors' folds. A material item's sample: the studio's four
+// "checking..." for good, because it compared the row shown with the holder's id ('functions'). The panel in boxes
+// (0.63.0): a material's own box first, a box a category after it, its relief last; the code editors' folds. A material item's sample: the studio's four
 // shapes offered at two sizes, one chosen swapped in wearing the material, "its own" once changed by hand. A
 // modifier's "material follows the warp", on a group with code only.
 //
@@ -81,9 +81,20 @@ ok('its code editor lists the errors reported at the relief\'s own lines', /erro
 const folders = () => p.evaluate(() => [...document.querySelectorAll('#p .tp-fldv')].map(f => ({
     title: f.querySelector(':scope > .tp-fldv_b .tp-fldv_t')?.textContent.trim(), open: f.classList.contains('tp-fldv-expanded'),
     top: f.parentElement.closest('.tp-fldv')?.querySelector(':scope > .tp-fldv_b .tp-fldv_t')?.textContent.trim() })))
+// THE BOXES (0.63.0): the material's own first, then a box a category -- the table's top-level folders, in order
+const boxes = () => p.evaluate(() => [...document.querySelectorAll('#p .tp-rotv_c > .tp-fldv')].map(f => ({
+    title: f.querySelector(':scope > .tp-fldv_b .tp-fldv_t')?.textContent.trim(), box: f.classList.contains('pt-box'),
+    rows: [...f.querySelectorAll(':scope > .tp-fldv_c > .tp-lblv .tp-lblv_l')].map(l => l.textContent.trim()) })))
 let F = await folders()
-const inMaterial = F.filter(f => f.top === 'Material').map(f => f.title)
-ok('a material\'s relief comes last, after its parameters and its code', inMaterial.at(-1) === 'relief' && inMaterial.indexOf('material code') < inMaterial.indexOf('relief'), inMaterial.join('|'))
+let B = await boxes()
+const order = B.map(b => b.title)
+ok('a material\'s own box first, then a box a category: its relief last, after its parameters and its code',
+    order[0] === 'Material' && order.at(-1) === 'relief' && order.indexOf('parameters') > 0 && order.indexOf('material code') < order.indexOf('relief')
+    && B.every(b => b.box), JSON.stringify(B.map(b => [b.title, b.box])))
+ok('...its own rows in its own box: its name, its type and its type\'s fields', ['label', 'type'].every(l => B[0].rows.includes(l)) && B[0].rows.length > 2,
+    JSON.stringify(B[0].rows))
+ok('...a folder in a category\'s box not a box: the relief\'s code in the relief\'s', F.find(f => f.title?.startsWith('relief code'))?.top === 'relief'
+    && await p.evaluate(() => [...document.querySelectorAll('#p .pt-box .tp-fldv')].every(f => !f.classList.contains('pt-box'))), JSON.stringify(F))
 ok('its code is a folder of its own, folded while it holds only comments', F.find(f => f.title?.startsWith('material code'))?.open === false, JSON.stringify(F))
 ok('...the relief\'s code, which holds code, open', F.find(f => f.title?.startsWith('relief code'))?.open === true, JSON.stringify(F))
 const titled = await p.evaluate(async () => {

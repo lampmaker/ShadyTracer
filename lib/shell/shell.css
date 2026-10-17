@@ -93,7 +93,14 @@
                --tp-groove-foreground-color: var(--sh-line);
                --tp-container-unit-size: 22px;
                --tp-blade-border-radius: 3px;
-               --tp-base-border-radius: 0; }
+               --tp-base-border-radius: 0;
+               /* ...and their BOXES (GUISTUFF's PropertyTable, `boxes`: Render settings, Properties, the Analysis
+                  pane's data -- whose results' box, not a table's, reads these too, .shell-ana below). The
+                  title is the ink colour, the library's default (--tp-input-foreground-color); the size, the
+                  corner and the gap are its defaults too, 12.5px, 7px, 8px. One place for the look: these were
+                  literals in two copies of the same rules here until 0.63.0. */
+               --pt-box-border-color: #36404a;
+               --pt-box-background-color: #1a1e22; }
 /* THE WORKBENCH MOCKUP'S TYPE, which the user found lighter than Tweakpane's: the system face at 13px,
    regular weight (Tweakpane sets 500 on everything and bold on its dropdowns and buttons), section
    titles as small muted capitals rather than bars of text, numbers in the monospace face. The size is
@@ -226,38 +233,29 @@
 .shell-note { font: 12px var(--sh-sans); color: var(--sh-faint); padding: 2px 10px 6px; }
 .shell-note:empty { display: none; }
 
-/* THE ANALYSIS PANE'S SECTIONS, a box each (mockup G, proposal B): the data's folders (Intensity, Map) and
-   the results' section (the selected chart's was one too, until a chart's settings went onto the chart), headed in the ink colour with an icon; what folds away below
-   stays in the small muted capitals, which is what makes it read as "more". The icons are masks the
-   pane sets as --ic-* (optics/page.js). */
-.shell-ana .ana-data .tp-fldv, .shell-ana .ana-sec { margin: 8px; border: 1px solid #36404a; border-radius: 7px; background: #1a1e22; overflow: hidden; }
-.shell-ana :is(.ana-data .tp-fldv_b, .ana-sec > .shell-head) {
-    position: relative; color: var(--sh-ink); font: 600 12.5px var(--sh-sans); text-transform: none; letter-spacing: 0;
-    padding: 8px 10px 4px 33px; height: auto; background: transparent; }
-.shell-ana :is(.ana-data .tp-fldv_b, .ana-sec > .shell-head)::before {
+/* THE ANALYSIS PANE'S SECTIONS, a box each (mockup G, proposal B): the data's folders (Intensity, Map), boxes as
+   the property table draws them (optics/page.js, `boxes`), and the results' section (the selected chart's was one
+   too, until a chart's settings went onto the chart) -- not a table's folder, so drawn here, in the boxes' own
+   properties (--pt-box-*, above) so that it cannot drift from them. What folds away below stays in the small muted
+   capitals, which is what makes it read as "more". The icon is a mask the pane sets as --ic-table. */
+.shell-ana .ana-sec { margin: var(--pt-box-margin, 8px); border: 1px solid var(--pt-box-border-color); border-radius: var(--pt-box-border-radius, 7px);
+                      background: var(--pt-box-background-color); overflow: hidden; }
+.shell-ana .ana-sec > .shell-head {
+    position: relative; color: var(--pt-box-title-color, var(--tp-input-foreground-color)); font: 600 var(--pt-box-title-font-size, 12.5px) var(--sh-sans);
+    text-transform: none; letter-spacing: 0; padding: 8px 10px 4px 33px; height: auto; background: transparent; }
+.shell-ana .ana-sec > .shell-head::before {
     content: ''; position: absolute; left: 10px; top: 50%; width: 15px; height: 15px; margin-top: -5.5px; background: currentColor;
     -webkit-mask: var(--ic) center / contain no-repeat; mask: var(--ic) center / contain no-repeat; }
-.shell-ana .ana-data .tp-fldv:nth-child(1) .tp-fldv_b { --ic: var(--ic-polar); }
-.shell-ana .ana-data .tp-fldv:nth-child(2) .tp-fldv_b { --ic: var(--ic-map); }
 .shell-ana .ana-results > .shell-head { --ic: var(--ic-table); }
 .shell-ana .ana-sec .shell-card { background: #22282d; }
 .shell-ana .ana-more { margin-top: 6px; }
 
-/* THE RENDERER PANEL'S BOXES, the same look (the user, 2026-10-04: "groups with boxed outlines, like the analysis
-   settings"; lib/pathtracer/settingsui.js RENDERER_BOXES): a panel marked .shell-boxes makes each of its table's
-   top-level folders a box, headed in the ink colour with the icon settingsui puts on the folder (--ic, data-icon).
-   A folder inside a box -- a developer's groups in Light sources -- keeps the small muted capitals, set in a
-   little, so it reads as part of its box. */
-.shell-boxes .tp-rotv_c > .tp-fldv { margin: 8px; border: 1px solid #36404a; border-radius: 7px; background: #1a1e22; overflow: hidden; }
-.shell-boxes .tp-rotv_c > .tp-fldv > .tp-fldv_b {
-    position: relative; color: var(--sh-ink); font: 600 12.5px var(--sh-sans); text-transform: none; letter-spacing: 0;
-    padding: 8px 10px 4px 12px; height: auto; background: transparent; }
-.shell-boxes .tp-rotv_c > .tp-fldv[data-icon] > .tp-fldv_b { padding-left: 33px; }
-.shell-boxes .tp-rotv_c > .tp-fldv[data-icon] > .tp-fldv_b::before {
-    content: ''; position: absolute; left: 10px; top: 50%; width: 15px; height: 15px; margin-top: -5.5px; background: currentColor;
-    -webkit-mask: var(--ic) center / contain no-repeat; mask: var(--ic) center / contain no-repeat; }
-.shell-boxes .tp-rotv_c > .tp-fldv .tp-fldv { margin: 2px 4px 2px 8px; }
-.shell-boxes .tp-rotv_c > .tp-fldv > .tp-fldv_c { padding-bottom: 4px; }
+/* THE RENDERER PANEL'S BOXES (the user, 2026-10-04: "groups with boxed outlines, like the analysis settings";
+   lib/pathtracer/settingsui.js RENDERER_BOXES) and the Properties panel's (the user, 2026-10-17: "a similar layout as
+   the render settings: collapsible categories are boxed ... a feature/option of used library so a style change gets
+   applied consistently"): the property table's own, `boxes: true`, in the colours above. A folder inside a box -- a
+   developer's groups in Light sources -- keeps the small muted capitals, set in a little, so it reads as part of
+   its box. These were rules here over Tweakpane's classes, `.shell-boxes`, until 0.63.0. */
 
 /* A LIBRARY PANEL (library/panel.js): a search bar, chips to filter, items by category */
 .shell-lib { display: flex; flex-direction: column; height: 100%; min-height: 0; font: 13px var(--sh-sans); }

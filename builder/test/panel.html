@@ -48,11 +48,11 @@ const BUILDER = {
     commit(k) { T.commits.push(k) },
     check: async () => ({ messages: [] }),
 }
-const table = new PropertyTable({ container: document.getElementById('t') })
+const table = new PropertyTable({ container: document.getElementById('t'), boxes: true })        // in boxes, as the page's
 const panel = installBuilderPanel(table, BUILDER, { onLabel: () => T.labels++, onStructure: () => T.structure++ })
 const P = makeParams()
 P.provide('scene', () => sceneParams(doc, { live: (id, k) => BUILDER.live(id, k), commit: k => BUILDER.commit(k) }))
-const flagPanel = installBuilderPanel(new PropertyTable({ container: document.getElementById('t2') }), BUILDER,
+const flagPanel = installBuilderPanel(new PropertyTable({ container: document.getElementById('t2'), boxes: true }), BUILDER,
     { onLabel: () => T.labels++, onStructure: () => T.structure++, params: P })
 window.CHECK = { M, T, doc, panel, table, P, flagPanel }
 </script>
