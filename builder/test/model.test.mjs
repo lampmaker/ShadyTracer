@@ -1519,5 +1519,53 @@ throws('another version is refused, not guessed at',
     eq('a node called camera keeps its own flag, apart from the view\'s', [n.root.animate, M.find(n, 'camera').node.animate], [undefined, ['radius']])
 }
 
+//----------------------------------------------------------------------------------------------
+// THE TIMELINE (0.67.0): the Timeline panel's keys and the film's settings, the scene's, whole
+// when read -- lib/timeline's load keeps whatever an object leaves out, so a scene handed over
+// as it is would get the last scene's fps (the camera's carry-over again)
+//----------------------------------------------------------------------------------------------
+{
+    const d = M.createDoc({ title: 'timeline' })
+    eq('a scene with no timeline is shown the defaults, whole', M.sceneTimelineOf(d),
+        { fps: 30, duration: 8, tracks: [], export: { width: 1920, height: 1080, samples: 64, from: 0, to: 0, filename: 'raytracer' } })
+    ok('...and has none in its file', !('timeline' in d))
+    eq('...as no document at all (nothing shown)', M.sceneTimelineOf(null), M.sceneTimelineOf(d))
+    // lib/timeline's own as the panel hands it over: toJSON, and every export setting, the encoder's too
+    const tracks = [{ prop: 'scene/n4/radius', interp: 'linear', keys: [{ t: 0, v: 1 }, { t: 2, v: 3, ease: 'in' }] },
+                    { prop: 'view/camera/target', interp: 'spline', keys: [{ t: 1, v: [0, 0.5, 1] }] }]
+    M.setTimeline(d, { fps: 24, duration: 4, tracks,
+        export: { width: 640, height: 480, samples: 16, format: 'mp4', bitrate: 12, filename: 'turn', from: 0.5, to: 3, stream: true } })
+    eq('kept: its fps, duration and tracks', [d.timeline.fps, d.timeline.duration, d.timeline.tracks], [24, 4, tracks])
+    eq('...and of the export settings the film\'s alone: the encoder\'s are the person\'s', d.timeline.export,
+        { width: 640, height: 480, samples: 16, from: 0.5, to: 3, filename: 'turn' })
+    ok('...a copy: the panel going on with its tracks changes nothing kept', (tracks[0].keys.push({ t: 3, v: 9 }), d.timeline.tracks[0].keys.length === 2))
+    eq('a sound document round-trips its timeline', M.parse(M.serialize(d)).timeline, d.timeline)
+    // a timeline that names its fps and nothing else: the rest the defaults, never what was there
+    const e = M.setTimeline(M.createDoc(), { fps: 12 })
+    eq('a scene that leaves things out is shown with the defaults for them', M.sceneTimelineOf(e),
+        { fps: 12, duration: 8, tracks: [], export: { width: 1920, height: 1080, samples: 64, from: 0, to: 0, filename: 'raytracer' } })
+    M.setTimeline(e, { fps: 25, duration: 2 })
+    eq('...and is set WHOLE: what the next one leaves out is gone, not merged', e.timeline, { fps: 25, duration: 2 })
+    // refused, and nothing changed
+    const before = JSON.stringify(d.timeline)
+    throws('an fps of 0 is refused', () => M.setTimeline(d, { fps: 0 }), /timeline\.fps/)
+    throws('a duration that is not a number', () => M.setTimeline(d, { duration: 'long' }), /timeline\.duration/)
+    throws('a track that is not a list', () => M.setTimeline(d, { tracks: {} }), /timeline\.tracks/)
+    throws('a track with no path', () => M.setTimeline(d, { tracks: [{ interp: 'linear', keys: [] }] }), /tracks\[0\]\.prop/)
+    throws('two tracks on one parameter', () => M.setTimeline(d, { tracks: [tracks[1], tracks[1]] }), /second track on 'view\/camera\/target'/)
+    throws('an interpolation lib/timeline has not', () => M.setTimeline(d, { tracks: [{ prop: 'a', interp: 'bezier', keys: [] }] }), /interp/)
+    throws('a key before 0', () => M.setTimeline(d, { tracks: [{ prop: 'a', interp: 'step', keys: [{ t: -1, v: 0 }] }] }), /keys\[0\]\.t/)
+    throws('a key whose value is a word', () => M.setTimeline(d, { tracks: [{ prop: 'a', interp: 'step', keys: [{ t: 0, v: 'red' }] }] }), /keys\[0\]\.v/)
+    throws('an ease that is not one', () => M.setTimeline(d, { tracks: [{ prop: 'a', interp: 'step', keys: [{ t: 0, v: 0, ease: 'bounce' }] }] }), /ease/)
+    throws('a film of half a pixel', () => M.setTimeline(d, { export: { width: 0.5 } }), /timeline\.export\.width/)
+    throws('no samples', () => M.setTimeline(d, { export: { samples: 0 } }), /timeline\.export\.samples/)
+    eq('...each refusal changed nothing', JSON.stringify(d.timeline), before)
+    ok('a key with no ease (null, as lib/timeline\'s own) is sound', M.validate({ ...M.createDoc(), timeline: { tracks: [{ prop: 'a', interp: 'smooth', keys: [{ t: 0, v: 1, ease: null }] }] } }).length === 0)
+    ok('a file with a timeline key it does not know is refused', M.validate({ ...M.createDoc(), timeline: { loop: true } }).some(p => /timeline\.loop/.test(p)))
+    ok('...and an export setting that is no film\'s', M.validate({ ...M.createDoc(), timeline: { export: { bitrate: 12 } } }).some(p => /timeline\.export\.bitrate/.test(p)))
+    M.setTimeline(d, null)
+    ok('taken away: no timeline at all', !('timeline' in d))
+}
+
 console.log(fail ? `\n${fail} FAILED, ${pass} passed` : `${pass} assertions pass.`)
 process.exit(fail ? 1 : 0)

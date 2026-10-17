@@ -15,6 +15,62 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.67.0 — 2026-10-17
+
+**Each scene keeps its own timeline.** You asked whether the animation timeline's settings could be part of a scene,
+and agreed to the defaults proposed: no undo step, the film's settings the scene's and the encoder's yours, a duplicate
+bringing its timeline.
+
+**What was wrong (read in code):**
+- The Timeline was one for the whole page, in the browser's storage (`raytracer.timeline`, `tools/timeline.js`). It
+  was not in the scene, the project, a scene file or an example, and switching scenes kept it.
+- A track names what it moves by the node's id, and ids repeat between scenes: `n1`, `n2` … in each
+  (`builder/model.js` newId). A track on one scene's `n4` stayed live in another scene with an `n4` that has a
+  parameter of the same name, and playing it moved that object. Not tried: nothing in the code stopped it.
+- A camera's lengths are in the scene's unit, so a camera distance keyed at 20 was 20 mm in one scene and 20 m in
+  the next.
+
+**Now:**
+- **The scene's file holds its timeline** (`builder/model.js` TIMELINE): the fps, the duration, the tracks and their
+  keys, and the film's size, renders per frame, from and to, and file name. A scene file, a duplicate, a project and a
+  workspace each come with it. The scene format's version does not move, as for the view in 0.66.0: an older builder
+  carries the field along unread.
+- **Shown with its scene**, at the moment the camera and exposure change hands (`builder/demo.js` markShown), and
+  whole: what a scene leaves out is the default (30 fps, 8 s, 1920 × 1080, 64 renders a frame, no tracks), never the
+  last scene's. Playback stops on a switch. The playhead stays, and nothing is applied to the scene until you move it
+  or press play.
+- **Written as it changes** into the scene shown. It is no undo step (it never was), and an undo leaves it as it is.
+  It is saved as an edit is, though: within the second, and a second tab's copy is made by it (`BUILDER.saveRevision`).
+  A scene deleted from its card and brought back with Ctrl+Z has its timeline again.
+- **Format, bitrate and "to disk" are yours, not the scene's**: kept in this browser (`raytracer.timeline.export`), the
+  same in every scene.
+- **Your timeline from before this goes to the first scene shown after the update**, if that scene has no tracks of
+  its own, and is then removed from the browser's storage. Where no scene of the project is shown (the safe start), it
+  waits for the next start.
+- **A scene shown while a video records**: the recording goes on with its own timeline, and the scene's comes in
+  when it ends.
+- **SAVE… and LOAD…** in the export drawer still write and read a `.timeline.json`. A file loaded becomes the scene's
+  timeline.
+- **A library item being edited is a scene of its own while open**, so it starts with an empty timeline, and the
+  scene you came from has its own back when you leave. Keys set in an item's scene are not saved with the item: the
+  library keeps its objects (read in code: `library/edit.js` save).
+
+**Tested without a GPU:** the model (the field's checks, whole when read, the film's settings only), the project (out
+of the history, carried across a restore, in a duplicate and a scene file), the builder over a stand-in renderer
+(handed over as each scene is shown, kept into the scene shown during a compile, no undo step, saved, a deleted
+scene's back), and the Timeline panel in headless Chromium (kept, another scene whole, the encoder's settings kept, a
+scene shown while recording, a reload, the old timeline taken once).
+
+**What to look at** (in the browser):
+1. Key a value in one scene (the camera's azimuth), then open another: its Timeline is empty, at 30 fps and 8 s. Go
+   back: your keys are there.
+2. Give one scene a square film and another 1920 × 1080: the frame over the picture follows the scene. Choose PNG as
+   the format: it stays PNG in every scene.
+3. Reload: both keep their timelines. Export a scene file and open it: the timeline comes with it.
+4. Your timeline from before this update should be in the first scene you see after it. Say if it went to another
+   scene, or nowhere.
+5. Set keys, then Ctrl+Z an edit: the keys stay.
+
 ## 0.66.0 — 2026-10-17
 
 **Each scene keeps its own camera, exposure and surface tolerance** (you: "switching between scenes almost always causes

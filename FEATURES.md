@@ -290,6 +290,7 @@ measured). (Aspheric and Fresnel lenses are shapes now: *Builder*.)
 | feature | status | evidence |
 |---|---|---|
 | **Keyframes on any live parameter**: camera, a light's flux, an object's position, the sun… with linear / smooth / spline / step interpolation and easing | built; headless-tested over a stand-in renderer | `tools/timeline.js` |
+| **Each scene its own timeline** (0.67.0): the fps, duration, tracks and keys, and the film's size, samples, range and name saved in the scene's file, written as they change into the scene shown, put back whole when it is shown -- nothing left from the scene before; no undo step, saved as an edit is. The encoder's format, bitrate and "to disk" are the browser's. The page's one timeline from before goes to the first scene shown | built 2026-10-17; node-tested (`model`, `project`, `timeline`), headless-checked (`timeline.check`); **not seen on hardware** | `builder/model.js` TIMELINE, `demo.js` keepTimeline, `tools/timeline.js` showScene |
 | **Record**: every frame rendered offscreen at the export size with its own samples | built | |
 | **MP4** (H.264, else VP9 or AV1, in MP4; Chromium only) or a **ZIP of PNG frames** (any browser); stream to disk where the browser allows | built | `lib/timeline/encoders.js` |
 | WebM | **not there** (README.md said so; corrected) | |

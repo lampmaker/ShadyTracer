@@ -353,6 +353,8 @@ number carries its standard error**.
 *preview*
 - **Keyframes on any live setting**: the camera, the sun, a light's flux, an object's position.
 - Linear, smooth, spline or step interpolation, with easing.
+- **Each scene its own timeline**, saved in its file: the keys, the frame rate and length, and the video's size and
+  samples. The format and bitrate are yours, the same in every scene.
 - **Record**: every frame rendered offscreen at the export size with its own samples.
 - **MP4** (H.264, or VP9 or AV1 where H.264 is missing; Chromium browsers) or a **ZIP of PNG frames**
   (any browser), streamed to disk where the browser allows.
