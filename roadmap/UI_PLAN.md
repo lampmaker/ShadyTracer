@@ -670,9 +670,37 @@ dropped on a card is copied there, and Shift moves it; dragging the cards reorde
 - Nothing is added while a library item is edited: its strip has Save and Close.
 - **The menu bar: 29 rows** (File 5, Edit 2, View 12, Analysis 4, Help 6), against today's 67.
 
-**Still open:**
-- whether undoing a change to the list of scenes stays on the scene being worked on (drawn so);
-- whether the Project view covers the panels (drawn so) or is a dock panel of its own.
+**Then decided (the user, 2026-10-17):** "go, undo stays put, project view is a dockable panel of its own. if it isnt
+open, open it in the same pane as the viewport, as these will rarely have to be viewed side by side."
+
+### Built (0.63.0)
+
+- **The cards** (`builder/scenestrip.js`): the line and a card per scene over the tree, in place of the row
+  (`builder/projectrow.js`, gone).
+  - A card's click shows it in Properties (`builder/panel.js` showScene), read from the project, so nothing compiles.
+  - ▶ or a double-click opens it.
+  - A tree row dropped on a card goes through `tree.js` sendTo: TreeView tells the tree a drag started, so the tree
+    knows the row. The drop asks for 'move', the only effect TreeView allows; Shift on the drop says which.
+- **The Project panel** (`workspace/projectview.js`): a dock panel, `menu: false`. It opens as a tab in the viewport's
+  group when it is not open; choosing a scene, an example or another project in it brings the picture back.
+  - It replaces `workspace/dialog.js` and keeps its rules (delete asks; the project open here, or in another tab,
+    cannot be deleted).
+- **Undo stays put.** A step carries what it was (`builder/history.js` meta). `demo.js` restore keeps the scene being
+  worked on for any step marked `scenes`, and returns 'live' without pushing the uniforms when that scene is untouched.
+  - A library item opened or closed is marked `follow`: a mode, whose undo goes with it.
+- **The pictures** (`workspace/scenepics.js`, `RT.thumbnail`): a second darkroom develops a copy of the live
+  accumulation, small, once a picture has settled.
+  - Their cost on a card was not measured. The user judges whether the view hitches when one is taken.
+- **The menus:**
+  - five on the bar; Render settings and Window menu-less (`standardCommands({ window: false, layouts: false })`);
+  - Undo and Redo in `SHELL.tools`;
+  - File in five rows (`builder/filemenu.js`);
+  - Import from file… asks of a project file (`workspace/ask.js`).
+- **Read in code, left for the submodule's own repository:** TreeView calls `_handleDragEnter`, which it never defines,
+  on every dragenter (`lib/guistuff/treeview/treeview.js:196`). A tree row dragged onto a card logs a TypeError and
+  drops anyway; `projects.check.mjs` lets it through by name.
+
+**Still open:** nothing the user was asked. Not measured: a picture's cost.
 
 **Building it (outline, once the user has seen C′):**
 - **The Scene panel.** `builder/projectrow.js` becomes the panel's line and cards, in a module of its own.

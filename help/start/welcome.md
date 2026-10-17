@@ -19,7 +19,7 @@ Both tracks use the same scenes, the same tree and the same materials.
 
 ## Five minutes
 
-1. Open an example: **File › Examples › Start › First steps** -- or [open it from here](example:first-steps.json).
+1. Open an example: click the project's name over the tree, and under **Examples** choose **First steps** -- or [open it from here](example:first-steps.json).
 2. Drag in the picture to orbit round it; the wheel moves you in and out, a middle-drag pans.
 3. Click the red ball. Its handles appear; drag one to move it. The numbers at the top right of the view say where
    it is; fold them away with ▾ when they are in the way.

@@ -90,7 +90,7 @@ export function createAutosave({ store, read, local = null, now = () => Date.now
                 return true
             } catch (e) {
                 console.error('[autosave]', e)
-                if (!failed) say(`NOT saved in the browser: ${e.message} -- File › Save to a file keeps a copy`)
+                if (!failed) say(`NOT saved in the browser: ${e.message} -- File › Export ▸ Project file keeps a copy`)
                 failed = true
                 return false
             } finally { busy = null; done() }

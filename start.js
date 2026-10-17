@@ -35,7 +35,7 @@ export function started(local) { try { local?.removeItem(STARTING_KEY) } catch {
 
 /** What the status says after a safe start. */
 export const safeNote = (title, { asked }) => `safe start: '${title}' was not compiled -- ${asked ? 'as asked (?safe)'
-    : 'the last start did not finish (closed, reloaded or stuck while compiling it)'}. ▶ beside its name compiles it, or choose another scene (▾)`
+    : 'the last start did not finish (closed, reloaded or stuck while compiling it)'}. ▶ on its card over the tree compiles it, or open another scene from its card`
 
 /**
  * THE RENDERER'S FIRST COMPILE (RT.init). Resolves to null when it went well; when it failed, to what to say -- with the
@@ -56,6 +56,6 @@ export async function firstCompile({ RT, BUILDER, nothing }) {
         let r = null
         try { r = await BUILDER.check({ quiet: true }) } catch { }
         const why = r && !r.ok ? String(r.report ?? '').split('\n').find(l => l.trim())?.trim() : null
-        return `'${BUILDER.doc.title}' does not compile${why ? `: ${why}` : ''} -- started on an empty scene. Fix it, or choose another scene (▾); ▶ beside its name compiles it`
+        return `'${BUILDER.doc.title}' does not compile${why ? `: ${why}` : ''} -- started on an empty scene. Fix it, or open another scene from its card; ▶ on its card over the tree compiles it`
     }
 }

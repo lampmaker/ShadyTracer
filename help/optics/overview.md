@@ -37,6 +37,6 @@ lights' rays also light the picture: a lens's spot on a screen shows in the pict
 - [How far to trust the numbers](accuracy.md): error bars, noise, what has been checked against known answers.
 - [What the optics trace does not do](limits.md): every known limitation, with where it is written.
 
-The examples under **File › Examples › Optical design** each show one thing: an aspheric condenser, a Fresnel lens
+The examples for **Optical design** (the Project panel: the project's name over the tree) each show one thing: an aspheric condenser, a Fresnel lens
 beside a plano-convex one, a parabolic reflector, a light guide, RGBW colour mixing, a prism's dispersion, a
 dichroic combiner, and an office's work-plane illuminance.

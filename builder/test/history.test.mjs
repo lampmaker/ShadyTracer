@@ -87,5 +87,31 @@ const clock = () => t
     eq('and starts from the new text', h.undo(), 'Z')
 }
 
+{
+    // WHAT A STEP WAS (0.63.0): the meta given with a commit comes back as `step` when that step is undone or redone
+    const h = createHistory('A', { now: clock })
+    h.commit('B', null, { scenes: 'delete' }); h.commit('C'); h.commit('D', null, { scenes: 'copy to' })
+    eq('an undo gives the meta of the step it undid', [h.undo(), h.step], ['C', { scenes: 'copy to' }])
+    eq('...a step committed with none, null', [h.undo(), h.step], ['B', null])
+    eq('...and the one before it', [h.undo(), h.step], ['A', { scenes: 'delete' }])
+    eq('a redo gives the meta of the step it redid', [h.redo(), h.step], ['B', { scenes: 'delete' }])
+    eq('...each in turn', [h.redo(), h.step, h.redo(), h.step], ['C', null, 'D', { scenes: 'copy to' }])
+    h.undo(); h.commit('E', null, { scenes: 'rename' })
+    eq('a new edit after an undo keeps its own', [h.undo(), h.step], ['C', { scenes: 'rename' }])
+}
+{
+    let t = 0
+    const h = createHistory('0', { now: () => t })
+    h.commit('1', 'drag', { first: true }); t += 10; h.commit('2', 'drag', { second: true })
+    eq('a merged step keeps the meta of its first commit', [h.undo(), h.step], ['0', { first: true }])
+}
+{
+    const h = createHistory('0', { now: clock, limit: 2 })
+    h.commit('1', null, 'one'); h.commit('2', null, 'two'); h.commit('3', null, 'three')
+    eq('the limit drops a step\'s meta with it', [h.undo(), h.step, h.undo(), h.step, h.undo()], ['2', 'three', '1', 'two', null])
+    h.reset('Z'); h.commit('Y')
+    eq('reset forgets the metas too', [h.undo(), h.step], ['Z', null])
+}
+
 console.log(fail ? `\n${fail} FAILED, ${pass} passed` : `${pass} assertions pass.`)
 process.exit(fail ? 1 : 0)
