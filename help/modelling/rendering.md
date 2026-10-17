@@ -32,6 +32,7 @@ glass and near-mirror metal on the way.
 | seen through glass (photon map) | off | as set | on | on | as set |
 | dust in the air | off | light scattered once | in full | in full | off |
 | dispersion | as set | as set | on | on | as set |
+| diffuse bounces | — | — | all | all | — |
 
 **Why Draft can be little faster than Standard.** Draft leaves out only the camera's bounce light. The photons of the
 caustics and of the lights' rays, and the photon map, still run in full, and on a scene with lamps behind lenses
@@ -54,6 +55,12 @@ you stop.
   the camera's own paths almost never do. **Lights' rays** (Render settings › Light sources) switches the light objects' part of it.
 - **Paths and noise**: how many bounces a path may take, and the **firefly clamp**, which caps single very bright
   samples (0 = off). A clamp makes the picture less noisy and a little darker than it should be.
+  **Max Diffuse Bounces** (40, all, by default): how often light may bounce between matte or glossy surfaces on its
+  way to the camera. Mirrors, glass and near-mirror gloss do not count, so light can still run down a long chain of
+  lenses while the bounces between walls are cut short. Dust in the air counts as matte.
+  - **0** is the direct light alone, but through lenses, mirrors and glass, caustics included: what Draft shows, done
+    exactly. **1** adds one bounce off a wall, and so on.
+  - Fewer reads as Custom; Standard and High put all of them back. At or above Max Bounces it changes nothing.
   **Dispersion** (ticked by default): glass with an Abbe number splits white light into its colours where it
   refracts. Untick it and every glass bends all colours alike: no colour fringes, and none of the colour noise they
   take to settle. Standard and High tick it again. The Optics page always traces dispersion.

@@ -15,6 +15,61 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.69.0 — 2026-10-17
+
+**Max Diffuse Bounces** (you: "different # of bounces for diffuse and optical (mirror, transparent) materials"; the
+design you approved). It is a row in Render settings › Paths and noise, beside Max Bounces, 40 (all) by default.
+
+**What it counts.** Bounces between matte or glossy surfaces on light's way to the camera, counted as Max Bounces and
+Cycles count them: N bounces of indirect light, the last scatter into a light not one of them.
+- **0** is the direct light alone, but through lenses, mirrors and glass, caustics included: what Draft shows, done
+  exactly. **1** adds one bounce off a wall, and so on.
+- **A diffuse bounce** is Draft's own split: the diffuse base, gloss rough enough for a photon to connect through, and a
+  point in the dust.
+- **Not counted** (Max Bounces still caps them): mirrors, clear glass, dichroics, near-mirror gloss and frosted glass.
+- **Fewer reads Custom,** "Max Diffuse Bounces 2 (Standard: 40)". Standard and High put all of them back.
+- **At or above Max Bounces it is not sent to the kernels at all** (photometry.js `diffuseCapOf`: the cap is 0, none). So
+  the default traces exactly what it did. Every random stream and march cut-off reads as before.
+
+**How it stays exact.** The picture's light comes from the camera's paths, the photons and the photon map, each owning a
+part. A limit has to cut the same paths on every side, or light is counted twice or lost. Read in code
+(`tracebasics.js` pathEnd, THE DIFFUSE CAP):
+- **A camera path with none left** takes no light sample. A matte draw then ends it; past a mirror or glass it goes on,
+  and what it meets there counts in full.
+- **A light's photon** connects only with one left, and ends once it has none. The surface it lands on is the camera's
+  first, a diffuse bounce on that side.
+- **The photon map** stores only what a gather can count. The sun's photons, the map's own class and every camera-side
+  hand-over are unchanged.
+- **The Optics page** traces without it.
+
+**Where the count lives.** The ray had no room left (112 bytes). The march-step counter's upper half holds it, and the
+field is renamed `counts`, so any old read fails to compile (naga and Dawn found none left).
+
+**Tested on the software GPU** (lavapipe, in the container; no picture looked at):
+- **A new test,** `diffuse.gpu.mjs`, 63 checks:
+  - a hit through the shade kernel's own stages at every cap: the light sample, the cut-off, the light's photon's
+    connection and its end, the Optics page's rays never cut, the march steps kept;
+  - **on a floor and a wall under the sun:** 0 bounces Draft's picture (1.0053 ± 0.0024). Light sampling off as on
+    (1.0005 ± 0.0035 at 0, 0.9987 ± 0.0034 at 1), so a capped vertex counts nothing twice. 1 bounce 1.18 of 0, no limit
+    1.04 of 1.
+- **The dust test:** 0 diffuse bounces at Max Bounces 10 is single scattering, 0.9932 ± 0.0079 of the integral it already
+  computes. (Max Bounces 1 is not single scattering; this is.)
+- **The photon-map test,** the floor seen and lit through the slab: the sun's photons with the map against the camera's
+  own paths, 0.971 ± 0.026 at 0 bounces and 1.026 ± 0.030 at 1. Its WGSL store rule is held to the JS one with caps.
+
+**Also, a fix to 0.68.0:** Tests › image rows start from your own settings. They now force every diffuse bounce, and
+dispersion as each glass sets it, as they force full path tracing and the scene's environment. A switch you left off no
+longer changes a closed-form row.
+
+**Tests › render-modes-cost:** two rows more, Standard at 0 and at 2 diffuse bounces. The same iterations a sample, so
+what they save is shader time.
+
+**What to look at:**
+- **An LED-and-lens scene at 0 against Draft:** floors and walls lit directly, the lens's light on the floor, no light
+  between walls. Draft makes its own approximations, so small differences are expected.
+- **A room at 0, 1, 2 and 40:** brighter at each step. 40 is today's picture.
+- **Tests › render-modes-cost:** what 0 and 2 cost against Standard and Draft. Paste the report.
+
 ## 0.68.0 — 2026-10-17
 
 **(Built as 0.65.0; renumbered when merged with main, which took 0.65.0 to 0.67.1.)**
