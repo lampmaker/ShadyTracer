@@ -52,7 +52,7 @@ input, select { font: inherit; color: var(--ink); background: var(--bg); border:
 .count b { color: #fff; }
 
 /* THE NOTES under the banner: what to try, and why */
-.notes { background: #171d22; border-bottom: 1px solid var(--line); padding: 6px 12px; font-size: 12px; flex: none; }
+.notes { background: #171d22; border-bottom: 1px solid var(--line); padding: 6px 12px; font-size: 12px; flex: none; max-height: 30vh; overflow: auto; }
 .notes .head { display: flex; gap: 10px; align-items: baseline; }
 .notes .head .what { color: #c5ced6; }
 .notes .head button { margin-left: auto; font-size: 11.5px; color: var(--muted); }
@@ -62,6 +62,7 @@ input, select { font: inherit; color: var(--ink); background: var(--bg); border:
 .notes li { margin: 1px 0; }
 .notes .pro li::marker { content: "+  "; color: var(--good); }
 .notes .con li::marker { content: "−  "; color: var(--bad); }
+.notes .ans li { margin-bottom: 3px; }
 .notes kbd, kbd.k { font: 11px var(--mono); border: 1px solid var(--line); border-radius: 3px; padding: 0 4px; color: var(--muted); }
 
 /* THE MENU BAR, the shell's */
@@ -74,6 +75,9 @@ input, select { font: inherit; color: var(--ink); background: var(--bg); border:
 .menubar .layouts button { font-size: 12px; padding: 1px 8px; color: var(--muted); }
 .menubar .layouts button.on { color: #fff; background: var(--accent-bg); }
 .menubar .title { color: var(--faint); font-size: 12px; margin-left: 12px; }
+.menubar .mbtools { display: flex; gap: 1px; margin-left: 6px; padding-left: 6px; border-left: 1px solid var(--line); }
+.menubar .mbtools button { padding: 0 7px; color: var(--muted); font-size: 14px; }
+.menubar .mbtools button:not(:disabled):hover { color: #fff; }
 
 /* A MENU, a submenu, a context menu: the shell's popup (lib/shell/menu.js) */
 .pop { position: fixed; z-index: 100; min-width: 230px; max-width: 460px; background: #20262b; border: 1px solid #36404a; border-radius: 5px;
@@ -147,6 +151,13 @@ input, select { font: inherit; color: var(--ink); background: var(--bg); border:
 .strip .sh .chev { cursor: pointer; width: 12px; text-align: center; }
 .strip .sh .sp { flex: 1; }
 .strip .sh button { font-size: 13px; padding: 0 6px; color: #fff; text-transform: none; letter-spacing: 0; }
+/* C′: the project's line and the Scenes header as one line (the user, 2026-10-17) */
+.strip .sh.line { text-transform: none; letter-spacing: 0; font-size: 12.5px; color: var(--ink); padding: 4px 6px; min-height: 32px; gap: 4px; }
+.strip .sh.line .pname { font-weight: 600; font-size: 12.5px; padding: 2px 6px; display: flex; gap: 6px; align-items: center; border: 1px solid transparent;
+                         white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.strip .sh.line .pname:hover { border-color: rgba(160,175,190,0.35); }
+.strip .sh.line .cnt { color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.strip .sh.line .note { color: var(--warn); font-weight: normal; font-size: 11.5px; }
 .strip .cards { display: flex; flex-direction: column; gap: 2px; padding: 2px 4px 6px; max-height: 196px; overflow: auto; }
 .card-s { display: flex; gap: 7px; align-items: center; padding: 3px 5px; border-radius: 4px; border: 1px solid transparent; cursor: default; position: relative; }
 .card-s:hover { background: rgba(120,150,175,0.10); }
@@ -160,7 +171,7 @@ input, select { font: inherit; color: var(--ink); background: var(--bg); border:
 .card-s .t { font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .card-s .m { font-size: 11px; color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .card-s .acts { display: flex; gap: 1px; opacity: 0; }
-.card-s:hover .acts, .card-s.sel .acts { opacity: 1; }
+.card-s:hover .acts, .card-s.sel .acts, .card-s.cur .acts { opacity: 1; }
 .card-s .acts span { padding: 0 5px; color: var(--muted); border-radius: 3px; cursor: pointer; }
 .card-s .acts span:hover { background: var(--accent-bg); color: #fff; }
 .card-s .acts .go { color: var(--good); }
@@ -227,6 +238,12 @@ input, select { font: inherit; color: var(--ink); background: var(--bg); border:
           flex: none; white-space: nowrap; overflow: hidden; }
 .status .sp { flex: 1; }
 .status .job { color: #f3dfa6; }
+.status .saved { color: #9fe0c4; }
+.status .saved.bad { color: #f3dfa6; }
+.dlg .body { padding: 10px 14px; font-size: 12.5px; color: #c5ced6; }
+.dlg .pick { display: flex; flex-direction: column; gap: 4px; padding: 6px 14px 4px; }
+.dlg .pick button { text-align: left; border-color: var(--line); padding: 6px 10px; }
+.dlg .pick button small { color: var(--muted); display: block; font-size: 11.5px; }
 
 /* THE PROJECT VIEW: over the docked panels, not over the menu bar */
 .pv { position: absolute; inset: 0; z-index: 20; background: #121619; display: grid; grid-template-columns: 250px minmax(0, 1fr); }
@@ -338,6 +355,7 @@ table.w td.best { color: #9fe0c4; }
     /* a phone: the page scrolls, and the work area is given a height of its own rather than squeezed under the notes */
     body { overflow: auto; }
     .app { height: auto; min-height: 100%; }
+    .notes { max-height: none; }
     .menubar { overflow-x: auto; }
     .menubar .layouts, .menubar .title { display: none; }
     .work { height: 1150px; flex: none; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(0, 1.4fr); }
@@ -423,7 +441,7 @@ const timeNote = s => s.last != null ? `opened in ${Math.round(s.last)} s last t
 ======================================================================================================================*/
 const S = {
     route: 'today', scenes: [], current: null, shown: null, sel: null, folded: new Set(),
-    sc: { many: false, item: false, copy: false, first: false, notCompiled: false, real: false },
+    sc: { many: false, item: false, copy: false, first: false, notCompiled: false, nostore: false, real: false }, imp: null,
     compiling: null, history: [], quality: 'draft', moveFast: true, lampsOnly: false, lightRays: true, lt: true,
     view: false, viewAt: null, dialog: false, notesOpen: true, stripFolded: false, pinFirst: false, msg: '', layout: 'Design',
 };
@@ -447,6 +465,7 @@ const cur = () => S.scenes.find(s => s.key === S.current);
 const byKey = k => S.scenes.find(s => s.key === k);
 const idx = k => S.scenes.findIndex(s => s.key === k);
 const PROPOSED = () => S.route !== 'today';
+const CHOSEN = () => S.route === 'c2';      // C as the user chose it, 2026-10-17
 const blocked = () => !!S.item;              // a library item is being edited: switching and adding wait (filemenu.js:18-20)
 const say = m => { S.msg = m; renderStatus(); };
 
@@ -493,7 +512,7 @@ function pic(s, big = false) {
   THE ROUTES: today, and the four everyday layers over the floor every proposal shares
 ======================================================================================================================*/
 const ROUTES = [
-    ['today', '', 'Today'], ['a', 'A', 'The view only'], ['b', 'B', 'A quick list'], ['c', 'C', 'A scenes strip'], ['d', 'D', 'The project in the tree'], ['menus', '', 'The menus, row by row'],
+    ['today', '', 'Today'], ['a', 'A', 'The view only'], ['b', 'B', 'A quick list'], ['c', 'C', 'A scenes strip'], ['c2', 'C′', 'Your choice'], ['d', 'D', 'The project in the tree'], ['menus', '', 'The menus, row by row'],
 ];
 const NOTES = {
     today: {
@@ -529,6 +548,20 @@ const NOTES = {
               'Fold the strip with its chevron; try <b>20 scenes</b>.'],
         pro: ['The overview is always on screen', 'Dragging between scenes comes back, visibly', 'Selecting a card never compiles'],
         con: ['Takes height from a 300 px column that Properties shares', 'Cards look like tabs, which say switching is free: it is not'],
+    },
+    c2: {
+        what: 'Your choice (2026-10-17): C, with the project and the Scenes header on one line; Undo / Redo on the menu bar; File in 5 rows -- no Save (the work is saved as it changes), Open is now Import from file…, Save picture where it was.',
+        try: ['The Scene panel\'s first line: <b>▾</b> folds the cards (the line then names the open scene); the project\'s <b>name</b> opens the Project view (projects, examples); <b>＋</b> adds a scene.',
+              '<b>↶ ↷</b> are on the menu bar now, after Help; the tooltip names the step. Delete a scene with a card\'s <b>⋯</b>, then ↶: it comes back and you stay where you are.',
+              '<b>File</b>: 5 rows. <b>Import from file…</b> with a project file asks: a project of its own, or its scenes into this one. A scene file just joins.',
+              'Bottom right: <b>saved in this browser</b>. <kbd>Ctrl S</kbd> still works, with no row (try <b>editing a library item</b>: there it saves the item). Try <b>storage refused</b> too.',
+              'Turn on <b>▶ not compiled</b>: the ▶ is on the open scene\'s card now, the scene it is about.'],
+        ans: ['<b>Save</b> did nothing the autosave does not do within a second: the project is written to this browser once a second when something changed, when the tab is hidden and when the page closes (workspace/autosave.js; index.html:1273-1276). "Save now" ran that write at once (session.js:117). So no Save row; Ctrl S still confirms, and saves a library item while one is open -- the one save that is not automatic, which also has its button on the item\'s strip.',
+              '<b>Open</b> never opened a project kept in the browser: the last one reopens by itself, the others are in Projects…. It read a .json file from disk -- a backup, or one sent to you (index.html:1033-1049). So it is <b>Import from file…</b>, beside Export ▸.',
+              '<b>Undo</b>: almost every program keeps it in Edit with Ctrl Z / Ctrl Y, as this one does; design and CAD tools often add ↶ ↷ to the top bar. The history is the whole project\'s, every scene\'s, not the tree\'s: so the menu bar, after the menus.',
+              '<b>Save picture</b>: where it was.'],
+        pro: ['One line less over the tree, and the scenes always in sight', 'Undo where the project\'s history belongs', 'File only does files: 5 rows'],
+        con: ['The cards still take height: fold them with ▾', 'A browser that refuses storage keeps nothing, and without a Save row the status bar has to say so'],
     },
     d: {
         what: 'A + the project in the tree: every scene a row at the tree\'s root, the open one unfolded, the others dimmed one-liners that never unfold.',
@@ -569,25 +602,25 @@ function todayMenus() {
     const ed = blocked(), free = !ed, n = S.scenes.length, i = idx(S.current);
     return [
         { name: 'File', items: [
-            R('Projects…', { run: () => { S.dialog = true; render(); }, to: 'File › Projects and scenes… (the Project view)' }),
+            R('Projects…', { run: () => { S.dialog = true; render(); }, to: 'File › Projects… (the Project view: projects, scenes, examples)' }),
             R('New project', { off: ed, run: () => say('new project: one empty scene (in the mockup, nothing happens)'), to: 'kept' }),
-            R('Import a project from a file…', { off: ed, run: () => say('import: a file kept as a project of its own'), to: 'File › Open… (it routes by kind); the Project view\'s Import' }), SEP,
-            R('New scene', { off: ed, run: () => newScene('empty'), to: '+ New scene, beside the scenes' }),
-            R('Switch to scene', { off: ed || n < 2, items: sceneSwitchItems, to: 'the scenes themselves: the view (A), ⇄ (B), the strip (C), the tree (D)' }),
-            R('Examples', { off: ed, items: () => exampleItems(e => newScene('example', e)), to: 'the Project view, under the scenes, each with what it shows' }),
+            R('Import a project from a file…', { off: ed, run: () => say('import: a file kept as a project of its own'), to: 'File › Import from file…; it asks what to do with a project file' }), SEP,
+            R('New scene', { off: ed, run: () => newScene('empty'), to: '＋ on the Scenes line' }),
+            R('Switch to scene', { off: ed || n < 2, items: sceneSwitchItems, to: 'the scene cards over the tree: ▶ or a double-click' }),
+            R('Examples', { off: ed, items: () => exampleItems(e => newScene('example', e)), to: '＋ › From an example… (the Project view, each with what it shows)' }),
             R('Rename this scene…', { off: ed, run: () => promptRename(S.current), to: 'the scene row\'s label in Properties' }),
-            R('Duplicate this scene', { off: ed, run: () => newScene('dup'), to: 'right-click the scene row; a scene\'s ⋯' }),
-            R('Move this scene up the list', { off: ed || i <= 0, run: () => moveScene(S.current, i - 1), to: 'drag, among the scenes' }),
-            R('Move this scene down the list', { off: ed || i >= n - 1, run: () => moveScene(S.current, i + 1), to: 'drag, among the scenes' }),
-            R('Delete this scene', { off: ed || n < 2, run: () => deleteScene(S.current), to: 'right-click the scene row; a scene\'s ⋯' }), SEP,
-            R('Open a file (scene, project or workspace)…', { keys: 'Ctrl O', off: ed, run: () => newScene('file'), to: 'File › Open…' }), SEP,
-            R('Save the library item', { keys: 'Ctrl S', off: !ed, run: () => say('library item saved'), to: 'File › Save, while an item is edited' }),
-            R('Close the library item', { off: !ed, run: () => closeItem(), to: 'File › Close library item, shown only while one is edited' }), SEP,
-            R('Save now (in this browser)', { keys: 'Ctrl S', off: ed, run: () => say('saved in this browser: Lamp study'), to: 'File › Save' }), SEP,
+            R('Duplicate this scene', { off: ed, run: () => newScene('dup'), to: '＋ › Duplicate this scene; a card\'s ⋯' }),
+            R('Move this scene up the list', { off: ed || i <= 0, run: () => moveScene(S.current, i - 1), to: 'drag the cards' }),
+            R('Move this scene down the list', { off: ed || i >= n - 1, run: () => moveScene(S.current, i + 1), to: 'drag the cards' }),
+            R('Delete this scene', { off: ed || n < 2, run: () => deleteScene(S.current), to: 'a card\'s ⋯; right-click the scene row' }), SEP,
+            R('Open a file (scene, project or workspace)…', { keys: 'Ctrl O', off: ed, run: () => newScene('file'), to: 'File › Import from file… (it never opened a project kept here: Projects… does)' }), SEP,
+            R('Save the library item', { keys: 'Ctrl S', off: !ed, run: () => say('library item saved'), to: 'the item\'s strip over the view; Ctrl S' }),
+            R('Close the library item', { off: !ed, run: () => closeItem(), to: 'the item\'s strip over the view' }), SEP,
+            R('Save now (in this browser)', { keys: 'Ctrl S', off: ed, run: () => say('saved in this browser: Lamp study'), to: 'nothing to do: saved as it changes (the status bar says so); Ctrl S still confirms' }), SEP,
             R('Save this scene to a file', { run: () => say(`downloaded ${fileName(cur().title)}.json (scene format)`), to: 'File › Export ▸ Scene file…' }),
             R('Save all scenes to a file', { run: () => say('downloaded raytracer-scenes.json (project format)'), to: 'File › Export ▸ Project file… (one format)' }),
             R('Save the project to a file (scenes, render settings, cameras)', { run: () => say('downloaded raytracer-workspace.json (workspace format)'), to: 'File › Export ▸ Project file…' }), SEP,
-            R('Save a picture (PNG)…', { run: () => say('Save picture: the floating panel (not in the mockup)'), to: 'File › Save picture…' }),
+            R('Save a picture (PNG)…', { run: () => say('Save picture: the floating panel (not in the mockup)'), to: 'kept' }),
         ] },
         { name: 'Edit', items: editItems() },
         { name: 'View', items: [
@@ -657,7 +690,23 @@ function proposedMenus() {
         { name: 'Help', items: helpItems() },
     ];
 }
-const menusNow = () => PROPOSED() ? proposedMenus() : todayMenus();
+/* C′, YOUR CHOICE: File in five rows. No Save (the project is saved as it changes, autosave.js; Ctrl S stays, with no
+   row), Open is Import from file… (it only ever read a file from disk), Save picture where it was. Undo / Redo also on
+   the menu bar (renderMenubar). */
+function chosenMenus() {
+    const ed = blocked();
+    const m = proposedMenus();
+    m[0].items = [
+        R('New project', { off: ed, run: () => say('new project: one empty scene, opened; Lamp study stays in Projects…'), title: 'A project of one empty scene' }),
+        R('Projects…', { run: () => openView(), title: 'The Project view: the projects in this browser, this one\'s scenes, the examples' }), SEP,
+        R('Import from file…', { keys: 'Ctrl O', off: ed, run: () => { S.imp = 'pick'; render(); }, cls: 'new',
+            title: 'A .json file from disk -- a backup, or one sent to you: a scene file joins this project; a project file asks' }),
+        m[0].items.find(i => i.label === 'Export'), SEP,
+        R('Save picture…', { run: () => say('Save picture: the floating panel, as today') }),
+    ];
+    return m;
+}
+const menusNow = () => CHOSEN() ? chosenMenus() : PROPOSED() ? proposedMenus() : todayMenus();
 const rowsOf = menus => menus.reduce((a, m) => a + m.items.filter(i => !i.sep && !i.hd).length, 0);
 
 /* the commands with no menu row: Ctrl K finds them (lib/shell/registry.js:58-62, 72-79) */
@@ -883,7 +932,7 @@ function quickList(anchor) {
 function newMenu(x, y) {
     popMenu([R('Empty scene', { run: () => newScene('empty') }), R('Duplicate this scene', { run: () => newScene('dup') }),
              R('From an example…', { run: () => openView('pv-examples'), title: 'The Project view, at its examples' }),
-             R('Add scenes from a file…', { run: () => newScene('file'), title: 'A scene or a project file: its scenes join this project' })], x, y);
+             ...(CHOSEN() ? [] : [R('Add scenes from a file…', { run: () => newScene('file'), title: 'A scene or a project file: its scenes join this project' })])], x, y);
 }
 function sceneMenu(key, x, y) {
     const s = byKey(key), here = key === S.current;
@@ -939,12 +988,12 @@ function openPalette() {
   RENDERING
 ======================================================================================================================*/
 function renderBanner() {
-    const total = rowsOf(todayMenus()), now = rowsOf(proposedMenus());
-    const sc = [['many', '20 scenes'], ['item', 'editing a library item'], ['copy', 'a second tab\'s copy'], ['first', 'first visit'], ['notCompiled', '▶ not compiled'], ['real', 'real compile speed']];
+    const total = rowsOf(todayMenus()), now = rowsOf(proposedMenus()), chosen = rowsOf(chosenMenus());
+    const sc = [['many', '20 scenes'], ['item', 'editing a library item'], ['copy', 'a second tab\'s copy'], ['first', 'first visit'], ['notCompiled', '▶ not compiled'], ['nostore', 'storage refused'], ['real', 'real compile speed']];
     document.getElementById('banner').innerHTML = `<b>H · Scenes, projects and the menus</b>
         <div class="seg">${ROUTES.map(([id, l, t]) => `<button data-route="${id}" class="${S.route === id ? 'on' : ''}" title="${esc(t)}">${l ? `<span class="l">${l}</span>` : ''}${esc(t)}</button>`).join('')}</div>
         <span class="scen">${sc.map(([k, t]) => `<button data-scen="${k}" class="${S.sc[k] ? 'on' : ''}">${t}</button>`).join('')}</span>
-        <span class="count">menu rows: today <b>${total}</b> · proposed <b>${now}</b></span>
+        <span class="count">menu rows: today <b>${total}</b> · A–D <b>${now}</b> · C′ <b>${chosen}</b></span>
         <a href="index.html">all mockups</a>`;
 }
 function renderNotes() {
@@ -952,14 +1001,19 @@ function renderNotes() {
     const el = document.getElementById('notes');
     const li = a => a.map(x => `<li>${x}</li>`).join('');
     el.innerHTML = `<div class="head"><span class="what">${n.what}</span><button data-act="notes">${S.notesOpen ? 'hide notes ▴' : 'notes ▾'}</button></div>
-        ${S.notesOpen ? `<div class="cols"><div><h4>Try this</h4><ul>${li(n.try)}</ul></div>
-            ${n.pro.length ? `<div><h4>For</h4><ul class="pro">${li(n.pro)}</ul></div><div><h4>Against</h4><ul class="con">${li(n.con)}</ul></div>` : ''}</div>` : ''}`;
+        ${!S.notesOpen ? '' : n.ans
+            ? `<div class="cols"><div><h4>Try this</h4><ul>${li(n.try)}</ul></div><div><h4>Your questions</h4><ul class="ans">${li(n.ans)}</ul></div>
+               <div><h4>For</h4><ul class="pro">${li(n.pro)}</ul><h4 style="margin-top:6px">Against</h4><ul class="con">${li(n.con)}</ul></div></div>`
+            : `<div class="cols"><div><h4>Try this</h4><ul>${li(n.try)}</ul></div>
+            ${n.pro.length ? `<div><h4>For</h4><ul class="pro">${li(n.pro)}</ul></div><div><h4>Against</h4><ul class="con">${li(n.con)}</ul></div>` : ''}</div>`}`;
 }
 function renderMenubar() {
     const el = document.getElementById('menubar');
     if (S.route === 'menus') { el.hidden = true; return; }
     el.hidden = false;
+    const top = S.history[S.history.length - 1];
     el.innerHTML = menusNow().map((m, i) => `<span class="mb${m.gone ? ' gone' : ''}" data-menu="${i}" title="${m.gone ? 'Gone under every proposal' : ''}">${m.name}</span>`).join('')
+        + (CHOSEN() ? `<span class="mbtools"><button data-act="undo" ${top ? '' : 'disabled'} title="${top ? `Undo ${esc(top.label)}` : 'Nothing to undo'} (Ctrl Z)">↶</button><button disabled title="Redo (Ctrl Y) -- not in the mockup">↷</button></span>` : '')
         + `<span class="spacer"></span><span class="layouts">${['Design', 'Analyse', 'Animate'].map(l => `<button data-layout="${l}" class="${S.layout === l ? 'on' : ''}">${l}</button>`).join('')}<button title="Save this layout as…">＋</button></span><span class="title">ShadyTracer · mockup</span>`;
 }
 
@@ -980,10 +1034,18 @@ function cardS(s, { quick = false } = {}) {
     return `<div class="card-s${here ? ' cur' : ''}${sel ? ' sel' : ''}" data-card="${s.key}" draggable="${!quick}" title="${here ? 'The scene being worked on' : quick ? `Click to open (compiles, ${timeNote(s)})` : 'Click: show it in Properties · ▶ or double-click: open it'}"${off ? ' style="opacity:.5"' : ''}>
         <div class="pic">${s.nopic ? '' : pic(s)}</div>
         <div class="tx"><div class="t">${esc(s.title)}</div><div class="m">${here ? (S.compiling?.key === s.key ? 'compiling…' : S.sc.notCompiled ? 'open · not compiled' : 'open') : `${s.unit} · ${s.edited} · ${s.last != null ? Math.round(s.last) + ' s' : '~' + s.predicted + ' s'}`}</div></div>
-        <div class="acts">${here ? '' : `<span class="go" data-act="open" data-key="${s.key}" title="Open (compiles, ${timeNote(s)})">▶</span>`}${quick ? '' : `<span data-act="smenu" data-key="${s.key}" title="More">⋯</span>`}</div></div>`;
+        <div class="acts">${here ? (CHOSEN() && S.sc.notCompiled && !S.compiling ? '<span class="go" data-act="play" title="Not compiled: the picture is not this scene. Click to compile and show it">▶</span>' : '') : `<span class="go" data-act="open" data-key="${s.key}" title="Open (compiles, ${timeNote(s)})">▶</span>`}${quick ? '' : `<span data-act="smenu" data-key="${s.key}" title="More">⋯</span>`}</div></div>`;
 }
 function strip() {
-    if (S.route !== 'c') return '';
+    if (S.route !== 'c' && S.route !== 'c2') return '';
+    if (CHOSEN()) {
+        // ONE LINE for the project and its scenes (the user, 2026-10-17): fold, the project (its view), how many, + a scene
+        return `<div class="strip"><div class="sh line"><span class="chev" data-act="strip" title="${S.stripFolded ? 'Show the scenes' : 'Fold the scenes away'}">${S.stripFolded ? '▸' : '▾'}</span>
+            <button class="pname" data-act="view" title="The Project view: the projects in this browser, the scenes large, the examples"><span class="grid-ic"><i></i><i></i><i></i><i></i></span>${esc(PROJECT())}${S.sc.copy ? '<span class="note"> · not saved yet</span>' : ''}</button>
+            <span class="cnt">· ${S.scenes.length} scene${S.scenes.length === 1 ? '' : 's'}${S.stripFolded ? ` · ${esc(cur().title)}` : ''}</span><span class="sp"></span>
+            <button data-act="newmenu" title="New scene ▸">＋</button></div>
+            ${S.stripFolded ? '' : `<div class="cards">${S.scenes.map(x => cardS(x)).join('')}</div>`}</div>`;
+    }
     return `<div class="strip"><div class="sh"><span class="chev" data-act="strip">${S.stripFolded ? '▸' : '▾'}</span>Scenes <span style="text-transform:none;letter-spacing:0;color:var(--faint)">${S.scenes.length}${S.stripFolded ? ` · ${esc(cur().title)}` : ''}</span><span class="sp"></span><button data-act="newmenu" title="New scene ▸">＋</button></div>
         ${S.stripFolded ? '' : `<div class="cards">${S.scenes.map(s => cardS(s)).join('')}</div>`}</div>`;
 }
@@ -1098,7 +1160,7 @@ function renderWork() {
     w.hidden = false;
     const keep = ['.pane.tree', '.pv .main', '.strip .cards', '.pane.props'].map(q => [q, w.querySelector(q)?.scrollTop ?? 0]);
     w.innerHTML = `<div class="colL"><div class="tabs"><span class="on">Scene</span><span>Library</span><span class="tabbtns">⧉⇱⤢</span></div>
-            ${projRow()}${strip()}<div class="pane tree">${tree()}</div>
+            ${CHOSEN() ? '' : projRow()}${strip()}<div class="pane tree">${tree()}</div>
             <div class="tabs" style="border-top:1px solid var(--line)"><span class="on">Properties</span></div><div class="pane props">${props()}</div></div>
         <div class="view">${view()}</div>
         <div class="colR">${settings()}</div>
@@ -1165,12 +1227,30 @@ function renderDialog() {
         <div class="df"><button class="primary">＋ New project</button><button>Import a file…</button><span class="where">Kept in this browser's storage, which "clear site data" empties.</span></div></div>`;
 }
 
+/* C′'s IMPORT FROM FILE: the browser's picker stood in for by two files, and the question a file of several scenes asks */
+function renderImport() {
+    let el = document.getElementById('imp');
+    if (!S.imp) { el?.remove(); return; }
+    if (!el) { el = document.createElement('div'); el.id = 'imp'; el.className = 'modal'; document.body.appendChild(el); }
+    el.innerHTML = S.imp === 'pick'
+        ? `<div class="dlg"><div class="dh">Import from file<span class="sp"></span><button data-act="imp-cancel">×</button></div>
+            <div class="body">The browser's file picker would open here. Two files to try (or drop a .json file on the page, which does the same):</div>
+            <div class="pick"><button data-act="imp-scene">bench-test.json<small>a scene: it joins this project, after the scene being worked on, and opens</small></button>
+                <button data-act="imp-project">desk-lamp.json<small>a project: 3 scenes (Arm, Shade, On the desk), their cameras and render settings</small></button></div>
+            <div class="df"><span class="where" style="margin-left:0;max-width:none">Projects kept in this browser are not files: they are in File › Projects….</span></div></div>`
+        : `<div class="dlg"><div class="dh">desk-lamp.json holds 3 scenes<span class="sp"></span><button data-act="imp-cancel">×</button></div>
+            <div class="body">Arm, Shade and On the desk, with their cameras and the render settings. What should become of them?</div>
+            <div class="pick"><button data-act="imp-new">Open as a project of its own<small>kept in this browser beside ${esc(PROJECT())}, and opened (what a project file always did)</small></button>
+                <button data-act="imp-add">Add its 3 scenes to ${esc(PROJECT())}<small>after the scene being worked on; this project keeps its own render settings</small></button></div>
+            <div class="df"><button data-act="imp-cancel">Cancel</button></div></div>`;
+}
+
 /* THE MENUS PAGE */
 function renderPage() {
     const p = document.getElementById('page');
     if (S.route !== 'menus') { p.hidden = true; return; }
     p.hidden = false;
-    const today = todayMenus(), prop = proposedMenus();
+    const today = todayMenus(), prop = chosenMenus();
     const box = (m, cut) => {
         const rows = m.items.filter(i => !i.sep && !i.hd).length;
         let h = `<div class="mbox${m.gone ? ' gone' : ''}"><div class="mh">${m.name}${m.gone ? ' (gone)' : ''}<span>${rows} row${rows === 1 ? '' : 's'}</span></div>`;
@@ -1183,44 +1263,50 @@ function renderPage() {
         return h + '</div>';
     };
     const T = (cells, best) => `<tr>${cells.map((c, i) => `<td class="${best?.includes(i) ? 'best' : ''}">${c}</td>`).join('')}</tr>`;
-    p.innerHTML = `<h2>The menus, row by row</h2>
-        <p>Today's menu bar has <b>${rowsOf(today)}</b> rows in 7 menus; the one every proposal shares has <b>${rowsOf(prop)}</b> in 5. Nothing is lost: a struck row is somewhere it can be seen
-           (the pane, the view's buttons, the scene's row, the Project view), and every command, with or without a menu row, is still found by <kbd>Ctrl K</kbd>
-           (lib/shell/registry.js:58-62: a command with no menu is the palette's alone).</p>
+    p.innerHTML = `<h2>The menus, row by row: today against your choice (C′)</h2>
+        <p>Today's menu bar has <b>${rowsOf(today)}</b> rows in 7 menus; C′'s has <b>${rowsOf(prop)}</b> in 5. Nothing is lost: a struck row is somewhere it can be seen
+           (the pane, the view's buttons, the Scenes line and its cards, the item's strip, the Project view), or no longer needed (Save), and every command, with or without a menu row,
+           is still found by <kbd>Ctrl K</kbd> (lib/shell/registry.js:58-62: a command with no menu is the palette's alone).</p>
         <div class="two"><div><h2 style="font-size:14px">Today</h2><div class="menus">${today.map(m => box(m, true)).join('')}</div></div>
-            <div><h2 style="font-size:14px">Proposed (A, B, C and D)</h2><div class="menus">${prop.map(m => box(m, false)).join('')}</div>
-            <p style="margin-top:12px"><b>Files, two kinds instead of three.</b> A <b>scene file</b> (one scene) and a <b>project file</b> (every scene, their cameras, the render settings: today's
-               workspace file, which the Projects dialog's Download already writes). "Save all scenes" wrote a third, the project format without the settings; such a file still opens.
-               <b>Open…</b> reads any of them: a scene file joins this project, a project file opens as a project of its own. To bring another project's scenes into this one:
-               + New scene › Add scenes from a file… (that is what Open did with an all-scenes file).</p>
-            <p><b>Save</b> stays one row with Ctrl S, though the project is saved as it changes: people look for it, and it is the library item's Save while one is edited.
-               <b>Close library item</b> is shown only then (today two greyed rows are always there, and two rows say Ctrl S).</p></div></div>
+            <div><h2 style="font-size:14px">Your choice (C′) <span style="font-weight:normal;color:var(--muted)">-- and ↶ ↷ on the menu bar, after Help</span></h2><div class="menus">${prop.map(m => box(m, false)).join('')}</div>
+            <p style="margin-top:12px"><b>No Save.</b> The project is written to this browser once a second when something changed, when the tab is hidden and when the page closes, with a
+               localStorage copy so a reload just after an edit loses nothing (workspace/autosave.js; index.html:1273-1276). "Save now" ran that same write at once (session.js:117).
+               The status bar says it is saved. Ctrl S still works with no row: it confirms, and while a library item is edited it saves the item -- the one save that is not automatic,
+               and also the Save on the item's strip.</p>
+            <p><b>Import, not Open.</b> Open never opened a project kept here: the last one reopens by itself and the others are in Projects…. It read a .json file from disk
+               (index.html:1033-1049). Import from file… does that, beside Export ▸: a scene file joins this project; a file of several scenes asks whether to open it as a project of its own
+               or add its scenes to this one -- the one way to bring another project's scenes in.</p>
+            <p><b>Files, two kinds instead of three.</b> A <b>scene file</b> and a <b>project file</b> (every scene, their cameras, the render settings: today's workspace file, which the
+               Projects dialog's Download already writes). "Save all scenes" wrote a third, the project format without the settings; such a file still imports.</p></div></div>
         <h2 style="margin-top:18px">Clicks per task</h2>
-        <div class="tablewrap"><table class="w"><tr><th>task</th><th>Today</th><th>A · the view only</th><th>B · a quick list</th><th>C · a scenes strip</th><th>D · the project in the tree</th></tr>
-            ${T(['See what scenes the project has', 'File › Switch ▸: 2, names only', 'the project\'s name: 1, with pictures', '⇄: 1, small pictures', 'always visible', 'always visible'], [4, 5])}
-            ${T(['Switch to another scene', '3 (File › Switch ▸ › name)', '2 (name › card)', '2 (⇄ › row)', '1 (▶, or a double-click)', '1 (▶, or a double-click)'], [4, 5])}
-            ${T(['A new scene from an example', '4 (File › Examples ▸ › group ▸ › example)', '2 (name › example)', '2', '2', '2'], [1, 2, 3, 4, 5].slice(1))}
-            ${T(['Duplicate this scene', '2 (File › Duplicate)', '2 (right-click the scene row)', '2', '2', '2'])}
-            ${T(['Rename this scene', 'File › Rename… or Properties', 'the scene row, then its label in Properties', '=', '=', '='])}
-            ${T(['Reorder scenes', '2 a step (File › Move up)', 'a drag in the view', 'a drag in the view', 'a drag in the strip', 'a drag in the tree'], [4, 5])}
-            ${T(['Copy an object to another scene', '2 (right-click › scene)', '2', '2', '1 drag onto its card', '1 drag onto its row'], [4, 5])}
+        <div class="tablewrap"><table class="w"><tr><th>task</th><th>Today</th><th>C′ · your choice</th><th>A · the view only</th><th>B · a quick list</th><th>D · the project in the tree</th></tr>
+            ${T(['See what scenes the project has', 'File › Switch ▸: 2, names only', 'always visible, with pictures', 'the project\'s name: 1', '⇄: 1, small pictures', 'always visible'], [1, 5])}
+            ${T(['Switch to another scene', '3 (File › Switch ▸ › name)', '1 (▶ on its card, or a double-click)', '2 (name › card)', '2 (⇄ › row)', '1 (▶, or a double-click)'], [1, 5])}
+            ${T(['A new scene from an example', '4 (File › Examples ▸ › group ▸ › example)', '3 (＋ › From an example… › example)', '2 (name › example)', '2', '2'], [3, 4, 5])}
+            ${T(['Duplicate this scene', '2 (File › Duplicate)', '2 (＋ › Duplicate this scene)', '2 (right-click the scene row)', '2', '2'])}
+            ${T(['Rename this scene', 'File › Rename… or Properties', 'its row, then its label in Properties', '=', '=', '='])}
+            ${T(['Reorder scenes', '2 a step (File › Move up)', 'a drag among the cards', 'a drag in the view', 'a drag in the view', 'a drag in the tree'], [1, 5])}
+            ${T(['Copy an object to another scene', '2 (right-click › scene)', '1 drag onto its card', '2', '2', '1 drag onto its row'], [1, 5])}
+            ${T(['Undo', 'Ctrl Z, Edit, or ↶ over the tree', 'Ctrl Z, Edit, or ↶ on the menu bar', 'Ctrl Z, Edit, ↶ over the tree', '=', '='])}
             ${T(['Export the project to a file', '2 (File › Save the project…)', '3 (File › Export ▸ › Project file…)', '3', '3', '3'], [1])}
-            ${T(['Open another project', '3 (File › Projects… › Open)', '2 (name › project)', '2', '2', '2'], [2, 3, 4, 5])}
+            ${T(['Open another project', '3 (File › Projects… › Open)', '2 (the project\'s name › project)', '2', '2', '2'], [2, 3, 4, 5])}
             ${T(['Change the quality', 'menu, view or pane', 'the view\'s Quality ▾ or the pane', '=', '=', '='])}
         </table></div>
-        <h2>What every proposal shares, and the questions for you</h2>
-        <p>The Project view (A) is under all four: it replaces the Projects dialog and File › Examples, and is opened from the project's name over the tree, from File › Projects and scenes…, or Ctrl K.
-           B, C and D differ only in what you see of the other scenes while you work. In all of them: switching is always a deliberate act (a compile, 4-23 s on your card); the scene is named once, by its row,
-           and renamed in Properties; undoing a change to the list of scenes stays on the scene you are on (today it switches to the scene it changed, a compile: builder/demo.js:166-174).</p>
-        <p><b>For you to decide:</b> which of A-D (the recommendation is D, with B if the tree cannot do it); "only the active scene in the tree" -- did you mean today's tree, or D's?; the Project view over the panels (as drawn) or a panel of its own;
-           undo staying put; Save picture beside Export ▸ (as drawn) or inside it.</p>`;
+        <h2>Decided, and still open</h2>
+        <p><b>Decided (you, 2026-10-17):</b> C, with the project and the Scenes header on one line; Undo / Redo out of the Scene panel (Edit and Ctrl Z as before, ↶ ↷ on the menu bar);
+           Save picture where it is; no Save row; Import from file… for Open.</p>
+        <p><b>Still open:</b> whether undoing a change to the list of scenes stays on the scene you are on, as drawn (today it switches to the scene it changed, a compile:
+           builder/demo.js:166-174); and whether the Project view covers the panels, as drawn, or is a panel of its own.</p>`;
 }
 function renderStatus() {
     const c = S.compiling;
-    document.getElementById('status').innerHTML = `<span>${esc(S.msg || 'ready')}</span><span class="sp"></span>${c ? `<span class="job">compiling ${esc(c.title)}…</span>` : ''}<span>${esc(PROJECT())} › ${esc(cur()?.title || '')} · ${QSHORT[S.quality]}</span>`;
+    // what the autosave did, under the proposals (no Save row there): saved, or the warning when there is no storage
+    const saved = !PROPOSED() ? '' : S.sc.nostore ? '<span class="saved bad" title="IndexedDB refused (index.html:341-346): only a file keeps the work">⚠ not kept: this browser refuses storage -- File › Export ▸ Project file keeps it</span>'
+        : `<span class="saved" title="Written to this browser once a second when something changed, when the tab is hidden and when the page closes (workspace/autosave.js)">✓ saved in this browser · just now</span>`;
+    document.getElementById('status').innerHTML = `<span>${esc(S.msg || 'ready')}</span><span class="sp"></span>${c ? `<span class="job">compiling ${esc(c.title)}…</span>` : ''}${saved}<span>${esc(PROJECT())} › ${esc(cur()?.title || '')} · ${QSHORT[S.quality]}</span>`;
 }
 function render() {
-    renderBanner(); renderNotes(); renderMenubar(); renderWork(); renderPage(); renderStatus();
+    renderBanner(); renderNotes(); renderMenubar(); renderWork(); renderPage(); renderStatus(); renderImport();
 }
 
 /*======================================================================================================================
@@ -1228,7 +1314,7 @@ function render() {
 ======================================================================================================================*/
 document.addEventListener('click', e => {
     const t = e.target;
-    if (t.classList?.contains('modal')) { S.dialog = false; render(); return; }
+    if (t.classList?.contains('modal')) { S.dialog = false; S.imp = null; render(); return; }
     if (!t.closest('.pop') && !t.closest('.quick') && !t.closest('.pal') && !t.closest('[data-menu]')) closeAll();
     const route = t.closest('[data-route]');
     if (route) { location.hash = route.dataset.route; return; }
@@ -1240,6 +1326,7 @@ document.addEventListener('click', e => {
         if (k === 'first' && S.sc.first) S.sc.many = false;
         if (k === 'many' && S.sc.many) S.sc.first = false;
         if (['many', 'first', 'item'].includes(k)) resetProject();
+        if (k === 'nostore') say(S.sc.nostore ? (PROPOSED() ? 'IndexedDB refused: the status bar says the work is not kept' : 'this browser refused storage: the work lasts this visit (File › Save to a file keeps it) -- today\'s words, naming a row that does not exist') : 'storage back');
         if (k === 'item' && !S.sc.item) S.item = null;
         render();
         return;
@@ -1281,6 +1368,21 @@ document.addEventListener('click', e => {
             case 'closeitem': return closeItem();
             case 'saveitem': return say('library item saved');
             case 'closedlg': S.dialog = false; render(); return;
+            case 'imp-cancel': S.imp = null; render(); return;
+            case 'imp-scene': S.imp = null; return newScene('file');
+            case 'imp-project': S.imp = 'ask'; render(); return;
+            case 'imp-new': S.imp = null; render(); return say('desk-lamp kept as a project of its own and opened (in the mockup, nothing is opened)');
+            case 'imp-add': {
+                S.imp = null;
+                if (S.compiling) { render(); return say('a compile is on its way'); }
+                const at = idx(S.current) + 1;
+                ['On the desk', 'Shade', 'Arm'].forEach(t => S.scenes.splice(at, 0, mkScene({ title: uniq(t), kind: 'file', unit: 'mm', predicted: 6 })));
+                const added = S.scenes.slice(at, at + 3);
+                S.history.push({ label: 'import 3 scenes', scene: added[0].key, wasCurrent: S.current, undo: () => { S.scenes.splice(idx(added[0].key), 3); return null; } });
+                S.current = added[0].key; S.sel = { t: 'scene', key: added[0].key };
+                compile(added[0]);
+                return say('Arm, Shade and On the desk added after the scene you were on; Arm opens');
+            }
             case 'vquality': return popMenu([{ hd: 'Quality' }, ...['sketch', 'draft', 'standard', 'high', 'optics'].map(x => R(`${x === S.quality ? '● ' : '  '}${QSHORT[x]}`, { run: () => setQuality(x) })), SEP, { hd: 'While moving' }, R(`${S.moveFast ? '☑' : '☐'} Fast while moving, as Draft`, { run: () => { S.moveFast = !S.moveFast; render(); } })], r.left, r.bottom);
             case 'bolt': S.moveFast = !S.moveFast; render(); return say(`fast while moving: ${S.moveFast ? 'on' : 'off'}`);
             case 'newproject': return say('a new project of one empty scene, opened (Lamp study stays in the list)');
@@ -1339,7 +1441,14 @@ document.addEventListener('keydown', e => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); return openPalette(); }
     if (e.target.matches('input, select')) return;
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); return undo(); }
-    if (e.key === 'Escape') { if (layer.children.length) return closeAll(); if (S.view) return closeView(); if (S.dialog) { S.dialog = false; render(); } }
+    // Ctrl S and Ctrl O as the page binds them (builder/toolbar.js:49-60), with or without a menu row
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        if (S.item) return say('library item saved: back into the library (Ctrl S, or Save on its strip)');
+        return say(CHOSEN() ? 'saved -- it already was: the project is saved in this browser as it changes' : `saved in this browser: ${PROJECT()}`);
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'o') { e.preventDefault(); if (CHOSEN()) { S.imp = 'pick'; render(); } else newScene('file'); return; }
+    if (e.key === 'Escape') { if (layer.children.length) return closeAll(); if (S.imp) { S.imp = null; return render(); } if (S.view) return closeView(); if (S.dialog) { S.dialog = false; render(); } }
 });
 
 /* DRAGS: a tree row onto a scene (C's card, D's row) copies it there, Shift moves it; scenes among scenes reorder */
@@ -1381,8 +1490,8 @@ document.addEventListener('dragend', () => { drag = null; document.querySelector
 
 function fromHash() {
     const h = location.hash.slice(1);
-    S.route = ROUTES.some(r => r[0] === h) ? h : 'today';
-    S.view = false; S.dialog = false;
+    S.route = ROUTES.some(r => r[0] === h) ? h : 'c2';
+    S.view = false; S.dialog = false; S.imp = null;
     closeAll();
     render();
 }

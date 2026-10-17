@@ -620,13 +620,71 @@ File › Examples.
   browser has cached opens faster than it says.
 - **Not measured:** what generating a scene's code for a prediction costs on the CPU.
 
-### For the user to decide
+### Decided (the user, 2026-10-17): C, refined (C′ in the mockup)
 
-1. **A, B, C or D.**
-2. **"Only show active scene in the tree":** today's tree, which already does, or D's.
-3. **The Project view:** over the panels, as drawn, or a dock panel of its own.
-4. **Undo:** whether undoing a change to the list of scenes stays on the scene being worked on.
-5. **Save picture:** beside Export ▸, as drawn, or inside it.
+The user: "go with C -> but combine the 'My project' line and Scenes header into one line. Make a mockup of that
+first." Also: "ctrlz - move that out of the scene view. where is that shown typicallu?"; "Save picture - keep where
+it is"; "Save: what does this do? Isn't evertything automatically store din the browser? same for open".
+
+**The Scene panel's first line** holds both the project and the scenes:
+`▾  ▦ Lamp study · 6 scenes  ……  ＋`
+- **The chevron** folds the cards. Folded, the line also names the open scene.
+- **The project's name** opens the Project view: the projects, the scenes large, the examples.
+- **＋** is New scene: Empty · Duplicate this scene · From an example…, which opens the Project view at its
+  examples.
+- **A second tab's copy** shows "· not saved yet" after the name.
+- **The ▶ "not compiled"** is on the open scene's card, the scene it is about. Today the row over the tree has it.
+- **Undo / Redo are no longer here.**
+
+The cards are C's: a click selects a card and shows it in Properties; ▶ or a double-click opens it; a tree row
+dropped on a card is copied there, and Shift moves it; dragging the cards reorders them.
+
+**Undo / Redo: Edit and the keys, as before, plus ↶ ↷ on the menu bar after the menus.**
+- The usual place is the Edit menu with Ctrl Z / Ctrl Y. Design and CAD tools often add icons to the top bar. This
+  is a general convention, not a measurement.
+- The undo history is the project's and covers every scene (`builder/demo.js:87-89`), so it belongs to the
+  application's bar, not the Scene panel. Each icon's tooltip names the step.
+
+**Save is gone. The project was always saved as it changed.**
+- It is written to the browser's storage once a second when something changed, when the tab is hidden, and when
+  the page closes (`index.html:1273-1276`). On closing it is also flushed to localStorage, so a reload just after an
+  edit loses nothing (`workspace/autosave.js:14-17, 99-137`).
+- "Save now" only ran that write at once: `autosave.tick()` twice (`workspace/session.js:117`).
+- **The one save that is not automatic is a library item's,** put back into the library (`library/edit.js:300`).
+  It has its button on the item's strip over the view (`library/edit.js:247`), and Ctrl S, which keeps working with
+  no menu row (`builder/toolbar.js:57-58`). Otherwise Ctrl S confirms that the project is saved.
+- **The status bar says "saved in this browser".** When the browser refuses storage, nothing is kept beyond the
+  visit (`index.html:341-346`), and the status bar says so. Today's warning there names "File › Save to a file", a
+  row that does not exist.
+
+**Open becomes Import from file….**
+- It never opened a project kept in the browser: the last one reopens by itself (`session.js:5-14`), and the others
+  are in Projects….
+- What it did was read a .json file from disk: a backup, or one someone sent (`index.html:973-978, 1033-1049`).
+  Dropping a file on the page does the same.
+- **A scene file joins this project.** A file of several scenes asks whether to open it as a project of its own or
+  to add its scenes to this one. That is the one way to bring another project's scenes in, without a second row.
+
+**File, 5 rows:** New project · Projects… | Import from file… (Ctrl O) · Export ▸ | Save picture….
+- Save picture stays where it is.
+- Nothing is added while a library item is edited: its strip has Save and Close.
+- **The menu bar: 29 rows** (File 5, Edit 2, View 12, Analysis 4, Help 6), against today's 67.
+
+**Still open:**
+- whether undoing a change to the list of scenes stays on the scene being worked on (drawn so);
+- whether the Project view covers the panels (drawn so) or is a dock panel of its own.
+
+**Building it (outline, once the user has seen C′):**
+- **The Scene panel.** `builder/projectrow.js` becomes the panel's line and cards, in a module of its own.
+- **Dropping tree rows onto cards.** TreeView tells the tree when a drag starts (`onNodeDrop(path, null,
+  'dragstart', node)`, `lib/guistuff/treeview/treeview.js:931-933`), so the strip can copy the row there with
+  `sendTo`. Nothing in guistuff changes.
+- **Undo / Redo.** They move from the row over the tree (`index.html:1082`) to a slot after the menus, which
+  `lib/shell/shell.js` needs.
+- **File.** `builder/filemenu.js` shrinks to the five rows.
+- **The Project view** (`workspace/projectview.js`) replaces `workspace/dialog.js`.
+- **The scenes' pictures,** as above.
+- **Tests and help:** the tests and help pages listed in this section's hazards.
 
 ## Open decisions
 

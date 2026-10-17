@@ -17,7 +17,7 @@ as PLAN.md does.
 
 ## 0.62.5 — 2026-10-17
 
-**A mockup, H: the scenes of a project, and the menus with fewer rows.** You asked for a fresh look at File, which
+**A mockup, H: the scenes of a project, and the menus with fewer rows; then C′, your choice, refined.** You asked for a fresh look at File, which
 gives no overview of a project's scenes, and at the Render settings menu, which repeats the view's buttons and the pane.
 
 **What is wrong today (read in code):**
@@ -48,15 +48,30 @@ gives no overview of a project's scenes, and at the Render settings menu, which 
 
 **Nothing in the application changed.**
 
-**What to look at:** open the mockup and use the strip at the top to switch between Today, A, B, C and D. In each
-proposal:
-- open File;
-- switch scenes;
-- drag an object onto another scene (C, D);
-- try the scenario buttons: 20 scenes, editing a library item, a second tab, a first visit.
+**Your choice, C, refined: C′, the tab the mockup now opens on.** You chose C, the strip of scene cards. The changes
+you asked for:
+- **One line.** The project's name and the Scenes header share one line over the cards: ▾ folds them, the name opens
+  the Project view, and ＋ adds a scene.
+- **Undo and Redo leave the Scene panel.** They stay in Edit and on Ctrl Z / Ctrl Y, and ↶ ↷ now sit on the menu
+  bar after the menus. The undo history covers the whole project, not one scene.
+- **Save picture** stays where it was.
 
-The last tab, "The menus, row by row", lists every row that was removed and where it went. Then say which proposal you
-want, or what to change.
+Your questions about Save and Open, answered from the code:
+- **Save did nothing the autosave does not do within a second.** The row is gone. Ctrl S still works: it confirms
+  the project is saved, or saves a library item while one is open. The status bar now says "saved in this browser".
+- **Open never opened a project kept in the browser.** It only read a file from disk, so it is now
+  **Import from file…**. A file with several scenes asks whether to open it as a project of its own or add its
+  scenes to this one.
+
+File now has 5 rows, and all the menus together have 29 rows instead of 67.
+
+**What to look at** in C′:
+- the Scene panel's first line: fold the cards, click the project's name, and use ＋;
+- a card's ⋯ › Delete, then ↶ on the menu bar;
+- File › Import from file… with the project file;
+- the scenario buttons "editing a library item" (then Ctrl S), "storage refused" and "▶ not compiled".
+
+The Menus tab now compares today with C′. A to D are still in the mockup, as they were.
 
 ## 0.62.4 — 2026-10-16
 
