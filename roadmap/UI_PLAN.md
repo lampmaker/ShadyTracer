@@ -441,6 +441,193 @@ examples (read, copied from, not edited: a list to open a copy from).
 - Ctrl+S saves the project in the browser at once (it downloaded a project file before); the File menu
   still saves the three files.
 
+## 11. Scenes, projects and the menus (proposed 2026-10-17, for the user to decide)
+
+**The user (2026-10-17):** "I dont like how the file menu is organized. I want a better overview of scenes in the project.
+Its pretty unclear now. Same for the render settings menu. Those are already covered by the icons in the viewport and
+setings in the render pane. ... Originally the scene tree contained multiple scenes. That was logical (scenetree shows
+the whole project) but unpractical as youre having a lot of navigation overload. ... Maybe a special project view or only
+show active scene in the tree. ... Look at save, load, export. Minimise the number of menu options where possible."
+Mockup H (`ui-mockups/h-scenes.html`) draws today and four answers on one made-up project.
+
+### What is there (read in code, 0.62.4)
+
+**Seven menus, 67 rows.** Counted from the code (the mockup's banner counts them from the same lists):
+
+| Menu | Rows | Defined at |
+|---|---|---|
+| File | 19 | `builder/filemenu.js:57-135` |
+| Edit | 2 | `index.html:1174-1175` |
+| View | 16 | `lib/shell/shell.js:491-500`, `index.html:306, 314` |
+| Render settings | 11 | `index.html:1177-1196` |
+| Analysis | 9 | `index.html:302, 1203-1217` |
+| Window | 4 | `shell.js:502-507` |
+| Help | 6 | `shell.js:501`, `index.html:1239-1255` |
+
+- **The scenes are seen nowhere but File › Switch to scene ▸,** as names. The 0.45.0 fold (section 10) made File the one
+  place for them, with Examples ▸ three levels deep, five "…this scene" verbs, and three kinds of file. The row over the
+  tree names only the project (`builder/projectrow.js`).
+- **File says two things twice:**
+  - "Save the library item" and "Save now" both show Ctrl S. One of them is always greyed (`filemenu.js:118, 125`).
+  - "Project" names two formats. "Save all scenes to a file" writes the project format; "Save the project to a file"
+    writes the workspace format, as the Projects dialog's Download does (`builder/demo.js:738-747`,
+    `workspace/dialog.js:109`).
+- **Every Render settings row is also somewhere visible.** The Quality presets and Fast while moving have three
+  homes each:
+  - the pane's Quality box (`lib/pathtracer/settingsui.js:55`);
+  - the view's Quality ▾ and ⚡ (`viewtools.js:175-240`);
+  - the menu.
+
+  Lamps only and Lights' rays have two: the pane's Light sources box (`settingsui.js:56-58`) and the menu. Environment
+  is a click on the scene's row.
+- **Other rows repeat a visible control:**
+  - Window's four rows are the buttons on every panel group's header (`shell.js:152-159`).
+  - View's "Layout: X" rows are the menu bar's layout buttons (`shell.js:284-299`).
+  - View › Help is Help › Contents.
+  - Rename this scene… is the scene row's label in Properties (`builder/panel.js:280-289`).
+- **A command with no menu row is still a command.** Ctrl K finds it (`lib/shell/registry.js:58-62, 72-79`). Taking a
+  row out of a menu loses nothing but the row. Two catches:
+  - The palette matches the menu's name too (`registry.js:76-79`), so a command taken out of Render settings needs
+    "render" in its label to be found by that word.
+  - A submenu row is never a palette answer (`registry.js:75`).
+- **Shared across a project, not per scene:**
+  - the render settings (`workspace/store.js:96-100`);
+  - the undo history.
+
+  Each scene has its own camera and environment (`demo.js:134-158`).
+
+### The workflow it serves (inferred from the code and this file's history: the user corrects it)
+
+- **Every session:** resume, then work on one scene for hours.
+- **Several times a session:** look at or compare another scene of the project, often a variant.
+- **Sometimes:**
+  - start a scene: empty, a duplicate, an example, a file;
+  - send work out: a picture, a scene or project file, a 3D print, a video.
+- **Rarely:**
+  - rename, reorder or delete scenes;
+  - other projects.
+
+Today the frequent task is the hidden one (three clicks, names only), and the rare ones fill the menu.
+
+### The principles
+
+- **P1.** Each level, project › scene › objects, is visible where the work is.
+- **P2.** The scene's commands have one home, beside the scenes. File keeps the files and the projects.
+- **P3.** Nothing a visible control does is said again in a menu. Ctrl K still finds it.
+- **P4.** Switching is always a deliberate act: a compile, 3.7-23 s on the user's card (section 10). It is never a
+  side effect of selecting.
+- **P5.** Saving is automatic (`workspace/autosave.js`). Files are for sending work out and bringing it in.
+
+### What every proposal shares
+
+**The menu bar: File · Edit · View · Analysis · Help, 30 rows.**
+- **Render settings and Window go.** Their commands keep their ids, with no menu row, and are labelled with "render" and
+  "window" so a search still finds them.
+- **View loses** Help and the "Layout: X" rows.
+- **Analysis** has New chart ▸ in place of six rows. The six commands stay in the palette.
+- **File:**
+  - New project · Open… (Ctrl O) · Projects and scenes…
+  - Save (Ctrl S). It is "Save library item" while an item is being edited, and "Close library item" appears only then.
+    This needs a row whose label and visibility follow the state; the registry copies a label once and only greys
+    (`registry.js:44-47`, `shell.js:397-400`).
+  - Save picture…
+  - Export ▸ Scene file… / Project file… / 3D print (3MF / STL)… The last selects the scene's Export box, whose Properties
+    hold the two buttons (`builder/panel.js:783-823`), or adds one.
+
+**Two kinds of file instead of three.**
+- A **scene file**, and a **project file** in today's workspace format. The project format, without the settings, still
+  opens. Nothing bundled is in either project format (read: the examples are scene files).
+- **Open…** reads any of them:
+  - a scene file joins this project;
+  - a project file opens as a project of its own. For a project-format file this changes behaviour: today it joins
+    (`index.html:1033-1043`; `store.js:206-213` already reads one as a project).
+- That was the only way to bring another project's scenes in, so it moves to **+ New scene › Add scenes from a file…**.
+
+**The Project view** (the user's "special project view"). It replaces the Projects dialog (`workspace/dialog.js`) and
+File › Examples.
+- **Where it goes:** over the docked panels, not the menu bar. It is opened from the project's name over the tree,
+  File › Projects and scenes…, or Ctrl K, and Esc goes back.
+- **The projects in this browser:** one another tab has open, and this tab's "not saved yet" copy, keep the dialog's
+  rules (`workspace/session.js:33-44`, `dialog.js:116-118`).
+- **The scenes as cards:**
+  - a picture, the unit, the counts, when edited, and how long the scene took to open last time;
+  - a click opens one (a compile) and goes back to the work;
+  - drag to reorder; ⋯ for duplicate, export and delete; a + New scene card.
+- **The 24 examples**, by audience and group, each with its line.
+
+**Smaller shared changes:**
+- **The scene is named once,** by its row, and renamed in Properties.
+- **A right-click on the scene's row** duplicates, exports and deletes it.
+- **Undoing a change to the list of scenes stays on the scene being worked on (proposed).** Today `restore()` makes the
+  changed scene current, a compile (`builder/demo.js:166-174`). Rename, delete, reorder or copy acting on another scene
+  would otherwise make Ctrl Z a switch.
+
+### The four everyday layers over it
+
+| | What you see of the other scenes while working | Switch | Against |
+|---|---|---|---|
+| **A** the view only | nothing; ⇄ on the scene's row opens the view | 2 clicks | every switch is a round trip |
+| **B** a quick list | ⇄ on the scene's row: a popover, a small picture each, a click opens | 2 | the overview only on request |
+| **C** a scenes strip | cards over the tree, foldable; a click selects (its card in Properties), ▶ or a double-click opens; a tree row dropped on a card is copied there | 1 | height out of a 300 px column; cards look like tabs, which say switching is free |
+| **D** the project in the tree | every scene a root row; the open one unfolded, the others one dimmed line that never unfolds; a click selects (its card in Properties), ▶ or a double-click opens; rows dropped on a scene are copied there, scenes dragged to reorder | 1 | rows below the open scene move on a switch (unless it is kept first); reverses 0.7.0's "one scene in the tree" |
+
+**D is not the overload of before 0.7.0.** That came from three things, and D has none of them:
+- every scene was a full tree;
+- touching any of its rows compiled it;
+- nine examples were loaded at every start.
+
+**Recommendation, for the user to overrule: D with the Project view, or B if D does not suit.**
+- Every level stays in sight while working, and the overview with pictures is one click away.
+- No dropdown comes back.
+- The scene is still named once.
+
+### Read in code: what building it needs
+
+**D through TreeView** (`lib/guistuff/treeview/treeview.js`, a7ad397) needs **no change to the submodule**:
+- The other scenes are a row type of their own (`nodeTypes`):
+  - dimmed by its `labelStyle` and `svgStyle`;
+  - with `open`, `duplicate` and `delete` as actions (a toggle with `values: []`), which reach `onToggleClick`.
+  - Never style the row div itself: selection, hover and drag reset its colour, background and opacity.
+- **A drop into a row without children** is allowed by that type's `allowedChildren`. The tree turns it into
+  `sendTo(mid, scene)`.
+- **Reordering root rows** splices the root array. `rowsFor` maps the new order to `sceneOps.move`.
+- **Drops:** no drop callback gets the DOM event. To read Shift (move instead of copy), the tree records it in a
+  capture listener, as it already does for a double-click (`builder/tree.js:616-630`). TreeView sets
+  `effectAllowed = 'move'`, so a key that asks for "copy" may cancel a drop. This is untested.
+- **The rows that move on a switch:** TreeView has no scroll API, and `rebuild()` makes a new container, so the tree
+  keeps the clicked row's place itself.
+- **Two bugs in the submodule** that matter here, for its own repository:
+  - `_handleDragEnter` is called and never defined, so every dragenter logs a TypeError.
+  - `destroy()` calls the undefined `_removeInsertionIndicators`.
+
+**The scene's picture.**
+- **What the code allows:** the canvas cannot be read back; its swapchain is RENDER_ATTACHMENT only
+  (`lib/pathtracer/index.js:409-411`). The offscreen grab the library's studio uses (`index.js:487-532`,
+  `library/studio.js:427-433`) can. It stops the loop and clears the accumulation, so it would run when a scene is
+  left: a switch, or another project opened.
+- **Where they would be kept:** in a database of their own through `library/thumbs.js:37-56` `indexedDbThumbs`, keyed
+  by project and scene. Scene keys repeat across projects (`index.html:1004-1005`). Pictures stay out of the files, so
+  there is no format change.
+- **Gaps:**
+  - A scene never shown in this browser has no picture.
+  - The examples have none; they show their line instead.
+
+**How long a scene takes to open.**
+- **Measured:** `RT._lastCompile.fromRequestMs` (`raytrace_main.js:570-571`) gives the time of the last compile,
+  recorded by scene.
+- **Predicted:** before a scene has been opened here, `R.predictCompile` compiles nothing (`raytrace_main.js:646-660`).
+  Its fit is rms 11 %, worst 28 % (`compileprogress.js:16-25`). It ignores the browser's own cache, so a scene the
+  browser has cached opens faster than it says.
+- **Not measured:** what generating a scene's code for a prediction costs on the CPU.
+
+### For the user to decide
+
+1. **A, B, C or D.**
+2. **"Only show active scene in the tree":** today's tree, which already does, or D's.
+3. **The Project view:** over the panels, as drawn, or a dock panel of its own.
+4. **Undo:** whether undoing a change to the list of scenes stays on the scene being worked on.
+5. **Save picture:** beside Export ▸, as drawn, or inside it.
+
 ## Open decisions
 
 **Lights as parameters and code: investigated (2026-09-28), a decision for the user.** A light is a node of

@@ -1,0 +1,1395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>H · Scenes and menus</title>
+<!-- H: SCENES, PROJECTS AND THE MENUS (proposed 2026-10-17, roadmap/UI_PLAN.md section 11). The user: the File menu
+     gives no overview of a project's scenes, and the Render settings menu says again what the view's icons and the
+     Render settings pane already do. Today's menus as the code has them (builder/filemenu.js, index.html,
+     lib/shell/shell.js), and four ways to see the scenes over one floor every option shares, on one made-up
+     project. ONE FILE, nothing imported or fetched, so it renders on its own; the look is mock.css's tokens.
+     Nothing here is used by the application. The pictures are sketches, not renders. -->
+<style>
+:root {
+    color-scheme: dark;
+    --bg: #0f1214; --panel: #16191c; --raised: #1d2226; --tabs: #13171a; --line: #2a3138;
+    --ink: #dde3e8; --muted: #8fa3b3; --faint: #5d6b77;
+    --accent: #7896af; --accent-bg: rgba(120, 150, 175, 0.22); --strong: #2f5d86;
+    --c1: #3987e5; --c2: #d95926; --c3: #199e70;
+    --good: #3fae6a; --warn: #d9a226; --bad: #d9534f;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 13px/1.4 var(--sans); overflow: hidden; }
+button { font: inherit; color: inherit; background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 3px 9px; cursor: pointer; }
+button:hover { background: var(--accent-bg); }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+button.on { background: var(--accent-bg); border-color: rgba(160, 175, 190, 0.35); color: #fff; }
+button.primary { background: var(--strong); border-color: #3b6f9c; color: #fff; }
+button:disabled { opacity: 0.4; cursor: default; background: none; }
+input, select { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 3px; padding: 2px 5px; min-width: 0; }
+[hidden] { display: none !important; }
+.app { display: flex; flex-direction: column; height: 100%; }
+
+/* THE BANNER: which proposal, the scenario, the menu bar's row count */
+.banner { display: flex; align-items: center; gap: 10px; padding: 5px 10px; background: #243240; color: #cfe0ee; font-size: 12px;
+          border-bottom: 1px solid #34506a; flex-wrap: wrap; flex: none; }
+.banner b { color: #fff; }
+.banner a { color: #9fc6ea; }
+.seg { display: inline-flex; border: 1px solid #34506a; border-radius: 5px; overflow: hidden; }
+.seg button { border-radius: 0; border: 0; border-right: 1px solid #34506a; padding: 3px 10px; color: #cfe0ee; }
+.seg button:last-child { border-right: 0; }
+.seg button.on { background: #2f5d86; color: #fff; }
+.seg button .l { font: 600 11px var(--mono); color: #9fc6ea; margin-right: 4px; }
+.seg button.on .l { color: #fff; }
+.scen { display: inline-flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+.scen button { font-size: 11.5px; padding: 1px 7px; border: 1px solid #34506a; color: #cfe0ee; }
+.scen button.on { background: #3a2f12; border-color: #6b5a2c; color: #f3dfa6; }
+.count { font: 11.5px var(--mono); color: #cfe0ee; margin-left: auto; }
+.count b { color: #fff; }
+
+/* THE NOTES under the banner: what to try, and why */
+.notes { background: #171d22; border-bottom: 1px solid var(--line); padding: 6px 12px; font-size: 12px; flex: none; }
+.notes .head { display: flex; gap: 10px; align-items: baseline; }
+.notes .head .what { color: #c5ced6; }
+.notes .head button { margin-left: auto; font-size: 11.5px; color: var(--muted); }
+.notes .cols { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 18px; margin-top: 6px; }
+.notes h4 { margin: 0 0 2px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: normal; }
+.notes ul { margin: 0; padding-left: 16px; color: #c5ced6; }
+.notes li { margin: 1px 0; }
+.notes .pro li::marker { content: "+  "; color: var(--good); }
+.notes .con li::marker { content: "−  "; color: var(--bad); }
+.notes kbd, kbd.k { font: 11px var(--mono); border: 1px solid var(--line); border-radius: 3px; padding: 0 4px; color: var(--muted); }
+
+/* THE MENU BAR, the shell's */
+.menubar { display: flex; align-items: center; height: 28px; padding: 0 6px; background: var(--raised); border-bottom: 1px solid var(--line); flex: none; }
+.menubar .mb { padding: 2px 10px; cursor: default; }
+.menubar .mb.on { background: var(--accent-bg); color: #fff; }
+.menubar .mb.gone { color: #e6c877; }
+.menubar .spacer { flex: 1; }
+.menubar .layouts { display: flex; gap: 2px; }
+.menubar .layouts button { font-size: 12px; padding: 1px 8px; color: var(--muted); }
+.menubar .layouts button.on { color: #fff; background: var(--accent-bg); }
+.menubar .title { color: var(--faint); font-size: 12px; margin-left: 12px; }
+
+/* A MENU, a submenu, a context menu: the shell's popup (lib/shell/menu.js) */
+.pop { position: fixed; z-index: 100; min-width: 230px; max-width: 460px; background: #20262b; border: 1px solid #36404a; border-radius: 5px;
+       padding: 4px 0; box-shadow: 0 8px 24px rgba(0,0,0,0.5); font-size: 12.5px; max-height: calc(100vh - 20px); overflow: auto; }
+.pop .it { padding: 4px 14px 4px 12px; white-space: nowrap; display: flex; gap: 18px; align-items: center; cursor: default; position: relative; }
+.pop .it:hover:not(.off), .pop .it.open { background: var(--accent-bg); }
+.pop .it.off { color: var(--faint); }
+.pop .it .kb { margin-left: auto; color: var(--faint); font: 11px var(--mono); }
+.pop .it .ar { margin-left: auto; color: var(--faint); }
+.pop .it.new::after { content: 'new'; font-size: 9.5px; color: #7fd1ae; border: 1px solid #2c6b54; border-radius: 6px; padding: 0 4px; margin-left: 6px; }
+.pop hr { border: 0; border-top: 1px solid var(--line); margin: 4px 0; }
+.pop .hd { color: var(--faint); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.05em; padding: 6px 12px 2px; }
+
+/* THE WORK AREA: left column, the view, right column (Design's layout, index.html:253-263) */
+.work { flex: 1; min-height: 0; display: grid; grid-template-columns: 300px minmax(0, 1fr) 260px; position: relative; }
+.colL, .colR { display: flex; flex-direction: column; min-height: 0; background: var(--panel); }
+.colL { border-right: 1px solid var(--line); }
+.colR { border-left: 1px solid var(--line); }
+.tabs { display: flex; height: 28px; background: var(--tabs); border-bottom: 1px solid var(--line); flex: none; }
+.tabs span { padding: 5px 12px; color: var(--muted); font-size: 12px; border-right: 1px solid var(--line); }
+.tabs span.on { background: var(--panel); color: #fff; box-shadow: inset 0 2px 0 var(--accent); }
+.tabs .tabbtns { margin-left: auto; color: var(--faint); padding: 5px 8px; font-size: 12px; letter-spacing: 3px; }
+.pane { overflow: auto; min-height: 0; }
+.pane.tree { flex: 1.25; }
+.pane.props { flex: 1; border-top: 1px solid var(--line); }
+.hline { height: 1px; background: var(--line); flex: none; }
+
+/* the row over the tree (builder/projectrow.js) */
+.projrow { display: flex; align-items: center; gap: 4px; padding: 4px 6px; border-bottom: 1px solid var(--line); flex: none; min-height: 32px; }
+.projrow .name { font-weight: 600; padding: 2px 6px; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.projrow button.name { border: 1px solid transparent; display: flex; gap: 6px; align-items: center; }
+.projrow button.name:hover { border-color: rgba(160,175,190,0.35); }
+.projrow .note { color: var(--warn); font-weight: normal; font-size: 11.5px; }
+.projrow .sp { flex: 1; }
+.projrow .ic { padding: 2px 6px; color: var(--muted); }
+.projrow .play { color: var(--good); }
+.grid-ic { display: inline-grid; grid-template-columns: 5px 5px; gap: 2px; }
+.grid-ic i { width: 5px; height: 5px; background: var(--muted); border-radius: 1px; }
+
+/* THE TREE (builder/tree.js over TreeView) */
+.rows { padding: 3px 2px; font-size: 12.5px; }
+.r { display: flex; align-items: center; gap: 5px; padding: 1px 6px; border-radius: 3px; min-height: 22px; white-space: nowrap; cursor: default; position: relative; }
+.r:hover { background: rgba(120,150,175,0.10); }
+.r.sel { background: var(--accent-bg); color: #fff; }
+.r .chev { width: 12px; color: var(--faint); font-size: 10px; text-align: center; cursor: pointer; flex: none; }
+.r .ico { width: 14px; text-align: center; flex: none; font-size: 11px; }
+.r .lab { overflow: hidden; text-overflow: ellipsis; }
+.r .nt { color: var(--faint); font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; }
+.r .acts { margin-left: auto; display: flex; gap: 1px; flex: none; }
+.r .acts span { padding: 0 4px; color: var(--muted); border-radius: 3px; cursor: pointer; }
+.r .acts span:hover { background: var(--accent-bg); color: #fff; }
+.r .acts .x { color: #e57373; }
+.r .acts .go { color: var(--good); }
+.r.dim .lab { color: var(--muted); }
+.r.dim .ico { opacity: 0.6; }
+.r.dim { min-height: 24px; }
+.r.dim .acts { opacity: 0; }
+.r.dim:hover .acts, .r.dim.sel .acts { opacity: 1; }
+.r.drop { box-shadow: inset 0 0 0 1px var(--c3); background: rgba(25,158,112,0.15); }
+.r.dropline { box-shadow: inset 0 2px 0 var(--c3); }
+.r.curscene .lab { font-weight: 600; }
+.r .pic { width: 30px; height: 19px; border-radius: 2px; overflow: hidden; flex: none; background: #0b0d0f; }
+.r .pic svg { display: block; width: 100%; height: 100%; }
+.ico.scene { color: #e6a356; } .ico.item { color: #7fd1ae; } .ico.group { color: #9fc6ea; } .ico.obj { color: #c5ced6; }
+.ico.light { color: #f0d36e; } .ico.export { color: #c9a5e6; } .ico.haze { color: #a9b8c4; } .ico.mat { color: #d98c6e; }
+.ico.back { color: var(--muted); }
+
+/* C · THE SCENES STRIP over the tree */
+.strip { border-bottom: 1px solid var(--line); flex: none; background: #14181b; }
+.strip .sh { display: flex; align-items: center; gap: 6px; padding: 3px 6px 3px 8px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.strip .sh .chev { cursor: pointer; width: 12px; text-align: center; }
+.strip .sh .sp { flex: 1; }
+.strip .sh button { font-size: 13px; padding: 0 6px; color: #fff; text-transform: none; letter-spacing: 0; }
+.strip .cards { display: flex; flex-direction: column; gap: 2px; padding: 2px 4px 6px; max-height: 196px; overflow: auto; }
+.card-s { display: flex; gap: 7px; align-items: center; padding: 3px 5px; border-radius: 4px; border: 1px solid transparent; cursor: default; position: relative; }
+.card-s:hover { background: rgba(120,150,175,0.10); }
+.card-s.cur { border-color: #3b5268; background: #1c2731; box-shadow: inset 3px 0 0 var(--accent); }
+.card-s.sel { background: var(--accent-bg); }
+.card-s.drop { box-shadow: inset 0 0 0 1px var(--c3); background: rgba(25,158,112,0.15); }
+.card-s.dropline { box-shadow: inset 0 2px 0 var(--c3); }
+.card-s .pic { width: 52px; height: 33px; border-radius: 3px; overflow: hidden; flex: none; background: #0b0d0f; }
+.card-s .pic svg { display: block; width: 100%; height: 100%; }
+.card-s .tx { min-width: 0; flex: 1; }
+.card-s .t { font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-s .m { font-size: 11px; color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-s .acts { display: flex; gap: 1px; opacity: 0; }
+.card-s:hover .acts, .card-s.sel .acts { opacity: 1; }
+.card-s .acts span { padding: 0 5px; color: var(--muted); border-radius: 3px; cursor: pointer; }
+.card-s .acts span:hover { background: var(--accent-bg); color: #fff; }
+.card-s .acts .go { color: var(--good); }
+.badge { font-size: 10px; border: 1px solid #3b6f9c; color: #9fc6ea; border-radius: 7px; padding: 0 5px; white-space: nowrap; }
+.badge.warn { border-color: #6b5a2c; color: #e6c877; }
+
+/* B · THE QUICK LIST, a popover off the scene row */
+.quick { position: fixed; z-index: 90; width: 330px; background: #1b2025; border: 1px solid #36404a; border-radius: 7px; box-shadow: 0 10px 30px rgba(0,0,0,0.55); }
+.quick .qh { display: flex; align-items: center; padding: 7px 10px 4px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.quick .qh .sp { flex: 1; }
+.quick .ql { max-height: 330px; overflow: auto; padding: 2px 5px; }
+.quick .qf { display: flex; gap: 4px; padding: 6px 8px; border-top: 1px solid var(--line); }
+.quick .qf button { font-size: 12px; }
+
+/* PROPERTIES */
+.ph { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); padding: 8px 10px 4px; display: flex; gap: 6px; align-items: center; }
+.prop { display: grid; grid-template-columns: 38% 1fr; gap: 6px; align-items: center; padding: 2px 10px; min-height: 24px; font-size: 12.5px; }
+.prop label { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.prop input[type=text], .prop select { width: 100%; }
+.pnote { font-size: 11.5px; color: var(--muted); padding: 4px 10px 8px; }
+.pnote b { color: var(--ink); font-weight: 600; }
+.scard { margin: 6px 10px; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--raised); }
+.scard .pic { height: 110px; background: #0b0d0f; }
+.scard .pic svg { display: block; width: 100%; height: 100%; }
+.scard .b { padding: 6px 9px 8px; }
+.scard .t { font-weight: 600; }
+.scard .m { color: var(--muted); font-size: 11.5px; }
+.scard .btns { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
+.scard .btns button { font-size: 12px; border-color: var(--line); }
+
+/* THE VIEW: a sketch where the picture would be, the renderer's buttons over it */
+.view { position: relative; min-width: 0; min-height: 0; background: #0b0d0f; overflow: hidden; }
+.view .picbig { position: absolute; inset: 0; }
+.view .picbig svg { width: 100%; height: 100%; display: block; }
+.view .vt { position: absolute; left: 8px; top: 8px; display: flex; gap: 3px; z-index: 2; }
+.view .vt button { background: rgba(22,25,28,0.85); border: 1px solid rgba(160,175,190,0.25); font-size: 12px; padding: 2px 8px; }
+.view .vt button.lit { color: #f0d36e; }
+.view .an { position: absolute; right: 8px; bottom: 8px; z-index: 2; }
+.view .an button { background: rgba(22,25,28,0.85); border: 1px solid rgba(160,175,190,0.25); font-size: 12px; }
+.view .cap { position: absolute; left: 8px; bottom: 8px; font: 11px var(--mono); color: var(--muted); background: rgba(22,25,28,0.8); padding: 2px 8px; border-radius: 4px; z-index: 2; }
+.view .itemstrip { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); z-index: 3; display: flex; gap: 6px; align-items: center;
+                   background: rgba(20,40,32,0.95); border: 1px solid #2c6b54; border-radius: 6px; padding: 3px 6px 3px 10px; font-size: 12px; }
+.view .itemstrip button { font-size: 12px; border-color: #2c6b54; }
+.busy { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); z-index: 5; width: 300px; background: rgba(22,25,28,0.95);
+        border: 1px solid rgba(160,175,190,0.3); border-radius: 7px; padding: 10px 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+.busy .t { font-size: 12.5px; margin-bottom: 6px; }
+.busy .bar { height: 6px; background: #0b0d0f; border-radius: 3px; overflow: hidden; }
+.busy .bar i { display: block; height: 100%; background: var(--accent); width: 0; }
+.busy .l { font: 11px var(--mono); color: var(--muted); margin-top: 5px; display: flex; justify-content: space-between; }
+
+/* RENDER SETTINGS, the pane in boxes (lib/pathtracer/settingsui.js RENDERER_BOXES) */
+.box { margin: 8px; border: 1px solid #36404a; border-radius: 7px; background: #1a1e22; padding: 4px 0 6px; }
+.box .bh { font-weight: 600; font-size: 12.5px; padding: 3px 10px 4px; }
+.qbtns { display: flex; gap: 4px; padding: 2px 8px; flex-wrap: wrap; }
+.qbtns .pill { display: inline-flex; border: 1px solid var(--line); border-radius: 5px; overflow: hidden; }
+.qbtns .pill button { border: 0; border-radius: 0; font-size: 11.5px; padding: 2px 7px; }
+.qbtns .pill button.on { background: var(--strong); color: #fff; }
+.chk { display: flex; gap: 6px; align-items: center; padding: 2px 10px; font-size: 12px; color: #c5ced6; cursor: pointer; }
+.chk input { margin: 0; }
+.rnote { font-size: 11px; color: var(--faint); padding: 2px 10px; }
+
+/* THE STATUS BAR */
+.status { display: flex; gap: 16px; align-items: center; padding: 0 10px; height: 24px; background: #12304a; color: #cfe0ee; font: 11.5px var(--mono);
+          flex: none; white-space: nowrap; overflow: hidden; }
+.status .sp { flex: 1; }
+.status .job { color: #f3dfa6; }
+
+/* THE PROJECT VIEW: over the docked panels, not over the menu bar */
+.pv { position: absolute; inset: 0; z-index: 20; background: #121619; display: grid; grid-template-columns: 250px minmax(0, 1fr); }
+.pv .side { border-right: 1px solid var(--line); background: var(--panel); display: flex; flex-direction: column; min-height: 0; }
+.pv .side .sh { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; padding: 12px 12px 6px; }
+.pv .plist { flex: 1; overflow: auto; padding: 0 6px; }
+.pv .prow { padding: 6px 8px; border-radius: 5px; cursor: default; position: relative; }
+.pv .prow:hover { background: rgba(120,150,175,0.10); }
+.pv .prow.here { background: #1c2731; box-shadow: inset 3px 0 0 var(--accent); }
+.pv .prow .n { font-weight: 600; font-size: 12.5px; display: flex; gap: 6px; align-items: center; }
+.pv .prow .m { font-size: 11px; color: var(--faint); }
+.pv .prow .more { position: absolute; right: 6px; top: 6px; opacity: 0; padding: 0 5px; color: var(--muted); border-radius: 3px; }
+.pv .prow:hover .more { opacity: 1; }
+.pv .side .foot { display: flex; flex-direction: column; gap: 3px; padding: 8px; border-top: 1px solid var(--line); }
+.pv .side .foot button { text-align: left; font-size: 12px; }
+.pv .side .foot .where { font-size: 10.5px; color: var(--faint); padding: 2px 4px; }
+.pv .main { overflow: auto; min-height: 0; padding: 14px 20px 30px; }
+.pv .top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.pv .top h2 { margin: 0; font-size: 19px; }
+.pv .top h2 input { font: inherit; font-weight: 600; background: transparent; border: 1px solid transparent; color: #fff; width: 280px; }
+.pv .top h2 input:hover, .pv .top h2 input:focus { border-color: var(--line); }
+.pv .top .m { color: var(--muted); font-size: 12px; }
+.pv .top .sp { flex: 1; }
+.pv .top button { border-color: var(--line); font-size: 12px; }
+.pv h3 { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: normal; margin: 18px 0 8px; display: flex; gap: 8px; align-items: baseline; }
+.pv h3 .h3n { text-transform: none; letter-spacing: 0; color: var(--faint); font-size: 11.5px; }
+.pv .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+.card-v { background: var(--panel); border: 1px solid var(--line); border-radius: 7px; overflow: hidden; cursor: pointer; position: relative; display: flex; flex-direction: column; }
+.card-v:hover { border-color: #4b6178; }
+.card-v.cur { border-color: #3b6f9c; box-shadow: 0 0 0 1px #3b6f9c; }
+.card-v.off { opacity: 0.5; cursor: default; }
+.card-v.dropline { box-shadow: -3px 0 0 var(--c3); }
+.card-v .pic { aspect-ratio: 16 / 10; background: #0b0d0f; position: relative; }
+.card-v .pic svg { display: block; width: 100%; height: 100%; }
+.card-v .pic .nopic { position: absolute; inset: 0; display: grid; place-items: center; color: var(--faint); font-size: 11.5px; text-align: center; padding: 10px; }
+.card-v .pic .bdg { position: absolute; left: 6px; top: 6px; }
+.card-v .b { padding: 6px 9px 8px; }
+.card-v .t { font-weight: 600; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-v .m { font-size: 11px; color: var(--muted); }
+.card-v .m2 { font-size: 11px; color: var(--faint); }
+.card-v .more { position: absolute; right: 5px; top: 5px; background: rgba(22,25,28,0.85); border-radius: 4px; padding: 0 6px; color: var(--muted); opacity: 0; }
+.card-v:hover .more { opacity: 1; }
+.card-v.add { border-style: dashed; display: grid; place-items: center; min-height: 160px; color: var(--muted); font-size: 13px; }
+.ex { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; cursor: pointer; }
+.ex:hover { border-color: #4b6178; }
+.ex .t { font-weight: 600; font-size: 12.5px; }
+.ex .d { font-size: 11.5px; color: var(--muted); }
+.pv .exgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
+.pv .aud { font-size: 13px; color: #fff; margin: 12px 0 4px; }
+.pv .grp { font-size: 11px; color: var(--faint); margin: 8px 0 4px; }
+.pv .welcome { margin-top: 12px; padding: 10px 12px; border: 1px solid #6b5a2c; background: #221b14; border-radius: 6px; color: #f3dfa6; font-size: 12.5px; }
+.pv .blocked { margin-top: 12px; padding: 8px 12px; border: 1px solid #2c6b54; background: #14221c; border-radius: 6px; color: #9fe0c4; font-size: 12.5px; }
+
+/* TODAY's Projects dialog (workspace/dialog.js) */
+.modal { position: fixed; inset: 0; z-index: 80; background: rgba(0,0,0,0.5); display: grid; place-items: center; }
+.dlg { width: 560px; max-width: calc(100vw - 32px); background: #1b2025; border: 1px solid #36404a; border-radius: 8px; box-shadow: 0 12px 40px rgba(0,0,0,0.6); }
+.dlg .dh { display: flex; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--line); font-weight: 600; }
+.dlg .dh .sp { flex: 1; }
+.dlg .dr { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; padding: 8px 14px; border-bottom: 1px solid #22292f; }
+.dlg .dr .n { font-weight: 600; }
+.dlg .dr .m { font-size: 11.5px; color: var(--muted); grid-column: 1; }
+.dlg .dr .bs { grid-row: 1 / span 2; grid-column: 2; display: flex; gap: 2px; align-items: center; }
+.dlg .dr .bs button { font-size: 11.5px; padding: 2px 6px; border-color: var(--line); }
+.dlg .df { display: flex; gap: 6px; padding: 10px 14px; align-items: center; }
+.dlg .df .where { font-size: 11px; color: var(--faint); margin-left: auto; max-width: 220px; }
+
+/* CTRL K */
+.pal { position: fixed; left: 50%; top: 70px; transform: translateX(-50%); z-index: 120; width: 520px; max-width: calc(100vw - 32px);
+       background: #1b2025; border: 1px solid #36404a; border-radius: 8px; box-shadow: 0 12px 40px rgba(0,0,0,0.6); }
+.pal input { width: 100%; border: 0; border-bottom: 1px solid var(--line); background: transparent; padding: 10px 14px; font-size: 14px; border-radius: 8px 8px 0 0; }
+.pal .pl { max-height: 360px; overflow: auto; padding: 4px 0; }
+.pal .pi { display: flex; gap: 10px; padding: 4px 14px; font-size: 12.5px; cursor: default; }
+.pal .pi:hover, .pal .pi.on { background: var(--accent-bg); }
+.pal .pi .mn { color: var(--faint); width: 92px; flex: none; }
+.pal .pi .only { margin-left: auto; font-size: 10.5px; color: #e6c877; }
+.pal .pf { font-size: 11px; color: var(--faint); padding: 6px 14px; border-top: 1px solid var(--line); }
+
+/* THE MENUS PAGE */
+.page { flex: 1; overflow: auto; padding: 18px 22px 40px; }
+.page h2 { margin: 0 0 6px; font-size: 17px; }
+.page p { color: #c5ced6; max-width: 90ch; margin: 4px 0 10px; }
+.page .two { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+.page .menus { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.mbox { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 6px 0; }
+.mbox .mh { display: flex; padding: 2px 12px 6px; font-weight: 600; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
+.mbox .mh span { margin-left: auto; font: 11px var(--mono); color: var(--muted); font-weight: normal; }
+.mbox.gone .mh { color: #e6c877; }
+.mbox .mr { padding: 2px 12px; font-size: 12px; display: flex; gap: 8px; }
+.mbox .mr .kb { margin-left: auto; color: var(--faint); font: 11px var(--mono); }
+.mbox .mr .lbl { display: flex; flex-direction: column; }
+.mbox .mr.cut .strike { color: var(--faint); text-decoration: line-through; text-decoration-color: rgba(217,83,79,0.7); }
+.mbox .mr.cut .kb { text-decoration: line-through; }
+.mbox .mr .to { color: var(--muted); font-size: 11px; }
+.mbox .ms { border-top: 1px solid #22292f; margin: 3px 0; }
+.mbox .mr.sub { padding-left: 24px; color: var(--muted); }
+table.w { border-collapse: collapse; width: 100%; font-size: 12px; margin-top: 6px; }
+table.w th, table.w td { padding: 5px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+table.w th { background: var(--raised); color: var(--muted); font-weight: normal; }
+table.w td:first-child { color: var(--ink); }
+table.w td.best { color: #9fe0c4; }
+.tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; margin-bottom: 14px; }
+
+@media (max-width: 1100px) {
+    .work { grid-template-columns: 270px minmax(0, 1fr); }
+    .colR { display: none; }
+    .notes .cols { grid-template-columns: 1fr; gap: 6px; }
+}
+@media (max-width: 760px) {
+    /* a phone: the page scrolls, and the work area is given a height of its own rather than squeezed under the notes */
+    body { overflow: auto; }
+    .app { height: auto; min-height: 100%; }
+    .menubar { overflow-x: auto; }
+    .menubar .layouts, .menubar .title { display: none; }
+    .work { height: 1150px; flex: none; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(0, 1.4fr); }
+    .page { overflow: visible; }
+    .view { grid-row: 1; } .colL { grid-row: 2; }
+    .pv { grid-template-columns: minmax(0, 1fr); } .pv .side { display: none; }
+    .page .two { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+    <div class="banner" id="banner"></div>
+    <div class="notes" id="notes"></div>
+    <div class="menubar" id="menubar"></div>
+    <div class="work" id="work"></div>
+    <div class="page" id="page" hidden></div>
+    <div class="status" id="status"></div>
+</div>
+<div id="layer"></div>
+<script>
+'use strict';
+/*======================================================================================================================
+  THE DATA: one made-up project, "Lamp study", its scenes and their trees; the other projects in this browser; the
+  real examples (scenes/examples.js, titles and lines copied 2026-10-17).
+======================================================================================================================*/
+const EXAMPLES = [["First steps","Modelling and rendering","Start","Shapes on a table in daylight: one glass, two blended into one"],["Shape gallery","Modelling and rendering","Shapes","Every built-in shape, about 50 mm across"],["Combining shapes","Modelling and rendering","Shapes","Union, subtract and intersect, sharp and blended; a die made the way a die is"],["Modifiers","Modelling and rendering","Shapes","Twist, bend, repeat, mirror, round, shell, displace and relief, each on a plain shape"],["From points","Modelling and rendering","Shapes","An extruded star, a turned wine glass, a pipe along a path, a swept bar"],["Parametric part","Modelling and rendering","Shapes","A heatsink whose fin count, pitch and height are its parameters"],["Infinite detail","Modelling and rendering","Shapes","A Menger sponge four levels deep, and columns repeated to the horizon"],["Material board","Modelling and rendering","Materials","The library's materials on 40 mm spheres"],["Relief and texture","Modelling and rendering","Materials","Plaster, stucco, render, stone, hammered metal, leather: reliefs in a raking light"],["Glass and liquid","Modelling and rendering","Materials","A tumbler of water, a green bottle, a flint prism in the sun"],["Lighting a room","Modelling and rendering","Light and camera","A room in metres: daylight through a window and a 1500 lm lamp"],["Depth of field","Modelling and rendering","Light and camera","A row of pawns through an open lens, focused on the third"],["Animation","Modelling and rendering","Light and camera","Values marked animated, for the Timeline"],["Product shot","Modelling and rendering","Light and camera","A perfume bottle on a plinth in studio light"],["LED, lens and screen","Optical design","Optical design","An LED, a PMMA lens and a detector: illuminance in lux"],["Beam in dusty air","Optical design","Optical design","An LED's beam through a lens, seen in dust; a PMMA block in it stays clear"],["Aspheric condenser","Optical design","Optical design","An aspheric lens collimating a small source"],["Fresnel or plano-convex","Optical design","Optical design","One focal length made two ways, side by side"],["Parabolic reflector","Optical design","Optical design","A torch's reflector: the far field, intensity and beam angle"],["Light guide","Optical design","Optical design","Light carried round two bends by total internal reflection"],["RGBW colour mixing","Optical design","Optical design","Four LEDs and a mixing rod: the colour map"],["Dispersion in a prism","Optical design","Optical design","White light split by a flint prism at minimum deviation"],["Dichroic combiner","Optical design","Optical design","Red and blue beams joined by a coated plate"],["Office lighting","Optical design","Optical design","Four LED panels and the work plane's illuminance"]]
+    .map(([title, audience, group, description]) => ({ title, audience, group, description }));
+
+// a node: [label, kind, note, children]; kinds: group obj light export haze
+const N = (l, k, n = '', c = null) => ({ l, k, n, c });
+const TREES = {
+    lens: () => [N('LED', 'light', '1 W, Lambertian'), N('Lens', 'group', 'a − b', [N('body', 'obj', '· PMMA'), N('bore', 'obj', '−')]),
+                 N('Holder', 'obj', '· Aluminium'), N('Screen', 'obj', '· detector'), N('Floor', 'obj', '· White matte')],
+    lens2: () => [N('LED', 'light', '1 W, Lambertian'), N('Asphere', 'obj', '· PMMA, k −0.6'), N('Holder', 'obj', '· Aluminium'),
+                  N('Screen', 'obj', '· detector'), N('Floor', 'obj', '· White matte')],
+    fresnel: () => [N('LED', 'light', '1 W'), N('Fresnel lens', 'obj', '· PMMA'), N('Plano-convex', 'obj', '· PMMA'),
+                    N('Screen', 'obj', '· detector'), N('Floor', 'obj', '· White matte')],
+    housing: () => [N('Housing', 'group', 'a ∪ b (smooth)', [N('shell', 'obj', '· Aluminium'), N('fins', 'obj', '× 12 · Aluminium')]),
+                    N('Cover glass', 'obj', '· Glass'), N('Print box', 'export', '3MF / STL'), N('Floor', 'obj', '· Grey')],
+    room: () => [N('Room', 'group', 'a − b', [N('walls', 'obj', '· Plaster'), N('window', 'obj', '−')]), N('Desk', 'obj', '· Oak'),
+                 N('Luminaire', 'light', '× 4, 3600 lm'), N('Work plane', 'obj', '· detector'), N('Dust', 'haze', 'haze')],
+    product: () => [N('Plinth', 'obj', '· White matte'), N('Bottle', 'group', 'a ∪ b ∪ c', [N('glass', 'obj', '· Glass'), N('perfume', 'obj', '· Liquid'), N('cap', 'obj', '· Brass')]),
+                    N('Key light', 'light', 'softbox'), N('Fill light', 'light', 'softbox')],
+    item: () => [N('Knob', 'obj', '· Brass'), N('Studio floor', 'obj', '· White matte')],
+    empty: () => [],
+    example: () => [N('(the example\'s objects)', 'group', '', [N('…', 'obj', '')])],
+    file: () => [N('Bench', 'obj', '· Steel'), N('Test lamp', 'light', '500 lm')],
+};
+const MATS = { lens: ['PMMA', 'Aluminium', 'White matte'], lens2: ['PMMA', 'Aluminium', 'White matte'], fresnel: ['PMMA', 'White matte'],
+               housing: ['Aluminium', 'Glass', 'Grey'], room: ['Plaster', 'Oak', 'White matte'], product: ['White matte', 'Glass', 'Liquid', 'Brass'],
+               item: ['Brass', 'White matte'], empty: ['Default'], example: ['Default'], file: ['Steel'] };
+const BASE = [
+    { title: 'Spot lens v1', kind: 'lens', unit: 'mm', edited: '2 days ago', last: 6.2 },
+    { title: 'Spot lens v2 (asphere)', kind: 'lens2', unit: 'mm', edited: '1 h ago', last: 9.4 },
+    { title: 'Fresnel variant', kind: 'fresnel', unit: 'mm', edited: 'yesterday', predicted: 11, nopic: true },
+    { title: 'Housing and heatsink', kind: 'housing', unit: 'mm', edited: '4 days ago', last: 12.6 },
+    { title: 'Office with luminaire', kind: 'room', unit: 'm', edited: '5 days ago', last: 14.8 },
+    { title: 'Product shot', kind: 'product', unit: 'cm', edited: '3 days ago', last: 7.1 },
+];
+const OTHER_PROJECTS = [
+    { name: 'Desk lamp', when: '2 days ago', titles: ['Arm', 'Shade', 'On the desk'] },
+    { name: 'Optics course', when: 'yesterday', titles: ['Week 1', 'Week 2', 'Week 3', 'Prism', 'Mirror'], other: true },
+    { name: 'Old tests', when: '3 weeks ago', titles: ['Bench', 'Glass 1', 'Glass 2', 'Room', 'Haze', 'Menger', 'Spheres', 'Lens', 'Text'] },
+];
+
+let KEY = 0;
+const mkScene = (o) => {
+    const key = 's' + (++KEY);
+    let id = 0;
+    const ids = list => list.map(n => ({ ...n, id: `${key}:${++id}`, c: n.c ? ids(n.c) : null }));
+    return { key, title: o.title, kind: o.kind, unit: o.unit || 'mm', edited: o.edited || 'just now', last: o.last ?? null,
+             predicted: o.predicted ?? (o.last ? null : 6 + (KEY % 5)), nopic: !!o.nopic, hue: o.hue ?? (KEY * 47) % 360,
+             tree: ids((TREES[o.kind] || TREES.empty)()), mats: [...(MATS[o.kind] || ['Default'])], nextId: 100 };
+};
+const countOf = s => { let o = 0, l = 0; const walk = list => list.forEach(n => { if (n.k === 'light') l++; else if (n.k !== 'group') o++; if (n.c) walk(n.c) }); walk(s.tree); return { o, l } };
+const meta = s => { const { o, l } = countOf(s); return `${s.unit} · ${o} object${o === 1 ? '' : 's'} · ${l} light${l === 1 ? '' : 's'}` };
+const secs = s => s.last != null ? s.last : (s.predicted || 8);
+const timeNote = s => s.last != null ? `opened in ${Math.round(s.last)} s last time` : `about ${s.predicted} s (predicted)`;
+
+/*======================================================================================================================
+  THE STATE, and the scenarios the banner toggles
+======================================================================================================================*/
+const S = {
+    route: 'today', scenes: [], current: null, shown: null, sel: null, folded: new Set(),
+    sc: { many: false, item: false, copy: false, first: false, notCompiled: false, real: false },
+    compiling: null, history: [], quality: 'draft', moveFast: true, lampsOnly: false, lightRays: true, lt: true,
+    view: false, viewAt: null, dialog: false, notesOpen: true, stripFolded: false, pinFirst: false, msg: '', layout: 'Design',
+};
+function resetProject() {
+    KEY = 0;
+    if (S.sc.first) {
+        S.scenes = [mkScene({ title: 'First steps', kind: 'product', unit: 'mm', edited: 'just now', last: 5.4 })];
+    } else {
+        S.scenes = BASE.map(mkScene);
+        if (S.sc.many) for (let i = 7; i <= 20; i++)
+            S.scenes.push(mkScene({ title: `Lens variant ${String(i).padStart(2, '0')}`, kind: i % 3 ? 'lens2' : 'fresnel', edited: `${i} days ago`, last: 8 + (i % 6) }));
+    }
+    S.current = S.shown = S.scenes[Math.min(1, S.scenes.length - 1)].key;
+    S.item = S.sc.item ? mkScene({ title: 'Brass knob', kind: 'item', unit: 'mm', last: 3.1 }) : null;
+    S.sel = { t: 'scene', key: S.current };
+    S.history = [];
+    S.folded.clear();
+}
+const PROJECT = () => S.sc.first ? 'My project' : S.sc.copy ? 'Lamp study (copy)' : 'Lamp study';
+const cur = () => S.scenes.find(s => s.key === S.current);
+const byKey = k => S.scenes.find(s => s.key === k);
+const idx = k => S.scenes.findIndex(s => s.key === k);
+const PROPOSED = () => S.route !== 'today';
+const blocked = () => !!S.item;              // a library item is being edited: switching and adding wait (filemenu.js:18-20)
+const say = m => { S.msg = m; renderStatus(); };
+
+/*======================================================================================================================
+  PICTURES: SVG sketches standing in for each scene's last picture. Not renders.
+======================================================================================================================*/
+function pic(s, big = false) {
+    if (!s) return '';
+    const k = s.kind, h = s.hue;
+    const g = `<defs><linearGradient id="bg${s.key}${big ? 'b' : ''}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="hsl(${h},18%,${k === 'room' ? 30 : 16}%)"/>`
+            + `<stop offset="1" stop-color="hsl(${h},12%,6%)"/></linearGradient></defs><rect width="160" height="100" fill="url(#bg${s.key}${big ? 'b' : ''})"/>`;
+    const floor = `<path d="M0 72 L160 72 L160 100 L0 100Z" fill="hsl(${h},8%,22%)"/>`;
+    let body = '';
+    if (k === 'lens' || k === 'lens2' || k === 'fresnel') {
+        body = floor + `<path d="M30 52 L118 36 L118 68 Z" fill="rgba(255,230,150,0.14)"/>`
+             + `<rect x="22" y="47" width="10" height="10" rx="2" fill="#f0d36e"/>`
+             + (k === 'fresnel' ? `<path d="M62 34 l5 4 l-5 4 l5 4 l-5 4 l5 4 l-5 4 l5 4 l-5 4 Z" fill="rgba(170,210,235,0.55)" stroke="#cfe8f5" stroke-width="0.6"/>`
+                : `<ellipse cx="64" cy="52" rx="${k === 'lens2' ? 7 : 5}" ry="17" fill="rgba(170,210,235,0.45)" stroke="#cfe8f5" stroke-width="0.6"/>`)
+             + `<rect x="118" y="30" width="5" height="44" fill="#d8dde2"/><ellipse cx="117.5" cy="52" rx="2" ry="${k === 'lens2' ? 5 : 9}" fill="#fff6c8"/>`;
+    } else if (k === 'housing') {
+        body = floor + `<rect x="40" y="40" width="80" height="30" rx="4" fill="#8e979e"/>`
+             + Array.from({ length: 9 }, (_, i) => `<rect x="${46 + i * 8}" y="26" width="3" height="16" fill="#a9b2b8"/>`).join('')
+             + `<rect x="46" y="62" width="68" height="5" fill="rgba(200,230,255,0.5)"/>`;
+    } else if (k === 'room') {
+        body = `<path d="M0 100 L40 70 L120 70 L160 100Z" fill="#6b5c4a"/><rect x="40" y="18" width="80" height="52" fill="#c9c2b6"/>`
+             + `<rect x="92" y="28" width="20" height="26" fill="#fff9e0"/><path d="M92 54 L112 54 L130 100 L80 100Z" fill="rgba(255,250,220,0.18)"/>`
+             + `<rect x="52" y="20" width="30" height="3" fill="#fff"/><rect x="50" y="56" width="34" height="4" fill="#7a5632"/>`;
+    } else if (k === 'product') {
+        body = `<rect x="56" y="62" width="48" height="38" fill="#e7e4df"/><rect x="66" y="30" width="28" height="32" rx="6" fill="rgba(210,190,240,0.55)" stroke="#efe6ff" stroke-width="0.8"/>`
+             + `<rect x="72" y="40" width="16" height="20" rx="3" fill="rgba(180,120,220,0.5)"/><rect x="74" y="22" width="12" height="9" rx="2" fill="#c9a24a"/>`
+             + `<circle cx="30" cy="20" r="14" fill="rgba(255,255,255,0.08)"/>`;
+    } else if (k === 'item') {
+        body = floor + `<circle cx="80" cy="54" r="16" fill="#c9a24a"/><circle cx="74" cy="48" r="5" fill="rgba(255,250,220,0.6)"/>`;
+    } else if (k === 'example' || k === 'file') {
+        body = floor + `<rect x="58" y="44" width="44" height="28" rx="3" fill="hsl(${h},30%,45%)"/><circle cx="80" cy="34" r="10" fill="hsl(${(h + 120) % 360},35%,55%)"/>`;
+    } else {
+        body = floor;
+    }
+    const tag = big ? '' : '';
+    return `<svg viewBox="0 0 160 100" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${g}${body}${tag}</svg>`;
+}
+
+/*======================================================================================================================
+  THE ROUTES: today, and the four everyday layers over the floor every proposal shares
+======================================================================================================================*/
+const ROUTES = [
+    ['today', '', 'Today'], ['a', 'A', 'The view only'], ['b', 'B', 'A quick list'], ['c', 'C', 'A scenes strip'], ['d', 'D', 'The project in the tree'], ['menus', '', 'The menus, row by row'],
+];
+const NOTES = {
+    today: {
+        what: 'As it is in 0.62.4: the scenes are names in File › Switch to scene ▸; File has 19 rows; Render settings is a menu and a pane.',
+        try: ['Open <b>File</b>: projects, scenes, the library item, three kinds of file and a picture, in 19 rows. The scenes appear only in <b>Switch to scene ▸</b>, as names.',
+              '<b>Render settings › Quality: Sketch</b>: the view\'s <kbd>Draft ▾</kbd> and the pane on the right change too. Three places for one setting.',
+              'Right-click an object in the tree: <b>Copy to / Move to</b> another scene.',
+              '<b>File › Projects…</b> is a dialog of its own; <b>Examples ▸</b> is three levels deep.'],
+        pro: ['Nothing new to learn', 'Switching is a deliberate choice (a compile)'],
+        con: ['No overview: the scenes are names in a submenu', 'File mixes projects, scenes, files and a picture', 'Render settings and Window say again what the pane, the view and the panel headers do', 'Two rows say Ctrl S; "project" names two file formats'],
+    },
+    a: {
+        what: 'The floor alone: File in 6 rows, no Render settings or Window menu, and a Project view (projects, scenes with pictures, examples) opened from the project\'s name or the ⇄ on the scene row.',
+        try: ['Click the project\'s name over the tree (or ⇄ on the scene row): the <b>Project view</b> covers the panels, not the menu bar. <kbd>Esc</kbd> goes back.',
+              'Click a scene card: it opens (a compile) and you are back at work. Drag cards to reorder; <b>⋯</b> duplicates, exports, deletes; <kbd>Ctrl Z</kbd> after a delete stays on this scene.',
+              'Scroll down in the view: the examples, by audience, each with what it shows. A click adds a copy and opens it.',
+              '<b>File</b>: 6 rows. <kbd>Ctrl K</kbd> "quality" still finds Quality: Sketch, which has no menu row any more.'],
+        pro: ['The least to build: one view, which replaces the Projects dialog and Examples ▸', 'Pictures, compile times and the examples in one place', 'Nothing on screen while working'],
+        con: ['Every switch is a round trip through the view', 'While working, the other scenes cannot be seen'],
+    },
+    b: {
+        what: 'A + a quick list: ⇄ on the scene row opens the scenes, with a small picture each; a click opens one. "All scenes and projects…" for the view.',
+        try: ['Click <b>⇄</b> on the scene row: the quick list. Click a scene to open it (a compile).',
+              'At its foot: <b>+ New scene</b> (empty, duplicate, an example, a file) and <b>All scenes and projects…</b>',
+              'The scene is still named once, by its row: rename it in Properties.'],
+        pro: ['Two clicks to switch, from where you work', 'No space taken; the full view stays one click further', 'Not the old dropdown: File no longer says it again, and it does not name the scene twice'],
+        con: ['The list is gone once closed: an overview only on request', 'Copying an object to another scene stays a right-click'],
+    },
+    c: {
+        what: 'A + a scenes strip over the tree: every scene a card with its picture, the open one marked. ▶ or a double-click opens one; a click only selects it.',
+        try: ['The <b>SCENES</b> strip over the tree. Click a card: Properties shows it, nothing compiles. <b>▶</b> or a double-click opens it.',
+              'Drag an object from the tree onto a card: copied there (hold <kbd>Shift</kbd>: moved). Drag cards to reorder.',
+              'Fold the strip with its chevron; try <b>20 scenes</b>.'],
+        pro: ['The overview is always on screen', 'Dragging between scenes comes back, visibly', 'Selecting a card never compiles'],
+        con: ['Takes height from a 300 px column that Properties shares', 'Cards look like tabs, which say switching is free: it is not'],
+    },
+    d: {
+        what: 'A + the project in the tree: every scene a row at the tree\'s root, the open one unfolded, the others dimmed one-liners that never unfold.',
+        try: ['The other scenes are dimmed rows. Click one: its card in Properties, nothing compiles. <b>▶</b> or a double-click opens it.',
+              'Drag an object onto another scene\'s row: copied there (<kbd>Shift</kbd>: moved). Drag scene rows to reorder. Right-click a scene row for the rest.',
+              'Try <b>20 scenes</b>, and <b>open scene first</b> (in the tree\'s row) against the project\'s order.'],
+        pro: ['"The tree shows the whole project", without the overload: the other scenes are one line each, a click never compiles, no examples in it', 'No new widget; the scene is named once, by its row'],
+        con: ['In the project\'s order, the rows below the open scene move on a switch (try "open scene first")', 'Reverses 0.7.0\'s "one scene in the tree"', 'Read in code: TreeView can do it unchanged (a row type of its own, dimmed; a drop into a row without children; an ▶ action), but its drop hands the tree no event, so Shift needs a listener of the tree\'s own'],
+    },
+    menus: {
+        what: 'Today\'s menu bar against the one every proposal shares, row by row, and where each removed row is instead.',
+        try: ['Struck rows are gone from the menus; the grey line says where they are instead. <kbd>Ctrl K</kbd> still finds every one.'],
+        pro: [], con: [],
+    },
+};
+
+/*======================================================================================================================
+  THE MENUS. TODAY's are copied from the code (filemenu.js:57-135, index.html:1174-1255, shell.js:491-507), with where
+  each row would be under the proposal (`to`). The PROPOSED floor is the same for A to D.
+======================================================================================================================*/
+const SEP = { sep: true };
+const exampleItems = (run) => {
+    const out = [];
+    for (const aud of [...new Set(EXAMPLES.map(e => e.audience))]) {
+        if (out.length) out.push(SEP);
+        out.push({ hd: aud });
+        const of = EXAMPLES.filter(e => e.audience === aud);
+        const groups = [...new Set(of.map(e => e.group))];
+        if (groups.length === 1) out.push(...of.map(e => ({ label: e.title, title: e.description, run: () => run(e) })));
+        else for (const g of groups) out.push({ label: g, items: () => of.filter(e => e.group === g).map(e => ({ label: e.title, title: e.description, run: () => run(e) })) });
+    }
+    return out;
+};
+const sceneSwitchItems = () => S.scenes.map(s => ({ label: `${s.key === S.current ? '● ' : '  '}${s.title}`, off: s.key === S.current, run: () => openScene(s.key) }));
+const R = (label, opts = {}) => ({ label, ...opts });
+
+function todayMenus() {
+    const ed = blocked(), free = !ed, n = S.scenes.length, i = idx(S.current);
+    return [
+        { name: 'File', items: [
+            R('Projects…', { run: () => { S.dialog = true; render(); }, to: 'File › Projects and scenes… (the Project view)' }),
+            R('New project', { off: ed, run: () => say('new project: one empty scene (in the mockup, nothing happens)'), to: 'kept' }),
+            R('Import a project from a file…', { off: ed, run: () => say('import: a file kept as a project of its own'), to: 'File › Open… (it routes by kind); the Project view\'s Import' }), SEP,
+            R('New scene', { off: ed, run: () => newScene('empty'), to: '+ New scene, beside the scenes' }),
+            R('Switch to scene', { off: ed || n < 2, items: sceneSwitchItems, to: 'the scenes themselves: the view (A), ⇄ (B), the strip (C), the tree (D)' }),
+            R('Examples', { off: ed, items: () => exampleItems(e => newScene('example', e)), to: 'the Project view, under the scenes, each with what it shows' }),
+            R('Rename this scene…', { off: ed, run: () => promptRename(S.current), to: 'the scene row\'s label in Properties' }),
+            R('Duplicate this scene', { off: ed, run: () => newScene('dup'), to: 'right-click the scene row; a scene\'s ⋯' }),
+            R('Move this scene up the list', { off: ed || i <= 0, run: () => moveScene(S.current, i - 1), to: 'drag, among the scenes' }),
+            R('Move this scene down the list', { off: ed || i >= n - 1, run: () => moveScene(S.current, i + 1), to: 'drag, among the scenes' }),
+            R('Delete this scene', { off: ed || n < 2, run: () => deleteScene(S.current), to: 'right-click the scene row; a scene\'s ⋯' }), SEP,
+            R('Open a file (scene, project or workspace)…', { keys: 'Ctrl O', off: ed, run: () => newScene('file'), to: 'File › Open…' }), SEP,
+            R('Save the library item', { keys: 'Ctrl S', off: !ed, run: () => say('library item saved'), to: 'File › Save, while an item is edited' }),
+            R('Close the library item', { off: !ed, run: () => closeItem(), to: 'File › Close library item, shown only while one is edited' }), SEP,
+            R('Save now (in this browser)', { keys: 'Ctrl S', off: ed, run: () => say('saved in this browser: Lamp study'), to: 'File › Save' }), SEP,
+            R('Save this scene to a file', { run: () => say(`downloaded ${fileName(cur().title)}.json (scene format)`), to: 'File › Export ▸ Scene file…' }),
+            R('Save all scenes to a file', { run: () => say('downloaded raytracer-scenes.json (project format)'), to: 'File › Export ▸ Project file… (one format)' }),
+            R('Save the project to a file (scenes, render settings, cameras)', { run: () => say('downloaded raytracer-workspace.json (workspace format)'), to: 'File › Export ▸ Project file…' }), SEP,
+            R('Save a picture (PNG)…', { run: () => say('Save picture: the floating panel (not in the mockup)'), to: 'File › Save picture…' }),
+        ] },
+        { name: 'Edit', items: editItems() },
+        { name: 'View', items: [
+            R('Timeline', { to: 'kept, among the panels' }), R('Help', { to: 'Help › Contents (F1), the same panel' }), SEP,
+            R('Viewport', { to: 'kept' }), R('Render settings', { to: 'kept' }), R('Tests', { to: 'kept' }), R('Render stats', { to: 'kept' }), SEP,
+            R('Scene', { to: 'kept' }), R('Properties', { to: 'kept' }), R('Library', { to: 'kept' }), SEP, R('Parameters', { to: 'kept' }), SEP,
+            R('Layout: Design', { run: () => setLayout('Design'), to: 'the layout buttons on the menu bar; Ctrl K' }),
+            R('Layout: Analyse', { run: () => setLayout('Analyse'), to: 'the layout buttons on the menu bar; Ctrl K' }),
+            R('Layout: Animate', { run: () => setLayout('Animate'), to: 'the layout buttons on the menu bar; Ctrl K' }),
+            R('Save this layout as…', { to: 'kept' }), R('Delete a saved layout…', { off: true, to: 'kept' }), R('Reset the layout', { to: 'kept' }),
+        ] },
+        { name: 'Render settings', gone: true, items: [
+            R('Environment (sun, sky, studio)', { run: () => { S.sel = { t: 'scene', key: S.current }; render(); say('the scene\'s row selected: its environment is in Properties'); }, to: 'click the scene row (Properties); Ctrl K' }), SEP,
+            ...['sketch', 'draft', 'standard', 'high', 'optics'].map(q => R(`Quality: ${QLABEL[q]}`, { run: () => setQuality(q), to: 'the view\'s Quality ▾; the pane\'s Quality box; Ctrl K' })),
+            R('Fast while moving: on / off', { run: () => { S.moveFast = !S.moveFast; render(); }, to: 'the view\'s ⚡; the pane\'s Quality box; Ctrl K' }),
+            R('Fast while moving: as Draft', { run: () => say('moves traced as Draft'), to: 'the view\'s Quality ▾; the pane; Ctrl K' }),
+            R('Fast while moving: as Sketch', { run: () => say('moves traced as Sketch'), to: 'the view\'s Quality ▾; the pane; Ctrl K' }),
+            R('Lamps only (no sun, sky or studio light): on / off', { run: () => { S.lampsOnly = !S.lampsOnly; render(); }, to: 'the pane: Light sources › Sun, sky or studio; Ctrl K' }),
+            R('Lights\' rays (the light objects\' photons): on / off', { run: () => { S.lightRays = !S.lightRays; render(); }, to: 'the pane: Light sources › Lights\' rays; Ctrl K' }),
+        ] },
+        { name: 'Analysis', items: [
+            R('Colour mixing', { to: 'kept' }), SEP, R('Analysis setup: show / hide', { to: 'kept' }), SEP,
+            ...['Map', 'Polar', 'I – γ', 'Profiles', 'Rings', 'Encircled flux'].map(c => R(`New chart: ${c}`, { to: 'Analysis › New chart ▸; Ctrl K' })),
+            R('Open chart', { items: () => ['Map', 'Polar', 'I – γ', 'Profiles', 'Rings', 'Encircled flux'].map(c => ({ label: c })), to: 'kept' }),
+        ] },
+        { name: 'Window', gone: true, items: [
+            R('Float the active panel', { to: 'the ⧉ on each panel group\'s header; Ctrl K' }), R('Pop out the active panel', { to: 'the ⇱ on the header; Ctrl K' }),
+            R('Maximise the active panel', { to: 'the ⤢ on the header; Ctrl K' }), R('Close the active panel', { to: 'the tab\'s ×; Ctrl K' }),
+        ] },
+        { name: 'Help', items: helpItems(true) },
+    ];
+}
+function editItems() {
+    const top = S.history[S.history.length - 1];
+    return [R(top ? `Undo ${top.label}` : 'Undo', { keys: 'Ctrl Z', off: !top, run: undo, to: 'kept' }), R('Redo', { keys: 'Ctrl Y', off: true, title: 'Not in the mockup', to: 'kept' })];
+}
+function helpItems() {
+    return [R('Find a command…', { keys: 'Ctrl K', run: () => openPalette(), to: 'kept' }), SEP, R('Contents', { keys: 'F1', to: 'kept' }), SEP,
+            R('Arranging the panels', { to: 'kept' }), SEP,
+            R('Report: the picture\'s light and the page\'s files (copied)', { to: 'kept' }), R('Reload every file fresh (past the browser\'s cache)', { to: 'kept' }), SEP,
+            R('About', { to: 'kept' })];
+}
+function proposedMenus() {
+    const ed = blocked();
+    const file = [
+        R('New project', { off: ed, run: () => say('new project: one empty scene, opened; Lamp study stays in the Project view'), title: 'A project of one empty scene' }),
+        R('Open…', { keys: 'Ctrl O', off: ed, run: () => say('Open: a scene file joins this project; a project file opens as a project of its own (in the mockup, nothing is read)'),
+                    title: 'Any file this program writes: a scene joins this project, a project opens as one of its own' }),
+        R('Projects and scenes…', { run: () => openView(), title: 'The Project view: the projects in this browser, this one\'s scenes with their pictures, the examples', cls: 'new' }), SEP,
+        ed ? R('Save library item', { keys: 'Ctrl S', run: () => say('library item saved') }) : R('Save', { keys: 'Ctrl S', run: () => say(`saved in this browser: ${PROJECT()} (it is saved as it changes; this does it now)`) }),
+        ...(ed ? [R('Close library item', { run: () => closeItem() })] : []), SEP,
+        R('Save picture…', { run: () => say('Save picture: the floating panel, as today') }),
+        R('Export', { cls: 'new', items: () => [
+            R('Scene file…', { run: () => say(`downloaded ${fileName(cur().title)}.json: this scene alone`) }),
+            R('Project file…', { run: () => say(`downloaded ${fileName(PROJECT())}.json: every scene, their cameras and the render settings (the workspace format; an older all-scenes file still opens)`) }),
+            SEP, R('3D print (3MF / STL)…', { run: () => exportPrint(), title: 'Selects the scene\'s Export box, whose Properties hold the two buttons; adds one if there is none' }),
+        ] }),
+    ];
+    return [
+        { name: 'File', items: file },
+        { name: 'Edit', items: editItems() },
+        { name: 'View', items: [R('Viewport'), R('Render settings'), R('Tests'), R('Render stats'), SEP, R('Scene'), R('Properties'), R('Library'), SEP, R('Parameters'), R('Timeline'), SEP,
+                                R('Save this layout as…'), R('Delete a saved layout…', { off: true }), R('Reset the layout')] },
+        { name: 'Analysis', items: [R('Colour mixing'), SEP, R('Analysis setup: show / hide'), SEP,
+                                    R('New chart', { cls: 'new', items: () => ['Map', 'Polar', 'I – γ', 'Profiles', 'Rings', 'Encircled flux'].map(c => ({ label: c })) }),
+                                    R('Open chart', { items: () => ['Map', 'Polar', 'I – γ', 'Profiles', 'Rings', 'Encircled flux'].map(c => ({ label: c })) })] },
+        { name: 'Help', items: helpItems() },
+    ];
+}
+const menusNow = () => PROPOSED() ? proposedMenus() : todayMenus();
+const rowsOf = menus => menus.reduce((a, m) => a + m.items.filter(i => !i.sep && !i.hd).length, 0);
+
+/* the commands with no menu row: Ctrl K finds them (lib/shell/registry.js:58-62, 72-79) */
+function paletteOnly() {
+    const out = [];
+    for (const q of ['sketch', 'draft', 'standard', 'high', 'optics']) out.push({ menu: 'Render', label: `Render quality: ${QLABEL[q]}`, run: () => setQuality(q) });
+    out.push({ menu: 'Render', label: 'Render: fast while moving on / off', run: () => { S.moveFast = !S.moveFast; render(); } });
+    out.push({ menu: 'Render', label: 'Render: lamps only on / off', run: () => { S.lampsOnly = !S.lampsOnly; render(); } });
+    out.push({ menu: 'Render', label: 'Render: lights\' rays on / off', run: () => { S.lightRays = !S.lightRays; render(); } });
+    out.push({ menu: 'Render', label: 'Render: the scene\'s environment (sun, sky, studio)', run: () => { S.sel = { t: 'scene', key: S.current }; render(); } });
+    for (const w of ['Float', 'Pop out', 'Maximise', 'Close']) out.push({ menu: 'Window', label: `Window: ${w.toLowerCase()} the active panel`, run: () => say(`${w}: the panel header's button`) });
+    for (const l of ['Design', 'Analyse', 'Animate']) out.push({ menu: 'Layout', label: `Layout: ${l}`, run: () => setLayout(l) });
+    out.push({ menu: 'Scene', label: 'Scene: new (empty)', run: () => newScene('empty') });
+    out.push({ menu: 'Scene', label: 'Scene: duplicate this one', run: () => newScene('dup') });
+    out.push({ menu: 'Scene', label: 'Scene: delete this one', run: () => deleteScene(S.current) });
+    out.push({ menu: 'Scene', label: 'Scene: add from a file…', run: () => newScene('file') });
+    for (const s of S.scenes) if (s.key !== S.current) out.push({ menu: 'Scene', label: `Scene: open ${s.title}`, run: () => openScene(s.key) });
+    for (const c of ['Map', 'Polar', 'I – γ', 'Profiles', 'Rings', 'Encircled flux']) out.push({ menu: 'Analysis', label: `New chart: ${c}`, run: () => say(`a new ${c} chart`) });
+    return out;
+}
+
+/*======================================================================================================================
+  WHAT THE MOCKUP DOES: the scene operations, a compile, undo
+======================================================================================================================*/
+const QLABEL = { sketch: 'Sketch (flat light, fastest)', draft: 'Draft (direct light)', standard: 'Standard', high: 'High quality', optics: 'Optics (light rays, flat light)' };
+const QSHORT = { sketch: 'Sketch', draft: 'Draft', standard: 'Standard', high: 'High', optics: 'Optics' };
+const fileName = t => t.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+function setQuality(q) { S.quality = q; render(); say(`Quality: ${QSHORT[q]} -- the view's ${QSHORT[q]} ▾ and the pane's Quality box show it too`); }
+function setLayout(l) { S.layout = l; render(); say(`layout ${l} (the mockup keeps Design's arrangement)`); }
+
+/* A COMPILE (index.html busy card, compileprogress.js:129-140 compileFraction / compileLabel copied): the tree is the
+   new scene at once; the picture is the old one until the build is done */
+const EASE_AT = 0.9, EASE_TO = 0.99, EASE_TAU = 0.5;
+const compileFraction = (e, x) => { if (!(x > 0)) return 0; const r = Math.max(0, e) / x; return r <= 1 ? EASE_AT * r : EASE_TO - (EASE_TO - EASE_AT) * Math.exp(-(r - 1) / EASE_TAU); };
+const compileLabel = (e, x) => (!(x > 0) || e >= x) ? 'taking longer than usual' : `about ${Math.max(1, Math.ceil((x - e) / 1000))} s left`;
+function compile(s, done) {
+    const speed = S.sc.real ? 1 : 5;
+    const expect = (s.last ?? s.predicted ?? 8) * 1000;
+    const actual = (s.last ?? (s.predicted * 1.15)) * 1000;
+    S.compiling = { key: s.key, title: s.title, t0: performance.now(), expect, actual, speed, done };
+    render();
+    const tick = () => {
+        const c = S.compiling;
+        if (!c) return;
+        const el = (performance.now() - c.t0) * c.speed;
+        const card = document.querySelector('.busy');
+        if (card) {
+            card.querySelector('.bar i').style.width = `${(compileFraction(el, c.expect) * 100).toFixed(1)}%`;
+            card.querySelector('.l .left').textContent = compileLabel(el, c.expect);
+            card.querySelector('.l .el').textContent = `${(el / 1000).toFixed(1)} s${c.speed > 1 ? ` (shown ×${c.speed})` : ''}`;
+        }
+        const job = document.querySelector('.status .job');
+        if (job) job.textContent = `compiling ${c.title} · ${compileLabel(el, c.expect)}`;
+        if (el >= c.actual) {
+            const took = c.actual / 1000;
+            const sc = byKey(c.key);
+            if (sc) { sc.last = Math.round(took * 10) / 10; sc.nopic = false; }
+            S.compiling = null;
+            S.shown = c.key;
+            S.sc.notCompiled = false;
+            c.done?.();
+            render();
+            say(`${c.title}: compiled in ${took.toFixed(1)} s${c.speed > 1 ? ' (shown five times faster: "real speed" in the banner)' : ''}`);
+            return;
+        }
+        requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+}
+function openScene(key, { back = true } = {}) {
+    if (blocked()) return say('close the library item first (Save / Close over the view)');
+    if (S.compiling) return say('a compile is on its way');
+    const s = byKey(key);
+    if (!s) return;
+    if (key === S.current) { if (back) closeView(); return say(`${s.title} is the scene being worked on`); }
+    S.current = key;
+    S.sel = { t: 'scene', key };
+    if (back) S.view = false;
+    compile(s);
+}
+function addScene(s, { at = idx(S.current) + 1, go = true, label = 'add scene' } = {}) {
+    S.scenes.splice(at, 0, s);
+    S.history.push({ label: `${label} '${s.title}'`, scene: s.key, undo: () => { S.scenes.splice(idx(s.key), 1); return s.key; }, wasCurrent: S.current });
+    if (go) { S.current = s.key; S.sel = { t: 'scene', key: s.key }; S.view = false; compile(s); } else render();
+}
+function newScene(how, arg) {
+    if (blocked()) return say('close the library item first (Save / Close over the view)');
+    if (S.compiling) return say('a compile is on its way');
+    const c = cur();
+    if (how === 'empty') addScene(mkScene({ title: uniq('New scene'), kind: 'empty', unit: 'cm', predicted: 3 }), { label: 'new scene' });
+    else if (how === 'dup') addScene({ ...mkScene({ title: uniq(`${c.title} copy`), kind: c.kind, unit: c.unit, last: c.last, predicted: c.predicted, hue: c.hue }) }, { label: 'duplicate' });
+    else if (how === 'dupOf') { const o = byKey(arg); addScene(mkScene({ title: uniq(`${o.title} copy`), kind: o.kind, unit: o.unit, last: o.last, predicted: o.predicted, hue: o.hue }), { at: idx(arg) + 1, go: false, label: 'duplicate' }); say(`'${o.title} copy' added after it; you stay on ${cur().title}`); }
+    else if (how === 'example') addScene(mkScene({ title: uniq(arg.title), kind: 'example', unit: 'mm', predicted: 6 }), { label: 'example' });
+    else if (how === 'file') addScene(mkScene({ title: uniq('Bench test'), kind: 'file', unit: 'mm', predicted: 5 }), { label: 'scene from a file' });
+}
+const uniq = t => { const used = new Set(S.scenes.map(s => s.title)); if (!used.has(t)) return t; let i = 2; while (used.has(`${t} ${i}`)) i++; return `${t} ${i}`; };
+function deleteScene(key) {
+    if (blocked()) return say('close the library item first');
+    if (S.scenes.length < 2) return say('the last scene cannot be deleted');
+    const at = idx(key), s = byKey(key), wasCurrent = key === S.current;
+    S.scenes.splice(at, 1);
+    S.history.push({ label: `delete scene '${s.title}'`, scene: key, undo: () => { S.scenes.splice(at, 0, s); return key; } });
+    if (S.sel?.key === key) S.sel = null;
+    if (wasCurrent) { const nx = S.scenes[Math.max(0, at - 1)]; S.current = nx.key; S.sel = { t: 'scene', key: nx.key }; compile(nx); }
+    else { render(); say(`deleted '${s.title}': Ctrl Z brings it back${PROPOSED() ? ', and you stay here' : ''}`); }
+}
+function moveScene(key, to) {
+    const from = idx(key);
+    if (from < 0 || to < 0 || to >= S.scenes.length || from === to) return;
+    const [s] = S.scenes.splice(from, 1);
+    S.scenes.splice(to, 0, s);
+    S.history.push({ label: `move scene '${s.title}'`, scene: key, undo: () => { const i = idx(key); const [x] = S.scenes.splice(i, 1); S.scenes.splice(from, 0, x); return key; } });
+    render();
+}
+function renameScene(key, t) {
+    const s = byKey(key); t = (t || '').trim();
+    if (!s || !t || t === s.title) return;
+    const old = s.title; s.title = t;
+    S.history.push({ label: `rename scene '${old}'`, scene: key, undo: () => { s.title = old; return key; } });
+    render();
+}
+function promptRename(key) { const s = byKey(key); const t = window.prompt('A new name for this scene', s.title); if (t != null) renameScene(key, t); }
+/* UNDO. Today restore() makes the changed scene current, a compile (builder/demo.js:166-174); proposed: it stays */
+function undo() {
+    if (S.compiling) return say('wait for the compile');
+    const h = S.history.pop();
+    if (!h) return say('nothing to undo');
+    const key = h.undo();
+    if (!byKey(S.current)) {
+        // the scene worked on was the one undone (a new scene taken back): back to the one before, a compile
+        const back = byKey(h.wasCurrent) || S.scenes[0];
+        S.current = back.key; S.sel = { t: 'scene', key: back.key };
+        compile(back);
+        return say(`undone: ${h.label} -- back on ${back.title} (a compile)`);
+    }
+    if (!PROPOSED() && key && byKey(key) && key !== S.current && !S.compiling) {
+        S.current = key; S.sel = { t: 'scene', key };
+        compile(byKey(key));
+        say(`undone: ${h.label} -- and switched to it, as today (a compile)`);
+    } else {
+        render();
+        say(`undone: ${h.label}${PROPOSED() ? ` -- you stay on ${cur().title}` : ''}`);
+    }
+}
+function findNode(list, id) { for (const n of list) { if (n.id === id) return n; if (n.c) { const r = findNode(n.c, id); if (r) return r; } } return null; }
+function removeNode(list, id) { const i = list.findIndex(n => n.id === id); if (i >= 0) return list.splice(i, 1)[0]; for (const n of list) if (n.c) { const r = removeNode(n.c, id); if (r) return r; } return null; }
+function sendTo(id, toKey, move) {
+    const from = cur(), to = byKey(toKey);
+    if (!from || !to || to.key === from.key) return;
+    const n = findNode(from.tree, id);
+    if (!n) return;
+    const clone = JSON.parse(JSON.stringify(n));
+    const re = x => { x.id = `${to.key}:${++to.nextId}`; if (x.c) x.c.forEach(re); };
+    re(clone);
+    to.tree.push(clone);
+    if (move) removeNode(from.tree, id);
+    S.history.push({ label: `${move ? 'move' : 'copy'} ${n.l} to '${to.title}'`, scene: to.key, undo: () => { removeNode(to.tree, clone.id); if (move) from.tree.push(n); return null; } });
+    if (move) { S.sel = { t: 'scene', key: S.current }; compile(from); }
+    else render();
+    say(`${move ? 'moved' : 'copied'} ${n.l} to ${to.title}: nothing compiled there${move ? '; this scene compiles without it' : ''}`);
+}
+function closeItem() { S.sc.item = false; S.item = null; render(); say('the library item closed: back to the scene'); }
+function exportPrint() {
+    const box = (function find(list) { for (const n of list) { if (n.k === 'export') return n; if (n.c) { const r = find(n.c); if (r) return r; } } return null; })(cur().tree);
+    if (box) { S.sel = { t: 'node', id: box.id }; render(); say(`${box.l} selected: its Properties hold Export 3MF (with colour) and Export STL`); }
+    else say('this scene has no Export box: one would be added around the selection, and selected');
+}
+function openView(at = null) { S.view = true; S.viewAt = at; closeAll(); render(); if (at) setTimeout(() => document.getElementById(at)?.scrollIntoView({ block: 'start' }), 0); }
+function closeView() { S.view = false; render(); }
+
+/*======================================================================================================================
+  POPUPS: a menu with submenus (lib/shell/menu.js's look), the quick list, the palette
+======================================================================================================================*/
+const layer = document.getElementById('layer');
+let openMenus = [];
+function closeAll() { layer.innerHTML = ''; openMenus = []; document.querySelectorAll('.menubar .mb.on').forEach(b => b.classList.remove('on')); }
+function popMenu(items, x, y, depth = 0, anchor = null) {
+    openMenus.slice(depth).forEach(m => m.remove());
+    openMenus = openMenus.slice(0, depth);
+    const el = document.createElement('div');
+    el.className = 'pop';
+    const list = typeof items === 'function' ? items() : items;
+    list.forEach(it => {
+        if (it.sep) { el.appendChild(document.createElement('hr')); return; }
+        if (it.hd) { const h = document.createElement('div'); h.className = 'hd'; h.textContent = it.hd; el.appendChild(h); return; }
+        const d = document.createElement('div');
+        d.className = `it${it.off ? ' off' : ''}${it.cls ? ' ' + it.cls : ''}`;
+        d.innerHTML = `<span>${esc(it.label)}</span>${it.items ? '<span class="ar">▸</span>' : it.keys ? `<span class="kb">${it.keys}</span>` : ''}`;
+        if (it.title) d.title = it.title;
+        if (it.items && !it.off) {
+            d.addEventListener('mouseenter', () => { el.querySelectorAll('.it.open').forEach(o => o.classList.remove('open')); d.classList.add('open');
+                const r = d.getBoundingClientRect(); popMenu(it.items, r.right - 2, r.top - 5, depth + 1, d); });
+        } else {
+            d.addEventListener('mouseenter', () => { el.querySelectorAll('.it.open').forEach(o => o.classList.remove('open')); openMenus.slice(depth + 1).forEach(m => m.remove()); openMenus = openMenus.slice(0, depth + 1); });
+            if (!it.off) d.addEventListener('click', e => { e.stopPropagation(); closeAll(); if (it.run) it.run(); else say(`${it.label}: not in the mockup`); });
+        }
+        el.appendChild(d);
+    });
+    layer.appendChild(el);
+    openMenus.push(el);
+    const r = el.getBoundingClientRect();
+    let left = x, top = y;
+    if (left + r.width > innerWidth - 4) left = anchor ? anchor.getBoundingClientRect().left - r.width + 2 : innerWidth - r.width - 4;
+    if (top + r.height > innerHeight - 4) top = Math.max(4, innerHeight - r.height - 4);
+    el.style.left = `${Math.max(4, left)}px`; el.style.top = `${top}px`;
+    return el;
+}
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function quickList(anchor) {
+    closeAll();
+    const r = anchor.getBoundingClientRect();
+    const el = document.createElement('div');
+    el.className = 'quick';
+    el.innerHTML = `<div class="qh">Scenes in ${esc(PROJECT())}<span class="sp"></span>${S.scenes.length}</div>
+        <div class="ql">${S.scenes.map(s => cardS(s, { quick: true })).join('')}</div>
+        <div class="qf"><button data-act="newmenu">＋ New scene ▸</button><span style="flex:1"></span><button data-act="view">All scenes and projects…</button></div>`;
+    layer.appendChild(el);
+    el.style.left = `${Math.min(r.left, innerWidth - 340)}px`;
+    el.style.top = `${Math.min(r.bottom + 2, innerHeight - 440)}px`;
+    openMenus.push(el);
+}
+function newMenu(x, y) {
+    popMenu([R('Empty scene', { run: () => newScene('empty') }), R('Duplicate this scene', { run: () => newScene('dup') }),
+             R('From an example…', { run: () => openView('pv-examples'), title: 'The Project view, at its examples' }),
+             R('Add scenes from a file…', { run: () => newScene('file'), title: 'A scene or a project file: its scenes join this project' })], x, y);
+}
+function sceneMenu(key, x, y) {
+    const s = byKey(key), here = key === S.current;
+    popMenu([{ hd: s.title },
+             ...(here ? [] : [R(`Open (compiles, ${timeNote(s).replace('opened in', 'last')})`, { run: () => openScene(key) })]),
+             R(here ? 'Duplicate this scene' : 'Duplicate', { run: () => here ? newScene('dup') : newScene('dupOf', key) }),
+             R('Export scene file…', { run: () => say(`downloaded ${fileName(s.title)}.json: the scene alone`) }),
+             ...(PROPOSED() && S.route !== 'd' && S.route !== 'c' && here ? [R('Other scenes…', { run: () => openView() })] : []),
+             SEP, R(here ? 'Delete this scene' : 'Delete', { off: S.scenes.length < 2, run: () => deleteScene(key) })], x, y);
+}
+function nodeMenu(id, x, y) {
+    const n = findNode(cur().tree, id);
+    if (!n) return;
+    const others = S.scenes.filter(s => s.key !== S.current);
+    const to = move => others.length ? others.map(s => R(s.title, { run: () => sendTo(id, s.key, move) })) : [R('no other scene in this project', { off: true })];
+    popMenu([{ hd: `Copy ${n.l} to` }, ...to(false), SEP, { hd: `Move ${n.l} to` }, ...to(true)], x, y);
+}
+
+/* CTRL K: every command, those with no menu row marked */
+let palSel = 0;
+function openPalette() {
+    closeAll();
+    const el = document.createElement('div');
+    el.className = 'pal';
+    el.innerHTML = `<input placeholder="Find a command, e.g. quality, scene, export…"><div class="pl"></div><div class="pf">The rows taken out of the menus are still here: they are marked <span style="color:#e6c877">no menu row</span>. Enter runs one, Esc closes.</div>`;
+    layer.appendChild(el);
+    openMenus.push(el);
+    const all = [];
+    const walk = (menu, items) => items.forEach(it => { if (it.sep || it.hd || it.items || it.off) return; all.push({ menu, label: it.label, keys: it.keys, run: it.run }); });
+    menusNow().forEach(m => walk(m.name, m.items));
+    if (PROPOSED()) all.push(...paletteOnly().map(c => ({ ...c, only: true })));
+    const inp = el.querySelector('input'), pl = el.querySelector('.pl');
+    const draw = () => {
+        const q = inp.value.toLowerCase().split(/\s+/).filter(Boolean);
+        const hits = all.filter(c => q.every(w => `${c.menu} ${c.label}`.toLowerCase().includes(w))).slice(0, 60);
+        palSel = Math.min(palSel, Math.max(0, hits.length - 1));
+        pl.innerHTML = hits.map((c, i) => `<div class="pi${i === palSel ? ' on' : ''}" data-i="${i}"><span class="mn">${esc(c.menu)}</span><span>${esc(c.label)}</span>${c.only ? '<span class="only">no menu row</span>' : c.keys ? `<span class="only" style="color:var(--faint)">${c.keys}</span>` : ''}</div>`).join('') || '<div class="pi" style="color:var(--faint)">nothing found</div>';
+        pl.querySelectorAll('.pi[data-i]').forEach(d => d.onclick = () => { const c = hits[+d.dataset.i]; closeAll(); c.run ? c.run() : say(`${c.label}: not in the mockup`); });
+        el._hits = hits;
+    };
+    inp.oninput = () => { palSel = 0; draw(); };
+    inp.onkeydown = e => {
+        if (e.key === 'ArrowDown') { palSel++; draw(); e.preventDefault(); }
+        else if (e.key === 'ArrowUp') { palSel = Math.max(0, palSel - 1); draw(); e.preventDefault(); }
+        else if (e.key === 'Enter') { const c = el._hits?.[palSel]; closeAll(); if (c) c.run ? c.run() : say(`${c.label}: not in the mockup`); }
+        else if (e.key === 'Escape') closeAll();
+    };
+    draw();
+    inp.focus();
+}
+
+/*======================================================================================================================
+  RENDERING
+======================================================================================================================*/
+function renderBanner() {
+    const total = rowsOf(todayMenus()), now = rowsOf(proposedMenus());
+    const sc = [['many', '20 scenes'], ['item', 'editing a library item'], ['copy', 'a second tab\'s copy'], ['first', 'first visit'], ['notCompiled', '▶ not compiled'], ['real', 'real compile speed']];
+    document.getElementById('banner').innerHTML = `<b>H · Scenes, projects and the menus</b>
+        <div class="seg">${ROUTES.map(([id, l, t]) => `<button data-route="${id}" class="${S.route === id ? 'on' : ''}" title="${esc(t)}">${l ? `<span class="l">${l}</span>` : ''}${esc(t)}</button>`).join('')}</div>
+        <span class="scen">${sc.map(([k, t]) => `<button data-scen="${k}" class="${S.sc[k] ? 'on' : ''}">${t}</button>`).join('')}</span>
+        <span class="count">menu rows: today <b>${total}</b> · proposed <b>${now}</b></span>
+        <a href="index.html">all mockups</a>`;
+}
+function renderNotes() {
+    const n = NOTES[S.route];
+    const el = document.getElementById('notes');
+    const li = a => a.map(x => `<li>${x}</li>`).join('');
+    el.innerHTML = `<div class="head"><span class="what">${n.what}</span><button data-act="notes">${S.notesOpen ? 'hide notes ▴' : 'notes ▾'}</button></div>
+        ${S.notesOpen ? `<div class="cols"><div><h4>Try this</h4><ul>${li(n.try)}</ul></div>
+            ${n.pro.length ? `<div><h4>For</h4><ul class="pro">${li(n.pro)}</ul></div><div><h4>Against</h4><ul class="con">${li(n.con)}</ul></div>` : ''}</div>` : ''}`;
+}
+function renderMenubar() {
+    const el = document.getElementById('menubar');
+    if (S.route === 'menus') { el.hidden = true; return; }
+    el.hidden = false;
+    el.innerHTML = menusNow().map((m, i) => `<span class="mb${m.gone ? ' gone' : ''}" data-menu="${i}" title="${m.gone ? 'Gone under every proposal' : ''}">${m.name}</span>`).join('')
+        + `<span class="spacer"></span><span class="layouts">${['Design', 'Analyse', 'Animate'].map(l => `<button data-layout="${l}" class="${S.layout === l ? 'on' : ''}">${l}</button>`).join('')}<button title="Save this layout as…">＋</button></span><span class="title">ShadyTracer · mockup</span>`;
+}
+
+/* the left column: the row over the tree, the strip (C), the tree, Properties */
+function projRow() {
+    const nc = S.sc.notCompiled && !S.compiling;
+    const name = S.route === 'today'
+        ? `<span class="name" title="The project, kept in this browser as it changes. Its scenes and files: the File menu">${esc(PROJECT())}${S.sc.copy ? '<span class="note"> · not saved yet</span>' : ''}</span>`
+        : `<button class="name" data-act="view" title="The Project view: the projects, this one's scenes, the examples"><span class="grid-ic"><i></i><i></i><i></i><i></i></span>${esc(PROJECT())}${S.sc.copy ? '<span class="note"> · not saved yet</span>' : ''}</button>`;
+    const plus = (S.route === 'd') ? `<button class="ic" data-act="newmenu" title="New scene ▸">＋</button>` : '';
+    const pin = S.route === 'd' ? `<button class="ic${S.pinFirst ? ' on' : ''}" data-act="pin" title="Open scene first: keep the scene being worked on at the top of the tree">⤒</button>` : '';
+    return `<div class="projrow">${name}${nc ? '<button class="ic play" data-act="play" title="Not compiled: the picture is not this scene. Click to compile and show it">▶</button>' : ''}<span class="sp"></span>${pin}${plus}
+        <button class="ic" data-act="undo" title="Undo (Ctrl Z)">↶</button><button class="ic" title="Redo (Ctrl Y)" disabled>↷</button></div>`;
+}
+function cardS(s, { quick = false } = {}) {
+    const here = s.key === S.current, sel = S.sel?.t === 'scene' && S.sel.key === s.key && !here && !quick;
+    const off = blocked() && !here;
+    return `<div class="card-s${here ? ' cur' : ''}${sel ? ' sel' : ''}" data-card="${s.key}" draggable="${!quick}" title="${here ? 'The scene being worked on' : quick ? `Click to open (compiles, ${timeNote(s)})` : 'Click: show it in Properties · ▶ or double-click: open it'}"${off ? ' style="opacity:.5"' : ''}>
+        <div class="pic">${s.nopic ? '' : pic(s)}</div>
+        <div class="tx"><div class="t">${esc(s.title)}</div><div class="m">${here ? (S.compiling?.key === s.key ? 'compiling…' : S.sc.notCompiled ? 'open · not compiled' : 'open') : `${s.unit} · ${s.edited} · ${s.last != null ? Math.round(s.last) + ' s' : '~' + s.predicted + ' s'}`}</div></div>
+        <div class="acts">${here ? '' : `<span class="go" data-act="open" data-key="${s.key}" title="Open (compiles, ${timeNote(s)})">▶</span>`}${quick ? '' : `<span data-act="smenu" data-key="${s.key}" title="More">⋯</span>`}</div></div>`;
+}
+function strip() {
+    if (S.route !== 'c') return '';
+    return `<div class="strip"><div class="sh"><span class="chev" data-act="strip">${S.stripFolded ? '▸' : '▾'}</span>Scenes <span style="text-transform:none;letter-spacing:0;color:var(--faint)">${S.scenes.length}${S.stripFolded ? ` · ${esc(cur().title)}` : ''}</span><span class="sp"></span><button data-act="newmenu" title="New scene ▸">＋</button></div>
+        ${S.stripFolded ? '' : `<div class="cards">${S.scenes.map(s => cardS(s)).join('')}</div>`}</div>`;
+}
+const ICON = { scene: '▣', item: '▣', group: '◫', obj: '●', light: '✷', export: '⬚', haze: '☁', mat: '◍', back: '‹' };
+function nodeRows(list, depth, sceneKey) {
+    let h = '';
+    for (const n of list) {
+        const sel = S.sel?.t === 'node' && S.sel.id === n.id;
+        const fold = n.c && S.folded.has(n.id);
+        h += `<div class="r${sel ? ' sel' : ''}" data-row="${n.id}" data-node="${n.id}" draggable="true" style="padding-left:${6 + depth * 14}px">
+            <span class="chev" ${n.c ? `data-fold="${n.id}"` : ''}>${n.c ? (fold ? '▸' : '▾') : ''}</span><span class="ico ${n.k}">${ICON[n.k] || '●'}</span>
+            <span class="lab">${esc(n.l)}</span> <span class="nt">${esc(n.n)}</span>
+            <span class="acts"><span title="Enabled">◎</span><span title="Duplicate">⧉</span><span class="x" title="Delete">×</span></span></div>`;
+        if (n.c && !fold) h += nodeRows(n.c, depth + 1, sceneKey);
+    }
+    return h;
+}
+function sceneBlock(s, depth = 0) {
+    // the scene being worked on: its row and its whole tree (tree.js rowsFor)
+    const sel = S.sel?.t === 'scene' && S.sel.key === s.key;
+    const fold = S.folded.has(s.key);
+    const swap = (S.route === 'a' || S.route === 'b') ? `<span data-act="${S.route === 'a' ? 'view' : 'quick'}" title="${S.route === 'a' ? 'The other scenes: the Project view' : 'The other scenes'}">⇄</span>` : '';
+    let h = `<div class="r curscene${sel ? ' sel' : ''}" data-row="scene:${s.key}" data-scene="${s.key}" ${S.route === 'd' ? 'draggable="true"' : ''} style="padding-left:${6 + depth * 14}px">
+        <span class="chev" data-fold="${s.key}">${fold ? '▸' : '▾'}</span><span class="ico scene">${ICON.scene}</span><span class="lab">${esc(s.title)}</span>
+        ${S.route === 'd' ? `<span class="nt">${S.compiling?.key === s.key ? 'compiling…' : S.sc.notCompiled ? 'not compiled' : 'open'}</span>` : ''}
+        <span class="acts">${swap}<span title="Add…">＋</span></span></div>`;
+    if (!fold) {
+        h += nodeRows(s.tree, depth + 1, s.key);
+        const mf = S.folded.has(`${s.key}#m`);
+        h += `<div class="r" data-row="${s.key}#m" style="padding-left:${6 + (depth + 1) * 14}px"><span class="chev" data-fold="${s.key}#m">${mf ? '▸' : '▾'}</span><span class="ico mat">◍</span><span class="lab">Materials</span><span class="acts"><span>＋</span></span></div>`;
+        if (!mf) h += s.mats.map(m => `<div class="r" style="padding-left:${6 + (depth + 2) * 14}px"><span class="chev"></span><span class="ico mat">◍</span><span class="lab">${esc(m)}</span></div>`).join('');
+    }
+    return h;
+}
+function otherRow(s) {
+    // D: another scene, one line, dimmed, never unfolding
+    const sel = S.sel?.t === 'scene' && S.sel.key === s.key;
+    return `<div class="r dim${sel ? ' sel' : ''}" data-row="scene:${s.key}" data-scene="${s.key}" data-other="1" draggable="true" title="Click: its card in Properties · ▶ or double-click: open it (compiles, ${timeNote(s)})">
+        <span class="chev"></span><span class="ico scene">${ICON.scene}</span><span class="lab">${esc(s.title)}</span>
+        <span class="acts"><span class="go" data-act="open" data-key="${s.key}" title="Open (compiles, ${timeNote(s)})">▶</span><span data-act="dupof" data-key="${s.key}" title="Duplicate (you stay here)">⧉</span><span class="x" data-act="del" data-key="${s.key}" title="Delete (Ctrl Z brings it back)">×</span></span></div>`;
+}
+function tree() {
+    if (S.item) {
+        // a library item edited: isolated (library/edit.js), the scenes behind a back row
+        return `<div class="rows"><div class="r" data-act="closeitem"><span class="chev"></span><span class="ico back">‹</span><span class="lab" style="color:var(--muted)">back to ${esc(cur().title)}</span></div>
+            <div class="r curscene${S.sel?.t === 'scene' ? ' sel' : ''}"><span class="chev">▾</span><span class="ico item">▣</span><span class="lab">${esc(S.item.title)}</span><span class="nt">library item</span><span class="acts"><span>＋</span></span></div>
+            ${nodeRows(S.item.tree, 1, S.item.key)}</div>`;
+    }
+    if (S.route !== 'd') return `<div class="rows">${sceneBlock(cur())}</div>`;
+    const order = S.pinFirst ? [cur(), ...S.scenes.filter(s => s.key !== S.current)] : S.scenes;
+    return `<div class="rows">${order.map(s => s.key === S.current ? sceneBlock(s) : otherRow(s)).join('')}</div>`;
+}
+function props() {
+    const sel = S.sel;
+    if (S.item) return `<div class="ph">Library item</div><div class="prop"><label>name</label><input type="text" value="${esc(S.item.title)}"></div><div class="prop"><label>category</label><select><option>Hardware</option></select></div><div class="pnote">Isolated until saved or closed (the strip over the view). Switching, adding and opening wait: <b>${PROPOSED() ? 'File › Save library item / Close library item' : 'File › Save the library item / Close the library item'}</b>.</div>`;
+    if (!sel) return '<div class="pnote">Nothing selected.</div>';
+    if (sel.t === 'node') {
+        const n = findNode(cur().tree, sel.id);
+        if (!n) return '<div class="pnote">Nothing selected.</div>';
+        return `<div class="ph">${n.k === 'light' ? 'Light' : n.k === 'group' ? 'Group' : n.k === 'export' ? 'Export box' : n.k === 'haze' ? 'Haze box' : 'Object'}</div>
+            <div class="prop"><label>label</label><input type="text" value="${esc(n.l)}"></div>
+            ${n.k === 'export' ? '<div class="prop"><label>export for printing</label><span><button class="primary" style="font-size:11.5px">Export 3MF</button> <button style="font-size:11.5px;border-color:var(--line)">STL</button></span></div>' : `<div class="prop"><label>${n.k === 'light' ? 'flux' : 'material'}</label><select><option>${esc(n.n.replace(/^· /, '') || 'Default')}</option></select></div>`}
+            <div class="prop"><label>position</label><input type="text" value="0, 0, 12" style="font-family:var(--mono)"></div>
+            <div class="pnote">Right-click its row: copy or move it to another scene${S.route === 'c' ? ', or drag it onto a scene\'s card' : S.route === 'd' ? ', or drag it onto a scene\'s row' : ''}.</div>`;
+    }
+    const s = byKey(sel.key);
+    if (!s) return '';
+    if (s.key !== S.current) {
+        // C, D: another scene selected -- its card, and Open
+        return `<div class="ph">Scene, not open</div><div class="scard"><div class="pic">${s.nopic ? '<div style="display:grid;place-items:center;height:100%;color:var(--faint);font-size:11.5px">no picture yet: never shown in this browser</div>' : pic(s)}</div>
+            <div class="b"><div class="t">${esc(s.title)}</div><div class="m">${meta(s)}</div><div class="m">edited ${s.edited} · ${timeNote(s)}</div>
+            <div class="btns"><button class="primary" data-act="open" data-key="${s.key}">▶ Open</button><button data-act="dupof" data-key="${s.key}">Duplicate</button><button data-act="exportscene" data-key="${s.key}">Export…</button><button data-act="del" data-key="${s.key}" style="color:#e57373">Delete</button></div></div></div>
+            <div class="prop"><label>label</label><input type="text" data-rename="${s.key}" value="${esc(s.title)}"></div>
+            <div class="pnote">Selecting it compiled nothing. The render settings are the project's: opening it keeps them; the camera is its own.</div>`;
+    }
+    return `<div class="ph">Scene</div>
+        <div class="prop"><label>label</label><input type="text" data-rename="${s.key}" value="${esc(s.title)}"></div>
+        <div class="prop"><label>unit</label><select><option>${s.unit}</option></select></div>
+        <div class="prop"><label>environment</label><select><option>Sun and sky</option><option>Studio</option></select></div>
+        <div class="prop"><label>instant hide / show</label><input type="checkbox" style="justify-self:start"></div>
+        <div class="pnote">${PROPOSED() ? '<b>The scene is renamed here</b>, by its row: no menu row says it again.' : 'Renamed here, or with File › Rename this scene…'} ${S.lampsOnly ? 'Lamps only is on: the environment is not traced.' : ''}</div>`;
+}
+function view() {
+    const shown = byKey(S.shown) || cur();
+    const c = S.compiling;
+    return `<div class="picbig">${pic(shown, true)}</div>
+        <div class="vt"><button title="Camera">⌖ ▾</button><button title="Exposure">◐ ▾</button><button data-act="vquality" title="Quality: the view's own menu of the same five presets">${QSHORT[S.quality]} ▾</button><button class="${S.moveFast ? 'lit' : ''}" data-act="bolt" title="Fast while moving">⚡</button><button title="Bounding boxes">⬚</button></div>
+        ${S.item ? `<div class="itemstrip">✎ ${esc(S.item.title)} <span style="color:#e6c877">●</span><button data-act="saveitem">Save</button><button data-act="closeitem">Close</button></div>` : ''}
+        <div class="an"><button title="Analyse: display, measure, rays">◫ Analyse</button></div>
+        <div class="cap">${esc(shown.title)} · a sketch, not a render${S.sc.notCompiled && !c ? ' · the picture is not this scene' : ''}</div>
+        ${c ? `<div class="busy"><div class="t">Compiling <b>${esc(c.title)}</b></div><div class="bar"><i></i></div><div class="l"><span class="left">…</span><span class="el"></span></div></div>` : ''}`;
+}
+function settings() {
+    const q = S.quality, b = id => `<button class="${q === id ? 'on' : ''}" data-q="${id}">${QSHORT[id]}</button>`;
+    return `<div class="tabs"><span class="on">Render settings</span><span>Analysis</span><span class="tabbtns" title="Float · pop out · maximise: the group's own buttons (Window's rows)">⧉⇱⤢</span></div>
+        <div class="pane" style="flex:1">
+        <div class="box"><div class="bh">Quality</div><div class="qbtns"><span class="pill">${b('sketch')}${b('draft')}</span><span class="pill">${b('standard')}${b('high')}</span><span class="pill">${b('optics')}</span></div>
+            <label class="chk"><input type="checkbox" data-t="moveFast" ${S.moveFast ? 'checked' : ''}> Fast while moving, as Draft</label>
+            <div class="rnote">${PROPOSED() ? 'The only home of these (and the view\'s Quality ▾ and ⚡): no menu says them again.' : 'Also: Render settings menu, the view\'s Draft ▾ and ⚡.'}</div></div>
+        <div class="box"><div class="bh">Light sources</div>
+            <label class="chk"><input type="checkbox" data-t="lampsOnly" ${S.lampsOnly ? '' : 'checked'}> Sun, sky or studio</label>
+            <label class="chk"><input type="checkbox" data-t="lt" ${S.lt ? 'checked' : ''}> Caustics (sun, glowing surfaces)</label>
+            <label class="chk"><input type="checkbox" data-t="lightRays" ${S.lightRays ? 'checked' : ''}> Lights' rays (light objects)</label></div>
+        <div class="box"><div class="bh">Paths and noise</div><div class="rnote">Max bounces 10 · firefly clamp 20</div></div>
+        <div class="box"><div class="bh">Render size</div><div class="rnote">fit the viewport · 100 %</div></div>
+        <div class="rnote" style="padding:0 12px">One set for the whole project (store.js:96-100): a switch keeps it; each scene keeps only its camera.</div></div>
+        <div class="hline"></div><div class="tabs"><span class="on">Render stats</span></div><div class="pane" style="flex:0 0 70px"><div class="rnote" style="padding-top:6px">42 samples/s · 23.8 ms a sample</div></div>`;
+}
+function renderWork() {
+    const w = document.getElementById('work');
+    if (S.route === 'menus') { w.hidden = true; return; }
+    w.hidden = false;
+    const keep = ['.pane.tree', '.pv .main', '.strip .cards', '.pane.props'].map(q => [q, w.querySelector(q)?.scrollTop ?? 0]);
+    w.innerHTML = `<div class="colL"><div class="tabs"><span class="on">Scene</span><span>Library</span><span class="tabbtns">⧉⇱⤢</span></div>
+            ${projRow()}${strip()}<div class="pane tree">${tree()}</div>
+            <div class="tabs" style="border-top:1px solid var(--line)"><span class="on">Properties</span></div><div class="pane props">${props()}</div></div>
+        <div class="view">${view()}</div>
+        <div class="colR">${settings()}</div>
+        ${S.view && PROPOSED() ? projectView() : ''}`;
+    for (const [q, top] of keep) { const el = w.querySelector(q); if (el) el.scrollTop = top; }
+    if (S.dialog && !PROPOSED()) renderDialog(); else document.getElementById('dlg')?.remove();
+}
+
+/* THE PROJECT VIEW (A-D): the projects, this one's scenes, the examples */
+function projectView() {
+    const here = PROJECT();
+    const projs = [{ name: here, when: 'just now', titles: S.scenes.map(s => s.title), here: true, copy: S.sc.copy },
+                   ...(S.sc.copy ? [{ name: 'Lamp study', when: 'just now', titles: BASE.map(b => b.title), other: true }] : []),
+                   ...(S.sc.first ? [] : OTHER_PROJECTS)];
+    const ex = (() => {
+        let h = '';
+        for (const aud of [...new Set(EXAMPLES.map(e => e.audience))]) {
+            h += `<div class="aud">${aud}</div>`;
+            const of = EXAMPLES.filter(e => e.audience === aud);
+            for (const g of [...new Set(of.map(e => e.group))]) {
+                if (g !== aud) h += `<div class="grp">${g}</div>`;
+                h += `<div class="exgrid">${of.filter(e => e.group === g).map(e => `<div class="ex" data-example="${EXAMPLES.indexOf(e)}" title="Adds a copy to this project and opens it"><div class="t">${esc(e.title)}</div><div class="d">${esc(e.description)}</div></div>`).join('')}</div>`;
+            }
+        }
+        return h;
+    })();
+    const off = blocked();
+    return `<div class="pv" id="pv">
+        <div class="side"><div class="sh">Projects in this browser</div>
+            <div class="plist">${projs.map((p, i) => `<div class="prow${p.here ? ' here' : ''}" data-proj="${i}" title="${p.here ? 'Open here' : p.other ? 'Open in another tab: opens here as a copy' : 'Click to open (this one is saved first)'}">
+                <div class="n">${esc(p.name)}${p.here ? '<span class="badge">this tab</span>' : ''}${p.other ? '<span class="badge warn">another tab</span>' : ''}</div>
+                <div class="m">${p.titles.length} scene${p.titles.length === 1 ? '' : 's'} · ${p.copy ? 'not saved yet: kept once something changes' : p.when}</div>
+                <span class="more" data-act="pmenu" data-i="${i}">⋯</span></div>`).join('')}</div>
+            <div class="foot"><button data-act="newproject">＋ New project</button><button data-act="import">Import a file…</button>
+                <div class="where">Kept in this browser's storage, which "clear site data" empties. Files are the backup: Export ▸ Project file.</div></div></div>
+        <div class="main">
+            <div class="top"><h2><input value="${esc(here)}" title="Rename the project"></h2><span class="m">${S.scenes.length} scene${S.scenes.length === 1 ? '' : 's'} · saved as it changes · render settings: ${QSHORT[S.quality]}</span>
+                <span class="sp"></span><button data-act="exportproject">Export project file…</button><button class="primary" data-act="closeview">Back to ${esc(cur().title)} <kbd class="k">Esc</kbd></button></div>
+            ${S.sc.first ? '<div class="welcome"><b>Welcome.</b> This project has one scene, First steps, which is open behind this view. Start another from an example below, or go back to it.</div>' : ''}
+            ${off ? '<div class="blocked">A library item is being edited: opening and adding scenes wait until it is saved or closed (the strip over the view).</div>' : ''}
+            <h3>Scenes <span class="h3n">click to open (a compile, then back to work) · drag to reorder · ⋯ for the rest</span></h3>
+            <div class="grid">${S.scenes.map(s => cardV(s, off)).join('')}<div class="card-v add" data-act="newmenu"><div>＋ New scene<div class="m" style="text-align:center;margin-top:4px">empty · duplicate · a file</div></div></div></div>
+            <h3 id="pv-examples">Start from an example <span class="h3n">a copy goes into this project and opens; the example itself is never changed</span></h3>
+            ${ex}
+        </div></div>`;
+}
+function cardV(s, off) {
+    const here = s.key === S.current;
+    return `<div class="card-v${here ? ' cur' : ''}${off && !here ? ' off' : ''}" data-vcard="${s.key}" draggable="true" title="${here ? 'The scene being worked on: back to it' : `Open (compiles, ${timeNote(s)})`}">
+        <div class="pic">${s.nopic ? '<div class="nopic">no picture yet<br>(never shown in this browser)</div>' : pic(s)}${here ? `<span class="bdg badge">${S.sc.notCompiled ? 'open · not compiled' : 'open'}</span>` : ''}</div>
+        <div class="b"><div class="t">${esc(s.title)}</div><div class="m">${meta(s)}</div><div class="m2">edited ${s.edited} · ${timeNote(s)}</div></div>
+        <span class="more" data-act="smenu" data-key="${s.key}">⋯</span></div>`;
+}
+
+/* TODAY's Projects dialog */
+function renderDialog() {
+    let el = document.getElementById('dlg');
+    if (!el) { el = document.createElement('div'); el.id = 'dlg'; el.className = 'modal'; document.body.appendChild(el); }
+    const projs = [{ name: PROJECT(), when: 'just now', titles: S.scenes.map(s => s.title), here: true }, ...OTHER_PROJECTS];
+    el.innerHTML = `<div class="dlg"><div class="dh">Projects<span class="sp"></span><button data-act="closedlg">×</button></div>
+        ${projs.map(p => `<div class="dr"><div class="n">${esc(p.name)}${p.here ? ' <span class="badge">open here</span>' : ''}${p.other ? ' <span class="badge warn">another tab</span>' : ''}</div>
+            <div class="m">${p.titles.length} scenes: ${esc(p.titles.slice(0, 4).join(', '))}${p.titles.length > 4 ? ', …' : ''} · ${p.when}</div>
+            <div class="bs"><button ${p.here ? 'disabled' : ''}>Open</button><button>Rename</button><button>Duplicate</button><button>Download</button><button ${p.here || p.other ? 'disabled' : ''}>Delete</button></div></div>`).join('')}
+        <div class="df"><button class="primary">＋ New project</button><button>Import a file…</button><span class="where">Kept in this browser's storage, which "clear site data" empties.</span></div></div>`;
+}
+
+/* THE MENUS PAGE */
+function renderPage() {
+    const p = document.getElementById('page');
+    if (S.route !== 'menus') { p.hidden = true; return; }
+    p.hidden = false;
+    const today = todayMenus(), prop = proposedMenus();
+    const box = (m, cut) => {
+        const rows = m.items.filter(i => !i.sep && !i.hd).length;
+        let h = `<div class="mbox${m.gone ? ' gone' : ''}"><div class="mh">${m.name}${m.gone ? ' (gone)' : ''}<span>${rows} row${rows === 1 ? '' : 's'}</span></div>`;
+        for (const it of m.items) {
+            if (it.sep) { h += '<div class="ms"></div>'; continue; }
+            const gone = cut && (m.gone || (it.to && it.to !== 'kept'));
+            h += `<div class="mr${gone ? ' cut' : ''}"><span class="lbl"><span class="strike">${esc(it.label)}${it.items ? ' ▸' : ''}</span>${gone ? `<span class="to">→ ${esc(it.to)}</span>` : ''}</span>${it.keys ? `<span class="kb">${it.keys}</span>` : ''}</div>`;
+            if (!cut && it.items && it.label === 'Export') h += it.items().filter(x => !x.sep).map(x => `<div class="mr sub">${esc(x.label)}</div>`).join('');
+        }
+        return h + '</div>';
+    };
+    const T = (cells, best) => `<tr>${cells.map((c, i) => `<td class="${best?.includes(i) ? 'best' : ''}">${c}</td>`).join('')}</tr>`;
+    p.innerHTML = `<h2>The menus, row by row</h2>
+        <p>Today's menu bar has <b>${rowsOf(today)}</b> rows in 7 menus; the one every proposal shares has <b>${rowsOf(prop)}</b> in 5. Nothing is lost: a struck row is somewhere it can be seen
+           (the pane, the view's buttons, the scene's row, the Project view), and every command, with or without a menu row, is still found by <kbd>Ctrl K</kbd>
+           (lib/shell/registry.js:58-62: a command with no menu is the palette's alone).</p>
+        <div class="two"><div><h2 style="font-size:14px">Today</h2><div class="menus">${today.map(m => box(m, true)).join('')}</div></div>
+            <div><h2 style="font-size:14px">Proposed (A, B, C and D)</h2><div class="menus">${prop.map(m => box(m, false)).join('')}</div>
+            <p style="margin-top:12px"><b>Files, two kinds instead of three.</b> A <b>scene file</b> (one scene) and a <b>project file</b> (every scene, their cameras, the render settings: today's
+               workspace file, which the Projects dialog's Download already writes). "Save all scenes" wrote a third, the project format without the settings; such a file still opens.
+               <b>Open…</b> reads any of them: a scene file joins this project, a project file opens as a project of its own. To bring another project's scenes into this one:
+               + New scene › Add scenes from a file… (that is what Open did with an all-scenes file).</p>
+            <p><b>Save</b> stays one row with Ctrl S, though the project is saved as it changes: people look for it, and it is the library item's Save while one is edited.
+               <b>Close library item</b> is shown only then (today two greyed rows are always there, and two rows say Ctrl S).</p></div></div>
+        <h2 style="margin-top:18px">Clicks per task</h2>
+        <div class="tablewrap"><table class="w"><tr><th>task</th><th>Today</th><th>A · the view only</th><th>B · a quick list</th><th>C · a scenes strip</th><th>D · the project in the tree</th></tr>
+            ${T(['See what scenes the project has', 'File › Switch ▸: 2, names only', 'the project\'s name: 1, with pictures', '⇄: 1, small pictures', 'always visible', 'always visible'], [4, 5])}
+            ${T(['Switch to another scene', '3 (File › Switch ▸ › name)', '2 (name › card)', '2 (⇄ › row)', '1 (▶, or a double-click)', '1 (▶, or a double-click)'], [4, 5])}
+            ${T(['A new scene from an example', '4 (File › Examples ▸ › group ▸ › example)', '2 (name › example)', '2', '2', '2'], [1, 2, 3, 4, 5].slice(1))}
+            ${T(['Duplicate this scene', '2 (File › Duplicate)', '2 (right-click the scene row)', '2', '2', '2'])}
+            ${T(['Rename this scene', 'File › Rename… or Properties', 'the scene row, then its label in Properties', '=', '=', '='])}
+            ${T(['Reorder scenes', '2 a step (File › Move up)', 'a drag in the view', 'a drag in the view', 'a drag in the strip', 'a drag in the tree'], [4, 5])}
+            ${T(['Copy an object to another scene', '2 (right-click › scene)', '2', '2', '1 drag onto its card', '1 drag onto its row'], [4, 5])}
+            ${T(['Export the project to a file', '2 (File › Save the project…)', '3 (File › Export ▸ › Project file…)', '3', '3', '3'], [1])}
+            ${T(['Open another project', '3 (File › Projects… › Open)', '2 (name › project)', '2', '2', '2'], [2, 3, 4, 5])}
+            ${T(['Change the quality', 'menu, view or pane', 'the view\'s Quality ▾ or the pane', '=', '=', '='])}
+        </table></div>
+        <h2>What every proposal shares, and the questions for you</h2>
+        <p>The Project view (A) is under all four: it replaces the Projects dialog and File › Examples, and is opened from the project's name over the tree, from File › Projects and scenes…, or Ctrl K.
+           B, C and D differ only in what you see of the other scenes while you work. In all of them: switching is always a deliberate act (a compile, 4-23 s on your card); the scene is named once, by its row,
+           and renamed in Properties; undoing a change to the list of scenes stays on the scene you are on (today it switches to the scene it changed, a compile: builder/demo.js:166-174).</p>
+        <p><b>For you to decide:</b> which of A-D (the recommendation is D, with B if the tree cannot do it); "only the active scene in the tree" -- did you mean today's tree, or D's?; the Project view over the panels (as drawn) or a panel of its own;
+           undo staying put; Save picture beside Export ▸ (as drawn) or inside it.</p>`;
+}
+function renderStatus() {
+    const c = S.compiling;
+    document.getElementById('status').innerHTML = `<span>${esc(S.msg || 'ready')}</span><span class="sp"></span>${c ? `<span class="job">compiling ${esc(c.title)}…</span>` : ''}<span>${esc(PROJECT())} › ${esc(cur()?.title || '')} · ${QSHORT[S.quality]}</span>`;
+}
+function render() {
+    renderBanner(); renderNotes(); renderMenubar(); renderWork(); renderPage(); renderStatus();
+}
+
+/*======================================================================================================================
+  EVENTS: one listener each, by data attributes
+======================================================================================================================*/
+document.addEventListener('click', e => {
+    const t = e.target;
+    if (t.classList?.contains('modal')) { S.dialog = false; render(); return; }
+    if (!t.closest('.pop') && !t.closest('.quick') && !t.closest('.pal') && !t.closest('[data-menu]')) closeAll();
+    const route = t.closest('[data-route]');
+    if (route) { location.hash = route.dataset.route; return; }
+    const scen = t.closest('[data-scen]');
+    if (scen) {
+        const k = scen.dataset.scen;
+        if (S.compiling && k !== 'real') return say('wait for the compile');
+        S.sc[k] = !S.sc[k];
+        if (k === 'first' && S.sc.first) S.sc.many = false;
+        if (k === 'many' && S.sc.many) S.sc.first = false;
+        if (['many', 'first', 'item'].includes(k)) resetProject();
+        if (k === 'item' && !S.sc.item) S.item = null;
+        render();
+        return;
+    }
+    const mb = t.closest('[data-menu]');
+    if (mb) {
+        const wasOn = mb.classList.contains('on');
+        closeAll();
+        if (!wasOn) { mb.classList.add('on'); const r = mb.getBoundingClientRect(); popMenu(menusNow()[+mb.dataset.menu].items, r.left, r.bottom); }
+        return;
+    }
+    const lay = t.closest('[data-layout]');
+    if (lay) return setLayout(lay.dataset.layout);
+    const q = t.closest('[data-q]');
+    if (q) return setQuality(q.dataset.q);
+    const fold = t.closest('[data-fold]');
+    if (fold) { const k = fold.dataset.fold; S.folded.has(k) ? S.folded.delete(k) : S.folded.add(k); render(); return; }
+    const act = t.closest('[data-act]');
+    if (act) {
+        const a = act.dataset.act, key = act.dataset.key;
+        e.stopPropagation();
+        const r = act.getBoundingClientRect();
+        switch (a) {
+            case 'notes': S.notesOpen = !S.notesOpen; render(); return;
+            case 'view': closeAll(); return openView();
+            case 'closeview': return closeView();
+            case 'quick': return quickList(act);
+            case 'newmenu': return newMenu(r.left, r.bottom);
+            case 'smenu': return sceneMenu(key, r.left, r.bottom);
+            case 'open': closeAll(); return openScene(key);
+            case 'dupof': return newScene('dupOf', key);
+            case 'del': return deleteScene(key);
+            case 'exportscene': return say(`downloaded ${fileName(byKey(key).title)}.json: the scene alone`);
+            case 'exportproject': return say(`downloaded ${fileName(PROJECT())}.json: every scene, their cameras and the render settings`);
+            case 'undo': return undo();
+            case 'play': S.sc.notCompiled = false; return compile(cur());
+            case 'strip': S.stripFolded = !S.stripFolded; render(); return;
+            case 'pin': S.pinFirst = !S.pinFirst; render(); return;
+            case 'closeitem': return closeItem();
+            case 'saveitem': return say('library item saved');
+            case 'closedlg': S.dialog = false; render(); return;
+            case 'vquality': return popMenu([{ hd: 'Quality' }, ...['sketch', 'draft', 'standard', 'high', 'optics'].map(x => R(`${x === S.quality ? '● ' : '  '}${QSHORT[x]}`, { run: () => setQuality(x) })), SEP, { hd: 'While moving' }, R(`${S.moveFast ? '☑' : '☐'} Fast while moving, as Draft`, { run: () => { S.moveFast = !S.moveFast; render(); } })], r.left, r.bottom);
+            case 'bolt': S.moveFast = !S.moveFast; render(); return say(`fast while moving: ${S.moveFast ? 'on' : 'off'}`);
+            case 'newproject': return say('a new project of one empty scene, opened (Lamp study stays in the list)');
+            case 'import': return say('Import a file…: a project file kept as a project of its own');
+            case 'pmenu': return popMenu([R('Open'), R('Rename…'), R('Duplicate'), R('Export project file…'), SEP, R('Delete…', { off: +act.dataset.i === 0, title: 'The project open here cannot be deleted' })], r.left, r.bottom);
+        }
+        return;
+    }
+    const proj = t.closest('[data-proj]');
+    if (proj) { if (+proj.dataset.proj === 0) return closeView(); return say('opening another project: this one is saved first, the other shown (its scenes, cameras, render settings) -- not in the mockup'); }
+    const ex = t.closest('[data-example]');
+    if (ex) { if (blocked()) return say('close the library item first'); return newScene('example', EXAMPLES[+ex.dataset.example]); }
+    const vcard = t.closest('[data-vcard]');
+    if (vcard) { if (blocked() && vcard.dataset.vcard !== S.current) return say('close the library item first'); return openScene(vcard.dataset.vcard); }
+    const card = t.closest('[data-card]');
+    if (card) {
+        const k = card.dataset.card;
+        if (card.closest('.quick')) { closeAll(); return openScene(k, { back: false }); }
+        if (twice(`c:${k}`) && k !== S.current) return openScene(k, { back: false });
+        S.sel = { t: 'scene', key: k }; render();
+        if (k !== S.current) say(`${byKey(k).title} selected: its card in Properties; nothing compiled. ▶ or a double-click opens it`);
+        return;
+    }
+    const row = t.closest('[data-row]');
+    if (row) {
+        if (row.dataset.node) S.sel = { t: 'node', id: row.dataset.node };
+        else if (row.dataset.scene) {
+            if (row.dataset.other && twice(`r:${row.dataset.scene}`)) return openScene(row.dataset.scene, { back: false });
+            S.sel = { t: 'scene', key: row.dataset.scene }; if (row.dataset.other) say(`${byKey(row.dataset.scene).title} selected: its card in Properties; nothing compiled. ▶ or a double-click opens it`); }
+        render();
+    }
+});
+/* A DOUBLE CLICK counted here, as tree.js:606-630 counts one: the first click re-renders, so the second lands on a new element */
+let lastClick = { k: null, t: 0 };
+function twice(k) { const now = performance.now(), hit = lastClick.k === k && now - lastClick.t < 450; lastClick = hit ? { k: null, t: 0 } : { k, t: now }; return hit; }
+document.getElementById('menubar').addEventListener('mouseover', e => {
+    // a menu open: pointing at another one opens that one instead, as a menu bar does
+    const mb = e.target.closest('[data-menu]');
+    if (!mb || mb.classList.contains('on') || !document.querySelector('.menubar .mb.on')) return;
+    closeAll(); mb.classList.add('on');
+    const r = mb.getBoundingClientRect(); popMenu(menusNow()[+mb.dataset.menu].items, r.left, r.bottom);
+});
+document.addEventListener('contextmenu', e => {
+    const t = e.target;
+    const node = t.closest('[data-node]');
+    if (node) { e.preventDefault(); return nodeMenu(node.dataset.node, e.clientX, e.clientY); }
+    const sc = t.closest('[data-scene]') || t.closest('[data-card]') || t.closest('[data-vcard]');
+    if (sc && PROPOSED()) { e.preventDefault(); return sceneMenu(sc.dataset.scene || sc.dataset.card || sc.dataset.vcard, e.clientX, e.clientY); }
+});
+document.addEventListener('change', e => {
+    const t = e.target;
+    if (t.dataset.rename) return renameScene(t.dataset.rename, t.value);
+    if (t.dataset.t) { const k = t.dataset.t; S[k] = k === 'lampsOnly' ? !t.checked : t.checked; render(); }
+});
+document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); return openPalette(); }
+    if (e.target.matches('input, select')) return;
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); return undo(); }
+    if (e.key === 'Escape') { if (layer.children.length) return closeAll(); if (S.view) return closeView(); if (S.dialog) { S.dialog = false; render(); } }
+});
+
+/* DRAGS: a tree row onto a scene (C's card, D's row) copies it there, Shift moves it; scenes among scenes reorder */
+let drag = null;
+document.addEventListener('dragstart', e => {
+    const n = e.target.closest?.('[data-node]'), sc = e.target.closest?.('[data-scene]'), c = e.target.closest?.('[data-card]'), v = e.target.closest?.('[data-vcard]');
+    if (n) drag = { node: n.dataset.node };
+    else if (sc) drag = { scene: sc.dataset.scene };
+    else if (c) drag = { scene: c.dataset.card };
+    else if (v) drag = { scene: v.dataset.vcard };
+    else return;
+    e.dataTransfer.effectAllowed = 'copyMove';
+    try { e.dataTransfer.setData('text/plain', 'mock'); } catch { }
+});
+const dropTarget = t => t.closest?.('[data-card]') || t.closest?.('[data-vcard]') || t.closest?.('[data-scene]');
+const keyOf = el => el.dataset.card || el.dataset.vcard || el.dataset.scene;
+document.addEventListener('dragover', e => {
+    if (!drag) return;
+    const el = dropTarget(e.target);
+    document.querySelectorAll('.drop, .dropline').forEach(x => x.classList.remove('drop', 'dropline'));
+    if (!el) return;
+    const k = keyOf(el);
+    if (drag.node && k !== S.current && (S.route === 'c' || S.route === 'd') && !el.dataset.vcard) { e.preventDefault(); el.classList.add('drop'); e.dataTransfer.dropEffect = e.shiftKey ? 'move' : 'copy'; }
+    else if (drag.scene && k !== drag.scene) { e.preventDefault(); el.classList.add('dropline'); }
+});
+document.addEventListener('drop', e => {
+    if (!drag) return;
+    e.preventDefault();
+    const el = dropTarget(e.target);
+    document.querySelectorAll('.drop, .dropline').forEach(x => x.classList.remove('drop', 'dropline'));
+    if (el) {
+        const k = keyOf(el);
+        if (drag.node && k !== S.current) sendTo(drag.node, k, e.shiftKey);
+        else if (drag.scene && k !== drag.scene) { const from = idx(drag.scene), tk = idx(k); moveScene(drag.scene, from < tk ? tk - 1 : tk); }   // before the scene dropped on
+    }
+    drag = null;
+});
+document.addEventListener('dragend', () => { drag = null; document.querySelectorAll('.drop, .dropline').forEach(x => x.classList.remove('drop', 'dropline')); });
+
+function fromHash() {
+    const h = location.hash.slice(1);
+    S.route = ROUTES.some(r => r[0] === h) ? h : 'today';
+    S.view = false; S.dialog = false;
+    closeAll();
+    render();
+}
+window.addEventListener('hashchange', fromHash);
+resetProject();
+fromHash();
+say('a mockup on made-up data: menus, the scenes and the compile are simulated; the pictures are sketches');
+</script>
+</body>
+</html>

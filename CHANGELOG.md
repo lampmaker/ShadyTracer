@@ -15,6 +15,49 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.62.5 — 2026-10-17
+
+**A mockup, H: the scenes of a project, and the menus with fewer rows.** You asked for a fresh look at File, which
+gives no overview of a project's scenes, and at the Render settings menu, which repeats the view's buttons and the pane.
+
+**What is wrong today (read in code):**
+- File has 19 rows, and a project's scenes appear only there, as names, under Switch to scene ▸.
+- File mixes projects, scenes, the library item, three kinds of file and a picture.
+- Two of its rows say Ctrl S.
+- "Project" names two file formats.
+- Every Render settings row can also be set in the pane or on the view. The Quality presets and Fast while moving
+  are in three places each.
+- Window repeats the buttons on each panel group's header.
+- In all, seven menus have 67 rows.
+
+**The mockup, `ui-mockups/h-scenes.html`** (also linked from the mockups' index):
+- It shows today and four proposals on one made-up project.
+- All four share one floor:
+  - File shrinks to 6 rows: New project, Open, Projects and scenes, Save, Save picture, and Export ▸ for a scene file,
+    a project file or a 3D print.
+  - The Render settings and Window menus are gone. Their commands stay in Ctrl K.
+  - In all, 30 menu rows.
+  - A Project view replaces the Projects dialog and File › Examples. It shows the projects, this project's scenes as
+    cards with pictures, and the examples.
+- The four proposals differ in what you see of the other scenes while working:
+  - **A:** the Project view only.
+  - **B:** a quick list off the scene's row.
+  - **C:** a strip of scene cards over the tree.
+  - **D:** the whole project in the tree, each other scene a dimmed line.
+- The reasoning and the questions for you are in section 11 of `roadmap/UI_PLAN.md`.
+
+**Nothing in the application changed.**
+
+**What to look at:** open the mockup and use the strip at the top to switch between Today, A, B, C and D. In each
+proposal:
+- open File;
+- switch scenes;
+- drag an object onto another scene (C, D);
+- try the scenario buttons: 20 scenes, editing a library item, a second tab, a first visit.
+
+The last tab, "The menus, row by row", lists every row that was removed and where it went. Then say which proposal you
+want, or what to change.
+
 ## 0.62.4 — 2026-10-16
 
 **The shell's browser check passes again.** `node lib/shell/test/example.check.mjs` failed one row: "a value set
