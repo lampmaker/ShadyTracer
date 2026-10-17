@@ -1,135 +1,95 @@
 //======================================================================================================================
-// THE FILE MENU -- the project, its scenes and the files, as the menu bar's commands (lib/shell registry.js). Data and
-// functions, no DOM: the page registers them (index.html) and builder/test/scenemenu.test.mjs runs them.
+// THE FILE MENU -- the projects and the files, as the menu bar's commands (lib/shell registry.js); and the scenes'
+// commands, which have no menu row. Data and functions, no DOM: the page registers them (index.html) and
+// builder/test/filemenu.test.mjs runs them.
 //
-// WHY HERE. The scenes had a menu of their own, a dropdown over the tree (switcher.js), which said New scene, Open and
-// the three saves again under other words, and was the only place to switch, rename, duplicate, move or delete a
-// scene, or reach the examples. Two menus for one job, and the user had to know which held what (the user,
-// 2026-10-09: "lots of duplicate entries ... remove that and make sure it's covered in the file menu"). Now File is
-// the one place, and the dropdown is gone.
+// FIVE ROWS (0.63.0; the user, 2026-10-17: "I dont like how the file menu is organized ... Minimise the number of menu
+// options"). File had nineteen: the projects, every verb on a scene, the examples, a library item's Save and Close,
+// Save now and three kinds of file. The scenes have a home of their own now -- the cards over the tree (scenestrip.js)
+// and the Project panel (workspace/projectview.js) -- so File keeps what is about files and projects:
+//   New project · Projects…  |  Import from file… · Export ▸  |  Save picture…
+// GONE, and why (UI_PLAN.md section 11):
+//   Save now      the project is written to this browser once a second when something changed, when the tab is
+//                 hidden and when the page closes (workspace/autosave.js); "Save now" ran that write a moment early.
+//                 Ctrl S still does, with no row -- and saves a library item while one is edited, the one save that is
+//                 not automatic (its strip over the view has the button too).
+//   Open          never opened a project kept in the browser (the last one reopens by itself, the others are in
+//                 Projects…): it read a .json file from disk. So it is Import from file…, beside Export.
+//   Save all scenes   the project format without the cameras and the render settings; Export ▸ Project file writes
+//                 the workspace format, which has them, as the Projects list's Download always did. Both still read.
+//   the scenes' verbs and Examples ▸   on the cards and in the Project panel; the palette keeps new, duplicate and
+//                 delete (sceneCommands), and the scene is renamed where it is named, its row's label in Properties.
 //
-// SWITCHING IS STILL A CHOICE (switcher.js's reason, 2026-10-02): a compile, 3.7-23 s on the user's card, so it is
-// a submenu entry, chosen, and never a click on something else. The scene ops are the tree's (tree.js sceneOps):
-// one undo step each, a compile when the scene being worked on changes. The verbs act on the scene being worked on.
+// Nothing that adds a project or reads a file while a library item is edited (library/edit.js): it stays isolated
+// until saved or closed (the user, 2026-09-30). Those rows are greyed then.
 //
-//   for (const c of fileCommands({ BUILDER, ops: tree.sceneOps, examples, actions, item, locked, prompt, say }))
-//       SHELL.command(c)
-//
-// Nothing that switches, adds or edits a scene or opens a file while a library item is edited (library/edit.js):
-// it stays isolated until saved or closed (the user, 2026-09-30). Those rows are greyed then; the item's own Save
-// and Close take their place.
+//   for (const c of fileCommands({ actions, item })) SHELL.command(c)
+//   for (const c of sceneCommands({ BUILDER, ops: tree.sceneOps, item, say })) SHELL.command(c)
 //======================================================================================================================
 
-/**
- * @param BUILDER   demo.js's: project, current
- * @param ops       tree.js's sceneOps: enter, add, duplicate, remove, move, rename
- * @param examples  { list: async () => [{ id, title }], open: async id => void }, or null
- * @param actions   the host's, each () => void, an entry whose function is missing not listed: projects, newProject,
- *                  importProject, open, saveNow, saveScene, save, saveWorkspace, picture
- * @param item      { active: () => bool, save, close }: the library item being edited (library/edit.js), or null
- * @param prompt    (question, value) => string | null: a new name (window.prompt on the page)
- * @param say       a line for the status bar
- */
-/* THE EXAMPLES' ROWS: by audience, a heading each, and by group a submenu each (0.54.0; the user, 2026-10-10: "grouped
-   in subcategories", and the examples "split between regular users and optical designers"). An audience with one group
-   lists its examples under its heading directly. An example with neither (a list from before, a test's stand-in) is a
-   row of its own. Each row's tooltip is what the example shows. */
-export function exampleRows(list, open) {
-    const row = x => ({ label: x.title, run: () => open(x),
-        title: `${x.description ? `${x.description}. ` : ''}Adds a copy to this project and works on it` })
+/* THE EXAMPLES BY AUDIENCE AND GROUP (0.54.0; the user, 2026-10-10: "grouped in subcategories", and the examples "split
+   between regular users and optical designers"), for the Project panel: [{ audience, groups: [{ group, items }] }], in
+   the list's order. An example with neither (a list from before, a test's stand-in) is under an audience of null. */
+export function exampleGroups(list) {
     const out = []
-    const audiences = []
-    for (const x of list) if (x.audience && !audiences.includes(x.audience)) audiences.push(x.audience)
-    for (const a of audiences) {
-        if (out.length) out.push({ separator: true })
-        out.push({ header: true, label: a })
-        const of = list.filter(x => x.audience === a)
-        const groups = [...new Set(of.map(x => x.group))]
-        if (groups.length === 1) out.push(...of.map(row))
-        else for (const g of groups) out.push({ label: g, items: of.filter(x => x.group === g).map(row) })
+    for (const x of list) {
+        const audience = x.audience ?? null, group = x.group ?? null
+        let a = out.find(o => o.audience === audience)
+        if (!a) out.push(a = { audience, groups: [] })
+        let g = a.groups.find(o => o.group === group)
+        if (!g) a.groups.push(g = { group, items: [] })
+        g.items.push(x)
     }
-    const loose = list.filter(x => !x.audience)
-    if (loose.length && out.length) out.push({ separator: true })
-    out.push(...loose.map(row))
     return out
 }
 
-export function fileCommands({ BUILDER, ops, examples = null, actions = {}, item = null, prompt = (q, v) => window.prompt(q, v), say = () => { } }) {
-    const editing = () => !!item?.active()
-    const free = () => !editing()
-    const scenes = () => BUILDER.project.scenes
-    const index = () => scenes().findIndex(s => s.key === BUILDER.current)
-    const cur = () => scenes()[index()]
+/**
+ * @param actions   the host's, each () => void, an entry whose function is missing not listed: newProject, projects,
+ *                  importFile, exportScene, exportProject, exportPrint, picture
+ * @param item      { active: () => bool }: the library item being edited (library/edit.js), or null
+ */
+export function fileCommands({ actions = {}, item = null } = {}) {
+    const free = () => !item?.active()
     const out = []
-    const C = def => { out.push({ menu: 'File', ...def }); return def }
-    const A = (key, def) => { if (actions[key]) C({ run: () => actions[key](), ...def }) }
+    const A = (key, def) => { if (actions[key]) out.push({ menu: 'File', run: () => actions[key](), ...def }) }
 
-    // ---- THE PROJECT
-    A('projects', { id: 'file.projects', group: 'project', label: 'Projects…',
-        help: 'Every project kept in this browser: open one, a new one, rename, duplicate, download, import a file, delete' })
     A('newProject', { id: 'file.newProject', group: 'project', label: 'New project', when: free,
-        help: 'A project of one empty scene; the one open now stays in File › Projects…' })
-    A('importProject', { id: 'file.importProject', group: 'project', label: 'Import a project from a file…', when: free,
-        help: 'A workspace or project file, kept in this browser as a project of its own, and opened' })
-
-    // ---- ITS SCENES
-    C({ id: 'file.new', group: 'scene', label: 'New scene', when: free, run: () => ops.add(), help: 'An empty scene after this one' })
-    C({ id: 'file.switch', group: 'scene', label: 'Switch to scene', when: () => free() && scenes().length > 1,
-        help: 'Another scene of this project, worked on and compiled',
-        items: () => scenes().map(s => {
-            const here = s.key === BUILDER.current
-            return { label: `${here ? '● ' : '   '}${s.doc.title}${s.doc.libraryItem ? '  (library item)' : ''}`, off: here,
-                     title: here ? 'The scene being worked on' : `Switch to ${s.doc.title} (compiles it)`, run: () => ops.enter(s.key) }
-        }) })
-    /* THE EXAMPLES (scenes/index.js): a COPY into the project, so an example is never edited and opening one twice
-       gives two. Their titles are read from the files, which takes a moment: asked for when File first opens (a
-       row's `when` is asked then), so the list is there by the time the pointer reaches it */
-    if (examples) {
-        let list = null, asked = false
-        const load = () => {
-            if (asked) return
-            asked = true
-            examples.list().then(l => { list = l }).catch(e => { list = []; say(`examples: ${e.message}`) })
-        }
-        C({ id: 'file.examples', group: 'scene', label: 'Examples', when: () => { load(); return free() },
-            help: 'The bundled scenes: a copy of one goes into this project, and is worked on',
-            items: () => { load(); return list ? exampleRows(list, x => examples.open(x.id)) : [{ label: 'loading…', off: true }] } })
-    }
-    C({ id: 'file.renameScene', group: 'scene', label: 'Rename this scene…', when: free, run: () => {
-        const s = cur()
-        const t = s && prompt('A new name for this scene', s.doc.title)
-        if (t != null && t.trim() && t.trim() !== s.doc.title) ops.rename(s.key, t)
-    } })
-    C({ id: 'file.duplicateScene', group: 'scene', label: 'Duplicate this scene', when: free, run: () => ops.duplicate(BUILDER.current),
-        help: 'A copy right after it, worked on' })
-    C({ id: 'file.sceneUp', group: 'scene', label: 'Move this scene up the list', when: () => free() && index() > 0,
-        run: () => { const i = index(); if (i > 0) ops.move(BUILDER.current, i - 1) } })
-    C({ id: 'file.sceneDown', group: 'scene', label: 'Move this scene down the list', when: () => free() && index() < scenes().length - 1,
-        run: () => { const i = index(); if (i >= 0 && i < scenes().length - 1) ops.move(BUILDER.current, i + 1) } })
-    // no confirmation, as for any delete: one undo step. The project refuses the last scene; so does the row, greyed.
-    C({ id: 'file.deleteScene', group: 'scene', label: 'Delete this scene', when: () => free() && scenes().length > 1,
-        help: 'Ctrl+Z brings it back; the last scene cannot be deleted',
-        run: () => scenes().length > 1 ? ops.remove(BUILDER.current) : say('the last scene cannot be deleted') })
-
-    // ---- OPEN, AND THE LIBRARY ITEM BEING EDITED
-    A('open', { id: 'file.open', group: 'open', label: 'Open a file (scene, project or workspace)…', keys: 'Ctrl O', when: free,
-        help: 'A scene or a project file joins this project; a workspace file becomes a project of its own' })
-    if (item) {
-        C({ id: 'file.saveItem', group: 'library', label: 'Save the library item', keys: 'Ctrl S', when: editing, run: () => item.save(),
-            help: 'The item being edited, back into the library' })
-        C({ id: 'file.closeItem', group: 'library', label: 'Close the library item', when: editing, run: () => item.close(),
-            help: 'Back to the scene before; asks first if it is not saved' })
-    }
-
-    // ---- SAVE. Ctrl+S is the item's while one is edited: one row says Ctrl S at a time
-    A('saveNow', { id: 'file.saveNow', group: 'save', label: 'Save now (in this browser)', keys: 'Ctrl S', when: free,
-        help: 'The project is saved in this browser as it changes; this does it at once' })
-    A('saveScene', { id: 'file.saveScene', group: 'files', label: 'Save this scene to a file', help: 'This scene alone, in the format of the bundled scenes' })
-    A('save', { id: 'file.save', group: 'files', label: 'Save all scenes to a file',
-        help: 'Every scene of this project, in one file: imported, they join the project it goes into' })
-    A('saveWorkspace', { id: 'file.saveWorkspace', group: 'files', label: 'Save the project to a file (scenes, render settings, cameras)',
-        help: 'A workspace file, which opens as a project of its own' })
-    A('picture', { id: 'file.picture', group: 'export', label: 'Save a picture (PNG)…',
+        help: 'A project of one empty scene; the one open now stays in Projects…' })
+    A('projects', { id: 'file.projects', group: 'project', label: 'Projects…',
+        help: 'The Project panel: the projects kept in this browser, this one\'s scenes, the examples' })
+    A('importFile', { id: 'file.import', group: 'files', label: 'Import from file…', keys: 'Ctrl O', when: free,
+        help: 'A .json file from disk -- a backup, or one sent to you: a scene joins this project; a project asks whether to open it as one of its own or add its scenes here' })
+    const exports = [
+        actions.exportScene && { label: 'Scene file…', run: () => actions.exportScene(), title: 'The scene being worked on, alone' },
+        actions.exportProject && { label: 'Project file…', run: () => actions.exportProject(),
+            title: 'Every scene, their cameras and the render settings: opens as a project of its own, or adds its scenes to another' },
+        actions.exportPrint && { separator: true },
+        actions.exportPrint && { label: '3D print (3MF / STL)…', run: () => actions.exportPrint(),
+            title: 'The scene\'s Export box, whose Properties hold Export 3MF and Export STL' },
+    ].filter(Boolean)
+    if (exports.length) out.push({ menu: 'File', id: 'file.export', group: 'files', label: 'Export', items: () => exports,
+        help: 'A scene file, a project file, or a mesh to print' })
+    A('picture', { id: 'file.picture', group: 'picture', label: 'Save picture…',
         help: 'Render a picture at a size and sample count of its own, develop it, save it as PNG' })
     return out
+}
+
+/**
+ * THE SCENES' COMMANDS WITH NO MENU ROW: the palette's (Ctrl K) and a help link's. Their rows are on the cards over the
+ * tree and in the Project panel; these act on the scene being worked on.
+ * @param BUILDER  demo.js's: project, current
+ * @param ops      tree.js's sceneOps: add, duplicate, remove
+ * @param item     { active: () => bool }, or null
+ * @param say      a line for the status bar
+ */
+export function sceneCommands({ BUILDER, ops, item = null, say = () => { } }) {
+    const free = () => !item?.active()
+    const scenes = () => BUILDER.project.scenes
+    return [
+        { id: 'scene.new', label: 'Scene: new (empty)', when: free, run: () => ops.add(), help: 'An empty scene after this one, worked on' },
+        { id: 'scene.duplicate', label: 'Scene: duplicate this one', when: free, run: () => ops.duplicate(BUILDER.current), help: 'A copy right after it, worked on' },
+        // no confirmation, as for any delete: one undo step. The project refuses the last scene; so does this, greyed
+        { id: 'scene.delete', label: 'Scene: delete this one', when: () => free() && scenes().length > 1, help: 'Ctrl+Z brings it back; the last scene cannot be deleted',
+          run: () => scenes().length > 1 ? ops.remove(BUILDER.current) : say('the last scene cannot be deleted') },
+    ]
 }

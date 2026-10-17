@@ -61,9 +61,9 @@ const proj = (...titles) => P.createProject(titles.map(t => P.blankScene(t)))
     await S.save(a.id, { session: { current: 's1', renderer: {}, views: { s1: { camera: { distance: 3 } } } } })
     const m2 = await S.meta(a.id)
     ok('a session saved alone leaves `modified` (the scenes) alone', m2.modified === before && m2.saved > before)
-    eq('...and is what is read: each scene with the view the session kept (0.63.0), over the one its text had',
+    eq('...and is what is read: each scene with the view the session kept (0.65.0), over the one its text had',
         (await S.read(a.id)).workspace.project.scenes[0].doc.view.camera.distance, 3)
-    // a project kept before 0.63.0: its scenes with no view, each one's camera in the session beside them
+    // a project kept before 0.65.0: its scenes with no view, each one's camera in the session beside them
     const old = await S.create({ name: 'Old', project: P.createProject([M.createDoc({ title: 'o1' })]), session: { current: 's1', cameras: { s1: { distance: 5 } } } })
     eq('...one kept before, its camera beside the scenes, is read into its scene', (await S.read(old.id)).workspace.project.scenes[0].doc.view, { camera: { distance: 5 } })
     await S.remove(old.id)

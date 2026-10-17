@@ -62,8 +62,8 @@
         import * as Project from './builder/project.js'
         import { generate, boxLoName, boxHiName } from './builder/codegen.js'
         import { installBuilderTree } from './builder/tree.js'
-        import { installProjectRow } from './builder/projectrow.js'
-        import { fileCommands } from './builder/filemenu.js'
+        import { installSceneStrip, sceneCards, seconds } from './builder/scenestrip.js'
+        import { fileCommands, sceneCommands } from './builder/filemenu.js'
         import { installBuilderPanel } from './builder/panel.js'
         import { sceneParams, viewEntriesFlagged } from './builder/params.js'
         import { createBoxes, cullBoxes, cullUniforms, cullReport } from './builder/boxes.js'
@@ -82,7 +82,9 @@
         import { createTabs } from './workspace/tabs.js'
         import { createAutosave, recoverAll } from './workspace/autosave.js'
         import { createSession } from './workspace/session.js'
-        import { installProjectsDialog } from './workspace/dialog.js'
+        import { installProjectView, fileName as projectFileName } from './workspace/projectview.js'
+        import { ask } from './workspace/ask.js'
+        import { createScenePics, indexedDbPics, memoryPics, startCapture } from './workspace/scenepics.js'
         import { createLibrary, indexedDbBackend, memoryBackend } from './library/store.js'
         import { installLibraryPanel } from './library/panel.js'
         import { createThumbs, indexedDbThumbs, memoryThumbs } from './library/thumbs.js'
@@ -153,7 +155,11 @@
         const container = document.getElementById('container');
         const SHELL = createShell(container, {
             title: `${versionText()} © Matthijs Keuper`, storageKey: 'raytracer.layout', popoutUrl: 'popout.html',
-            menus: ['File', 'Edit', 'View', 'Render settings', 'Analysis', 'Window', 'Help'],
+            /* FIVE MENUS (0.63.0; the user, 2026-10-17: "Minimise the number of menu options"): no Render settings menu --
+               every row of it was the Render settings panel's or the view's Quality ▾ and ⚡ again -- and no Window menu,
+               whose verbs are the buttons on every panel group's header (standardCommands({ window: false })). Their
+               commands are kept, in the palette (Ctrl K) */
+            menus: ['File', 'Edit', 'View', 'Analysis', 'Help'],
         });
         window.SHELL = SHELL;
         /* THE PARAMETERS: every setting by a path -- the renderer's (RT.parameters) and the scene's
@@ -188,28 +194,35 @@
              its bench      Tests
            The renderer fills each with the same folders it used to put on its pages (installUI's
            `sections`); only where they sit is new. */
-        // the tables take the shell's font and colours (shell.css themes Tweakpane inside a panel)
-        const tableIn = el => {
-            const t = new PropertyTable({ container: el });
+        /* the tables take the shell's font and colours (shell.css themes Tweakpane inside a panel). `opts` are the
+           table's own: `boxes`, its top-level folders drawn as boxes -- by the property table (GUISTUFF), in the
+           colours shell.css gives its --pt-box-* properties, so every panel in boxes has the one look */
+        const tableIn = (el, opts = {}) => {
+            const t = new PropertyTable({ container: el, ...opts });
             Object.assign(t.element.style, { fontSize: '13px', width: '100%' });
             return t;
         };
-        /* ...IN BOXES, as the Analysis pane's sections are (the user, 2026-10-04; lib/shell/shell.css .shell-boxes): the
-           renderer's folders are its boxes (lib/pathtracer/settingsui.js RENDERER_BOXES) */
+        /* ...IN BOXES, as the Analysis pane's sections are (the user, 2026-10-04): the renderer's folders are its boxes
+           (lib/pathtracer/settingsui.js RENDERER_BOXES) */
         const rendererEl = SHELL.panel({ id: 'renderer', title: 'Render settings', module: 'renderer',
             help: 'How hard the renderer works: Quality (Preview: Sketch, Draft · Accurate: Standard, High · Optics), the light sources and how each is traced, bounces and noise, render size; the developer settings behind their switch.' });
-        rendererEl.classList.add('shell-boxes');
-        const rendererTable = tableIn(rendererEl);
+        const rendererTable = tableIn(rendererEl, { boxes: true });
         const testsTable = tableIn(SHELL.panel({ id: 'tests', title: 'Tests', module: 'renderer',
             help: 'The measurement bench: one row per test with a known answer, and a report to copy.' }));
-        // no View entry: File › Save a picture opens it, floating (menu: false, lib/shell/shell.js standard)
+        // no View entry: File › Save picture… opens it, floating (menu: false, lib/shell/shell.js standard)
         const outputTable = tableIn(SHELL.panel({ id: 'output', title: 'Save picture', module: 'renderer', menu: false,
             help: 'Render a picture at a size and sample count of its own, then develop it -- exposure, tone curve, grading, on a preview -- and save it as PNG.' }));
         const statsEl = SHELL.panel({ id: 'stats', title: 'Render stats', module: 'renderer',
             help: 'The renderer\'s live readout: samples per second, cost per sample, the value under the cursor.' });
         /* THE BUILDER, split in two: the project's tree (with its toolbar) and the selection's properties */
         const sceneEl = SHELL.panel({ id: 'scene', title: 'Scene', module: 'builder',
-            help: 'The project: its scenes, their objects, lights and materials.' });
+            help: 'The project and its scenes, a card each; under them the scene being worked on: its objects, lights and materials.' });
+        /* THE PROJECT PANEL (workspace/projectview.js, 0.63.0): the projects in this browser, this one's scenes large, the
+           examples. A dock panel of its own, opened as a tab beside the picture (openProject, below) -- "these will rarely
+           have to be viewed side by side" (the user, 2026-10-17). No View row: File › Projects… and the project's name over
+           the tree open it */
+        const projectEl = SHELL.panel({ id: 'project', title: 'Project', module: 'builder', menu: false,
+            help: 'The projects kept in this browser; this one\'s scenes with their pictures; the examples.' });
         const propsEl = SHELL.panel({ id: 'properties', title: 'Properties', module: 'builder',
             help: 'The selected row\'s settings.' });
         /* THE OPTICS: one Analysis pane and a panel per chart (optics/charts.js, mockup F). The pane keeps the
@@ -229,7 +242,8 @@
         const chartEls = {};
         const chartPanel = c => (chartEls[c.id] = SHELL.panel({ id: c.id, title: c.title, module: 'optics', menu: false, help: c.help }));
         for (const c of CHARTS.list()) chartPanel(c);
-        const propsTable = tableIn(propsEl);
+        // in boxes, as Render settings (builder/panel.js show: the selection's, then one a category)
+        const propsTable = tableIn(propsEl, { boxes: true });
         /* THE LIBRARY (library/): objects, groups, lights and materials to put in, built in and one's own */
         const libraryEl = SHELL.panel({ id: 'library', title: 'Library', module: 'builder',
             help: 'Things to put into the scene: shapes, modifiers, lights, materials, assemblies, and your own. Double-click one to put it in at the selection; ＋ keeps the selection.' });
@@ -237,11 +251,11 @@
             help: 'Every setting by the name a script, the timeline or an optimiser uses; its value, its range, and whether changing it recompiles.' });
         /* THE TIMELINE, a tool (tools/timeline.js): keys on the parameters over time, played in the view and
            filmed offscreen. Registered here with the rest, filled once the parameters have their providers. */
-        const timelineEl = SHELL.panel({ id: 'tools.timeline', title: 'Timeline', module: 'app',
+        const timelineEl = SHELL.panel({ id: 'tools.timeline', title: 'Timeline', module: 'app', menu: false,
             help: 'Keyframes on any live setting -- the camera, a light\'s flux, an object\'s position -- played in the view, and a video rendered frame by frame (⚙ export, RECORD).' });
         /* THE HELP (help/panel.js): pages to read, with links that open examples, run commands and point at panels.
            Help › Contents and F1 open it, floating; View lists it too. Filled once the commands exist (below). */
-        const helpEl = SHELL.panel({ id: 'help', title: 'Help', module: 'app',
+        const helpEl = SHELL.panel({ id: 'help', title: 'Help', module: 'app', menu: false,
             help: 'How to use ShadyTracer: getting started, modelling and rendering, optical design, and a reference of every shape, modifier, material field and light setting.' });
 
         /* THE LAYOUTS: one per stage of the work, in the menu bar's switcher and the View menu. Each is
@@ -303,16 +317,20 @@
             help: 'Three of the scene\'s lights, a target colour and a total flux: the fluxes that make it',
             run: () => SHELL.isOpen('tools.mixing') ? SHELL.open('tools.mixing')
                 : SHELL.open('tools.mixing', undefined, undefined, { floating: { width: 380, height: 480 } }) });
+        /* THE HELP floats over the work, a page to read beside it. Help › Contents and F1 open it (registered with the help,
+           below); View said it again until 0.63.0 -- its id is kept, with no menu row, so the shell adds none */
+        const openHelp = () => SHELL.isOpen('help') ? SHELL.open('help')
+            : SHELL.open('help', undefined, undefined, { floating: { width: Math.min(900, innerWidth - 80), height: Math.min(680, innerHeight - 80) } });
+        SHELL.command({ id: 'view.help', label: 'Help: the help pages', help: 'The help pages (Help › Contents, F1)', run: openHelp });
+        /* THE WINDOW VERBS AND "LAYOUT: X" IN NO MENU (0.63.0): the first are the buttons on every group's header, the second
+           the layout buttons on the menu bar; the palette keeps both */
+        SHELL.standardCommands({ window: false, layouts: false });
+        /* THE TIMELINE goes across the foot of the view: its View entry is the page's (the panel has none of the shell's,
+           menu: false), registered after the shell's so it comes after Parameters, among the app's panels */
         SHELL.command({ id: 'view.tools.timeline', menu: 'View', group: 'panels.app', label: 'Timeline',
             help: 'Keyframes on any live setting, played in the view, and a video rendered frame by frame',
             run: () => SHELL.isOpen('tools.timeline') ? SHELL.open('tools.timeline')
                 : SHELL.open('tools.timeline', { referencePanel: 'viewport', direction: 'below' }, { height: Math.round(innerHeight * 0.34) }) });
-        /* THE HELP floats over the work, a page to read beside it: its View entry is the page's, so View opens it that way
-           too (Help › Contents and F1 are registered with the help, below) */
-        const openHelp = () => SHELL.isOpen('help') ? SHELL.open('help')
-            : SHELL.open('help', undefined, undefined, { floating: { width: Math.min(900, innerWidth - 80), height: Math.min(680, innerHeight - 80) } });
-        SHELL.command({ id: 'view.help', menu: 'View', group: 'panels.app', label: 'Help', help: 'The help pages', run: openHelp });
-        SHELL.standardCommands();
         SHELL.layout.restore();
         SHELL.open('viewport');
 
@@ -330,7 +348,7 @@
            was left: its scenes, the scene being worked on, the renderer's settings, every scene's camera, a library
            item being edited. Until 0.7.0 every load put the nine bundled scenes into a fresh project and restored
            nothing, so a refresh lost the work. A first visit gets a project of one lightweight demo scene
-           (scenes/index.js FIRST_VISIT); the bundled scenes are File › Examples. A second tab on the project
+           (scenes/index.js FIRST_VISIT); the bundled scenes are the Project panel's examples. A second tab on the project
            another has works on its own copy (workspace/session.js); a project that cannot be read is kept as it was
            and a fresh one started. A browser that refuses storage keeps the work for the visit, and says so.
            The renderer starts on the scene being worked on, generated here the same way BUILDER.apply generates it
@@ -343,9 +361,12 @@
         catch (e) {
             console.warn('[projects] IndexedDB refused, the work lasts this visit:', e?.message);
             projectBackend = memoryProjects();
-            storeNote = 'this browser refused storage: the work lasts this visit (File › Save to a file keeps it)';
+            storeNote = 'this browser refused storage: the work lasts this visit (File › Export ▸ Project file keeps it)';
         }
         const PROJECTS = createProjectStore({ backend: projectBackend });
+        /* THE SCENES' PICTURES (workspace/scenepics.js, 0.63.0): the last picture each scene had, and how long it took to open,
+           for its card -- a database of their own, or memory where the browser refuses storage */
+        const PICS = window.PICS = createScenePics({ backend: storeNote ? memoryPics() : indexedDbPics() });
         let showProject = async () => { };            // the page's, once the builder exists (below)
         /* WHAT IS SAVED, looked at once a second (workspace/autosave.js): the builder's revision and scenes, and the
            session -- the scene being worked on, the renderer's settings but what each scene has of its own (the
@@ -627,7 +648,7 @@
            emissive object. Its scene too is a builder document, so the page hands it in the same way. */
         window.RTTESTS?.addTest?.({ id: 'light-vs-emitter', title: 'A light against the same emissive object', prepare: async () => lightBench() });
         // the environment's entries are the scene's now (builder/params.js), not the renderer's
-        /* ...and the view's values a scene flags animated (builder model.js setAnimated, 0.63.0) are offered as animated: the
+        /* ...and the view's values a scene flags animated (builder model.js setAnimated, 0.65.0) are offered as animated: the
            camera's and the exposure's are the renderer's entries, at its paths, which a saved track names. Unmarked, they
            left the timeline's + track whenever any scene value was flagged (tools/timeline.js onlyAnimated). */
         PARAMS.provide('renderer', () => viewEntriesFlagged(RT.parameters().filter(p => !p.path.startsWith('scene/environment/')), window.BUILDER?.doc));
@@ -637,14 +658,30 @@
           the project; the tree shows the one being worked on, and File the rest (builder/filemenu.js). The console still reaches it all: BUILDER.wgsl(), check(),
           apply(), break(), fix().
         =========================================================================================*/
-        let builderTree = null, builderPanel = null, toolbar = null, ACTIONS = null, PROJECT_ROW = null, examples = null;
+        let builderTree = null, builderPanel = null, toolbar = null, ACTIONS = null, STRIP = null, examples = null, PROJECT_VIEW = null;
         // a builder status goes to the shell's status bar (the toolbar's own line said the same)
         const status = t => SHELL.status(t);
         /* WHICH BUILD IS SHOWN, at the status bar's right (builder/modeline.js): baked, or the editing build and its mode --
            the picture is the same either way, so only this says which. Painted twice a second with the boxes' look, and
            at once when a scene is shown or the bake swapped in. Set up below, once the baker is. */
         const modeEl = document.createElement('span');
-        SHELL.statusRight(modeEl);
+        /* ...AND BESIDE IT, THAT THE WORK IS KEPT (0.63.0): File has no Save -- the project is written to this browser as it
+           changes (workspace/autosave.js) -- so the bar says so: when it was last written, or that it is not being kept
+           at all (a browser that refuses storage). Painted with the mode line. */
+        const savedEl = document.createElement('span');
+        savedEl.className = 'shell-saved';
+        let savedAt = null;
+        const paintSaved = () => {
+            if (storeNote) { savedEl.textContent = '⚠ not kept'; savedEl.title = storeNote; savedEl.classList.add('bad'); return }
+            const i = SESSION.info();
+            savedEl.textContent = i.copy && !i.id ? 'not saved yet' : '✓ saved';
+            savedEl.title = i.copy && !i.id ? `This tab's copy of '${i.copy}': kept as a project of its own once something in it changes`
+                : `Kept in this browser as it changes${savedAt ? `; last written ${new Date(savedAt).toLocaleTimeString()}` : ''}. A file is the backup: File › Export ▸ Project file`;
+        };
+        const rightEl = document.createElement('span');
+        rightEl.className = 'shell-status-group';
+        rightEl.append(savedEl, modeEl);
+        SHELL.statusRight(rightEl);
         let paintMode = () => { };
         const BUILDER = installBuilder(window, {
             // each scene seen as it keeps (builder/model.js VIEW): a first visit's example from its own camera, in its file
@@ -654,6 +691,8 @@
                 if (builderPanel?.shown() === BUILDER.doc.root.id) builderPanel.refresh();
                 status(`${sc.title}  (${ms.toFixed(0)} ms, march kernel `
                     + `${((RT.prog_wvfmarch?.wgsl?.length || 0) / 1024).toFixed(0)} kB)`);
+                // how long it took, for its card (a data-mode swap is 0: nothing compiled, nothing to say)
+                if (ms > 0 && !BUILDER.doc.libraryItem) PICS.put(SESSION.info().id, BUILDER.current, { openMs: ms });
                 // the timeline's + track list and its headers are the scene's parameters (tools/timeline.js)
                 window.TIMELINE?.refreshParams();
                 paintMode();
@@ -661,13 +700,14 @@
                 window.ITEM_EDITOR?.shown();
             },
             // a loaded or restored project replaces the one the tree was built from
-            onDoc: () => { builderTree?.rebuild(); builderPanel?.refresh(); window.ITEM_EDITOR?.sync(); },
+            onDoc: () => { builderTree?.rebuild(); builderPanel?.refresh(); window.ITEM_EDITOR?.sync(); STRIP?.refresh(); },
         });
         if (safeStart) BUILDER.unshow();            // the renderer was made on the empty scene (above)
 
-        /* THE BUILDER PAGE, top to bottom: one row -- the project's name (builder/projectrow.js; its scenes and files
-           are File's, builder/filemenu.js), a ▶ when the scene is not the one shown, Undo and Redo (builder/toolbar.js) -- then the scene in the user's TreeView, its row the root; the
-           selected row's properties are a panel of their own. */
+        /* THE SCENE PANEL, top to bottom (0.63.0): one line for the project and its scenes and a card per scene
+           (builder/scenestrip.js) -- then the scene being worked on in the user's TreeView, its row the root; the selected
+           row's properties are a panel of their own. Undo and Redo are on the menu bar (the project's history is every
+           scene's, not this panel's: the user, 2026-10-17); the files and the projects are File's (builder/filemenu.js). */
         {
             const host = sceneEl;
             const swHost = document.createElement('div');
@@ -782,6 +822,7 @@
                     if (modeEl.textContent !== m.text) modeEl.textContent = m.text;
                     modeEl.title = m.title;
                     modeEl.classList.toggle('baked', m.baked);
+                    paintSaved();
                 };
                 setInterval(async () => {
                     const want = modeOf(BUILDER.dataMode);
@@ -869,8 +910,33 @@
                 };
                 requestAnimationFrame(step);
             };
+            /* A SCENE'S CARD CHOSEN (builder/scenestrip.js) shows in Properties (panel.js showScene), the tree's selection
+               cleared -- and stays shown through the tree's own onSelect(null), which every rebuild sends; a tree row chosen
+               takes Properties back. Nothing is compiled for it: what it shows is read from the project. */
+            const editing = () => !!window.ITEM_EDITOR?.active;
+            const notWhileEditing = fn => (...a) => editing() ? status('close the library item first (over the view)') : fn(...a);
+            let cardKey = null;
+            const showCard = key => {
+                const c = sceneCards(BUILDER.project, BUILDER.current).find(x => x.key === key), shot = PICS.get(SESSION.info().id, key);
+                const info = c ? `${c.unit} · ${c.objects} object${c.objects === 1 ? '' : 's'} · ${c.lights} light${c.lights === 1 ? '' : 's'}`
+                    + (shot?.openMs ? `\nopened in ${seconds(shot.openMs)} last time` : '') : '';
+                const ops = builderTree.sceneOps;
+                panel?.showScene(key, { picture: shot?.url ?? null, info, actions: {
+                    open: notWhileEditing(k => ops.enter(k)), duplicate: notWhileEditing(k => ops.duplicate(k, { go: false })),
+                    exportScene: k => BUILDER.saveScene(undefined, k), remove: notWhileEditing(k => ops.remove(k)), rename: (k, t) => ops.rename(k, t) } });
+            };
+            const selectRow = id => {
+                if (id == null && cardKey && cardKey !== BUILDER.current && Project.scene(BUILDER.project, cardKey)) { showCard(cardKey); overlay.select(null); return; }
+                cardKey = null; STRIP?.select(null);
+                panel?.show(id); overlay.select(id);
+            };
+            const chooseCard = key => {
+                if (key === BUILDER.current) { cardKey = null; return builderTree.select(BUILDER.doc.root.id); }
+                cardKey = key;
+                builderTree.select(null);                 // ...whose onSelect(null) shows the card
+            };
             builderTree = installBuilderTree(el, BUILDER, {
-                onStatus: status, onSelect: id => { panel?.show(id); overlay.select(id); }, onStructure: reapply,
+                onStatus: status, onSelect: id => selectRow(id), onStructure: reapply,
                 onFocus: id => focusOn(id),
                 onLibrary: () => { SHELL.open('library'); window.LIBRARY_PANEL?.focus(); },
                 // a library item's scene: its back row closes it (library/edit.js); Save is the strip's over the view
@@ -984,28 +1050,38 @@
                 input.oncancel = () => res(null);
                 input.click();
             });
-            /* THE PROJECTS LIST (workspace/dialog.js), File › Projects… */
-            const PROJECTS_DIALOG = window.PROJECTS_DIALOG = installProjectsDialog({ session: SESSION, say: status,
-                download: downloadText, pickFile, app: stamp });
-            /* THE EXAMPLES (scenes/index.js): the bundled scenes, a COPY of one into the project from File › Examples -- the
-               same as opening its file (demo.js load: put after the scene being worked on, and worked on). Their
-               titles are read from the files when File is first opened. */
-            /* ...by audience and group, each with what it shows (scenes/examples.js, made by scenes/make.mjs), and seen as its
-               file says: an example is a place to look from as much as a scene (0.54.0), its camera and exposure in its
-               document since 0.63.0 (builder/model.js VIEW) */
+            /* THE EXAMPLES (scenes/index.js): the bundled scenes, a COPY of one into the project from the Project panel -- the
+               same as opening its file (demo.js load: put after the scene being worked on, and worked on) -- by audience and
+               group, each with what it shows (scenes/examples.js, made by scenes/make.mjs), and seen as its file says: an
+               example is a place to look from as much as a scene (0.54.0), its camera and exposure in its document since
+               0.65.0 (builder/model.js VIEW) */
             examples = {
-                list: async () => EXAMPLES.map(e => ({ id: e.file, title: e.title, audience: e.audience, group: e.group, description: e.description })),
+                list: EXAMPLES.map(e => ({ id: e.file, title: e.title, audience: e.audience, group: e.group, description: e.description })),
                 open: async file => openText(await (await fetch(urlOf(file))).text(), file),
             };
-            /* a file kept as a project of its own and opened -- what the Projects list's Import does (workspace/dialog.js) */
-            const importProject = async () => {
-                const f = await pickFile();
-                if (!f) return;
-                try { await SESSION.importText(f.text, f.name.replace(/\.json$/i, '')); }
-                catch (e) { console.error('[projects] import:', e); status(`import ${f.name}: ${e.problems ? e.problems[0] : e.message}`); }
+            const ops = builderTree.sceneOps;
+            const picture = key => PICS.get(SESSION.info().id, key);
+            const exportScene = key => BUILDER.saveScene(undefined, key);
+            const exportProject = () => BUILDER.saveWorkspace(projectFileName(SESSION.info().name));
+            /* THE PROJECT PANEL (workspace/projectview.js): a tab beside the picture when it is not open (the user, 2026-10-17:
+               "if it isnt open, open it in the same pane as the viewport"), brought forward when it is; the picture brought
+               back (showWork) once a scene, an example or another project is chosen in it */
+            const showWork = () => SHELL.open('viewport');
+            const openProject = section => {
+                if (SHELL.isOpen('project')) SHELL.open('project');
+                else SHELL.open('project', { referencePanel: 'viewport', direction: 'within' });
+                requestAnimationFrame(() => PROJECT_VIEW?.at(section));
             };
-            /* THE ROW OVER THE TREE (builder/projectrow.js): the project's name, the ▶, and the toolbar's Undo and Redo */
-            PROJECT_ROW = window.PROJECT_ROW = installProjectRow(swHost, { BUILDER, project: () => SESSION.info(), compile: () => builderTree.apply() });
+            PROJECT_VIEW = window.PROJECT_VIEW = installProjectView(projectEl, { session: SESSION, BUILDER, ops, picture, examples,
+                importFile: () => ACTIONS.importFile(), exportProject, exportScene, download: downloadText, app: stamp, showWork,
+                item: editing, onRemoved: id => PICS.removeProject(id), say: status });
+            SHELL.onVisible('project', v => PROJECT_VIEW.visible(v));
+            /* THE PROJECT AND ITS SCENES OVER THE TREE (builder/scenestrip.js): one line, a card each */
+            STRIP = window.STRIP = installSceneStrip(swHost, { BUILDER, ops, tree: builderTree, project: () => SESSION.info(), picture,
+                onSelect: key => chooseCard(key), openProject, item: editing, compile: () => builderTree.apply(), exportScene, say: status });
+            PICS.on(() => STRIP.refresh());
+            /* THE SCENE'S PICTURE, taken from the live one once it has settled (workspace/scenepics.js; RT.thumbnail) */
+            window.CAPTURE = startCapture({ RT, BUILDER, pics: PICS, project: () => SESSION.info().id });
             /* ANOTHER PROJECT SHOWN (workspace/session.js open, create): its scenes into the builder -- a history of its
                own -- its renderer settings, its item being edited if it had one, and its scene compiled */
             showProject = async (w, item) => {
@@ -1015,7 +1091,8 @@
                 const unknown = RT.applySettings(w.renderer || {});
                 if (unknown.length) console.warn(`[projects] settings this renderer does not have, ignored: ${unknown.join(', ')}`);
                 await window.ITEM_EDITOR?.adopt(item);
-                PROJECT_ROW.refresh();
+                cardKey = null;
+                STRIP.refresh();
                 await builderTree.apply();
                 /* ITS SCENE DID NOT COMPILE: the picture would be the last project's scene, under this one's tree -- the
                    empty scene instead, as at a start (start.js); the ▶ over the tree compiles it once it is fixed. Not while
@@ -1035,27 +1112,45 @@
                 if (r === 'structural') builderTree.apply();
                 else status(which === 'undo' ? 'undone' : 'redone');
             };
-            /* A FILE, whichever it is: the picker, or one dropped on the page. A SCENE or a PROJECT file joins the
-               project being worked on (demo.js load: after the current scene, and worked on). A WORKSPACE file
-               becomes a project of its own in the list, and is opened: it replaced the work open before, which
-               with the work kept in the browser would be throwing it away (UI_PLAN.md section 10). */
+            /* A FILE FROM DISK, the picker's (File › Import from file…) or one dropped on the page. A SCENE file joins the
+               project being worked on (demo.js load: after the current scene, and worked on). A PROJECT file -- every scene,
+               and a workspace's with their cameras and the render settings -- ASKS (0.63.0): a project of its own in this
+               browser (what a workspace file always became: replacing the work open would throw it away), or its scenes
+               added to this one (what an all-scenes file did: the one way to bring another project's scenes in). Projects
+               kept in this browser are not files: the Project panel opens them. Each scene brings its view in its document
+               (builder/model.js VIEW, 0.65.0). */
             const openText = async (text, name = 'file') => {
                 try {
                     let kind = null;
                     try { kind = Project.parse(text); } catch { }      // a bad file: load() below says all that is wrong with it
-                    if (kind?.workspace) {
-                        await SESSION.importText(text, String(name).replace(/\.json$/i, ''));
-                        return status(`opened ${name} as a project of its own (File › Projects…)`);
+                    const many = kind?.workspace?.project ?? kind?.project;
+                    if (many) {
+                        const n = many.scenes.length, here = SESSION.info().name;
+                        const titles = many.scenes.slice(0, 4).map(x => x.doc.title).join(', ') + (n > 4 ? ', …' : '');
+                        const how = await ask({ title: `${name} holds ${n} scene${n === 1 ? '' : 's'}`,
+                            text: `${titles}${kind.workspace ? ', with their cameras and the render settings' : ''}. What should become of ${n === 1 ? 'it' : 'them'}?`,
+                            choices: [
+                                { value: 'new', label: 'Open as a project of its own', note: `kept in this browser beside ${here}, and opened` },
+                                { value: 'add', label: n === 1 ? `Add its scene to ${here}` : `Add its ${n} scenes to ${here}`,
+                                  note: 'after the scene being worked on; this project keeps its own render settings' }] });
+                        if (how === 'new') {
+                            await SESSION.importText(text, String(name).replace(/\.json$/i, ''));
+                            showWork();
+                            return status(`opened ${name} as a project of its own`);
+                        }
+                        if (how !== 'add') return status('nothing imported');
+                        status(BUILDER.load(kind.workspace ? Project.serialize(many) : text));
+                        return builderTree.apply();
                     }
                     status(BUILDER.load(text));
                     builderTree.apply();
                 } catch (e) {
                     // a ModelError lists every problem with the file; the project is unchanged
                     console.error('[builder] load failed:', e);
-                    status('LOAD FAILED: ' + (e.problems ? e.problems[0] + (e.problems.length > 1 ? ` (+${e.problems.length - 1} more, see console)` : '') : e.message));
+                    status('IMPORT FAILED: ' + (e.problems ? e.problems[0] + (e.problems.length > 1 ? ` (+${e.problems.length - 1} more, see console)` : '') : e.message));
                 }
             };
-            const open = async () => { const f = await pickFile(); if (f) await openText(f.text, f.name); };
+            const importFile = async () => { const f = await pickFile(); if (f) await openText(f.text, f.name); };
             /* DROPPED FILES only -- the tree's own drags are rows, not files, and must reach it
                untouched, so anything without 'Files' in it is left alone. */
             const isFile = e => [...(e.dataTransfer?.types || [])].includes('Files');
@@ -1066,29 +1161,35 @@
                 for (const f of e.dataTransfer.files) if (/\.json$/i.test(f.name) || f.type === 'application/json')
                     f.text().then(t => openText(t, f.name));
             });
-            /* the same actions for the toolbar and the menu bar: the toolbar keeps its keys (Ctrl Z,
-               Ctrl S, ...), the menus only show them */
-            /* WHILE A LIBRARY ITEM IS EDITED (library/edit.js) Ctrl+S saves it -- what the user is working on --
-               and a new scene or a file opened would leave its isolation behind, so they wait for it to close */
-            const editing = () => !!window.ITEM_EDITOR?.active;
-            const notWhileEditing = fn => () => editing() ? status('close the library item first (over the view)') : fn();
-            /* CTRL+S SAVES IN THE BROWSER, at once -- it was a download of every scene, the only way to keep the work
-               before it was kept here; the three files are the File menu's */
+            /* the same actions for the toolbar and the menu bar: the toolbar keeps its keys (Ctrl Z, Ctrl S, Ctrl O), the menus
+               only show them. WHILE A LIBRARY ITEM IS EDITED (library/edit.js) Ctrl+S saves it -- what the user is working on
+               -- and a new project or a file read in would leave its isolation behind, so they wait for it to close */
+            /* CTRL+S, WITH NO MENU ROW (0.63.0): the project is written to this browser as it changes (workspace/autosave.js),
+               so this only does it at once and says so -- kept because people press it; a library item's save is real */
             const saveNow = async () => {
                 await SESSION.saveNow();
                 const i = SESSION.info();
-                status(i.id ? `saved in this browser: ${i.name}` : `nothing changed yet: this tab's copy of '${i.copy}' is kept once something is`);
+                status(i.id ? `saved in this browser: ${i.name} (it is saved as it changes)` : `nothing changed yet: this tab's copy of '${i.copy}' is kept once something is`);
+            };
+            /* EXPORT ▸ 3D PRINT: the scene's Export box, whose Properties hold Export 3MF and Export STL (panel.js) */
+            const exportPrint = () => {
+                let box = null;
+                Model.walk(BUILDER.doc, n => { if (!box && n.type === 'export') box = n; });
+                if (!box) return status('this scene has no Export box: ＋ on a group\'s row › Export box (3MF / STL) adds one; its Properties hold Export 3MF and Export STL');
+                builderTree.select(box.id);
+                SHELL.open('properties');
+                status(`${box.label}: Export 3MF and Export STL are in its Properties`);
             };
             ACTIONS = {
                 undo: () => step('undo'), redo: () => step('redo'),
-                open: notWhileEditing(open), newScene: notWhileEditing(() => builderTree.newScene()),
-                importProject: notWhileEditing(importProject),
-                newProject: notWhileEditing(() => SESSION.create().catch(e => { console.error('[projects]', e); status(`new project: ${e.message}`); })),
-                saveScene: () => BUILDER.saveScene(), save: () => BUILDER.save(), saveWorkspace: () => BUILDER.saveWorkspace(),
+                importFile: notWhileEditing(importFile), open: notWhileEditing(importFile),
+                newProject: notWhileEditing(() => SESSION.create().then(showWork).catch(e => { console.error('[projects]', e); status(`new project: ${e.message}`); })),
+                projects: () => openProject(),
+                exportScene: () => exportScene(BUILDER.current), exportProject, exportPrint,
                 saveNow, saveKey: () => editing() ? window.ITEM_EDITOR.save() : saveNow(),
                 canUndo: () => BUILDER.canUndo, canRedo: () => BUILDER.canRedo,
             };
-            toolbar = installToolbar(PROJECT_ROW.element, ACTIONS);    // Undo and Redo, at the end of the row
+            toolbar = installToolbar(SHELL.tools, ACTIONS);       // Undo and Redo on the menu bar, after the menus; and the keys
             status(first.title);
         }
 
@@ -1162,50 +1263,52 @@
         window.MEASURE = installMeasureTool({ stage, canvas: ctx.canvas, RT, toolbar: VIEW });     // its buttons: the analysis drawer's Measure
 
         /*=========================================================================================
-          THE MENU BAR'S COMMANDS. The View and Window menus are the shell's own (one entry per
-          panel, and float / pop out / maximise / close); these are the application's, and none of
-          them opens a panel: that is View's alone, so nothing is said twice. Shortcuts
-          are shown, not bound: the toolbar and the tree already listen for them.
+          THE MENU BAR'S COMMANDS: File, Edit, Analysis and Help are the application's; View is the
+          shell's own (one entry per panel). Five menus since 0.63.0 (UI_PLAN.md section 11): no
+          Render settings menu -- every row of it was the Render settings panel's or the view's
+          Quality ▾ and ⚡ again -- and no Window menu -- the buttons on every panel group's header.
+          Their commands stay, menu-less, for the palette (Ctrl K) and the help's links: a command
+          need not be a row. Shortcuts are shown, not bound: the toolbar and the tree listen for them.
         =========================================================================================*/
         {
             const C = SHELL.command, A = () => ACTIONS;
             const savePicture = () => SHELL.open('output', undefined, undefined, { floating: { width: 420, height: 760 } });
             const itemOpen = () => !!window.ITEM_EDITOR?.active;
-            /* FILE (builder/filemenu.js): the projects kept in this browser (workspace/, UI_PLAN.md section 10), the scenes
-               of the one open -- switched, added, renamed, moved, deleted; the examples -- the library item being
-               edited, and the files. Its only home: the dropdown over the tree that said half of it again is gone. */
-            for (const c of fileCommands({ BUILDER, ops: builderTree.sceneOps, examples, say: status,
-                item: { active: itemOpen, save: () => window.ITEM_EDITOR.save(), close: () => window.ITEM_EDITOR.close() },
-                actions: { projects: () => window.PROJECTS_DIALOG.show(), newProject: () => A().newProject(), importProject: () => A().importProject(),
-                           open: () => A().open(), saveNow: () => A().saveNow(), saveScene: () => A().saveScene(), save: () => A().save(),
-                           saveWorkspace: () => A().saveWorkspace(), picture: savePicture } }))
+            /* FILE (builder/filemenu.js), five rows: New project · Projects… | Import from file… · Export ▸ | Save picture….
+               The scenes are on their cards over the tree and in the Project panel; the project is saved as it changes. */
+            for (const c of fileCommands({ item: { active: itemOpen },
+                actions: { newProject: () => A().newProject(), projects: () => A().projects(), importFile: () => A().importFile(),
+                           exportScene: () => A().exportScene(), exportProject: () => A().exportProject(), exportPrint: () => A().exportPrint(),
+                           picture: savePicture } }))
                 C(c);
+            // ...and the scenes' own commands, menu-less: new, duplicate, delete the one being worked on
+            for (const c of sceneCommands({ BUILDER, ops: builderTree.sceneOps, item: { active: itemOpen }, say: status })) C(c);
             C({ id: 'edit.undo', menu: 'Edit', label: 'Undo', keys: 'Ctrl Z', when: () => !!A()?.canUndo(), run: () => A().undo() });
             C({ id: 'edit.redo', menu: 'Edit', label: 'Redo', keys: 'Ctrl Y', when: () => !!A()?.canRedo(), run: () => A().redo() });
-            // the scene's row: its properties hold the environment (tree.js select maps the environment's id to it)
-            C({ id: 'render.environment', menu: 'Render settings', label: 'Environment (sun, sky, studio)', run: () => { builderTree.select(Model.ENVIRONMENT_ID); SHELL.open('properties'); } });
-            /* THE QUALITY PRESETS (lib/pathtracer/quality.js), as the Renderer panel's Quality row sets them, and
-               lamps only: the scene's own lights alone, its sun and sky left as they are in the scene */
+            /* THE RENDERER'S SWITCHES, IN NO MENU (0.63.0; the user, 2026-10-17: "Those are already covered by the icons in the
+               viewport and settings in the render pane"). The palette keeps them, "Render" in each label so the word finds
+               them -- the palette reads a command's menu and label, and there is no menu. The environment is the scene row's
+               properties (tree.js select maps its id to it). */
+            C({ id: 'render.environment', label: 'Render: the scene\'s environment (sun, sky, studio)', run: () => { builderTree.select(Model.ENVIRONMENT_ID); SHELL.open('properties'); } });
+            /* THE QUALITY PRESETS (lib/pathtracer/quality.js), as the Render settings panel's Quality box and the view's
+               Quality ▾ set them */
             for (const q of QUALITY_PRESETS)
-                C({ id: `render.quality.${q.id}`, menu: 'Render settings', group: 'quality', label: `Quality: ${q.label}`, help: q.help,
+                C({ id: `render.quality.${q.id}`, label: `Render quality: ${q.label}`, help: q.help,
                     run: () => applyPreset(q.id, RT.get(), v => RT.set(v)) });
             /* FAST WHILE MOVING (0.59.0; quality.js effective, the view's ⚡ and its Quality menu): a full picture traced as
                Draft or Sketch while the camera, a drag or a live value moves */
-            C({ id: 'render.moveFast', menu: 'Render settings', group: 'quality', label: 'Fast while moving: on / off',
+            C({ id: 'render.moveFast', label: 'Render: fast while moving on / off',
                 help: 'While the camera or an object moves, a full picture is traced as Draft or Sketch, and comes back when it stops',
                 run: () => RT.set({ moveFast: ((RT.get().moveFast ?? 1) | 0) ? 0 : 1 }) });
             for (const [m, name, help] of [[1, 'Draft', 'the light and the shadows kept'], [2, 'Sketch', 'a flat light, the lightest']])
-                C({ id: `render.moveMode.${name.toLowerCase()}`, menu: 'Render settings', group: 'quality', label: `Fast while moving: as ${name}`,
+                C({ id: `render.moveMode.${name.toLowerCase()}`, label: `Render: fast while moving, as ${name}`,
                     help: `A move traces as ${name}: ${help}`, run: () => RT.set({ moveFast: 1, moveMode: m }) });
-            C({ id: 'render.lampsOnly', menu: 'Render settings', group: 'quality', label: 'Lamps only (no sun, sky or studio light): on / off',
-                help: 'The view lit by the scene\'s own lights; the scene keeps its environment',
+            C({ id: 'render.lampsOnly', label: 'Render: lamps only (no sun, sky or studio light) on / off',
+                help: 'The view lit by the scene\'s own lights; the scene keeps its environment (Render settings › Light sources › Sun, sky or studio)',
                 run: () => RT.set({ lampsOnly: (RT.get().lampsOnly | 0) ? 0 : 1 }) });
-            C({ id: 'render.lightRays', menu: 'Render settings', group: 'quality', label: 'Lights\' rays (the light objects\' photons): on / off',
+            C({ id: 'render.lightRays', label: 'Render: lights\' rays (the light objects\' photons) on / off',
                 help: 'Off, the camera\'s paths count a light\'s face themselves: noisier through glass, and a point, a ray file or a collimated beam lights nothing',
                 run: () => RT.set({ lightRays: ((RT.get().lightRays ?? 1) | 0) ? 0 : 1 }) });
-            /* A CHART OF A KIND, with its own settings (optics/charts.js) -- the menu's only chart entries (the user,
-               2026-10-02: a "Map chart" to show beside a "New chart: Map" was one too many). The kind's first chart
-               when it is closed, another when it is open; a chart's ⧉ makes one like it. View lists every one. */
             /* THE ANALYSIS PANE shown and hidden (the user, 2026-10-10): where Design keeps it, a tab beside
                Render settings, or left of the picture when that is not open; hidden, Design is what the Render
                layout was */
@@ -1214,18 +1317,25 @@
                 run: () => SHELL.isOpen('optics') ? SHELL.close('optics')
                     : SHELL.isOpen('renderer') ? SHELL.open('optics', { referencePanel: 'renderer', direction: 'within' })
                     : SHELL.open('optics', { referencePanel: 'viewport', direction: 'left' }, { width: 330 }) });
+            /* A CHART OF A KIND, with its own settings (optics/charts.js): the kind's first chart when it is closed, another when
+               it is open; a chart's ⧉ makes one like it. One row, New chart ▸ (0.63.0: six rows were "New chart: X"); each kind
+               is also a command of its own, menu-less, for the palette */
+            const newChart = c => SHELL.isOpen(c.id) ? window.OPTICS.addChart(c.key) : openChart(c.id);
             for (const c of OPTICS_CHARTS)
-                C({ id: `optics.new.${c.key}`, menu: 'Analysis', group: 'charts', label: `New chart: ${c.title}`,
+                C({ id: `optics.new.${c.key}`, label: `New chart: ${c.title}`,
                     help: 'The first of this kind if it is closed, else another, with settings of its own (a chart\'s ⧉ copies its settings instead)',
-                    run: () => SHELL.isOpen(c.id) ? window.OPTICS.addChart(c.key) : openChart(c.id) });
+                    run: () => newChart(c) });
+            C({ id: 'analysis.newChart', menu: 'Analysis', group: 'charts', label: 'New chart',
+                help: 'A chart of a kind: the first of it if it is closed, else another, with settings of its own',
+                items: () => OPTICS_CHARTS.map(c => ({ label: c.title, run: () => newChart(c) })) });
             /* EVERY CHART THAT EXISTS, to bring one back: View listed them until they left it, and a closed chart
                had no other way back -- New chart opens the kind's first only while it is closed */
             C({ id: 'analysis.charts', menu: 'Analysis', group: 'charts', label: 'Open chart',
                 help: 'Every chart there is, open or closed: the one chosen brought to the front',
                 items: () => CHARTS.list().map(c => ({ label: `${SHELL.isOpen(c.id) ? '● ' : ''}${c.title}`, run: () => openChart(c.id),
                     title: SHELL.isOpen(c.id) ? 'Open: brought to the front' : 'Closed: opened beside the other charts' })) });
-            /* THE HELP: its links act on the page through these (help/links.js) -- an example opened as File › Examples
-               does, a command run as its menu entry would, a panel opened and outlined for a moment so the eye finds it */
+            /* THE HELP: its links act on the page through these (help/links.js) -- an example opened as the Project panel
+               opens one, a command run as its menu entry would, a panel opened and outlined for a moment so the eye finds it */
             const flash = el => { if (!el) return false; el.classList.add('help-flash'); setTimeout(() => el.classList.remove('help-flash'), 1600); return true };
             const HELP = window.HELP = installHelp(helpEl, {
                 say: status,
@@ -1281,7 +1391,8 @@
             if (unknown.length) console.warn(`[projects] settings this renderer does not have, ignored: ${unknown.join(', ')}`);
             await window.ITEM_EDITOR?.adopt(START.item);
             AUTOSAVE.since();
-            setInterval(() => AUTOSAVE.tick(), 1000);
+            // when it last wrote, for the status bar's "saved" (paintSaved): tick() resolves true when it did
+            setInterval(async () => { if (await AUTOSAVE.tick()) savedAt = Date.now(); }, 1000);
             document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') AUTOSAVE.tick(); });
             window.addEventListener('pagehide', () => { AUTOSAVE.flush(); AUTOSAVE.tick(); });
             const note = [storeNote, START.note, startNote].filter(Boolean).join(' · ');

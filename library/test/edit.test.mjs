@@ -138,7 +138,7 @@ ok('the studio\'s light keeps the settings it does not name', studioEnvironment(
     // a scene of the user's, lit their way and looked at their way
     const home = M.createDoc({ title: 'my scene' })
     M.addObject(home, 'root', { primitive: 'box' })
-    // ...its view its own (builder/model.js VIEW, 0.63.0): looked at from 99 off at 60 degrees, the exposure set by hand
+    // ...its view its own (builder/model.js VIEW, 0.65.0): looked at from 99 off at 60 degrees, the exposure set by hand
     M.setView(home, { camera: { mode: 'orbit', distance: 99, fov: 60 }, exposure: { autoExposure: 0 } })
     const other = M.createDoc({ title: 'lit' })
     M.setEnvironment(other, { envMode: 1 })
@@ -149,7 +149,7 @@ ok('the studio\'s light keeps the settings it does not name', studioEnvironment(
         set: v => { Object.assign(R.values, structuredClone(v)); return [] },
         settings: () => ({ camera: structuredClone(R.camera) }),
         applySettings: ({ camera }) => { if (camera) R.camera = structuredClone(camera); return [] },
-        /* THE VIEW (0.63.0) as the real renderer gives and takes it (lib/pathtracer/index.js): the camera put back only
+        /* THE VIEW (0.65.0) as the real renderer gives and takes it (lib/pathtracer/index.js): the camera put back only
            in the fields given, and whoever keeps it told */
         view: () => ({ camera: structuredClone(R.camera), exposure: { autoExposure: R.values.autoExposure } }),
         applyView: ({ camera, exposure } = {}) => {
@@ -167,13 +167,15 @@ ok('the studio\'s light keeps the settings it does not name', studioEnvironment(
     // THE TREE'S SCENE VERBS, as tree.js's sceneEdit does them: change, current, one undo step, compiled
     const T = { selected: null }
     const tree = {
-        openScene(doc) { const e = P.addScene(B.project, doc, P.indexOf(B.project, B.current) + 1); B.use(e.key); B.commit(); applied() },
+        // committed as tree.js's sceneEdit commits them: a mode entered or left, whose undo follows it (demo.js restore)
+        openScene(doc) { const was = B.current; const e = P.addScene(B.project, doc, P.indexOf(B.project, B.current) + 1); B.use(e.key); B.commit(null, { scenes: 'open', was, follow: true }); applied() },
         closeScene(key, goTo) {
             const p = B.project
             if (p.scenes.length === 1) P.newScene(p, 'New scene')
             const i = P.indexOf(p, key)
             const next = goTo && goTo !== key && P.scene(p, goTo) ? goTo : p.scenes[i > 0 ? i - 1 : i + 1].key
-            P.removeScene(p, key); B.use(next); B.commit(); applied()
+            const was = B.current
+            P.removeScene(p, key); B.use(next); B.commit(null, { scenes: 'close', was, follow: true }); applied()
         },
         enterScene(key) { B.use(key); applied() },
         select(id) { T.selected = id },

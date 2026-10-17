@@ -72,7 +72,7 @@ export const ENVIRONMENT_HELP = {
     uSkyTurbidity: 'Haze in the sky: 0 the clearest; higher scatters more, for a hazier, paler sky. The sun\'s own colour does not change.',
 }
 
-/* THE VIEW'S ROWS' TOOLTIPS (0.63.0): the scene row's camera and exposure folders, the popovers' fields */
+/* THE VIEW'S ROWS' TOOLTIPS (0.65.0): the scene row's camera and exposure folders, the popovers' fields */
 export const CAMERA_HELP = {
     mode: 'orbit: the camera turns about its target (drag to turn, wheel to come closer). fps: it stands where it is and looks about.',
     camtype: 'Perspective, as an eye or a lens sees; or orthographic, parallel: sizes do not shrink with distance, as a drawing.',
@@ -101,7 +101,8 @@ export const EXPOSURE_HELP = {
 export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStructure = () => { }, onApply = () => { }, params = null,
                                                       environment = () => ({}), itemSample = null, view = null } = {}) {
     const M = BUILDER.model
-    let folder = null, shownId = null
+    // the selection's own box, and the boxes of its categories after it (show says why they are apart)
+    let folder = null, boxes = [], shownId = null
 
     /* A BINDING WHOSE CHANGE REACHES US FROM EVERY CONTROL IT HAS. PropertyTable gives a vec3
        a '+' that opens per-component sliders, and those report through binding._onChange --
@@ -189,7 +190,10 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
     function animatedFolder(parent, doc) {
         const paths = M.animatedPaths(doc)
         if (!paths.length) return
-        const af = parent.addFolder({ title: `animated · ${paths.length}` })
+        /* the panel's first box, above the scene's own (its folder is the table's: show), so that what a timeline moves
+           stays at the top of the scene as the user asked; Tweakpane's `index` puts it there */
+        const at = table.children.findIndex(c => c.element === parent.element)
+        const af = parent.addFolder({ title: `animated · ${paths.length}`, ...(at >= 0 ? { index: at } : {}) })
         { const t = af.element?.querySelector?.('.tp-fldv_t'); if (t) t.title = 'The values marked animated (◆), wherever they are in the scene: each stays a live value in the baked scene, so the Timeline can move it without a compile' }
         const redraw = () => { const at = shownId; setTimeout(() => { if (shownId === at) show(at) }) }
         const XYZ = ['x', 'y', 'z', 'w']
@@ -238,16 +242,20 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
     const doc0 = table.container?.ownerDocument ?? globalThis.document
     let pointer = { x: 0, y: 0 }, dragIn = false
     doc0?.addEventListener('mousemove', e => { pointer = { x: e.clientX, y: e.clientY } }, true)
-    doc0?.addEventListener('mousedown', e => { dragIn = !!folder?.element?.contains(e.target) }, true)
+    doc0?.addEventListener('mousedown', e => { dragIn = [folder, ...boxes].some(f => f?.element?.contains(e.target)) }, true)
     doc0?.addEventListener('mouseup', () => { dragIn = false }, true)
     const endDrag = () => {
         if (!dragIn) return
         dragIn = false
         try { doc0.dispatchEvent(new MouseEvent('mouseup', { clientX: pointer.x, clientY: pointer.y, bubbles: true })) } catch { }
     }
-    const clear = () => { endDrag(); try { folder?.dispose() } catch { } folder = null; rechecks.clear(); entries = null; viewFolders.length = 0 }
+    const clear = () => {
+        endDrag()
+        for (const f of [...boxes, folder]) try { f?.dispose() } catch { }
+        folder = null; boxes = []; rechecks.clear(); entries = null; viewFolders.length = 0
+    }
 
-    /* THE VIEW'S FOLDERS FOLLOW THE VIEW (0.63.0): a drag in the picture, the popover, a timeline -- the renderer tells
+    /* THE VIEW'S FOLDERS FOLLOW THE VIEW (0.65.0): a drag in the picture, the popover, a timeline -- the renderer tells
        (view.watch), and an open folder is refreshed once a frame at most; a folded one costs nothing */
     const viewFolders = []
     let following = 0
@@ -295,8 +303,45 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
         z.on('change', ev => pick(std.shape, +ev.value))
     }
 
+    /* ANOTHER SCENE'S CARD (builder/scenestrip.js, 0.63.0): a card over the tree chosen with one click -- selecting it
+       compiles nothing, so what it shows is read from the project, not the renderer: its picture, its name (renamed
+       here, as the open scene is by its label), what is in it, and what can be done with it, by the host's hands
+       (`actions`: open, duplicate, exportScene, remove, rename). */
+    let card = null
+    const showScene = (key, opts = {}) => {
+        clear()
+        shownId = null
+        const s = BUILDER.projectModel.scene(BUILDER.project, key)
+        card = s ? { key, ...opts } : null
+        if (!s) return
+        const { picture = null, info = '', actions = {} } = opts
+        folder = table.addFolder({ title: 'Scene, not open' })
+        const t = folder.element?.querySelector?.('.tp-fldv_t')
+        if (t) t.title = 'A scene of this project, not the one being worked on: choosing it compiled nothing. Open it to work on it.'
+        const L = { label: s.doc.title }
+        const lb = rowTip(folder.addBinding(L, 'label', { label: 'label' }), 'The scene\'s name: its card, and the file it saves as')
+        lb.on('change', ev => { const v = String(ev.value ?? '').trim(); if (v && v !== s.doc.title) actions.rename?.(key, v) })
+        const pic = document.createElement('div')
+        pic.className = 'builder-scene-pic'
+        Object.assign(pic.style, { height: '120px', margin: '4px 6px 6px', borderRadius: '4px', overflow: 'hidden', background: '#0b0d0f',
+            display: 'grid', placeItems: 'center', color: '#5d6b77', font: '11.5px system-ui, sans-serif', textAlign: 'center' })
+        if (picture) {
+            const img = document.createElement('img')
+            Object.assign(img.style, { width: '100%', height: '100%', objectFit: 'cover', display: 'block' })
+            img.src = picture; img.alt = ''
+            pic.appendChild(img)
+        } else pic.textContent = 'no picture yet: it is taken while the scene is shown'
+        lb.element.before(pic)
+        if (info) folder.addBinding({ info }, 'info', { readonly: true, label: '', multiline: true, rows: Math.min(4, info.split('\n').length) })
+        if (actions.open) folder.addButton({ title: '▶ Open it (a compile)' }).on('click', () => actions.open(key))
+        if (actions.duplicate) folder.addButton({ title: 'Duplicate (you stay here)' }).on('click', () => actions.duplicate(key))
+        if (actions.exportScene) folder.addButton({ title: 'Export scene file…' }).on('click', () => actions.exportScene(key))
+        if (actions.remove) folder.addButton({ title: 'Delete (Ctrl+Z brings it back)' }).on('click', () => actions.remove(key))
+    }
+
     const show = id => {
         clear()
+        card = null
         shownId = id ?? null
         if (shownId == null) return
         const doc = BUILDER.doc
@@ -311,6 +356,16 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
             : node.kind === 'group' ? 'Group' : 'Object'
         // the kind, not the id: the id is internal, and the label -- the name -- is the first row
         folder = table.addFolder({ title })
+        /* EVERY CATEGORY A BOX OF ITS OWN, as the Render settings' are (the user, 2026-10-17: "a similar layout as the
+           render settings: collapsible categories are boxed"). The boxes are the table's (`boxes`, its host's: GUISTUFF
+           draws them, in the shell's colours), and a table boxes its top-level folders -- so a folder a helper puts in
+           the selection's (parameters, code, copies, coating, environment, ...) is made the table's instead, after the
+           selection's own box. The helpers are as they were, each handed the selection's folder. What they add to a
+           category is in its box, folders and all (a relief's parameters and its code, set in). Only an order changes:
+           a row a helper adds after a category -- a group's position after its recipe, the scene's unit after its
+           animated values -- is in the selection's box, above every category. The animated values are still the
+           scene's first: their box goes above the scene's own (animatedFolder). */
+        folder.addFolder = params => { const f = table.addFolder(params); boxes.push(f); return f }
         if (node.id === doc.root.id) {
             const t = folder.element?.querySelector?.('.tp-fldv_t')
             if (t) t.title = 'The scene\'s own settings: its name, its unit and how far it reaches, what lights it from outside, and '
@@ -320,7 +375,7 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
         // ---- label: redraws the tree, nothing else
         const L = { label: node.label }
         rowTip(folder.addBinding(L, 'label', { label: 'label' }), node.id === doc.root.id
-            ? 'The scene\'s name: the tree\'s top row, File \u203a Switch to scene, and the file it saves as'
+            ? 'The scene\'s name: the tree\'s top row, its card over the tree, and the file it saves as'
             : 'Its name in the tree. Only a name: nothing refers to it, so it can be anything').on('change', ev => {
             M.rename(doc, node.id, ev.value)
             if (node.id === doc.root.id) doc.title = ev.value
@@ -460,7 +515,7 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
                     () => A.live(BUILDER.doc.root.id, 'envRadius'))
                 const rl = rb.element?.querySelector?.('.tp-lblv_l')
                 if (rl) rl.title = 'Where the scene stops: a ray beyond it sees the sky, and anything placed beyond it is not drawn. In the scene\'s unit.'
-                /* THE SCENE'S SURFACE TOLERANCE (model.js setTolerance, 0.63.0): the Renderer panel's row in um until then,
+                /* THE SCENE'S SURFACE TOLERANCE (model.js setTolerance, 0.65.0): the Renderer panel's row in um until then,
                    one for every scene. Live, as the radius (RT.updateScene), and one undo step a drag. What that row
                    learned holds here: A BOX TO TYPE INTO, NO RANGE (the user, 2026-10-08: "dont make it a slider, just a
                    number I can type in") -- a min alone is a box -- and NO STEP, which Tweakpane takes as a rounding of what
@@ -475,7 +530,7 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
                     + 'scene; the optics trace uses it too.')
                 // ...and what it sees there: the sun and sky, or the studio (a row of the tree of its own until 0.52.0)
                 environmentFolder(folder, doc)
-                // ...and how it is looked at: its camera and its exposure (model.js VIEW, 0.63.0)
+                // ...and how it is looked at: its camera and its exposure (model.js VIEW, 0.65.0)
                 cameraFolder(folder, doc)
                 exposureFolder(folder, doc)
                 /* HIDE WITHOUT RECOMPILING (model.js setLiveVisibility): the eye becomes a uniform
@@ -1606,5 +1661,6 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
         run()
     }
 
-    return { show, shown: () => shownId, refresh: () => show(shownId) }
+    return { show, showScene, shown: () => shownId, card: () => card?.key ?? null,
+             refresh: () => card ? showScene(card.key, card) : show(shownId) }
 }

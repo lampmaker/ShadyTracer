@@ -9,7 +9,7 @@ checks run on cannot start the raytracer.
 
 ## Two ways to take one
 
-- **A render**: File › **Save a picture** in the raytracer, **1280 × 720**, the samples given
+- **A render**: File › **Save picture…** in the raytracer, **1280 × 720**, the samples given
   below, and the file name below. It renders offscreen and downloads a PNG.
 - **A screenshot** of the window or part of it: Win + Shift + S on Windows (Cmd + Shift + 4 on a
   Mac), saved as PNG. A browser window of about 1600 × 900 gives pictures that read well at README
@@ -28,7 +28,7 @@ picture forever.
 | `noise.png` | render, 256 samples | *Noise library* (the slowest scene). |
 | `lux-view.png` | screenshot of the picture | *Optics test: LED, lens, screen*. The view icon **lux on surfaces**; with the measure tool, two pins on the screen and one area over the spot. Include the colour legend. |
 | `builder.png` | screenshot, whole window | *Builder demo*, Design layout. Select the twisted column in the picture so its handles show, and scroll Properties to its code. |
-| `library.png` | screenshot of the Library panel | Grid view, after its pictures have been made. Float the panel larger (Window › Float) if it is cramped. |
+| `library.png` | screenshot of the Library panel | Grid view, after its pictures have been made. Float the panel larger (⧉ on its group's header) if it is cramped. |
 | `optics-rays.png` | screenshot of the picture | *Optics test: LED, lens, screen*. The rays icon on, a few hundred rays, coloured by the light's colour or by the flux left. |
 | `optics-analyse.png` | screenshot, whole window | View › Layout › **Analyse**, after ▶ Run on the optics test (a million rays or more): the map with isolux lines, the polar diagram, intensity against angle and the result cards. |
 | `colour.png` | screenshot | *RGBW mixer* after a Run: the map showing CCT (or Δu′v′), with Tools › **Colour mixing** open beside it. |

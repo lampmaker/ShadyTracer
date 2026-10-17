@@ -90,7 +90,7 @@ throws('and so is broken JSON', () => P.parse('{'), /JSON/)
 
 {
     // a workspace: the project, the current scene, and the renderer's settings, whatever they are -- but what each
-    // scene has of its own (0.63.0): the camera, the exposure and the tolerance are in the scenes (model.js VIEW)
+    // scene has of its own (0.65.0): the camera, the exposure and the tolerance are in the scenes (model.js VIEW)
     const settings = { values: { sunIlluminance: 90000, tint: [1, 0.9, 0.8], exposureEV: 9, eps: 0 }, camera: { mode: 'orbit', azimuth: 12 }, size: { mode: 'fit' } }
     const w = P.parse(P.serializeWorkspace(p, p.scenes[1].key, settings)).workspace
     ok('a workspace round-trips its project', w && P.serialize(w.project) === P.serialize(p))
@@ -104,7 +104,7 @@ throws('and so is broken JSON', () => P.parse('{'), /JSON/)
     const badInside = JSON.parse(P.serializeWorkspace(p, 's1')); badInside.project.scenes[0].doc.nextId = 0
     throws('and so is a workspace whose project is unsound', () => P.parse(JSON.stringify(badInside)), /nextId/)
     ok('...and writes no cameras beside the scenes: each scene\'s is in it', !('cameras' in JSON.parse(P.serializeWorkspace(p, 's1', settings))))
-    /* A WORKSPACE WRITTEN BEFORE 0.63.0: each scene's camera beside the project, one exposure and one tolerance in its
+    /* A WORKSPACE WRITTEN BEFORE 0.65.0: each scene's camera beside the project, one exposure and one tolerance in its
        renderer settings -- read into the scenes (project.js adoptViews) */
     const before = JSON.parse(P.serializeWorkspace(P.createProject([M.createDoc({ title: 'P' }), Object.assign(M.createDoc({ title: 'Q' }), { unit: 'mm' })]), 's2', {}))
     before.cameras = { s1: { mode: 'orbit', distance: 7, aspect: 1.5 }, s999: { distance: 1 }, s2: 3 }
@@ -153,6 +153,68 @@ throws('and so is broken JSON', () => P.parse('{'), /JSON/)
 }
 
 {
+    /* UNDO STAYS PUT (0.63.0; the user, 2026-10-17): a change to the list of scenes -- committed as tree.js's sceneEdit
+       and sendTo commit it, with `scenes` in the step's meta -- is undone and redone on the scene being worked on.
+       Until then each switched to the scene it changed: a compile of seconds for a scene nobody asked to see. */
+    const { installBuilder } = await import('../demo.js')
+    const RT = { settings: () => ({}), applySettings: () => [] }
+    const log = console.log; console.log = () => { }
+    try {
+        const B = installBuilder({}, { RT, project: P.createProject(['A', 'B', 'C'].map(title => M.createDoc({ title }))) })
+        const key = t => B.project.scenes.find(s => s.doc.title === t)?.key
+        const edit = (what, fn) => { const was = B.current; const next = fn(); if (next) B.use(next); B.commit(null, { scenes: what, was }) }
+        B.use(key('B')); B.markShown()
+        const titles = () => B.project.scenes.map(s => s.doc.title).join(' ')
+        edit('delete scene', () => { P.removeScene(B.project, key('C')) })
+        let r = B.undo()
+        ok('another scene deleted and undone: it is back, and the scene worked on stays', titles() === 'A B C' && B.doc.title === 'B', titles())
+        eq('...nothing to compile, nothing pushed: the picture goes on', r, 'live')
+        r = B.redo()
+        ok('...redone: gone again, still here', titles() === 'A B' && B.doc.title === 'B' && r === 'live', `${titles()} ${r}`)
+        B.undo()
+        // copy to another scene (tree.js sendTo): this one is unchanged, that one gets the copy
+        const { primitiveObject } = await import('../primitives.js')
+        const C = P.scene(B.project, key('C')).doc
+        const ball = M.addObject(B.doc, B.doc.root.id, { ...primitiveObject('sphere'), label: 'ball' })
+        B.commit()
+        edit('copy to', () => { M.insertAsset(C, M.extractAsset(B.doc, ball.id), C.root.id) })
+        B.undo()
+        ok('a copy to another scene undone: taken out of it, and no switch to it', B.doc.title === 'B'
+            && !P.scene(B.project, key('C')).doc.root.children.some(n => n.label === 'ball'))
+        B.undo()                                                    // the ball added here
+        edit('rename scene', () => { P.scene(B.project, key('A')).doc.title = 'A2' })
+        B.undo()
+        ok('another scene renamed and undone: still here', B.doc.title === 'B' && titles() === 'A B C', titles())
+        edit('reorder scenes', () => { P.moveScene(B.project, key('C'), 0) })
+        B.undo()
+        ok('scenes reordered and undone: still here', B.doc.title === 'B' && titles() === 'A B C', titles())
+        // the scene worked on deleted: the one before it is shown; its undo brings it back as a card and stays there
+        edit('delete scene', () => { const i = P.indexOf(B.project, key('B')); P.removeScene(B.project, key('B')); return B.project.scenes[i - 1].key })
+        ok('the scene worked on deleted: the one before it worked on', B.doc.title === 'A' && titles() === 'A C')
+        B.undo()
+        ok('...undone: back in the list, and the undo stays on the one before', B.doc.title === 'A' && titles() === 'A B C', `${B.doc.title} ${titles()}`)
+        // a new scene made and worked on: undoing it takes away the scene worked on, so back where the step began
+        B.use(key('C'))
+        edit('new scene', () => P.newScene(B.project, 'D', P.indexOf(B.project, key('C')) + 1).key)
+        ok('a new scene is worked on', B.doc.title === 'D')
+        B.undo()
+        ok('...undone: gone, and back to the scene it was made from', B.doc.title === 'C' && titles() === 'A B C', `${B.doc.title} ${titles()}`)
+        B.redo()
+        ok('...redone: made again, and still on that one (it stays put)', B.doc.title === 'C' && titles() === 'A B C D', `${B.doc.title} ${titles()}`)
+        // a file loaded: its scene worked on; undone, back where the load began
+        B.load(M.serialize(M.createDoc({ title: 'Lamp' })))
+        B.undo()
+        ok('a load undone: its scene gone, back on the scene it was loaded from', B.doc.title === 'C' && !titles().includes('Lamp'), `${B.doc.title} ${titles()}`)
+        // AN EDIT INSIDE A SCENE keeps the rule it had: its undo shows the scene it changed
+        B.use(key('A'))
+        M.addObject(B.doc, B.doc.root.id, { ...primitiveObject('sphere'), label: 'pip' }); B.commit()
+        B.use(key('B'))
+        B.undo()
+        ok('an edit inside another scene undone: shown, as before', B.doc.title === 'A')
+    } finally { console.log = log }
+}
+
+{
     /* WHAT OPEN DOES WITH EACH KIND OF FILE -- demo.js load, driven here with a stand-in renderer,
        since this is page code that otherwise only ever runs in a browser. */
     const { installBuilder } = await import('../demo.js')
@@ -181,7 +243,7 @@ throws('and so is broken JSON', () => P.parse('{'), /JSON/)
     } finally { console.warn = warn; console.log = log }
 }
 
-/* A STAND-IN RENDERER WITH A VIEW (0.63.0, lib/pathtracer/index.js view, applyView, watchView): it puts a camera back
+/* A STAND-IN RENDERER WITH A VIEW (0.65.0, lib/pathtracer/index.js view, applyView, watchView): it puts a camera back
    ONLY IN THE FIELDS IT IS GIVEN, as the real one does (applyCamera) -- the stand-in these tests had replaced the whole
    camera, so a camera put back without its field of view, which kept the last scene's, could not fail them. A drag
    (move) tells its watchers, as the camera's onChange does. */
@@ -261,7 +323,35 @@ const standIn = (cam0, exposure0 = { exposureEV: 15, autoExposure: 1 }) => {
     } finally { globalThis.document = realDoc; URL.createObjectURL = realURL; console.log = log }
 }
 {
-    /* A SCENE WITH NO CAMERA OF ITS OWN (a scene file written before 0.63.0): seen from the camera there is, SAID IN ITS
+    /* A SCENE DELETED AND BROUGHT BACK BY UNDO keeps its view (a card's "Delete (Ctrl+Z brings it back)"): the history's
+       text holds no view, so the project restored from it takes each scene's from the one before (carryViews) -- and a
+       scene the step had taken out from the builder's memory of it, by key, as the cameras kept beside the documents
+       until this branch were kept until a restore pruned them */
+    const { installBuilder } = await import('../demo.js')
+    const R = standIn({ mode: 'orbit', distance: 5, azimuth: 30 })
+    const log = console.log; console.log = () => { }
+    try {
+        const kept = M.setView(M.createDoc({ title: 'kept' }), { camera: { mode: 'orbit', distance: 42, azimuth: -10 }, exposure: { exposureEV: 7 } })
+        const B = installBuilder({}, { RT: R.RT, project: P.createProject([M.createDoc({ title: 'A' }), kept]) })
+        const [a, k] = B.project.scenes.map(s => s.key)
+        // a scene never shown, deleted from its card: a change to the list of scenes, which stays on A
+        P.removeScene(B.project, k); B.commit(null, { scenes: 'delete', was: a })
+        ok('deleted', !P.scene(B.project, k))
+        B.undo()
+        eq('undone: it is back, with its camera and its exposure', [B.cameraOf(k)?.distance, P.scene(B.project, k)?.doc.view?.exposure?.exposureEV], [42, 7])
+        eq('...and A still the one worked on (undo stays put)', B.current, a)
+        B.use(k); B.markShown()
+        eq('shown, it is seen from its own camera', R.cam.distance, 42)
+        // shown and moved, then deleted and brought back: the camera it was left with
+        R.move({ distance: 43 })
+        B.use(a); B.markShown()
+        P.removeScene(B.project, k); B.commit(null, { scenes: 'delete', was: a })
+        B.undo()
+        eq('one moved before it was deleted comes back as it was left', B.cameraOf(k)?.distance, 43)
+    } finally { console.log = log }
+}
+{
+    /* A SCENE WITH NO CAMERA OF ITS OWN (a scene file written before 0.65.0): seen from the camera there is, SAID IN ITS
        UNIT -- 330 mm from a mm scene is 0.33 m in a metre scene, not 330 m */
     const { installBuilder } = await import('../demo.js')
     const R = standIn({ mode: 'orbit', target: [0, -20, 25], distance: 330, dimensions: 330, azimuth: 30 })
@@ -277,7 +367,7 @@ const standIn = (cam0, exposure0 = { exposureEV: 15, autoExposure: 1 }) => {
 }
 {
     /* A NEW SCENE IS SEEN FROM CLOSE BY (the user, 2026-10-02): its document comes with the close view (project.js
-       blankScene, 0.63.0) -- an empty scene loaded keeps the view, as above */
+       blankScene, 0.65.0) -- an empty scene loaded keeps the view, as above */
     const { installBuilder } = await import('../demo.js')
     const R = standIn({ mode: 'orbit', distance: 150, azimuth: 30 })
     const log = console.log; console.log = () => { }
@@ -344,7 +434,7 @@ ${m}`, module: { getCompilationInfo: async () => ({ messages: [] }) }, ready: Pr
         hold = false; release()
         await compiling
         got.replayed = RT.scene.envRadius
-        /* ...AND ITS SURFACE TOLERANCE (0.63.0, model.js setTolerance): the same road, and an undo is the same shader */
+        /* ...AND ITS SURFACE TOLERANCE (0.65.0, model.js setTolerance): the same road, and an undo is the same shader */
         got.tolCompiled = RT.scene.tolerance
         M.setTolerance(B.doc, 0.002)
         got.tolTook = B.live(root, 'tolerance')

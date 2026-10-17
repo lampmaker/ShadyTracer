@@ -466,8 +466,8 @@ ok('the unit changed to cm', await set('unit', 'cm') === 'set')
 await p.waitForTimeout(50)
 ok('...and the radius row says so by itself (the panel redrawn), the number kept: the scene reinterpreted, as its shapes',
     (await readRows()).includes('environment radius (cm)') && await p.evaluate(() => CHECK.doc.envRadius) === 2.5, JSON.stringify(await readRows()))
-/* THE SCENE'S SURFACE TOLERANCE (0.63.0, model.js setTolerance): after the radius, in its unit, 0 the automatic one; live,
-   one undo step. What the Renderer panel's row held there (lib/pathtracer/test/renderer.check.mjs until 0.63.0): a box and
+/* THE SCENE'S SURFACE TOLERANCE (0.65.0, model.js setTolerance): after the radius, in its unit, 0 the automatic one; live,
+   one undo step. What the Renderer panel's row held there (lib/pathtracer/test/renderer.check.mjs until 0.65.0): a box and
    not a slider, nothing rounded that is typed -- 0.000001 once became 0 -- and a value above 100 kept */
 {
     const TOL = 'surface tolerance (cm, 0 = auto)'
@@ -676,6 +676,22 @@ ok('...and a conic typed to four places kept on its slider (its step\'s rounding
     const listed = fr.find(r => /top › radius/.test(r.label ?? ''))
     ok('the scene\'s row lists it, ◆ before it', listed?.flag === '◆' && fr.findIndex(r => r === listed) < fr.findIndex(r => /^unit/.test(r.label ?? '')),
        JSON.stringify(fr.map(r => r.label)))
+    /* IN BOXES (0.64.0): the animated values' box first, above the scene's own -- its name, unit, radius, instant hide --
+       then a box a category; every one the table's, and drawn again the same */
+    const sceneBoxes = () => p.evaluate(() => [...document.querySelectorAll('#t2 .tp-rotv_c > .tp-fldv')].map(f => [
+        f.querySelector(':scope > .tp-fldv_b .tp-fldv_t').textContent.trim(), f.classList.contains('pt-box'),
+        [...f.querySelectorAll(':scope > .tp-fldv_c > .tp-lblv .tp-lblv_l')].map(l => l.textContent.trim().replace(/^[◇◆]/, ''))]))
+    let SB = await sceneBoxes()
+    ok('...in boxes: the animated values\' first, then the scene\'s own with its rows, then environment and functions',
+       JSON.stringify(SB.map(b => b[0].replace(/\s+◆$/, ''))) === '["animated · 1","Scene","environment","functions"]' && SB.every(b => b[1])
+       && ['label', 'unit', 'instant hide / show'].every(l => SB[1][2].includes(l)) && SB[1][2].some(l => l.startsWith('environment radius')), JSON.stringify(SB))
+    await p.evaluate(() => CHECK.flagPanel.show(CHECK.doc.root.id))
+    ok('...drawn again: the same boxes, none left over', JSON.stringify(await sceneBoxes()) === JSON.stringify(SB), JSON.stringify(await sceneBoxes()))
+    await p.evaluate(() => CHECK.flagPanel.show('g'))
+    SB = await sceneBoxes()
+    ok('...a group: its own box first, its position in it, its recipe and its code each a box after', SB[0]?.[0] === 'Group'
+       && SB[0][2].some(l => l.startsWith('position')) && SB.slice(1).some(b => b[0] === 'recipe') && SB.at(-1)?.[0].startsWith('group code'), JSON.stringify(SB))
+    await p.evaluate(() => CHECK.flagPanel.show(CHECK.doc.root.id))
     const live0 = (await state()).live.length
     const typed = await p.evaluate(() => {
         const row = [...document.querySelectorAll('#t2 .tp-lblv')].find(r => /top › radius/.test(r.querySelector('.tp-lblv_l')?.textContent ?? ''))
@@ -750,7 +766,7 @@ ok('...reaches the document, live (its dust), with its undo step and no compile'
 const visText = await p.evaluate(() => [...document.querySelectorAll('textarea')].map(t => t.value).find(v => v.startsWith('visibility')) ?? '')
 ok('...and the visibility beside it follows: 3.912 x 4 m, 15.6 m', /^visibility 15\.6 m/.test(visText), visText)
 
-/* THE SCENE'S VIEW (0.63.0, model.js VIEW): the third panel, given a view as the page gives it. Its scene row has a camera
+/* THE SCENE'S VIEW (0.65.0, model.js VIEW): the third panel, given a view as the page gives it. Its scene row has a camera
    and an exposure folder, folded until opened and remembered so; their rows are the popovers' and write the renderer's
    camera and exposure (which the scene keeps: demo.js keepView); an open folder follows a move made elsewhere; a value
    the registry has gets ◇, and flagging it puts the view's path on the root; a scene not shown yet says so */

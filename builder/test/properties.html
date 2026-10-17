@@ -29,7 +29,7 @@ const BUILDER = {
     commit: k => { T.commits.push(k) }, syncSources: () => { },
     check: async () => { T.checked++; return { ok: !T.messages.length, messages: T.messages.slice() } },
 }
-const table = new PropertyTable({ container: document.getElementById('p') })
+const table = new PropertyTable({ container: document.getElementById('p'), boxes: true })        // in boxes, as the page's
 const panel = installBuilderPanel(table, BUILDER, { onStructure: () => { T.structure++ },
     itemSample: { choices: SAMPLE_CHOICES, sizes: SAMPLE_SIZES, of: sampleOf, set: setSample } })
 window.CHECK = { T, M, get doc() { return doc }, panel, sampleOf,

@@ -237,7 +237,7 @@ const throws = f => { try { f(); return false } catch (e) { return e instanceof 
     ok('a compile-time value is never `animated` (its flag went with the marking)', !PR.get('scene/ball/radius').animated)
 }
 
-/* THE VIEW'S VALUES FLAGGED (0.63.0): the camera's and the exposure's entries are the renderer's (settingsParams, the
+/* THE VIEW'S VALUES FLAGGED (0.65.0): the camera's and the exposure's entries are the renderer's (settingsParams, the
    paths a saved track names), marked animated where the scene flags them (params.js viewEntriesFlagged, as the page
    provides them) -- so while a scene value is flagged too, the + track still offers them, and the bake keeps nothing
    for them: no uniform of the scene's carries them */

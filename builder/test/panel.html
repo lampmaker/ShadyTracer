@@ -15,7 +15,7 @@
      flag, and the scene row lists the flagged values. Apart from the first, so its icons are in no label the checks
      above read. -->
 <div id="t2" class="shell-panel"></div>
-<!-- a third WITH A VIEW (0.63.0): the scene row's camera and exposure folders, over a real camera (lib/camera.js) and the
+<!-- a third WITH A VIEW (0.65.0): the scene row's camera and exposure folders, over a real camera (lib/camera.js) and the
      exposure's own state, handed in as the page hands them (index.html: RT.cameraBindings, RT.view, RT.applyView,
      RT.watchView), and the renderer's entries in its registry, as the page provides them -->
 <div id="t3" class="shell-panel"></div>
@@ -57,11 +57,11 @@ const BUILDER = {
     commit(k) { T.commits.push(k) },
     check: async () => ({ messages: [] }),
 }
-const table = new PropertyTable({ container: document.getElementById('t') })
+const table = new PropertyTable({ container: document.getElementById('t'), boxes: true })        // in boxes, as the page's
 const panel = installBuilderPanel(table, BUILDER, { onLabel: () => T.labels++, onStructure: () => T.structure++ })
 const P = makeParams()
 P.provide('scene', () => sceneParams(doc, { live: (id, k) => BUILDER.live(id, k), commit: k => BUILDER.commit(k) }))
-const flagPanel = installBuilderPanel(new PropertyTable({ container: document.getElementById('t2') }), BUILDER,
+const flagPanel = installBuilderPanel(new PropertyTable({ container: document.getElementById('t2'), boxes: true }), BUILDER,
     { onLabel: () => T.labels++, onStructure: () => T.structure++, params: P })
 const watchers = new Set(), tell = () => watchers.forEach(f => f())
 const cam = CAMERA({ aspect: 1.5, fov: 40, up: [0, 0, 1], onChange: tell })

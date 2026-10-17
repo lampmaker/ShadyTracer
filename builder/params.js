@@ -213,7 +213,7 @@ export function sceneParams(doc, hooks = {}) {
 }
 
 /**
- * THE VIEW'S ENTRIES AS THE SCENE FLAGS THEM (0.63.0): the renderer's camera and exposure entries (lib/pathtracer/
+ * THE VIEW'S ENTRIES AS THE SCENE FLAGS THEM (0.65.0): the renderer's camera and exposure entries (lib/pathtracer/
  * params.js view/camera, view/exposure) marked `animated` where the scene being edited flags them (model.js
  * setAnimated, kept on its root at the renderer's own paths). Unmarked, they left the timeline's + track and the
  * Parameters panel whenever any scene value was flagged (lib/shell/params.js onlyAnimated). The others as they are.

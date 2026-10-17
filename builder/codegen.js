@@ -1921,7 +1921,7 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
         /* ...and where it stops, in that unit (model.js envRadius): the renderer reads it off the scene it
            has, like the unit. null is the renderer's 400 m, as every scene before 0.9.0 had. */
         envRadius: tree.envRadius ?? null,
-        /* ...and its surface tolerance, in that unit (model.js setTolerance, 0.63.0): the renderer takes it as the one it
+        /* ...and its surface tolerance, in that unit (model.js setTolerance, 0.65.0): the renderer takes it as the one it
            traces with (photometry.js sceneEps). null is the automatic one, as every scene before it had. */
         tolerance: tree.tolerance ?? null,
         /* ...and its haze box (hazebox.js hazeOf: in the world, in that unit; the renderer's core/haze.js), only when it

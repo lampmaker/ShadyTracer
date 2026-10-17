@@ -1437,7 +1437,7 @@ throws('another version is refused, not guessed at',
 }
 
 //----------------------------------------------------------------------------------------------
-// THE VIEW (0.63.0): the scene's camera and exposure, whole when read; its surface tolerance;
+// THE VIEW (0.65.0): the scene's camera and exposure, whole when read; its surface tolerance;
 // its environment whole when shown
 //----------------------------------------------------------------------------------------------
 {
@@ -1446,7 +1446,7 @@ throws('another version is refused, not guessed at',
     ok('a scene with no view has no camera: the builder shows it from the camera there is', v0.camera === null)
     eq('...and the whole exposure, at the schema\'s defaults', v0.exposure,
         Object.fromEntries(Object.entries(M.VIEW_EXPOSURE).map(([k, sp]) => [k, sp.def])))
-    // an example's camera as it was (scenes/examples.js before 0.63.0): no field of view, no projection, no lens
+    // an example's camera as it was (scenes/examples.js before 0.65.0): no field of view, no projection, no lens
     M.setView(d, { camera: { mode: 'orbit', target: [0, -20, 25], azimuth: -60, elevation: 65, distance: 330, dimensions: 330 } })
     const c = M.sceneViewOf(d).camera
     eq('a camera that leaves settings out has the defaults for them, never the last scene\'s',

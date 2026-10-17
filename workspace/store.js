@@ -12,7 +12,7 @@
 //   project  the scenes, as project.serialize writes them -- written only when an edit changed them
 //   session  { current, renderer, views, item } -- written when the camera or a setting moves, which while
 //            orbiting is all the time, without serializing every scene again: `views` every scene's view as it is
-//            now, which the scenes' text has as of their last write (`cameras` until 0.63.0, read still)
+//            now, which the scenes' text has as of their last write (`cameras` until 0.65.0, read still)
 // Read back, the two are put together as one workspace text and project.parse reads it as it reads a file,
 // so what was kept is held to exactly a workspace file's rules, and upgraded as a file's scenes are. `item`
 // is the library item editor's memory (library/edit.js remember): what leaving an item open at the reload
@@ -97,7 +97,7 @@ const summary = project => {
 /* THE WORKSPACE TEXT, from the two parts: the session's fields as JSON, the project's text spliced in as it
    was written -- one megabyte of scenes is not parsed and written again to be read */
 export const workspaceText = (projectText, session = {}) => {
-    /* `views`: every scene's view as the session kept it, newer than the project's documents (0.63.0); `cameras`: a
+    /* `views`: every scene's view as the session kept it, newer than the project's documents (0.65.0); `cameras`: a
        session kept before. Both go into the scenes as the workspace is read (builder/project.js workspaceOf). */
     const { current = null, renderer = {}, cameras = {}, views = {} } = session ?? {}
     const head = JSON.stringify({ format: P.WORKSPACE_FORMAT, version: P.WORKSPACE_VERSION, current, renderer, cameras, views })

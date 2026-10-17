@@ -66,10 +66,10 @@ measured on lavapipe (2026-10-07), 0 of 2304 rays differ, plainly, as data and w
 
     marchTol(p) = max(setting, 1 nm, 128 × 2⁻²³ × max(|p.x|, |p.y|, |p.z|))
 
-- **The setting is the scene's** (since 0.63.0): its Properties' *surface tolerance*, in the scene's unit, saved with
+- **The setting is the scene's** (since 0.65.0): its Properties' *surface tolerance*, in the scene's unit, saved with
   the scene (`builder/model.js setTolerance`), which the engine takes in metres as `UB.epsAuto` (`photometry.js
   sceneEps`). At 0 it is **automatic**: 1e-4 of the scene's estimated size, between 10 nm and 1 mm (`photometry.js
-  autoEps`). Until 0.63.0 it was Render settings › Ray marching, in µm, one setting for every scene: a value typed for
+  autoEps`). Until 0.65.0 it was Render settings › Ray marching, in µm, one setting for every scene: a value typed for
   one was the one every scene shown after it was traced with. The renderer's `UB.eps` stays, no control and not
   saved: an override a bench row or the library's studio sets, which wins while above 0. The optics trace's own
   (Analysis › Advanced) is another: its 0 follows the scene's.

@@ -119,7 +119,7 @@ S.layout.setDefault(() => {
     S.dock.getPanel('optics')?.group?.api?.setSize?.({ width: 330 })
 })
 S.layout.restore()
-const tableIn = e => { const t = new PropertyTable({ container: e }); Object.assign(t.element.style, { fontSize: '13px', width: '100%' }); return t }
+const tableIn = (e, opts = {}) => { const t = new PropertyTable({ container: e, ...opts }); Object.assign(t.element.style, { fontSize: '13px', width: '100%' }); return t }
 /* A VIEW AND ITS TOOLBAR (lib/pathtracer/viewtools.js), for the rays: their switch and settings are the RAYS group of
    its analysis drawer (2026-10-02). A corner of the page of its own, over the shell: the layout is the charts'. */
 const viewEl = document.createElement('div')

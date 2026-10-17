@@ -14,7 +14,7 @@ choices:
 Every setting has a tooltip. The scene's **environment radius** sits next to them: how far the scene reaches. Anything
 beyond it is not drawn, and a ray that passes it sees the sky. Keep it larger than everything in the scene.
 
-**Render settings › Lamps only** turns the environment off without changing it, to see what the scene's own lights do.
+**Sun, sky or studio**, unticked in Render settings › Light sources (*lamps only*), turns the environment off without changing it, to see what the scene's own lights do.
 
 ## Light objects
 

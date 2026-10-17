@@ -77,8 +77,9 @@ The letters are the children in order, as the tree labels them.
   scene's Properties to make hiding instant, at a small cost to every picture.
 - **The lock** holds what it says: the position, the parameters, or both. A locked object loses those handles.
 - **Ctrl C, Ctrl V, Ctrl D** copy, paste and duplicate in the tree, through the system clipboard, so also between
-  tabs. Right-click a row to copy or move it to another scene of the project.
-- **Ctrl Z / Ctrl Shift Z** undo and redo across the whole project.
+  tabs. Right-click a row to copy or move it to another scene of the project, or drop it on that scene's card over
+  the tree (hold Shift to move it).
+- **Ctrl Z / Ctrl Shift Z** undo and redo across the whole project (↶ ↷ on the menu bar, after the menus).
 
 ## When the picture waits
 
