@@ -20,7 +20,7 @@ Add the file, then a line in `index.js` with its title, which must be the page's
 | write | does |
 |---|---|
 | `[text](other.md)`, `[text](../track/other.md#heading)` | another page (works on GitHub too) |
-| `[text](example:first-steps.json)` | opens that example from File › Examples |
+| `[text](example:first-steps.json)` | opens that example, as the Project panel's examples do |
 | `[text](cmd:analysis.setup)` | runs a command, as its menu entry does |
 | `[text](show:properties)`, `[text](show:menu:Analysis)` | opens a panel and outlines it, or outlines a menu |
 

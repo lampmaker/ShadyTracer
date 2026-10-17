@@ -121,6 +121,68 @@ throws('and so is broken JSON', () => P.parse('{'), /JSON/)
 }
 
 {
+    /* UNDO STAYS PUT (0.63.0; the user, 2026-10-17): a change to the list of scenes -- committed as tree.js's sceneEdit
+       and sendTo commit it, with `scenes` in the step's meta -- is undone and redone on the scene being worked on.
+       Until then each switched to the scene it changed: a compile of seconds for a scene nobody asked to see. */
+    const { installBuilder } = await import('../demo.js')
+    const RT = { settings: () => ({}), applySettings: () => [] }
+    const log = console.log; console.log = () => { }
+    try {
+        const B = installBuilder({}, { RT, project: P.createProject(['A', 'B', 'C'].map(title => M.createDoc({ title }))) })
+        const key = t => B.project.scenes.find(s => s.doc.title === t)?.key
+        const edit = (what, fn) => { const was = B.current; const next = fn(); if (next) B.use(next); B.commit(null, { scenes: what, was }) }
+        B.use(key('B')); B.markShown()
+        const titles = () => B.project.scenes.map(s => s.doc.title).join(' ')
+        edit('delete scene', () => { P.removeScene(B.project, key('C')) })
+        let r = B.undo()
+        ok('another scene deleted and undone: it is back, and the scene worked on stays', titles() === 'A B C' && B.doc.title === 'B', titles())
+        eq('...nothing to compile, nothing pushed: the picture goes on', r, 'live')
+        r = B.redo()
+        ok('...redone: gone again, still here', titles() === 'A B' && B.doc.title === 'B' && r === 'live', `${titles()} ${r}`)
+        B.undo()
+        // copy to another scene (tree.js sendTo): this one is unchanged, that one gets the copy
+        const { primitiveObject } = await import('../primitives.js')
+        const C = P.scene(B.project, key('C')).doc
+        const ball = M.addObject(B.doc, B.doc.root.id, { ...primitiveObject('sphere'), label: 'ball' })
+        B.commit()
+        edit('copy to', () => { M.insertAsset(C, M.extractAsset(B.doc, ball.id), C.root.id) })
+        B.undo()
+        ok('a copy to another scene undone: taken out of it, and no switch to it', B.doc.title === 'B'
+            && !P.scene(B.project, key('C')).doc.root.children.some(n => n.label === 'ball'))
+        B.undo()                                                    // the ball added here
+        edit('rename scene', () => { P.scene(B.project, key('A')).doc.title = 'A2' })
+        B.undo()
+        ok('another scene renamed and undone: still here', B.doc.title === 'B' && titles() === 'A B C', titles())
+        edit('reorder scenes', () => { P.moveScene(B.project, key('C'), 0) })
+        B.undo()
+        ok('scenes reordered and undone: still here', B.doc.title === 'B' && titles() === 'A B C', titles())
+        // the scene worked on deleted: the one before it is shown; its undo brings it back as a card and stays there
+        edit('delete scene', () => { const i = P.indexOf(B.project, key('B')); P.removeScene(B.project, key('B')); return B.project.scenes[i - 1].key })
+        ok('the scene worked on deleted: the one before it worked on', B.doc.title === 'A' && titles() === 'A C')
+        B.undo()
+        ok('...undone: back in the list, and the undo stays on the one before', B.doc.title === 'A' && titles() === 'A B C', `${B.doc.title} ${titles()}`)
+        // a new scene made and worked on: undoing it takes away the scene worked on, so back where the step began
+        B.use(key('C'))
+        edit('new scene', () => P.newScene(B.project, 'D', P.indexOf(B.project, key('C')) + 1).key)
+        ok('a new scene is worked on', B.doc.title === 'D')
+        B.undo()
+        ok('...undone: gone, and back to the scene it was made from', B.doc.title === 'C' && titles() === 'A B C', `${B.doc.title} ${titles()}`)
+        B.redo()
+        ok('...redone: made again, and still on that one (it stays put)', B.doc.title === 'C' && titles() === 'A B C D', `${B.doc.title} ${titles()}`)
+        // a file loaded: its scene worked on; undone, back where the load began
+        B.load(M.serialize(M.createDoc({ title: 'Lamp' })))
+        B.undo()
+        ok('a load undone: its scene gone, back on the scene it was loaded from', B.doc.title === 'C' && !titles().includes('Lamp'), `${B.doc.title} ${titles()}`)
+        // AN EDIT INSIDE A SCENE keeps the rule it had: its undo shows the scene it changed
+        B.use(key('A'))
+        M.addObject(B.doc, B.doc.root.id, { ...primitiveObject('sphere'), label: 'pip' }); B.commit()
+        B.use(key('B'))
+        B.undo()
+        ok('an edit inside another scene undone: shown, as before', B.doc.title === 'A')
+    } finally { console.log = log }
+}
+
+{
     /* WHAT OPEN DOES WITH EACH KIND OF FILE -- demo.js load, driven here with a stand-in renderer,
        since this is page code that otherwise only ever runs in a browser. */
     const { installBuilder } = await import('../demo.js')

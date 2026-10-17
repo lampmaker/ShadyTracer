@@ -175,7 +175,7 @@ ok('the bundled scenes have parameters at all', total > 50, `${total}`)
 // THE PANEL'S NUMBER FIELDS (lib/guistuff PropertyTable, vendored): a min alone is a field unbounded above.
 // `!options.min` read a min of 0 as no range given and capped the field at max(its value when drawn, 100):
 // a light's flux could not be raised past what it was (the user, 2026-09-28). Fixed in GUISTUFF itself.
-// A RANGE GIVEN, WIDENED TO HOLD ITS VALUE (GUISTUFF 15be4e1, pinned since 0.63.0; 0.59.1's general fix): a range is
+// A RANGE GIVEN, WIDENED TO HOLD ITS VALUE (GUISTUFF 15be4e1, pinned since 0.64.0; 0.59.1's general fix): a range is
 // the slider's reach, and a 60 mm screen on a width range that stops at 10 was written 10 at its first drag. Only a
 // bound given moves, and on a copy -- a caller's options object, shared by every row of a kind, is left as it was.
 {

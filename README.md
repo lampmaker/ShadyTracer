@@ -87,9 +87,9 @@ clone made without it).
   one of its two submodules.
 
 **First steps in the raytracer.** A first visit starts on the *First steps* example; after that, on your own
-project, as you left it -- it is kept in the browser as it changes. The scene's name over the
-**Scene** tree opens the list of your scenes, and File › **Examples** the bundled scenes; choose one to
-switch to it. Select an object in the picture and drag its handles;
+project, as you left it -- it is kept in the browser as it changes. Over the **Scene** tree a card
+for each scene of the project: ▶ or a double-click opens one. The project's name there opens the
+**Project** panel: your projects, and the examples to add a copy of. Select an object in the picture and drag its handles;
 change its material in **Properties**; switch the view to **lux on surfaces** with the icons over
 the picture; press **Ctrl K** and type what you are looking for.
 
@@ -203,13 +203,16 @@ the picture; press **Ctrl K** and type what you are looking for.
 ![The builder: the scene tree, an object's properties with its code, and the move handles in the picture](docs/screenshots/builder.png)
 
 - **Projects of several scenes**, each with its environment, its objects in groups, and its
-  materials. The tree shows the scene being worked on, its row the root: a click on it shows its
-  settings, and its + adds to it. The project menu over the tree (the project's name) switches,
-  adds, renames, duplicates, orders and deletes scenes, opens a copy of an example, and imports and
-  exports scenes and projects as files. Right-click a node to copy or move it to another scene.
-- **Projects kept in the browser**, saved as they change: a reload comes back to the same scene,
-  camera and settings. **File › Projects…** lists them (open, new, rename, duplicate, download,
-  import, delete). A second tab on a project works on its own copy.
+  materials. Over the tree, one line for the project and a card per scene, with its last picture
+  and how long it took to open: a click shows it in Properties, ▶ or a double-click opens it (a
+  compile), its ⋯ duplicates, exports or deletes it, a drag reorders, and a tree row dropped on it
+  is copied there (Shift: moved). The tree shows the scene being worked on, its row the root.
+  Undoing a change to the list of scenes stays on the scene being worked on.
+- **Projects kept in the browser**, saved as they change -- there is no Save: a reload comes back to
+  the same scene, camera and settings. The **Project** panel (the project's name, or File ›
+  Projects…) lists them (open, new, rename, duplicate, download, delete), this project's scenes and
+  the examples. **File** is five rows: New project, Projects…, Import from file…, Export ▸ (a scene,
+  the project, a 3D print), Save picture…. A second tab on a project works on its own copy.
 - **Twenty-four shapes in three groups**, each an editable piece of code from the start:
   - *Primitives:* sphere, box, cylinder, capsule, torus, cone, round cone, **pyramid** (a rectangular
     base and top: an apex or a frustum), **prism** (its number of sides a live slider), octahedron,
@@ -356,7 +359,7 @@ number carries its standard error**.
 
 ### Bundled scenes
 
-**File › Examples**, by who they are for and what they show; each opens as a copy in your project, with a camera of its own. They are made in code by `scenes/make.mjs`, which says why each size is what it is; the scenes that were the examples before 0.54.0 are test fixtures now (`test/fixtures/scenes/`).
+**The Project panel's examples**, by who they are for and what they show; each opens as a copy in your project, with a camera of its own. They are made in code by `scenes/make.mjs`, which says why each size is what it is; the scenes that were the examples before 0.54.0 are test fixtures now (`test/fixtures/scenes/`).
 
 **Modelling and rendering**
 

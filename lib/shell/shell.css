@@ -32,6 +32,9 @@
 /* the menu bar */
 .shell-menubar { display: flex; align-items: center; height: 28px; padding: 0 6px; background: var(--sh-raised); border-bottom: 1px solid var(--sh-line); flex: none; }
 .shell-menus { display: flex; }
+/* the host's buttons right after the menus (S.tools): a hairline before them, nothing when there are none */
+.shell-tools { display: flex; align-items: center; gap: 1px; }
+.shell-tools:not(:empty) { margin-left: 6px; padding-left: 6px; border-left: 1px solid var(--sh-line); }
 .shell-menu { font: inherit; color: var(--sh-ink); background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 2px 10px; cursor: default; }
 .shell-menu:hover, .shell-menu.on { background: var(--sh-accent-bg); color: #fff; }
 .shell-title { font-size: 11px; letter-spacing: 0.08em; color: var(--sh-faint); text-transform: uppercase; padding-right: 6px; }
@@ -98,7 +101,7 @@
                   pane's data -- whose results' box, not a table's, reads these too, .shell-ana below). The
                   title is the ink colour, the library's default (--tp-input-foreground-color); the size, the
                   corner and the gap are its defaults too, 12.5px, 7px, 8px. One place for the look: these were
-                  literals in two copies of the same rules here until 0.63.0. */
+                  literals in two copies of the same rules here until 0.64.0. */
                --pt-box-border-color: #36404a;
                --pt-box-background-color: #1a1e22; }
 /* THE WORKBENCH MOCKUP'S TYPE, which the user found lighter than Tweakpane's: the system face at 13px,
@@ -137,6 +140,11 @@
    `baked` lit so a switch is seen at a glance */
 .shell-status-right { flex: none; color: var(--sh-muted); cursor: default; }
 .shell-status-right .baked { color: #ffcc33; }
+/* the raytracer's "saved" note beside its build line (index.html paintSaved, 0.63.0): File has no Save, the bar says the
+   work is kept -- or, in amber, that it is not */
+.shell-status-group { display: inline-flex; gap: 14px; }
+.shell-saved { color: #7fbf9a; }
+.shell-saved.bad { color: var(--sh-warn); }
 .shell-job { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; white-space: nowrap; }
 .shell-job-bar { position: relative; width: 90px; height: 6px; border-radius: 3px; background: rgba(0, 0, 0, 0.35); overflow: hidden; }
 .shell-job-bar > i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: #6cb6ff; transition: width 0.2s; }
@@ -255,7 +263,7 @@
    the render settings: collapsible categories are boxed ... a feature/option of used library so a style change gets
    applied consistently"): the property table's own, `boxes: true`, in the colours above. A folder inside a box -- a
    developer's groups in Light sources -- keeps the small muted capitals, set in a little, so it reads as part of
-   its box. These were rules here over Tweakpane's classes, `.shell-boxes`, until 0.63.0. */
+   its box. These were rules here over Tweakpane's classes, `.shell-boxes`, until 0.64.0. */
 
 /* A LIBRARY PANEL (library/panel.js): a search bar, chips to filter, items by category */
 .shell-lib { display: flex; flex-direction: column; height: 100%; min-height: 0; font: 13px var(--sh-sans); }
@@ -335,10 +343,36 @@
 /* a muted heading inside a dropdown (lib/shell/menu.js { header: true }; the project menu's Scenes and Project) */
 .shell-item-head { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--sh-muted) !important; padding-top: 6px; }
 .shell-item-head:hover { background: transparent !important; }
-/* THE ROW OVER THE TREE (builder/projectrow.js): the project's name, a ▶ when needed, Undo and
-   Redo at its end (builder/toolbar.js) */
-.shell-sw { display: flex; align-items: center; gap: 8px; padding: 4px 6px 4px 8px; min-width: 0; flex: none; }
-.shell-sw-title { display: flex; align-items: center; gap: 6px; min-width: 0; font: 600 13px var(--sh-sans); color: var(--sh-ink); padding: 3px 0; }
+/* THE PROJECT AND ITS SCENES OVER THE TREE (builder/scenestrip.js, 0.63.0): one line -- fold, the project's name (the
+   Project panel), how many scenes, + -- and a card per scene under it */
+.shell-scenes { flex: none; display: flex; flex-direction: column; border-bottom: 1px solid var(--sh-line); background: #14181b; }
+.shell-scenes-line { display: flex; align-items: center; gap: 4px; padding: 4px 6px 4px 4px; min-width: 0; min-height: 32px; }
+.shell-scenes-fold { font-size: 11px; width: 18px; }
+.shell-scenes-project { display: flex; align-items: center; gap: 6px; min-width: 0; font: 600 13px var(--sh-sans); color: var(--sh-ink);
+    background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 2px 6px; cursor: pointer; }
+.shell-scenes-project:hover { border-color: rgba(160, 175, 190, 0.35); }
+.shell-scenes-grid { display: inline-grid; grid-template-columns: 5px 5px; gap: 2px; flex: none; }
+.shell-scenes-grid i { width: 5px; height: 5px; background: var(--sh-muted); border-radius: 1px; }
+.shell-scenes-count { color: var(--sh-faint); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.shell-scenes-cards { display: flex; flex-direction: column; gap: 2px; padding: 0 4px 6px; max-height: 214px; overflow: auto; }
+.shell-scenes-cards[hidden] { display: none; }
+.shell-scene-card { display: flex; align-items: center; gap: 7px; padding: 3px 4px; border-radius: 4px; border: 1px solid transparent; cursor: default; min-width: 0; }
+.shell-scene-card:hover { background: rgba(120, 150, 175, 0.10); }
+.shell-scene-card.here { border-color: #3b5268; background: #1c2731; box-shadow: inset 3px 0 0 var(--sh-accent); }
+.shell-scene-card.sel { background: var(--sh-accent-bg); }
+.shell-scene-card.off { opacity: 0.45; }
+.shell-scene-card.drop { box-shadow: inset 0 0 0 1px #199e70; background: rgba(25, 158, 112, 0.15); }
+.shell-scene-card.dropline { box-shadow: inset 0 2px 0 #199e70; }
+.shell-scene-pic { width: 52px; height: 33px; flex: none; border-radius: 3px; overflow: hidden; background: #0b0d0f; display: grid; place-items: center; color: var(--sh-faint); }
+.shell-scene-pic img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.shell-scene-tx { min-width: 0; flex: 1; }
+.shell-scene-title { font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.shell-scene-meta { font-size: 11px; color: var(--sh-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.shell-scene-acts { display: flex; align-items: center; gap: 1px; flex: none; opacity: 0; }
+.shell-scene-card:hover .shell-scene-acts, .shell-scene-card.sel .shell-scene-acts, .shell-scene-card.here .shell-scene-acts { opacity: 1; }
+.shell-scene-go { color: #7fd1ae !important; }
+.shell-scene-more { font: 15px/1 var(--sh-sans); }
+/* the project's name and the note beside it (the line above; the row over the tree was these until 0.63.0) */
 .shell-sw-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .shell-sw-note { flex: none; white-space: nowrap; font-weight: 400; font-size: 11px; color: var(--sh-faint); }
 .shell-sw-act { display: grid; place-items: center; width: 22px; height: 22px; padding: 0; color: var(--sh-muted); background: transparent;
@@ -374,6 +408,56 @@
 .shell-proj-empty { padding: 18px 16px; color: var(--sh-faint); }
 .shell-proj-foot { display: flex; align-items: center; gap: 10px; padding: 8px 16px; border-top: 1px solid var(--sh-line); font-size: 11.5px; color: var(--sh-faint); }
 .shell-proj-foot span { flex: 1; }
+/* ONE QUESTION OVER THE PAGE (workspace/ask.js): Import from file…'s, of a project file */
+.shell-ask .shell-proj-box { width: min(520px, 94vw); }
+.shell-ask-body { padding: 10px 16px 4px; font-size: 12.5px; color: #c5ced6; }
+.shell-ask-choices { display: flex; flex-direction: column; gap: 6px; padding: 8px 16px 12px; }
+.shell-ask-choice { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; font: 13px var(--sh-sans); color: var(--sh-ink);
+    background: transparent; border: 1px solid var(--sh-line); border-radius: 6px; padding: 7px 11px; cursor: pointer; }
+.shell-ask-choice:hover, .shell-ask-choice:focus-visible { background: var(--sh-accent-bg); border-color: var(--sh-accent); outline: none; }
+.shell-ask-note { font-size: 11.5px; color: var(--sh-muted); }
+/* THE PROJECT PANEL (workspace/projectview.js, 0.63.0): the projects at its side, this project's scenes, the examples */
+.shell-pv { display: flex; height: 100%; min-height: 0; background: #121619; font: 13px var(--sh-sans); color: var(--sh-ink); }
+.shell-pv-side { flex: 0 0 250px; display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--sh-line); background: var(--sh-panel); }
+.shell-pv-side .shell-proj-list { flex: 1; padding: 0 4px; }
+.shell-pv-side .shell-proj-row { padding: 6px 6px 6px 10px; border-bottom: 0; border-radius: 5px; cursor: pointer; position: relative; }
+.shell-pv-side .shell-proj-row.here { box-shadow: inset 3px 0 0 var(--sh-accent); }
+.shell-pv-side .shell-proj-name { font-size: 12.5px; }
+.shell-pv-more { opacity: 0; }
+.shell-proj-row:hover .shell-pv-more, .shell-pv-card:hover .shell-pv-more { opacity: 1; }
+.shell-pv-foot { display: flex; flex-direction: column; align-items: stretch; gap: 4px; padding: 8px; border-top: 1px solid var(--sh-line); }
+.shell-pv-where { font-size: 10.5px; color: var(--sh-faint); padding: 2px 2px 0; display: flex; flex-direction: column; gap: 4px; }
+.shell-pv-main { flex: 1; min-width: 0; overflow: auto; padding: 12px 18px 28px; }
+.shell-pv-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.shell-pv-name { font: 600 18px var(--sh-sans); color: #fff; background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 2px 6px; min-width: 0; width: 280px; }
+.shell-pv-name:hover, .shell-pv-name:focus { border-color: var(--sh-line); outline: none; }
+.shell-pv-meta { font-size: 12px; color: var(--sh-muted); }
+.shell-pv-h { font-size: 11px; color: var(--sh-muted); text-transform: uppercase; letter-spacing: 0.06em; margin: 16px 0 8px; }
+.shell-pv-side > .shell-pv-h { margin: 12px 12px 6px; }
+.shell-pv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+.shell-pv-card { position: relative; display: flex; flex-direction: column; background: var(--sh-panel); border: 1px solid var(--sh-line); border-radius: 7px; overflow: hidden; cursor: pointer; }
+.shell-pv-card:hover { border-color: #4b6178; }
+.shell-pv-card.here { border-color: #3b6f9c; box-shadow: 0 0 0 1px #3b6f9c; }
+.shell-pv-card.off { opacity: 0.45; cursor: default; }
+.shell-pv-card.dropline { box-shadow: -3px 0 0 #199e70; }
+.shell-pv-card.add { border-style: dashed; display: grid; place-items: center; align-content: center; gap: 4px; min-height: 170px; color: var(--sh-muted); }
+.shell-pv-addl { font-size: 13px; }
+.shell-pv-pic { position: relative; aspect-ratio: 16 / 10; background: #0b0d0f; display: grid; place-items: center; }
+.shell-pv-pic img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.shell-pv-nopic { font-size: 11px; color: var(--sh-faint); text-align: center; padding: 10px; }
+.shell-pv-badge { position: absolute; left: 6px; top: 6px; font-size: 10px; color: #9fc6ea; border: 1px solid #3b6f9c; border-radius: 7px; padding: 0 5px; background: rgba(18, 21, 24, 0.8); }
+.shell-pv-card > .shell-pv-more { position: absolute; right: 5px; top: 5px; font: 15px/1 var(--sh-sans); color: var(--sh-muted); background: rgba(22, 25, 28, 0.85);
+    border: 0; border-radius: 4px; padding: 2px 7px; cursor: pointer; }
+.shell-pv-cardb { padding: 6px 9px 8px; }
+.shell-pv-title { font-weight: 600; font-size: 12.5px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.shell-pv-cmeta { font-size: 11px; color: var(--sh-muted); display: block; }
+.shell-pv-cmeta.faint { color: var(--sh-faint); }
+.shell-pv-aud { font-size: 13px; color: #fff; margin: 12px 0 4px; }
+.shell-pv-grp { font-size: 11px; color: var(--sh-faint); margin: 8px 0 4px; }
+.shell-pv-exgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
+.shell-pv-ex { text-align: left; font: inherit; color: inherit; background: var(--sh-panel); border: 1px solid var(--sh-line); border-radius: 6px; padding: 7px 10px; cursor: pointer; }
+.shell-pv-ex:hover { border-color: #4b6178; }
+@media (max-width: 760px) { .shell-pv { flex-direction: column; } .shell-pv-side { flex: none; max-height: 40%; border-right: 0; border-bottom: 1px solid var(--sh-line); } }
 /* a submenu's row (lib/shell/menu.js { items }, the project menu's Examples): its ▸ in the shortcut's place */
 .shell-item-sub kbd { font-family: var(--sh-sans); }
 /* a button beside the project's name: the ▶ */

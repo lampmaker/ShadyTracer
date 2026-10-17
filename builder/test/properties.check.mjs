@@ -6,7 +6,7 @@
 // listing the errors reported against the relief; none takes it away. A library item's scene row: its category,
 // tags and help, each an undo step. The scene's functions editor lists its own errors -- it stopped at
 // "checking..." for good, because it compared the row shown with the holder's id ('functions'). The panel in boxes
-// (0.63.0): a material's own box first, a box a category after it, its relief last; the code editors' folds. A material item's sample: the studio's four
+// (0.64.0): a material's own box first, a box a category after it, its relief last; the code editors' folds. A material item's sample: the studio's four
 // shapes offered at two sizes, one chosen swapped in wearing the material, "its own" once changed by hand. A
 // modifier's "material follows the warp", on a group with code only.
 //
@@ -81,7 +81,7 @@ ok('its code editor lists the errors reported at the relief\'s own lines', /erro
 const folders = () => p.evaluate(() => [...document.querySelectorAll('#p .tp-fldv')].map(f => ({
     title: f.querySelector(':scope > .tp-fldv_b .tp-fldv_t')?.textContent.trim(), open: f.classList.contains('tp-fldv-expanded'),
     top: f.parentElement.closest('.tp-fldv')?.querySelector(':scope > .tp-fldv_b .tp-fldv_t')?.textContent.trim() })))
-// THE BOXES (0.63.0): the material's own first, then a box a category -- the table's top-level folders, in order
+// THE BOXES (0.64.0): the material's own first, then a box a category -- the table's top-level folders, in order
 const boxes = () => p.evaluate(() => [...document.querySelectorAll('#p .tp-rotv_c > .tp-fldv')].map(f => ({
     title: f.querySelector(':scope > .tp-fldv_b .tp-fldv_t')?.textContent.trim(), box: f.classList.contains('pt-box'),
     rows: [...f.querySelectorAll(':scope > .tp-fldv_c > .tp-lblv .tp-lblv_l')].map(l => l.textContent.trim()) })))

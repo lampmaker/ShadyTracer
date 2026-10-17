@@ -656,7 +656,7 @@ ok('...and a conic typed to four places kept on its slider (its step\'s rounding
     const listed = fr.find(r => /top › radius/.test(r.label ?? ''))
     ok('the scene\'s row lists it, ◆ before it', listed?.flag === '◆' && fr.findIndex(r => r === listed) < fr.findIndex(r => /^unit/.test(r.label ?? '')),
        JSON.stringify(fr.map(r => r.label)))
-    /* IN BOXES (0.63.0): the animated values' box first, above the scene's own -- its name, unit, radius, instant hide --
+    /* IN BOXES (0.64.0): the animated values' box first, above the scene's own -- its name, unit, radius, instant hide --
        then a box a category; every one the table's, and drawn again the same */
     const sceneBoxes = () => p.evaluate(() => [...document.querySelectorAll('#t2 .tp-rotv_c > .tp-fldv')].map(f => [
         f.querySelector(':scope > .tp-fldv_b .tp-fldv_t').textContent.trim(), f.classList.contains('pt-box'),

@@ -155,13 +155,15 @@ ok('the studio\'s light keeps the settings it does not name', studioEnvironment(
     // THE TREE'S SCENE VERBS, as tree.js's sceneEdit does them: change, current, one undo step, compiled
     const T = { selected: null }
     const tree = {
-        openScene(doc) { const e = P.addScene(B.project, doc, P.indexOf(B.project, B.current) + 1); B.use(e.key); B.commit(); applied() },
+        // committed as tree.js's sceneEdit commits them: a mode entered or left, whose undo follows it (demo.js restore)
+        openScene(doc) { const was = B.current; const e = P.addScene(B.project, doc, P.indexOf(B.project, B.current) + 1); B.use(e.key); B.commit(null, { scenes: 'open', was, follow: true }); applied() },
         closeScene(key, goTo) {
             const p = B.project
             if (p.scenes.length === 1) P.newScene(p, 'New scene')
             const i = P.indexOf(p, key)
             const next = goTo && goTo !== key && P.scene(p, goTo) ? goTo : p.scenes[i > 0 ? i - 1 : i + 1].key
-            P.removeScene(p, key); B.use(next); B.commit(); applied()
+            const was = B.current
+            P.removeScene(p, key); B.use(next); B.commit(null, { scenes: 'close', was, follow: true }); applied()
         },
         enterScene(key) { B.use(key); applied() },
         select(id) { T.selected = id },

@@ -18,6 +18,8 @@ S.command({ id: 'file.save', menu: 'File', group: 'save', label: 'Save', keys: '
 S.command({ id: 'file.recent', menu: 'File', label: 'Recent', items: () => [{ label: 'a.json', run }] })   // a submenu row ▸
 S.layout.setDefault(() => { S.open('view'); S.open('tree', { referencePanel: 'view', direction: 'left' }, { width: 300 }) })
 S.standardCommands()          // View: one entry per panel, Reset; Window: float, pop out, maximise, close
+S.standardCommands({ window: false, layouts: false })   // ...or with those and "Layout: X" in the palette only (menu-less)
+S.tools.appendChild(button)   // the host's own buttons on the menu bar, right after the menus (the raytracer's Undo / Redo)
 S.layout.preset('Analyse', () => { ... }, 'what it is for')   // in the menu bar's switcher and View
 S.layout.onApply(() => S.open('view'))                        // what every layout must still have
 S.layout.restore()            // the user's last arrangement, or the default
@@ -62,6 +64,8 @@ S.searchIn(paramsSearch(P, { reveal, say: S.status }))   // Ctrl K finds setting
 - **View is the list of panels.** `standardCommands()` gives each one a `view.<id>` entry unless it has one
   already -- so an owner that opens a panel its own way (floating, in a set place) registers `view.<id>` itself
   first -- or the panel was registered with **`menu: false`** (one another menu opens).
+- **A menu with nothing in it has no button.** A host that keeps every row out of a menu (`window: false`)
+  gets no empty Window on its bar, whatever its `menus:` list says.
 - **A submenu row** is a command with `items: () => [{ label, run, off, title }]`, asked for each time it
   opens and drawn beside it (menu.js `flyout`). It is never a palette answer: it is not one verb.
 - **`renderer: 'always'`** keeps a panel's element in the page while another tab covers it (a canvas

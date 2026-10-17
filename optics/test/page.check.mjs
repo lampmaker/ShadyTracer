@@ -192,7 +192,7 @@ ok('...and its saves and ⧉ at the end: the map\'s CSVs and picture', ['Save th
    .every(t => st.bars.map.tools.some(x => x.startsWith(t))) && st.bars.polar.tools.some(x => x.startsWith('Save the intensity table')), JSON.stringify(st.bars.map.tools))
 ok('the Analysis pane has no chart\'s settings, nor a Chart section', !['shows', 'C planes', 'isolines', 'about', 'view'].some(l => st.labels.includes(l))
    && !st.heads.some(h => /^Chart/.test(h)), JSON.stringify([st.labels, st.heads]))
-// THE SECTIONS' BOXES (0.63.0): the data's two the property table's (`boxes`), with their icons; the results' box the
+// THE SECTIONS' BOXES (0.64.0): the data's two the property table's (`boxes`), with their icons; the results' box the
 // pane's own, in the same colours; what folds away below them not boxed
 const boxes = await p.evaluate(() => {
     const data = [...document.querySelectorAll('.ana-data .tp-rotv_c > .tp-fldv')]

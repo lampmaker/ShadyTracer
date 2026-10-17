@@ -393,18 +393,20 @@ export function installBuilderTree(container, BUILDER, { onStatus = () => { }, o
     }
 
     /* SCENES. Removing the current one moves to the one before; duplicating one moves to the copy,
-       which is what a copy is made for. Both are one undo step, like any other edit. */
+       which is what a copy is made for -- unless asked not to (a scene card's Duplicate of another scene).
+       Each is one undo step, like any other edit, committed as a change to the list of scenes: its undo stays on
+       the scene being worked on (demo.js restore; the user, 2026-10-17: "undo stays put"). */
     // a library item's scene is a scene too: pasting into it, copying out of it, dropping on it
     const isScene = row => row?.type === 'scene' || row?.type === 'sceneItem'
     // the scene being worked on: its row, the one at the root (the back row above an item is not it)
     const sceneRow = () => tree.options.data.find(isScene)
     const P = BUILDER.projectModel
-    const sceneEdit = (what, fn) => {
+    const sceneEdit = (what, fn, { follow = false } = {}) => {
         const was = BUILDER.current
         try {
             const next = fn()
             if (next && next !== BUILDER.current) BUILDER.use(next)
-            BUILDER.commit?.()
+            BUILDER.commit?.(null, { scenes: what, was, ...(follow ? { follow } : {}) })
             if (BUILDER.current !== was) selectedId = here(BUILDER.doc.root.id)
             rebuild()
             onSelect(selectedMid())
@@ -421,7 +423,9 @@ export function installBuilderTree(container, BUILDER, { onStatus = () => { }, o
        each, the selection kept honest, compiled. Closing one that is the last scene first adds an empty
        one -- the project always has one to show -- and goes to the scene it came from if that is still
        there, else the one before it. */
-    const openScene = doc => sceneEdit(`open ${doc.title}`, () => P.addScene(BUILDER.project, doc, P.indexOf(BUILDER.project, BUILDER.current) + 1).key)
+    /* ...and, a mode entered or left rather than a list changed, its undo follows it (`follow`): undoing a close opens
+       the item again, as it was */
+    const openScene = doc => sceneEdit(`open ${doc.title}`, () => P.addScene(BUILDER.project, doc, P.indexOf(BUILDER.project, BUILDER.current) + 1).key, { follow: true })
     const closeScene = (key, goTo = null) => sceneEdit('close', () => {
         const p = BUILDER.project
         if (p.scenes.length === 1) P.newScene(p, 'New scene')
@@ -429,15 +433,19 @@ export function installBuilderTree(container, BUILDER, { onStatus = () => { }, o
         const next = goTo && goTo !== key && P.scene(p, goTo) ? goTo : p.scenes[i > 0 ? i - 1 : i + 1].key
         P.removeScene(p, key)
         return next
-    })
+    }, { follow: true })
     const enterScene = key => { if (enter(key)) { selectedId = here(BUILDER.doc.root.id); rebuild(); onSelect(selectedMid()); apply() } }
-    /* THE SCENES' OPERATIONS (File's, filemenu.js), each through sceneEdit: one undo step, and a compile when the
-       scene being worked on changes. A rename touches no shader; it is the scene row's label, as Properties
-       renames it. */
+    /* THE SCENES' OPERATIONS (the scene cards', builder/scenestrip.js, and the Project panel's), each through
+       sceneEdit: one undo step, and a compile when the scene being worked on changes. A rename touches no shader;
+       it is the scene row's label, as Properties renames it. */
     const sceneOps = {
         enter: enterScene,
         add: newScene,
-        duplicate: key => sceneEdit('duplicate scene', () => P.duplicateScene(BUILDER.project, key).key),
+        // { go: false }: the copy is made beside its original and the scene being worked on stays (a card's ⋯)
+        duplicate: (key, { go = true } = {}) => sceneEdit('duplicate scene', () => {
+            const c = P.duplicateScene(BUILDER.project, key)
+            return go ? c.key : null
+        }),
         /* no confirmation, as for any delete: it is one undo step. The current one gone, the one before it
            is shown (for a copy, its original); the last scene is refused, by the project */
         remove: key => sceneEdit('delete scene', () => {
@@ -470,7 +478,14 @@ export function installBuilderTree(container, BUILDER, { onStatus = () => { }, o
     /* A DROP IS READ BACK, NOT TRUSTED. By the time onNodeDrop fires the widget has already
        moved a clone of the row in its own data; where it put it -- which parent, which index
        -- is the whole of what the drop means, and the model is told exactly that. */
+    /* A ROW BEING DRAGGED, for a drop outside the tree (a scene card, builder/scenestrip.js: copied into that scene,
+       moved with Shift). TreeView tells its start and end and carries only the row's index path in the drag's data,
+       so the row is kept here and asked for (draggedRow). Only a row Copy to would take; cleared at the end, and by
+       the taker (its drop runs before a dragend, which a rebuild may leave without its source). */
+    let dragging = null
     const onDrop = (from, to, action, draggedRow) => {
+        if (action === 'dragstart') { dragging = copyable(draggedRow) && draggedRow.scene === BUILDER.current ? draggedRow : null; return }
+        if (action === 'dragend') { dragging = null; return }
         if (action === 'drop_failed') return onStatus('cannot drop there')
         if (action !== 'drop' || !draggedRow?.id) return
         const place = placeOf(tree.options.data, draggedRow.id)
@@ -575,8 +590,9 @@ export function installBuilderTree(container, BUILDER, { onStatus = () => { }, o
     /* COPY TO, MOVE TO ANOTHER SCENE without seeing it (UI_PLAN.md section 10): what the drag between scenes did
        when every scene was in the tree. Into that scene's top level -- or its materials, for a material -- as an
        asset, so with fresh ids and the materials it uses. That scene is not shown, so nothing compiles for it; a
-       move takes the node out of this one, which does compile. ONE undo step, both scenes together; an undo shows
-       the scene it changed, as every undo does (demo.js restore). A material still worn here cannot move. */
+       move takes the node out of this one, which does compile. ONE undo step, both scenes together, committed as a
+       change to the list of scenes: its undo takes the copy back out of that scene and stays on this one (demo.js
+       restore; until 0.63.0 it switched to that scene, a compile). A material still worn here cannot move. */
     const sendTo = (id, key, { move = false } = {}) => {
         const p = BUILDER.project, to = P.scene(p, key), from = P.scene(p, BUILDER.current)
         if (!to || key === BUILDER.current) return null
@@ -587,7 +603,7 @@ export function installBuilderTree(container, BUILDER, { onStatus = () => { }, o
             const asset = M.extractAsset(from.doc, id)
             if (move) isMat ? M.removeMaterial(from.doc, id) : M.remove(from.doc, id)
             const n = M.insertAsset(to.doc, asset, isMat ? null : to.doc.root.id)
-            BUILDER.commit?.()
+            BUILDER.commit?.(null, { scenes: move ? 'move to' : 'copy to', was: BUILDER.current })
             const name = asset.kind === 'material' ? asset.material.label : asset.node.label
             onStatus(`${move ? 'moved' : 'copied'} ${name} to ${to.doc.title}`)
             if (move && selectedMid() === id) selectedId = null
@@ -822,5 +838,8 @@ export function installBuilderTree(container, BUILDER, { onStatus = () => { }, o
             dropAsset(it.asset, { row: el ? rowAt(tree.options.data, el.dataset.path) : null })
         })
     }
-    return { apply, rebuild, newScene, select, insertAsset, selectedAsset, dropAsset, acceptLibrary, openScene, closeScene, enterScene, sceneOps, sendTo }
+    /** The tree row being dragged, if Copy to would take it: { mid, scene, label } -- and done(), for the taker's drop. */
+    const draggedRow = () => dragging && { mid: dragging.mid, scene: dragging.scene, label: dragging.label }
+    draggedRow.done = () => { dragging = null }
+    return { apply, rebuild, newScene, select, insertAsset, selectedAsset, dropAsset, acceptLibrary, openScene, closeScene, enterScene, sceneOps, sendTo, draggedRow }
 }

@@ -32,7 +32,7 @@ you stop.
 
 - **Light sources**: the environment, and the two kinds of light tracing. Light tracing carries light from the
   lights to the camera, through glass and off mirrors. It finds caustics and lamps hidden behind lenses, which
-  the camera's own paths almost never do. **Render settings › Lights' rays** switches the light objects' part of it.
+  the camera's own paths almost never do. **Lights' rays** (Render settings › Light sources) switches the light objects' part of it.
 - **Paths and noise**: how many bounces a path may take, and the **firefly clamp**, which caps single very bright
   samples (0 = off). A clamp makes the picture less noisy and a little darker than it should be.
 - **Render size**: fit the view, or a fixed width and height; and a **resolution** of 100 % down to 25 %, which keeps the picture's size on screen, softer, with a quarter of the pixels to trace at 50 %.
@@ -45,7 +45,7 @@ Each row has a tooltip.
 A **haze box** (the **+** menu, *Haze box*) fills the air inside it with dust. Light that crosses it is partly
 scattered and partly absorbed, as in a dusty room, fog or a stage's haze. Beams from lamps and lenses show in it, and
 so do the sun's shafts and a lamp's glow. Whatever is seen through it, or lit through it, is dimmer. The example
-*Beam in dusty air* (File › Examples) shows an LED's beam through a lens.
+*Beam in dusty air* (an example: the Project panel) shows an LED's beam through a lens.
 
 - **Only the air inside scatters.** Glass, water and solids inside the box stay clear, so a lens in a dusty box
   still looks like glass.
@@ -91,7 +91,7 @@ goes straight back to the editable build.
 
 ## Saving a picture
 
-**File › Save a picture (PNG)…** renders offscreen at its own size, up to 16 384 pixels on a side, with its own
+**File › Save picture…** renders offscreen at its own size, up to 16 384 pixels on a side, with its own
 number of samples. You can stop it early. The render is kept as light, so you can choose its exposure, tone curve
 and grading on a preview afterwards, and save it as often as you like.
 

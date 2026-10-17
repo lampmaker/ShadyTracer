@@ -15,7 +15,7 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
-## 0.63.0 — 2026-10-17
+## 0.64.0 — 2026-10-17
 
 **The Properties panel in boxes, like Render settings, and the boxes are the property table's own now** (you:
 "a similar layout as the render settings: collapsible categories are boxed ... a feature/option of used library so
@@ -61,8 +61,117 @@ page's seven boxes, before against after):**
 - Properties, for an object, a group, a material, a light and the scene: one box for the selection, then a box for each
   category, in the Render settings' colours.
 - A material's colour picker, opened: whole, not cut off.
+- Another scene's card chosen over the tree (0.63.0's "Scene, not open"): its Properties are one box.
 - Render settings and the Analysis pane: unchanged.
 - In a popped-out Properties or Render settings window: still boxed.
+
+## 0.63.0 — 2026-10-17
+
+**C′, built: the project and its scenes over the tree, a Project panel, and a File menu of five rows.** You chose mockup
+H's C′ (0.62.5) and said "go, undo stays put, project view is a dockable panel of its own. if it isnt open, open it in the
+same pane as the viewport". UI_PLAN.md section 11.
+
+**Over the tree**, one line holds the project's name and its scene count, with ▾ to fold the cards and ＋ for a new scene
+(empty, a copy, an example). Under it is a card per scene, with its last picture and how long it took to open.
+- A **click** on another card shows that scene in Properties: its picture, what is in it, its name to rename, and Open,
+  Duplicate, Export and Delete. Nothing is compiled.
+- **▶** or a **double-click** opens the scene.
+- **⋯** or a right-click: Open, Duplicate, Export scene file…, Delete. Duplicating another scene puts the copy beside it
+  and leaves you where you are.
+- **Drag cards** to reorder them.
+- **Drop a tree row on a card** to copy it into that scene; hold **Shift** to move it.
+- The ▶ "not compiled" sits on the open scene's card, not over the tree.
+- Undo and Redo are no longer here: they are on the menu bar.
+
+**Undo stays put.** Undoing a change to the list of scenes keeps you on the scene you are working on, with nothing to
+compile: a scene deleted, duplicated, renamed, reordered, a copy sent to another scene, a file's scenes added. Until now
+each of these switched you to the scene it changed. Two exceptions: undoing a new scene takes you back where it was made
+from, and a library item's open and close still follow their undo.
+
+**The Project panel** replaces the Projects list over the page and File › Examples. It opens as a tab beside the picture
+from the project's name or File › Projects….
+- Your projects: open, new, rename, duplicate, download, delete (it asks first).
+- This project's scenes, large.
+- The examples, by who they are for.
+- Choosing a scene, an example or a project brings the picture back.
+
+**The menus: five, 29 rows (67 before).**
+- **File** has five rows: New project · Projects… | Import from file… (Ctrl O) · Export ▸ (Scene file… / Project file… /
+  3D print…) | Save picture….
+  - There is no Save: the project is saved as it changes, and the status bar now says "✓ saved".
+  - Ctrl S still writes at once, and saves a library item while one is open.
+  - Import from file… asks of a project file whether to open it as a project of its own or add its scenes to this one.
+- **No Render settings or Window menu.** Their commands are still in Ctrl K: type "render" or "window".
+- **View** lost Help and the "Layout: X" rows.
+- **Analysis** has one New chart ▸ row instead of six.
+
+**What to look at on the card:**
+- The cards' **pictures**. Each is taken from the picture on screen, about a second after it settles (32 samples, nothing
+  moving), never by rendering again. Watch whether the view hitches or restarts when one is taken: it should not, but
+  its cost was not measured.
+- Open another scene from its card.
+- File › Projects…, which should open as a tab beside the picture.
+- ↶ ↷ on the menu bar, after Help.
+- Delete another scene from its ⋯, then Ctrl Z: it comes back, and you stay where you are, with no compile.
+- Drag a tree row onto another scene's card.
+
+## 0.62.5 — 2026-10-17
+
+**A mockup, H: the scenes of a project, and the menus with fewer rows; then C′, your choice, refined.** You asked for a fresh look at File, which
+gives no overview of a project's scenes, and at the Render settings menu, which repeats the view's buttons and the pane.
+
+**What is wrong today (read in code):**
+- File has 19 rows, and a project's scenes appear only there, as names, under Switch to scene ▸.
+- File mixes projects, scenes, the library item, three kinds of file and a picture.
+- Two of its rows say Ctrl S.
+- "Project" names two file formats.
+- Every Render settings row can also be set in the pane or on the view. The Quality presets and Fast while moving
+  are in three places each.
+- Window repeats the buttons on each panel group's header.
+- In all, seven menus have 67 rows.
+
+**The mockup, `ui-mockups/h-scenes.html`** (also linked from the mockups' index):
+- It shows today and four proposals on one made-up project.
+- All four share one floor:
+  - File shrinks to 6 rows: New project, Open, Projects and scenes, Save, Save picture, and Export ▸ for a scene file,
+    a project file or a 3D print.
+  - The Render settings and Window menus are gone. Their commands stay in Ctrl K.
+  - In all, 30 menu rows.
+  - A Project view replaces the Projects dialog and File › Examples. It shows the projects, this project's scenes as
+    cards with pictures, and the examples.
+- The four proposals differ in what you see of the other scenes while working:
+  - **A:** the Project view only.
+  - **B:** a quick list off the scene's row.
+  - **C:** a strip of scene cards over the tree.
+  - **D:** the whole project in the tree, each other scene a dimmed line.
+- The reasoning and the questions for you are in section 11 of `roadmap/UI_PLAN.md`.
+
+**Nothing in the application changed.**
+
+**Your choice, C, refined: C′, the tab the mockup now opens on.** You chose C, the strip of scene cards. The changes
+you asked for:
+- **One line.** The project's name and the Scenes header share one line over the cards: ▾ folds them, the name opens
+  the Project view, and ＋ adds a scene.
+- **Undo and Redo leave the Scene panel.** They stay in Edit and on Ctrl Z / Ctrl Y, and ↶ ↷ now sit on the menu
+  bar after the menus. The undo history covers the whole project, not one scene.
+- **Save picture** stays where it was.
+
+Your questions about Save and Open, answered from the code:
+- **Save did nothing the autosave does not do within a second.** The row is gone. Ctrl S still works: it confirms
+  the project is saved, or saves a library item while one is open. The status bar now says "saved in this browser".
+- **Open never opened a project kept in the browser.** It only read a file from disk, so it is now
+  **Import from file…**. A file with several scenes asks whether to open it as a project of its own or add its
+  scenes to this one.
+
+File now has 5 rows, and all the menus together have 29 rows instead of 67.
+
+**What to look at** in C′:
+- the Scene panel's first line: fold the cards, click the project's name, and use ＋;
+- a card's ⋯ › Delete, then ↶ on the menu bar;
+- File › Import from file… with the project file;
+- the scenario buttons "editing a library item" (then Ctrl S), "storage refused" and "▶ not compiled".
+
+The Menus tab now compares today with C′. A to D are still in the mockup, as they were.
 
 ## 0.62.4 — 2026-10-16
 
