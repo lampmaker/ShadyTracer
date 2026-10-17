@@ -2,7 +2,7 @@
 
 **Analysis › Analysis setup** ([open it](cmd:analysis.setup)) shows or hides the **Analysis pane**: it starts a
 run, says what the charts are made from, and holds the results. The charts are panels of their own (**Analysis ›
-New chart**, **Open chart ▸**), and **Layout: Analyse** shows them all beside the pane.
+New chart ▸**, **Open chart ▸**), and the **Analyse** layout (its button on the menu bar) shows them all beside the pane.
 
 ## Running
 

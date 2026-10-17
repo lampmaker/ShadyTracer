@@ -92,12 +92,19 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
        may have changed, and never misses a change made through any of the places that edit */
     let revision = 0
 
-    /* A RESTORED PROJECT, and what the renderer needs to follow it. The scene the step changed
-       becomes current -- undoing an edit made in another scene shows that scene, rather than
-       changing something off screen. If that is the scene already showing and it generates the
-       same shader text, only values differ -- undoing a slider drag or a transform -- so every
-       uniform is pushed and nothing compiles. Otherwise the caller has to apply. Returns 'live'
-       or 'structural'. */
+    /* A RESTORED PROJECT, and what the renderer needs to follow it. AN EDIT INSIDE A SCENE: the scene the step
+       changed becomes current -- undoing an edit made in another scene shows that scene, rather than changing
+       something off screen. A CHANGE TO THE LIST OF SCENES (a step committed with `scenes` in its meta: added,
+       duplicated, deleted, reordered, renamed, copied or moved to, loaded) STAYS ON THE SCENE BEING WORKED ON
+       (the user, 2026-10-17: "undo stays put") -- a deleted scene comes back as a card, a copy is taken back out of
+       the scene it went to, and nothing compiles; until 0.63.0 each of those switched to the scene it changed, a
+       compile of 4-23 s for a scene the user had not asked to see. Only where the step took the scene being worked
+       on away (undoing a + Scene) does it go back where the step began. A library item opened or closed is a mode
+       entered or left, not a list changed (`follow`): its undo goes back with it.
+       If the scene ends up the one already showing and it generates the same shader text, only values differ --
+       undoing a slider drag or a transform -- so every uniform is pushed and nothing compiles; and when a list
+       change left it untouched, not even that (a push restarts the picture). Otherwise the caller has to apply.
+       Returns 'live' or 'structural'. */
     /* WHAT A SCENE SAYS ABOUT ITSELF THAT IS NOT TEXT and the engine takes live (RT.updateScene) */
     /* ...its haze box too (hazebox.js; core/haze.js): its values; whether there is one is text, which the engine refuses
        to change here (an undo that adds or takes one away compiles: its comment is in the shader) */
@@ -156,22 +163,32 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
         const back = cams.get(current) ?? (P.takeFresh(doc()) ? P.NEW_SCENE_CAMERA : null)
         if (back) RT.applySettings?.({ camera: structuredClone(back) })
     }
-    const restore = text => {
+    const restore = (text, step = null, dir = 'undo') => {
         if (text == null) return null
         const before = new Map(project.scenes.map(s => [s.key, M.serialize(s.doc)]))
-        const at = P.indexOf(project, current)
+        const at = P.indexOf(project, current), was = current
         project = P.parse(text).project
         revision++
         prune()
-        /* the scene being worked on, if the step changed it -- a Move to another scene (tree.js) changes this one
-           and that one, and undoing it should not leave the one on screen */
         const differs = s => before.get(s.key) !== M.serialize(s.doc)
         const here = P.scene(project, current)
-        const changed = here && differs(here) ? here : project.scenes.find(differs)
-        if (changed) current = changed.key
-        // the current scene was the step (undoing "+ Scene"): go to the one before it
-        else if (!P.scene(project, current)) current = project.scenes[Math.max(0, Math.min(at - 1, project.scenes.length - 1))].key
+        const before1 = () => project.scenes[Math.max(0, Math.min(at - 1, project.scenes.length - 1))].key
+        if (step?.scenes) {
+            // where the step began (an undo goes back across it) or ended (a redo goes across it again)
+            const there = dir === 'undo' ? step.was : step.current
+            const exists = k => k != null && !!P.scene(project, k)
+            if (step.follow && exists(there)) current = there
+            else if (!here) current = exists(there) ? there : before1()
+        } else {
+            /* the scene being worked on, if the step changed it -- a Move to another scene (tree.js) changes this one
+               and that one, and undoing it should not leave the one on screen */
+            const changed = here && differs(here) ? here : project.scenes.find(differs)
+            if (changed) current = changed.key
+            // the current scene was the step (undoing "+ Scene"): go to the one before it
+            else if (!here) current = before1()
+        }
         onDoc(doc())
+        if (step?.scenes && current === was && current === shown && !differs(P.scene(project, current))) return 'live'
         return current === shown ? sync() : 'structural'
     }
 
@@ -285,6 +302,7 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
        first time, as a scene's own kept camera is (markShown). A workspace brings its own, and ignores it. */
     const load = (text, { camera = null } = {}) => {
         const r = P.parse(text)          // throws a ModelError listing every problem; nothing changed
+        const loadedFrom = current
         let said
         /* A SCENE KEEPS A MATERIAL (model.ensureMaterial): one written before that, or by hand, gets the
            white as it comes in -- here, not in parse, which is also undo's format */
@@ -306,7 +324,8 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
             if (camera && typeof camera === 'object') cams.set(current, structuredClone(camera))
             said = added.length === 1 ? `added '${doc().title}'` : `added ${added.length} scenes`
         }
-        history.commit(P.serialize(project))
+        // a change to the list of scenes: its undo takes them out and stays where it can (restore)
+        history.commit(P.serialize(project), null, { scenes: 'load', was: loadedFrom, current })
         revision++
         onDoc(doc())
         console.log(`[builder] ${said}`)
@@ -719,16 +738,18 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
             return r
         },
         /** Call after any edit. Cheap when nothing changed -- the text is compared, and an
-         *  identical one records nothing -- so a handler may call it unconditionally. */
-        commit(key = null) {
-            const recorded = history.commit(P.serialize(project), key)
+         *  identical one records nothing -- so a handler may call it unconditionally. `meta`: what the step
+         *  was, for undo -- `{ scenes: what, was }` for a change to the list of scenes (tree.js), `follow: true`
+         *  for a library item opened or closed; the scene current after it is added here. */
+        commit(key = null, meta = null) {
+            const recorded = history.commit(P.serialize(project), key, meta ? { ...meta, current } : null)
             if (recorded) revision++
             return recorded
         },
         /** A source's settings changed (the panel): derive and push its luminance, no compile. */
         syncSources() { if (current === shown && RT.scene?.id === 'built') pushSources() },
-        undo: () => restore(history.undo()),
-        redo: () => restore(history.redo()),
+        undo: () => { const t = history.undo(); return restore(t, history.step, 'undo') },
+        redo: () => { const t = history.redo(); return restore(t, history.step, 'redo') },
         /** Whether the renderer shows the current scene, compiled -- what anything reading the compiled
          *  scene about the document needs (its tags name this document's nodes only then). */
         get showing() { return current === shown && RT.scene?.id === 'built' },
@@ -736,8 +757,11 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
         get canRedo() { return history.canRedo },
         /** Download every scene as one project file. */
         save(filename) { download(filename || 'raytracer-scenes.json', P.serialize(forFile().p, { app: stamp() })) },
-        /** Download the current scene alone, in the scene format (what scenes/ holds). */
-        saveScene(filename) { download(filename || fileName(doc().title), P.serializeScene(project, current, { app: stamp() })) },
+        /** Download a scene alone (the current one unless `key` names another), in the scene format (what scenes/ holds). */
+        saveScene(filename, key = current) {
+            const d = P.scene(project, key)?.doc
+            if (d) download(filename || fileName(d.title), P.serializeScene(project, key, { app: stamp() }))
+        },
         /** Download the workspace: every scene, which one is current, and the renderer's settings. */
         saveWorkspace(filename) {
             const { p, cur } = forFile()
@@ -761,9 +785,10 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
         },
         /** Back to the project the page started with -- one undo step, like a load. */
         reset() {
+            const was = current
             project = P.parse(startup).project; current = project.scenes[0].key
             cams.clear()                // the startup project's keys are handed out again from here
-            history.commit(P.serialize(project)); revision++; onDoc(doc()); return doc()
+            history.commit(P.serialize(project), null, { scenes: 'reset', was, current }); revision++; onDoc(doc()); return doc()
         },
         /** Break it on purpose. This is the demonstration, not a convenience. */
         break() {

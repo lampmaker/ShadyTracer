@@ -255,8 +255,45 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
         z.on('change', ev => pick(std.shape, +ev.value))
     }
 
+    /* ANOTHER SCENE'S CARD (builder/scenestrip.js, 0.63.0): a card over the tree chosen with one click -- selecting it
+       compiles nothing, so what it shows is read from the project, not the renderer: its picture, its name (renamed
+       here, as the open scene is by its label), what is in it, and what can be done with it, by the host's hands
+       (`actions`: open, duplicate, exportScene, remove, rename). */
+    let card = null
+    const showScene = (key, opts = {}) => {
+        clear()
+        shownId = null
+        const s = BUILDER.projectModel.scene(BUILDER.project, key)
+        card = s ? { key, ...opts } : null
+        if (!s) return
+        const { picture = null, info = '', actions = {} } = opts
+        folder = table.addFolder({ title: 'Scene, not open' })
+        const t = folder.element?.querySelector?.('.tp-fldv_t')
+        if (t) t.title = 'A scene of this project, not the one being worked on: choosing it compiled nothing. Open it to work on it.'
+        const L = { label: s.doc.title }
+        const lb = rowTip(folder.addBinding(L, 'label', { label: 'label' }), 'The scene\'s name: its card, and the file it saves as')
+        lb.on('change', ev => { const v = String(ev.value ?? '').trim(); if (v && v !== s.doc.title) actions.rename?.(key, v) })
+        const pic = document.createElement('div')
+        pic.className = 'builder-scene-pic'
+        Object.assign(pic.style, { height: '120px', margin: '4px 6px 6px', borderRadius: '4px', overflow: 'hidden', background: '#0b0d0f',
+            display: 'grid', placeItems: 'center', color: '#5d6b77', font: '11.5px system-ui, sans-serif', textAlign: 'center' })
+        if (picture) {
+            const img = document.createElement('img')
+            Object.assign(img.style, { width: '100%', height: '100%', objectFit: 'cover', display: 'block' })
+            img.src = picture; img.alt = ''
+            pic.appendChild(img)
+        } else pic.textContent = 'no picture yet: it is taken while the scene is shown'
+        lb.element.before(pic)
+        if (info) folder.addBinding({ info }, 'info', { readonly: true, label: '', multiline: true, rows: Math.min(4, info.split('\n').length) })
+        if (actions.open) folder.addButton({ title: '▶ Open it (a compile)' }).on('click', () => actions.open(key))
+        if (actions.duplicate) folder.addButton({ title: 'Duplicate (you stay here)' }).on('click', () => actions.duplicate(key))
+        if (actions.exportScene) folder.addButton({ title: 'Export scene file…' }).on('click', () => actions.exportScene(key))
+        if (actions.remove) folder.addButton({ title: 'Delete (Ctrl+Z brings it back)' }).on('click', () => actions.remove(key))
+    }
+
     const show = id => {
         clear()
+        card = null
         shownId = id ?? null
         if (shownId == null) return
         const doc = BUILDER.doc
@@ -280,7 +317,7 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
         // ---- label: redraws the tree, nothing else
         const L = { label: node.label }
         rowTip(folder.addBinding(L, 'label', { label: 'label' }), node.id === doc.root.id
-            ? 'The scene\'s name: the tree\'s top row, File \u203a Switch to scene, and the file it saves as'
+            ? 'The scene\'s name: the tree\'s top row, its card over the tree, and the file it saves as'
             : 'Its name in the tree. Only a name: nothing refers to it, so it can be anything').on('change', ev => {
             M.rename(doc, node.id, ev.value)
             if (node.id === doc.root.id) doc.title = ev.value
@@ -1500,5 +1537,6 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
         run()
     }
 
-    return { show, shown: () => shownId, refresh: () => show(shownId) }
+    return { show, showScene, shown: () => shownId, card: () => card?.key ?? null,
+             refresh: () => card ? showScene(card.key, card) : show(shownId) }
 }

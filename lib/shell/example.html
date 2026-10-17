@@ -67,7 +67,10 @@ S.layout.setDefault(() => {
 S.layout.preset('Wide', () => S.open('view'), 'the view alone')
 S.layout.preset('Charts', () => { S.open('view'); S.open('chart', { referencePanel: 'view', direction: 'below' }) }, 'the view and the chart')
 S.layout.onApply(() => S.open('view'))
-S.standardCommands()
+// ?bare: the window verbs and the "Layout: X" rows kept out of the menus, in the palette only (the raytracer's choice)
+S.standardCommands(new URLSearchParams(location.search).has('bare') ? { window: false, layouts: false } : undefined)
+// a button of the page's own on the menu bar, right after the menus (S.tools)
+{ const b = document.createElement('button'); b.className = 'shell-menu'; b.textContent = '↶'; b.title = 'A tool of the page\'s'; b.onclick = () => S.status('tool'); S.tools.appendChild(b) }
 const how = S.layout.restore()
 S.open('view')
 // ------------------------------------------------------------------------------------------------------
