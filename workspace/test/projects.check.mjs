@@ -250,7 +250,8 @@ ok('Ctrl+C puts the row on the system clipboard, marked as ours', r.marked, JSON
 ok('...and Ctrl+V pastes it from there, in another scene', r.added === 1 && r.cur === 'Lens v2', JSON.stringify(r))
 
 // ---- A RELOAD ----------------------------------------------------------------------------------------------
-await p.evaluate(() => { CHECK.R.camera = { ...CHECK.R.camera, distance: 7.5 } })
+// turned as a move turns it: through the renderer, which tells whoever keeps the view (0.63.0: the scene's, demo.js keepView)
+await p.evaluate(() => { CHECK.RT.applyView({ camera: { distance: 7.5 } }) })
 await settle(p)
 const before = await p.evaluate(() => ({ titles: CHECK.BUILDER.project.scenes.map(s => s.doc.title), cur: CHECK.BUILDER.doc.title,
     kids: CHECK.BUILDER.doc.root.children.map(n => n.label) }))
@@ -289,7 +290,7 @@ await q.goto(url); await ready(q)
 r = await q.evaluate(() => ({ info: CHECK.SESSION.info(), proj: document.querySelector('.shell-sw-title').textContent, said: CHECK.T.said }))
 ok('a second tab on the project: a copy, not made yet, and it says so', r.info.id === null && r.info.copy === 'My project' && /not saved yet/.test(r.proj), JSON.stringify(r))
 const n0 = await p.evaluate(async () => (await CHECK.SESSION.list()).length)
-await q.evaluate(() => { CHECK.R.camera = { ...CHECK.R.camera, distance: 99 } }); await settle(q)
+await q.evaluate(() => { CHECK.RT.applyView({ camera: { distance: 99 } }) }); await settle(q)
 ok('...a look (the camera turned) makes no copy', (await p.evaluate(async () => (await CHECK.SESSION.list()).length)) === n0)
 const firstScenes = await p.evaluate(() => CHECK.BUILDER.project.scenes.length)
 await q.evaluate(() => CHECK.tree.sceneOps.add()); await settle(q)
@@ -339,7 +340,7 @@ r = await p.evaluate(was => ({ info: CHECK.SESSION.info(), was, titles: CHECK.BU
 ok('File › New project: another, of one empty scene, worked on here', r.info.id !== r.was && JSON.stringify(r.titles) === '["New scene"]', JSON.stringify(r))
 await p.evaluate(() => {
     const { P } = CHECK
-    CHECK.T.nextFile = { name: 'filed.json', text: P.serializeWorkspace(P.createProject([P.blankScene('From a file')]), 's1', { values: {} }, {}) }
+    CHECK.T.nextFile = { name: 'filed.json', text: P.serializeWorkspace(P.createProject([P.blankScene('From a file')]), 's1', { values: {} }) }
 })
 await run('file.importProject')
 await p.waitForFunction(() => CHECK.SESSION.info().name === 'filed', null, { timeout: 4000 }).catch(() => { })

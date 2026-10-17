@@ -466,6 +466,26 @@ ok('the unit changed to cm', await set('unit', 'cm') === 'set')
 await p.waitForTimeout(50)
 ok('...and the radius row says so by itself (the panel redrawn), the number kept: the scene reinterpreted, as its shapes',
     (await readRows()).includes('environment radius (cm)') && await p.evaluate(() => CHECK.doc.envRadius) === 2.5, JSON.stringify(await readRows()))
+/* THE SCENE'S SURFACE TOLERANCE (0.63.0, model.js setTolerance): after the radius, in its unit, 0 the automatic one; live,
+   one undo step. What the Renderer panel's row held there (lib/pathtracer/test/renderer.check.mjs until 0.63.0): a box and
+   not a slider, nothing rounded that is typed -- 0.000001 once became 0 -- and a value above 100 kept */
+{
+    const TOL = 'surface tolerance (cm, 0 = auto)'
+    const r = await readRows()
+    ok('the tolerance is the scene\'s, after its radius, in its unit', r.indexOf(TOL) === r.indexOf('environment radius (cm)') + 1, JSON.stringify(r))
+    const field = () => p.evaluate(TOL => [...document.querySelectorAll('#t .tp-lblv')].find(e => e.querySelector('.tp-lblv_l')?.textContent.trim() === TOL), TOL)
+    ok('...a box to type into, not a slider', await p.evaluate(TOL => { const row = [...document.querySelectorAll('#t .tp-lblv')]
+        .find(e => e.querySelector('.tp-lblv_l')?.textContent.trim() === TOL); return !!row && !row.querySelector('.tp-sldv') }, TOL))
+    const t0 = await state()
+    ok('typing 0.0002 (2 um)', await set(TOL, '0.0002') === 'set')
+    const t1 = await state()
+    ok('...sets the scene\'s, unrounded, pushed live, one undo step, nothing compiled', await p.evaluate(() => CHECK.doc.tolerance) === 0.0002
+        && t1.live.at(-1) === 'root.tolerance' && t1.commits.at(-1) === 'root.tolerance' && t1.structure === t0.structure, JSON.stringify([await p.evaluate(() => CHECK.doc.tolerance), t1.live.slice(-1)]))
+    ok('...a millionth of one typed is kept', await set(TOL, '0.000001') === 'set' && await p.evaluate(() => CHECK.doc.tolerance) === 0.000001)
+    ok('...and 250 too (no range of the table\'s own)', await set(TOL, '250') === 'set' && await p.evaluate(() => CHECK.doc.tolerance) === 250)
+    ok('0 is the automatic one: nothing in the scene', await set(TOL, '0') === 'set' && await p.evaluate(() => !('tolerance' in CHECK.doc)))
+    void field
+}
 // THE ENVIRONMENT, in the Scene folder since 0.52.0 (the user, 2026-10-10): its source and its settings after the radius;
 // its old id shows the scene; a source chosen redraws it with that source's settings
 {
@@ -729,6 +749,75 @@ ok('...reaches the document, live (its dust), with its undo step and no compile'
     && s.commits.at(-1) === 'hz.haze' && s.structure === before.structure, JSON.stringify([hzNow, s.live.slice(-2), s.commits.slice(-2)]))
 const visText = await p.evaluate(() => [...document.querySelectorAll('textarea')].map(t => t.value).find(v => v.startsWith('visibility')) ?? '')
 ok('...and the visibility beside it follows: 3.912 x 4 m, 15.6 m', /^visibility 15\.6 m/.test(visText), visText)
+
+/* THE SCENE'S VIEW (0.63.0, model.js VIEW): the third panel, given a view as the page gives it. Its scene row has a camera
+   and an exposure folder, folded until opened and remembered so; their rows are the popovers' and write the renderer's
+   camera and exposure (which the scene keeps: demo.js keepView); an open folder follows a move made elsewhere; a value
+   the registry has gets ◇, and flagging it puts the view's path on the root; a scene not shown yet says so */
+{
+    const sel = '#t3'
+    const showRoot = () => p.evaluate(() => { CHECK.viewPanel.show(CHECK.doc.root.id) })
+    const folderOf = title => p.evaluate(([sel, title]) => {
+        const f = [...document.querySelectorAll(`${sel} .tp-fldv`)].find(e => e.querySelector(':scope > .tp-fldv_b .tp-fldv_t')?.textContent.trim().replace(/\s*\u25C6$/, '') === title)
+        return f ? { open: f.classList.contains('tp-fldv-expanded'), rows: [...f.querySelectorAll('.tp-lblv')].map(r => r.querySelector('.tp-lblv_l')?.textContent.trim()) } : null
+    }, [sel, title])
+    const toggle = title => p.evaluate(([sel, title]) => {
+        const f = [...document.querySelectorAll(`${sel} .tp-fldv`)].find(e => e.querySelector(':scope > .tp-fldv_b .tp-fldv_t')?.textContent.trim().replace(/\s*\u25C6$/, '') === title)
+        f?.querySelector(':scope > .tp-fldv_b')?.click(); return !!f
+    }, [sel, title])
+    const typeIn = (folder, label, value) => p.evaluate(([sel, folder, label, value]) => {
+        const f = [...document.querySelectorAll(`${sel} .tp-fldv`)].find(e => e.querySelector(':scope > .tp-fldv_b .tp-fldv_t')?.textContent.trim().replace(/\s*\u25C6$/, '') === folder)
+        const row = [...(f?.querySelectorAll('.tp-lblv') || [])].find(r => r.querySelector('.tp-lblv_l')?.textContent.trim().replace(/^[\u25C7\u25C6]/, '') === label)
+        const txt = row?.querySelector('input.tp-txtv_i'), sl = row?.querySelector('select')
+        if (sl) { const i = [...sl.options].findIndex(o => o.textContent.trim().startsWith(value)); sl.selectedIndex = i; sl.dispatchEvent(new Event('change', { bubbles: true })); return 'set' }
+        if (!txt) return `no field '${label}' in '${folder}'`
+        txt.value = String(value); txt.dispatchEvent(new Event('change', { bubbles: true })); return 'set'
+    }, [sel, folder, label, value])
+    const shownValue = (folder, label) => p.evaluate(([sel, folder, label]) => {
+        const f = [...document.querySelectorAll(`${sel} .tp-fldv`)].find(e => e.querySelector(':scope > .tp-fldv_b .tp-fldv_t')?.textContent.trim().replace(/\s*\u25C6$/, '') === folder)
+        const row = [...(f?.querySelectorAll('.tp-lblv') || [])].find(r => r.querySelector('.tp-lblv_l')?.textContent.trim().replace(/^[\u25C7\u25C6]/, '') === label)
+        return [...(row?.querySelectorAll('input.tp-txtv_i') || [])].pop()?.value ?? null
+    }, [sel, folder, label])
+    await p.evaluate(() => { try { localStorage.removeItem('raytracer.properties.codeOpen') } catch { } })
+    await showRoot()
+    let cf = await folderOf('camera'), ef = await folderOf('exposure')
+    ok('the scene row has a camera and an exposure folder, both folded', cf && ef && !cf.open && !ef.open, JSON.stringify([cf, ef]))
+    ok('...the camera\'s the popover\'s fields', ['mode', 'camtype', 'azimuth', 'elevation', 'distance', 'target', 'position'].every(k => cf.rows.some(r => r.replace(/^[\u25C7\u25C6]/, '') === k)),
+        JSON.stringify(cf.rows))
+    ok('...the exposure\'s every setting', ['EV100 (manual)', 'Auto exposure', 'Compensation (EV)', 'Tone curve'].every(k => ef.rows.some(r => r.replace(/^[\u25C7\u25C6]/, '') === k)),
+        JSON.stringify(ef.rows))
+    await toggle('camera'); await p.waitForTimeout(50)
+    await showRoot()
+    ok('opened, it stays open when the row is drawn again (remembered)', (await folderOf('camera'))?.open === true && (await folderOf('exposure'))?.open === false)
+    const commits0 = (await state()).commits.length
+    ok('typing a distance', await typeIn('camera', 'distance', 7.25) === 'set')
+    ok('...moves the camera, and is no undo step', await p.evaluate(() => CHECK.cam.get().distance) === 7.25 && (await state()).commits.length === commits0)
+    ok('the exposure\'s EV typed', await typeIn('exposure', 'EV100 (manual)', 9) === 'set')
+    ok('...is the exposure\'s', await p.evaluate(() => CHECK.exposure.values.exposureEV) === 9 && (await state()).commits.length === commits0)
+    await p.evaluate(() => CHECK.cam.set({ distance: 12.5 })); await p.waitForTimeout(80)
+    ok('a move made elsewhere (a drag, the popover): the open folder follows it', Number(await shownValue('camera', 'distance')) === 12.5, await shownValue('camera', 'distance'))
+    // ◇: the view's values the registry has; a word (mode) and a point (target) none
+    const flags = await p.evaluate(sel => [...document.querySelectorAll(`${sel} .tp-fldv`)].filter(f => /^camera/.test(f.querySelector(':scope > .tp-fldv_b .tp-fldv_t')?.textContent.trim() ?? ''))
+        .flatMap(f => [...f.querySelectorAll('.tp-lblv')]).map(r => [r.querySelector('.tp-lblv_l')?.textContent.trim().replace(/^[\u25C7\u25C6]/, ''), r.querySelector('.builder-animate')?.textContent ?? null]), sel)
+    const flagOf = k => flags.find(([l]) => l === k)?.[1]
+    ok('a camera number has ◇, its mode and target none', flagOf('distance') === '\u25C7' && flagOf('fov') === '\u25C7' && flagOf('mode') === null && flagOf('target') === null, JSON.stringify(flags))
+    const flagged = await p.evaluate(sel => {
+        const f = [...document.querySelectorAll(`${sel} .tp-fldv`)].find(e => /^camera/.test(e.querySelector(':scope > .tp-fldv_b .tp-fldv_t')?.textContent.trim() ?? ''))
+        const row = [...f.querySelectorAll('.tp-lblv')].find(r => r.querySelector('.tp-lblv_l')?.textContent.trim().replace(/^[\u25C7\u25C6]/, '') === 'fov')
+        row.querySelector('.builder-animate').click()
+        return { animate: CHECK.doc.root.animate, shown: CHECK.P3.shown().map(e => e.path) }
+    }, sel)
+    ok('flagging the field of view: on the scene\'s root at the renderer\'s path, an undo step', JSON.stringify(flagged.animate) === '["view/camera/fov"]'
+        && (await state()).commits.length === commits0 + 1, JSON.stringify(flagged))
+    ok('...and the registry offers it as animated', flagged.shown.includes('view/camera/fov'), JSON.stringify(flagged.shown))
+    await p.evaluate(() => CHECK.M.setAnimated(CHECK.doc, 'view/camera/fov', false))
+    // a scene not shown yet: its camera is not the renderer's
+    await p.evaluate(() => { CHECK.T.showing = false })
+    await showRoot()
+    cf = await folderOf('camera')
+    ok('a scene still compiling: the folder says so, and binds nothing', cf && cf.rows.length === 1 && !cf.rows.includes('distance'), JSON.stringify(cf))
+    await p.evaluate(() => { CHECK.T.showing = true; CHECK.viewPanel.show(null) })
+}
 
 ok('no page errors', !errs.length, errs.join('\n'))
 await b.close(); server.close()

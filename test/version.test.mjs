@@ -130,7 +130,7 @@ eq('a project file: app right after its version', keysOf(projectText).slice(0, 3
 ok('...read back, the project has no app', !('app' in P.parse(projectText).project))
 ok('undo\'s snapshots are not stamped (serialize with no app)', !('app' in JSON.parse(P.serialize(p))))
 
-const wsText = P.serializeWorkspace(p, key, { exposure: 1 }, {}, { app: APP })
+const wsText = P.serializeWorkspace(p, key, { exposure: 1 }, { app: APP })
 eq('a workspace file: app right after its version', keysOf(wsText).slice(0, 3), ['format', 'version', 'app'])
 const ws = P.parse(wsText).workspace
 ok('...read back, neither the workspace\'s project nor its documents have app',

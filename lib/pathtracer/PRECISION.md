@@ -66,8 +66,13 @@ measured on lavapipe (2026-10-07), 0 of 2304 rays differ, plainly, as data and w
 
     marchTol(p) = max(setting, 1 nm, 128 × 2⁻²³ × max(|p.x|, |p.y|, |p.z|))
 
-- **The setting** is Render settings › Ray marching › *Surface tolerance (µm, 0 = auto)*, stored in metres. At 0 it is
-  **automatic**: 1e-4 of the scene's estimated size, between 10 nm and 1 mm (`photometry.js autoEps`).
+- **The setting is the scene's** (since 0.63.0): its Properties' *surface tolerance*, in the scene's unit, saved with
+  the scene (`builder/model.js setTolerance`), which the engine takes in metres as `UB.epsAuto` (`photometry.js
+  sceneEps`). At 0 it is **automatic**: 1e-4 of the scene's estimated size, between 10 nm and 1 mm (`photometry.js
+  autoEps`). Until 0.63.0 it was Render settings › Ray marching, in µm, one setting for every scene: a value typed for
+  one was the one every scene shown after it was traced with. The renderer's `UB.eps` stays, no control and not
+  saved: an override a bench row or the library's studio sets, which wins while above 0. The optics trace's own
+  (Analysis › Advanced) is another: its 0 follows the scene's.
 - **The estimated size** is the diagonal of a box around every object, each padded by its largest numeric parameter
   times its scale (`builder/bounds.js estimateBox`). That over-counts: the RGBW mixer's lens is padded by its curvature
   radius r2 (7.23 × 4.21 = 30 mm), so its size reads 105 mm and its automatic tolerance is 10.5 µm (computed with
@@ -93,8 +98,8 @@ measured on lavapipe (2026-10-07), 0 of 2304 rays differ, plainly, as data and w
   or more, where the 1 mm cap holds (computed; `core/test/floor.test.mjs`). Beyond that -- a ground plane running out
   past the scene, a ray on its way to the sky -- the floor decides, and the march there takes coarser steps than
   before 0.36.0: the RGBW mixer (105 mm by its estimate, 10.5 µm) gets the floor beyond 69 cm from its origin.
-- **Where it is shown:** Render stats › Picture (the tolerance and how it was chosen), the Ray marching box's line,
-  and `RT.tolerances()`.
+- **Where it is shown:** Render stats › Picture (the tolerance and how it was chosen: automatic, the scene's own, or
+  set), the Ray marching box's line, and `RT.tolerances()`.
 
 ## Every use
 
@@ -121,8 +126,9 @@ mixer's 10.5 µm.
 ## What to do about a small precise part
 
 1. **Keep it near the origin.** Every number about it is then small, and f32's spacing with it.
-2. **Set the tolerance by hand** (Render settings › Ray marching, µm) to a few hundredths of the part's size, for instance 1 µm
-   for a 0.4 mm sphere. The Render stats say what is in use. Within 6.5 cm of the origin 1 µm is above the floor.
+2. **Set the scene's tolerance by hand** (its Properties, in its unit) to a few hundredths of the part's size, for
+   instance 1 µm for a 0.4 mm sphere. The Render stats say what is in use. Within 6.5 cm of the origin 1 µm is above
+   the floor. The examples *Glass and liquid* (a 10 µm gap, 2 µm) and *Parabolic reflector* (5 µm) do.
 3. **Coming:** a tolerance per pixel (`roadmap/PLAN.md`, *A tolerance per pixel*), so a close-up gets
    a fine tolerance automatically while the rest of the scene keeps its own.
 

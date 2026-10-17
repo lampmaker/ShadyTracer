@@ -253,7 +253,14 @@ and sampling (∷). Neither belongs to a view. The rule that sorts them:
 | a control changes… | so it lives… | what that is |
 |---|---|---|
 | **this view** | in the view's toolbar, per viewport | the camera, what it shows (photographic / lux on surfaces / luminance), exposure and tone curve, or the false-colour range and bands; the overlays (rays, handles, measure pins); split, pop out, save image |
-| **the scene** | in the tree and Properties, saved with the scene | objects, lights, materials, **the Environment** (sun, sky, studio: it was the renderer's Light page, but a room scene should keep its sun) |
+| **the scene** | in the tree and Properties, saved with the scene | objects, lights, materials, **the Environment** (sun, sky, studio: it was the renderer's Light page, but a room scene should keep its sun); **the surface tolerance** (0.63.0: a Ray marching row before, one for every scene) |
+
+**The camera and the exposure: the view's controls, the scene's values** (the user, 2026-10-17: "Now these are shown
+over the viewport, where they belong, but the information should belong to the scenes. Because switching between
+scenes almost always causes the camera and exposure to be wrong"). Since 0.63.0 the controls stay the view's -- its
+toolbar's camera and exposure popovers -- and the values are each scene's, saved in its document (`builder/model.js`
+VIEW), shown again too in the scene row's Properties as two folders, where they are flagged animated. Moving the
+camera is still no undo step. A second viewport would need a camera of its own: the scene's is the main view's.
 | **the renderer's effort** | the Renderer panel | in boxes since 2026-10-04 (below): quality, light sources, paths and noise, render size; a developer's march and diagnostics |
 | **the optics trace's data** | Optics setup | sources, where light is counted, far field from / axis / grid, ray counts, limits |
 | **how a chart shows its data** | the chart's own strip | the quantity (flux, CCT, x, y), planes, scale, range, reference, export |
@@ -435,9 +442,9 @@ examples (read, copied from, not edited: a list to open a copy from).
   against 3.7-4.1 s for *Material test*, which is a test chart rather than a demo. *Demo scene*
   (`demoscene.json`), the first scene until now, has a relief and was never measured. One line
   (`FIRST_VISIT`, `scenes/index.js`) changes it.
-- An example opens from the camera the view has, as every scene shown for the first time always has. The
-  box estimate (`builder/bounds.js`) is too loose to frame a scene: Menger's floor makes its box 300 m
-  wide. A camera kept with each example would need the user to choose it.
+- ~~An example opens from the camera the view has~~ -- each has its own since 0.54.0, chosen in `scenes/make.mjs`
+  and, since 0.63.0, in its file with its exposure, whole (`builder/model.js` VIEW). The box estimate
+  (`builder/bounds.js`) is still too loose to frame a scene with: Menger's floor makes its box 300 m wide.
 - Ctrl+S saves the project in the browser at once (it downloaded a project file before); the File menu
   still saves the three files.
 

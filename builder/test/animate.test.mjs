@@ -18,7 +18,9 @@ import { readFileSync } from 'node:fs'
 import * as M from '../model.js'
 import * as P from '../project.js'
 import { EVERY_SCENE } from '../../test/scenes.mjs'
-import { sceneParams } from '../params.js'
+import { sceneParams, viewEntriesFlagged } from '../params.js'
+import { settingsParams, CAM_FIELDS } from '../../lib/pathtracer/params.js'
+import { UniformGroups, createUniformState } from '../../lib/pathtracer/core/uniforms.schema.js'
 import { liveKeyOfPath, liveUniformsOf, animatedKeys, keptUniforms } from '../animate.js'
 import { generate, uniformName, xfName, blendName } from '../codegen.js'
 import { baked, BAKE_PREFIX } from '../bake.js'
@@ -233,6 +235,31 @@ const throws = f => { try { f(); return false } catch (e) { return e instanceof 
     ok('back to the default', PR.onlyAnimated())
     M.setConstant(d, 'ball', 'radius', 'f32')
     ok('a compile-time value is never `animated` (its flag went with the marking)', !PR.get('scene/ball/radius').animated)
+}
+
+/* THE VIEW'S VALUES FLAGGED (0.63.0): the camera's and the exposure's entries are the renderer's (settingsParams, the
+   paths a saved track names), marked animated where the scene flags them (params.js viewEntriesFlagged, as the page
+   provides them) -- so while a scene value is flagged too, the + track still offers them, and the bake keeps nothing
+   for them: no uniform of the scene's carries them */
+{
+    const pose = { mode: 'orbit', camtype: 0, azimuth: 0, elevation: 60, distance: 5, fov: 40, dimensions: 2, aperture: 0, focus: 0 }
+    const cam = { get: () => ({ ...pose }), set: o => Object.assign(pose, o) }
+    const states = { Exposure: createUniformState(UniformGroups.Exposure) }
+    const d = M.createDoc()
+    M.addObject(d, 'root', { id: 'ball', primitive: 'sphere' })
+    M.setAnimated(d, 'scene/ball/radius', true)
+    M.setAnimated(d, 'view/camera/fov', true)
+    M.setAnimated(d, 'view/exposure/exposureEV', true)
+    const PR = makeParams()
+    PR.provide('scene', () => sceneParams(d, {}))
+    PR.provide('renderer', () => viewEntriesFlagged(settingsParams(states, { update: () => { }, cam, camFields: CAM_FIELDS }), d))
+    const shown = PR.shown().map(e => e.path)
+    ok('the view\'s flagged values are offered with the scene\'s while any is flagged', PR.onlyAnimated()
+        && ['scene/ball/radius', 'view/camera/fov', 'view/exposure/exposureEV'].every(p => shown.includes(p)) && !shown.includes('view/camera/distance'), shown.join(', '))
+    ok('...and moved through the renderer, as a track moves them', (PR.write('view/camera/fov', 25), pose.fov === 25)
+        && (PR.write('view/exposure/exposureEV', 8), states.Exposure.values.exposureEV === 8))
+    ok('...the bake keeps nothing for them: no uniform of the scene carries them', !liveKeyOfPath('view/camera/fov')
+        && [...keptUniforms(d, generate(...M.generateArgs(d)))].every(n => /radius/.test(n) || /^bx/.test(n)))
 }
 
 console.log(`animate: ${pass} passed, ${fail} failed`)

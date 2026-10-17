@@ -13,7 +13,10 @@
 //   a SCENE      one document in the scene format (scenes/*.json)           serializeScene
 //   a PROJECT    every scene, in order ("all scenes")                        serialize
 //   a WORKSPACE  a project, which scene was current, and the renderer's own  serializeWorkspace
-//                settings -- lighting, exposure, camera, size -- as the host hands them over
+//                settings -- quality, sampling, size -- as the host hands them over. Not the camera, the
+//                exposure or the surface tolerance since 0.63.0: each scene has its own (model.js VIEW,
+//                setTolerance), in its document; a workspace written before is read into the scenes
+//                (workspaceOf, adoptViews).
 // What a file MEANS is the caller's (demo.js load): a scene or a project is added to the open
 // one (importScenes), a workspace replaces it. This module does not know what the renderer's
 // settings are; it carries them as an object and checks only that.
@@ -56,22 +59,15 @@ export function addScene(p, doc, index) {
  *  or a lamp, and its + shapes are 1 unit across (primitives.js), so a 1 cm sphere. createDoc stays in
  *  metres with the 400 m default: it is what every test, bench and library document is built on. */
 export const NEW_SCENE = Object.freeze({ unit: 'cm', envRadius: 25 })
-/* ...and seen from close by, the first time it is shown (demo.js markShown): the page's start angle (index.html
-   camera), 4 units off -- a 1-unit shape a third of the view's height at the 40 degree field -- rather than
-   wherever the scene before left the camera, 20 m off or 150 mm. dimensions is the parallel view's width. */
+/* ...and seen from close by (model.js VIEW): the page's start angle (index.html camera), 4 units off -- a 1-unit shape
+   a third of the view's height at the 40 degree field -- rather than wherever the scene before left the camera, 20 m
+   off or 150 mm. dimensions is the parallel view's width. In the document since 0.63.0, as every scene's camera is: it
+   was held beside it, for the first time the scene was shown, and a new scene saved before it was shown had none. */
 export const NEW_SCENE_CAMERA = Object.freeze({ mode: 'orbit', target: [0, 0, 0], azimuth: 40, elevation: 70, distance: 4, dimensions: 3 })
-/* WHICH DOCUMENTS blankScene MADE, and have not been shown yet: only those get the camera above. Not "an empty
-   scene": one loaded from a file or put back by an undo keeps the view as it is, as every scene shown for the
-   first time does (demo.js; test/project.test.mjs). Held here, not in the document -- nothing to save, and a
-   document copied (an undo, a load) is a new object that was never made from nothing. */
-const fresh = new WeakSet()
 export const blankScene = (title = 'New scene') => {
     const doc = M.ensureMaterial(Object.assign(M.createDoc({ title }), NEW_SCENE))
-    fresh.add(doc)
-    return doc
+    return M.setView(doc, { camera: { ...M.CAMERA_DEFAULTS, ...NEW_SCENE_CAMERA } })
 }
-/** True once for a document blankScene made: the first time it is shown. */
-export const takeFresh = doc => fresh.delete(doc)
 
 /** A fresh, empty scene (blankScene). */
 export function newScene(p, title = 'New scene', index) {
@@ -136,12 +132,70 @@ const uniqueTitle = (p, t) => {
    (demo.js), never by undo's snapshots or the start-up copy, which are the project itself */
 export const serialize = (p, { app } = {}) => JSON.stringify(M.withApp(p, app), null, 2)
 
+/* THE HISTORY'S TEXT (demo.js): the project without any scene's view (model.js VIEW). Looking is not an edit: a
+   snapshot that held the camera would make an undo move it back to where it was at that edit, and a commit after an
+   orbit -- harmless by history.js's rule, nothing changed -- would record the orbit as a step. restore() gives each
+   scene the view it has now back (carryViews). */
+export const historyText = p => serialize({ ...p, scenes: p.scenes.map(s => {
+    const { view: _, ...doc } = s.doc
+    return { ...s, doc }
+}) })
+/** Each scene of `next` with the view the scene of the same key has in `from` -- or none, for a scene `from` does not
+ *  have (one an undo brings back: shown from the camera there is, converted, as a scene without one is). */
+export function carryViews(next, from) {
+    for (const s of next.scenes) {
+        const v = scene(from, s.key)?.doc.view
+        if (v) s.doc.view = structuredClone(v)
+        else delete s.doc.view
+    }
+    return next
+}
+
+/* THE RENDERER'S SETTINGS AS A PROJECT KEEPS THEM (0.63.0): everything the renderer hands over (RT.settings) but what
+   the scenes have of their own now -- the camera, the exposure (model.js VIEW_EXPOSURE) and the surface tolerance
+   (`eps`). Saved, they were put back over the scene shown at every start (index.html applySettings), one scene's
+   camera over another's, and one exposure and one tolerance for all. */
+export function rendererSettings(s) {
+    if (!s || typeof s !== 'object' || Array.isArray(s)) return {}
+    const { camera: _, values = {}, ...rest } = s
+    return { ...rest, values: Object.fromEntries(Object.entries(values || {}).filter(([k]) => !(k in M.VIEW_EXPOSURE) && k !== 'eps')) }
+}
+/**
+ * WHAT A PROJECT KEPT BESIDE ITS SCENES, PUT INTO THEM (0.63.0): `views` { key: view } -- the browser's session, newer
+ * than the documents it was written beside (the project's record is written only when an edit moves the revision; the
+ * session every second: workspace/autosave.js) -- and, from a project or a workspace written before, `cameras`
+ * { key: camera }, each scene's kept camera, and `renderer`, whose exposure was every scene's and whose tolerance
+ * (eps, metres) was set while `current` was being worked on. A scene's own view comes first; a kept view that is not
+ * sound is left out, never the reason a project does not open. Changes `p`; returns it.
+ */
+export function adoptViews(p, { views = null, cameras = null, renderer = null, current = null } = {}) {
+    const obj = o => o && typeof o === 'object' && !Array.isArray(o)
+    const exposure = M.exposureSettings(obj(renderer?.values) ? renderer.values : null)
+    const tryView = (d, v) => { try { M.setView(d, v) } catch (e) { console.warn(`[project] a kept view of '${d.title}' left out: ${e.message}`) } }
+    for (const s of p.scenes) {
+        const d = s.doc, v = obj(views) ? views[s.key] : null
+        if (obj(v)) tryView(d, { camera: obj(v.camera) ? v.camera : undefined, exposure: obj(v.exposure) ? v.exposure : undefined })
+        const c = obj(cameras) ? cameras[s.key] : null
+        if (!d.view?.camera && obj(c)) tryView(d, { camera: c })
+        if (!d.view?.exposure && exposure && Object.keys(exposure).length) tryView(d, { exposure })
+    }
+    const eps = +renderer?.values?.eps, cur = scene(p, current)?.doc
+    if (eps > 0 && cur && !cur.tolerance) {
+        try { M.setTolerance(cur, Number((eps / (M.UNITS[cur.unit] ?? 1)).toPrecision(12))) }
+        catch (e) { console.warn(`[project] the tolerance kept left out: ${e.message}`) }
+    }
+    return p
+}
+/** Every scene's view, { key: view }: what the browser's session keeps between the project's writes (adoptViews). */
+export const viewsOf = p => Object.fromEntries(p.scenes.filter(s => s.doc.view).map(s => [s.key, structuredClone(s.doc.view)]))
+
 export const WORKSPACE_FORMAT = 'raytracer-workspace'
 export const WORKSPACE_VERSION = 1
-/** The project, the key of the scene being worked on, the renderer's settings, and each scene's camera
- *  ({ key: camera }, as the renderer's settings hold one: demo.js keeps one per scene). */
-export const serializeWorkspace = (p, current, renderer = {}, cameras = {}, { app } = {}) => JSON.stringify(
-    M.withApp({ format: WORKSPACE_FORMAT, version: WORKSPACE_VERSION, current, renderer, cameras, project: p }, app), null, 2)
+/** The project, the key of the scene being worked on, and the renderer's settings -- without what the scenes have of
+ *  their own (rendererSettings): each scene's camera and exposure are in its document (model.js VIEW). A workspace
+ *  written before 0.63.0 had `cameras` beside the project; workspaceOf still reads them into the scenes. */
+export const serializeWorkspace = (p, current, renderer = {}, { app } = {}) => JSON.stringify(
+    M.withApp({ format: WORKSPACE_FORMAT, version: WORKSPACE_VERSION, current, renderer: rendererSettings(renderer), project: p }, app), null, 2)
 /** THE PROJECT AS A FILE HOLDS IT: without the scenes of library items being edited (library/edit.js) --
  *  they are the library's, saved there -- and with a current scene it still has: the one the item was opened
  *  from, else the first. Returns { project, current }; the same project when it has no such scene. Two
@@ -187,7 +241,8 @@ export function validate(p) {
 /**
  * Text in: { doc } for a scene file, { project } for a project file, { workspace: { project,
  * current, renderer } } for a workspace -- each sound, or a ModelError listing everything wrong.
- * The scenes inside are upgraded like any scene.
+ * The scenes inside are upgraded like any scene; a workspace's views and its old cameras, exposure and
+ * tolerance are put into its scenes, and its renderer settings are what is left (adoptViews).
  */
 export function parse(text) {
     let raw
@@ -215,8 +270,9 @@ function workspaceOf(raw) {
     const project = projectOf(raw.project)
     /* a current scene the project does not have is the first one: the file is still worth opening */
     const current = scene(project, raw.current) ? raw.current : project.scenes[0].key
-    /* each scene's camera: optional (a workspace written before had none), and only objects for scenes it has */
-    const cameras = raw.cameras && typeof raw.cameras === 'object' && !Array.isArray(raw.cameras)
-        ? Object.fromEntries(Object.entries(raw.cameras).filter(([k, c]) => scene(project, k) && c && typeof c === 'object')) : {}
-    return { project, current, renderer: raw.renderer, cameras }
+    /* WHAT IT KEPT BESIDE ITS SCENES, into them (adoptViews): the browser session's views (store.js workspaceText), and a
+       workspace's from before 0.63.0 -- each scene's camera (optional: one written before 0.7.0 had none), and the
+       exposure and tolerance its renderer settings held for every scene. What is left of those is the renderer's. */
+    adoptViews(project, { views: raw.views, cameras: raw.cameras, renderer: raw.renderer, current })
+    return { project, current, renderer: rendererSettings(raw.renderer) }
 }

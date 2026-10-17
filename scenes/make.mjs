@@ -4,7 +4,14 @@
 // maybe even grouped in subcategories. SDF's may be new to people and I want to be able to demonstrate all the
 // features. consider correct dimensions"). Each example is a function here that builds its scene through the model's
 // own API (builder/model.js) -- the calls the tree and the panel make -- and this script writes it to scenes/<file>,
-// in the scene format, with the menu's list beside it (examples.js: group, audience, description, camera).
+// in the scene format, with the menu's list beside it (examples.js: group, audience, description).
+//
+// EACH FILE IS WHOLE (0.63.0; the user, 2026-10-17: "switching between scenes almost always causes the camera and
+// exposure to be wrong", and "review every single example scene to make sure camera, exposure etc. are set correctly
+// there"): its view -- the camera it opens with, every setting of it, and its exposure (model.js VIEW) -- and its
+// environment with every setting, each the default where the example says nothing. The camera was in examples.js,
+// with no field of view, projection or lens, and the environment named three settings: each of those was whatever the
+// scene shown before had left, so Depth of field's open lens blurred the next example opened.
 //
 // WHY A SCRIPT AND NOT SCENES SAVED FROM THE PAGE: the sizes are the point. A wine glass is 210 mm tall and its wall
 // 1.5 mm thick, a die 16 mm, a room 4 x 3 x 2.6 m, an LED die 1 mm; written here as numbers with their reasons, they
@@ -34,12 +41,13 @@ const T = (at = [0, 0, 0], rot = [0, 0, 0], scale = 1) => ({ pos: { x: at[0], y:
 const V = (x, y, z) => ({ x, y, z })
 const RGB = (r, g, b) => ({ r, g, b })
 
-/** A scene: title, unit, how far it reaches (its radius, in its unit), and its environment. */
+/** A scene: title, unit, how far it reaches (its radius, in its unit), and its environment -- whole: every setting the
+ *  example does not name at its default, so nothing of the scene shown before it is left in it (model.js environmentOf). */
 function scene(title, { unit = 'mm', radius, env = {} }) {
     const doc = M.createDoc({ title })
     doc.unit = unit
     M.setEnvRadius(doc, radius)
-    M.setEnvironment(doc, env)
+    M.setEnvironment(doc, { ...Object.fromEntries(Object.entries(M.ENVIRONMENT).map(([k, sp]) => [k, structuredClone(sp.def)])), ...env })
     doc.$mats = new Map()
     return doc
 }
@@ -78,9 +86,15 @@ const light = (doc, parent, shapeName, { at, towards = [0, 0, -1], ...o }) => {
 /** The floor: the plane z = 0, solid below. */
 const floor = (doc, material) => shape(doc, 'root', 'plane', { label: 'floor', material })
 /** A camera orbiting `target`: azimuth from +x towards +y, `above` degrees above the horizon (the camera's own
- *  elevation counts from straight up, lib/camera.js), `distance` away, all in the scene's unit. */
-const orbit = (target, azimuth, above, distance, lens = {}) =>
-    ({ mode: 'orbit', target, azimuth, elevation: 90 - above, distance, dimensions: distance, ...lens })
+ *  elevation counts from straight up, lib/camera.js), `distance` away, all in the scene's unit. `more`: the field of
+ *  view, a lens -- whatever is not the page's start (model.js CAMERA_DEFAULTS: 40 degrees, perspective, a pinhole). */
+const orbit = (target, azimuth, above, distance, more = {}) =>
+    ({ mode: 'orbit', target, azimuth, elevation: 90 - above, distance, dimensions: distance, ...more })
+/** THE VIEW AN EXAMPLE IS SAVED WITH: its camera and its exposure, each whole (the defaults where it says nothing) */
+const viewOf = (camera, exposure = {}) => ({
+    camera: { ...structuredClone(M.CAMERA_DEFAULTS), ...camera },
+    exposure: { ...Object.fromEntries(Object.entries(M.VIEW_EXPOSURE).map(([k, sp]) => [k, sp.def])), ...exposure },
+})
 
 //----------------------------------------------------------------------------------------------------------------------
 // MODELLING AND RENDERING -- for anyone; no optics assumed
@@ -306,6 +320,12 @@ function glassLiquid() {
     shape(doc, 'root', 'revolution', { label: 'tumbler', material: lib(doc, 'clear glass'), at: [-60, 0, 0],
         params: { outline: [[0, 0], [40, 0, 2], [40, 100, 0.9], [38, 100, 0.9], [38, 6, 2], [0, 6]] } })
     shape(doc, 'root', 'cylinder', { label: 'water', params: { radius: 37.99, height: 64 }, at: [-60, 0, 38], material: water })
+    /* THE WATER IS 10 um INSIDE THE GLASS (37.99 against the tumbler's 38): a liquid against its glass. The automatic
+       tolerance is 1e-4 of the scene's size, about 80 um here (the bottle and the floor's reach make it), eight times
+       the gap -- a ray could not tell the water's surface from the glass's. 2 um is a fifth of the gap, and above the
+       f32 floor there (about 1.7 um, 0.1 m from the origin: core/tolerances.js), which marchTol takes when it is
+       larger. Reasoned, not seen: the water's edge is what to look at (CHANGELOG 0.63.0). */
+    M.setTolerance(doc, 0.002)
     // a BOTTLE, 70 mm across and 230 tall, its wall 3 mm, the glass green through its body
     shape(doc, 'root', 'revolution', { label: 'bottle', material: lib(doc, 'green tinted glass'), at: [60, 40, 0],
         params: { outline: [[0, 0], [35, 0, 3], [35, 150, 25], [13, 195, 10], [13, 225, 1], [15, 230, 1], [12.5, 232], [10, 232], [10, 195, 8],
@@ -331,7 +351,9 @@ function lighting() {
         shape(doc, t.id, 'box', { label: 'leg', params: { size: V(0.03, 0.03, 0.355), rounding: 0.003 }, at: [x, y, 0.355], material: lib(doc, 'wood') })
     shape(doc, 'root', 'sphere', { label: 'ball', params: { radius: 0.12 }, at: [0.3, -0.2, 0.87], material: lib(doc, 'glossy red plastic') })
     light(doc, 'root', 'disc', { label: 'lamp (1500 lm)', at: [0, -0.2, 2.2], params: { radius: 0.2 }, flux: 1500, colourBy: 'cct', cct: 3000 })
-    return { doc, camera: { mode: 'orbit', target: [0, 0, 1], azimuth: -90, elevation: 85, distance: 1.4, dimensions: 4 } }
+    /* INSIDE, 11 cm from the back wall, at eye height. The field is 65 degrees (0.63.0): at the page's 40, 1.4 m from the
+       target sees about 1 x 1.8 m -- the table and little of the room. A first guess still: the user judges. */
+    return { doc, camera: { mode: 'orbit', target: [0, 0, 1], azimuth: -90, elevation: 85, distance: 1.4, dimensions: 4, fov: 65 } }
 }
 
 /* DEPTH OF FIELD: a row of chess pawns 30 mm across, 60 mm apart, going away from the camera; the camera's lens is
@@ -462,6 +484,12 @@ function reflector() {
     shape(doc, 'root', 'reflector', { label: 'reflector', params: { focal: 8, aperture: 25, wall: 1 }, material: mirror })
     light(doc, 'root', 'rectangle', { label: 'LED (200 lm)', at: [0, 0, 0], towards: [0, 0, -1], params: { width: 1, height: 1 }, flux: 200, colourBy: 'cct', cct: 6000 })
     shape(doc, 'root', 'rectangle', { label: 'wall 2 m away (detector)', params: { width: 1200, height: 1200 }, at: [0, 0, 2000], material: detector(doc, 'wall') })
+    /* THE TOLERANCE OF THE REFLECTOR, NOT OF THE WALL (0.63.0): the automatic one is 1e-4 of the scene's size, and the
+       wall 2 m away makes that 4.7 m -- 0.47 mm, against a 1 mm wall, a 1 mm LED and a focal length of 8. The optics
+       trace's far field is marched with it too (its own eps 0 follows the scene's). 5 um is 1e-4 of the 50 mm reflector;
+       at the wall the f32 floor, 30 um at 2 m, takes over by itself (core/tolerances.js marchTol). Reasoned, not
+       measured: the far field's beam angle before and after is the test (CHANGELOG 0.63.0). */
+    M.setTolerance(doc, 0.005)
     return { doc, camera: orbit([0, 0, 10], -60, 25, 160) }
 }
 
@@ -548,7 +576,11 @@ function office() {
     for (const [x, y] of [[-1.5, -1], [1.5, -1], [-1.5, 1], [1.5, 1]])
         light(doc, 'root', 'rectangle', { label: 'LED panel (3600 lm)', at: [x, y, 2.79], params: { width: 0.6, height: 0.6 }, flux: 3600, colourBy: 'cct', cct: 4000 })
     shape(doc, 'root', 'rectangle', { label: 'work plane at 0.75 m (detector)', params: { width: 5.6, height: 3.6 }, at: [0, 0, 0.75], material: detector(doc, 'work plane') })
-    return { doc, camera: { mode: 'orbit', target: [0, 0, 1], azimuth: -90, elevation: 70, distance: 2.5, dimensions: 6 } }
+    /* FROM INSIDE THE ROOM (0.63.0). The camera was 2.5 m from (0, 0, 1) at 20 degrees above level: y -2.35 m, outside
+       the outer wall (-2.1 .. -2.0), looking at its outside face -- which the studio's 0 lx leaves unlit. Now 1.8 m from
+       (0, 0, 1.2): y -1.69, 1.82 m up, under the 2.8 m ceiling, looking down 20 degrees over the work plane at a field of
+       70 degrees. Reasoned from the sizes, not seen. */
+    return { doc, camera: { mode: 'orbit', target: [0, 0, 1.2], azimuth: -90, elevation: 70, distance: 1.8, dimensions: 6, fov: 70 } }
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -595,17 +627,19 @@ export const EXAMPLES = [
 if (import.meta.url === `file://${process.argv[1]}`) {
     const list = []
     for (const { audience, group: g, items } of EXAMPLES) for (const [file, make, description] of items) {
-        const { doc, camera } = make()
+        const { doc, camera, exposure } = make()
         delete doc.$mats
+        // the view in the file, whole (viewOf above): what the example is seen with whatever was shown before it
+        M.setView(doc, viewOf(camera, exposure))
         const bad = M.validate(doc)
         if (bad.length) throw new Error(`${file}: ${bad.join('; ')}`)
         writeFileSync(new URL(file, here), M.serialize(doc) + '\n')
-        list.push({ file, title: doc.title, audience, group: g, description, camera })
+        list.push({ file, title: doc.title, audience, group: g, description })
         console.log(`${file}: ${doc.title}`)
     }
     writeFileSync(new URL('examples.js', here), `// MADE BY scenes/make.mjs -- edit that, and run it, rather than this.
-// File › Examples, in order: each example's file, title, who it is for, its group, a line saying what it shows, and
-// the camera it opens with (lib/camera.js orbit: azimuth from +x towards +y, elevation from straight up).
+// File › Examples, in order: each example's file, title, who it is for, its group, and a line saying what it shows.
+// The camera and the exposure it opens with are in its file (builder/model.js VIEW).
 export const EXAMPLES = ${JSON.stringify(list, null, 1)}
 `)
 }

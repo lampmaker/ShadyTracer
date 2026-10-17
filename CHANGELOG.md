@@ -15,6 +15,73 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.63.0 — 2026-10-17
+
+**Each scene keeps its own camera, exposure and surface tolerance** (you: "switching between scenes almost always causes
+the camera and exposure to be wrong"; the information "should belong to the scenes").
+
+**What was wrong (read in code):**
+- The builder kept a camera per scene beside the documents. It put back only the fields it had. An example's camera
+  has no field of view, projection or lens, so those stayed as the last scene left them: the next example after
+  *Depth of field* kept its open lens (inferred from the code; not seen).
+- A scene with no kept camera (a file opened, a duplicate) took the live camera's numbers in its own unit: 330 mm
+  became 330 m.
+- The exposure was one for the whole project. Nothing on a switch changed it, and the meter eased over from the last
+  scene's EV.
+- A surface tolerance typed in Render settings › Ray marching was one number, in metres, for every scene, example,
+  library item and new project. The automatic one was already right per scene: 1e-4 of each scene's size,
+  recomputed when it is swapped in.
+- Each example's environment named three settings. Sun and sky brightness, the sun's size, the turbidity and the
+  studio's colour were whatever the scene before had.
+
+**Now:**
+- **The scene's file holds its view**: the camera with every setting, its lens too, and the exposure with every
+  setting (`builder/model.js` VIEW). It is written as it changes, and put back whole when the scene is shown. A scene
+  file, an example, a duplicate and *Copy to* all come with it. Moving the camera or the exposure is still no undo
+  step, and an undo never moves the camera.
+- **The meter starts again on a switch**, so a dim room shown after a street meters at once.
+- **The scene row's Properties** have two folders, **camera** and **exposure**, folded until you open one, and
+  remembered. They hold the popovers' own fields and follow a drag in the picture. **◇** flags a camera or exposure
+  value for the Timeline: the + track then offers it beside the scene's flagged values. Before, flagging any scene
+  value hid the camera and exposure from that list.
+- **The surface tolerance is the scene's**: *surface tolerance* on the scene row, after the radius, in the scene's
+  unit, 0 automatic. It is live, one undo step, and saved with the scene. The Ray marching row is gone; its box still
+  says the tolerance in use. The optics trace follows it too.
+- **A scene's environment is shown whole**: what it leaves out is the default, never the last scene's.
+- **Old projects and workspaces are read into this**: each scene gets its kept camera and the project's exposure, and a
+  typed tolerance goes to the scene being worked on. A scene with no camera at all is seen from the camera there is,
+  converted to its unit.
+
+**Every example reviewed** (worked out from each file's sizes, nothing rendered):
+- **Office lighting** opened from outside the room: the camera was at y −2.35 m, behind the outer wall (−2.1 m), looking
+  at its unlit outside. It now stands inside, 1.8 m from the work plane, with a 70° field of view.
+- **Lighting a room**: a 40° field at 1.4 m showed about 1 × 1.8 m of a 4 × 3 m room. It is 65° now.
+- **Glass and liquid**: the water sits 10 µm inside its glass, under an automatic tolerance of 80 µm, so the march could
+  not tell the two apart. The scene now sets 2 µm.
+- **Parabolic reflector**: the automatic tolerance was 0.47 mm, set by the detector wall 2 m away, against a 1 mm wall,
+  a 1 mm LED and an 8 mm focal length. The far field was traced with it too. The scene now sets 5 µm.
+- **Every example's file is whole**: a camera at 40°, perspective, a pinhole (Depth of field keeps its 8 mm lens), the
+  default exposure (auto), every environment setting. The other twenty frame their subject by the same arithmetic.
+
+**What to look at** (on your card):
+1. Open *Depth of field*, then any other example: nothing is blurred.
+2. Set a manual EV in a sunlit scene, switch to a dim one and back: each keeps its own. Switching should meter at
+   once, not fade over a second or two.
+3. A mm scene and an m scene in one project: the camera is right in both, and right after a reload too.
+4. The scene row: open **camera**, orbit in the picture, and its numbers follow. Flag the field of view (◇): the
+   Timeline's + track offers it.
+5. Type a surface tolerance in one scene; it is not in the next scene or in a new one. Render stats › Picture says
+   "the scene's own".
+6. **Each example, in the menu's order**: framed and lit as before, with nothing inherited from the one before.
+   - *Office lighting* from inside the room.
+   - *Lighting a room* at 65°: say if it is too wide.
+   - *Glass and liquid*: the water's edge against the glass.
+   - *Parabolic reflector*: its far-field beam angle, if you have a reading from before.
+7. **The three bright subjects in a dark room**: *LED, lens and screen*, *Beam in dusty air* and *Dispersion in a
+   prism*. By my arithmetic the meter sets for the room and the subject sits 7 to 20 stops over it, so the prism's
+   spectrum is probably white rather than a rainbow (inferred). Set each until its subject reads and paste the EV or
+   the compensation: it goes into that example's file.
+
 ## 0.62.4 — 2026-10-16
 
 **The shell's browser check passes again.** `node lib/shell/test/example.check.mjs` failed one row: "a value set

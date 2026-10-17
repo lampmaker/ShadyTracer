@@ -503,7 +503,52 @@
   "envRadius": 3000,
   "environment": {
     "envMode": 0,
+    "studioIlluminance": 1000,
+    "studioColor": {
+      "r": 1,
+      "g": 1,
+      "b": 1
+    },
+    "studioTop": 0.5,
+    "sunIlluminance": 100000,
+    "sunDiameter": 0.53,
+    "skyIlluminance": 15000,
+    "uSunAzimuth": -140,
     "uSunElevation": 35,
-    "uSunAzimuth": -140
+    "uSkyTurbidity": 0.7
+  },
+  "view": {
+    "camera": {
+      "mode": "orbit",
+      "camtype": 0,
+      "fov": 40,
+      "dimensions": 330,
+      "target": [
+        0,
+        -20,
+        25
+      ],
+      "azimuth": -60,
+      "elevation": 65,
+      "distance": 330,
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "aperture": 0,
+      "focus": 0
+    },
+    "exposure": {
+      "exposureEV": 15,
+      "autoExposure": 1,
+      "exposureComp": 0,
+      "aeSpeed": 0.1,
+      "aeHeadroom": 2,
+      "toneMap": 1,
+      "contrast": 0,
+      "saturation": 0,
+      "brightness": 0
+    }
   }
 }

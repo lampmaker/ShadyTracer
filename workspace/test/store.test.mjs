@@ -58,10 +58,15 @@ const proj = (...titles) => P.createProject(titles.map(t => P.blankScene(t)))
 
     // the session alone: the scenes are not written again
     const before = (await S.meta(a.id)).modified
-    await S.save(a.id, { session: { current: 's1', renderer: {}, cameras: { s1: { distance: 3 } } } })
+    await S.save(a.id, { session: { current: 's1', renderer: {}, views: { s1: { camera: { distance: 3 } } } } })
     const m2 = await S.meta(a.id)
     ok('a session saved alone leaves `modified` (the scenes) alone', m2.modified === before && m2.saved > before)
-    eq('...and is what is read', (await S.read(a.id)).workspace.cameras, { s1: { distance: 3 } })
+    eq('...and is what is read: each scene with the view the session kept (0.63.0), over the one its text had',
+        (await S.read(a.id)).workspace.project.scenes[0].doc.view.camera.distance, 3)
+    // a project kept before 0.63.0: its scenes with no view, each one's camera in the session beside them
+    const old = await S.create({ name: 'Old', project: P.createProject([M.createDoc({ title: 'o1' })]), session: { current: 's1', cameras: { s1: { distance: 5 } } } })
+    eq('...one kept before, its camera beside the scenes, is read into its scene', (await S.read(old.id)).workspace.project.scenes[0].doc.view, { camera: { distance: 5 } })
+    await S.remove(old.id)
     const p3 = proj('v1', 'v2', 'v3')
     await S.save(a.id, { project: p3 })
     const m3 = await S.meta(a.id)
@@ -87,7 +92,7 @@ const proj = (...titles) => P.createProject(titles.map(t => P.blankScene(t)))
         file.workspace && file.workspace.project.scenes.length === 1 && file.workspace.current === 's1')
 
     // importing: a workspace or a project file is a project; a scene file goes into one
-    const w = await S.importText(P.serializeWorkspace(proj('a', 'b'), 's2', { values: {} }, {}), 'From file')
+    const w = await S.importText(P.serializeWorkspace(proj('a', 'b'), 's2', { values: {} }), 'From file')
     eq('a workspace file kept as a project, current as it says', [(await S.read(w.id)).workspace.current, w.name], ['s2', 'From file'])
     const pf = await S.importText(P.serialize(proj('x')), 'Project file')
     eq('a project file kept, current its first scene', (await S.read(pf.id)).workspace.current, 's1')

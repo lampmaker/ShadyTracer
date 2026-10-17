@@ -30,10 +30,11 @@
 // otherwise make a saved item look saved when the library holds the newer one, or the reverse.
 //
 // LEAVING puts back the lighting the user had (a scene without an environment of its own would keep the
-// studio's sun otherwise) and the exposure mode -- the item's view meters its exposure, as its picture does.
-// The camera is the builder's: every scene keeps its own (builder/demo.js markShown), so going back is going
-// back to where that scene was seen from, and an item's scene is framed the first time it is shown. Not the
-// renderer's other settings: what the user changed while editing stays.
+// studio's sun otherwise). The camera and the exposure are the scene's (builder/model.js VIEW, 0.63.0): an item's
+// scene is made seen as its picture is -- framed on the item from the studio's angle, its exposure metered -- and
+// every scene the builder shows comes with its own (demo.js markShown), so going back is going back to how that
+// scene was seen. The exposure mode was forced on here and put back on leaving until then, the one scene switch that
+// changed the exposure at all. Not the renderer's other settings: what the user changed while editing stays.
 //
 //   const E = installItemEditor({ BUILDER, RT, SHELL, library, tree, stage, say, thumbs })
 //   E.open(item)  E.save()  E.close()  E.active  E.dirty  E.shown() (the builder's onScene)  E.sync() (its onDoc)  E.frame()
@@ -92,8 +93,15 @@ export function itemSceneDoc(item, { environment = {} } = {}) {
     doc.libraryItem = { id: item.id, kind: isMat ? 'material' : 'node', unit: item.asset.unit ?? null,
         subject, sample, stage, stageMaterials: [floorMat.id],
         details: { category: item.category ?? 'Mine', tags: [...(item.tags || [])], help: item.help ?? '' } }
+    /* SEEN AS ITS PICTURE IS (0.63.0, builder/model.js VIEW): framed on the item from the studio's angle, the exposure
+       metered -- the view the editor gave it the first time it was shown, now the scene's own from the start */
+    const f = itemView(doc)
+    Model.setView(doc, { camera: f ? studioCamera(f) : undefined, exposure: { autoExposure: 1 } })
     return doc
 }
+/** The studio's camera on a framing (studio.js framing: { target, distance }): its angle and field, a pinhole. */
+export const studioCamera = f => ({ mode: 'orbit', camtype: 0, fov: STUDIO.fov, target: f.target, azimuth: STUDIO.azimuth,
+    elevation: STUDIO.elevation, distance: f.distance, dimensions: f.distance, aperture: 0, focus: 0 })
 
 /* A sample stands on z = 0 (studio.js): the floor a hair below, not in its bottom face -- and below the
    deepest its material's relief reaches (materials.js: its amplitude, in mm) */
@@ -202,7 +210,7 @@ export function canonScene(doc) {
 
 /**
  * @param BUILDER  builder/demo.js's (project, current, doc, commit)
- * @param RT       the renderer: get, set, settings, applySettings (camera and lighting on the way in and out)
+ * @param RT       the renderer: get, set, applyView (the camera framed on an item), and the lighting on the way in and out
  * @param SHELL    the shell: open, isOpen, dock (the panels brought forward, and back) -- optional
  * @param library  library/store.js's (update, add)
  * @param tree     builder/tree.js's: openScene, closeScene, enterScene, select
@@ -212,7 +220,7 @@ export function installItemEditor({ BUILDER, RT, SHELL = null, library, tree, st
     const saved = new Map()                 // item id -> canonItem of what the library holds
     const envKeys = Object.keys(Model.ENVIRONMENT)
     const envNow = () => { const v = RT.get?.() ?? {}; return Object.fromEntries(envKeys.filter(k => v[k] !== undefined).map(k => [k, structuredClone(v[k])])) }
-    let home = { env: envNow(), exposure: null }
+    let home = { env: envNow() }
     let inItem = null                       // the item id of the item scene last shown, or null
     let libraryWasShowing = false
 
@@ -337,26 +345,18 @@ export function installItemEditor({ BUILDER, RT, SHELL = null, library, tree, st
         /** Close without asking (the strip's Discard). */
         discard: () => finish(),
         /* THE MODE FOLLOWS THE SCENE SHOWN (the builder's onScene): entering an item's scene takes the lighting
-           and exposure mode the user had; leaving puts them back. Called after every apply -- which is also how
-           an undo past the open, or a redo of it, arrives. The camera the builder has already dealt with: the
-           scene shown now has the one it was last left with, if it was ever left (demo.js markShown). A
-           camera kept here as well was the item editor's own "home" -- which went back to where the item was
-           opened from even when the scene shown next was another, and was the only scene switch that did. */
+           the user had; leaving puts it back. Called after every apply -- which is also how an undo past the open,
+           or a redo of it, arrives. The camera and the exposure the builder has already dealt with: they are the
+           scene's (demo.js markShown), the item's made as its picture is (itemSceneDoc). A camera kept here as well
+           was the item editor's own "home" -- which went back to where the item was opened from even when the scene
+           shown next was another, and was the only scene switch that did. */
         shown() {
             const doc = BUILDER.doc
             const now = doc?.libraryItem?.id ?? null
             if (now === inItem) return drawStrip()
-            if (inItem) {
-                if (home.exposure) RT.set?.(home.exposure)
-                // a scene with an environment of its own has had it pushed already; one without gets the user's
-                if (!doc?.environment) RT.set?.(structuredClone(home.env))
-            }
-            if (now) {
-                if (!inItem) home.exposure = { autoExposure: RT.get?.().autoExposure ?? 0 }
-                RT.set?.({ autoExposure: 1 })
-                // shown for the first time: framed on the item, as its picture is
-                if (!BUILDER.cameraOf?.(BUILDER.current)) E.frame()
-            } else home.env = envNow()          // a scene of the user's: its lighting is what leaving an item puts back
+            // a scene with an environment of its own has had it pushed already; one without gets the user's
+            if (inItem && !doc?.environment) RT.set?.(structuredClone(home.env))
+            if (!now) home.env = envNow()          // a scene of the user's: its lighting is what leaving an item puts back
             inItem = now
             drawStrip()
         },
@@ -364,12 +364,12 @@ export function installItemEditor({ BUILDER, RT, SHELL = null, library, tree, st
          *  200 mm sample seen from where the 50 mm one was is a wall). */
         frame() {
             const doc = itemDoc(), view = doc ? itemView(doc) : null
-            if (view) RT.applySettings?.({ camera: { mode: 'orbit', camtype: 0, fov: STUDIO.fov, target: view.target,
-                azimuth: STUDIO.azimuth, elevation: STUDIO.elevation, distance: view.distance } })
+            // the renderer's camera, which the builder keeps as the scene's (demo.js keepView)
+            if (view) RT.applyView?.({ camera: studioCamera(view) })
         },
         /** The project was replaced or restored (the builder's onDoc): the strip follows. */
         sync() { if (!itemDoc()) asking = false; lastText = null; drawStrip() },
-        /** WHAT LEAVING THE ITEM PUTS BACK -- the lighting and exposure the user had before it opened -- for a project
+        /** WHAT LEAVING THE ITEM PUTS BACK -- the lighting the user had before it opened -- for a project
          *  kept in the browser (workspace/), so an item open at a reload is reopened as it was (the user, 2026-10-02).
          *  Null when no item is open. */
         remember() { return itemDoc() ? { home: structuredClone(home), libraryWasShowing } : null },
@@ -379,7 +379,8 @@ export function installItemEditor({ BUILDER, RT, SHELL = null, library, tree, st
          *  project kept. An item gone from the library since stays unsaved: Save keeps it as a new one. */
         async adopt(memory = null) {
             asking = false; lastText = null
-            home = memory?.home ? structuredClone(memory.home) : { env: envNow(), exposure: null }
+            // a memory kept before 0.63.0 has an exposure mode too: the item's scene has its own now
+            home = { env: memory?.home?.env ? structuredClone(memory.home.env) : envNow() }
             libraryWasShowing = !!memory?.libraryWasShowing
             inItem = itemDoc()?.libraryItem?.id ?? null
             const ids = BUILDER.project.scenes.map(s => s.doc.libraryItem?.id).filter(Boolean)

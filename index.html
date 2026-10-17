@@ -44,7 +44,7 @@
         import { compileFraction, compileLabel } from "./lib/pathtracer/core/compileprogress.js"
         import { makeParams } from "./lib/shell/params.js"
         import { installParamsPanel, paramsSearch } from "./lib/shell/paramspanel.js"
-        import { EXAMPLES, FIRST_VISIT, example, urlOf } from './scenes/index.js'
+        import { EXAMPLES, FIRST_VISIT, urlOf } from './scenes/index.js'
         import { benchTest } from './bench/index.js'
         import { scalingTest } from './bench/scaling.js'
         import { sceneDataTest } from './bench/scenedata.js'
@@ -65,7 +65,7 @@
         import { installProjectRow } from './builder/projectrow.js'
         import { fileCommands } from './builder/filemenu.js'
         import { installBuilderPanel } from './builder/panel.js'
-        import { sceneParams } from './builder/params.js'
+        import { sceneParams, viewEntriesFlagged } from './builder/params.js'
         import { createBoxes, cullBoxes, cullUniforms, cullReport } from './builder/boxes.js'
         import { stepCacheBox } from './builder/stepbox.js'
         import { lightBench } from './builder/lightbench.js'
@@ -348,11 +348,13 @@
         const PROJECTS = createProjectStore({ backend: projectBackend });
         let showProject = async () => { };            // the page's, once the builder exists (below)
         /* WHAT IS SAVED, looked at once a second (workspace/autosave.js): the builder's revision and scenes, and the
-           session -- the scene being worked on, the renderer's settings, every scene's camera, the item editor's
-           memory. Read only once the builder exists: the ticks start at the end of the page. */
+           session -- the scene being worked on, the renderer's settings but what each scene has of its own (the
+           camera, the exposure, the tolerance: project.js rendererSettings), every scene's view as it is now (written
+           between the project's writes: BUILDER.views), the item editor's memory. Read only once the builder exists:
+           the ticks start at the end of the page. */
         const AUTOSAVE = createAutosave({ store: PROJECTS, local: localStore, say: t => SHELL.status(t),
             read: () => ({ revision: BUILDER.revision, project: BUILDER.project,
-                session: { current: BUILDER.current, renderer: RT.settings(), cameras: BUILDER.cameras(), item: window.ITEM_EDITOR?.remember?.() ?? null } }),
+                session: { current: BUILDER.current, renderer: Project.rendererSettings(RT.settings()), views: BUILDER.views(), item: window.ITEM_EDITOR?.remember?.() ?? null } }),
             onCreated: m => SESSION.adopt(m) });
         const SESSION = window.SESSION = createSession({ store: PROJECTS, tabs: createTabs(), autosave: AUTOSAVE, say: t => SHELL.status(t),
             firstVisit: async () => {
@@ -625,7 +627,10 @@
            emissive object. Its scene too is a builder document, so the page hands it in the same way. */
         window.RTTESTS?.addTest?.({ id: 'light-vs-emitter', title: 'A light against the same emissive object', prepare: async () => lightBench() });
         // the environment's entries are the scene's now (builder/params.js), not the renderer's
-        PARAMS.provide('renderer', () => RT.parameters().filter(p => !p.path.startsWith('scene/environment/')));
+        /* ...and the view's values a scene flags animated (builder model.js setAnimated, 0.63.0) are offered as animated: the
+           camera's and the exposure's are the renderer's entries, at its paths, which a saved track names. Unmarked, they
+           left the timeline's + track whenever any scene value was flagged (tools/timeline.js onlyAnimated). */
+        PARAMS.provide('renderer', () => viewEntriesFlagged(RT.parameters().filter(p => !p.path.startsWith('scene/environment/')), window.BUILDER?.doc));
 
         /*=========================================================================================
           THE BUILDER -- the whole of the application's side now. Every scene is a document in
@@ -642,11 +647,11 @@
         SHELL.statusRight(modeEl);
         let paintMode = () => { };
         const BUILDER = installBuilder(window, {
+            // each scene seen as it keeps (builder/model.js VIEW): a first visit's example from its own camera, in its file
             RT, gpu: WG, project, current: START.workspace.current,
-            // a first visit's scene is an example: seen from that example's camera (scenes/index.js), the rest as kept
-            cameras: START.firstVisit && example(FIRST_VISIT)?.camera
-                ? { ...START.workspace.cameras, [START.workspace.current]: example(FIRST_VISIT).camera } : START.workspace.cameras,
             onScene: (sc, ms) => {
+                // the scene row's camera and exposure are the scene's once it is shown (builder/panel.js viewFolder)
+                if (builderPanel?.shown() === BUILDER.doc.root.id) builderPanel.refresh();
                 status(`${sc.title}  (${ms.toFixed(0)} ms, march kernel `
                     + `${((RT.prog_wvfmarch?.wgsl?.length || 0) / 1024).toFixed(0)} kB)`);
                 // the timeline's + track list and its headers are the scene's parameters (tools/timeline.js)
@@ -949,6 +954,9 @@
                 onStructure: reapply,
                 onApply: () => builderTree.apply(),
                 params: PARAMS, environment: () => RT.get(),
+                // the scene row's camera and exposure (builder/panel.js cameraFolder, exposureFolder): the renderer's own fields
+                view: { cameraBindings: () => RT.cameraBindings(), cameraShown: () => RT.cameraShown(), exposure: () => RT.view().exposure,
+                        setExposure: (k, v) => RT.applyView({ exposure: { [k]: v } }), watch: f => RT.watchView(f) },
                 // a material item's sample shape and size (library/edit.js): the library's, handed to the builder;
                 // a new size is framed afresh, since the camera was where the other size wanted it
                 itemSample: { choices: SAMPLE_CHOICES, sizes: SAMPLE_SIZES, of: sampleOf,
@@ -982,11 +990,12 @@
             /* THE EXAMPLES (scenes/index.js): the bundled scenes, a COPY of one into the project from File › Examples -- the
                same as opening its file (demo.js load: put after the scene being worked on, and worked on). Their
                titles are read from the files when File is first opened. */
-            /* ...by audience and group, each with what it shows (scenes/examples.js, made by scenes/make.mjs), and opened with
-               a camera of its own: an example is a place to look from as much as a scene (0.54.0) */
+            /* ...by audience and group, each with what it shows (scenes/examples.js, made by scenes/make.mjs), and seen as its
+               file says: an example is a place to look from as much as a scene (0.54.0), its camera and exposure in its
+               document since 0.63.0 (builder/model.js VIEW) */
             examples = {
                 list: async () => EXAMPLES.map(e => ({ id: e.file, title: e.title, audience: e.audience, group: e.group, description: e.description })),
-                open: async file => openText(await (await fetch(urlOf(file))).text(), file, { camera: example(file)?.camera }),
+                open: async file => openText(await (await fetch(urlOf(file))).text(), file),
             };
             /* a file kept as a project of its own and opened -- what the Projects list's Import does (workspace/dialog.js) */
             const importProject = async () => {
@@ -1000,7 +1009,7 @@
             /* ANOTHER PROJECT SHOWN (workspace/session.js open, create): its scenes into the builder -- a history of its
                own -- its renderer settings, its item being edited if it had one, and its scene compiled */
             showProject = async (w, item) => {
-                BUILDER.replace({ project: w.project, current: w.current, cameras: w.cameras });
+                BUILDER.replace({ project: w.project, current: w.current });
                 // nothing selected: scene keys start again in every project, so `s1:n5` would name another node
                 builderTree.select(null);
                 const unknown = RT.applySettings(w.renderer || {});
@@ -1030,7 +1039,7 @@
                project being worked on (demo.js load: after the current scene, and worked on). A WORKSPACE file
                becomes a project of its own in the list, and is opened: it replaced the work open before, which
                with the work kept in the browser would be throwing it away (UI_PLAN.md section 10). */
-            const openText = async (text, name = 'file', { camera = null } = {}) => {
+            const openText = async (text, name = 'file') => {
                 try {
                     let kind = null;
                     try { kind = Project.parse(text); } catch { }      // a bad file: load() below says all that is wrong with it
@@ -1038,7 +1047,7 @@
                         await SESSION.importText(text, String(name).replace(/\.json$/i, ''));
                         return status(`opened ${name} as a project of its own (File › Projects…)`);
                     }
-                    status(BUILDER.load(text, { camera }));
+                    status(BUILDER.load(text));
                     builderTree.apply();
                 } catch (e) {
                     // a ModelError lists every problem with the file; the project is unchanged
@@ -1262,7 +1271,8 @@
         const failed = await firstCompile({ RT, BUILDER, nothing: NOTHING });      // init itself, on a safe start too
         const startNote = safeStart ? safeNote(first.title, SAFE) : failed;
         started(localStore);
-        /* THE PROJECT AS IT WAS LEFT (workspace/): the renderer's settings -- camera, exposure, quality, size; after init,
+        /* THE PROJECT AS IT WAS LEFT (workspace/): the renderer's settings -- quality, size: not the camera, the exposure
+           or the tolerance, which are each scene's and came back with it (builder/model.js VIEW); after init,
            since a size needs the canvas's buffers -- and a library item that was being edited, taken up again with its
            strip over the view, without framing the camera the project kept. Then what counts as saved is what is
            there, and the autosave looks once a second, when the tab is hidden, and as the page goes. */
