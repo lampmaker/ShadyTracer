@@ -60,7 +60,7 @@ let BUILDER = null, tree = null, E = null, strip = null, showProject = async () 
 let local = null
 try { local = localStorage } catch { }
 const AUTOSAVE = createAutosave({ store, local, say,
-    read: () => ({ revision: BUILDER.revision, project: BUILDER.project,
+    read: () => ({ revision: BUILDER.saveRevision, project: BUILDER.project,
         session: { current: BUILDER.current, renderer: P.rendererSettings(RT.settings()), views: BUILDER.views(), item: E?.remember() ?? null } }),
     onCreated: m => SESSION.adopt(m) })
 const SESSION = createSession({ store, tabs: createTabs(), autosave: AUTOSAVE, say,

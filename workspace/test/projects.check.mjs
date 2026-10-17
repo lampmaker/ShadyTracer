@@ -158,7 +158,7 @@ r = await p.evaluate(() => { const was = CHECK.BUILDER.undo(); return { was, tit
 ok('...an undo brings it back and stays on the scene worked on: nothing to compile', JSON.stringify(r.titles) === '["Builder demo","Lens v2","Lens v2 copy"]'
     && r.cur === 'Builder demo' && r.was === 'live', JSON.stringify(r))
 await p.evaluate(() => CHECK.tree.sceneOps.remove(CHECK.BUILDER.project.scenes[2].key))
-/* DRAGGED, the cards reorder -- by the mouse itself, pressed on whatever card is under it (0.66.1). Playwright's
+/* DRAGGED, the cards reorder -- by the mouse itself, pressed on whatever card is under it (0.67.1). Playwright's
    dragAndDrop finds the card first and presses after, and a card redrawn in between (here: the remove just above, drawn
    by the strip's next look) has the press held back as one another element would receive: a pointerdown and no
    mousedown, then a drag that Playwright starts and does not follow, so no drop. Measured headless, the strip redrawn
@@ -192,7 +192,7 @@ ok('a card dragged onto another: before it', JSON.stringify(await titles()) === 
 await drag('Builder demo', 'Lens v2')
 await order(['Builder demo', 'Lens v2'])
 ok('...and back', JSON.stringify(await titles()) === '["Builder demo","Lens v2"]', JSON.stringify(await titles()))
-/* ...AND WHEN THE CARDS ARE REDRAWN UNDER THE MOUSE (0.66.1): the strip redraws them when what they show changes -- an
+/* ...AND WHEN THE CARDS ARE REDRAWN UNDER THE MOUSE (0.67.1): the strip redraws them when what they show changes -- an
    edit, a picture taken -- and a card replaced under a drag was a drag lost, and under a click a click lost
    (scenestrip.js `held`). Redrawn between the move and the release: 0 drags of 6 reordered before; between the press
    and the release, 6 clicks of 6 chose nothing. */

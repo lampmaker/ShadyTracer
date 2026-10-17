@@ -130,7 +130,7 @@ throws('and so is broken JSON', () => P.parse('{'), /JSON/)
     // THE HISTORY'S TEXT holds no view: looking is not an edit (project.js historyText)
     const h = P.createProject([M.setView(M.createDoc({ title: 'H' }), { camera: { distance: 3 }, exposure: { exposureEV: 4 } })])
     ok('the history\'s text has no view', !P.historyText(h).includes('"view"') && P.serialize(h).includes('"view"'))
-    const back = P.carryViews(P.parse(P.historyText(h)).project, h)
+    const back = P.carryOutside(P.parse(P.historyText(h)).project, h)
     eq('...and a snapshot restored gets each scene\'s view back by its key', back.scenes[0].doc.view, h.scenes[0].doc.view)
     const dup = P.duplicateScene(h, 's1')
     eq('a duplicate comes with the view', dup.doc.view, h.scenes[0].doc.view)
@@ -324,7 +324,7 @@ const standIn = (cam0, exposure0 = { exposureEV: 15, autoExposure: 1 }) => {
 }
 {
     /* A SCENE DELETED AND BROUGHT BACK BY UNDO keeps its view (a card's "Delete (Ctrl+Z brings it back)"): the history's
-       text holds no view, so the project restored from it takes each scene's from the one before (carryViews) -- and a
+       text holds no view, so the project restored from it takes each scene's from the one before (carryOutside) -- and a
        scene the step had taken out from the builder's memory of it, by key, as the cameras kept beside the documents
        until this branch were kept until a restore pruned them */
     const { installBuilder } = await import('../demo.js')
@@ -384,6 +384,73 @@ const standIn = (cam0, exposure0 = { exposureEV: 15, autoExposure: 1 }) => {
         B.use(n); B.markShown()
         eq('back to the new one: the camera it was left with, not the start again', R.cam.distance, 9)
     } finally { console.log = log }
+}
+{
+    /* THE TIMELINE IS NO UNDO STEP EITHER (0.67.0, model.js TIMELINE; project.js OUTSIDE_HISTORY): out of the history's
+       text, carried across a restore, a part at a time; in a duplicate and a scene file */
+    const tl = { fps: 12, duration: 3, tracks: [{ prop: 'scene/n1/radius', interp: 'linear', keys: [{ t: 0, v: 1 }, { t: 3, v: 2 }] }] }
+    const h = P.createProject([M.setTimeline(M.setView(M.createDoc({ title: 'H' }), { camera: { distance: 3 } }), tl)])
+    ok('the history\'s text has no timeline', !P.historyText(h).includes('"timeline"') && P.serialize(h).includes('"timeline"'))
+    eq('...and a snapshot restored gets each scene\'s timeline back by its key', P.carryOutside(P.parse(P.historyText(h)).project, h).scenes[0].doc.timeline, tl)
+    eq('a duplicate comes with the timeline', P.duplicateScene(h, 's1').doc.timeline, tl)
+    eq('...and a scene file', JSON.parse(P.serializeScene(h, 's1')).timeline, tl)
+    // each part on its own: a scene with a view and no timeline takes the timeline kept for it
+    const viewOnly = P.createProject([M.setView(M.createDoc({ title: 'H' }), { camera: { distance: 4 } })])
+    const kept = new Map([['s1', { view: { camera: { distance: 9 } }, timeline: tl }]])
+    const both = P.carryOutside(P.parse(P.historyText(viewOnly)).project, viewOnly, kept).scenes[0].doc
+    eq('...its own view, and the timeline kept for it', [both.view.camera.distance, both.timeline], [4, tl])
+    const rest = P.withoutOutside(h.scenes[0].doc)
+    eq('withoutOutside takes out the view and the timeline, and leaves the rest', ['view' in rest, 'timeline' in rest, rest.title], [false, false, 'H'])
+}
+{
+    /* EACH SCENE ITS OWN TIMELINE (0.67.0): handed to the host as each scene is shown (BUILDER.onTimeline, from markShown,
+       with the view), WHOLE; kept into the scene SHOWN, as its view is; no undo step and no revision, but a save
+       revision, so the autosave writes it; an undo leaves it; a scene deleted and brought back has it again */
+    const { installBuilder } = await import('../demo.js')
+    const R = standIn({ mode: 'orbit', distance: 5, azimuth: 30 })
+    const log = console.log; console.log = () => { }
+    const warn = console.warn, warned = []; console.warn = (...x) => warned.push(x.join(' '))
+    try {
+        const tl = { fps: 12, duration: 3, tracks: [{ prop: 'scene/n1/radius', interp: 'linear', keys: [{ t: 0, v: 1 }, { t: 3, v: 2 }] }],
+                     export: { width: 320, height: 240, samples: 4, from: 0, to: 0, filename: 'b' } }
+        const docB = M.setTimeline(M.createDoc({ title: 'B' }), tl)
+        const B = installBuilder({}, { RT: R.RT, project: P.createProject([M.createDoc({ title: 'A' }), docB]) })
+        const [a, b] = B.project.scenes.map(s => s.key)
+        const handed = []
+        B.onTimeline = t => handed.push(t)
+        const tlOf = k => P.scene(B.project, k)?.doc.timeline
+        eq('the scene the renderer starts on: its timeline, whole -- the defaults, it has none', B.timeline(), M.sceneTimelineOf(null))
+        B.use(b); B.markShown()
+        eq('B shown: the host is handed B\'s, whole', handed.at(-1), M.sceneTimelineOf(docB))
+        const r0 = B.revision, s0 = B.saveRevision
+        ok('a change kept into the scene shown', B.keepTimeline({ ...B.timeline(), fps: 15 }) && tlOf(b).fps === 15)
+        ok('...no undo step and no revision (the bake waits on it), but a save revision (the autosave reads it)',
+            !B.canUndo && B.revision === r0 && B.saveRevision !== s0, `${r0} ${B.revision} ${s0} ${B.saveRevision}`)
+        B.use(a); B.markShown()
+        eq('back to A: A\'s, the defaults -- not B\'s fps or its tracks', [handed.at(-1).fps, handed.at(-1).tracks.length], [30, 0])
+        ok('...and nothing written into A for being shown', tlOf(a) === undefined)
+        // DURING A COMPILE: the next scene current, the last one still shown -- the panel holds the shown one's
+        B.use(b)
+        B.keepTimeline({ ...B.timeline(), fps: 50 })
+        eq('a change while the next scene compiles goes to the scene shown, not the current one', [tlOf(a)?.fps, tlOf(b).fps], [50, 15])
+        B.markShown()
+        eq('...and B\'s comes when it is shown', handed.at(-1).fps, 15)
+        // an undo is no change to the timeline
+        M.addObject(B.doc, 'root', { primitive: 'sphere' }); B.commit()
+        B.keepTimeline({ ...B.timeline(), fps: 60 })
+        B.undo()
+        eq('an undo leaves the timeline as it is', tlOf(b).fps, 60)
+        // refused: nothing kept, said once
+        const n = warned.length
+        ok('one the model refuses is not kept', !B.keepTimeline({ fps: -1 }) && !B.keepTimeline({ fps: -1 }) && tlOf(b).fps === 60)
+        eq('...and said once', warned.length - n, 1)
+        // a scene deleted from its card and brought back with Ctrl+Z
+        P.removeScene(B.project, a); B.commit(null, { scenes: 'delete', was: b })
+        B.undo()
+        eq('a scene deleted and brought back has its timeline again', tlOf(a)?.fps, 50)
+        B.unshow()
+        ok('no scene shown: nothing kept, and the defaults to show', !B.keepTimeline({ fps: 5 }) && B.timeline().fps === 30)
+    } finally { console.log = log; console.warn = warn }
 }
 {
     /* THE SCENE'S RADIUS, LIVE (model.js envRadius): no uniform but a value of the scene object the renderer

@@ -26,7 +26,7 @@
 // IT FOLLOWS BY LOOKING, four times a second, as the row before it did: the project, its scenes (counted again only
 // when the builder's revision moves), the open one, its picture, whether it is compiled. An undo, a project opened from
 // the Project panel, a picture arriving -- each reaches it without a hook. refresh() for at once. Never under the mouse:
-// from a press on a card until it is let go, the redraw waits (0.66.1, `held`).
+// from a press on a card until it is let go, the redraw waits (0.67.1, `held`).
 //
 //   const S = installSceneStrip(host, { BUILDER, ops: tree.sceneOps, tree, project, picture, onSelect, openProject, examples, item, compile, exportScene, say })
 //   S.refresh()    S.select(key | null)    S.selected()
@@ -149,7 +149,7 @@ export function installSceneStrip(host, { BUILDER, ops, tree = null, project = (
 
     // ---- THE CARDS: drawn when what they show changes; a selection only moves a class
     let sig = '', counted = '', list = []
-    /* NOT WHILE A CARD IS HELD (0.66.1): the cards are replaced when what they show changes -- a picture taken, a compile
+    /* NOT WHILE A CARD IS HELD (0.67.1): the cards are replaced when what they show changes -- a picture taken, a compile
        begun or ended, any edit, found by the 250 ms look below -- and a card replaced under the mouse lost what the mouse
        was doing with it. Measured headless in Chromium: a card dragged onto another with the cards redrawn between the
        move and the release, 0 of 6 reordered, each on a fresh page (not redrawn, 6 of 6); a click on another card

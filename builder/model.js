@@ -163,6 +163,7 @@ export const OPS = ['union', 'subtract', 'intersect']
 
 export { identity, matrixOf } from './transform.js'
 import { identity, matrixOf } from './transform.js'
+import { INTERPS, EASES } from '../lib/timeline/timeline.js'
 
 /** Parameter names that would collide with what codegen declares for every node:
  *  `xf_<id>` (the transform), `blend_<id>` (a group's blend), `bxlo_<id>` / `bxhi_<id>` (a top-level
@@ -2220,6 +2221,118 @@ export function cameraInUnit(camera, from, to) {
 }
 
 /*======================================================================================================================
+  THE TIMELINE -- how the scene moves: the Timeline panel's keys and the film it records (0.67.0; the user, 2026-10-17:
+  "make the settings for the animation timeline part of a scene").
+
+  `doc.timeline = { fps, duration, tracks, export }`: the `timeline` of lib/timeline's own file (timeline.js toJSON),
+  and of its export settings the film's (TIMELINE_FILM): its size, samples, range and name. The encoder's -- format,
+  bitrate, written to disk as it goes -- are the person's, not the scene's, and stay in the browser (tools/timeline.js).
+
+  WHY THE SCENE'S. Until 0.67.0 one timeline was the page's, in the browser's storage, whatever scene was shown:
+  - a track names what it moves by its registry path, and a node's is its id (builder/params.js), which is unique
+    only within its document (newId: n1, n2 ... in every scene). A track on one scene's n4 found another scene's n4
+    with a parameter of the same name and moved it (read in code: tools/timeline.js liveRegistry asks only whether
+    the path is there);
+  - a camera's lengths are in the scene's unit (CAMERA_LENGTHS): a distance keyed at 20 was 20 mm in one scene, 20 m in
+    the next;
+  - which values are animated (setAnimated) was already the scene's, and the keys that go with them were not.
+
+  WHOLE WHEN READ (sceneTimelineOf): what a scene leaves out is the default, never the last scene's. lib/timeline's
+  load keeps the fps, the duration and any export setting a file does not name (timeline.js fromJSON `o.fps > 0`,
+  sequencer.js load `k in obj.export`), so a scene handed over as it is would get the scene before's -- the camera's
+  carry-over of 0.66.0 again.
+
+  NOT AN UNDO STEP, as the view is not (project.js OUTSIDE_HISTORY): the timeline has never had an undo, and a
+  snapshot of the whole project at every key dragged would cost what an edit costs for nothing anyone asked for. But
+  SAVED as an edit is (demo.js keepTimeline): keys are work, so a timeline changed is written with the project within
+  the second, and a second tab's copy is made by it (workspace/autosave.js).
+
+  A TRACK ON A PATH THE SCENE DOES NOT HAVE IS KEPT, as lib/timeline keeps it ("(unknown)" in its header): a node
+  deleted and brought back by an undo has its track again.
+
+  No version change, as the view's and the environment's: a builder of 22 that predates it carries it along unread.
+======================================================================================================================*/
+/** The film's settings a scene keeps, and what each may be: lib/timeline's export settings (sequencer.js S), as its
+ *  export menu sets them (export-ui.js). */
+export const TIMELINE_FILM = Object.freeze({
+    width: v => (Number.isInteger(v) && v >= 1) || 'must be a whole number of pixels >= 1',
+    height: v => (Number.isInteger(v) && v >= 1) || 'must be a whole number of pixels >= 1',
+    samples: v => (Number.isInteger(v) && v >= 1) || 'must be a whole number >= 1 (renders a frame)',
+    from: v => (Number.isFinite(v) && v >= 0) || 'must be a number of seconds >= 0',
+    to: v => (Number.isFinite(v) && v >= 0) || 'must be a number of seconds >= 0 (0 the whole duration)',
+    filename: v => typeof v === 'string' || 'must be text',
+})
+/* THE TIMELINE A SCENE LEAVING ONE OUT HAS: what the panel started with before it was the scene's (tools/timeline.js
+   until 0.67.0), and lib/timeline's own range of 0 to 0, the whole duration */
+export const TIMELINE_DEFAULTS = Object.freeze({ fps: 30, duration: 8, tracks: Object.freeze([]),
+    export: Object.freeze({ width: 1920, height: 1080, samples: 64, from: 0, to: 0, filename: 'raytracer' }) })
+
+const keyValue = v => Number.isFinite(v) || (Array.isArray(v) && v.length > 0 && v.every(Number.isFinite))
+function timelineProblems(t) {
+    if (!t || typeof t !== 'object' || Array.isArray(t)) return ['timeline must be an object']
+    const p = []
+    for (const k of Object.keys(t)) if (!['fps', 'duration', 'tracks', 'export'].includes(k)) p.push(`timeline.${k}: not part of a timeline (fps, duration, tracks, export)`)
+    if (t.fps !== undefined && !(Number.isFinite(t.fps) && t.fps > 0)) p.push('timeline.fps must be a number > 0 (frames a second)')
+    if (t.duration !== undefined && !(Number.isFinite(t.duration) && t.duration > 0)) p.push('timeline.duration must be a number > 0 (seconds)')
+    if (t.tracks !== undefined) {
+        if (!Array.isArray(t.tracks)) p.push('timeline.tracks must be a list')
+        else {
+            const seen = new Set()
+            t.tracks.forEach((k, i) => {
+                const at = `timeline.tracks[${i}]`
+                if (!k || typeof k !== 'object' || Array.isArray(k)) { p.push(`${at} must be an object`); return }
+                if (typeof k.prop !== 'string' || !k.prop) p.push(`${at}.prop must be a parameter's path`)
+                else if (seen.has(k.prop)) p.push(`${at}: a second track on '${k.prop}' (one a parameter)`)
+                else seen.add(k.prop)
+                if (!INTERPS.includes(k.interp)) p.push(`${at}.interp must be one of ${INTERPS.join(', ')}`)
+                if (!Array.isArray(k.keys)) { p.push(`${at}.keys must be a list`); return }
+                k.keys.forEach((x, j) => {
+                    if (!x || typeof x !== 'object' || Array.isArray(x)) { p.push(`${at}.keys[${j}] must be an object`); return }
+                    if (!(Number.isFinite(x.t) && x.t >= 0)) p.push(`${at}.keys[${j}].t must be a number of seconds >= 0`)
+                    if (!keyValue(x.v)) p.push(`${at}.keys[${j}].v must be a number or a list of numbers`)
+                    if (x.ease != null && !EASES.includes(x.ease)) p.push(`${at}.keys[${j}].ease must be one of ${EASES.join(', ')}`)
+                })
+            })
+        }
+    }
+    const e = t.export
+    if (e !== undefined) {
+        if (!e || typeof e !== 'object' || Array.isArray(e)) p.push('timeline.export must be an object')
+        else for (const [k, v] of Object.entries(e)) {
+            const check = TIMELINE_FILM[k]
+            if (!check) { p.push(`timeline.export.${k}: not a setting of the film (${Object.keys(TIMELINE_FILM).join(', ')})`); continue }
+            const ok = check(v)
+            if (ok !== true) p.push(`timeline.export.${k} ${ok}`)
+        }
+    }
+    return p
+}
+/** The film's settings of an export's, copied: lib/timeline's hold the encoder's too (format, bitrate, stream). */
+export const filmSettings = e => e && typeof e === 'object'
+    ? Object.fromEntries(Object.keys(TIMELINE_FILM).filter(k => e[k] !== undefined).map(k => [k, e[k]])) : null
+/** THE TIMELINE A SCENE IS SHOWN WITH, whole: its own over TIMELINE_DEFAULTS, the film's settings each over theirs. A
+ *  copy: what the panel does to it is not the scene's until it is kept (setTimeline). */
+export function sceneTimelineOf(doc) {
+    const t = doc?.timeline ?? {}
+    return { fps: t.fps ?? TIMELINE_DEFAULTS.fps, duration: t.duration ?? TIMELINE_DEFAULTS.duration,
+             tracks: structuredClone(t.tracks ?? []), export: { ...TIMELINE_DEFAULTS.export, ...filmSettings(t.export) } }
+}
+/** Set the scene's timeline, WHOLE (the panel hands over all of it at every change): its fps, duration and tracks as
+ *  given, and of its export settings the film's. Checked first: a refusal changes nothing. Null takes it away. */
+export function setTimeline(doc, t) {
+    if (t == null) { delete doc.timeline; return doc }
+    if (!t || typeof t !== 'object' || Array.isArray(t)) throw new ModelError(['timeline must be an object'])
+    const next = {}
+    for (const k of ['fps', 'duration', 'tracks']) if (t[k] !== undefined) next[k] = structuredClone(t[k])
+    const film = filmSettings(t.export)
+    if (film && Object.keys(film).length) next.export = film
+    const bad = timelineProblems(next)
+    if (bad.length) throw new ModelError(bad)
+    doc.timeline = next
+    return doc
+}
+
+/*======================================================================================================================
   THE SCENE'S SURFACE TOLERANCE (0.66.0): how close a ray must come to a surface to have hit it, in the scene's unit,
   0 or absent the renderer's automatic one (a share of the scene's size: lib/pathtracer/core/photometry.js autoEps).
   It was a renderer setting in metres, one for every scene: a value typed for a 25 cm optic was the one a 4 m room, an
@@ -2401,6 +2514,7 @@ export function validate(doc) {
     if (doc.environment !== undefined) p.push(...environmentProblems(doc.environment))
     if (doc.envRadius !== undefined) p.push(...envRadiusProblems(doc.envRadius))
     if (doc.view !== undefined) p.push(...viewProblems(doc.view))
+    if (doc.timeline !== undefined) p.push(...timelineProblems(doc.timeline))
     if (doc.tolerance !== undefined) p.push(...toleranceProblems(doc.tolerance))
     if (doc.liveVisibility !== undefined && typeof doc.liveVisibility !== 'boolean') p.push('liveVisibility must be true or false')
     if (p.length) return p
