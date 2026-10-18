@@ -5,8 +5,8 @@
 //   march     sphere tracing a ray through a small scene: each step's circle, step scale and tolerance, a thin wall a
 //             long step can jump, and the scene's radius a ray escapes past
 //   march3d   the same march in 3D: a real picture, its normals, or how many steps each pixel's ray took; turned by dragging
-//   lipschitz a squashed circle whose distance is too large: the circles claim empty space that is not, the ray ends up
-//             inside -- and the same field divided by its steepest slope, safe again
+//   lipschitz a squeezed circle whose distance is too large: the circles claim empty space that is not, and the ray lands
+//             inside the shape or steps right over it -- and the same field divided by its steepest slope, safe again
 //
 // The distances are the help's 2D mirrors of sdf.js (help/widgets.js), so what is drawn is the renderer's formula.
 //======================================================================================================================
@@ -127,7 +127,8 @@ export const figures = {
         steps: {
             march: { from: [-3.3, 0.35], aim: [1.8, 0.9], stepscale: 0.9, eps: 0.01, ...MARCH_AT },
             graze: { from: [-3.3, -1.45], aim: [0.7, -0.18], stepscale: 0.9, eps: 0.01, ...MARCH_AT },
-            tolerance: { from: [-3.3, 0.35], aim: [1.8, 0.9], stepscale: 0.9, eps: 0.25, ...MARCH_AT },
+            // the grazing ray again: at a large tolerance, a ray that would slip past the block's corner stops beside it
+            tolerance: { from: [-3.3, -1.45], aim: [0.7, -0.18], stepscale: 0.9, eps: 0.1, ...MARCH_AT },
             overshoot: { from: [-3.3, 0.95], aim: [1.8, 0.75], stepscale: 1.7, eps: 0.01, ...MARCH_AT },
             escape: { from: [-3.3, 2.1], aim: [1.8, 2.5], stepscale: 0.9, eps: 0.01, ...MARCH_AT },
         },
@@ -140,7 +141,7 @@ export const figures = {
         },
         draw(pen, s) {
             pen.circle([0, 0], s.radius, { role: 'faint', w: 0.8, dash: [6, 6], id: 'radius' })
-            pen.label([s.radius * Math.cos(-0.62), s.radius * Math.sin(-0.62)], "the scene's radius", { role: 'soft', size: 13, dx: 8 })
+            pen.label([s.radius * Math.cos(-0.62), s.radius * Math.sin(-0.62)], "the scene's radius", { role: 'soft', size: 13, dx: -8, dy: 12, align: 'right' })
             const scene = sceneOf(s), sceneD = distOf(scene)
             for (const sh of scene.shapes) pen.flat(sh, { id: sh.name })
             const d = unit(s.from, s.aim)
@@ -151,15 +152,19 @@ export const figures = {
                 pen.dot([s.from[0] + d[0] * t, s.from[1] + d[1] * t], { role: 'blocked', r: 5, ring: true })
                 pen.label([s.from[0] + d[0] * t, s.from[1] + d[1] * t], 'it should have stopped here', { role: 'blocked', size: 14, dx: 10, dy: -16 })
             }
+            // stopped before the real surface: a near miss counted as a hit, or a stop well short of what it hit
+            const early = r.end === 'hit' && t > reached + 0.03
+            if (early) pen.label([r.x, r.y], t === Infinity ? 'a near miss, counted as a hit' : 'stopped short', { role: 'blocked', size: 14, dx: 10, dy: 18 })
             for (const k of ['ball', 'block', 'wall']) pen.handle(k, s[k], { role: 'soft' })
             pen.handle('from', s.from, { label: 'start' })
             pen.handle('aim', s.aim, { label: 'aim' })
-            s._r = { n: r.steps.length, end: r.end, through: r.end === 'hit' ? reached > t + 0.02 : t < 12 && r.end !== 'hit' }
+            s._r = { n: r.steps.length, end: r.end, through: r.end === 'hit' ? reached > t + 0.02 : t < 12 && r.end !== 'hit', early, short: t - reached }
         },
         readout(s) {
             const r = s._r
             if (!r) return ''
             const what = r.through ? (r.end === 'hit' ? 'hit — but the wrong surface: it stepped through one' : `${r.end} — straight through a surface`)
+                : r.early ? (r.short === Infinity ? 'counted as a hit, though the ray would have missed: it passed within the tolerance' : `stopped ${r.short.toFixed(2)} short of the surface`)
                 : r.end === 'hit' ? 'hit a surface' : r.end
             return `${r.n} steps · ${what}`
         },
@@ -168,41 +173,50 @@ export const figures = {
     lipschitz: {
         aspect: 1.6,
         world: { x: [-3.4, 3.2], y: [-1.9, 2.2] },
-        state: { squash: 0.3, safe: false, y0: 0.25 },
+        // squeezed to half: the first step of the raw formula lands inside the ellipse; squeezed harder, it jumps it
+        state: { squash: 0.5, safe: false, start: [-2.0, 0.25] },
         controls: [
-            { type: 'slider', key: 'squash', label: 'squash', min: 0.15, max: 1, step: 0.01, fmt: v => `× ${v.toFixed(2)}` },
+            { type: 'slider', key: 'squash', label: 'squeeze', min: 0.2, max: 1, step: 0.01, fmt: v => `× ${v.toFixed(2)}` },
             { type: 'toggle', key: 'safe', label: 'Divide by the slope' },
         ],
-        steps: { lie: { squash: 0.3, safe: false }, fix: { squash: 0.3, safe: true } },
-        drag: { start: (s, p) => { s.y0 = clamp(p[1], -1.6, 1.6) } },
+        steps: { lie: { squash: 0.5, safe: false, start: [-2.0, 0.25] }, fix: { squash: 0.5, safe: true, start: [-2.0, 0.25] } },
+        drag: { start: (s, p) => { s.start = [clamp(p[0], -3.2, -0.9), clamp(p[1], -1.6, 1.6)] } },
         draw(pen, s) {
-            const R = 1.4, k = s.squash
-            const wrong = (x, y) => circle(x / k, y, R)          // the circle's formula, with x squeezed: an ellipse
-            const f = s.safe ? (x, y) => wrong(x, y) * k : wrong   // its steepest slope is 1/k: divide by it
-            // the true shape, an ellipse R k wide and R tall
+            const R = 1.4, k = s.squash, a = R * k
+            const raw = (x, y) => circle(x / k, y, R)             // the circle's formula with x squeezed: an ellipse
+            const f = s.safe ? (x, y) => raw(x, y) * k : raw       // it changes up to 1/k as fast as a distance: divide
             const pts = []
-            for (let i = 0; i < 72; i++) { const a = i / 72 * Math.PI * 2; pts.push([R * k * Math.cos(a), R * Math.sin(a)]) }
+            for (let i = 0; i < 72; i++) { const t = i / 72 * Math.PI * 2; pts.push([a * Math.cos(t), R * Math.sin(t)]) }
             pen.shape(pts, { role: 'solid', fill: 'fill', w: 1.25, id: 'ellipse' })
-            const o = [-3.1, s.y0], d = [1, 0]
-            const r = sphereTrace(f, o, d, { stepscale: 1, eps: 0.004, radius: 50, max: 60 })
-            const insideShape = st => (st.x / (R * k)) ** 2 + (st.y / R) ** 2 < 1
-            // stop drawing past the first step that landed inside: the rest is a ray lost in a solid
-            const firstIn = r.steps.findIndex(insideShape)
-            const shown = firstIn >= 0 ? { ...r, steps: r.steps.slice(0, firstIn + 1), x: r.steps[firstIn].x, y: r.steps[firstIn].y, end: 'inside' } : r
-            for (const [j, st] of shown.steps.entries()) {
-                const lies = Math.abs(st.d) > trueDist(st, R * k, R) + 1e-6    // a circle bigger than the real distance
+            const o = s.start, r = sphereTrace(f, o, [1, 0], { stepscale: 1, eps: 0.004, radius: 50, max: 60 })
+            // where the ray really meets the ellipse (it runs along y = o[1]), and leaves it
+            const enter = Math.abs(o[1]) < R ? -a * Math.sqrt(1 - (o[1] / R) ** 2) : Infinity, exit = -enter
+            const inside = st => (st.x / a) ** 2 + (st.y / R) ** 2 < 1
+            const firstIn = r.steps.findIndex(inside)
+            const over = firstIn < 0 && enter < Infinity ? r.steps.findIndex(st => st.x > exit) : -1
+            const last = firstIn >= 0 ? firstIn : over >= 0 ? over : r.steps.length - 1
+            const shown = r.steps.slice(0, last + 1)
+            for (const [j, st] of shown.entries()) {
+                const lies = Math.abs(st.d) > trueDist(st, a, R) + 1e-6    // a circle bigger than the real distance
                 pen.circle([st.x, st.y], Math.abs(st.d), { role: lies ? 'blocked' : 'step', w: 0.8, exact: true })
-                pen.dot([st.x, st.y], { role: firstIn === j ? 'blocked' : 'cam', r: firstIn === j ? 4.5 : 2.4 })
+                pen.dot([st.x, st.y], { role: j === firstIn ? 'blocked' : 'cam', r: j === firstIn ? 4.5 : 2.4 })
             }
-            pen.ray(o, [shown.x, shown.y], { role: 'cam', w: 1.2, arrow: false })
+            const end = shown[shown.length - 1]
+            pen.ray(o, [end.x, end.y], { role: 'cam', w: 1.2, arrow: over >= 0 })
+            if (firstIn >= 0) pen.label([end.x, end.y], 'inside the shape!', { role: 'blocked', size: 15, dx: 10, dy: -18 })
+            if (over >= 0) {
+                pen.dot([enter, o[1]], { role: 'blocked', r: 5, ring: true })
+                pen.label([enter, o[1]], 'it should have stopped here', { role: 'blocked', size: 14, dx: -10, dy: -18, align: 'right' })
+            }
             pen.handle('start', o, { label: 'start' })
-            if (firstIn >= 0) pen.label([shown.x, shown.y], 'inside the shape!', { role: 'blocked', size: 15, dx: 10, dy: -18 })
-            s._r = { n: shown.steps.length, inside: firstIn >= 0 }
+            s._r = { n: shown.length, end: firstIn >= 0 ? 'inside' : over >= 0 ? 'over' : r.end }
         },
         readout(s) {
-            if (!s._r) return ''
-            return s._r.inside ? `${s._r.n} steps · the ray ended up inside the shape: a step was longer than the real distance`
-                : `${s._r.n} steps · stopped at the surface${s.safe ? ', every circle really empty' : ''}`
+            const r = s._r
+            if (!r) return ''
+            if (r.end === 'inside') return `${r.n} steps · the ray landed inside the shape: the formula claimed more empty space than there was`
+            if (r.end === 'over') return `${r.n} steps · the ray stepped right over the shape: a step was longer than the real distance`
+            return `${r.n} steps · ${r.end === 'hit' ? 'stopped at the surface' : r.end}${s.safe ? ', every circle truly empty' : ''}`
         },
     },
 }
@@ -237,7 +251,7 @@ figures.march3d = {
     aspect: FILM[0] / FILM[1],
     world: { x: [-1, 1], y: [-0.625, 0.625] },
     orbit: true,
-    state: { yaw: -1.05, pitch: 0.5, view: 'picture', stepscale: 0.9 },
+    state: { yaw: -1.05, pitch: 0.32, view: 'picture', stepscale: 0.9 },
     controls: [
         { type: 'seg', key: 'view', options: [['picture', 'Picture'], ['steps', 'Steps per pixel'], ['normal', 'Normals']] },
         { type: 'slider', key: 'stepscale', label: 'step scale', min: 0.5, max: 1.8, step: 0.05, fmt: v => v.toFixed(2) },

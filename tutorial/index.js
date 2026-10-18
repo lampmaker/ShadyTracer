@@ -7,6 +7,7 @@ import { boot, chapterHref } from './kit/page.js'
 import { PARTS, CHAPTERS } from './kit/chapters.js'
 import { makePen } from './kit/pen.js'
 import { readTheme } from './kit/figure.js'
+import { legend } from './kit/legend.js'
 
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']
@@ -50,26 +51,8 @@ function route(doc, map, canvas) {
     return draw
 }
 
-/* THE LEGEND: what each colour and line means in every figure */
-export const figures = {
-    legend: {
-        aspect: 3.2,
-        world: { x: [0, 16], y: [-0.4, 4.6] },
-        state: {},
-        draw(pen) {
-            const row = (y, label, f) => { f(y); pen.label([5.3, y], label, { role: 'ink', size: 14 }) }
-            row(4, 'camera ray: from the eye', y => pen.ray([0.4, y], [4.8, y], { role: 'cam', w: 1.2 }))
-            row(3, 'light: a lamp, a light ray', y => { pen.bulb([0.6, y], { r: 6 }); pen.ray([1.2, y], [4.8, y], { role: 'light', w: 1.2 }) })
-            row(2, 'shadow ray that reached its light', y => pen.ray([0.4, y], [4.8, y], { role: 'shadow', w: 1.2, exact: false, id: 'l1' }))
-            row(1, 'blocked, or something gone wrong', y => pen.ray([0.4, y], [4.8, y], { role: 'blocked', w: 1.2, exact: false, id: 'l2' }))
-            row(0, 'normal: straight out of a surface', y => pen.ray([2.6, y - 0.3], [2.6, y + 0.45], { role: 'normal', w: 1.2, exact: false, id: 'l3' }))
-            pen.circle([12.2, 2.9], 1.1, { role: 'solid', fill: 'fill', w: 1.25, id: 'l4' })
-            pen.label([13.6, 3.6], 'a solid shape', { size: 14 })
-            pen.handle('demo', [11.2, 0.6])
-            pen.label([11.75, 0.6], 'drag these', { role: 'accent', size: 14 })
-        },
-    },
-}
+/* THE LEGEND: what each colour and line means in every figure (kit/legend.js: the styles page draws it too) */
+export const figures = { legend }
 
 export function mount() {
     const doc = document

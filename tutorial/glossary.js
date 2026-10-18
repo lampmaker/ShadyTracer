@@ -1,11 +1,13 @@
 //======================================================================================================================
-// THE GLOSSARY PAGE: every entry of kit/glossary.js, A to Z, each with the chapter that explains it and its related
-// entries; a filter box narrows the list as you type. Terms link here from every page (data-g, page.js).
+// THE GLOSSARY PAGE: every entry of kit/glossary.js, A to Z, each with the chapter that explains it, its related
+// entries and, for some, an outside source to read more (kit/reading.js); a filter box narrows the list as you type.
+// Terms link here from every page (data-g, page.js).
 //======================================================================================================================
 
 import { boot, chapterHref } from './kit/page.js'
 import { GLOSSARY } from './kit/glossary.js'
 import { chapter } from './kit/chapters.js'
+import { reading } from './kit/reading.js'
 
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
 
@@ -17,7 +19,9 @@ export function listHTML() {
         const c = chapter(g.ch)
         const where = c ? `<a class="where${c.file ? '' : ' planned'}" href="${chapterHref(c.id)}">${c.file ? 'Explained in' : 'Planned:'} chapter ${c.number}, “${esc(c.title)}”</a>` : ''
         const see = g.see.length ? `<span class="see">See also: ${g.see.map(id => { const t = GLOSSARY.find(x => x.id === id); return t ? `<a href="#${id}">${esc(t.term)}</a>` : '' }).join(', ')}</span>` : ''
-        return `${head}<dl class="entry" id="${g.id}" data-text="${esc((g.term + ' ' + g.short).toLowerCase())}"><dt>${esc(g.term)}</dt><dd><p>${esc(g.short)}</p>${where}${see}</dd></dl>`
+        const rs = (g.read ?? []).map(reading).filter(Boolean)
+        const read = rs.length ? `<span class="read">Read more: ${rs.map(r => r.href ? `<a href="${esc(r.href)}" target="_blank" rel="noopener">${esc(r.title)}</a> (${esc(r.who)})` : `${esc(r.title)} (${esc(r.who)})`).join('; ')}</span>` : ''
+        return `${head}<dl class="entry" id="${g.id}" data-text="${esc((g.term + ' ' + g.short).toLowerCase())}"><dt>${esc(g.term)}</dt><dd><p>${esc(g.short)}</p>${where}${see}${read}</dd></dl>`
     }).join('')
 }
 

@@ -83,6 +83,9 @@ for (const page of PAGES) {
             for (const x of c.querySelectorAll('sub')) x.textContent = '_' + x.textContent
             for (const f of c.querySelectorAll('.frac')) f.textContent = `(${f.children[0]?.textContent ?? ''})/(${f.children[1]?.textContent ?? ''})`
             for (const x of c.querySelectorAll('.n, .tag')) x.textContent = x.textContent + (x.matches('.tag') ? ': ' : ' ')
+            // a claim's stamp is said once, by the claim's own line below; a glossary entry's notes apart from its words
+            for (const x of c.querySelectorAll('.stamp')) x.remove()
+            for (const x of c.querySelectorAll('.where, .see, .read')) x.textContent = ' | ' + x.textContent
             for (const li of c.querySelectorAll('li, dt')) li.textContent = (li.matches('li') ? '\n- ' : '\n') + li.textContent
             for (const dd of c.querySelectorAll('dd')) dd.textContent = ' -- ' + dd.textContent
             // a detached copy's innerText is its textContent: the source's line breaks and indents, which say nothing
@@ -103,7 +106,9 @@ for (const page of PAGES) {
                 }
                 else if (n.matches('figure.excerpt')) lines.push(`[CODE from ShadyTracer's source, as the page shows it -- ${txt(n.querySelector('figcaption'))}]\n\`\`\`\n${n.querySelector('pre')?.innerText ?? ''}\n\`\`\``)
                 else if (n.matches('details')) { lines.push(`[FOLD-OUT, closed until the reader opens it: ${txt(n.querySelector('summary'))}]`); walk(n.querySelector('.body') ?? n); lines.push('[END OF FOLD-OUT]') }
-                else if (n.matches('[data-claim]')) lines.push(`[STAMPED "${({ measured: 'MEASURED', code: 'READ IN CODE', inferred: 'INFERRED' })[n.dataset.claim]}"] ${txt(n)}`)
+                else if (n.matches('[data-claim]')) { used.add('claim-' + n.dataset.claim); lines.push(`[STAMPED "${({ measured: 'MEASURED', code: 'READ IN CODE', inferred: 'INFERRED' })[n.dataset.claim]}"°, the stamp a link with a card] ${txt(n)}`) }
+                else if (n.matches('aside.refs')) lines.push(`[READING BOX, "${n.querySelector('.tag')?.textContent.trim() ?? ''}": outside sources, each a link that opens another site]\n`
+                    + [...n.querySelectorAll('li')].map(li => `- ${li.querySelector('.src-t')?.textContent.trim() ?? '?'} (${li.querySelector('.by')?.textContent.trim() ?? ''}): ${txt(li.querySelector('.why') ?? li)}`).join('\n'))
                 else if (n.matches('aside.note')) lines.push(`[NOTE IN THE MARGIN] ${txt(n)}`)
                 else if (n.matches('[data-step]')) lines.push(`[moves figure ${n.closest('section')?.querySelector('figure.fig')?.dataset.n ?? '?'}: ${n.dataset.step.split(':')[1]}] ${txt(n)}`)
                 else if (n.matches('p, ul, ol, dl, .eyebrow, .lede, pre')) lines.push(txt(n))

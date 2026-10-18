@@ -14,6 +14,8 @@ is indeed understandable").*
    no other file of the repository, no search, no web. Nothing about ShadyTracer goes in that the page does not show.
 3. Its report is kept in `reports/<date>/<page>.md`, and what changed because of it is written in
    [`REVIEWS.md`](REVIEWS.md): every finding either fixed, or answered with why not.
+4. A page revised for its findings is read again, by a new reader, before it is called done. So is a section rewritten
+   because ShadyTracer changed (`affected.mjs`, CLAUDE.md "The tutorial follows the code").
 
 **What it is and is not.** The reader is a language model told to read as a beginner. It does know the subject, and
 says when it understood something only because of that ("outside knowledge"). So its *"I got lost here"* is a strong

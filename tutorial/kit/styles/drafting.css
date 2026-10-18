@@ -6,7 +6,7 @@
     --ink: #151515; --ink-soft: #454545; --ink-faint: #8b8a85; --grid: rgba(0, 0, 0, .05); --rule: #151515;
     --accent: #d2401c; --accent-soft: rgba(210, 64, 28, .085);
     --c-cam: #151515; --c-light: #d2401c; --c-shadow: #151515; --c-blocked: #d2401c; --c-solid: #151515;
-    --c-fill: rgba(21, 21, 21, .62); --c-glass: #151515; --c-normal: #151515; --c-hit: #151515; --c-step: rgba(21, 21, 21, .28);
+    --c-fill: rgba(21, 21, 21, .62); --c-glass: #151515; --c-normal: #6e6e6e; --c-hit: #151515; --c-step: rgba(21, 21, 21, .28);
     --code-bg: rgba(0, 0, 0, .035); --code-ink: #151515; --code-comment: #6d6c66; --code-kw: #151515; --code-num: #d2401c;
     --stamp-measured: #151515; --stamp-code: #151515; --stamp-inferred: #d2401c;
     --f-display: 'Spectral SC', 'Spectral', Georgia, serif; --f-body: 'Spectral', Georgia, 'Times New Roman', serif;
@@ -21,7 +21,7 @@
         --ink: #ecebe6; --ink-soft: #b9b8b2; --ink-faint: #7d7c78; --grid: rgba(255, 255, 255, .05); --rule: #ecebe6;
         --accent: #ff6a3d; --accent-soft: rgba(255, 106, 61, .12);
         --c-cam: #ecebe6; --c-light: #ff6a3d; --c-shadow: #ecebe6; --c-blocked: #ff6a3d; --c-solid: #ecebe6;
-        --c-fill: rgba(236, 235, 230, .55); --c-glass: #ecebe6; --c-normal: #ecebe6; --c-hit: #ecebe6; --c-step: rgba(236, 235, 230, .28);
+        --c-fill: rgba(236, 235, 230, .55); --c-glass: #ecebe6; --c-normal: #a3a19a; --c-hit: #ecebe6; --c-step: rgba(236, 235, 230, .28);
         --code-bg: rgba(255, 255, 255, .04); --code-ink: #ecebe6; --code-comment: #9b9a94; --code-kw: #ecebe6; --code-num: #ff6a3d;
         --stamp-measured: #ecebe6; --stamp-code: #ecebe6; --stamp-inferred: #ff6a3d;
         --tex: none;
@@ -33,7 +33,7 @@
     --ink: #ecebe6; --ink-soft: #b9b8b2; --ink-faint: #7d7c78; --grid: rgba(255, 255, 255, .05); --rule: #ecebe6;
     --accent: #ff6a3d; --accent-soft: rgba(255, 106, 61, .12);
     --c-cam: #ecebe6; --c-light: #ff6a3d; --c-shadow: #ecebe6; --c-blocked: #ff6a3d; --c-solid: #ecebe6;
-    --c-fill: rgba(236, 235, 230, .55); --c-glass: #ecebe6; --c-normal: #ecebe6; --c-hit: #ecebe6; --c-step: rgba(236, 235, 230, .28);
+    --c-fill: rgba(236, 235, 230, .55); --c-glass: #ecebe6; --c-normal: #a3a19a; --c-hit: #ecebe6; --c-step: rgba(236, 235, 230, .28);
     --code-bg: rgba(255, 255, 255, .04); --code-ink: #ecebe6; --code-comment: #9b9a94; --code-kw: #ecebe6; --code-num: #ff6a3d;
     --stamp-measured: #ecebe6; --stamp-code: #ecebe6; --stamp-inferred: #ff6a3d;
     --tex: none;

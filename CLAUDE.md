@@ -189,7 +189,7 @@ node help/test/markdown.test.mjs                  # the help's markdown and link
 node help/test/coverage.test.mjs                  # the help holds together: every page listed and on disk with its title, every link going somewhere (a page and its heading, an example, a command, a panel); the reference pages as reference.mjs writes them now, every material field and light setting with its words
 node help/test/widgets.test.mjs                   # the SDF explainer's numbers: the shapes exact, the blend the renderer's own, sphere tracing stopping at the surface
 node help/test/panel.check.mjs                    # the Help panel headless: contents, a page link, back and forward, the SDF widgets drawn and redrawn, links handed to the host (an example, a command, a panel), search, the last page (optional: playwright)
-node tutorial/test/tutorial.test.mjs              # the developer tutorial holds together: its contents and pages agree, every glossary term, chapter link, anchor and data-* attribute real, every excerpt found exactly once in today's source (changed ones listed, not failed: node tutorial/stamp.mjs after re-reading them), no file:line typed by hand, every figure and step drawn into a recording canvas, the flat world against 2D closed forms and the 3D renderer against 3D ones (1/d^2, a glowing ball's pi L sin^2), NEE against plain path tracing in both, the pages' imports never reaching GPU code (--manifest lists them)
+node tutorial/test/tutorial.test.mjs              # the developer tutorial holds together: its contents and pages agree, every glossary term, chapter link, anchor and data-* attribute real, every excerpt found exactly once in today's source (changed ones listed, not failed: node tutorial/stamp.mjs after re-reading them), every path a chapter is about existing and a change held against the lines a page shows, the modules its figures run and the folders a chapter is about (review/affected.mjs), no file:line typed by hand, every figure and step drawn into a recording canvas, the flat world against 2D closed forms and the 3D renderer against 3D ones (1/d^2, a glowing ball's pi L sin^2), NEE against plain path tracing in both, the pages' imports never reaching GPU code (--manifest lists them)
 node tutorial/test/pages.check.mjs [dir]          # ...in headless Chromium: every page in every style and theme with no error, every figure drawn, every excerpt found, a figure moved by the keyboard, a paragraph's step, the theme kept over a reload, a glossary card; each style's faces reported loaded or not; screenshots into dir (optional: playwright)
 ```
 
@@ -236,6 +236,26 @@ someone set `guide != 0`. If you add a mode, find a way to execute it.
 - `main` is what GitHub Pages serves (`.github/workflows/pages.yml`): a merge is a release.
 - CI (`.github/workflows/test.yml`) runs `check-shaders.mjs` and every `*.test.mjs` above on each
   push and PR. It is no substitute for running them yourself before a push.
+
+## The tutorial follows the code
+
+`tutorial/` teaches how ShadyTracer works to people who will build or improve a renderer: it quotes the code, cites
+its lines, runs some of its modules in its figures and reports its measurements. A tutorial that describes last
+month's engine teaches the wrong thing with confidence, so **every change to ShadyTracer includes a review of the
+tutorial, in the same PR**:
+
+1. `node tutorial/review/affected.mjs` lists every chapter tied to a file the branch changed: an excerpt (and whether
+   its lines changed), a citation, a module a figure runs, or a chapter -- planned ones too -- that is *about* the file
+   (`code` in `tutorial/kit/chapters.js`). The list is where the review starts, not where it ends: a new feature or a
+   removed one belongs in some chapter's plan whether or not a file of it is tied to one yet.
+2. Read those sections against the change and fix what no longer holds: the prose, a figure's numbers, a stamped
+   measurement, a glossary card. A planned chapter's line in `tutorial/PLAN.md` is corrected the same way. A new
+   file a chapter is about goes into that chapter's `code`.
+3. `node tutorial/test/tutorial.test.mjs` lists the excerpts whose code changed. Re-read each against the words
+   around it, then `node tutorial/stamp.mjs`. Never stamp an excerpt you have not read: the stamp is the claim that
+   the page still fits the code.
+4. Say in the PR what was read and what changed, or that nothing needed to. A section rewritten for the change is
+   read again by a blank reader (`tutorial/review/README.md`) before its chapter is called done.
 
 ## Versions
 

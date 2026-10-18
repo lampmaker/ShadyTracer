@@ -86,7 +86,8 @@ export const figures = {
             bounce: { mode: 'bounce', size: 1.2, block: false },
             small: { mode: 'bounce', size: 0.2, block: false },
             aim: { mode: 'aim', size: 0.2, block: false },
-            block: { mode: 'aim', size: 1.2, block: true, blockAt: [3.05, 1.9], lampX: 3.6 },
+            // the block across part of the lamp, as seen from the point: some shadow rays get past, most do not
+            block: { mode: 'aim', size: 1.2, block: true, blockAt: [3.5, 1.9], lampX: 3.6 },
         },
         drag: {
             lamp: (s, p) => { s.lampX = clamp(p[0], 0.8, 5.4) },
@@ -124,7 +125,7 @@ export const figures = {
             if (!a) return ''
             const fmt = e => `${e.m.toFixed(3)} ± ${e.se.toFixed(3)}`
             const first = s.mode === 'bounce' ? `${a.found} of ${a.K} random directions found the lamp` : `${a.found} of ${a.K} shadow rays reached the lamp`
-            return `${first} · light here, from 3000 tries each — bouncing: ${fmt(a.off)}, aiming: ${fmt(a.on)}${a.exact != null ? `, exact: ${a.exact.toFixed(3)}` : ''}`
+            return `${first} · the light reaching this point, estimated from 3000 tries each — bouncing: ${fmt(a.off)}, aiming: ${fmt(a.on)}${a.exact != null ? `, exact: ${a.exact.toFixed(3)}` : ''}`
         },
     },
 
@@ -186,12 +187,13 @@ export const figures = {
             // the selected pixel's last few paths: eye rays and bounces, and (with NEE) the shadow rays
             const show = s.view === 'off' ? ['off'] : ['on']
             for (const w of show) for (const rec of s.paths[w] ?? []) for (const seg of rec) {
-                const role = seg.kind === 'shadow' ? 'shadow' : seg.kind === 'blocked' ? 'blocked' : 'cam'
-                pen.ray(seg.a, seg.b, { role, w: seg.kind === 'eye' ? 1.1 : 0.8, alpha: 0.75, arrow: false })
+                // a bounce that ends on the lamp and is counted is drawn in the lamp's colour: the paths that found it
+                const role = seg.kind === 'shadow' ? 'shadow' : seg.kind === 'blocked' ? 'blocked' : seg.lamp ? 'light' : 'cam'
+                pen.ray(seg.a, seg.b, { role, w: seg.lamp ? 1.6 : seg.kind === 'eye' ? 1.1 : 0.8, alpha: seg.lamp ? 1 : 0.75, arrow: false })
             }
             pen.eye(CAM.eye, CAM.dir, { size: 18 })
             const [ox, oy, dx, dy] = cameraRay(CAM, s.px)
-            pen.handle('pixel', [ox + dx * 1.1, oy + dy * 1.1], { label: 'pixel' })
+            pen.handle('pixel', [ox + dx * 1.1, oy + dy * 1.1], { label: 'whose paths' })
             pen.handle('lamp', [s.lampX, 3.75 - 0.32], { label: 'lamp', role: 'light' })
             pen.handle('ball', s.ball, { role: 'soft' }); pen.handle('block', s.blockAt, { role: 'soft' })
 

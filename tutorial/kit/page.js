@@ -10,6 +10,10 @@
 //   data-step="name:step"       a paragraph that moves figure `name` to `step` as it scrolls past (or when clicked)
 //   .titleblock[data-auto]      the sheet's title block, from chapters.js and the app's version
 //   ul.words[data-words]        the chapter's glossary terms as chips
+//   [data-claim]                a claim stamped measured / read in code / inferred: its stamp a glossary link, whose
+//                               card says what the stamp means
+//   li[data-ref="id"]           in an aside.refs, a source from kit/reading.js: its title linked, who wrote it and
+//                               what it is, then the page's own reason to read it
 //   nav.tabs[data-auto]         previous and next written chapters
 //
 // And the bar: contents, the style by name (kit/styles.js) and light / dark, both remembered. A style is kept in
@@ -20,6 +24,7 @@
 
 import { CHAPTERS, PARTS, TITLE, chapter, neighbours, partOf } from './chapters.js'
 import { term } from './glossary.js'
+import { reading } from './reading.js'
 import { locate, optionsOf, languageOf } from './excerpt.js'
 import { mountFigure } from './figure.js'
 import { VERSION, loadRevision, revision } from '../../version.js'
@@ -226,6 +231,32 @@ function relinkExcerpts(doc) {
     for (const c of doc.querySelectorAll('cite[data-src] a')) { const el = c.parentElement; if (el.dataset.first) c.href = ghLink(el.dataset.src, +el.dataset.first) }
 }
 
+/* THE STAMPS: the label a claim's box wears (kit.css drew it as ::before, which nothing can point at) made a link to
+   its glossary entry, so a reader meeting one on a chapter page can find out what it means without the contents page */
+const STAMPS = { measured: 'MEASURED', code: 'READ IN CODE', inferred: 'INFERRED' }
+function stamps(doc) {
+    for (const el of doc.querySelectorAll('[data-claim]')) {
+        if (el.querySelector(':scope > .stamp') || !STAMPS[el.dataset.claim]) continue
+        const a = doc.createElement('a'); a.className = 'stamp'; a.dataset.g = 'claim-' + el.dataset.claim; a.textContent = STAMPS[el.dataset.claim]
+        el.prepend(a)
+    }
+}
+
+/* THE READING BOXES: each source's title, link and author from kit/reading.js, the page's reason after them. A source
+   on another site opens in a new tab, so the reader keeps their place (and the figure's state) here ---------------- */
+export function refs(doc) {
+    for (const li of doc.querySelectorAll('aside.refs li[data-ref]')) {
+        if (li.querySelector(':scope > .src-t')) continue
+        const r = reading(li.dataset.ref), why = doc.createElement('span')
+        why.className = 'why'; why.append(...li.childNodes)
+        const t = doc.createElement(r?.href ? 'a' : 'span'); t.className = 'src-t'
+        t.textContent = r ? r.title : `(no source "${li.dataset.ref}")`
+        if (r?.href) Object.assign(t, { href: r.href, target: '_blank', rel: 'noopener' })
+        const by = doc.createElement('span'); by.className = 'by'; by.textContent = r ? `${r.who} · ${r.kind}` : ''
+        li.append(t, by, why)
+    }
+}
+
 /* THE SHEET: title block, words, prev / next ---------------------------------------------------------------------- */
 function titleBlock(doc, id) {
     const c = chapter(id), el = doc.querySelector('.titleblock[data-auto]')
@@ -299,7 +330,9 @@ export function boot({ figures = {}, styles = true, allFonts = false } = {}) {
     titleBlock(doc, id)
     words(doc)
     tabs(doc, id)
+    stamps(doc)
     glossaryLinks(doc)
+    refs(doc)
     const mounted = figuresOf(doc, figures)
     const done = excerpts(doc)
     loadRevision().then(() => { titleBlock(doc, id); done.then(() => relinkExcerpts(doc)) })

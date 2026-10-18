@@ -1,8 +1,8 @@
 # ShadyTracer, inside out: the tutorial's plan
 
 *Status 2026-10-18: first round written (contents, glossary, chapters 1, 2 and 14, four styles), with 3D figures where
-they show more, each page read by a blank reader (`review/REVIEWS.md`). This file is the plan; `kit/chapters.js` is the
-contents the pages read, and the two must agree.*
+they show more; each page read by a blank reader and revised from what it found (`review/REVIEWS.md`). This file is the
+plan; `kit/chapters.js` is the contents the pages read, and the two must agree.*
 
 ## What it is, and for whom
 
@@ -30,6 +30,12 @@ One page per chapter, the same order every time:
 6. **What went wrong before**: the bug stories the code's comments tell, which explain why it looks the way it does.
 7. **Try it**: things to do in the figures, and in ShadyTracer.
 8. **Words from this chapter**: glossary chips; previous and next.
+
+**Reading boxes** sit beside the sections they belong to (`<aside class="refs">`, sources from `kit/reading.js`): where
+an idea comes from, and where to go next. Every chapter has at least one. "Where ShadyTracer learned it" is said only
+where the code's own comments credit the source (the reading list's `credited`, checked by the test); everything else
+is a recommendation, and says so by its wording. A link goes in only once it has been opened and found to be the work
+named (`checked`).
 
 A page is **done** only after a blank reader has read it ([`review/README.md`](review/README.md)): a fresh agent that
 may see nothing but the page as a reader meets it, says where it got lost, and answers a short quiz. Every finding is
@@ -60,7 +66,19 @@ fixed or answered in `review/REVIEWS.md`.
 - **Let the reader move the shapes.** Where a figure shows distance-field shapes, each can be dragged by a handle at
   its middle (the field, the march, the rooms), so a reader can push two shapes together and watch a blend form.
 - **Every style, every figure.** A reader chooses the style (the bar's menu, `kit/styles.js`), so a figure takes its
-  colours from roles, never from a value, and is checked in every style and theme (`test/pages.check.mjs`).
+  colours from roles, never from a value, and is checked in every style and theme (`test/pages.check.mjs`). Within a
+  style, no two roles a figure puts side by side (a camera ray and a normal) may share a colour.
+- **Name what a figure shows.** Every colour a figure uses for a meaning is named in its caption or text the first time
+  (orange: found the lamp; dashed: a shadow ray), every handle is said to be draggable, and a step's paragraph says only
+  what its screenshot shows. The blank readers' worst findings were all a figure and its text disagreeing.
+
+## The tutorial follows the code
+
+Every change to ShadyTracer includes a review of the tutorial, in the same PR (CLAUDE.md, "The tutorial follows the
+code"). `node tutorial/review/affected.mjs` lists the chapters a branch touches: excerpts whose lines changed, citations,
+modules a figure runs, and chapters (planned ones too) that are about a changed file, by `code` in `kit/chapters.js`.
+Read those sections, fix what no longer holds, re-stamp the excerpts once re-read, and correct this file's line for a
+planned chapter. A new file a chapter is about goes into its `code`.
 
 ## The toolkit (`kit/`)
 
@@ -74,24 +92,32 @@ fixed or answered in `review/REVIEWS.md`.
 | `flatland.js` | the flat world: SDF shapes, sphere tracing, a camera, a path tracer with and without NEE |
 | `space.js` | 3D: an orbiting camera for drawings, sphere tracing, a camera, cheap views (steps, normals, sun) and a path tracer with and without NEE |
 | `excerpt.js` | finds a symbol in a source file: the page and the test share it |
-| `chapters.js`, `glossary.js` | the contents and the glossary, as data |
+| `chapters.js`, `glossary.js`, `reading.js` | the contents (with the code each chapter is about), the glossary and the reading list, as data |
+| `legend.js` | the key to the figures' colours and lines, on the contents page and every style's card |
 
 ## Contents
 
 Status: **draft** = written this round, for judging the direction; everything else is planned. Each line: what the
-chapter teaches → its main figure → the code it walks through.
+chapter teaches → its main figure → the code it walks through. *Read:* the sources its reading boxes will name (ids in
+`kit/reading.js`; a source not yet in the list is named in words, and goes in once its link is checked).
 
 **Start here**: Contents (the map) · Glossary · **0. How to read this** (the figure legend, the stamps, fold-outs,
 excerpts; running the app and its tests).
 
 **I. Seeing with rays**
-1. **Rays make a picture** (draft): pinhole camera, one ray per pixel, tracing from the eye, shadow rays, jitter →
-   genrays.js (the tile grid rounded, not floored).
+1. **Rays make a picture** (draft): pinhole camera, one ray per pixel, tracing from the eye, shadow rays, the cosine
+   law, jitter → genrays.js (the tile grid rounded, not floored).
+   *Read:* rtiow, pbr-camera, pbr-sampling.
 2. **Shapes as distances** (draft): SDFs, sphere tracing, tolerance, step scale, escape, the Lipschitz rule → the
-   march kernel, shapes.js's "exact or safe".
+   march kernel, shapes.js's "exact or safe". *Read:* Inigo Quilez's 2D and 3D distance functions, his smooth minimum,
+   distance estimation and interior SDFs (iq-distfunctions2d, iq-distfunctions, iq-smin, iq-distance, iq-interior,
+   iq-raymarching); hart1996; keinert2014; iq-normals.
 3. **Building and bending shapes**: CSG, the smooth blend and its normal (the warped fillet), fold tracking surface and
-   medium, uniform scale, `warp(k)`, noise relief's Lipschitz bound → scene_api.js, noise.js.
-4. **Which way is up**: normals from the field's slope, analytic against three extra evaluations.
+   medium, uniform scale, `warp(k)`, noise relief's Lipschitz bound → scene_api.js, noise.js. *Read:* Quilez again,
+   above all: iq-distfunctions (its operators: union, subtraction, rounding, onion, repetition, twist), iq-smin,
+   iq-interior.
+4. **Which way is up**: normals from the field's slope, analytic against three extra evaluations. *Read:* iq-normals
+   (Quilez's tetrahedron of four evaluations against central differences).
 
 **II. What light is**
 5. **Measuring light**: lm, cd, lx, cd/m²; inverse-square and cosine laws; emitters in cd/m²; the sun's disc in double
@@ -101,22 +127,27 @@ excerpts; running the app and its tests).
 
 **III. What surfaces do**
 8. **Diffuse and mirror**: the BSDF, energy conservation, the white furnace.
-9. **Rough and shiny**: microfacets, GGX, Smith, visible-normal sampling, albedo tables, Kulla–Conty.
+9. **Rough and shiny**: microfacets, GGX, Smith, visible-normal sampling, albedo tables, Kulla–Conty. *Read* (named in
+   the code's comments, links to be checked): Walter et al. 2007, Heitz 2014, Dupuy & Benyoub 2023, Kulla & Conty 2017.
 10. **Glass**: Snell, Fresnel from the IOR, total internal reflection, Beer–Lambert, which medium a ray is in.
 11. **Rainbows**: dispersion from n_d and the Abbe number, a wavelength per channel, coatings → spectral.js.
 
 **IV. Path tracing**
-12. **Dice and averages**: Monte Carlo, 1/√N, the per-pixel error bar, PCG4D.
+12. **Dice and averages**: Monte Carlo, 1/√N, the per-pixel error bar, PCG4D. *Read:* pbr-montecarlo, jarzynski2020
+    (the hash ShadyTracer's random numbers come from, credited in tracebasics.js).
 13. **Following a path**: the rendering equation in words, throughput, importance sampling, Russian roulette (off,
     and why).
 14. **Aim at the light** (draft): next event estimation, shadow rays, choosing among lights, where it cannot help.
-15. **Two ways to the light**: MIS and the power heuristic; delta directions keep weight 1.
+    *Read:* rtrest, pbr-lights, pbr-spheres, pbr-pathtracer, veach1997.
+15. **Two ways to the light**: MIS and the power heuristic; delta directions keep weight 1. *Read:* veach1997 (chapter
+    9), rtrest's mixture densities.
 16. **Every glowing thing is a light**: emitter discovery, unbiased from the first sample.
 17. **The camera's lens**: thin lens, focus, depth of field.
 
 **V. Light the camera can't find**
 18. **Caustics**: light → glass → floor → eye; light tracing; a split of path space.
 19. **Photon mapping**: a hashed grid built with atomics, a shrinking radius, 1/n² in glass, the gather budget.
+    *Read* (named in the code, link to be checked): Knaus & Zwicker 2011, progressive photon mapping.
 20. **Dust in the air**: transmittance, free flight, Henyey–Greenstein, light sampling from the air.
 
 **VI. The machine**
@@ -128,7 +159,7 @@ excerpts; running the app and its tests).
 **VII. Speed** (every number stamped; the review's ±20% drift between runs stated)
 25. **Measure first**: per-kernel timestamps, drift, bench rows, the plan that was reverted.
 26. **Fewer and cheaper steps**: culling boxes, boxes on dear nodes only, relief shells, the step cache, what was
-    measured and removed.
+    measured and removed. *Read:* iq-bounding (Quilez on bounding volumes for SDFs), keinert2014.
 27. **Faster compiles**: off-thread, `noUnroll`, one copy of the scene per kernel, the pipeline cache.
 28. **Feeling fast**: the governor, fast-while-moving, presets, slicing, the watchdog, uploading only what moved.
 
@@ -152,7 +183,8 @@ step cache's grid around a scene (26).
 ## Rounds
 
 1. **This round**: the plan, the toolkit, four styles kept for every reader (a named menu), chapters 1, 2 and 14,
-   the contents and the glossary, each read by a blank reader.
+   the contents and the glossary, each read by a blank reader and revised; reading boxes; the rule that the tutorial
+   follows the code (`review/affected.mjs`).
 2. Next: keep every style's fonts in the repository (`kit/fonts/`, with their licences) so the tutorial loads nothing
    from elsewhere; "How to read this", then Part I and Part IV in order (the flat world grows mirrors, glass and MIS as
    they are needed).
@@ -164,3 +196,4 @@ step cache's grid around a scene (26).
   canvas, flat-world and 3D closed forms, and the imports' reach.
 - `node tutorial/test/pages.check.mjs [dir]` (optional, Playwright): every page in every style and theme, headless.
 - `node tutorial/review/extract.mjs <dir>` (Playwright): the pages as a reader meets them, for the blank reader.
+- `node tutorial/review/affected.mjs [base]`: which chapters a branch's changes to ShadyTracer touch.

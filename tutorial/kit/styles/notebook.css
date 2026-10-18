@@ -79,5 +79,5 @@
 [data-style="notebook"] .note::before { content: ""; position: absolute; left: 0; top: .2rem; bottom: .2rem; width: 3px; border-radius: 3px; background: var(--accent); opacity: .7; }
 [data-style="notebook"] .note .tag { font-family: var(--f-hand); text-transform: none; letter-spacing: 0; font-size: 1.06rem; }
 [data-style="notebook"] [data-claim] { border-radius: var(--hand-border); }
-[data-style="notebook"] [data-claim]::before { background: var(--paper); rotate: -2deg; }
+[data-style="notebook"] [data-claim]::before, [data-style="notebook"] [data-claim] > .stamp { background: var(--paper); rotate: -2deg; }
 [data-style="notebook"] details.maths > summary { font-family: var(--f-hand); font-size: 1.12rem; }

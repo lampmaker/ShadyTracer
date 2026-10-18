@@ -3,7 +3,9 @@
 // and every step; mount() starts the page.
 //
 //   scene   a flat room seen from the side: an eye, its screen of pixels, one ray per pixel, the picture they make;
-//           steps show light going the other way (from the lamp, almost none of it arriving), and a shadow ray
+//           steps show light going the other way (from the lamp, almost none of it arriving), and a shadow ray from a
+//           lit point and from one in shadow (its ray stopped where it is blocked)
+//   slant   a beam of light meeting a floor at an angle: the patch it lights is wider by 1 / cos(theta), the cosine law
 //   grid    the same in 3D: the screen a grid of pixels, each painted with what its ray finds; turned by dragging
 //   edge    one pixel at the edge of the ball, close up: its samples, the average, and what jitter does to it
 //======================================================================================================================
@@ -49,6 +51,17 @@ function cell(cam, i, f = 1.25) {
     return [at(-1 + 2 * i / cam.pixels), at(-1 + 2 * (i + 1) / cam.pixels)]
 }
 
+/* which pixel a step shows: 'lit', the middle one of those whose ray meets the ball where the lamp reaches it; 'dark',
+   the middle one of those whose point faces the lamp and still cannot see it -- in something else's shadow, not merely
+   turned away (a face turned away is blocked by its own shape, at its own surface, which shows nothing). Either falls
+   back to any point the lamp cannot see, then to the middle of the screen. */
+function choose(looks, world, want, lamp) {
+    const ball = world.shapes.findIndex(sh => sh.name === 'ball')
+    const facing = r => r.n[0] * (lamp[0] - r.hit[0]) + r.n[1] * (lamp[1] - r.hit[1]) > 0
+    const pick = f => { const ok = looks.map((r, i) => [r, i]).filter(([r]) => r.hit && f(r)).map(([, i]) => i); return ok.length ? ok[Math.floor(ok.length / 2)] : null }
+    return (want === 'lit' ? pick(r => r.i === ball && r.E > 0) : pick(r => r.E === 0 && facing(r)) ?? pick(r => r.E === 0)) ?? Math.floor(looks.length / 2)
+}
+
 /* LIGHT GOING FORWARD: rays leave the lamp in every direction, bounce once off what they meet, and a few happen to
    pass through the eye's pupil. Seeded, so the same batches draw the same rays. */
 const PUPIL = 0.1
@@ -88,7 +101,7 @@ export const figures = {
             { type: 'seg', key: 'mode', options: [['eye', 'From the eye'], ['lamp', 'From the lamp']] },
             { type: 'slider', key: 'pixels', label: 'pixels', min: 3, max: 40, step: 1, fmt: v => `${v}` },
             { type: 'slider', key: 'fov', label: 'field of view', min: 20, max: 130, step: 1, fmt: v => `${v}°` },
-            { type: 'button', label: 'Throw 400 more', act: s => { s.mode = 'lamp'; s.batches = Math.min(25, s.batches + 1) } },
+            { type: 'button', label: 'Throw 400 more', act: s => { s.mode = 'lamp'; s.batches = Math.min(25, s.batches + 1) }, when: s => s.mode === 'lamp' },
         ],
         steps: {
             idea: { mode: 'eye', pixels: 12, fov: 52, shadow: false },
@@ -96,7 +109,10 @@ export const figures = {
             backward: { mode: 'eye', shadow: false },
             pixels: { mode: 'eye', pixels: 28, shadow: false },
             fov: { mode: 'eye', fov: 104, pixels: 28, shadow: false },
-            shade: { mode: 'eye', pixels: 16, fov: 52, shadow: true, sel: 9 },
+            // a pixel whose ray meets the lit ball, and one whose point is in shadow: chosen when drawn (the room can
+            // have been rearranged by then), not by number
+            shade: { mode: 'eye', pixels: 16, fov: 52, shadow: true, sel: 'lit' },
+            shadowed: { mode: 'eye', pixels: 16, fov: 52, shadow: true, sel: 'dark' },
         },
         drag: {
             eye: (s, p) => { s.eye = [clamp(p[0], -0.9, 2.2), clamp(p[1], 0.25, 3.6)] },
@@ -111,10 +127,9 @@ export const figures = {
                 s.sel = best; s.shadow = true
             },
         },
-        changed(s, key) { if (key === 'pixels') s.sel = Math.min(s.sel, s.pixels - 1); if (key === 'mode' && s.mode === 'eye') s.batches = Math.max(1, s.batches) },
+        changed(s, key) { if (key === 'pixels' && typeof s.sel === 'number') s.sel = Math.min(s.sel, s.pixels - 1); if (key === 'mode' && s.mode === 'eye') s.batches = Math.max(1, s.batches) },
         draw(pen, s) {
             const world = room(s), cam = camOf(s)
-            s.sel = Math.min(s.sel, s.pixels - 1)
             for (const sh of world.shapes) pen.flat(sh, { id: sh.name })
             pen.label([s.ball[0], s.ball[1] + 1.25], 'ball', { align: 'center', role: 'soft' })
             pen.label([s.block[0], s.block[1] + 0.9], 'block', { align: 'center', role: 'soft' })
@@ -122,6 +137,8 @@ export const figures = {
 
             const looks = []
             for (let i = 0; i < s.pixels; i++) looks.push(look(world, s, cam, i))
+            if (typeof s.sel !== 'number') s.sel = choose(looks, world, s.sel, s.lamp)
+            s.sel = Math.min(s.sel, s.pixels - 1)
             if (s.mode === 'lamp') {
                 const L = fromLamp(world, s)
                 pen.rays(L.first, { role: 'light', alpha: 0.18, w: 0.6 })
@@ -150,16 +167,32 @@ export const figures = {
                 const [a, b] = cell(cam, s.sel)
                 pen.handle('pixel', [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], { label: 'this pixel' })
                 if (r.hit) {
-                    const lit = r.E > 0
-                    pen.ray([r.hit[0] + r.n[0] * 0.01, r.hit[1] + r.n[1] * 0.01], lit ? s.lamp : [r.hit[0] + (s.lamp[0] - r.hit[0]) * 0.5, r.hit[1] + (s.lamp[1] - r.hit[1]) * 0.5], { role: lit ? 'shadow' : 'blocked', w: 1.3, exact: false, id: 'shadowray' })
-                    pen.ray(r.hit, [r.hit[0] + r.n[0] * 0.8, r.hit[1] + r.n[1] * 0.8], { role: 'normal', w: 1.1, exact: false, id: 'normal' })
+                    const lit = r.E > 0, from = [r.hit[0] + r.n[0] * 0.01, r.hit[1] + r.n[1] * 0.01]
+                    if (lit) pen.ray(from, s.lamp, { role: 'shadow', w: 1.3, exact: false, id: 'shadowray' })
+                    else {
+                        // a shadow ray stops where something is in the way: drawn to that point, crossed out there,
+                        // and only a faint line on to the lamp it could not reach
+                        const L = Math.hypot(s.lamp[0] - from[0], s.lamp[1] - from[1]), B = {}
+                        const dx = (s.lamp[0] - from[0]) / L, dy = (s.lamp[1] - from[1]) / L
+                        march(world, from[0], from[1], dx, dy, { far: L }, B)
+                        const stop = B.hit && B.t < L ? [B.x, B.y] : s.lamp
+                        pen.ray(from, stop, { role: 'blocked', w: 1.4, arrow: false, exact: false, id: 'shadowray' })
+                        pen.line(stop, s.lamp, { role: 'faint', w: 0.8, exact: true })
+                        const k = 0.13
+                        pen.line([stop[0] - k, stop[1] - k], [stop[0] + k, stop[1] + k], { role: 'blocked', w: 1.6, exact: true })
+                        pen.line([stop[0] - k, stop[1] + k], [stop[0] + k, stop[1] - k], { role: 'blocked', w: 1.6, exact: true })
+                        pen.label(stop, 'blocked here', { role: 'blocked', size: 13, dx: 10, dy: -10 })
+                    }
+                    const tip = [r.hit[0] + r.n[0] * 0.8, r.hit[1] + r.n[1] * 0.8]
+                    pen.ray(r.hit, tip, { role: 'normal', w: 1.1, exact: false, id: 'normal' })
+                    pen.label(tip, 'normal', { role: 'normal', size: 13, dx: r.n[0] < 0 ? -6 : 6, align: r.n[0] < 0 ? 'right' : 'left', dy: -6 })
                     if (lit) {
                         const an = Math.atan2(r.n[1], r.n[0]), al = Math.atan2(s.lamp[1] - r.hit[1], s.lamp[0] - r.hit[0])
                         pen.angle(r.hit, an, al, 0.45, 'θ', { role: 'normal' })
                     }
                     pen.label(r.hit, lit ? 'lit' : 'in shadow', { role: lit ? 'shadow' : 'blocked', dx: 10, dy: 14, size: 14 })
                 }
-            } else if (s.mode === 'eye') pen.handle('pixel', (() => { const [a, b] = cell(cam, s.sel); return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2] })())
+            }
             pen.handle('ball', s.ball, { role: 'soft' }); pen.handle('block', s.block, { role: 'soft' })
             pen.eye(s.eye, cam.dir, { size: 22 })
             pen.handle('eye', [s.eye[0] - 0.42 * Math.cos(cam.dir), s.eye[1] - 0.42 * Math.sin(cam.dir)], { label: 'eye' })
@@ -174,10 +207,15 @@ export const figures = {
             ctx.strokeStyle = pen.col('ink'); ctx.lineWidth = 1.2; ctx.strokeRect(x0, y0, W, ch)
             if (s.shadow && s.mode === 'eye') { ctx.strokeStyle = pen.col('accent'); ctx.lineWidth = 2; ctx.strokeRect(x0 + s.sel * cw, y0 - 2, cw, ch + 4) }
             ctx.restore()
-            pen.labelPx(x0, y0 + ch + 6, s.mode === 'eye' ? `the picture: ${s.pixels} pixels, one ray each` : 'the picture: nothing yet', { role: 'soft' })
+            // the strip is the screen turned on its side: its left end is the screen's top
+            pen.labelPx(x0, y0 + ch + 6, s.mode === 'eye' ? `the picture: ${s.pixels} pixels, one ray each` : 'the picture: still empty (see below)', { role: 'soft' })
+            if (s.mode === 'eye') {
+                pen.labelPx(x0, y0 - 1, 'top', { role: 'faint', size: 11, base: 'bottom' })
+                pen.labelPx(x0 + W, y0 - 1, 'bottom', { role: 'faint', size: 11, base: 'bottom', align: 'right' })
+            }
         },
         readout(s) {
-            if (s.mode === 'lamp' && s._lamp) return `${s._lamp.n} rays left the lamp · ${s._lamp.k} bounced into the eye (${(100 * s._lamp.k / s._lamp.n).toFixed(1)}%)`
+            if (s.mode === 'lamp' && s._lamp) return `${s._lamp.n} rays left the lamp · ${s._lamp.k} bounced into the eye (${(100 * s._lamp.k / s._lamp.n).toFixed(1)}%) · too few to give any pixel a value`
             return `${s.pixels} pixels · ${s.pixels} rays · field of view ${s.fov}°`
         },
     },
@@ -239,6 +277,43 @@ export const figures = {
             const g = edgeGeom(s)
             return `${s.n} samples · the pixel reads ${(s.n ? s.hits / s.n : 0).toFixed(3)} · the ball covers ${g.cover.toFixed(3)} of its wedge`
         },
+    },
+}
+
+/* LIGHT AT A SLANT: a beam w wide, from a lamp far enough away that its rays are parallel, meets a floor at theta from
+   the normal. It lights a patch w / cos(theta) long, so each piece of floor gets cos(theta) of what it would straight
+   on: the cosine law, drawn instead of stated. */
+figures.slant = {
+    aspect: 1.55,
+    world: { x: [-3.3, 3.3], y: [-0.85, 3.5] },
+    state: { theta: 50 },
+    controls: [{ type: 'slider', key: 'theta', label: 'angle from the normal', min: 0, max: 75, step: 1, fmt: v => `${v}°` }],
+    steps: { straight: { theta: 0 }, slant: { theta: 60 } },
+    drag: { lamp: (s, p) => { s.theta = Math.round(clamp(Math.atan2(-p[0], Math.max(0.05, p[1])) * 180 / Math.PI, 0, 75)) } },
+    draw(pen, s) {
+        const th = s.theta * Math.PI / 180, c = Math.cos(th), W = 1.1, R = 2.95
+        const d = [Math.sin(th), -c], q = [c, Math.sin(th)]           // the light's direction, and across the beam
+        pen.flat({ kind: 'box', c: [0, -0.45], h: [3.3, 0.45] }, { id: 'floor' })
+        const n = 7, half = W / 2 / c
+        for (let k = 0; k < n; k++) {
+            const o = -W / 2 + W * k / (n - 1), x = o / c
+            pen.ray([x - d[0] * 2.4, -d[1] * 2.4], [x, 0], { role: 'light', w: 1, exact: false, id: 'b' + k })
+        }
+        pen.line([-half, 0.02], [half, 0.02], { role: 'accent', w: 3.2, exact: true })
+        pen.dim([-half, 0], [half, 0], `lit: w / cos θ = ${(W / c).toFixed(2)}`, { role: 'accent', off: 30 })
+        // the beam's own width, across it
+        const m = [-d[0] * 1.7, -d[1] * 1.7]
+        pen.dim([m[0] - q[0] * W / 2, m[1] - q[1] * W / 2], [m[0] + q[0] * W / 2, m[1] + q[1] * W / 2], `w = ${W.toFixed(2)}`, { role: 'soft', off: 18 })
+        pen.ray([0, 0], [0, 1.45], { role: 'normal', w: 1.1, exact: false, id: 'normal' })
+        pen.label([0, 1.45], 'normal', { role: 'normal', size: 13, dx: 6, dy: -4 })
+        if (s.theta > 2) pen.angle([0, 0], Math.PI / 2, Math.atan2(-d[1], -d[0]), 0.62, 'θ', { role: 'normal' })
+        const lamp = [-d[0] * R, -d[1] * R]
+        pen.bulb(lamp)
+        pen.handle('lamp', lamp, { label: 'lamp', role: 'light' })
+    },
+    readout(s) {
+        const c = Math.cos(s.theta * Math.PI / 180)
+        return `θ = ${s.theta}° · the same beam lights ${(1 / c).toFixed(2)} × its width · each bit of floor gets ${c.toFixed(2)} of the light: cos θ`
     },
 }
 

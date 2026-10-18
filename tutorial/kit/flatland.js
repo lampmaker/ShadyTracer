@@ -151,7 +151,8 @@ export const lampsOf = world => world.shapes.map((s, i) => s.emit > 0 && s.kind 
  *   nee: true    at every bounce a shadow ray to a random point of a random lamp; a bounce that hits a lamp after the
  *                first then adds nothing (it was counted by the shadow ray: counting both would count it twice).
  *                ShadyTracer weighs the two instead of choosing (MIS, chapter "mis").
- * `record`, if given, receives the path's pieces for drawing: { kind: 'eye'|'bounce'|'shadow'|'blocked', a, b }.
+ * `record`, if given, receives the path's pieces for drawing: { kind: 'eye'|'bounce'|'shadow'|'blocked', a, b }, with
+ * `lamp: true` on the piece that ends on a lamp whose light is counted.
  */
 export function tracePath(world, ox, oy, dx, dy, { nee = false, maxBounce = 4, rand, eps = 1e-3, record = null, lampPick } = {}) {
     let L = 0, beta = 1, x = ox, y = oy
@@ -161,7 +162,7 @@ export function tracePath(world, ox, oy, dx, dy, { nee = false, maxBounce = 4, r
         if (record) record.push({ kind: b === 0 ? 'eye' : 'bounce', a: [x, y], b: [HIT.x, HIT.y] })
         if (!HIT.hit) { L += beta * (world.sky || 0); break }
         const sh = world.shapes[HIT.i]
-        if (sh.emit > 0) { if (b === 0 || !nee) L += beta * sh.emit; break }   // lamps glow and reflect nothing
+        if (sh.emit > 0) { if (b === 0 || !nee) { L += beta * sh.emit; if (record) record[record.length - 1].lamp = true } break }   // lamps glow and reflect nothing
         let [nx, ny] = normalAt(world, HIT.x, HIT.y, HIT.i)
         if (nx * dx + ny * dy > 0) { nx = -nx; ny = -ny }                    // the side the ray came from
         const px = HIT.x + nx * 4 * eps, py = HIT.y + ny * 4 * eps

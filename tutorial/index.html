@@ -37,21 +37,41 @@
   <div>
     <p class="eyebrow">A tutorial beside the program</p>
     <h1>ShadyTracer, inside out</h1>
-    <p class="lede">How a path tracer that runs in your browser turns shapes and lamps into a picture: rays, distances,
-      light, glass, noise, photons, haze, the graphics card and every trick that makes it fast. For anyone who wants
-      to understand ShadyTracer's code, build their own renderer, or improve this one. No ray tracing, optics or GPU
-      programming needed to start.</p>
+    <p class="lede">ShadyTracer is a <a data-g="path-tracing">path tracer</a> that runs in your browser: it makes a
+      picture by following rays of light backwards from the camera, bouncing them around the scene at random, and
+      averaging what they find. This tutorial is how it works, from the first ray to every trick that makes it fast:
+      rays, distances, light, glass, noise, photons, haze and the graphics card. For anyone who wants to understand
+      ShadyTracer's code, build their own <a data-g="renderer">renderer</a>, or improve this one.</p>
   </div>
   <div class="titleblock" data-auto></div>
 </header>
 
+<section class="plain wide" id="start">
+  <div class="prose two">
+    <div>
+      <h2><span class="n">◇</span>What you need</h2>
+      <p>A little programming: JavaScript's variables, loops, functions and arrays are enough to follow the code, and
+        the text says what each excerpt does. School maths: algebra, Pythagoras, sin, cos and tan, and arrows (vectors)
+        with an x and a y. No calculus, and no ray tracing, optics or graphics-card programming: the chapters start from
+        nothing. The harder maths waits in fold-outs marked <em>The maths</em>, and every chapter reads without them.</p>
+    </div>
+    <div>
+      <h2><span class="n">◇</span>Where to start</h2>
+      <p>Read chapter 1, <a data-ch="rays">Rays make a picture</a>, then chapter 2, <a data-ch="distances">Shapes as
+        distances</a>. Chapter 14, <a data-ch="nee">Aim at the light</a>, can be read straight after them: it says what it
+        borrows from the chapters in between, which are not written yet. To see the program itself, open
+        ShadyTracer in a browser with WebGPU (a recent Chrome or Edge, on a computer with a graphics card).</p>
+    </div>
+  </div>
+</section>
+
 <section class="plain wide" id="contents">
   <div class="prose">
     <h2><span class="n">◇</span>The map</h2>
-    <p>Thirty-four chapters in ten parts, in reading order. The filled stations are written (this is the first round,
-      for judging the direction); the rest are planned, each with the one line it will cover. Every chapter has the same
-      shape: the question, the idea with a live figure, the maths in a fold-out, the real code, the tricks and what they
-      cost, what went wrong before, and things to try.</p>
+    <p>Thirty-four chapters in ten parts, in reading order. The filled stations are written; the rest are planned,
+      each with a line on what it will cover. Every chapter has the same shape: the question, the idea with a live
+      figure, the maths in a fold-out, the real code, the tricks and what they cost, what went wrong before, things to
+      try, and where to read more.</p>
     <div id="map"></div>
   </div>
 </section>
@@ -60,12 +80,13 @@
   <div class="prose two">
     <div>
       <h2><span class="n">◇</span>Reading the figures</h2>
-      <p>Every figure is drawn in a <a data-g="flatland">flat world</a>: a slice of a scene, so it can be drawn and
-        dragged. The same colour means the same thing in every one. Circled crosses are handles: drag them.
+      <p>Most figures are drawn in a <a data-g="flatland">flat world</a>: a slice of a scene, so it can be drawn and
+        dragged; a few are 3D, and turn when you drag them. Within a style, the same colour and line mean the same thing
+        in every figure: the key here is drawn in the style you are viewing. Circled crosses (⊕) are handles: drag them.
         Paragraphs with a dot beside them move the figure next to them when you scroll to them (or click them).</p>
-      <p>Words with a dotted underline are in the <a href="glossary.html">glossary</a>; hover or tap one for a short
-        explanation. Code shown on a page is read from ShadyTracer's own files when you open the page, with a link to
-        the exact lines.</p>
+      <p>Words with a dotted underline are in the <a href="glossary.html">glossary</a>, the list of every word the
+        tutorial explains; hover or tap one for a short explanation. Code shown on a page is read from ShadyTracer's own
+        files when you open the page, with a link to the exact lines.</p>
     </div>
     <figure class="fig" data-fig="legend">
       <figcaption>The figures' colours and lines, in the style you are viewing.</figcaption>
@@ -76,17 +97,19 @@
 <section class="plain wide" id="claims">
   <div class="prose">
     <h2><span class="n">◇</span>How sure is each claim?</h2>
-    <p>ShadyTracer's own rules ask of every statement: do I <em>know</em> this, or do I <em>think</em> it? The tutorial
-      marks the difference the same way, wherever it matters (mostly when it is about speed):</p>
+    <p>The people who write ShadyTracer hold every statement to one question: do I <em>know</em> this, or do I
+      <em>think</em> it? The tutorial marks the difference the same way, with a stamp, wherever it matters (mostly when
+      it is about speed). Point at a stamp on any page for what it means.</p>
     <div class="stamps">
       <div data-claim="measured"><p>Someone ran it on real hardware and wrote the number down. The page says who, on
-        what card, and where it is recorded.</p></div>
+        which graphics card, and where it is recorded.</p></div>
       <div data-claim="code"><p>The code does this, and the page links the line. It says what the code <em>does</em>,
         never what it costs.</p></div>
       <div data-claim="inferred"><p>A reasonable guess, not yet tested. The page says what would test it.</p></div>
     </div>
-    <p>These pages come in several styles, each light or dark: the menu at the top right switches them, and the
-      <a href="styles.html">styles</a> page shows them side by side. Your choice is kept on this device.</p>
+    <p>These pages come in several styles, each light or dark: the <strong>Style</strong> menu at the top right
+      switches the style, the <strong>Dark</strong> / <strong>Light</strong> button beside it the light, and the
+      <a href="styles.html">styles</a> page shows every style with its key. Your choice is kept on this device.</p>
   </div>
 </section>
 

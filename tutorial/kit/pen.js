@@ -50,6 +50,11 @@ export function makePen(ctx, view, theme, handles = []) {
             ctx.beginPath()
             const amp = exact ? 0 : rough * (k ? 0.9 : 1)
             const ring = close ? [...pts, pts[0]] : pts
+            // a closed line's wobble must meet itself: blended towards the noise a whole loop back, so it ends where it
+            // began (without that, a circle in a rough style was left open like a C where its two ends missed)
+            let total = 0
+            if (close) for (let i = 0; i < ring.length - 1; i++) total += Math.hypot(ring[i + 1][0] - ring[i][0], ring[i + 1][1] - ring[i][1])
+            const wob = a => noise1(a / 38, seed + k * 101) * amp + noise1(a / 9, seed + 7 + k * 31) * amp * 0.35
             let along = 0
             for (let i = 0; i < ring.length - 1; i++) {
                 const [ax, ay] = ring[i], [bx, by] = ring[i + 1]
@@ -58,7 +63,7 @@ export function makePen(ctx, view, theme, handles = []) {
                 const nx = L ? -(by - ay) / L : 0, ny = L ? (bx - ax) / L : 0
                 for (let j = (i ? 1 : 0); j <= n; j++) {
                     const t = j / n, a = along + L * t
-                    const o = amp ? noise1(a / 38, seed + k * 101) * amp + noise1(a / 9, seed + 7 + k * 31) * amp * 0.35 : 0
+                    const o = !amp ? 0 : close && total ? wob(a) * (1 - a / total) + wob(a - total) * (a / total) : wob(a)
                     const x = ax + (bx - ax) * t + nx * o, y = ay + (by - ay) * t + ny * o
                     if (i === 0 && j === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y)
                 }
@@ -202,6 +207,12 @@ export function makePen(ctx, view, theme, handles = []) {
         },
         /** an angle mark at c from direction a0 to a1 (radians, world), with its text */
         angle(c, a0, a1, r, text, { role = 'accent' } = {}) {
+            // the angle between two directions is the short way round: from -170 degrees to +120 is 70, not 290 (the
+            // long way drew a ring round the point and put the label on its far side, inside the shape)
+            let d = a1 - a0
+            while (d > Math.PI) d -= 2 * Math.PI
+            while (d < -Math.PI) d += 2 * Math.PI
+            a1 = a0 + d
             strokePx(arcPts(c, r, a0, a1), { role, w: 0.8 })
             if (text) pen.label([c[0] + (r + 0.12 * Math.abs(r) + pen.world(10)) * Math.cos((a0 + a1) / 2), c[1] + (r + pen.world(10)) * Math.sin((a0 + a1) / 2)], text, { role, size: 14, align: 'center' })
         },

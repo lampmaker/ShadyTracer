@@ -157,10 +157,26 @@ h2 .n { display: inline-block; min-width: 2.2ch; margin-right: .35em; color: var
 .seg { display: inline-flex; }
 .seg button + button { border-left: 0; }
 
+/* hidden means hidden: a figure's control shown only for some states (controls.js `when`) is a label the rules above
+   make inline-flex, which beat the hidden attribute's own display: none and left a dead slider on the page */
+[hidden] { display: none !important; }
+
 /* NOTES, MATHS, STAMPS ---------------------------------------------------------------------------------------------- */
 .note { margin: 1.2rem 0; padding: .7rem .9rem; border-left: 3px solid var(--accent); background: var(--accent-soft); font-size: .95rem; max-width: 62ch; }
 .note > :last-child { margin-bottom: 0; }
 .note .tag, details.maths > summary .tag { font: 700 .72rem/1 var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-right: .5rem; }
+
+/* A READING BOX: outside sources for the idea beside it (kit/reading.js; page.js writes each title, author and link).
+   A slip of card left in the book, not a note in its margin: dashed, raised, the reason last and quietest. */
+.refs { margin: 1.4rem 0; padding: .7rem .95rem .75rem; max-width: 62ch; border: 1.5px dashed var(--ink-faint); border-radius: var(--radius); background: var(--paper-raised); font-size: .93rem; }
+.refs > .tag { display: block; margin-bottom: .55rem; font: 700 .72rem/1 var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); }
+.refs > ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .7rem; }
+.refs li { margin: 0; }
+.refs .src-t { font-weight: 700; }
+.refs a.src-t::after { content: "\2009↗"; font-weight: 400; color: var(--ink-faint); }
+.refs .by { display: block; margin-top: .12rem; font: 500 .74rem/1.35 var(--f-mono); letter-spacing: .02em; color: var(--ink-faint); }
+.refs .why { display: block; margin-top: .2rem; color: var(--ink-soft); line-height: 1.45; }
+.refs .why cite { font-style: normal; }
 
 details.maths { margin: 1.4rem 0; max-width: 64ch; border: 1.5px solid var(--rule); border-radius: var(--radius); background: var(--paper); }
 details.maths > summary { list-style: none; cursor: pointer; padding: .6rem .9rem; font: 600 .95rem/1.3 var(--f-display); display: flex; gap: .5rem; align-items: baseline; }
@@ -181,10 +197,14 @@ dl.terms dd { margin: 0; color: var(--ink-soft); }
 
 /* a claim stamped with what it rests on (CLAUDE.md): measured, read in code, or inferred */
 [data-claim] { position: relative; margin: 1rem 0; padding: .7rem .9rem .7rem 1rem; border: 1.5px solid var(--stamp-c); border-radius: var(--radius); max-width: 64ch; }
-[data-claim]::before {
+[data-claim]::before, [data-claim] > .stamp {
     content: var(--stamp-t); position: absolute; top: -.62rem; left: .7rem; padding: 0 .4rem; background: var(--paper);
     font: 700 .66rem/1.2 var(--f-mono); letter-spacing: .14em; color: var(--stamp-c);
 }
+/* with the page's script, the stamp is a real link (page.js stamps) and the drawn label steps aside */
+.kit-js [data-claim]::before { content: none; }
+[data-claim] > .stamp { text-decoration: none; cursor: help; }
+[data-claim] > .stamp:hover, [data-claim] > .stamp:focus-visible { text-decoration: underline dotted; color: var(--stamp-c); }
 [data-claim="measured"] { --stamp-c: var(--stamp-measured); --stamp-t: "MEASURED"; }
 [data-claim="code"] { --stamp-c: var(--stamp-code); --stamp-t: "READ IN CODE"; }
 [data-claim="inferred"] { --stamp-c: var(--stamp-inferred); --stamp-t: "INFERRED"; border-style: dashed; }

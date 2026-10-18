@@ -50,6 +50,23 @@ for (const f of pages.filter(f => f.includes('/ch/'))) {
     ok(`${relative(TUT, f)} is in the contents`, !!chapter(id)?.file, id)
 }
 
+/* WHAT A CHANGE TOUCHES (review/affected.mjs, CLAUDE.md "The tutorial follows the code"): every path a chapter is
+   about exists -- a renamed file would leave its chapter unwatched with nothing saying so -- and a change is held
+   against the lines a page shows, the files its figures run and the folders a chapter is about ------------------ */
+{
+    const { ties, affected } = await import('../review/affected.mjs')
+    for (const c of CHAPTERS) for (const p of c.code) ok(`chapter "${c.id}": the code it is about, ${p}, exists`, existsSync(join(REPO, p)))
+    const all = ties(), tiles = all.find(t => t.kind === 'excerpt' && t.sym === 'const raygenTiles')
+    ok('affected: an excerpt is a tie, with the lines it shows', tiles?.first > 0 && tiles.last >= tiles.first)
+    const inside = affected([{ file: tiles.file, ranges: [[tiles.last, tiles.last]] }], all)
+    ok('affected: a change inside an excerpt\'s lines is flagged as those lines', inside.some(h => h.sym === 'const raygenTiles' && h.overlap === true)
+        && inside.some(h => h.kind === 'excerpt' && h.sym !== 'const raygenTiles' && h.overlap === false))
+    ok('affected: ...and finds the chapter that is about the file, planned ones too', inside.some(h => h.kind === 'about' && h.chapter === 'rays') && inside.some(h => h.kind === 'about' && h.chapter === 'caustics'))
+    ok('affected: a module a figure runs is a tie', affected([{ file: 'help/widgets.js', ranges: null }], all).some(h => h.kind === 'import' && h.chapter === 'nee'))
+    ok('affected: a file in a folder a chapter is about', affected([{ file: 'lib/pathtracer/optics/farfield.js', ranges: null }], all).some(h => h.chapter === 'optics'))
+    ok('affected: the tutorial\'s own files and version.js are not changes to ShadyTracer', !affected([{ file: 'tutorial/kit/pen.js', ranges: null }, { file: 'version.js', ranges: null }], all).length)
+}
+
 /* THE STYLES: every one in kit/styles.js has its file, imported by kit.css, setting every token kit.css defaults, the
    colours for light and for dark both (a style missing a dark colour would show the default's in the reader's) ---- */
 {
@@ -71,17 +88,28 @@ for (const f of pages.filter(f => f.includes('/ch/'))) {
     }
 }
 
+/* THE READING LIST: every source once, its link https, and "credited" only where that file's own comments name the
+   author -- where ShadyTracer learned something is a claim read in code, never remembered ------------------------- */
+const { READING, reading } = await import('../kit/reading.js')
+ok('reading list: ids are unique', new Set(READING.map(r => r.id)).size === READING.length)
+for (const r of READING) {
+    ok(`reading "${r.id}": an author, a title and what it is`, r.who && r.title && r.kind)
+    if (r.href) ok(`reading "${r.id}": its link is https, and dated as checked`, /^https:\/\/[^\s"<>]+$/.test(r.href) && /^\d{4}-\d\d-\d\d$/.test(r.checked ?? ''))
+    if (r.credited) ok(`reading "${r.id}": ${r.credited} credits ${r.who.split(/[ ,]/)[1] || r.who}`, existsSync(join(REPO, r.credited)) && readFileSync(join(REPO, r.credited), 'utf8').includes(r.who.split(',')[0].split(' ').pop()))
+}
+
 /* THE GLOSSARY ---------------------------------------------------------------------------------------------------- */
 ok('glossary ids are unique', new Set(GLOSSARY.map(g => g.id)).size === GLOSSARY.length)
 for (const g of GLOSSARY) {
     ok(`glossary "${g.id}": its chapter exists`, !!chapter(g.ch), g.ch)
     ok(`glossary "${g.id}": its see-also entries exist`, g.see.every(s => term(s)), g.see.join(' '))
     ok(`glossary "${g.id}": a term and a definition`, g.term && g.short && g.short.length > 20)
+    ok(`glossary "${g.id}": its sources are in the reading list`, (g.read ?? []).every(id => reading(id)), (g.read ?? []).join(' '))
 }
 
 /* THE PAGES ------------------------------------------------------------------------------------------------------- */
 const KNOWN = new Set(['data-g', 'data-ch', 'data-fig', 'data-step', 'data-src', 'data-sym', 'data-nth', 'data-in', 'data-to', 'data-max', 'data-doc',
-    'data-why', 'data-hash', 'data-claim', 'data-auto', 'data-words', 'data-chapter', 'data-open-style', 'data-style'])
+    'data-why', 'data-hash', 'data-claim', 'data-auto', 'data-words', 'data-chapter', 'data-open-style', 'data-style', 'data-ref'])
 const excerpted = new Set(), drift = []
 const srcCache = new Map(), src = p => { if (!srcCache.has(p)) srcCache.set(p, readFileSync(join(REPO, p), 'utf8')); return srcCache.get(p) }
 const modules = new Map()          // page -> its module's exports
@@ -104,6 +132,7 @@ for (const f of pages) {
         const a = t.attrs
         if (a['data-g'] != null) ok(`${name}: glossary term "${a['data-g']}" exists`, !!term(a['data-g']))
         if (a['data-words'] != null) for (const w of a['data-words'].trim().split(/\s+/)) ok(`${name}: word "${w}" is in the glossary`, !!term(w))
+        if (a['data-ref'] != null) ok(`${name}: source "${a['data-ref']}" is in the reading list`, !!reading(a['data-ref']))
         if (a['data-claim'] != null) ok(`${name}: a claim is measured, code or inferred`, ['measured', 'code', 'inferred'].includes(a['data-claim']), a['data-claim'])
         if (a['data-ch'] != null) {
             const [id, anchor] = a['data-ch'].split('#'), c = chapter(id)
@@ -133,6 +162,14 @@ for (const f of pages) {
             }
         }
     }
+    // a reading box: a tag, then sources by id, each with the page's own reason to read it (an empty li is a bare link)
+    for (const box of html.matchAll(/<aside class="refs">([\s\S]*?)<\/aside>/g)) {
+        ok(`${name}: a reading box starts with its tag`, /^\s*<span class="tag">[^<]+<\/span>\s*<ul>/.test(box[1]))
+        const items = [...box[1].matchAll(/<li\b([^>]*)>([\s\S]*?)<\/li>/g)]
+        ok(`${name}: a reading box lists sources`, items.length > 0)
+        for (const [, at, why] of items) ok(`${name}: each source in a reading box is one from the list, with a reason`, /data-ref="[^"]+"/.test(at) && why.replace(/<[^>]+>/g, '').trim().length > 30, at)
+    }
+    if (name.startsWith('ch/')) ok(`${name}: says where its ideas come from (a reading box)`, html.includes('<aside class="refs">'))
     // a file:line typed by hand goes stale: every one is a <cite data-src data-sym>
     const typed = [...html.replace(/<(pre|cite)\b[^>]*>/g, '').matchAll(/\b[\w./-]+\.(?:js|mjs|md|css|html):\d+/g)].map(m => m[0])
     ok(`${name}: no file:line typed by hand`, !typed.length, typed.join(' '))

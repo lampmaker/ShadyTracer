@@ -29,7 +29,7 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   same shape: the question, the idea with a live figure, the maths in a fold-out, the real code, the tricks stamped
   measured / read in code / inferred, what went wrong before, things to try.
 - **Written as drafts:** chapter 1, *Rays make a picture*; chapter 2, *Shapes as distances*; chapter 14, *Aim at the
-  light* (next event estimation); the contents map; a glossary of 54 terms, each linked from the pages with a card on
+  light* (next event estimation); the contents map; a glossary of 74 terms, each linked from the pages with a card on
   hover or tap.
 - **The kit** (`tutorial/kit/`): one pen draws every figure in the style's colours and line; a figure is a spec with
   state, controls, drag handles and steps that the paragraphs beside it trigger as they scroll by. The figures trace a
@@ -44,15 +44,16 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   laws hold, so the test holds it to them: a point light's I cos θ / d², a glowing ball's π L sin² α, a room's pixel
   with and without NEE agreeing.
 - **A stale comment caught:** the NEE comment in `tracebasics.js` says the sun is "about 0.03 steradian" and found by a
-  bounce "roughly once in two hundred tries". That was the old sun, drawn 21 times too wide. The real one is 0.00007
-  steradian, found by chance about once in 47,000 bounces. Chapter 14 quotes the comment and says so; the comment itself
-  is unchanged.
+  cosine-weighted bounce "roughly once in two hundred tries". That was the old sun, drawn 21 times too wide (441 times
+  the sky), and two hundred is the chance for a direction picked evenly; a cosine-weighted bounce finds that sun about
+  once in a hundred. The real sun is 0.000067 steradian (0.53° across, `photometry.js`), found by such a bounce about once
+  in 47,000. Chapter 14 quotes the comment and says so; the comment itself is unchanged.
 - **Four styles, for every reader** (you: "make the style a dropdown, expect to add more styles later. We'll keep this
   in for everyone. give them names"): *Lab notebook*, *Blueprint*, *Drafting sheet* and *Risograph*, each light and
   dark, chosen by name from the menu at the top right of every page and kept on the reader's device. They are listed
   once, in `tutorial/kit/styles.js`; a new style is a CSS file, its `@import` and an entry there, and the test fails if
-  a style misses a token or a dark colour. `tutorial/styles.html` shows them side by side, its cards made from the
-  list. Their fonts still come from Google Fonts (THIRD_PARTY.md); keeping them in the repository is the next round's.
+  a style misses a token or a dark colour. `tutorial/styles.html` shows each with a labelled sample and its key to the
+  figures' colours, its cards made from the list. Their fonts still come from Google Fonts (THIRD_PARTY.md); keeping them in the repository is the next round's.
 - **Shapes you can move** (you: "make SDF elements draggable (the blend mode is not very visible now, the shapes are
   too far apart)"): in chapter 2's distance field the circle and the box start touching, both drag by a handle at
   their middle, and a blend slider (shown only while they are blended) widens the fillet. The ball, the block and the
@@ -61,8 +62,25 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
 - **Read by a blank reader** (you: "have every page read by an independent agent … that has no knowledge about
   shadytracer"): `tutorial/review/extract.mjs` writes each page as a reader meets it, text and figure screenshots, and
   a fresh agent that may read nothing else reads it as a beginner, answers a quiz and says where it got lost
-  (`tutorial/review/README.md`). What each reader said and what changed because of it is in
-  `tutorial/review/REVIEWS.md`.
+  (`tutorial/review/README.md`). The first round's reports are kept whole, and every finding is answered in
+  `tutorial/review/REVIEWS.md`. The worst were figures that did not show what their paragraph said: chapter 1's shadow
+  ray hit the block, not the ball; chapter 2's squeezed circle stepped right over the shape while its readout said it
+  stopped at the surface; chapter 14's blocked lamp was hidden entirely. All fixed, with a new figure for the cosine law
+  (chapter 1, *Light at a slant*), the NEE fold-out rewritten, the sun's numbers made to agree, and two kit bugs found
+  by them: a hidden control still showing, and an angle mark drawn the long way round.
+- **Where to read more** (you: "add a box with recommended external references, eg where you learned the info. Inigo
+  quilez definitely needs to be named. Probably more than once"): reading boxes beside the sections they belong to,
+  every chapter at least one, from one list (`tutorial/kit/reading.js`) whose every link was opened and checked. Inigo
+  Quilez is named all through chapter 2: his 2D and 3D distance functions (the code credits him shape by shape, and
+  the box cites that line), his smooth minimum (chapter 2's blend is his quadratic one, its k four times his), his
+  history of raymarching, distance estimation and interior SDFs for the "never too large" rule, his normals, and the
+  two formulas of his that ShadyTracer measured and replaced, told with why his list is still where to start; and again
+  in the glossary and in the plan for chapters 3, 4 and 26. "Where ShadyTracer learned it" is said only where the code's own comments credit the
+  source, which the test checks.
+- **The tutorial follows the code** (you: "any change to shadytracer will need a review of the tutorial to make sure it
+  is still aligned"): a new section in CLAUDE.md makes it part of every PR. `node tutorial/review/affected.mjs` lists the
+  chapters a branch touches: excerpts whose lines changed, citations, modules a figure runs, and chapters, planned
+  ones too, that are about a changed file (`code` in `kit/chapters.js`, each path checked to exist).
 - **Checked:** `node tutorial/test/tutorial.test.mjs` (in CI) holds the pages, links, glossary and excerpts to the
   contents and today's source, draws every figure and step into a recording canvas, and tests the flat world against
   2D closed forms (a point light's I h / (x² + h²), a lamp's L (sin φ₂ − sin φ₁), a room traced with and without NEE
@@ -71,6 +89,11 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   pages run, not that they read well.
 
 What to look at:
+- **The reading boxes.** Chapter 2 above all: are these the sources you would send a student to, and is anything you
+  learned from missing?
+- **Chapter 1, sections 5 and 6**: the shadow ray now meets the lit ball, then a point in the block's shadow; and the
+  new beam at a slant.
+- **The stamps**: point at READ IN CODE on any chapter; the card says what it means.
 - **The styles.** The menu at the top right of any page, and `tutorial/styles.html`: are the names right, and does
   each read well in light and dark?
 - **Dragging the shapes.** Chapter 2, section 1: *Blended*, then pull the circle away from the box and back.

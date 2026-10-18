@@ -1,79 +1,101 @@
 //======================================================================================================================
 // THE GLOSSARY, as data: the glossary page lists it, a term in any page (data-g="id") links to its entry and shows
 // `short` in a card, and the test holds every data-g to an id here and every `ch` to a chapter. `ch` is the chapter
-// that explains the term properly; `see` are related entries.
+// that explains the term properly; `see` are related entries; `read` are sources from kit/reading.js, listed under the
+// entry on the glossary page.
 //
 // Written for someone who has never met the word: one or two plain sentences, no other jargon where it can be
 // avoided, and where it cannot, that word is an entry too.
 //======================================================================================================================
 
-const G = (id, term, short, ch, see = []) => ({ id, term, short, ch, see })
+const G = (id, term, short, ch, see = [], read = []) => ({ id, term, short, ch, see, read })
 
 export const GLOSSARY = [
     // seeing with rays
     G('ray', 'ray', 'A starting point and a direction: a line that goes one way for ever. A ray tracer follows rays to find what they hit.', 'rays', ['camera-ray']),
     G('pixel', 'pixel', 'One dot of the picture. A picture of 1920 × 1080 has about two million of them, each with one colour.', 'rays', ['resolution']),
     G('resolution', 'resolution', 'How many pixels a picture has across and down. More pixels, finer detail, more work.', 'rays', ['pixel']),
+    G('scene', 'scene', 'Everything a picture is of: the shapes, what each is made of, the lights and the camera.', 'rays', ['renderer']),
+    G('renderer', 'renderer', 'A program that makes pictures from a scene. ShadyTracer is one; a path tracer is one kind.', 'rays', ['path-tracing']),
+    G('sky', 'sky', 'What a ray shows when it meets nothing: it has left the scene. In ShadyTracer the sky gives light too, and so does the sun in it.', 'rays', ['escape']),
     G('pinhole', 'pinhole camera', 'A camera with no lens: every ray goes through one point, the eye. Everything is sharp at every distance.', 'rays', ['lens']),
-    G('fov', 'field of view', 'How wide the camera sees, as an angle. Wide angles fit more in and stretch the edges.', 'rays'),
+    G('fov', 'field of view', 'How wide the camera sees, as an angle. Wide angles fit more in and stretch what is near the edges.', 'rays'),
     G('camera-ray', 'camera ray', 'A ray from the eye through a pixel, out into the scene. Also called a primary ray. Finding what it hits says what that pixel shows.', 'rays', ['ray', 'pixel']),
     G('shadow-ray', 'shadow ray', 'A ray from a point on a surface towards a light, asking one question: is anything in the way? If not, the point is lit.', 'nee', ['nee']),
-    G('jitter', 'jitter', 'Sending each sample\'s ray through a random point inside its pixel instead of the middle, so edges come out smooth on average.', 'rays', ['aliasing', 'sample']),
+    G('jitter', 'jitter', 'Sending each sample\'s ray through a random point inside its pixel instead of the middle, so edges come out smooth on average.', 'rays', ['aliasing', 'sample'], ['pbr-sampling']),
     G('aliasing', 'aliasing', 'The stair steps along an edge when each pixel looks in one exact direction: the pixel is all in or all out, never part.', 'rays', ['jitter']),
-    G('sample', 'sample', 'One try: one ray (or path) per pixel. A picture is the average of many samples; each one adds a little less noise.', 'montecarlo', ['spp', 'noise']),
+    G('tile', 'tile', 'One cell of the grid ShadyTracer lays a sample\'s rays over the picture with: one ray a tile. With one ray a pixel, a tile is a pixel.', 'rays', ['pixel']),
+    G('matrix', 'matrix', 'A table of numbers that turns one set of directions into another. A camera\'s matrix holds its right, up and backward directions, and where it is.', 'rays'),
+    G('sample', 'sample', 'One try: one ray (or path) per pixel. A picture is the average of many samples; the more there are, the less the average wanders.', 'montecarlo', ['spp', 'noise']),
     G('spp', 'samples per pixel', 'How many samples have been averaged into each pixel so far. ShadyTracer keeps adding them while the picture stands still.', 'montecarlo', ['sample']),
-    G('lens', 'lens (thin lens)', 'A camera with a lens instead of a pinhole: rays start from anywhere on the lens and meet again at one distance, the focus. Things nearer or further are blurred: depth of field.', 'lens', ['pinhole']),
+    G('lens', 'lens (thin lens)', 'A camera with a lens instead of a pinhole: rays start from anywhere on the lens and meet again at one distance, the focus. Things nearer or further are blurred; how far the sharp region reaches is the depth of field.', 'lens', ['pinhole']),
     G('flatland', 'flat world', 'The tutorial\'s 2D stand-in for the renderer: the same ideas in a slice, so they can be drawn. Some formulas differ (light spreads around a circle, not a sphere), and the pages say where.', 'reading'),
 
     // distances
-    G('sdf', 'signed distance field (SDF)', 'A function that says, for any point, how far it is to the nearest surface: positive outside, negative inside, zero on the surface. ShadyTracer\'s shapes are all SDFs.', 'distances', ['sphere-tracing']),
-    G('sphere-tracing', 'sphere tracing', 'Finding where a ray meets an SDF by stepping: ask the distance, move that far (nothing is closer, so nothing can be skipped), repeat until the distance is tiny. Also called ray marching.', 'distances', ['sdf', 'tolerance']),
-    G('tolerance', 'surface tolerance', 'How close is close enough to count as a hit. Too large and surfaces look soft; too small and rays take many more steps, or never arrive.', 'distances', ['f32']),
+    G('sdf', 'signed distance field (SDF)', 'A formula that says, for any point, how far it is to the nearest surface: positive outside, negative inside, zero on the surface. Each of ShadyTracer\'s shapes is a formula of this kind.', 'distances', ['sphere-tracing'], ['iq-distfunctions']),
+    G('sphere-tracing', 'sphere tracing', 'Finding where a ray meets an SDF by stepping: ask the distance, move that far (nothing is closer, so nothing can be skipped), repeat until the distance is tiny. ShadyTracer moves 0.9 of it, as a margin (the step scale). Also called ray marching.', 'distances', ['sdf', 'tolerance', 'stepscale'], ['hart1996', 'iq-raymarching']),
+    G('tolerance', 'surface tolerance', 'How close is close enough to count as a hit. Too large and edges grow fat and near misses count as hits; too small and rays take many more steps, or never arrive.', 'distances', ['f32']),
     G('stepscale', 'step scale', 'A safety factor on each step: ShadyTracer moves 0.9 of the distance, not all of it, so a distance that is slightly too large cannot carry the ray through a surface.', 'distances', ['lipschitz']),
-    G('lipschitz', 'Lipschitz bound', 'A promise about a distance field: it never changes faster than the real distance does. Break it, and a step can jump over a surface. Divide by how much faster it changes, and it is safe again.', 'distances', ['sdf']),
-    G('union', 'union', 'Two shapes as one: the distance to either, so the smaller of the two distances.', 'shapes', ['csg', 'smin']),
-    G('csg', 'CSG (constructive solid geometry)', 'Building shapes from shapes: union (both), intersection (where they overlap), subtraction (one with the other cut out).', 'shapes', ['union']),
-    G('smin', 'smooth blend', 'A union that melts two shapes together near where they meet, instead of a sharp crease. It shortens the distance a little where both are close.', 'shapes', ['union']),
-    G('normal', 'normal', 'The direction straight out of a surface at a point. Light bounces, reflects and refracts relative to it. For an SDF it is the direction the distance grows fastest.', 'normals'),
-    G('escape', 'escape', 'A ray that leaves the scene: ShadyTracer stops marching once a ray is outside the scene\'s radius and moving away, and gives it the sky.', 'distances'),
+    G('lipschitz', 'Lipschitz bound', 'A promise about a distance formula: it never changes faster than a true distance does, which is at most one unit for every unit you move. A formula that changes faster claims more empty room than there is, and a step can jump a surface. The fix: divide the formula by how much faster it can change.', 'distances', ['sdf'], ['iq-distance', 'hart1996']),
+    G('union', 'union', 'Two shapes as one: everything that is in either of them. Its distance is the smaller of the two distances.', 'shapes', ['csg', 'smin']),
+    G('csg', 'CSG (constructive solid geometry)', 'Building shapes from shapes: union (everything in either), intersection (only where they overlap), subtraction (one with the other cut out).', 'shapes', ['union']),
+    G('smin', 'smooth blend', 'A union that melts two shapes together near where they meet, instead of a sharp crease. It shortens the distance a little wherever both are close.', 'shapes', ['union', 'fillet'], ['iq-smin']),
+    G('fillet', 'fillet', 'A rounded web of material filling the corner where two shapes meet, as a smooth blend makes.', 'shapes', ['smin']),
+    G('normal', 'normal', 'The direction straight out of a surface at a point. Light bounces and reflects relative to it, and bends by it entering glass. For an SDF it is the direction in which the distance grows fastest: straight uphill, on the height lines.', 'normals', [], ['iq-normals']),
+    G('escape', 'escape', 'A ray that leaves the scene: ShadyTracer stops a ray once it is outside the scene\'s radius (a ball around everything in it) and moving away from its middle, and gives it the sky.', 'distances', ['sky']),
 
     // light
-    G('radiance', 'radiance', 'How bright a surface looks from one direction: what a camera pixel measures. ShadyTracer stores it as luminance, in candela per square metre (cd/m²).', 'photometry', ['irradiance']),
-    G('irradiance', 'irradiance', 'How much light lands on a surface, from all directions together. Measured for the eye it is illuminance, in lux.', 'photometry', ['radiance']),
-    G('cosine-law', 'cosine law', 'Light arriving at a slant spreads over more surface, so it lights it less: by the cosine of the angle from the normal.', 'photometry', ['normal']),
+    G('intensity', 'intensity', 'How strongly a small lamp shines in one direction. The light it puts on a surface then falls with distance and slant. Measured in candela.', 'photometry', ['candela', 'irradiance']),
+    G('candela', 'candela (cd)', 'The unit of how strongly a light shines in one direction, as the eye sees it. A candle gives about one.', 'photometry', ['intensity']),
+    G('lux', 'lux (lx)', 'The unit of how much light lands on a surface, as the eye sees it. A bright office is about 500 lux; sunlight can reach 100,000.', 'photometry', ['irradiance']),
+    G('radiance', 'radiance', 'How bright a surface looks from one direction: what a camera pixel measures. ShadyTracer keeps it as luminance, its brightness to the eye, in candela per square metre (cd/m²).', 'photometry', ['irradiance', 'candela']),
+    G('irradiance', 'irradiance', 'How much light lands on a surface, from every direction it arrives from (from one lamp, just that lamp\'s). Measured for the eye it is called illuminance, in lux.', 'photometry', ['radiance', 'lux']),
+    G('cosine-law', 'cosine law', 'Light arriving at a slant spreads over more surface, so it lights each bit of it less: by the cosine of the angle from the normal.', 'photometry', ['normal']),
     G('albedo', 'albedo', 'The share of light a surface sends back out: 1 is white, 0 is black, 0.7 a light grey. The rest is absorbed.', 'diffuse'),
+    G('material', 'material', 'What a surface is made of, as far as light is concerned: its colour, how rough or shiny it is, whether light passes into it.', 'diffuse', ['bsdf']),
     G('diffuse', 'diffuse', 'A matte surface that scatters light in every direction, looking equally bright from all of them. Paper, chalk, a painted wall. Also called Lambertian.', 'diffuse', ['albedo', 'bsdf']),
-    G('bsdf', 'BSDF', 'A material\'s rule for where light goes when it hits: how much leaves in each direction for light arriving from each direction. Short for bidirectional scattering distribution function.', 'diffuse', ['diffuse']),
-    G('delta', 'mirror-like (delta) direction', 'A perfect mirror or clear glass sends light in exactly one direction. A random direction never hits it, so light sampling cannot help there.', 'mis', ['nee', 'caustic']),
+    G('bsdf', 'BSDF', 'A material\'s rule for where light goes when it hits: for light arriving from each direction, how much leaves in each direction. The letters stand for bidirectional scattering distribution function.', 'diffuse', ['material']),
+    G('delta', 'mirror-like (delta) direction', 'A perfect mirror or clear glass sends light on in exactly one direction: in maths, a delta, all of it at one point and none anywhere else. A shadow ray to a random point of a light is never exactly that direction, so aiming at the light cannot help there.', 'mis', ['nee', 'caustic']),
     G('emitter', 'emitter', 'Anything that gives off light: a lamp, the sun, a glowing surface.', 'emitters'),
 
     // path tracing
     G('path', 'path', 'The chain of rays one sample follows: from the eye to a surface, bouncing to the next, until it reaches a light, leaves the scene or is stopped.', 'paths', ['bounce']),
-    G('bounce', 'bounce', 'One step of a path: hitting a surface and leaving it in a new direction chosen by the material.', 'paths', ['path', 'bsdf']),
-    G('path-tracing', 'path tracing', 'Making a picture by following many random paths from the eye and averaging what light they bring back. Done right, the average converges to the true picture.', 'paths', ['montecarlo']),
-    G('throughput', 'throughput', 'How much of the light found at the end of a path still reaches the eye: each bounce multiplies it by what the surface keeps. ShadyTracer calls it beta.', 'paths'),
-    G('montecarlo', 'Monte Carlo', 'Working out an average by trying random cases and averaging them. The more tries, the closer the answer; the error falls as one over the square root of the number of tries.', 'montecarlo', ['noise', 'estimator']),
+    G('bounce', 'bounce', 'One step of a path: hitting a surface and leaving it in a new direction chosen by the material. A matte surface sends it in a random direction, not like a mirror.', 'paths', ['path', 'bsdf']),
+    G('path-tracing', 'path tracing', 'Making a picture by following many random paths from the eye and averaging the light they bring back. From the eye, because a light path can be walked either way, and starting there wastes no work on light nobody sees. Random, because light arrives from every direction and there is no counting them all: the average of a random few gets closer to the true picture (converges) as more are added.', 'paths', ['montecarlo'], ['rtiow', 'pbr-pathtracer']),
+    G('throughput', 'throughput', 'How much of the light found further along a path still reaches the eye. Each bounce multiplies it by the share the surface sends on (for a matte surface, its albedo); the rest is absorbed. ShadyTracer calls it beta.', 'paths', ['albedo']),
+    G('montecarlo', 'Monte Carlo', 'Working out a number that is hard to calculate by trying many random cases and averaging what they give. A pixel is such a number: the light along every path through it, estimated from a few random ones. The error falls as one over the square root of the number of tries.', 'montecarlo', ['noise', 'estimator'], ['pbr-montecarlo']),
     G('estimator', 'estimator', 'A recipe that turns random tries into a guess at a number. A good one guesses right on average and does not scatter much.', 'montecarlo', ['unbiased']),
     G('unbiased', 'unbiased', 'Right on average: the mean of many tries is the true answer, however few tries each picture had. The noise is the only error.', 'checking', ['estimator']),
     G('noise', 'noise', 'The speckle in a picture made from too few samples: each pixel\'s average has not settled yet. Four times the samples halve it.', 'montecarlo', ['variance', 'error-bar']),
     G('variance', 'variance', 'How much the tries scatter around their average. Lower variance means less noise for the same number of samples.', 'montecarlo', ['noise']),
-    G('error-bar', 'error bar', 'How far a pixel\'s average might still be from its true value, worked out from how much its samples disagree (its standard error). ShadyTracer keeps one for every pixel.', 'montecarlo', ['noise']),
-    G('solid-angle', 'solid angle', 'How big something looks from a point: the patch it covers on a ball around that point, measured in steradians (sr). The whole sky all round is 4π sr; the sun is about 0.00007 sr.', 'photometry', ['pdf']),
-    G('pdf', 'probability density (pdf)', 'How likely a random choice is to land at each value. An estimator divides by it, so a choice made often counts less each time and a rare one counts more: on average it comes out right.', 'nee', ['importance']),
+    G('error-bar', 'error bar', 'How far a pixel\'s average might still be from its true value, worked out from how much its samples disagree (statisticians call it the standard error). About two times in three, the true value is within one error bar. ShadyTracer keeps one for every pixel.', 'montecarlo', ['noise']),
+    G('solid-angle', 'solid angle', 'How big something looks from a point: the patch it covers on a ball of radius 1 around that point, measured in steradians (sr). The whole sky all round is 4π sr; the sun is about 0.000067 sr.', 'photometry', ['pdf']),
+    G('pdf', 'probability density (pdf)', 'How likely a random choice is to land at each value: for a point picked evenly along a lamp 2 long, ½ for each unit of its length. An estimate divides what it found by it, so a choice made often counts less each time and a rare one more, and on average the result is right.', 'nee', ['importance']),
     G('importance', 'importance sampling', 'Choosing random directions more often where they matter more (towards bright light, along a shiny reflection) and dividing by how often you chose them. Same answer on average, much less noise.', 'paths', ['pdf']),
-    G('nee', 'next event estimation (NEE)', 'At every bounce, also send a shadow ray to a random point of a light. A bounce finds a small light by luck; NEE aims at it.', 'nee', ['shadow-ray', 'mis']),
+    G('nee', 'next event estimation (NEE)', 'At every bounce, also send a shadow ray to a random point of a light. A bounce finds a small light by luck; NEE aims at it.', 'nee', ['shadow-ray', 'mis'], ['rtrest']),
     G('direct', 'direct light', 'Light that reaches a point straight from a light. Indirect light has bounced off something else first.', 'nee'),
-    G('mis', 'multiple importance sampling (MIS)', 'Using two ways of choosing a direction at once (aim at the light, follow the material) and weighting each by how good it is for that direction, so neither can make a firefly.', 'mis', ['nee', 'importance']),
-    G('firefly', 'firefly', 'A single far-too-bright pixel: a rare sample that found a lot of light and was divided by a tiny pdf.', 'mis', ['pdf']),
-    G('caustic', 'caustic', 'Light focused by glass or a mirror onto a surface: the bright pattern under a glass of water. Hard for a camera path to find, because it has to pass through the glass the exact right way.', 'caustics', ['delta']),
+    G('mis', 'multiple importance sampling (MIS)', 'Using two ways of choosing a direction at once (aim at the light, follow the material) and weighting each by how likely it was to choose that direction, so neither can make a firefly and nothing is counted twice.', 'mis', ['nee', 'importance'], ['veach1997']),
+    G('firefly', 'firefly', 'A single far-too-bright pixel: a rare sample that found a lot of light and was divided by a tiny chance (its pdf), so it counts hugely.', 'mis', ['pdf']),
+    G('caustic', 'caustic', 'Light focused by glass or a mirror onto a surface: the bright pattern under a glass of water. Hard for a camera path to find, because it has to pass through the glass the exact right way.', 'caustics', ['delta', 'photon']),
+    G('photon', 'photon', 'In ShadyTracer, a packet of light sent out from a light and followed as it bounces: the opposite direction to a camera ray. Photon mapping keeps where they land.', 'photons', ['caustic']),
+    G('prng', 'random number generator (PRNG)', 'A formula that turns a number into one that looks random, and then into the next. Pseudo-random: the same start (seed) gives the same numbers, so a picture can be made again exactly.', 'montecarlo', ['seed'], ['jarzynski2020']),
+    G('seed', 'seed', 'The number a random number generator starts from. Each sample gets a fresh one, so its random choices differ from the last.', 'montecarlo', ['prng']),
 
     // the machine
-    G('gpu', 'GPU', 'A graphics card: thousands of small processors that run the same program on different data at the same time. Each pixel\'s ray can be one of them.', 'gpu', ['kernel']),
-    G('kernel', 'kernel', 'A program that runs on the GPU, once for every item of work (every pixel, every ray). ShadyTracer\'s frame is a dozen kernels in turn.', 'gpu', ['wgsl', 'wavefront']),
+    G('gpu', 'GPU', 'A graphics card: thousands of small processors that run the same program on different data at the same time. Each ray, or each pixel, gets one of them.', 'gpu', ['kernel', 'thread']),
+    G('kernel', 'kernel', 'A program that runs on the GPU, once for every item of work (every pixel, every ray). Each of ShadyTracer\'s samples is a dozen kernels in turn.', 'gpu', ['wgsl', 'wavefront']),
+    G('thread', 'thread', 'One of the GPU\'s workers: one copy of a kernel, working on one item, such as one ray. Thousands run at once.', 'gpu', ['kernel']),
+    G('uniform', 'uniform', 'A value handed to a GPU program that is the same for every item it works on: the camera\'s position, the picture\'s size, a setting. Changing one needs no new program.', 'gpu', ['kernel']),
+    G('compile', 'compile', 'Turn a program\'s text into the instructions a processor runs. For the GPU this happens in the browser, and for a big kernel it can take seconds.', 'compiles', ['kernel']),
     G('wgsl', 'WGSL', 'The language WebGPU programs are written in. ShadyTracer\'s kernels are WGSL text inside JavaScript files.', 'gpu', ['kernel']),
     G('webgpu', 'WebGPU', 'The browser\'s way of running programs on the graphics card. ShadyTracer uses it through a small library of its own, tinywebgpu.', 'gpu', ['wgsl']),
-    G('wavefront', 'wavefront', 'Running a path tracer as several kernels with queues between them (march, shade, shadow rays) instead of one big program, so the GPU\'s workers stay busy with the same kind of work.', 'wavefront', ['kernel']),
-    G('f32', 'f32 (32-bit float)', 'The kind of number the GPU computes with: about seven significant digits. Far from the origin its steps get coarse, which limits how small a tolerance can be.', 'precision', ['tolerance']),
+    G('wavefront', 'wavefront', 'Running a path tracer as several kernels in turn (one marches rays to surfaces, one shades them, one traces shadow rays), each handing its rays to the next on a list, instead of one big program, so the GPU\'s workers all do the same kind of work at once.', 'wavefront', ['kernel']),
+    G('f32', 'f32 (32-bit float)', 'The kind of number the GPU computes with: about seven significant digits. Like a ruler whose marks spread further apart the further you go from zero: far from the origin, the closest two numbers it can tell apart are further apart, which limits how small a tolerance can be.', 'precision', ['tolerance']),
+
+    // how sure a claim is: the stamps on the pages (CLAUDE.md, "Do I know this is true, or do I think it is true?")
+    G('claim-measured', 'measured (a stamp)', 'Someone ran it on real hardware and wrote the number down. The page says who, on what card, the number, and where it is recorded.', 'reading', ['claim-code', 'claim-inferred']),
+    G('claim-code', 'read in code (a stamp)', 'The code does this, and the page links the line. It says what the code does, never what it costs.', 'reading', ['claim-measured', 'claim-inferred']),
+    G('claim-inferred', 'inferred (a stamp)', 'A reasonable guess, not yet tested. The page says what would test it.', 'reading', ['claim-measured', 'claim-code']),
 ]
 
 export const term = id => GLOSSARY.find(g => g.id === id) ?? null
