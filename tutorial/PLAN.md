@@ -154,7 +154,12 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
    wiki-tonemapping, wiki-srgb.
 
 **III. What surfaces do**
-8. **Diffuse and mirror**: the BSDF, energy conservation, the white furnace.
+8. **Diffuse and mirror** (draft): a matte point under a lamp dragged round it, its bounce directions drawn as the
+   renderer draws them and its cos θ intensity circle; ρ/π and the cosine draw's weight ρ; a room whose right wall
+   becomes a mirror, the lamp seen in it at 0.95 though no shadow ray can find it (flatland.js gains mirrors); the white
+   furnace in the flat world, exact on every path at albedo 1, the cap's loss, a black control; makeDiffuse, makeMirror,
+   the metal and matte branches of lobesSample, Schlick, ALPHA_MIN; the measured furnace; the 4% coat that made the
+   floor a plastic → materials.js, materials_pbr.js. *Read:* pbr-diffuse, pbr-specular, pbr-conductor, rtiow.
 9. **Rough and shiny**: microfacets, GGX, Smith, visible-normal sampling, albedo tables, Kulla–Conty. *Read* (named in
    the code's comments, links to be checked): Walter et al. 2007, Heitz 2014, Dupuy & Benyoub 2023, Kulla & Conty 2017.
 10. **Glass**: Snell, Fresnel from the IOR, total internal reflection, Beer–Lambert, which medium a ray is in.

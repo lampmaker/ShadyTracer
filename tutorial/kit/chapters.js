@@ -49,8 +49,8 @@ export const CHAPTERS = [
     C('light', 'pixels', 'From light to pixels', 'From light to the brightness of a screen: exposure and tone.', 'draft',
         [`${K}autoexposure.js`, `${K}rendertoscreen.js`, `${P}develop.js`, `${K}photometry.js`]),
 
-    C('surfaces', 'diffuse', 'Diffuse and mirror', 'Where light goes when it hits a matte surface or a mirror; a test that no light is made or lost.', 'planned',
-        [`${K}materials.js`]),
+    C('surfaces', 'diffuse', 'Diffuse and mirror', 'Where light goes when it hits a matte surface or a mirror; a test that no light is made or lost.', 'draft',
+        [`${K}materials.js`, `${K}materials_pbr.js`]),
     C('surfaces', 'microfacets', 'Rough and shiny', 'Rough and shiny surfaces as many tiny mirrors, without losing light.', 'planned',
         [`${K}microfacet.js`, `${K}materials_pbr.js`]),
     C('surfaces', 'glass', 'Glass', 'Light bending into glass, reflecting off it, and coloured by it.', 'planned',

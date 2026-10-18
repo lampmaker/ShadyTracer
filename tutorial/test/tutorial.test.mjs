@@ -654,6 +654,29 @@ for (const [name, { mod }] of modules) {
     ok('ch.7: the darkest tenth gets 27 codes kept linearly, 90 as sRGB', re.includes('27 of the 256 codes kept linearly, 90 kept as sRGB'), re)
 }
 
+{
+    const D = await import('../ch/diffuse.js'), F = await import('../kit/flatland.js'), MF = readFileSync(join(REPO, 'lib/pathtracer/core/microfacet.js'), 'utf8')
+    // flatland's mirror: a ray down at 45 degrees onto a mirror floor leaves up at 45 degrees, carrying the albedo
+    const world = { sky: 1, shapes: [{ kind: 'box', c: [0, -1], h: [5, 1], albedo: 0.8, mirror: true }] }, rec = []
+    const Lm = F.tracePath(world, -1, 1, Math.SQRT1_2, -Math.SQRT1_2, { rand: F.rng(1), maxBounce: 3, record: rec })
+    const out = rec[1], dir = [out.b[0] - out.a[0], out.b[1] - out.a[1]], l = Math.hypot(...dir)
+    ok('ch.8: a mirror sends a ray out at the angle it came in, with its albedo', Math.abs(dir[0] / l - Math.SQRT1_2) < 1e-9 && Math.abs(dir[1] / l - Math.SQRT1_2) < 1e-9 && Math.abs(Lm - 0.8) < 1e-12, `${dir} ${Lm}`)
+    // the matte figure's numbers: E = cos / 2.6, L = rho E / 2
+    const m = D.matteOut(35, 0.7)
+    ok('ch.8: the matte point at 35 degrees: E 0.3151, its radiance 0.1103 every way', m.E.toFixed(4) === '0.3151' && m.L.toFixed(4) === '0.1103')
+    // the room: the mirror shows the lamp at 0.95, which only a bounce can find with NEE on
+    const r0 = D.render('mirror', { wall: 'matte', max: 96 }), r1 = D.render('mirror', { wall: 'mirror', max: 96 }), top = Math.max(...r1.pix.map(p => p.Y))
+    ok('ch.8: the matte room averages 0.1320; with a mirror, a pixel sees the lamp at 0.950', D.figures.mirror.readout(r0).includes('average 0.1320') && Math.abs(top - 0.95) < 1e-12, top)
+    // the furnace: exact at albedo 1, matte or mirror, on every path; the page's other numbers
+    const w = D.render('furnace', { rho: 1, surface: 'matte', cap: 40, max: 48 }), wm = D.render('furnace', { rho: 1, surface: 'mirror', cap: 40, max: 48 })
+    ok('ch.8: the white furnace: every pixel exactly 1, with no noise, matte and mirror', [w, wm].every(r => r.pix.every(p => p.Y === 1 && p.V === 0)))
+    const fr = st => D.figures.furnace.readout(D.render('furnace', { ...D.figures.furnace.steps[st], max: 48 }))
+    ok('ch.8: grey 0.8128, a cap of one bounce 0.9963', fr('grey').includes('average 0.8128') && fr('cap').includes('average 0.9963'), fr('cap'))
+    // makeMirror's "tiny value (e.g., 0.02)": below ALPHA_MIN, still a delta; the first blur at sqrt(ALPHA_MIN)
+    const AM = +/export const ALPHA_MIN = ([\d.e-]+)/.exec(MF)[1]
+    ok('ch.8: a roughness of 0.02 is an alpha of 0.0004, under ALPHA_MIN 0.001: still a mirror; the first blur at 0.0316', 0.02 ** 2 < AM && Math.sqrt(AM).toFixed(4) === '0.0316')
+}
+
 /* THE EXCERPT LOCATOR ON ITS OWN ----------------------------------------------------------------------------------- */
 {
     const text = [

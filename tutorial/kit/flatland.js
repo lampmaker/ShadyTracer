@@ -4,8 +4,9 @@
 //
 // It does what ShadyTracer does, in a slice: shapes are signed distance fields (the help's 2D mirrors of sdf.js,
 // help/widgets.js), rays find them by sphere tracing, a camera has a 1D film, and a path tracer follows light with or
-// without next event estimation. It is a teaching copy, not the renderer: one grey channel, diffuse surfaces only,
-// one kind of lamp. Later chapters add what they need (mirrors, glass, MIS, photons, haze) when they are written.
+// without next event estimation. It is a teaching copy, not the renderer: one grey channel, diffuse surfaces and
+// mirrors (a shape with `mirror: true` reflects a share `albedo` of the light, as a metal's F0 does at every angle here),
+// one kind of lamp. Later chapters add what they need (glass, MIS, photons, haze) when they are written.
 //
 // THE FLAT WORLD'S OWN LAWS. Light in a plane spreads around a circle, not a sphere, so several numbers differ from
 // 3D, and a figure must never borrow a 3D-normalised formula from the engine for its estimator:
@@ -161,7 +162,7 @@ export const lampsOf = world => world.shapes.map((s, i) => s.emit > 0 && s.kind 
  * the light it had gathered by the end of bounce b -- what a cap of b bounces would have returned.
  */
 export function tracePath(world, ox, oy, dx, dy, { nee = false, maxBounce = 4, rand, eps = 1e-3, record = null, lampPick, rr = null, info = null } = {}) {
-    let L = 0, beta = 1, x = ox, y = oy
+    let L = 0, beta = 1, x = ox, y = oy, delta = false
     const lamps = lampsOf(world)                 // asked every time: a figure moves and adds shapes
     if (info) { info.bounces = 0; info.end = 'cap'; info.upTo = [] }
     const done = end => { if (info) { info.end = end; while (info.upTo.length <= maxBounce) info.upTo.push(L) } return L }
@@ -170,11 +171,25 @@ export function tracePath(world, ox, oy, dx, dy, { nee = false, maxBounce = 4, r
         if (record) record.push({ kind: b === 0 ? 'eye' : 'bounce', a: [x, y], b: [HIT.x, HIT.y], beta })
         if (!HIT.hit) { L += beta * (world.sky || 0); return done('sky') }
         const sh = world.shapes[HIT.i]
-        if (sh.emit > 0) { if (b === 0 || !nee) { L += beta * sh.emit; if (record) record[record.length - 1].lamp = true } return done('lamp') }   // lamps glow and reflect nothing
+        // lamps glow and reflect nothing; with NEE a lamp met by a bounce was counted by the shadow ray -- unless the
+        // bounce was a mirror's, where no shadow ray could aim (a delta: chapter 8), so the hit is the only way
+        if (sh.emit > 0) { if (b === 0 || !nee || delta) { L += beta * sh.emit; if (record) record[record.length - 1].lamp = true } return done('lamp') }
         let [nx, ny] = normalAt(world, HIT.x, HIT.y, HIT.i)
         if (nx * dx + ny * dy > 0) { nx = -nx; ny = -ny }                    // the side the ray came from
         const px = HIT.x + nx * 4 * eps, py = HIT.y + ny * 4 * eps
         const rho = sh.albedo ?? 0.7
+        /* A MIRROR: one direction out, the incoming one reflected about the normal, carrying rho of the light. No
+           shadow ray: a mirror sends light from a lamp only along that one direction, and a random point of the lamp
+           lies on it with probability 0. Roulette is not played on a mirror bounce. */
+        if (sh.mirror) {
+            const dn = dx * nx + dy * ny
+            dx -= 2 * dn * nx; dy -= 2 * dn * ny
+            beta *= rho; delta = true
+            if (info) { info.bounces = b + 1; info.upTo.push(L) }
+            x = px; y = py
+            continue
+        }
+        delta = false
         if (nee && lamps.length) {
             const pick = lampPick ? lampPick(rand()) : Math.min(lamps.length - 1, Math.floor(rand() * lamps.length))
             const li = lamps[pick], lamp = sampleLamp(world.shapes[li], rand())

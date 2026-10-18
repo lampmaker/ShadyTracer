@@ -147,6 +147,13 @@ real student.
 4. What does a tone curve do, and how do PBR Neutral and AgX differ?
 5. Why is a picture stored as sRGB rather than in proportion to the light?
 
+**diffuse** (Diffuse and mirror)
+1. What does it mean that a matte surface looks equally bright from every direction, and why does its intensity still
+   fall with the cosine?
+2. Why is a matte surface's BSDF ρ/π, and why does a bounce drawn by the cosine weigh exactly ρ?
+3. Why can the renderer not aim a shadow ray through a mirror, and how is a lamp seen in a mirror found?
+4. What is a white furnace, what should it show, and why does it need a black control?
+
 **emitters** (Every glowing thing is a light)
 1. How does the renderer find glowing shapes nobody told it about?
 2. Why is the picture right even before a glowing shape has been found?
