@@ -17,9 +17,9 @@ The author's own libraries, separate repositories under MIT and included as git 
 Not code, but owed: the signed distance functions follow
 [Inigo Quilez's articles](https://iquilezles.org/articles/distfunctions/).
 
-Not in the repository: the tutorial's style mockups (`tutorial/kit/page.js`, `STYLES`) load their typefaces from
-[Google Fonts](https://fonts.google.com/) when a page is opened, each under the SIL Open Font License. Once a style
-is chosen its faces are to be kept in `tutorial/kit/fonts/` and listed here.
+Not in the repository: the tutorial's styles (`tutorial/kit/styles.js`) load their typefaces from
+[Google Fonts](https://fonts.google.com/) when a page is opened, each under the SIL Open Font License. They are to be
+kept in `tutorial/kit/fonts/`, with their licences, and listed here.
 
 ## The MIT licence
 

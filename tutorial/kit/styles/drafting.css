@@ -1,6 +1,6 @@
-/* C. DRAFTING SHEET -- a patent drawing on vellum: crisp black ink, FIG. numbers, leader lines and hatching, a book
+/* DRAFTING SHEET -- a patent drawing on vellum: crisp black ink, FIG. numbers, leader lines and hatching, a book
    serif with small-capital headings, typewritten labels, and one spot colour (vermilion) for light. Dark: white ink on
-   charcoal. Mockup round only: tokens, texture and frame; kit.css holds the layout. */
+   charcoal. A style: tokens, texture and frame (kit/styles.js names it); kit.css holds the layout. */
 :root[data-style="drafting"], [data-style="drafting"] {
     --paper: #f4f3ee; --paper-deep: #dad8cf; --paper-raised: #fbfaf6;
     --ink: #151515; --ink-soft: #454545; --ink-faint: #8b8a85; --grid: rgba(0, 0, 0, .05); --rule: #151515;

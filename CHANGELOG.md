@@ -17,7 +17,7 @@ as PLAN.md does.
 
 ## 0.67.2 — 2026-10-18
 
-**A developer tutorial beside the program: its plan, its figure kit, four style mockups and the first three chapters**
+**A developer tutorial beside the program: its plan, its figure kit, four styles and the first three chapters**
 (you: "a tutorial for shadytracer, parallel to the program … that explains the inner workings of the code … interactive,
 2D visualisations … a solid toolkit for that so it looks the same everywhere … start with a plan and list of contents,
 then a few pages … make a few mockups of different styles"). Nothing in the application changed: the tutorial is
@@ -47,9 +47,22 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   bounce "roughly once in two hundred tries". That was the old sun, drawn 21 times too wide. The real one is 0.00007
   steradian, found by chance about once in 47,000 bounces. Chapter 14 quotes the comment and says so; the comment itself
   is unchanged.
-- **Four styles to choose from** (`tutorial/mockups/index.html`): A lab notebook, B blueprint, C drafting sheet, D
-  risograph, each light and dark, switched live from the strip at the top right of every page. Their fonts come from
-  Google Fonts for this round only (THIRD_PARTY.md).
+- **Four styles, for every reader** (you: "make the style a dropdown, expect to add more styles later. We'll keep this
+  in for everyone. give them names"): *Lab notebook*, *Blueprint*, *Drafting sheet* and *Risograph*, each light and
+  dark, chosen by name from the menu at the top right of every page and kept on the reader's device. They are listed
+  once, in `tutorial/kit/styles.js`; a new style is a CSS file, its `@import` and an entry there, and the test fails if
+  a style misses a token or a dark colour. `tutorial/styles.html` shows them side by side, its cards made from the
+  list. Their fonts still come from Google Fonts (THIRD_PARTY.md); keeping them in the repository is the next round's.
+- **Shapes you can move** (you: "make SDF elements draggable (the blend mode is not very visible now, the shapes are
+  too far apart)"): in chapter 2's distance field the circle and the box start touching, both drag by a handle at
+  their middle, and a blend slider (shown only while they are blended) widens the fillet. The ball, the block and the
+  wall of the march, the room's ball and block in chapter 1, and the block and the room's shapes in chapter 14 drag the
+  same way.
+- **Read by a blank reader** (you: "have every page read by an independent agent … that has no knowledge about
+  shadytracer"): `tutorial/review/extract.mjs` writes each page as a reader meets it, text and figure screenshots, and
+  a fresh agent that may read nothing else reads it as a beginner, answers a quiz and says where it got lost
+  (`tutorial/review/README.md`). What each reader said and what changed because of it is in
+  `tutorial/review/REVIEWS.md`.
 - **Checked:** `node tutorial/test/tutorial.test.mjs` (in CI) holds the pages, links, glossary and excerpts to the
   contents and today's source, draws every figure and step into a recording canvas, and tests the flat world against
   2D closed forms (a point light's I h / (x² + h²), a lamp's L (sin φ₂ − sin φ₁), a room traced with and without NEE
@@ -58,8 +71,9 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   pages run, not that they read well.
 
 What to look at:
-- **The style.** Open `tutorial/mockups/index.html`, then chapter 1 in each of A to D, light and dark. Which one, or
-  which mix?
+- **The styles.** The menu at the top right of any page, and `tutorial/styles.html`: are the names right, and does
+  each read well in light and dark?
+- **Dragging the shapes.** Chapter 2, section 1: *Blended*, then pull the circle away from the box and back.
 - **The direction.** Are chapters 1, 2 and 14 pitched right for a high-school reader who wants to build a renderer:
   too much, too little, the right figures?
 - **The figures by hand**: drag the eye and the lamp in chapter 1, the ray's start in chapter 2, the lamp's size in

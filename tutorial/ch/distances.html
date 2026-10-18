@@ -34,12 +34,13 @@
       distance field</a>, SDF for short. The thin lines are places with the same distance, like the height lines on a
       map; the bold one is the surface itself.</p>
     <p data-step="field:two">Two shapes together? Ask each one and keep the smaller answer: the nearest surface is the
-      nearer of the two. That is a <a data-g="union">union</a>, and it is one comparison. Cutting one shape out of
+      nearer of the two. Drag the circle and the box by the crosses in their middles and watch the lines rearrange. That is a <a data-g="union">union</a>, and it is one comparison. Cutting one shape out of
       another, or keeping only where two overlap, are just as short (<a data-ch="shapes">Building and bending
       shapes</a>).</p>
     <p data-step="field:blend">Or melt them together: a <a data-g="smin">smooth blend</a> takes a little off the smaller
-      distance wherever the two are close, and a fillet appears between them. This is the very formula ShadyTracer uses,
-      in its flat form.</p>
+      distance wherever the two are close, and a fillet appears between them. Move the <strong>blend</strong> slider to
+      widen it, and drag the shapes by the crosses in their middles: pull them apart and the fillet stretches, then lets
+      go. This is the very formula ShadyTracer uses, in its flat form.</p>
     <details class="maths">
       <summary><span class="tag">The maths</span>A circle, a union, a blend</summary>
       <div class="body">
@@ -71,7 +72,8 @@
       the figure is one question, and the ray hops from the middle of one to its edge. Near a surface the distances
       shrink, the hops get shorter, and the ray creeps up to it.</p>
     <p>This is <a data-g="sphere-tracing">sphere tracing</a> (in 3D the circles are spheres). It needs nothing from a
-      shape but its distance. Drag <strong>start</strong> and <strong>aim</strong>.</p>
+      shape but its distance. Drag <strong>start</strong> and <strong>aim</strong>, and move the ball, the block and the
+      wall by the crosses in their middles.</p>
     <p data-step="march:graze">Most rays need only a handful of steps. The expensive ones pass close to a surface
       without hitting it: every distance is small, so every step is small. Aim the ray just past the corner of the
       block and count.</p>

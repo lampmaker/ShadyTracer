@@ -1,13 +1,14 @@
 /*======================================================================================================================
-  THE TUTORIAL'S LOOK -- layout and components. Every colour and face is a token; the four candidate styles
-  (styles/*.css, the mockup round) only set tokens, a texture and a few frame details, so choosing one later deletes
-  three files and changes nothing here.
+  THE TUTORIAL'S LOOK -- layout and components. Every colour and face is a token; a style (styles/*.css) only sets
+  tokens, a texture and a few frame details, so adding one is a file of its own and changes nothing here.
+
+  Every reader chooses a style (kit/styles.js lists them, the bar's menu switches them); kit.css imports each one's file.
 
   A page is a SHEET: a drawn border, a title block, and sections where the text runs beside a figure that stays put
   (sticky) while its paragraphs scroll past. On a phone the figure sticks to the top and the text runs under it.
 
   Theme: light by default, dark under prefers-color-scheme, and an explicit data-theme on <html> wins both ways (the
-  toggle, page.js). Each style defines both, on [data-style=...] so a card in the mockup hub can show a style that is
+  toggle, page.js). Each style defines both, on [data-style=...] so a card on the styles page can show a style that is
   not the page's own.
 ======================================================================================================================*/
 @import url("styles/notebook.css");
@@ -233,7 +234,7 @@ cite[data-src] { font: 500 .85em/1 var(--f-mono); font-style: normal; }
 .tabs a span { font: 700 1.15rem/1.25 var(--f-display); }
 .tabs .next { text-align: right; grid-column: 2; }
 
-/* THE BAR: contents, the theme, and (this round) the style ----------------------------------------------------------- */
+/* THE BAR: contents, the style by name, the theme -------------------------------------------------------------------- */
 .kit-bar {
     position: fixed; z-index: 60; top: calc(env(safe-area-inset-top, 0px) + 14px); right: calc(env(safe-area-inset-right, 0px) + 18px);
     display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .4rem; align-items: center; max-width: calc(100vw - 36px);
@@ -241,9 +242,12 @@ cite[data-src] { font: 500 .85em/1 var(--f-mono); font-style: normal; }
 }
 .kit-bar > * { background: var(--paper-raised); }
 .kit-bar a.kbtn { text-decoration: none; display: inline-block; }
-.kit-bar .seg button { padding: .42rem .5rem; }
-.kit-bar .stylelabel { padding: .42rem .5rem; color: var(--ink-faint); background: transparent; }
-@media (max-width: 640px) { .kit-bar { top: calc(env(safe-area-inset-top, 0px) + 8px); right: calc(env(safe-area-inset-right, 0px) + 10px); } .kit-bar .stylelabel { display: none; } }
+.kit-bar .stylepick { display: inline-flex; align-items: center; gap: .1rem; border: 1.5px solid var(--rule); border-radius: var(--radius); padding: 0 .1rem 0 .55rem; }
+.kit-bar .stylesall { text-decoration: none; color: var(--ink-faint); }
+.kit-bar .stylesall:hover { color: var(--accent); }
+.kit-bar select { font: 600 .75rem/1 var(--f-mono); color: var(--ink); background: transparent; border: 0; padding: .42rem .3rem; cursor: pointer; max-width: 11rem; }
+.kit-bar select option { background: var(--paper-raised); color: var(--ink); }
+@media (max-width: 640px) { .kit-bar { top: calc(env(safe-area-inset-top, 0px) + 8px); right: calc(env(safe-area-inset-right, 0px) + 10px); } .kit-bar .stylesall { display: none; } }
 
 /* small screens: sizes down a step */
 @media (max-width: 640px) {

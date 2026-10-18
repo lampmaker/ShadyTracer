@@ -28,7 +28,7 @@ function aimWorld(s) {
         { kind: 'box', c: [3, -0.4], h: [5, 0.4], albedo: 0.7, name: 'floor' },
         { kind: 'segment', a: [s.lampX - s.size / 2, 3.4], b: [s.lampX + s.size / 2, 3.4], r: 0.02, emit: L, name: 'lamp' },
     ]
-    if (s.block) shapes.push({ kind: 'box', c: [s.lampX - 0.55, 1.9], h: [0.5, 0.12], albedo: 0.7, name: 'block' })
+    if (s.block) shapes.push({ kind: 'box', c: s.blockAt, h: [0.5, 0.12], albedo: 0.7, name: 'block' })
     return { shapes }
 }
 const X0 = [2.6, 0]                    // the point on the floor
@@ -54,8 +54,8 @@ function roomWorld(s) {
             { kind: 'box', c: [3.4, 4.4], h: [4.1, 0.3], albedo: 0.6, name: 'ceiling' },
             { kind: 'box', c: [-0.4, 2.05], h: [0.3, 2.65], albedo: 0.6, name: 'left' },
             { kind: 'box', c: [7.2, 2.05], h: [0.3, 2.65], albedo: 0.6, name: 'right' },
-            { kind: 'circle', c: [2.3, 0.62], r: 0.62, albedo: 0.7, name: 'ball' },
-            { kind: 'box', c: [4.7, 0.8], h: [0.55, 0.8], round: 0.04, albedo: 0.7, name: 'block' },
+            { kind: 'circle', c: s.ball, r: 0.62, albedo: 0.7, name: 'ball' },
+            { kind: 'box', c: s.blockAt, h: [0.55, 0.8], round: 0.04, albedo: 0.7, name: 'block' },
             { kind: 'segment', a: [s.lampX - s.size / 2, 3.75], b: [s.lampX + s.size / 2, 3.75], r: 0.015, emit: 1.1 / s.size, name: 'lamp' },
         ],
     }
@@ -76,7 +76,7 @@ export const figures = {
     aim: {
         aspect: 1.5,
         world: { x: [-0.2, 6.2], y: [-0.55, 4.1] },
-        state: { mode: 'bounce', size: 1.2, lampX: 3.6, block: false },
+        state: { mode: 'bounce', size: 1.2, lampX: 3.6, block: false, blockAt: [3.05, 1.9] },
         controls: [
             { type: 'seg', key: 'mode', options: [['bounce', 'Bounce at random'], ['aim', 'Aim at the lamp']] },
             { type: 'slider', key: 'size', label: 'lamp size', min: 0.05, max: 3, step: 0.05, fmt: v => v.toFixed(2) },
@@ -86,9 +86,12 @@ export const figures = {
             bounce: { mode: 'bounce', size: 1.2, block: false },
             small: { mode: 'bounce', size: 0.2, block: false },
             aim: { mode: 'aim', size: 0.2, block: false },
-            block: { mode: 'aim', size: 1.2, block: true },
+            block: { mode: 'aim', size: 1.2, block: true, blockAt: [3.05, 1.9], lampX: 3.6 },
         },
-        drag: { lamp: (s, p) => { s.lampX = clamp(p[0], 0.8, 5.4) } },
+        drag: {
+            lamp: (s, p) => { s.lampX = clamp(p[0], 0.8, 5.4) },
+            block: (s, p) => { s.blockAt = [clamp(p[0], 0.4, 5.6), clamp(p[1], 0.6, 3.0)] },
+        },
         draw(pen, s) {
             const world = aimWorld(s)
             for (const sh of world.shapes) pen.flat(sh, { id: sh.name })
@@ -113,6 +116,7 @@ export const figures = {
             pen.dot(X0, { role: 'accent', r: 4.5 })
             pen.label(X0, 'this point', { role: 'accent', size: 14, dx: 8, dy: 14 })
             pen.handle('lamp', [s.lampX, 3.4 + 0.25], { label: 'lamp', role: 'light' })
+            if (s.block) pen.handle('block', s.blockAt, { role: 'soft' })
             s._aim = { found, K, off: estimate(world, false, 3000, 5), on: estimate(world, true, 3000, 6), exact: s.block ? null : exactE(s) }
         },
         readout(s) {
@@ -127,7 +131,7 @@ export const figures = {
     room: {
         aspect: 1.15,
         world: { x: [-0.8, 7.6], y: [-3.9, 4.75] },
-        state: { size: 0.6, lampX: 3.0, view: 'off', spp: 0, seed: 1, off: film(), on: film(), paths: { off: [], on: [] }, px: 30, ymax: 0.5 },
+        state: { size: 0.6, lampX: 3.0, view: 'off', spp: 0, seed: 1, off: film(), on: film(), paths: { off: [], on: [] }, px: 30, ymax: 0.5, ball: [2.3, 0.62], blockAt: [4.7, 0.8] },
         controls: [
             { type: 'slider', key: 'size', label: 'lamp size', min: 0.05, max: 2.5, step: 0.05, fmt: v => v.toFixed(2) },
             { type: 'seg', key: 'view', options: [['off', 'Without NEE'], ['both', 'Both']] },
@@ -141,6 +145,9 @@ export const figures = {
         },
         drag: {
             lamp: (s, p) => { s.lampX = clamp(p[0], 0.8, 6.2) },
+            // the ball and the block anywhere in the room, never through the floor (a drag starts the pictures again)
+            ball: (s, p) => { s.ball = [clamp(p[0], 0.6, 6.2), clamp(p[1], 0.62, 3.2)] },
+            block: (s, p) => { s.blockAt = [clamp(p[0], 0.7, 6.1), clamp(p[1], 0.8, 3.0)] },
             pixel: (s, p) => {
                 // the pixel whose ray passes nearest the pointer
                 let best = 0, bd = Infinity
@@ -186,6 +193,7 @@ export const figures = {
             const [ox, oy, dx, dy] = cameraRay(CAM, s.px)
             pen.handle('pixel', [ox + dx * 1.1, oy + dy * 1.1], { label: 'pixel' })
             pen.handle('lamp', [s.lampX, 3.75 - 0.32], { label: 'lamp', role: 'light' })
+            pen.handle('ball', s.ball, { role: 'soft' }); pen.handle('block', s.blockAt, { role: 'soft' })
 
             // THE FILMS: each pixel's average as a grey, and below, every pixel's value with its error bar
             const cur = Math.max(1e-3, ...s.on.map(p => p[0]))

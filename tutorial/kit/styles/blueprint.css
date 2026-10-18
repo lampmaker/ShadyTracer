@@ -1,6 +1,6 @@
-/* B. BLUEPRINT -- a cyanotype: white lines on Prussian blue, a fine grid, a title block, stencil headings and the
+/* BLUEPRINT -- a cyanotype: white lines on Prussian blue, a fine grid, a title block, stencil headings and the
    mono lettering of a drawing office. Its light version is a whiteprint (diazo): blue-violet lines on pale paper.
-   Mockup round only: tokens, texture and frame; kit.css holds the layout. */
+   A style: tokens, texture and frame (kit/styles.js names it); kit.css holds the layout. */
 :root[data-style="blueprint"], [data-style="blueprint"] {
     --paper: #eef0f4; --paper-deep: #d5d9e3; --paper-raised: #f7f8fb;
     --ink: #222e74; --ink-soft: #4a548c; --ink-faint: #8a91b6; --grid: rgba(34, 46, 116, .085); --grid-major: rgba(34, 46, 116, .15); --rule: #222e74;

@@ -36,8 +36,9 @@ const base = `http://localhost:${server.address().port}/tutorial/`
 const shots = process.argv[2] ? resolve(process.argv[2]) : null
 if (shots) await mkdir(shots, { recursive: true })
 
-const PAGES = ['index.html', 'glossary.html', 'mockups/index.html', 'ch/rays.html', 'ch/distances.html', 'ch/nee.html']
-const STYLES = { notebook: '700 16px "Kalam"', blueprint: '16px "Saira Stencil One"', drafting: '600 16px "Spectral SC"', riso: '800 16px "Bricolage Grotesque"' }
+const PAGES = ['index.html', 'glossary.html', 'styles.html', 'ch/rays.html', 'ch/distances.html', 'ch/nee.html']
+const { STYLES: LIST } = await import('../kit/styles.js')
+const STYLES = Object.fromEntries(LIST.map(st => [st.id, st.face]))      // every style there is, and a face of it to check loaded
 let failed = 0
 const ok = (n, c, x = '') => { if (!c) failed++; console.log((c ? 'ok    ' : 'FAIL  ') + n + (c ? '' : '  ' + x)) }
 
@@ -94,10 +95,14 @@ for (const theme of ['light', 'dark']) for (const [style, face] of Object.entrie
         const readouts = await p.evaluate(() => [...document.querySelectorAll('.fig-readout')].map(e => e.textContent).join(' | '))
         ok('a paragraph\'s step moves its figure', /left the lamp/.test(readouts), readouts)
         // THE THEME IS KEPT: dark chosen, a reload, still dark
-        await p.click('.kit-bar button.kbtn:last-child')
+        await p.click('.kit-bar > button.kbtn')
         const t1 = await p.evaluate(() => document.documentElement.dataset.theme)
         await p.reload(); await p.waitForTimeout(500)
         ok('the theme chosen survives a reload', t1 === 'dark' && await p.evaluate(() => document.documentElement.dataset.theme) === 'dark', t1)
+        // THE STYLE MENU: a style chosen by name is the page's, and kept over a reload
+        await p.selectOption('#kit-style', 'drafting'); await p.reload(); await p.waitForTimeout(400)
+        ok('a style chosen from the menu is kept over a reload', await p.evaluate(() => document.documentElement.dataset.style === 'drafting' && document.getElementById('kit-style').value === 'drafting'))
+        await p.selectOption('#kit-style', 'notebook')
         // A GLOSSARY TERM'S CARD, on hover
         await p.hover('a[data-g="pixel"]'); await p.waitForTimeout(200)
         ok('a glossary term shows its card', await p.evaluate(() => { const c = document.querySelector('.gcard'); return !!c && !c.hidden && /dot of the picture/.test(c.textContent) }))

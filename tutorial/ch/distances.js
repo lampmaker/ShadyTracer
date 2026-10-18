@@ -19,22 +19,27 @@ import { orbit, shade3, cameraRay3 } from '../kit/space.js'
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v))
 const fmt = d => (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(2)
 
-/* FIELD: one circle, or the circle and a box together (the smaller distance: a union) */
-const FIELD = {
-    one: (x, y) => circle(x - 0.4, y - 0.1, 1.1),
-    two: (x, y) => Math.min(circle(x - 0.9, y - 0.2, 1.0), box(x + 1.6, y + 0.35, 0.8, 0.55)),
-    blend: (x, y) => smin(circle(x - 0.9, y - 0.2, 1.0), box(x + 1.6, y + 0.35, 0.8, 0.55), 0.9),
+/* FIELD: one circle, or the circle and a box together -- the smaller distance (a union), or melted (the smooth minimum,
+   the renderer's csgUnion: help/widgets.js smin). Both shapes where the state puts them, so they can be dragged. */
+const R_CIRCLE = 1.0, BOX_H = [0.75, 0.55]
+export const fieldOf = s => {
+    const c = x => circle(x[0] - s.c[0], x[1] - s.c[1], R_CIRCLE), b = x => box(x[0] - s.b[0], x[1] - s.b[1], BOX_H[0], BOX_H[1])
+    if (s.shape === 'one') return (x, y) => c([x, y])
+    if (s.shape === 'two') return (x, y) => Math.min(c([x, y]), b([x, y]))
+    return (x, y) => smin(c([x, y]), b([x, y]), s.k)
 }
+const FIELD_AT = { c: [0.55, 0.15], b: [-0.95, -0.25] }       // just touching: where a blend shows
 
-/* THE MARCH'S SCENE: a block, a ball and a thin wall, as flatland shapes */
-const SCENE = {
+/* THE MARCH'S SCENE: a block, a ball and a thin wall, as flatland shapes, each where the state has dragged it */
+const sceneOf = s => ({
     shapes: [
-        { kind: 'box', c: [1.4, -0.9], h: [0.7, 0.7], round: 0.04, name: 'block' },
-        { kind: 'circle', c: [2.05, 1.2], r: 0.75, name: 'ball' },
-        { kind: 'segment', a: [-0.3, -0.2], b: [-0.3, 1.9], r: 0.035, name: 'wall' },
+        { kind: 'box', c: s.block, h: [0.7, 0.7], round: 0.04, name: 'block' },
+        { kind: 'circle', c: s.ball, r: 0.75, name: 'ball' },
+        { kind: 'segment', a: [s.wall[0], s.wall[1] - 1.05], b: [s.wall[0], s.wall[1] + 1.05], r: 0.035, name: 'wall' },
     ],
-}
-const sceneD = (x, y) => { let d = Infinity; for (const s of SCENE.shapes) d = Math.min(d, shapeDist(s, x, y)); return d }
+})
+const distOf = scene => (x, y) => { let d = Infinity; for (const sh of scene.shapes) d = Math.min(d, shapeDist(sh, x, y)); return d }
+const MARCH_AT = { ball: [2.05, 1.2], block: [1.4, -0.9], wall: [-0.3, 0.85] }
 
 /* SPHERE TRACING, written out the way the march kernel does it (wavefront.js prog_march): the distance here, a hit
    when it is under the tolerance, escaped when outside the scene's radius and heading out, else a step of
@@ -71,20 +76,25 @@ export const figures = {
     field: {
         aspect: 1.5,
         world: { x: [-3.2, 3.2], y: [-2.2, 2.2] },
-        state: { shape: 'one', probe: [-1.4, 1.3], lines: true },
+        state: { shape: 'one', probe: [-1.4, 1.3], lines: true, k: 0.6, ...FIELD_AT },
         controls: [
             { type: 'seg', key: 'shape', options: [['one', 'A circle'], ['two', 'Circle and box'], ['blend', 'Blended']] },
+            { type: 'slider', key: 'k', label: 'blend', min: 0, max: 1.5, step: 0.05, fmt: v => v.toFixed(2), when: s => s.shape === 'blend' },
             { type: 'toggle', key: 'lines', label: 'Contours' },
         ],
         steps: {
-            one: { shape: 'one', probe: [-1.4, 1.3] },
-            inside: { shape: 'one', probe: [0.75, -0.15] },
-            two: { shape: 'two', probe: [-0.3, 1.45] },
-            blend: { shape: 'blend', probe: [0.05, -1.25] },
+            one: { shape: 'one', probe: [-1.4, 1.3], ...FIELD_AT },
+            inside: { shape: 'one', probe: [0.75, -0.15], ...FIELD_AT },
+            two: { shape: 'two', probe: [-0.3, 1.45], ...FIELD_AT },
+            blend: { shape: 'blend', k: 0.6, probe: [-0.25, -1.15], ...FIELD_AT },
         },
-        drag: { probe: (s, p) => { s.probe = [clamp(p[0], -3.1, 3.1), clamp(p[1], -2.1, 2.1)] } },
+        drag: {
+            probe: (s, p) => { s.probe = [clamp(p[0], -3.1, 3.1), clamp(p[1], -2.1, 2.1)] },
+            circle: (s, p) => { s.c = [clamp(p[0], -2.2, 2.2), clamp(p[1], -1.2, 1.2)] },
+            box: (s, p) => { s.b = [clamp(p[0], -2.4, 2.4), clamp(p[1], -1.6, 1.6)] },
+        },
         draw(pen, s) {
-            const f = FIELD[s.shape]
+            const f = fieldOf(s)
             pen.field(f, { step: s.lines ? 0.25 : 0, cell: 4 })
             const d = f(...s.probe)
             pen.circle(s.probe, Math.abs(d), { role: d < 0 ? 'blocked' : 'cam', w: 1.1, id: 'empty' })
@@ -93,38 +103,46 @@ export const figures = {
             const g = Math.hypot(gx, gy) || 1, q = [s.probe[0] - gx / g * d, s.probe[1] - gy / g * d]
             pen.line(s.probe, q, { role: d < 0 ? 'blocked' : 'cam', w: 1, id: 'toSurface' })
             pen.dot(q, { role: 'accent', r: 3.2 })
+            // the shapes' own handles, at their middles: drag them about
+            pen.handle('circle', s.c, { role: 'soft' })
+            if (s.shape !== 'one') pen.handle('box', s.b, { role: 'soft' })
             pen.handle('probe', s.probe)
             pen.label(s.probe, `distance ${fmt(d)}`, { kind: 'mono', size: 13, dx: 14, dy: 16, bg: true })
         },
         readout(s) {
-            const d = FIELD[s.shape](...s.probe)
-            return d < 0 ? `inside: ${(-d).toFixed(3)} below the surface (the distance is negative)` : `outside: nothing is closer than ${d.toFixed(3)}`
+            const d = fieldOf(s)(...s.probe)
+            return (d < 0 ? `inside: ${(-d).toFixed(3)} below the surface (the distance is negative)` : `outside: nothing is closer than ${d.toFixed(3)}`)
+                + (s.shape === 'blend' ? ` · blend ${s.k.toFixed(2)}` : '')
         },
     },
 
     march: {
         aspect: 1.45,
         world: { x: [-3.85, 4.0], y: [-2.75, 2.75] },
-        state: { from: [-3.3, 0.35], aim: [1.8, 0.9], stepscale: 0.9, eps: 0.01, radius: 3.6 },
+        state: { from: [-3.3, 0.35], aim: [1.8, 0.9], stepscale: 0.9, eps: 0.01, radius: 3.6, ...MARCH_AT },
         controls: [
             { type: 'slider', key: 'stepscale', label: 'step scale', min: 0.3, max: 1.8, step: 0.05, fmt: v => v.toFixed(2) },
             { type: 'slider', key: 'eps', label: 'tolerance', min: 0.002, max: 0.3, step: 0.002, fmt: v => v.toFixed(3) },
         ],
         steps: {
-            march: { from: [-3.3, 0.35], aim: [1.8, 0.9], stepscale: 0.9, eps: 0.01 },
-            graze: { from: [-3.3, -1.45], aim: [0.7, -0.18], stepscale: 0.9, eps: 0.01 },
-            tolerance: { from: [-3.3, 0.35], aim: [1.8, 0.9], stepscale: 0.9, eps: 0.25 },
-            overshoot: { from: [-3.3, 0.95], aim: [1.8, 0.75], stepscale: 1.7, eps: 0.01 },
-            escape: { from: [-3.3, 2.1], aim: [1.8, 2.5], stepscale: 0.9, eps: 0.01 },
+            march: { from: [-3.3, 0.35], aim: [1.8, 0.9], stepscale: 0.9, eps: 0.01, ...MARCH_AT },
+            graze: { from: [-3.3, -1.45], aim: [0.7, -0.18], stepscale: 0.9, eps: 0.01, ...MARCH_AT },
+            tolerance: { from: [-3.3, 0.35], aim: [1.8, 0.9], stepscale: 0.9, eps: 0.25, ...MARCH_AT },
+            overshoot: { from: [-3.3, 0.95], aim: [1.8, 0.75], stepscale: 1.7, eps: 0.01, ...MARCH_AT },
+            escape: { from: [-3.3, 2.1], aim: [1.8, 2.5], stepscale: 0.9, eps: 0.01, ...MARCH_AT },
         },
         drag: {
             from: (s, p) => { s.from = [clamp(p[0], -3.8, 3.9), clamp(p[1], -2.6, 2.6)] },
             aim: (s, p) => { s.aim = [clamp(p[0], -3.8, 3.9), clamp(p[1], -2.6, 2.6)] },
+            ball: (s, p) => { s.ball = [clamp(p[0], -2.5, 2.8), clamp(p[1], -1.9, 1.9)] },
+            block: (s, p) => { s.block = [clamp(p[0], -2.5, 2.8), clamp(p[1], -1.9, 1.9)] },
+            wall: (s, p) => { s.wall = [clamp(p[0], -2.5, 2.8), clamp(p[1], -1.5, 1.5)] },
         },
         draw(pen, s) {
             pen.circle([0, 0], s.radius, { role: 'faint', w: 0.8, dash: [6, 6], id: 'radius' })
             pen.label([s.radius * Math.cos(-0.62), s.radius * Math.sin(-0.62)], "the scene's radius", { role: 'soft', size: 13, dx: 8 })
-            for (const sh of SCENE.shapes) pen.flat(sh, { id: sh.name })
+            const scene = sceneOf(s), sceneD = distOf(scene)
+            for (const sh of scene.shapes) pen.flat(sh, { id: sh.name })
             const d = unit(s.from, s.aim)
             const r = sphereTrace(sceneD, s.from, d, s)
             drawSteps(pen, r)
@@ -133,6 +151,7 @@ export const figures = {
                 pen.dot([s.from[0] + d[0] * t, s.from[1] + d[1] * t], { role: 'blocked', r: 5, ring: true })
                 pen.label([s.from[0] + d[0] * t, s.from[1] + d[1] * t], 'it should have stopped here', { role: 'blocked', size: 14, dx: 10, dy: -16 })
             }
+            for (const k of ['ball', 'block', 'wall']) pen.handle(k, s[k], { role: 'soft' })
             pen.handle('from', s.from, { label: 'start' })
             pen.handle('aim', s.aim, { label: 'aim' })
             s._r = { n: r.steps.length, end: r.end, through: r.end === 'hit' ? reached > t + 0.02 : t < 12 && r.end !== 'hit' }

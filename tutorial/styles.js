@@ -1,11 +1,14 @@
 //======================================================================================================================
-// THE STYLE HUB (mockup round only): each card carries data-style, so its tokens -- and the small figure in it, drawn by
-// the same pen as the chapters -- are that style's whatever the page's own. "Open" stores the style first: the preview
-// of a claude.ai artifact drops a link's query, so ?style= alone would not carry it.
+// THE STYLES PAGE: every style in kit/styles.js side by side, each card in its own style (its data-style sets its
+// tokens, and the small figure in it is drawn by the same pen as the chapters'), with a button to read in it. The cards
+// are made from the list, so a style added there appears here.
 //======================================================================================================================
 
-import { boot, setStyle, STYLES } from '../kit/page.js'
-import { march } from '../kit/flatland.js'
+import { boot, setStyle } from './kit/page.js'
+import { STYLES } from './kit/styles.js'
+import { march } from './kit/flatland.js'
+
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
 
 /* the sample every card draws: a ray from an eye to a ball, its shadow ray to a lamp, the normal, the march's circles */
 const WORLD = { shapes: [{ kind: 'box', c: [3, -0.45], h: [4, 0.45], name: 'floor' }, { kind: 'circle', c: [3.6, 0.85], r: 0.85, name: 'ball' }] }
@@ -29,14 +32,29 @@ const sample = {
         pen.label([lamp[0] + 0.3, lamp[1]], 'lamp', { size: 14, role: 'soft' })
     },
 }
+export const figures = Object.fromEntries(STYLES.map(st => [`sample-${st.id}`, sample]))
 
-export const figures = Object.fromEntries(Object.keys(STYLES).map(n => [`sample-${n}`, sample]))
+/** the cards' markup, one a style */
+export const cardsHTML = () => STYLES.map(st => `
+    <article class="card" data-style="${st.id}">
+      <h3>${esc(st.name)}</h3>
+      <p class="eyebrowish">${esc(st.line)}</p>
+      <figure class="fig" data-fig="sample-${st.id}"><figcaption>${esc(st.name)}</figcaption></figure>
+      <p>${esc(st.about)}</p>
+      <div class="open">
+        <button type="button" class="kbtn" data-use-style="${st.id}">Use this style</button>
+        <a class="kbtn" data-use-style="${st.id}" href="ch/rays.html?style=${st.id}">Read chapter 1 in it</a>
+      </div>
+    </article>`).join('')
 
 export function mount() {
     const doc = document
-    for (const a of doc.querySelectorAll('[data-open-style]')) {
-        a.addEventListener('click', () => setStyle(doc, a.dataset.openStyle))
-    }
+    const cards = doc.getElementById('cards')
+    if (cards) cards.innerHTML = cardsHTML()
+    for (const el of doc.querySelectorAll('[data-use-style]')) el.addEventListener('click', () => {
+        setStyle(doc, el.dataset.useStyle)
+        const sel = doc.getElementById('kit-style'); if (sel) sel.value = el.dataset.useStyle
+    })
     boot({ figures, allFonts: true })
 }
 if (typeof document !== 'undefined') mount()

@@ -1,7 +1,8 @@
 # ShadyTracer, inside out: the tutorial's plan
 
-*Status 2026-10-18: first round written (contents, glossary, chapters 1, 2 and 14, the style mockups), with 3D
-figures where they show more. The style is not chosen yet. This file is the plan; `kit/chapters.js` is the contents the pages read, and the two must agree.*
+*Status 2026-10-18: first round written (contents, glossary, chapters 1, 2 and 14, four styles), with 3D figures where
+they show more, each page read by a blank reader (`review/REVIEWS.md`). This file is the plan; `kit/chapters.js` is the
+contents the pages read, and the two must agree.*
 
 ## What it is, and for whom
 
@@ -30,6 +31,10 @@ One page per chapter, the same order every time:
 7. **Try it**: things to do in the figures, and in ShadyTracer.
 8. **Words from this chapter**: glossary chips; previous and next.
 
+A page is **done** only after a blank reader has read it ([`review/README.md`](review/README.md)): a fresh agent that
+may see nothing but the page as a reader meets it, says where it got lost, and answers a short quiz. Every finding is
+fixed or answered in `review/REVIEWS.md`.
+
 ## Rules for authors
 
 - **Figures draw the flat world** (`kit/flatland.js`): a 2D slice, so it can be drawn. Its laws differ from 3D where
@@ -52,12 +57,16 @@ One page per chapter, the same order every time:
 - **Do not repeat a stale comment.** Read the code the comment describes (e.g. the wavelength rides in 15 bits of the
   tag, not 16; the march loop is no longer unrolled).
 - **No numbers without their source.** A speed claim without who and what hardware is inferred, and says so.
+- **Let the reader move the shapes.** Where a figure shows distance-field shapes, each can be dragged by a handle at
+  its middle (the field, the march, the rooms), so a reader can push two shapes together and watch a blend form.
+- **Every style, every figure.** A reader chooses the style (the bar's menu, `kit/styles.js`), so a figure takes its
+  colours from roles, never from a value, and is checked in every style and theme (`test/pages.check.mjs`).
 
 ## The toolkit (`kit/`)
 
 | file | what |
 |---|---|
-| `kit.css`, `styles/*.css` | layout and components; a style is tokens, a texture and a frame |
+| `kit.css`, `styles/*.css`, `styles.js` | layout and components; a style is tokens, a texture and a frame, named in `styles.js` (adding one: its file, its `@import`, its entry) |
 | `page.js` | a page's start: bar, title block, glossary cards, chapter links, excerpts, figures and steps |
 | `figure.js`, `controls.js` | a live figure from a spec: canvas, handles, controls, scroll steps, progressive work |
 | `pen.js` | every line, ray, shape, label and glyph, in the style's colours and line character |
@@ -142,10 +151,11 @@ step cache's grid around a scene (26).
 
 ## Rounds
 
-1. **This round**: the plan, the toolkit, the style mockups, chapters 1, 2 and 14, the contents and the glossary.
-   Decide the style.
-2. Next: vendor the chosen style's fonts, delete the other styles and the hub; "How to read this", then Part I and
-   Part IV in order (the flat world grows mirrors, glass and MIS as they are needed).
+1. **This round**: the plan, the toolkit, four styles kept for every reader (a named menu), chapters 1, 2 and 14,
+   the contents and the glossary, each read by a blank reader.
+2. Next: keep every style's fonts in the repository (`kit/fonts/`, with their licences) so the tutorial loads nothing
+   from elsewhere; "How to read this", then Part I and Part IV in order (the flat world grows mirrors, glass and MIS as
+   they are needed).
 3. Then Parts II, III, V; then the machine and speed (VI, VII), which lean most on measured numbers; then VIII and IX.
 
 ## Checks
@@ -153,3 +163,4 @@ step cache's grid around a scene (26).
 - `node tutorial/test/tutorial.test.mjs` (in CI): contents, links, glossary, excerpts, figures drawn into a recording
   canvas, flat-world and 3D closed forms, and the imports' reach.
 - `node tutorial/test/pages.check.mjs [dir]` (optional, Playwright): every page in every style and theme, headless.
+- `node tutorial/review/extract.mjs <dir>` (Playwright): the pages as a reader meets them, for the blank reader.

@@ -1,6 +1,6 @@
-/* A. LAB NOTEBOOK -- an engineering pad: pale green squared paper, blue-black ink, a red pencil for what matters,
+/* LAB NOTEBOOK -- an engineering pad: pale green squared paper, blue-black ink, a red pencil for what matters,
    headings and labels by hand, the body in a book face so it stays easy to read. Dark: a slate page, white gel pen.
-   Mockup round only: tokens, texture and frame; kit.css holds the layout. */
+   A style: tokens, texture and frame (kit/styles.js names it); kit.css holds the layout. */
 :root[data-style="notebook"], [data-style="notebook"] {
     --paper: #edf1e4; --paper-deep: #d6dccb; --paper-raised: #f7f9f1;
     --ink: #1e2944; --ink-soft: #4a536a; --ink-faint: #858e9f; --grid: rgba(70, 130, 95, .17); --rule: #1e2944;

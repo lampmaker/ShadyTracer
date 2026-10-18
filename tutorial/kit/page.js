@@ -12,9 +12,9 @@
 //   ul.words[data-words]        the chapter's glossary terms as chips
 //   nav.tabs[data-auto]         previous and next written chapters
 //
-// And the bar: contents, light / dark (remembered), and -- this round only -- the four candidate styles. A style is
-// kept in localStorage (the preview of a claude.ai artifact drops a URL's query, so ?style= cannot be relied on), and
-// ?style= still wins where it arrives. Storage can be refused (a private window): every read and write is guarded and
+// And the bar: contents, the style by name (kit/styles.js) and light / dark, both remembered. A style is kept in
+// localStorage (the preview of a claude.ai artifact drops a URL's query, so ?style= cannot be relied on), and ?style=
+// still wins where it arrives. Storage can be refused (a private window): every read and write is guarded and
 // the page works without it.
 //======================================================================================================================
 
@@ -23,19 +23,13 @@ import { term } from './glossary.js'
 import { locate, optionsOf, languageOf } from './excerpt.js'
 import { mountFigure } from './figure.js'
 import { VERSION, loadRevision, revision } from '../../version.js'
+import { STYLES, DEFAULT_STYLE, styleOf } from './styles.js'
 
 export const TUT = new URL('../', import.meta.url)          // tutorial/
 export const REPO = new URL('../../', import.meta.url)      // the repository's root: excerpts' paths start here
 export const GITHUB = 'https://github.com/lampmaker/ShadyTracer'
 
-/* THE CANDIDATE STYLES (the mockup round). Fonts from Google Fonts while the choice is open; the chosen style's are
-   then kept in tutorial/kit/fonts/ and this list goes. */
-export const STYLES = {
-    notebook: { key: 'A', name: 'Lab notebook', fonts: 'family=Kalam:wght@400;700&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=IBM+Plex+Mono:wght@400;500;600' },
-    blueprint: { key: 'B', name: 'Blueprint', fonts: 'family=Saira+Stencil+One&family=Barlow:ital,wght@0,400;0,600;0,700;1,400&family=B612+Mono:wght@400;700' },
-    drafting: { key: 'C', name: 'Drafting sheet', fonts: 'family=Spectral:ital,wght@0,400;0,600;1,400&family=Spectral+SC:wght@500;600&family=Courier+Prime:wght@400;700' },
-    riso: { key: 'D', name: 'Risograph', fonts: 'family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@400;500' },
-}
+export { STYLES } from './styles.js'
 const KEY_STYLE = 'shadytracer.tutorial.style', KEY_THEME = 'shadytracer.tutorial.theme'
 const store = {
     get: k => { try { return localStorage.getItem(k) } catch { return null } },
@@ -45,18 +39,20 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;',
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']
 
 /* STYLE AND THEME ---------------------------------------------------------------------------------------------------- */
-function loadFonts(doc, names) {
-    for (const n of names) {
-        const href = `https://fonts.googleapis.com/css2?${STYLES[n].fonts}&display=swap`
+function loadFonts(doc, ids) {
+    for (const id of ids) {
+        const st = styleOf(id)
+        if (!st?.fonts) continue
+        const href = `https://fonts.googleapis.com/css2?${st.fonts}&display=swap`
         if (doc.head.querySelector(`link[href="${href}"]`)) continue
         const l = doc.createElement('link'); l.rel = 'stylesheet'; l.href = href; doc.head.appendChild(l)
     }
 }
 export function currentStyle(doc = document) {
     const q = new URL(doc.defaultView.location.href).searchParams.get('style')
-    if (q && STYLES[q]) { store.set(KEY_STYLE, q); return q }
+    if (q && styleOf(q)) { store.set(KEY_STYLE, q); return q }
     const s = store.get(KEY_STYLE)
-    return STYLES[s] ? s : 'notebook'
+    return styleOf(s) ? s : DEFAULT_STYLE
 }
 export function setStyle(doc, name) {
     doc.documentElement.dataset.style = name
@@ -76,16 +72,16 @@ function bar(doc, { styles = true } = {}) {
     const home = doc.createElement('a'); home.className = 'kbtn'; home.href = new URL('index.html', TUT).href; home.textContent = 'Contents'
     el.appendChild(home)
     if (styles) {
-        const lab = doc.createElement('span'); lab.className = 'stylelabel'; lab.textContent = 'Style mockup'
-        const seg = doc.createElement('div'); seg.className = 'seg'; seg.setAttribute('role', 'group'); seg.setAttribute('aria-label', 'Style mockup')
-        const bs = Object.entries(STYLES).map(([n, s]) => {
-            const b = doc.createElement('button'); b.type = 'button'; b.textContent = s.key; b.title = `${s.key}. ${s.name}`
-            b.addEventListener('click', () => { setStyle(doc, n); sync() })
-            seg.appendChild(b); return [n, b]
-        })
-        const sync = () => bs.forEach(([n, b]) => b.setAttribute('aria-pressed', doc.documentElement.dataset.style === n ? 'true' : 'false'))
-        sync()
-        el.append(lab, seg)
+        /* THE STYLE, BY NAME: a menu, since there will be more of them (kit/styles.js), and a link to them side by side */
+        const lab = doc.createElement('label'); lab.className = 'stylepick'
+        const sel = doc.createElement('select'); sel.id = 'kit-style'
+        for (const st of STYLES) { const o = doc.createElement('option'); o.value = st.id; o.textContent = st.name; o.title = st.line; sel.appendChild(o) }
+        sel.value = doc.documentElement.dataset.style
+        sel.addEventListener('change', () => setStyle(doc, sel.value))
+        const all = doc.createElement('a'); all.className = 'stylesall'; all.href = new URL('styles.html', TUT).href; all.textContent = 'Style'
+        all.title = 'All the styles, side by side'
+        lab.append(all, sel)
+        el.appendChild(lab)
     }
     const th = doc.createElement('button'); th.type = 'button'; th.className = 'kbtn'
     const label = () => { const d = isDark(doc); th.textContent = d ? 'Light' : 'Dark'; th.setAttribute('aria-label', d ? 'Switch to light' : 'Switch to dark') }
@@ -288,8 +284,8 @@ function figuresOf(doc, specs) {
 }
 
 /**
- * Start the page. `figures` are the page module's specs by name; `styles: false` hides the mockup strip; `allFonts`
- * loads every style's faces (the style hub shows all four).
+ * Start the page. `figures` are the page module's specs by name; `styles: false` leaves the style menu out; `allFonts`
+ * loads every style's faces (the styles page shows them all).
  */
 export function boot({ figures = {}, styles = true, allFonts = false } = {}) {
     const doc = document
@@ -297,7 +293,7 @@ export function boot({ figures = {}, styles = true, allFonts = false } = {}) {
     const t = store.get(KEY_THEME)
     if (t === 'light' || t === 'dark') doc.documentElement.dataset.theme = t
     setStyle(doc, currentStyle(doc))
-    if (allFonts) loadFonts(doc, Object.keys(STYLES))
+    if (allFonts) loadFonts(doc, STYLES.map(st => st.id))
     const id = doc.body.dataset.chapter
     bar(doc, { styles })
     titleBlock(doc, id)

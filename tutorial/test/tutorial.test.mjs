@@ -50,6 +50,27 @@ for (const f of pages.filter(f => f.includes('/ch/'))) {
     ok(`${relative(TUT, f)} is in the contents`, !!chapter(id)?.file, id)
 }
 
+/* THE STYLES: every one in kit/styles.js has its file, imported by kit.css, setting every token kit.css defaults, the
+   colours for light and for dark both (a style missing a dark colour would show the default's in the reader's) ---- */
+{
+    const { STYLES } = await import('../kit/styles.js')
+    const kit = readFileSync(join(TUT, 'kit/kit.css'), 'utf8')
+    const block = sel => { const i = kit.indexOf(sel); return kit.slice(i, kit.indexOf('}', i)) }
+    const all = [...block(':where(:root) {').matchAll(/(--[\w-]+):/g)].map(m => m[1])
+    const dark = [...block(':where(:root[data-theme="dark"]) {').matchAll(/(--[\w-]+):/g)].map(m => m[1])
+    ok('styles: ids are unique and named', new Set(STYLES.map(s => s.id)).size === STYLES.length && STYLES.every(s => s.name && s.line && s.about && s.face))
+    for (const st of STYLES) {
+        const f = join(TUT, `kit/styles/${st.id}.css`)
+        ok(`style "${st.id}": its file exists and kit.css imports it`, existsSync(f) && kit.includes(`@import url("styles/${st.id}.css")`))
+        if (!existsSync(f)) continue
+        const css = readFileSync(f, 'utf8'), count = t => css.split(t + ':').length - 1
+        const missing = all.filter(t => !count(t)), noDark = dark.filter(t => count(t) < 3)
+        ok(`style "${st.id}": sets every token`, !missing.length, missing.join(' '))
+        ok(`style "${st.id}": sets every colour for dark too, under the media query and data-theme both`, !noDark.length, noDark.join(' '))
+        ok(`style "${st.id}": its dark blocks are its own`, css.includes(`:root[data-theme="dark"][data-style="${st.id}"]`) && css.includes(`:root:not([data-theme="light"])[data-style="${st.id}"]`))
+    }
+}
+
 /* THE GLOSSARY ---------------------------------------------------------------------------------------------------- */
 ok('glossary ids are unique', new Set(GLOSSARY.map(g => g.id)).size === GLOSSARY.length)
 for (const g of GLOSSARY) {

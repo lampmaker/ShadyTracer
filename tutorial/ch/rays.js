@@ -14,13 +14,15 @@ import { plot } from '../kit/plot.js'
 import { orbit, draw3, march3, normal3, cameraRay3, pointLightE3, v3 } from '../kit/space.js'
 
 const SKY = [0.66, 0.75, 0.86]
-export const room = () => ({
+/* the room: a floor, and a block and a ball where the state has put them (both can be dragged) */
+export const room = (s = { block: [3.2, 0.55], ball: [5.75, 0.95] }) => ({
     shapes: [
         { kind: 'box', c: [4.2, -0.6], h: [5.8, 0.6], rgb: [0.8, 0.76, 0.68], name: 'floor' },
-        { kind: 'box', c: [3.2, 0.55], h: [0.55, 0.55], round: 0.05, rgb: [0.24, 0.44, 0.86], name: 'block' },
-        { kind: 'circle', c: [5.75, 0.95], r: 0.95, rgb: [0.86, 0.3, 0.2], name: 'ball' },
+        { kind: 'box', c: s.block, h: [0.55, 0.55], round: 0.05, rgb: [0.24, 0.44, 0.86], name: 'block' },
+        { kind: 'circle', c: s.ball, r: 0.95, rgb: [0.86, 0.3, 0.2], name: 'ball' },
     ],
 })
+const ROOM_AT = { block: [3.2, 0.55], ball: [5.75, 0.95] }
 const TARGET = [5.0, 0.75]
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v))
 const srgb = v => Math.round(255 * Math.pow(clamp(v, 0, 1), 1 / 2.2))
@@ -81,7 +83,7 @@ export const figures = {
     scene: {
         aspect: 1.55,
         world: { x: [-1.0, 8.2], y: [-1.0, 4.85] },
-        state: { eye: [-0.2, 1.7], lamp: [4.3, 3.35], pixels: 12, fov: 52, mode: 'eye', batches: 1, shadow: false, sel: 6, strip: true },
+        state: { eye: [-0.2, 1.7], lamp: [4.3, 3.35], pixels: 12, fov: 52, mode: 'eye', batches: 1, shadow: false, sel: 6, strip: true, ...ROOM_AT },
         controls: [
             { type: 'seg', key: 'mode', options: [['eye', 'From the eye'], ['lamp', 'From the lamp']] },
             { type: 'slider', key: 'pixels', label: 'pixels', min: 3, max: 40, step: 1, fmt: v => `${v}` },
@@ -98,6 +100,9 @@ export const figures = {
         },
         drag: {
             eye: (s, p) => { s.eye = [clamp(p[0], -0.9, 2.2), clamp(p[1], 0.25, 3.6)] },
+            // the shapes sit on the floor or float above it, never sink into it
+            ball: (s, p) => { s.ball = [clamp(p[0], 1.2, 7.4), clamp(p[1], 0.95, 3.4)] },
+            block: (s, p) => { s.block = [clamp(p[0], 1.2, 7.4), clamp(p[1], 0.55, 3.4)] },
             lamp: (s, p) => { s.lamp = [clamp(p[0], -0.6, 7.9), clamp(p[1], 2.2, 3.9)] },
             pixel: (s, p) => {
                 const cam = camOf(s)
@@ -108,11 +113,11 @@ export const figures = {
         },
         changed(s, key) { if (key === 'pixels') s.sel = Math.min(s.sel, s.pixels - 1); if (key === 'mode' && s.mode === 'eye') s.batches = Math.max(1, s.batches) },
         draw(pen, s) {
-            const world = room(), cam = camOf(s)
+            const world = room(s), cam = camOf(s)
             s.sel = Math.min(s.sel, s.pixels - 1)
             for (const sh of world.shapes) pen.flat(sh, { id: sh.name })
-            pen.label([world.shapes[2].c[0], world.shapes[2].c[1] + 1.25], 'ball', { align: 'center', role: 'soft' })
-            pen.label([3.2, 1.45], 'block', { align: 'center', role: 'soft' })
+            pen.label([s.ball[0], s.ball[1] + 1.25], 'ball', { align: 'center', role: 'soft' })
+            pen.label([s.block[0], s.block[1] + 0.9], 'block', { align: 'center', role: 'soft' })
             pen.label([7.5, -0.3], 'floor', { align: 'center', role: 'soft' })
 
             const looks = []
@@ -155,6 +160,7 @@ export const figures = {
                     pen.label(r.hit, lit ? 'lit' : 'in shadow', { role: lit ? 'shadow' : 'blocked', dx: 10, dy: 14, size: 14 })
                 }
             } else if (s.mode === 'eye') pen.handle('pixel', (() => { const [a, b] = cell(cam, s.sel); return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2] })())
+            pen.handle('ball', s.ball, { role: 'soft' }); pen.handle('block', s.block, { role: 'soft' })
             pen.eye(s.eye, cam.dir, { size: 22 })
             pen.handle('eye', [s.eye[0] - 0.42 * Math.cos(cam.dir), s.eye[1] - 0.42 * Math.sin(cam.dir)], { label: 'eye' })
             pen.bulb(s.lamp)

@@ -1,6 +1,6 @@
-/* D. RISOGRAPH (the wildcard) -- two fluorescent inks printed one over the other on grainy paper: pink for light,
+/* RISOGRAPH -- two fluorescent inks printed one over the other on grainy paper: pink for light,
    blue for the camera, a little out of register; bold grotesque headings, a very legible body. Dark: the same inks on
-   black stock. Mockup round only: tokens, texture and frame; kit.css holds the layout. */
+   black stock. A style: tokens, texture and frame (kit/styles.js names it); kit.css holds the layout. */
 :root[data-style="riso"], [data-style="riso"] {
     --paper: #f3eee3; --paper-deep: #e1d9c8; --paper-raised: #fbf8f1;
     --ink: #1f3660; --ink-soft: #4a5d80; --ink-faint: #8e98aa; --grid: rgba(31, 54, 96, .06); --rule: #1f3660;
