@@ -536,6 +536,7 @@ test/                 the application's own tests (each module folder has its te
 roadmap/              the plans: where things stand (PLAN.md), the builder, surfaces, UI, analytics, import
 docs/                 the test bench (TESTING.md), the measured performance (PERFORMANCE.md), and
   screenshots/        the pictures in this README, and the list of how each is taken
+tutorial/             ShadyTracer, inside out: how the renderer works, chapter by chapter, with live figures
 lib/                  shared, project-agnostic — see lib/README.md before adding anything
   pathtracer/         the renderer as a component; optics/ and measure/ inside it
   shell/ timeline/ dockview/   the application shell and its vendored libraries
@@ -553,6 +554,10 @@ Working on this with an agent? **[`CLAUDE.md`](CLAUDE.md)** holds the rules and 
 without a GPU; **[`roadmap/PLAN.md`](roadmap/PLAN.md)** holds where the path
 tracer actually stands, including the parts that are finished but unproven. For the renderer,
 [`lib/pathtracer/README.md`](lib/pathtracer/README.md) is the real orientation.
+
+**[`tutorial/`](tutorial/index.html)** explains the renderer from zero, for developers new to ray tracing:
+rays, distance fields, light, noise and every trick for speed, each with live figures and the real code
+beside it. It is being written; [`tutorial/PLAN.md`](tutorial/PLAN.md) has its contents and where it stands.
 
 ### Versions
 

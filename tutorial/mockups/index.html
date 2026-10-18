@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tutorial style mockups · ShadyTracer</title>
+<link rel="stylesheet" href="../kit/kit.css">
+<style>
+  /* each card is a piece of its own style's paper: tokens from its data-style, not the page's */
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 30rem), 1fr)); gap: 2rem; margin-top: 1.5rem; }
+  .card { min-width: 0; display: flex; flex-direction: column; gap: .9rem; padding: 1.4rem 1.4rem 1.2rem; color: var(--ink);
+          background-color: var(--paper); background-image: var(--tex); background-size: var(--tex-size, auto); border: 1.5px solid var(--rule);
+          border-radius: var(--radius); font: 400 1rem/1.55 var(--f-body); }
+  .card .key { font: 700 .78rem/1 var(--f-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--accent); }
+  .card h3 { margin: 0; font: 700 2rem/1.05 var(--f-display); }
+  .card .eyebrowish { margin: 0; font: 600 .74rem/1.3 var(--f-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); }
+  .card p { margin: 0; }
+  .card .fig figcaption { display: none; }
+  .card ul { margin: 0; padding-left: 1.2rem; font-size: .93rem; }
+  .card .pro li::marker { content: "+  "; color: var(--stamp-measured); font-weight: 700; }
+  .card .con li::marker { content: "−  "; color: var(--accent); font-weight: 700; }
+  .card .open { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: auto; padding-top: .4rem; }
+  .card .open a { text-decoration: none; }
+  .card[data-style="blueprint"] h3 { font-weight: 400; text-transform: uppercase; letter-spacing: .04em; }
+  .card[data-style="drafting"] h3 { font-weight: 600; }
+  .card[data-style="riso"] h3 { font-weight: 800; letter-spacing: -.03em; color: var(--c-cam); text-shadow: 2px 2px 0 var(--accent); }
+  .rec { margin-top: 2.5rem; padding: 1.2rem 1.4rem; border: 1.5px solid var(--accent); border-radius: var(--radius); background: var(--accent-soft); max-width: 72ch; }
+  .rec h2 { font-size: 1.4rem; }
+  .rec ol { margin: 0; padding-left: 1.3rem; }
+  .same { columns: 2 22rem; column-gap: 3rem; }
+</style>
+<script type="module" src="hub.js"></script>
+</head>
+<body data-chapter="">
+<p class="kit-offline">This page runs from a web server, not from a file: in the repository run <code>python3 -m http.server 8000</code> and open http://localhost:8000/tutorial/mockups/.</p>
+<main class="sheet">
+
+<header class="sheet-head">
+  <div>
+    <p class="eyebrow">ShadyTracer, inside out · style mockups</p>
+    <h1>Four ways it could look</h1>
+    <p class="lede">The same pages (the contents, the glossary and three chapters) in four styles, each with a light and a
+      dark version. Every card below is drawn in its own style, figure included. Open one, read a little, drag
+      something, press <strong>Dark</strong> at the top right, and switch between A, B, C and D there: the page stays
+      where it is and only the style changes.</p>
+  </div>
+  <div class="titleblock" data-auto></div>
+</header>
+
+<section class="plain wide">
+  <div class="prose">
+    <div class="cards">
+
+      <article class="card" data-style="notebook">
+        <span class="key">A · Lab notebook</span>
+        <h3>An engineer's pad</h3>
+        <p class="eyebrowish">Squared green paper · fountain pen · red pencil</p>
+        <figure class="fig" data-fig="sample-notebook"><figcaption>sample</figcaption></figure>
+        <p>Headings and figure labels written by hand, the text in a book face so it stays easy to read; lines wobble a
+          little and are drawn twice, like ink. Dark: a slate page and white gel pen.</p>
+        <ul class="pro"><li>Closest to "hand-drawn, technical, on paper"</li><li>Warm and approachable for a first-time reader</li><li>Figures look sketched, so a rough one does not look broken</li></ul>
+        <ul class="con"><li>Handwritten headings can tire over 34 chapters</li><li>Wobbly lines are a little less exact to read off</li></ul>
+        <div class="open"><a class="kbtn" data-open-style="notebook" href="../ch/rays.html?style=notebook">Open chapter 1</a><a class="kbtn" data-open-style="notebook" href="../ch/nee.html?style=notebook">Chapter 14</a><a class="kbtn" data-open-style="notebook" href="../index.html?style=notebook">Contents</a></div>
+      </article>
+
+      <article class="card" data-style="blueprint">
+        <span class="key">B · Blueprint</span>
+        <h3>Drawing office</h3>
+        <p class="eyebrowish">Cyanotype · white lines · stencil lettering</p>
+        <figure class="fig" data-fig="sample-blueprint"><figcaption>sample</figcaption></figure>
+        <p>A fine grid, a ruled border, a title block, stencil headings and the mono lettering of a drawing office. In
+          dark it is a real blueprint (white on Prussian blue); in light, a whiteprint (blue-violet on pale paper).</p>
+        <ul class="pro"><li>Unmistakably technical; the dark version is striking</li><li>Grid and mono labels suit measured diagrams</li></ul>
+        <ul class="con"><li>The light version is the quieter of the two</li><li>Long reading on blue is harder than on paper</li></ul>
+        <div class="open"><a class="kbtn" data-open-style="blueprint" href="../ch/rays.html?style=blueprint">Open chapter 1</a><a class="kbtn" data-open-style="blueprint" href="../ch/nee.html?style=blueprint">Chapter 14</a><a class="kbtn" data-open-style="blueprint" href="../index.html?style=blueprint">Contents</a></div>
+      </article>
+
+      <article class="card" data-style="drafting">
+        <span class="key">C · Drafting sheet</span>
+        <h3>A patent drawing</h3>
+        <p class="eyebrowish">Vellum · black ink · one vermilion</p>
+        <figure class="fig" data-fig="sample-drafting"><figcaption>sample</figcaption></figure>
+        <p>Crisp lines, hatching, FIG. numbers, a ruled border with zone marks, small-capital headings and typewritten
+          labels. One spot colour, for light. Dark: white ink on charcoal.</p>
+        <ul class="pro"><li>The most exact: nothing wobbles, everything reads off cleanly</li><li>Calm over many chapters; scales to dense pages</li></ul>
+        <ul class="con"><li>Less playful; closest to a classic textbook</li><li>Rays mostly black: told apart by dashes, not colour</li></ul>
+        <div class="open"><a class="kbtn" data-open-style="drafting" href="../ch/rays.html?style=drafting">Open chapter 1</a><a class="kbtn" data-open-style="drafting" href="../ch/nee.html?style=drafting">Chapter 14</a><a class="kbtn" data-open-style="drafting" href="../index.html?style=drafting">Contents</a></div>
+      </article>
+
+      <article class="card" data-style="riso">
+        <span class="key">D · Risograph (wildcard)</span>
+        <h3>A printed zine</h3>
+        <p class="eyebrowish">Grainy stock · fluorescent pink and blue</p>
+        <figure class="fig" data-fig="sample-riso"><figcaption>sample</figcaption></figure>
+        <p>Two inks printed one over the other, a little out of register; bold grotesque headings and a very legible
+          body face; solids printed as dots. Dark: the same inks on black stock.</p>
+        <ul class="pro"><li>The most fun; strong for a school audience</li><li>Colours carry meaning: pink is light, blue the camera</li></ul>
+        <ul class="con"><li>Least "technical drawing"</li><li>Fluorescent colours can tire the eye in long reads</li></ul>
+        <div class="open"><a class="kbtn" data-open-style="riso" href="../ch/rays.html?style=riso">Open chapter 1</a><a class="kbtn" data-open-style="riso" href="../ch/nee.html?style=riso">Chapter 14</a><a class="kbtn" data-open-style="riso" href="../index.html?style=riso">Contents</a></div>
+      </article>
+    </div>
+
+    <div class="rec">
+      <h2>A recommendation, for you to overrule</h2>
+      <p><strong>A, the lab notebook</strong>, because it answers all three words of the brief at once: hand-drawn,
+        technical, paper. Two things from C are worth taking into it whichever you choose: numbered FIG. captions and the
+        title block, which make a chapter feel like a drawing set rather than a web page. B is the one to pick if you want
+        the tutorial to feel like engineering first; D if the readers are mostly students and you want them to enjoy it.
+        A mix is possible: the styles share every component and differ only in their tokens.</p>
+    </div>
+
+    <h2 style="margin-top: 3rem">The same in all four</h2>
+    <div class="same">
+      <p>The layout: a sheet with a title block, text beside a figure that stays in place while its paragraphs scroll by,
+        fold-outs for the maths, the three stamps for how sure a claim is, excerpts read live from the code, glossary
+        cards, prev and next.</p>
+      <p>The figures: one drawing kit (<code>tutorial/kit/pen.js</code>) draws every line, ray, shape and label, taking
+        its colours, faces and line character from the style. A style is one CSS file of tokens; the choice deletes the
+        other three.</p>
+      <p>Fonts come from Google Fonts for this round only. The chosen style's fonts will be kept in the repository, so
+        the finished tutorial loads nothing from elsewhere.</p>
+      <p>This page and the style strip go once a style is chosen. Nothing in the tutorial is part of the application:
+        it lives in <code>tutorial/</code> and is served beside it.</p>
+    </div>
+  </div>
+</section>
+
+</main>
+</body>
+</html>

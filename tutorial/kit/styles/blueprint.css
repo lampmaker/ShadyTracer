@@ -1,0 +1,61 @@
+/* B. BLUEPRINT -- a cyanotype: white lines on Prussian blue, a fine grid, a title block, stencil headings and the
+   mono lettering of a drawing office. Its light version is a whiteprint (diazo): blue-violet lines on pale paper.
+   Mockup round only: tokens, texture and frame; kit.css holds the layout. */
+:root[data-style="blueprint"], [data-style="blueprint"] {
+    --paper: #eef0f4; --paper-deep: #d5d9e3; --paper-raised: #f7f8fb;
+    --ink: #222e74; --ink-soft: #4a548c; --ink-faint: #8a91b6; --grid: rgba(34, 46, 116, .085); --grid-major: rgba(34, 46, 116, .15); --rule: #222e74;
+    --accent: #b0235c; --accent-soft: rgba(176, 35, 92, .09);
+    --c-cam: #1d55c7; --c-light: #c0531a; --c-shadow: #222e74; --c-blocked: #b0235c; --c-solid: #222e74;
+    --c-fill: rgba(34, 46, 116, .5); --c-glass: #127f9c; --c-normal: #6b3fb0; --c-hit: #222e74; --c-step: rgba(29, 85, 199, .3);
+    --code-bg: rgba(34, 46, 116, .05); --code-ink: #222e74; --code-comment: #6c74a3; --code-kw: #b0235c; --code-num: #c0531a;
+    --stamp-measured: #1f7a55; --stamp-code: #1d55c7; --stamp-inferred: #c0531a;
+    --f-display: 'Saira Stencil One', 'Arial Narrow', sans-serif; --f-body: 'Barlow', 'Segoe UI', system-ui, sans-serif;
+    --f-hand: 'B612 Mono', ui-monospace, Menlo, monospace; --f-mono: 'B612 Mono', ui-monospace, Menlo, Consolas, monospace;
+    --pen-rough: .28; --pen-double: 0; --pen-width: 1.4; --pen-misreg: 0; --pen-fill: hatch;
+    --radius: 0;
+    --tex: linear-gradient(var(--grid-major) 1px, transparent 1px), linear-gradient(90deg, var(--grid-major) 1px, transparent 1px),
+        linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    --tex-size: 100px 100px, 100px 100px, 20px 20px, 20px 20px;
+}
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"])[data-style="blueprint"], :root:not([data-theme="light"]) [data-style="blueprint"] {
+        --paper: #133a66; --paper-deep: #0b2645; --paper-raised: #184678;
+        --ink: #eef5ff; --ink-soft: #bcd0e8; --ink-faint: #85a2c6; --grid: rgba(255, 255, 255, .07); --grid-major: rgba(255, 255, 255, .13); --rule: rgba(238, 245, 255, .85);
+        --accent: #ffd166; --accent-soft: rgba(255, 209, 102, .13);
+        --c-cam: #ffffff; --c-light: #ffd166; --c-shadow: #a8d8ff; --c-blocked: #ff9a8a; --c-solid: #eef5ff;
+        --c-fill: rgba(238, 245, 255, .45); --c-glass: #7fe3ff; --c-normal: #c9b8ff; --c-hit: #eef5ff; --c-step: rgba(255, 255, 255, .3);
+        --code-bg: rgba(0, 0, 0, .2); --code-ink: #eef5ff; --code-comment: #9db6d6; --code-kw: #ffd166; --code-num: #ffb38a;
+        --stamp-measured: #8ff0b8; --stamp-code: #a8d8ff; --stamp-inferred: #ffd166;
+        color-scheme: dark;
+    }
+}
+:root[data-theme="dark"][data-style="blueprint"], :root[data-theme="dark"] [data-style="blueprint"] {
+    --paper: #133a66; --paper-deep: #0b2645; --paper-raised: #184678;
+    --ink: #eef5ff; --ink-soft: #bcd0e8; --ink-faint: #85a2c6; --grid: rgba(255, 255, 255, .07); --grid-major: rgba(255, 255, 255, .13); --rule: rgba(238, 245, 255, .85);
+    --accent: #ffd166; --accent-soft: rgba(255, 209, 102, .13);
+    --c-cam: #ffffff; --c-light: #ffd166; --c-shadow: #a8d8ff; --c-blocked: #ff9a8a; --c-solid: #eef5ff;
+    --c-fill: rgba(238, 245, 255, .45); --c-glass: #7fe3ff; --c-normal: #c9b8ff; --c-hit: #eef5ff; --c-step: rgba(255, 255, 255, .3);
+    --code-bg: rgba(0, 0, 0, .2); --code-ink: #eef5ff; --code-comment: #9db6d6; --code-kw: #ffd166; --code-num: #ffb38a;
+    --stamp-measured: #8ff0b8; --stamp-code: #a8d8ff; --stamp-inferred: #ffd166;
+    color-scheme: dark;
+}
+
+[data-style="blueprint"] .sheet { background-size: var(--tex-size); }
+/* the border: a heavy outer line and a fine inner one, with a tick every 100 px like a drawing's zones */
+[data-style="blueprint"] .sheet::before {
+    inset: 12px; border: 2px solid var(--rule); opacity: .85;
+    box-shadow: inset 0 0 0 5px var(--paper), inset 0 0 0 6px var(--rule);
+}
+[data-style="blueprint"] .sheet::after {
+    content: ""; position: absolute; left: 12px; right: 12px; top: 12px; height: 9px; pointer-events: none; opacity: .7;
+    background: linear-gradient(90deg, var(--rule) 1.5px, transparent 1.5px) 50px 0 / 100px 100%;
+}
+[data-style="blueprint"] h1 { font-weight: 400; text-transform: uppercase; letter-spacing: .04em; line-height: .98; }
+[data-style="blueprint"] h2 { font-family: var(--f-display); font-weight: 400; text-transform: uppercase; letter-spacing: .05em; }
+[data-style="blueprint"] h3 { font-family: var(--f-mono); text-transform: uppercase; letter-spacing: .06em; font-size: .98rem; }
+[data-style="blueprint"] .lede { font-weight: 400; }
+[data-style="blueprint"] .titleblock { border-width: 2px; font-size: .7rem; }
+[data-style="blueprint"] .titleblock > div:first-child, [data-style="blueprint"] .titleblock > div:nth-child(2) { border-bottom-width: 2px; }
+[data-style="blueprint"] .fig figcaption::before { content: "FIG. " counter(fig) " —"; }
+[data-style="blueprint"] .fig-canvas { outline: 1px solid var(--grid-major); }
+[data-style="blueprint"] .note { border-left-width: 0; border: 1px dashed var(--accent); background: none; }

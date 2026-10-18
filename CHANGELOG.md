@@ -15,6 +15,46 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.67.2 — 2026-10-18
+
+**A developer tutorial beside the program: its plan, its figure kit, four style mockups and the first three chapters**
+(you: "a tutorial for shadytracer, parallel to the program … that explains the inner workings of the code … interactive,
+2D visualisations … a solid toolkit for that so it looks the same everywhere … start with a plan and list of contents,
+then a few pages … make a few mockups of different styles"). Nothing in the application changed: the tutorial is
+`tutorial/`, which Pages serves beside it.
+
+- **The plan and contents** (`tutorial/PLAN.md`; the pages read the same contents from `tutorial/kit/chapters.js`):
+  34 chapters in ten parts, from rays and distance fields through light, surfaces, path tracing, caustics and
+  photons, haze, the GPU and wavefront tracing, to every speed trick and how its cost was measured. Each chapter has the
+  same shape: the question, the idea with a live figure, the maths in a fold-out, the real code, the tricks stamped
+  measured / read in code / inferred, what went wrong before, things to try.
+- **Written as drafts:** chapter 1, *Rays make a picture*; chapter 2, *Shapes as distances*; chapter 14, *Aim at the
+  light* (next event estimation); the contents map; a glossary of 54 terms, each linked from the pages with a card on
+  hover or tap.
+- **The kit** (`tutorial/kit/`): one pen draws every figure in the style's colours and line; a figure is a spec with
+  state, controls, drag handles and steps that the paragraphs beside it trigger as they scroll by. The figures trace a
+  flat world (`kit/flatland.js`): signed distance shapes from the help's 2D mirrors of `sdf.js`, sphere tracing, a
+  camera, a path tracer with and without NEE whose per-pixel error bars are `core/measure.js`'s own. Code on a page is
+  never pasted: it is found by name in today's file when the page opens (`kit/excerpt.js`), with its lines and a link
+  to them.
+- **Four styles to choose from** (`tutorial/mockups/index.html`): A lab notebook, B blueprint, C drafting sheet, D
+  risograph, each light and dark, switched live from the strip at the top right of every page. Their fonts come from
+  Google Fonts for this round only (THIRD_PARTY.md).
+- **Checked:** `node tutorial/test/tutorial.test.mjs` (in CI) holds the pages, links, glossary and excerpts to the
+  contents and today's source, draws every figure and step into a recording canvas, and tests the flat world against
+  2D closed forms (a point light's I h / (x² + h²), a lamp's L (sin φ₂ − sin φ₁), a room traced with and without NEE
+  agreeing within their error bars). Measured headless in Chromium (`tutorial/test/pages.check.mjs`, Playwright 1.56.1,
+  in the container): every page in every style and theme loads with no error and every figure draws. That says the
+  pages run, not that they read well.
+
+What to look at:
+- **The style.** Open `tutorial/mockups/index.html`, then chapter 1 in each of A to D, light and dark. Which one, or
+  which mix?
+- **The direction.** Are chapters 1, 2 and 14 pitched right for a high-school reader who wants to build a renderer:
+  too much, too little, the right figures?
+- **The figures by hand**: drag the eye and the lamp in chapter 1, the ray's start in chapter 2, the lamp's size in
+  chapter 14, on a phone too. Do the handles and the scroll steps feel right?
+
 ## 0.67.1 — 2026-10-17
 
 **A scene card dragged or clicked while the cards redraw is no longer lost** (you: "fix the flaky card-drag check").

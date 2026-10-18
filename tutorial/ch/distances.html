@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Shapes as distances · ShadyTracer, inside out</title>
+<link rel="stylesheet" href="../kit/kit.css">
+<script type="module" src="distances.js"></script>
+</head>
+<body data-chapter="distances">
+<p class="kit-offline">This page runs from a web server, not from a file: in the repository run <code>python3 -m http.server 8000</code> and open http://localhost:8000/tutorial/.</p>
+<main class="sheet">
+
+<header class="sheet-head">
+  <div>
+    <p class="eyebrow">Part I · Seeing with rays · Chapter 2</p>
+    <h1>Shapes as distances</h1>
+    <p class="lede">A ray has to find where it meets a shape. ShadyTracer's shapes are not made of triangles; each one
+      is a formula that answers a single question: how far is it from here to the nearest surface? That answer turns
+      out to be all a ray needs.</p>
+  </div>
+  <div class="titleblock" data-auto></div>
+</header>
+
+<section class="scene" id="field">
+  <div class="prose">
+    <h2><span class="n">1</span>A distance for every point</h2>
+    <p data-step="field:one">Take a circle with its middle at <var>c</var> and radius <var>r</var>. How far is a point
+      <var>p</var> from it? Measure the distance to the middle, and take away the radius. That is one subtraction. Drag
+      the <strong>probe</strong>: the circle drawn around it is as large as it can be without touching the shape. Nothing
+      at all is inside that circle.</p>
+    <p data-step="field:inside">Now drag the probe inside. The distance becomes negative: it says how deep the point is.
+      Positive outside, zero exactly on the surface, negative inside. A formula like this is a <a data-g="sdf">signed
+      distance field</a>, SDF for short. The thin lines are places with the same distance, like the height lines on a
+      map; the bold one is the surface itself.</p>
+    <p data-step="field:two">Two shapes together? Ask each one and keep the smaller answer: the nearest surface is the
+      nearer of the two. That is a <a data-g="union">union</a>, and it is one comparison. Cutting one shape out of
+      another, or keeping only where two overlap, are just as short (<a data-ch="shapes">Building and bending
+      shapes</a>).</p>
+    <p data-step="field:blend">Or melt them together: a <a data-g="smin">smooth blend</a> takes a little off the smaller
+      distance wherever the two are close, and a fillet appears between them. This is the very formula ShadyTracer uses,
+      in its flat form.</p>
+    <details class="maths">
+      <summary><span class="tag">The maths</span>A circle, a union, a blend</summary>
+      <div class="body">
+        <p class="eq"><var>d</var><sub>circle</sub>(<var>p</var>) = |<var>p</var> − <var>c</var>| − <var>r</var></p>
+        <p class="eq"><var>d</var><sub>union</sub> = min(<var>d</var><sub>1</sub>, <var>d</var><sub>2</sub>)</p>
+        <p class="eq"><var>h</var> = max(<var>k</var> − |<var>d</var><sub>1</sub> − <var>d</var><sub>2</sub>|, 0), &nbsp;
+          <var>d</var><sub>blend</sub> = min(<var>d</var><sub>1</sub>, <var>d</var><sub>2</sub>) − <span class="frac"><span><var>h</var><sup>2</sup></span><span>4<var>k</var></span></span></p>
+        <dl class="terms">
+          <dt>|p − c|</dt><dd>the length of the line from the middle to the point</dd>
+          <dt>k</dt><dd>how far the blend reaches: where the two distances differ by more than <var>k</var>, <var>h</var> is 0 and nothing changes</dd>
+        </dl>
+        <p>In 3D the circle becomes a sphere and nothing else changes: |<var>p</var> − <var>c</var>| is then the length
+          in three dimensions. A box takes a few more lines; the help's widget has it in 2D, below.</p>
+      </div>
+    </details>
+  </div>
+  <figure class="fig" data-fig="field">
+    <figcaption>A distance field. Drag the probe: the circle around it touches the nearest surface and holds nothing
+      else.</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="march">
+  <div class="prose">
+    <h2><span class="n">2</span>Sphere tracing</h2>
+    <p data-step="march:march">Here is the trick. A ray starts somewhere and wants to know where it first hits
+      anything. Ask the field for the distance at the start. Nothing is closer than that, in <em>any</em> direction, so
+      the ray can safely move that far along its own direction. At the new point, ask again, move again. Each circle in
+      the figure is one question, and the ray hops from the middle of one to its edge. Near a surface the distances
+      shrink, the hops get shorter, and the ray creeps up to it.</p>
+    <p>This is <a data-g="sphere-tracing">sphere tracing</a> (in 3D the circles are spheres). It needs nothing from a
+      shape but its distance. Drag <strong>start</strong> and <strong>aim</strong>.</p>
+    <p data-step="march:graze">Most rays need only a handful of steps. The expensive ones pass close to a surface
+      without hitting it: every distance is small, so every step is small. Aim the ray just past the corner of the
+      block and count.</p>
+  </div>
+  <figure class="fig" data-fig="march">
+    <figcaption>A ray marched through a small scene. Each circle is one distance asked; the ray moves to its edge
+      (times the step scale) and asks again.</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="close">
+  <div class="prose">
+    <h2><span class="n">3</span>Close enough, and not too far</h2>
+    <p data-step="march:tolerance">The distances shrink but never quite reach zero, so the march stops when the
+      distance is below a small number, the <a data-g="tolerance">surface tolerance</a>. Make it large and rays stop
+      early, short of the surface: edges look soft and thin gaps close up. Make it tiny and rays need more steps to
+      arrive. ShadyTracer chooses it from the scene's size, and never smaller than the computer's numbers can tell
+      apart at that point (<a data-ch="precision">Numbers have grain</a>).</p>
+    <p data-step="march:overshoot">Why move only 0.9 of the distance, the <a data-g="stepscale">step scale</a>? Because
+      a step longer than the real distance can carry the ray straight through a thin wall. Set the step scale above 1
+      and watch the ray jump the wall: it goes on to hit the ball, a surface it could never have seen. Nothing in the
+      result looks broken. The pixel just shows the wrong thing.</p>
+    <p data-step="march:escape">And when there is nothing to hit? A ray that is outside the <em>scene's radius</em> and
+      moving away from the middle can never come back, so the march stops and the ray is given the sky. ShadyTracer
+      asks <em>where</em> the ray is, not how far it has gone (a ray that bounced around inside for a long way has not
+      left). That is called an <a data-g="escape">escape</a>.</p>
+  </div>
+  <figure class="fig" data-fig="march">
+    <figcaption>The same march. A large tolerance stops short; a step scale above 1 jumps the thin wall; a ray past
+      the scene's radius escapes.</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="rule">
+  <div class="prose">
+    <h2><span class="n">4</span>The one rule: never too large</h2>
+    <p data-step="lipschitz:lie">Sphere tracing trusts the distance completely. If a formula ever says the nearest
+      surface is further than it really is, the ray can step through it. Here is an easy way to get that wrong: take the
+      circle's formula and squeeze it sideways to make an ellipse. The shape looks right. But the distances are now too
+      large across the squeezed direction. The red circles claim to be empty and are not, and the ray lands inside.</p>
+    <p data-step="lipschitz:fix">The fix is to know how much faster than a real distance the formula can change (here:
+      one over the squeeze) and divide by it. The steps get shorter and the ray stops at the surface. A promise that a
+      formula never changes faster than a true distance is a <a data-g="lipschitz">Lipschitz bound</a>. A formula that
+      keeps it is called <em>safe</em>; one that equals the true distance is <em>exact</em>.</p>
+    <p>ShadyTracer holds every shape to this rule, and says in the code which kind each one is:</p>
+    <pre data-src="lib/pathtracer/core/shapes.js" data-sym="// EXACT OR SAFE, AND SAID WHICH." data-to="Their replacements are below."
+         data-why="The header of the file that holds the newer shapes. Each shape's claim was measured against an independent reference; two well-known formulas failed and were replaced." data-hash="05355362"></pre>
+    <p>It is also why ShadyTracer's scene builder only scales a shape by the same amount in every direction
+      (<cite data-src="builder/transform.js" data-sym="Uniform only, and deliberately" data-doc="no"></cite>), and why
+      shapes that bend space, like a twist, shrink their steps to stay safe (<a data-ch="shapes">Building and bending
+      shapes</a>).</p>
+  </div>
+  <figure class="fig" data-fig="lipschitz">
+    <figcaption>A circle squeezed into an ellipse. Its raw formula claims too much empty space (red circles), and the
+      ray ends up inside; divided by its steepest slope, every circle is truly empty.</figcaption>
+  </figure>
+</section>
+
+<section class="plain wide" id="code">
+  <div class="prose">
+    <h2><span class="n">5</span>How ShadyTracer does it</h2>
+    <p>The figures above use the help's own 2D distance functions, which are written to match the renderer's 3D ones in
+      <code>sdf.js</code>:</p>
+    <pre data-src="help/widgets.js" data-sym="const circle" data-to="}" data-doc="yes"
+         data-why="A circle is one subtraction; a box, a few more lines. Negative inside." data-hash="dd9359d6"></pre>
+    <p>In the renderer, sphere tracing is the <code>march</code> kernel. Each GPU thread takes one ray and runs this
+      loop. <code>sceneAt</code> asks the whole scene for its distance (and which surface it is); <code>marchTol</code>
+      is the tolerance at this point; <code>UB.stepscale</code> is the 0.9.</p>
+    <pre data-src="lib/pathtracer/core/wavefront.js" data-sym="hit = sceneAt(ray, false);" data-to="ray = moveBy(ray, ray.dir * d);" data-max="45"
+         data-why="One step of the march: the distance, the hit test, the two ways to stop without a hit (too far or too many steps, and leaving the scene), and the step itself." data-hash="18ebd171"></pre>
+    <p>Two details matter for later chapters:</p>
+    <ul>
+      <li><strong>The march takes at most 32 steps at a time</strong>
+        (<cite data-src="lib/pathtracer/core/wavefront.js" data-sym="const MAX_STEPS: u32 = 32u;" data-doc="no"></cite>).
+        A ray that needs more is put back in a queue and continued in the next round, so that all the GPU's threads stay
+        busy with rays that still have work. That is the idea of <a data-ch="wavefront">wavefront path tracing</a>.</li>
+      <li><strong>It uses the absolute distance</strong>, <code>abs(hit.s.w)</code>. A ray inside glass is inside a
+        shape, where the distance is negative, and it marches to the far side the same way
+        (<a data-ch="glass">Glass</a>).</li>
+    </ul>
+  </div>
+</section>
+
+<section class="plain wide" id="tricks">
+  <div class="prose">
+    <h2><span class="n">6</span>Tricks and trade-offs</h2>
+    <div data-claim="code">
+      <p><strong>Leaving the scene is a test, not a shape.</strong> Every scene used to contain a huge sphere around
+        everything, the sky dome, so that a ray going nowhere would still hit something. That sphere was part of every
+        distance the scene computed, at every step of every ray. Now the march checks two dot products once a step
+        instead; the comment in the excerpt above calls it "strictly cheaper".</p>
+    </div>
+    <div data-claim="code">
+      <p><strong>Steps of 0.9.</strong> The step scale defaults to 0.9
+        (<cite data-src="lib/pathtracer/core/uniforms.schema.js" data-sym="stepscale: { type: 'f32', def: 0.9" data-doc="no"></cite>):
+        a small margin against a formula that is very slightly too large, paid for with somewhat more steps. In the
+        march figure, compare the step count at 0.9 and at 1.0 for the same ray.</p>
+    </div>
+    <div data-claim="inferred">
+      <p><strong>Longer steps, taken back when wrong.</strong> <em>Over-relaxed</em> sphere tracing steps 1.2 to 1.6
+        times the distance and steps back when the two circles do not overlap. ShadyTracer does not do this; its
+        performance notes list it as an idea whose gain "is not known" here. It would cut steps in open space; what it
+        costs near surfaces in these scenes has not been measured.</p>
+    </div>
+    <div data-claim="code">
+      <p><strong>Normals for free.</strong> The same shapes that give a distance also give the direction out of the
+        surface, so a hit needs no extra questions to find which way the surface faces. Without that, the renderer
+        asks the scene three more times per hit (<a data-ch="normals">Which way is up</a>).</p>
+    </div>
+  </div>
+</section>
+
+<section class="plain wide" id="before">
+  <div class="prose">
+    <h2><span class="n">7</span>What went wrong before</h2>
+    <ul>
+      <li><strong>The sky dome.</strong> Described above: a sphere in every scene, costing a little at every step of
+        every ray, replaced by a two-line test.</li>
+      <li><strong>Textbook formulas that broke the rule.</strong> A well-known pyramid formula gave distances too large
+        inside the pyramid, by up to half its base, in 15 to 46% of the solid. A well-known parabola's sign flipped near
+        the curve in the GPU's number format, so the whole axis read as surface. Both were found by measuring every
+        shape against an independent reference, and replaced.</li>
+      <li><strong><code>sign(0)</code> is 0.</strong> The GPU's sign function returns 0 for 0, not ±1, which made
+        normals of the wrong length on an axis. ShadyTracer's shapes use a comparison instead. Small, and the kind of
+        thing only a test finds.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="plain" id="try">
+  <div class="prose">
+    <h2><span class="n">8</span>Try it</h2>
+    <ul>
+      <li>In the march figure, aim the ray straight at the ball and count the steps. Then aim it so it just misses the
+        top of the ball. Why so many more?</li>
+      <li>Set the step scale to 1.0 and to 0.5 for the same ray. How does the count change? Then find a ray where 1.0
+        and 1.8 hit <em>different</em> surfaces.</li>
+      <li>In the last figure, find the largest squeeze for which the raw formula still works for a ray through the
+        middle. Then move the ray's start up or down. Is it still safe?</li>
+      <li>In ShadyTracer's Help, the page on signed distance functions has the same field to play with, with more
+        shapes.</li>
+    </ul>
+    <h3>Words from this chapter</h3>
+    <ul class="words" data-words="sdf sphere-tracing union smin tolerance stepscale escape lipschitz normal kernel f32"></ul>
+  </div>
+</section>
+
+<nav class="tabs" data-auto></nav>
+</main>
+</body>
+</html>
