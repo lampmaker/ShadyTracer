@@ -211,7 +211,14 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
     (Defocus Blur), pbr-camera.
 
 **V. Light the camera can't find**
-18. **Caustics**: light → glass → floor → eye; light tracing; a split of path space.
+18. **Caustics** (draft): a glass ball over a sunlit floor in the flat world, its picture made four ways (the camera's
+    paths with NEE, which find the caustic only by chance; light tracing alone; both with ShadyTracer's split; both
+    without it, the caustic counted nearly twice); the four kinds of path to the sun and who counts each, the last
+    (a caustic seen through glass) nobody's until chapter 19; the learned emission map (hits / emitted, a 20% floor,
+    halved each rebuild: 11.7% of photons connect evenly, 61% learned). Kit: flatland.js gains glass, a sun, the
+    split and `lightTrace`, tested against the camera's own pictures. -> materials_pbr.js (THE SPLIT, the
+    connection), tracebasics.js, wavefront.js (prog_lt_build). *Read:* wiki-caustic, pbr3-pathspace, pbr3-bdpt,
+    veach1997.
 19. **Photon mapping**: a hashed grid built with atomics, a shrinking radius, 1/n² in glass, the gather budget.
     *Read* (named in the code, link to be checked): Knaus & Zwicker 2011, progressive photon mapping.
 20. **Dust in the air**: transmittance, free flight, Henyey–Greenstein, light sampling from the air.

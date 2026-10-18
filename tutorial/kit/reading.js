@@ -60,6 +60,9 @@ export const READING = [
     R('pbr-efficiency', PBR, 'Physically Based Rendering (4th ed.), 2.2: Improving efficiency (importance sampling, multiple importance sampling, Russian roulette)', 'free online book', 'https://pbr-book.org/4ed/Monte_Carlo_Integration/Improving_Efficiency'),
     R('pbr-pathtracer', PBR, 'Physically Based Rendering (4th ed.), 13.4: A better path tracer', 'free online book', 'https://pbr-book.org/4ed/Light_Transport_I_Surface_Reflection/A_Better_Path_Tracer'),
     R('kajiya1986', 'James T. Kajiya', 'The rendering equation', 'paper, SIGGRAPH 1986'),
+    R('wiki-caustic', 'Wikipedia', 'Caustic (optics)', 'encyclopedia article', 'https://en.wikipedia.org/wiki/Caustic_(optics)'),
+    R('pbr3-pathspace', PBR, 'Physically Based Rendering (3rd ed.), 16.1: The path-space measurement equation', 'free online book', 'https://pbr-book.org/3ed-2018/Light_Transport_III_Bidirectional_Methods/The_Path-Space_Measurement_Equation'),
+    R('pbr3-bdpt', PBR, 'Physically Based Rendering (3rd ed.), 16.3: Bidirectional path tracing', 'free online book', 'https://pbr-book.org/3ed-2018/Light_Transport_III_Bidirectional_Methods/Bidirectional_Path_Tracing'),
     R('veach1997', 'Eric Veach', 'Robust Monte Carlo methods for light transport simulation', 'PhD thesis, Stanford University, 1997', 'https://graphics.stanford.edu/papers/veach_thesis/'),
 
     // averages with error bars

@@ -62,7 +62,7 @@ for (const f of pages.filter(f => f.includes('/ch/'))) {
     const inside = affected([{ file: tiles.file, ranges: [[tiles.last, tiles.last]] }], all)
     ok('affected: a change inside an excerpt\'s lines is flagged as those lines', inside.some(h => h.sym === 'const raygenTiles' && h.overlap === true)
         && inside.some(h => h.kind === 'excerpt' && h.sym !== 'const raygenTiles' && h.overlap === false))
-    ok('affected: ...and finds the chapter that is about the file, planned ones too', inside.some(h => h.kind === 'about' && h.chapter === 'rays') && inside.some(h => h.kind === 'about' && h.chapter === 'caustics'))
+    ok('affected: ...and finds the chapter that is about the file, planned ones too', inside.some(h => h.kind === 'about' && h.chapter === 'rays') && inside.some(h => h.kind === 'about' && h.chapter === 'wavefront'))
     ok('affected: a module a figure runs is a tie', affected([{ file: 'help/widgets.js', ranges: null }], all).some(h => h.kind === 'import' && h.chapter === 'nee'))
     ok('affected: a file in a folder a chapter is about', affected([{ file: 'lib/pathtracer/optics/farfield.js', ranges: null }], all).some(h => h.chapter === 'optics'))
     ok('affected: the tutorial\'s own files and version.js are not changes to ShadyTracer', !affected([{ file: 'tutorial/kit/pen.js', ranges: null }, { file: 'version.js', ranges: null }], all).length)
@@ -775,6 +775,49 @@ for (const [name, { mod }] of modules) {
         && SPs.includes('is 41 softplus') && SPs.includes('upper 16 bits'), `${zero[0]}-${zero[zero.length - 1]}`)
     const tail = SP.SPEC_PICK.reduce((a, p, k) => a + (SP.SPEC_LO + k * SP.SPEC_STEP >= 730 ? p : 0), 0)
     ok('ch.11: the fit\'s red end: red 0 from 733 nm, and those bins drawn 1.25e-5 of the time', SP.rgbBar(733)[0] === 0 && SP.rgbBar(732)[0] > 0 && tail.toExponential(2) === '1.25e-5', tail)
+}
+
+{
+    // CHAPTER 18: the flat world's glass, sun, split and light tracer
+    const F = await import('../kit/flatland.js'), C = await import('../ch/caustics.js'), { standardError } = await import('../../lib/pathtracer/core/measure.js')
+    const DEG = Math.PI / 180
+    // pixelOf is cameraRay turned round
+    const cam = C.CAM
+    ok('ch.18: a point on a pixel\'s middle ray lands back on that pixel', Array.from({ length: cam.pixels }, (_, p) => p).every(p => { const [ox, oy, dx, dy] = F.cameraRay(cam, p, 0.5); return F.pixelOf(cam, ox + dx * 3, oy + dy * 3).px === p }))
+    // glass: Snell's law, and Fresnel's share reflected
+    const R = F.rng(5), th = 45 * DEG, d = [Math.sin(th), -Math.cos(th)]
+    let refl = 0; const N = 40000
+    for (let i = 0; i < N; i++) if (F.glassStep(1.5, d[0], d[1], 0, 1, 0, 0, R()).reflected) refl++
+    const R45 = F.glassStep(1.5, d[0], d[1], 0, 1, 0, 0, 0.99).R, t = F.glassStep(1.5, d[0], d[1], 0, 1, 0, 0, 0.99)
+    ok('ch.18: glass refracts by Snell (sin 45 = 1.5 sin theta_t) and reflects Fresnel\'s share', Math.abs(Math.sin(th) - 1.5 * Math.abs(t.dx)) < 1e-12 && Math.abs(refl / N - R45) < 4 * Math.sqrt(R45 * (1 - R45) / N), `${refl / N} ${R45}`)
+    // light tracing against the camera: a floor in the sun, every photon connected (all), against NEE
+    const floorOnly = () => { const w = C.worldOf(0.27); w.shapes = w.shapes.filter(s => s.name === 'floor'); w.sun.width = 16; return w }
+    const camImg = (world, spp, opts) => { const r = F.rng(7), img = new Float64Array(cam.pixels); for (let s = 0; s < spp; s++) for (let p = 0; p < cam.pixels; p++) { const [ox, oy, dx, dy] = F.cameraRay(cam, p, r()); img[p] += F.tracePath(world, ox, oy, dx, dy, { rand: r, maxBounce: 6, ...opts }) } return Array.from(img, v => v / spp) }
+    const ltImg = (world, batches, n, opts) => { const r = F.rng(11), img = new Float64Array(cam.pixels); for (let b = 0; b < batches; b++) { const o = F.lightTrace(world, cam, { n, rand: r, ...opts }); for (let p = 0; p < cam.pixels; p++) img[p] += o.img[p] } return Array.from(img, v => v / batches) }
+    const wf = floorOnly(), nee = camImg(wf, 60, { nee: true }), lt = ltImg(wf, 60, 3000, { all: true }), mid = Array.from({ length: 30 }, (_, k) => k + 12)
+    // photons are counted, so each pixel carries counting noise (a few hundred connections each): the region's mean
+    // is held tight, each pixel loosely
+    const worst = Math.max(...mid.map(p => Math.abs(lt[p] / nee[p] - 1))), ratio = mid.reduce((a, p) => a + lt[p], 0) / mid.reduce((a, p) => a + nee[p], 0)
+    ok('ch.18: photons connected from a sunlit floor make the camera\'s own picture of it (0.386, rho E / 2): its mean within 1%, every pixel within 15%', Math.abs(ratio - 1) < 0.01 && worst < 0.15 && Math.abs(nee[30] - 0.8 / 2 * F.sunE(wf.sun) * Math.sin(75 * DEG)) < 2e-3, `${ratio} ${worst} ${nee[30]}`)
+    // the split: the camera's paths (NEE, no split: right, noisy) against both with the split, under the ball
+    const reg = r => { let m = 0, v = 0; for (const i of C.causticPixels) { m += r.pix[i].Y; v += (standardError(r.pix[i].V, r.pix[i].S) ?? 0) ** 2 } return [m / C.causticPixels.length, Math.sqrt(v) / C.causticPixels.length] }
+    const [mc, sc] = reg(C.render({ mode: 'camera', half: 1, max: 1500, seed: 2 })), [mb, sb] = reg(C.render({ mode: 'both', half: 1, max: 300, seed: 3 }))
+    const [ml] = reg(C.render({ mode: 'light', half: 1, max: 300, seed: 4 })), [mt, st] = reg(C.render({ mode: 'twice', half: 1, max: 300, seed: 3 }))
+    ok('ch.18: under the ball, the camera alone and both with the split agree; without it the photons\' share is counted again', Math.abs(mc - mb) < 4 * Math.hypot(sc, sb) && Math.abs(mt - mb - ml) < 4 * st + 0.02 && mt > 1.6 * mb, `${mc}±${sc} ${mb}±${sb} twice ${mt} lt ${ml}`)
+    // the open floor is the camera's in every mode but light tracing's own
+    const open = C.render({ mode: 'twice', half: 0.27, max: 40 }).pix[40].Y, openB = C.render({ mode: 'both', half: 0.27, max: 40 }).pix[40].Y
+    ok('ch.18: the open floor reads the same split or not', Math.abs(open - openB) < 1e-12, `${open} ${openB}`)
+    // the learned map: a distribution with its floor; counts halved; the page's numbers
+    const L = F.newLearn(8); L.emitted.set([10, 10, 10, 10, 10, 10, 10, 10]); L.hits.set([0, 0, 9, 1, 0, 0, 0, 0]); F.learnRebuild(L)
+    const sum = L.p.reduce((a, b) => a + b, 0)
+    ok('ch.18: a rebuilt map sums to 1, keeps 20% / K in every cell, gives the rest by hits / emitted, and halves both counts', Math.abs(sum - 1) < 1e-12 && Math.min(...L.p) >= 0.2 / 8 - 1e-15
+        && Math.abs(L.p[2] - (0.8 * 0.9 / 1.0 + 0.2 / 8)) < 1e-12 && L.hits[2] === 4 && L.emitted[0] === 5)
+    const rd = st2 => C.figures.learn.readout({ ...C.figures.learn.state, ...C.figures.learn.steps[st2] })
+    ok('ch.18: the page\'s photons: 176 of 1500 connect evenly, 919 learned after ten samples', rd('uniform').includes('176 connected') && rd('learned').includes('919 connected'), rd('learned'))
+    // the kinds: each path's blocked lines are blocked, its open ones open
+    const kw = C.kindsWorld(), ph = C.photonPath(kw), f0 = ph.end, up = [Math.cos(75 * DEG), Math.sin(75 * DEG)]
+    const sees = (x, y, tx, ty) => F.visible(kw, x, y + 4e-3, tx, ty)
+    ok('ch.18: the caustic\'s floor sees the eye but not the sun; through the pane it sees neither', !sees(f0[0], f0[1], f0[0] + up[0] * 30, f0[1] + up[1] * 30) && F.visible(C.worldOf(), f0[0], f0[1] + 4e-3, ...C.CAM.eye) && !sees(f0[0], f0[1], ...C.CAM.eye))
 }
 
 /* THE EXCERPT LOCATOR ON ITS OWN ----------------------------------------------------------------------------------- */

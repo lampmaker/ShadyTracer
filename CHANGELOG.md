@@ -17,7 +17,7 @@ as PLAN.md does.
 
 ## 0.67.2 — 2026-10-18
 
-**A developer tutorial beside the program: its plan, its figure kit, eight styles and its first eighteen chapters**
+**A developer tutorial beside the program: its plan, its figure kit, eight styles and its first nineteen chapters**
 (you: "a tutorial for shadytracer, parallel to the program … that explains the inner workings of the code … interactive,
 2D visualisations … a solid toolkit for that so it looks the same everywhere … start with a plan and list of contents,
 then a few pages … make a few mockups of different styles"). Nothing in the application changed: the tutorial is
@@ -55,8 +55,12 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   Fresnel at an interface, a pane's bounces summed to (1 − R)/(1 + R) and Beer–Lambert, parallel light through a
   ball, all on `optics/fresnel.js`); chapter 11, *Rainbows* (white light through a prism at each wavelength's
   index, Cauchy through n_d and the Abbe number, the wavelength draw whose weights average to 1, a dichroic coat on
-  three channels); chapter 2, *Shapes as distances*; chapter 14, *Aim at the
-  light* (next event estimation); the contents map; a glossary of 116 terms, each linked from the pages with a card on
+  three channels); chapter 18, *Caustics* (a glass ball over a sunlit floor, its picture made by the camera's paths,
+  by light tracing, by both with ShadyTracer's split of path space and by both without it, the caustic counted nearly
+  twice; who counts each kind of path, a caustic seen through glass nobody's until the photon map; the learned
+  emission map, 11.7% of photons connecting evenly and 61% learned; the flat world gains glass, a sun and a light
+  tracer, held to the camera's own pictures); chapter 2, *Shapes as distances*; chapter 14, *Aim at the
+  light* (next event estimation); the contents map; a glossary of 117 terms, each linked from the pages with a card on
   hover or tap.
 - **The kit** (`tutorial/kit/`): one pen draws every figure in the style's colours and line; a figure is a spec with
   state, controls, drag handles and steps that the paragraphs beside it trigger as they scroll by. The figures trace a
