@@ -105,9 +105,32 @@
   </figure>
 </section>
 
+<section class="scene" id="where">
+  <div class="prose">
+    <h2><span class="n">4</span>In 3D: where the steps go</h2>
+    <p data-step="march3d:picture">The same march in three dimensions makes a real picture: one ray per pixel, sphere
+      traced into a small scene and lit by the sun, with a shadow ray where it hits. This is what ShadyTracer's march
+      kernel does, written out in JavaScript and run on your computer's processor instead of the graphics card, so it is
+      small and blocky. <strong>Drag it to turn the scene.</strong></p>
+    <p data-step="march3d:steps">Now show <strong>Steps per pixel</strong>: each pixel coloured by how many steps its
+      ray took. Rays that go straight at a surface need only a few. The bright outlines are rays that pass just beside
+      a surface: every distance they ask is small, so every step is small. And the floor gets dearer towards the
+      horizon, where the rays run almost parallel to it. Where a picture spends its time is decided by its edges, not
+      by how big things are.</p>
+    <p data-step="march3d:scale">With a step scale above 1, steps are longer than the distance says is safe. Look at the
+      picture: rays step through the thin ring and the edges of the shapes, stop on the wrong surface or inside one, and
+      in places jump straight through the floor and find the sky beneath it. Back at 0.9, the picture is right again,
+      for a few more steps a ray.</p>
+  </div>
+  <figure class="fig" data-fig="march3d">
+    <figcaption>A small scene sphere traced in 3D, a ray a pixel. Picture: lit by the sun. Steps per pixel: how many
+      steps each ray needed. Normals: the direction out of each surface, as a colour. Drag to turn.</figcaption>
+  </figure>
+</section>
+
 <section class="scene" id="rule">
   <div class="prose">
-    <h2><span class="n">4</span>The one rule: never too large</h2>
+    <h2><span class="n">5</span>The one rule: never too large</h2>
     <p data-step="lipschitz:lie">Sphere tracing trusts the distance completely. If a formula ever says the nearest
       surface is further than it really is, the ray can step through it. Here is an easy way to get that wrong: take the
       circle's formula and squeeze it sideways to make an ellipse. The shape looks right. But the distances are now too
@@ -132,7 +155,7 @@
 
 <section class="plain wide" id="code">
   <div class="prose">
-    <h2><span class="n">5</span>How ShadyTracer does it</h2>
+    <h2><span class="n">6</span>How ShadyTracer does it</h2>
     <p>The figures above use the help's own 2D distance functions, which are written to match the renderer's 3D ones in
       <code>sdf.js</code>:</p>
     <pre data-src="help/widgets.js" data-sym="const circle" data-to="}" data-doc="yes"
@@ -157,7 +180,7 @@
 
 <section class="plain wide" id="tricks">
   <div class="prose">
-    <h2><span class="n">6</span>Tricks and trade-offs</h2>
+    <h2><span class="n">7</span>Tricks and trade-offs</h2>
     <div data-claim="code">
       <p><strong>Leaving the scene is a test, not a shape.</strong> Every scene used to contain a huge sphere around
         everything, the sky dome, so that a ray going nowhere would still hit something. That sphere was part of every
@@ -186,7 +209,7 @@
 
 <section class="plain wide" id="before">
   <div class="prose">
-    <h2><span class="n">7</span>What went wrong before</h2>
+    <h2><span class="n">8</span>What went wrong before</h2>
     <ul>
       <li><strong>The sky dome.</strong> Described above: a sphere in every scene, costing a little at every step of
         every ray, replaced by a two-line test.</li>
@@ -203,7 +226,7 @@
 
 <section class="plain" id="try">
   <div class="prose">
-    <h2><span class="n">8</span>Try it</h2>
+    <h2><span class="n">9</span>Try it</h2>
     <ul>
       <li>In the march figure, aim the ray straight at the ball and count the steps. Then aim it so it just misses the
         top of the ball. Why so many more?</li>

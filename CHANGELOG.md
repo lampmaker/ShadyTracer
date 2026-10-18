@@ -37,6 +37,16 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   camera, a path tracer with and without NEE whose per-pixel error bars are `core/measure.js`'s own. Code on a page is
   never pasted: it is found by name in today's file when the page opens (`kit/excerpt.js`), with its lines and a link
   to them.
+- **3D where it shows more** (`kit/space.js`, z up as the engine's world): figures stay flat where a slice says it
+  best and turn 3D where depth is the point. Chapter 1 shows the screen as a grid of pixels, its rays and the picture
+  they make, turned by dragging. Chapter 2 sphere traces a small scene into a real picture and shows how many steps
+  each pixel's ray took. Chapter 14 path traces a small room live, without and with NEE side by side. In 3D the real
+  laws hold, so the test holds it to them: a point light's I cos θ / d², a glowing ball's π L sin² α, a room's pixel
+  with and without NEE agreeing.
+- **A stale comment caught:** the NEE comment in `tracebasics.js` says the sun is "about 0.03 steradian" and found by a
+  bounce "roughly once in two hundred tries". That was the old sun, drawn 21 times too wide. The real one is 0.00007
+  steradian, found by chance about once in 47,000 bounces. Chapter 14 quotes the comment and says so; the comment itself
+  is unchanged.
 - **Four styles to choose from** (`tutorial/mockups/index.html`): A lab notebook, B blueprint, C drafting sheet, D
   risograph, each light and dark, switched live from the strip at the top right of every page. Their fonts come from
   Google Fonts for this round only (THIRD_PARTY.md).
@@ -54,6 +64,10 @@ What to look at:
   too much, too little, the right figures?
 - **The figures by hand**: drag the eye and the lamp in chapter 1, the ray's start in chapter 2, the lamp's size in
   chapter 14, on a phone too. Do the handles and the scroll steps feel right?
+- **The 3D figures**: turn them by dragging. Is the mix of flat and 3D right? Are the CPU pictures fast enough on your
+  machine? Measured in node in the container: one sample of chapter 14's two 44 × 33 pictures takes 113 ms, and the
+  figure spends at most 14 ms a frame on it, so it adds a few samples a second. What a browser on your machine does is
+  not measured.
 
 ## 0.67.1 — 2026-10-17
 

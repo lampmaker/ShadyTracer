@@ -9,8 +9,11 @@
 //     drag: { id(state, p) },    what dragging the handle `id` (pen.handle) to world point p does
 //     draw(pen, state, t),       the picture; depends on state alone, so a redraw is always safe
 //     work: { reset(state), add(state, ms) -> more? },   progressive figures: a path tracer adding samples
+//     budget: ms,                the milliseconds of work a frame (9 unless said)
 //     changed(state, key),       optional: a control or handle moved `key` (to rebuild derived things)
 //     keep: [key, ...],          keys whose change redraws without restarting `work`
+//     orbit: true,               a 3D figure: dragging where there is no handle turns state.yaw (and state.pitch, with a
+//                                mouse; on a touch screen a vertical drag still scrolls the page), the arrow keys too
 //     readout(state) -> text }   a line under the figure, read out to screen readers
 //
 // Drawing runs only when something changed, or while `work` has work left and the figure is on screen and the tab is
@@ -101,7 +104,7 @@ export function mountFigure(el, spec, { name = '' } = {}) {
         raf = 0
         if (!visible || doc.hidden) return
         if (spec.work && more) {
-            more = !!spec.work.add(state, 9)
+            more = !!spec.work.add(state, spec.budget ?? 9)
             dirty = true
         }
         if (dirty || spec.animate) render()
@@ -126,23 +129,33 @@ export function mountFigure(el, spec, { name = '' } = {}) {
         return best
     }
     const toWorld = ([x, y]) => [(x - view.ox) / view.s, (view.oy - y) / view.s]
+    let last = null
+    const turn = (dx, dy) => {
+        state.yaw = (state.yaw ?? 0) - dx * 0.008
+        state.pitch = Math.min(1.45, Math.max(0.05, (state.pitch ?? 0.3) + dy * 0.006))
+        changed('orbit')
+    }
     canvas.addEventListener('pointerdown', e => {
         const h = nearestHandle(at(e))
-        if (!h || !spec.drag?.[h.id]) return
-        held = h.id; canvas.setPointerCapture?.(e.pointerId); e.preventDefault()
+        if (h && spec.drag?.[h.id]) held = h.id
+        else if (spec.orbit) { held = '\u21bb'; last = at(e) }
+        else return
+        canvas.setPointerCapture?.(e.pointerId); e.preventDefault()
         canvas.style.cursor = 'grabbing'
     })
     canvas.addEventListener('pointermove', e => {
+        if (held === '\u21bb') { const p = at(e); turn(p[0] - last[0], e.pointerType === 'touch' ? 0 : p[1] - last[1]); last = p; e.preventDefault(); return }
         if (held) { spec.drag[held](state, toWorld(at(e))); changed(held); e.preventDefault(); return }
-        canvas.style.cursor = nearestHandle(at(e)) ? 'grab' : ''
+        canvas.style.cursor = nearestHandle(at(e)) ? 'grab' : spec.orbit ? 'move' : ''
     })
     const drop = () => { held = null; canvas.style.cursor = '' }
     canvas.addEventListener('pointerup', drop); canvas.addEventListener('pointercancel', drop)
     canvas.addEventListener('touchstart', e => { if (nearestHandle(at(e.touches[0]))) e.preventDefault() }, { passive: false })
-    // the keyboard: arrows move the first handle a little
+    // the keyboard: arrows move the first handle a little, or turn a 3D figure that has none
     canvas.addEventListener('keydown', e => {
         const k = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] }[e.key]
         const h = handles.find(h => spec.drag?.[h.id])
+        if (k && !h && spec.orbit) { e.preventDefault(); turn(-k[0] * 12, k[1] * 12); return }
         if (!k || !h) return
         e.preventDefault()
         const p = toWorld([h.x, h.y]), d = 6 / view.s

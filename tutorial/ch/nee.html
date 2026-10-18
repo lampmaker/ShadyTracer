@@ -55,8 +55,8 @@
       right <em>on average</em> (look at the estimate in the readout: it agrees with the exact value within its error
       bar) but each try is either nothing or far too much. That is exactly the speckle in the room.</p>
     <aside class="note"><span class="tag">In ShadyTracer</span>The sun is the extreme case: a disc only half a degree
-      across, by far the brightest thing in a daylight scene. A random bounce finds it, as the code's comment puts it,
-      "roughly once in two hundred tries".</aside>
+      across (about 0.00007 of a <a data-g="solid-angle">steradian</a>), by far the brightest thing in a daylight scene.
+      A random bounce off a surface facing it finds it about once in 47,000 tries.</aside>
   </div>
   <figure class="fig" data-fig="aim">
     <figcaption>One point on a floor under a lamp. Bouncing: random directions, and the few that find the lamp.
@@ -128,9 +128,32 @@
   </figure>
 </section>
 
+<section class="scene" id="room3">
+  <div class="prose">
+    <h2><span class="n">5</span>And in 3D</h2>
+    <p data-step="room3:both">The same comparison as a real picture: a small room lit by a glowing ball near the ceiling,
+      path traced on your computer's processor while you watch, without NEE on the left and with it on the right. Both
+      pictures get the same number of samples per pixel. Only the right one aims a shadow ray at the lamp at every
+      bounce.</p>
+    <p>In 3D the lamp is aimed at differently from the flat world. Instead of a random point on it, the shadow ray goes
+      in a random direction inside the cone of directions the ball fills, seen from the point. How big that cone is,
+      as a patch of the sky around the point, is its <a data-g="solid-angle">solid angle</a>; the shadow ray divides
+      by the chance of picking its direction in it. ShadyTracer aims at a glowing object it has found in exactly this
+      way: into the cone of a sphere around it.</p>
+    <p data-step="room3:small">Shrink the lamp to a bright speck. The left picture is almost black with white dots: a
+      random bounce hardly ever finds the lamp. The right one barely changes.</p>
+    <p data-step="room3:big">Make the lamp large and the two come closer, as in the flat room: a big lamp is easy to
+      find by chance.</p>
+  </div>
+  <figure class="fig" data-fig="room3">
+    <figcaption>A small room lit by a glowing ball, path traced live: the same samples per pixel without NEE (left) and
+      with it (right). The readout gives each picture's average error bar.</figcaption>
+  </figure>
+</section>
+
 <section class="plain" id="limits">
   <div class="prose">
-    <h2><span class="n">5</span>Where aiming cannot help</h2>
+    <h2><span class="n">6</span>Where aiming cannot help</h2>
     <p>A shadow ray asks a surface: how much of the light coming from <em>that</em> direction do you send to the eye? A
       matte surface answers "some" for every direction. A perfect mirror answers "none" for every direction except
       one, the exact reflection. A random point on the lamp is never exactly that direction, so for a mirror or clear
@@ -146,10 +169,16 @@
 
 <section class="plain wide" id="code">
   <div class="prose">
-    <h2><span class="n">6</span>How ShadyTracer does it</h2>
+    <h2><span class="n">7</span>How ShadyTracer does it</h2>
     <p>The reasoning is written at the top of the light-sampling code, in the renderer's own words:</p>
     <pre data-src="lib/pathtracer/core/tracebasics.js" data-sym="WHY. Left to itself" data-to="the variance was not."
          data-why="The estimator was right without NEE. The problem was how much it scattered." data-hash="aa6db3b2"></pre>
+    <aside class="note"><span class="tag">A stale number</span>The comment's sun, "about 0.03 steradian", found "roughly
+      once in two hundred tries", is an old one: ShadyTracer once drew the sun 21 times wider than the real one (its
+      photometry file says so), and that sun was about 0.03 steradian. The real sun is 0.00007: a target some 470 times
+      smaller, which makes the case for NEE that much stronger. Comments go stale like this when the code around them changes; this tutorial
+      checks its quotes against the code (<a data-ch="checking">Noise, bias and checking</a>), and when a quote and the
+      facts disagree, it says so.</aside>
     <p>ShadyTracer has three kinds of light to aim at: the faces of the light objects you place in the builder, glowing
       surfaces it has discovered in the scene (<a data-ch="emitters">Every glowing thing is a light</a>), and the sky
       with its sun. One random number chooses which; each choice is then divided by its probability, as in the
@@ -169,7 +198,7 @@
 
 <section class="plain wide" id="tricks">
   <div class="prose">
-    <h2><span class="n">7</span>Tricks and trade-offs</h2>
+    <h2><span class="n">8</span>Tricks and trade-offs</h2>
     <div data-claim="measured">
       <p><strong>Shadow rays are not free.</strong> On the user's NVIDIA Pascal card (Chrome 154, Windows, 1280 × 720,
         ShadyTracer 0.9.2), the Noise library scene took 184.7 ms of GPU time a sample with NEE and 136.9 ms without:
@@ -200,7 +229,7 @@
 
 <section class="plain wide" id="before">
   <div class="prose">
-    <h2><span class="n">8</span>What went wrong before</h2>
+    <h2><span class="n">9</span>What went wrong before</h2>
     <p><strong>Two edges for one sun.</strong> To divide by its probability, a shadow ray to the sun needs to know whether
       a direction is inside the sun's disc. The light itself had its own test for the same question. The two tests were
       written differently and disagreed on a thin ring at the disc's edge, where rounding decides. A shadow ray landing
@@ -220,7 +249,7 @@
 
 <section class="plain" id="try">
   <div class="prose">
-    <h2><span class="n">9</span>Try it</h2>
+    <h2><span class="n">10</span>Try it</h2>
     <ul>
       <li>In the room, set the lamp to its smallest size and press <strong>Start again</strong>. How many samples does the
         picture without NEE need before you can tell where the ball is?</li>
@@ -231,7 +260,7 @@
         Estimation</strong> switch. Turn it off in a sunlit scene and watch the picture; turn it on again.</li>
     </ul>
     <h3>Words from this chapter</h3>
-    <ul class="words" data-words="nee shadow-ray path noise error-bar pdf montecarlo estimator direct albedo delta caustic mis emitter"></ul>
+    <ul class="words" data-words="nee shadow-ray path noise error-bar pdf solid-angle montecarlo estimator direct albedo delta caustic mis emitter"></ul>
   </div>
 </section>
 

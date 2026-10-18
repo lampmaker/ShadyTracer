@@ -4,12 +4,14 @@
 //
 //   scene   a flat room seen from the side: an eye, its screen of pixels, one ray per pixel, the picture they make;
 //           steps show light going the other way (from the lamp, almost none of it arriving), and a shadow ray
+//   grid    the same in 3D: the screen a grid of pixels, each painted with what its ray finds; turned by dragging
 //   edge    one pixel at the edge of the ball, close up: its samples, the average, and what jitter does to it
 //======================================================================================================================
 
 import { boot } from '../kit/page.js'
 import { march, normalAt, cameraRay, pointLightE, cosineDir, rng } from '../kit/flatland.js'
 import { plot } from '../kit/plot.js'
+import { orbit, draw3, march3, normal3, cameraRay3, pointLightE3, v3 } from '../kit/space.js'
 
 const SKY = [0.66, 0.75, 0.86]
 export const room = () => ({
@@ -232,6 +234,101 @@ export const figures = {
             return `${s.n} samples · the pixel reads ${(s.n ? s.hits / s.n : 0).toFixed(3)} · the ball covers ${g.cover.toFixed(3)} of its wedge`
         },
     },
+}
+
+/* THE SAME IDEA IN 3D (space.js, z up): the screen a grid of W x H pixels, each one's ray marched into a small scene and
+   the cell painted with what it found, lit by a lamp with a shadow ray. Drawn from an orbiting camera, so it can be
+   turned to see the rays from the side. */
+const SCENE3 = {
+    sky: SKY,
+    shapes: [
+        { kind: 'plane', z: 0, rgb: [0.8, 0.76, 0.68] },
+        { kind: 'sphere', c: [3.3, 0.45, 0.7], r: 0.7, rgb: [0.86, 0.3, 0.2] },
+        { kind: 'box', c: [2.7, -1.15, 0.45], h: [0.45, 0.45, 0.45], round: 0.03, rgb: [0.24, 0.44, 0.86] },
+    ],
+}
+const CAM3 = { eye: [0, 0, 1.25], target: [3, -0.2, 0.45], fov: 0.72 }
+const LAMP3 = { p: [2.0, 1.6, 2.3], I: 7 }
+const gridSize = s => [s.px, Math.max(2, Math.round(s.px * 0.68))]
+/** pixel (i, j)'s ray and what it finds: the hit point and the colour the pixel gets */
+function look3(i, j, W, H) {
+    const d = cameraRay3(CAM3, i, j, W, H), h = {}
+    march3(SCENE3, CAM3.eye, d, { far: 12 }, h)
+    if (!h.hit) return { d, hit: null, rgb: SKY }
+    const sh = SCENE3.shapes[h.i]
+    let n = normal3(SCENE3, h.p, h.i)
+    if (v3.dot(n, d) > 0) n = v3.scl(n, -1)
+    const E = pointLightE3(SCENE3, LAMP3, h.p, n)
+    return { d, hit: h.p, rgb: sh.rgb.map(c => c * (0.08 + 0.55 * E)) }
+}
+/** a corner of the screen's cell grid, at (x, y) from -1 to 1 across it, `f` in front of the eye */
+function screenPoint(x, y, W, H, f = 1.5) {
+    const fw = v3.norm(v3.sub(CAM3.target, CAM3.eye)), r = v3.norm(v3.cross(fw, [0, 0, 1])), up = v3.cross(r, fw)
+    const fy = Math.tan(CAM3.fov / 2), fx = fy * W / H
+    return v3.add(CAM3.eye, v3.scl(v3.add(fw, v3.add(v3.scl(r, x * fx), v3.scl(up, y * fy))), f))
+}
+figures.grid = {
+    aspect: 1.5,
+    world: { x: [-1.5, 1.5], y: [-0.95, 1.05] },
+    orbit: true,
+    state: { yaw: -2.45, pitch: 0.42, px: 8, all: false, sel: [5, 2] },
+    controls: [
+        { type: 'slider', key: 'px', label: 'pixels across', min: 3, max: 16, step: 1, fmt: v => `${v}` },
+        { type: 'toggle', key: 'all', label: 'Every ray' },
+    ],
+    steps: { grid: { px: 8, all: false, yaw: -2.45, pitch: 0.42 }, all: { all: true, yaw: -2.2, pitch: 0.6 } },
+    drag: {
+        pixel: (s, p) => {
+            const [W, H] = gridSize(s), cam = orbit({ yaw: s.yaw, pitch: s.pitch, dist: 6.2, target: [1.5, -0.3, 0.6] })
+            let best = s.sel, bd = Infinity
+            for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
+                const q = cam.project(screenPoint(((i + 0.5) / W) * 2 - 1, 1 - ((j + 0.5) / H) * 2, W, H))
+                const d = Math.hypot(q[0] - p[0], q[1] - p[1]); if (d < bd) { bd = d; best = [i, j] }
+            }
+            s.sel = best
+        },
+    },
+    draw(pen, s) {
+        const [W, H] = gridSize(s), cam = orbit({ yaw: s.yaw, pitch: s.pitch, dist: 6.2, target: [1.5, -0.3, 0.6] }), g = draw3(pen, cam)
+        s.sel = [Math.min(s.sel[0], W - 1), Math.min(s.sel[1], H - 1)]
+        // the floor, as lines a metre apart
+        for (let x = -1; x <= 5; x++) g.line([x, -2.5, 0], [x, 2, 0], { role: 'faint', w: 0.6, exact: true })
+        for (let y = -2.5; y <= 2; y += 0.5) g.line([-1, y, 0], [5, y, 0], { role: 'faint', w: 0.6, exact: true })
+        const looks = []
+        for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) looks.push(look3(i, j, W, H))
+        // the box's edges and the sphere
+        const b = SCENE3.shapes[2], [cx, cy, cz] = b.c, [hx, hy, hz] = b.h
+        const V = [-1, 1].flatMap(a => [-1, 1].flatMap(c => [-1, 1].map(e => [cx + a * hx, cy + c * hy, cz + e * hz])))
+        for (const [a, c] of [[0, 1], [2, 3], [4, 5], [6, 7], [0, 2], [1, 3], [4, 6], [5, 7], [0, 4], [1, 5], [2, 6], [3, 7]]) g.line(V[a], V[c], { role: 'solid', w: 1, id: 'box' + a + c })
+        g.sphere(SCENE3.shapes[1].c, SCENE3.shapes[1].r, { id: 'ball' })
+        // the rays: every one, or the chosen pixel's
+        looks.forEach((l, k) => {
+            const i = k % W, j = Math.floor(k / W), mine = i === s.sel[0] && j === s.sel[1]
+            if (!s.all && !mine) return
+            const end = l.hit ?? v3.add(CAM3.eye, v3.scl(l.d, 6))
+            g.ray(CAM3.eye, end, { role: 'cam', w: mine ? 1.4 : 0.6, alpha: mine ? 1 : 0.45, arrow: !l.hit && mine })
+            if (l.hit) g.dot(l.hit, { role: 'cam', r: mine ? 3.2 : 1.8 })
+        })
+        // the screen: each cell painted with what its ray found
+        const corner = (i, j) => screenPoint((i / W) * 2 - 1, 1 - (j / H) * 2, W, H)
+        const ctx = pen.ctx
+        for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
+            const q = [corner(i, j), corner(i + 1, j), corner(i + 1, j + 1), corner(i, j + 1)].map(p => pen.P(g.P(p)))
+            const c = looks[j * W + i].rgb.map(v => Math.round(255 * Math.pow(Math.min(1, Math.max(0, v)), 1 / 2.2)))
+            ctx.save(); ctx.globalAlpha = 0.92; ctx.fillStyle = `rgb(${c})`; ctx.beginPath(); q.forEach(([x, y], k) => k ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.closePath(); ctx.fill()
+            ctx.globalAlpha = 1; ctx.strokeStyle = pen.col('ink'); ctx.lineWidth = i === s.sel[0] && j === s.sel[1] ? 2 : 0.5; ctx.stroke(); ctx.restore()
+        }
+        const mid = screenPoint(((s.sel[0] + 0.5) / W) * 2 - 1, 1 - ((s.sel[1] + 0.5) / H) * 2, W, H)
+        pen.handle('pixel', g.P(mid))
+        g.label(corner(0, 0), 'screen', { role: 'soft', size: 13, dy: -10 })
+        g.dot(CAM3.eye, { role: 'ink', r: 4 }); g.label(CAM3.eye, 'eye', { size: 14, dx: -30, dy: 2 })
+        if (cam.project(LAMP3.p)[2] > 0) { pen.bulb(g.P(LAMP3.p), { r: 6 }); g.label(LAMP3.p, 'lamp', { role: 'light', size: 14, dx: 12 }) }
+        // the picture the grid makes, flat
+        const pw = Math.min(150, pen.view.W * 0.26), ph = pw * H / W
+        pen.image(10, 10, pw, ph, W, H, (i, j) => looks[j * W + i].rgb)
+        pen.labelPx(10, 14 + ph, `the picture: ${W} × ${H}`, { role: 'soft', size: 12 })
+    },
+    readout(s) { const [W, H] = gridSize(s); return `${W} × ${H} pixels, ${W * H} rays · drag the background to turn it` },
 }
 
 /* THE EDGE FIGURE'S GEOMETRY: the eye at the origin, the ball, a pixel's wedge `width` degrees wide placed across the

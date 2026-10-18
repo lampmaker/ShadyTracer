@@ -20,6 +20,7 @@ import { GLOSSARY, term } from '../kit/glossary.js'
 import { locate, optionsOf, hash } from '../kit/excerpt.js'
 import { makePen } from '../kit/pen.js'
 import { march, pointLightE, directE, tracePath, cameraRay, rng } from '../kit/flatland.js'
+import { march3, pointLightE3, directE3, trace3, cameraRay3, orbit, sampleCone } from '../kit/space.js'
 
 const TUT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const REPO = resolve(TUT, '..')
@@ -147,7 +148,7 @@ for (const [name, { mod }] of modules) {
                 if (spec.readout) ok(`${name} figure "${fig}" (${k}): its readout is text`, typeof spec.readout(state) === 'string')
             } catch (e) { err = e }
             ok(`${name} figure "${fig}" (${k}): draws without throwing`, !err, err?.stack?.split('\n').slice(0, 3).join(' | '))
-            ok(`${name} figure "${fig}" (${k}): draws something`, calls.includes('stroke') || calls.includes('fill'))
+            ok(`${name} figure "${fig}" (${k}): draws something`, calls.includes('stroke') || calls.includes('fill') || calls.includes('fillRect'))
             ok(`${name} figure "${fig}" (${k}): no NaN or infinite coordinate`, !nan.length, nan.slice(0, 3).join('; '))
         }
     }
@@ -206,6 +207,41 @@ for (const [name, { mod }] of modules) {
     const mid = cameraRay(cam, 5, 0), edge = cameraRay(cam, 0, 0)
     ok('flat world: the film\'s middle looks along the camera', Math.abs(Math.atan2(mid[3], mid[2]) - 0.3) < 1e-12)
     ok('...and its edge half the field of view aside', Math.abs(Math.abs(Math.atan2(edge[3], edge[2]) - 0.3) - 0.6) < 1e-12)
+}
+
+/* 3D (kit/space.js) AGAINST CLOSED FORMS: light over spheres again -------------------------------------------------- */
+{
+    // a point light over a floor: I cos(theta) / d^2
+    const floor = { shapes: [{ kind: 'plane', z: 0 }] }
+    let worst = 0
+    for (const x of [0, 0.5, 1, 2, 4]) worst = Math.max(worst, Math.abs(pointLightE3(floor, { p: [0, 0, 2], I: 3 }, [x, 0, 0], [0, 0, 1]) - 3 * 2 / Math.pow(x * x + 4, 1.5)))
+    ok('3D: a point light on a floor is I cos(theta) / d^2', worst < 1e-12, `worst ${worst}`)
+    // a glowing ball of radius R at distance d, straight above a point: E = pi L sin^2(alpha), sin(alpha) = R / d
+    const L = 2, R = 0.5, d = 3, ball = { shapes: [{ kind: 'sphere', c: [0, 0, d], r: R, emit: L }] }, exact = Math.PI * L * (R / d) ** 2
+    const run = (nee, n, seed) => { const r = rng(seed); let s = 0, s2 = 0; for (let i = 0; i < n; i++) { const e = directE3(ball, [0, 0, 0], [0, 0, 1], { nee, rand: r }); s += e; s2 += e * e } const m = s / n; return { m, se: Math.sqrt(Math.max(0, s2 / n - m * m) / (n - 1)) } }
+    const on = run(true, 20000, 31), off = run(false, 60000, 32)
+    ok('3D: a glowing ball\'s light by aiming into its cone is pi L sin^2(alpha)', Math.abs(on.m - exact) < 4 * on.se + 1e-4 * exact, `${on.m} ± ${on.se} vs ${exact}`)
+    ok('...and by bouncing at random, on average', Math.abs(off.m - exact) < 4 * off.se, `${off.m} ± ${off.se} vs ${exact}`)
+    // the cone sampler's density integrates to 1 over its cone: 1 / pdf is the cone's solid angle, 2 pi (1 - cos)
+    const c = sampleCone([0, 0, 0], ball.shapes[0], 0.3, 0.7)
+    ok('3D: the cone\'s density is one over its solid angle', Math.abs(1 / c.pdf - 2 * Math.PI * (1 - Math.sqrt(1 - (R / d) ** 2))) < 1e-12)
+    // a room path traced with and without NEE: the same pixel within their error bars
+    const room = { sky: [0, 0, 0], shapes: [
+        { kind: 'plane', z: 0, rgb: [0.7, 0.7, 0.7] }, { kind: 'wall', n: [0, -1, 0], d: -2, rgb: [0.7, 0.7, 0.7] },
+        { kind: 'wall', n: [1, 0, 0], d: -2, rgb: [0.7, 0.3, 0.3] }, { kind: 'wall', n: [-1, 0, 0], d: -2, rgb: [0.3, 0.7, 0.3] },
+        { kind: 'wall', n: [0, 0, -1], d: -3, rgb: [0.7, 0.7, 0.7] }, { kind: 'sphere', c: [0, 1, 2.4], r: 0.3, emit: 4 }] }
+    const cam = { eye: [0, -3, 1.5], target: [0, 1, 1.2], fov: 0.8 }
+    const est = (nee, seed) => { const r = rng(seed); let s = 0, s2 = 0; const n = 6000; for (let i = 0; i < n; i++) { const y = trace3(room, cam.eye, cameraRay3(cam, 3, 4, 8, 6, r(), r()), { nee, maxBounce: 3, rand: r, far: 14 })[1]; s += y; s2 += y * y } const m = s / n; return { m, se: Math.sqrt((s2 / n - m * m) / (n - 1)) } }
+    const a = est(true, 41), b = est(false, 42)
+    ok('3D: a room pixel path traced with and without NEE agrees', Math.abs(a.m - b.m) < 4 * Math.hypot(a.se, b.se), `${a.m} ± ${a.se} vs ${b.m} ± ${b.se}`)
+    ok('...NEE\'s error bar the smaller', a.se < b.se, `${a.se} vs ${b.se}`)
+    // the march, and the cameras
+    const o = {}; march3({ shapes: [{ kind: 'sphere', c: [4, 0.5, 0], r: 1 }] }, [0, 0, 0], [1, 0, 0], { eps: 1e-5 }, o)
+    ok('3D: the march stops at the sphere, within its tolerance', o.hit && Math.abs(o.t - (4 - Math.sqrt(0.75))) < 1e-5 / 0.9, `${o.t}`)
+    const mid = cameraRay3({ eye: [0, 0, 0], target: [1, 0, 0], fov: 1 }, 4, 3, 8, 6, 0, 0)
+    ok('3D: the film\'s middle looks at the target', Math.abs(mid[0] - 1) < 1e-12 && Math.abs(mid[1]) < 1e-12 && Math.abs(mid[2]) < 1e-12)
+    const t = orbit({ target: [1, 2, 3], yaw: 0.4, pitch: 0.3 }).project([1, 2, 3])
+    ok('3D: an orbiting camera puts its target in the middle', Math.abs(t[0]) < 1e-12 && Math.abs(t[1]) < 1e-12)
 }
 
 /* THE EXCERPT LOCATOR ON ITS OWN ----------------------------------------------------------------------------------- */

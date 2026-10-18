@@ -3,6 +3,7 @@
 //
 //   aim    one point on a floor under a lamp: random bounce directions, of which few find the lamp, against shadow
 //          rays aimed at it -- each strategy's estimate of the light there, with its error bar, against the exact value
+//   room3  the same comparison in 3D: a small room lit by a glowing ball, two live pictures side by side
 //   room   a flat room path traced twice at once, without and with next event estimation: the same paths' worth of
 //          work, two films, their error bars; the lamp's size changes how far apart they are
 //
@@ -15,6 +16,7 @@ import { boot } from '../kit/page.js'
 import { march, rng, tracePath, cosineDir, directE, cameraRay } from '../kit/flatland.js'
 import { stepMoments, standardError } from '../../lib/pathtracer/core/measure.js'
 import { plot } from '../kit/plot.js'
+import { trace3, cameraRay3 } from '../kit/space.js'
 
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v))
 
@@ -214,6 +216,76 @@ export const figures = {
             return s.view === 'both' ? `${s.spp} samples per pixel · average error bar: without NEE ${p(off)}, with NEE ${p(on)}`
                 : `${s.spp} samples per pixel · average error bar ${p(off)}`
         },
+    },
+}
+
+
+/* THE ROOM IN 3D (space.js, z up): a small room lit by a glowing ball, path traced live on the CPU twice at once,
+   without and with next event estimation, every pixel's average and error bar kept by measure.js as the room's flat
+   films are. 3D's own laws here: light falls as 1/d^2, a diffuse surface is rho / pi, and the shadow ray aims into the
+   cone the lamp fills, as ShadyTracer aims at a glowing surface it has found. The lamp's radiance goes as 1 / size^2,
+   so its power stays the same as it shrinks. */
+const ROOM3 = s => ({
+    sky: [0, 0, 0],
+    shapes: [
+        { kind: 'plane', z: 0, rgb: [0.72, 0.72, 0.72] },
+        { kind: 'wall', n: [0, -1, 0], d: -2.6, rgb: [0.72, 0.72, 0.72] },
+        { kind: 'wall', n: [1, 0, 0], d: -2.1, rgb: [0.75, 0.28, 0.22] },
+        { kind: 'wall', n: [-1, 0, 0], d: -2.1, rgb: [0.28, 0.58, 0.32] },
+        { kind: 'wall', n: [0, 0, -1], d: -3.0, rgb: [0.72, 0.72, 0.72] },
+        { kind: 'sphere', c: [-0.7, 1.4, 0.55], r: 0.55, rgb: [0.75, 0.75, 0.75] },
+        { kind: 'box', c: [0.8, 1.8, 0.7], h: [0.4, 0.4, 0.7], round: 0.02, rgb: [0.75, 0.75, 0.75] },
+        { kind: 'sphere', c: [0.1, 1.0, 2.45], r: s.size, emit: 0.35 / (s.size * s.size) },
+    ],
+})
+const CAM_ROOM = { eye: [0, -3.4, 1.55], target: [0, 1.0, 1.3], fov: 0.82 }
+const F3 = [44, 33]
+const film3 = () => ({ rgb: new Array(F3[0] * F3[1] * 3).fill(0), m: Array.from({ length: F3[0] * F3[1] }, () => [0, 0, 0, 0]) })
+const lum = c => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+figures.room3 = {
+    aspect: 2.25,
+    budget: 14,
+    world: { x: [0, 1], y: [0, 1] },
+    state: { size: 0.22, spp: 0, cursor: 0, seed: 1, off: film3(), on: film3(), exp: 0 },
+    controls: [
+        { type: 'slider', key: 'size', label: 'lamp size', min: 0.06, max: 0.6, step: 0.02, fmt: v => v.toFixed(2) },
+        { type: 'button', label: 'Start again', act: s => { s.seed++ } },
+    ],
+    steps: { both: { size: 0.22 }, small: { size: 0.08 }, big: { size: 0.55 } },
+    work: {
+        reset(s) { s.spp = 0; s.cursor = 0; s.off = film3(); s.on = film3(); s.exp = 0 },
+        add(s, ms) {
+            const world = ROOM3(s), [W, H] = F3, t0 = performance.now()
+            do {
+                const k = s.cursor, i = k % W, j = Math.floor(k / W)
+                const R = rng((s.seed * 7919 + s.spp) * 100003 + k)
+                for (const which of ['off', 'on']) {
+                    const d = cameraRay3(CAM_ROOM, i, j, W, H, R(), R())
+                    const c = trace3(world, CAM_ROOM.eye, d, { nee: which === 'on', maxBounce: 3, rand: R, far: 14 })
+                    const f = s[which]
+                    for (let q = 0; q < 3; q++) f.rgb[k * 3 + q] += c[q]
+                    step(f.m[k], lum(c))
+                }
+                if (++s.cursor === W * H) { s.cursor = 0; s.spp++ }
+            } while (performance.now() - t0 < ms && s.spp < 256)
+            return s.spp < 256
+        },
+    },
+    draw(pen, s) {
+        const [W, H] = F3, n = k => Math.max(1, s.spp + (k < s.cursor ? 1 : 0))
+        // one exposure for both, from the NEE picture's average once it has one: the same light shown the same way
+        if (s.spp > 0 && !s.exp) { let t = 0; for (let k = 0; k < W * H; k++) t += s.on.m[k][0]; s.exp = 0.45 / Math.max(1e-6, t / (W * H)) }
+        const exp = s.exp || 1
+        const gap = 14, w = (pen.view.W - gap) / 2, h = Math.min(pen.view.H - 22, w * H / W)
+        for (const [x, which, label] of [[0, 'off', 'without NEE'], [w + gap, 'on', 'with NEE']]) {
+            const f = s[which]
+            pen.image(x, 0, w, h, W, H, (i, j) => { const k = j * W + i, m = n(k); return [f.rgb[k * 3] / m, f.rgb[k * 3 + 1] / m, f.rgb[k * 3 + 2] / m] }, { exposure: exp })
+            pen.labelPx(x, h + 5, label, { role: 'soft', size: 13 })
+        }
+    },
+    readout(s) {
+        const p = v => Number.isFinite(v) ? `±${(100 * v).toFixed(1)}%` : '—'
+        return `${s.spp} samples per pixel · average error bar: without NEE ${p(relError(s.off.m))}, with NEE ${p(relError(s.on.m))}`
     },
 }
 

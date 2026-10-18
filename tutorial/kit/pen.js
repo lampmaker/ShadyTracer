@@ -174,6 +174,23 @@ export function makePen(ctx, view, theme, handles = []) {
         labelPx(x, y, text, { role = 'ink', size = 13, align = 'left', base = 'top', kind = 'hand' } = {}) {
             ctx.save(); ctx.font = font(kind, size); ctx.textAlign = align; ctx.textBaseline = base; ctx.fillStyle = col(role); ctx.fillText(text, x, y); ctx.restore()
         },
+        /**
+         * A PICTURE: W x H pixels in the rectangle (x, y, w, h) of the canvas, in CSS pixels; rgbAt(i, j) gives pixel
+         * (i, j)'s linear colour, j from the top, shown as sRGB after multiplying by `exposure`. Blocky on purpose: each
+         * pixel is one square, which is what a pixel is. A picture is the scene's, so it is not in the style's colours.
+         */
+        image(x, y, w, h, W, H, rgbAt, { exposure = 1, frame = true } = {}) {
+            const enc = v => Math.round(255 * Math.pow(Math.min(1, Math.max(0, v * exposure)), 1 / 2.2))
+            const cw = w / W, ch = h / H
+            ctx.save()
+            for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
+                const c = rgbAt(i, j)
+                ctx.fillStyle = `rgb(${enc(c[0])},${enc(c[1])},${enc(c[2])})`
+                ctx.fillRect(x + i * cw, y + j * ch, cw + 0.6, ch + 0.6)
+            }
+            if (frame) { ctx.strokeStyle = col('ink'); ctx.lineWidth = 1.2; ctx.strokeRect(x, y, w, h) }
+            ctx.restore()
+        },
         /** a dimension line between a and b with end ticks and its text in the middle */
         dim(a, b, text, { role = 'soft', off = 0 } = {}) {
             const pa = P(a), pb = P(b), L = Math.hypot(pb[0] - pa[0], pb[1] - pa[1]) || 1

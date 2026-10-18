@@ -1,7 +1,7 @@
 # ShadyTracer, inside out: the tutorial's plan
 
-*Status 2026-10-18: first round written (contents, glossary, chapters 1, 2 and 14, the style mockups). The style is
-not chosen yet. This file is the plan; `kit/chapters.js` is the contents the pages read, and the two must agree.*
+*Status 2026-10-18: first round written (contents, glossary, chapters 1, 2 and 14, the style mockups), with 3D
+figures where they show more. The style is not chosen yet. This file is the plan; `kit/chapters.js` is the contents the pages read, and the two must agree.*
 
 ## What it is, and for whom
 
@@ -36,6 +36,12 @@ One page per chapter, the same order every time:
   light spreads (1/r, not 1/r²; Lambert is ρ/2, not ρ/π). A function normalised for 3D (Lambert's ρ/π, the HG phase
   function's 1/4π, the photon map's πr²) may be plotted but never put into a flat estimator. Say on the page where a
   formula differs.
+- **Flat by default, 3D where the third dimension is the point** (`kit/space.js`, z up as in ShadyTracer). A slice is
+  easier to draw, read and drag, so most figures stay flat. A figure goes 3D when the idea lives in depth or in a real
+  picture: the screen as a grid of pixels, where a march spends its steps across a whole image, real noise with and
+  without NEE, a lobe or a cone of directions, a photon map's cells. Two kinds: **3D drawings** (the pen's lines through
+  an orbiting camera: drag to turn) and **3D pictures** (a small CPU renderer, the march kernel's logic in JavaScript,
+  blocky on purpose). In 3D the real laws hold (1/d², ρ/π), so the engine's 3D-normalised functions may be used there.
 - **Use the engine's own pure-JS functions** where they exist (help/widgets.js, core/spectral.js, colorimetry.js,
   haze.js, sppm.js, lens.js, measure.js, tolerances.js, optics/fresnel.js), never a retyped copy. The test fails if a
   page's imports reach a GPU module.
@@ -57,6 +63,7 @@ One page per chapter, the same order every time:
 | `pen.js` | every line, ray, shape, label and glyph, in the style's colours and line character |
 | `plot.js` | small charts in the same ink |
 | `flatland.js` | the flat world: SDF shapes, sphere tracing, a camera, a path tracer with and without NEE |
+| `space.js` | 3D: an orbiting camera for drawings, sphere tracing, a camera, cheap views (steps, normals, sun) and a path tracer with and without NEE |
 | `excerpt.js` | finds a symbol in a source file: the page and the test share it |
 | `chapters.js`, `glossary.js` | the contents and the glossary, as data |
 
@@ -125,6 +132,14 @@ excerpts; running the app and its tests).
 32. **A ray tracer in one page**: the flat world explained line by line, then extended.
 33. **Open problems**: what is not built yet, and the measured or inferred case for each.
 
+## Where 3D is planned
+
+Written: the screen as a grid (ch.1), steps per pixel in a real picture (ch.2), a 3D room with and without NEE
+(ch.14). Planned: normals as colours on real shapes (4), the inverse-square law on a sphere around a lamp and the sun's
+cone (5), a lobe on its hemisphere (8, 9), a ball of glass refracting a picture (10), depth of field in a picture (17), a
+caustic under a glass ball and the photon map's cells (18, 19), a beam through a haze box (20), the culling boxes and the
+step cache's grid around a scene (26).
+
 ## Rounds
 
 1. **This round**: the plan, the toolkit, the style mockups, chapters 1, 2 and 14, the contents and the glossary.
@@ -136,5 +151,5 @@ excerpts; running the app and its tests).
 ## Checks
 
 - `node tutorial/test/tutorial.test.mjs` (in CI): contents, links, glossary, excerpts, figures drawn into a recording
-  canvas, flat-world closed forms, and the imports' reach.
+  canvas, flat-world and 3D closed forms, and the imports' reach.
 - `node tutorial/test/pages.check.mjs [dir]` (optional, Playwright): every page in every style and theme, headless.

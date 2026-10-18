@@ -4,6 +4,7 @@
 //   field     a distance field: contour lines, the surface, and a probe whose empty circle touches the nearest surface
 //   march     sphere tracing a ray through a small scene: each step's circle, step scale and tolerance, a thin wall a
 //             long step can jump, and the scene's radius a ray escapes past
+//   march3d   the same march in 3D: a real picture, its normals, or how many steps each pixel's ray took; turned by dragging
 //   lipschitz a squashed circle whose distance is too large: the circles claim empty space that is not, the ray ends up
 //             inside -- and the same field divided by its steepest slope, safe again
 //
@@ -13,6 +14,7 @@
 import { boot } from '../kit/page.js'
 import { circle, box, smin } from '../../help/widgets.js'
 import { shapeDist } from '../kit/flatland.js'
+import { orbit, shade3, cameraRay3 } from '../kit/space.js'
 
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v))
 const fmt = d => (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(2)
@@ -191,6 +193,71 @@ function trueDist(p, a, b) {
     let best = Infinity
     for (let i = 0; i < 720; i++) { const t = i / 720 * Math.PI * 2; best = Math.min(best, Math.hypot(p.x - a * Math.cos(t), p.y - b * Math.sin(t))) }
     return best
+}
+
+
+/* THE MARCH IN 3D (space.js, z up): a small scene sphere traced into a real picture, a ray a pixel, as the march kernel
+   does it -- shown lit by the sun, as the normals it found, or as how many steps each ray took: the march's cost, pixel
+   by pixel. One pass, no noise, so it redraws as it is turned. */
+const SCENE3 = {
+    sky: [0.62, 0.72, 0.85],
+    shapes: [
+        { kind: 'plane', z: 0, rgb: [0.78, 0.76, 0.7] },
+        { kind: 'sphere', c: [0.55, -0.95, 0.7], r: 0.7, rgb: [0.86, 0.3, 0.2] },
+        { kind: 'box', c: [-0.75, 0.45, 0.5], h: [0.5, 0.5, 0.5], round: 0.08, rgb: [0.24, 0.44, 0.86] },
+        { kind: 'torus', c: [0.95, 0.95, 0.2], R: 0.55, r: 0.2, rgb: [0.9, 0.7, 0.25] },
+    ],
+}
+const FILM = [96, 60]
+/* the style's colours as linear RGB, for the steps view's scale: few steps the paper, many the accent */
+const linear = css => {
+    const m = /rgba?\(([\d.]+),\s*([\d.]+),\s*([\d.]+)/.exec(css) ?? /#(..)(..)(..)/.exec(css)?.slice(0, 4).map((v, i) => i ? String(parseInt(v, 16)) : v)
+    return m ? [1, 2, 3].map(k => Math.pow(+m[k] / 255, 2.2)) : [0.5, 0.5, 0.5]
+}
+figures.march3d = {
+    aspect: FILM[0] / FILM[1],
+    world: { x: [-1, 1], y: [-0.625, 0.625] },
+    orbit: true,
+    state: { yaw: -1.05, pitch: 0.5, view: 'picture', stepscale: 0.9 },
+    controls: [
+        { type: 'seg', key: 'view', options: [['picture', 'Picture'], ['steps', 'Steps per pixel'], ['normal', 'Normals']] },
+        { type: 'slider', key: 'stepscale', label: 'step scale', min: 0.5, max: 1.8, step: 0.05, fmt: v => v.toFixed(2) },
+    ],
+    steps: {
+        picture: { view: 'picture', stepscale: 0.9 },
+        steps: { view: 'steps', stepscale: 0.9 },
+        scale: { view: 'picture', stepscale: 1.6 },
+    },
+    draw(pen, s) {
+        const [W, H] = FILM, cam = orbit({ yaw: s.yaw, pitch: s.pitch, dist: 4.4, target: [0, 0, 0.45] })
+        const lens = { eye: cam.eye, target: [0, 0, 0.45], fov: 0.8 }
+        const px = []
+        let sum = 0, most = 0
+        for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
+            const r = shade3(SCENE3, lens.eye, cameraRay3(lens, i, j, W, H), { view: s.view === 'normal' ? 'normal' : 'sun', stepscale: s.stepscale })
+            px.push(r); sum += r.steps; most = Math.max(most, r.steps)
+        }
+        s._steps = { avg: sum / (W * H), most }
+        const lo = linear(pen.col('paper')), mid = linear(pen.col('cam')), hi = linear(pen.col('accent'))
+        const ramp = t => t < 0.5 ? lo.map((v, k) => v + (mid[k] - v) * t * 2) : mid.map((v, k) => v + (hi[k] - v) * (t - 0.5) * 2)
+        const top = Math.max(8, most)
+        pen.image(0, 0, pen.view.W, pen.view.H, W, H, (i, j) => {
+            const r = px[j * W + i]
+            return s.view === 'steps' ? ramp(Math.sqrt((r.steps - 1) / (top - 1))) : r.rgb
+        })
+        if (s.view === 'steps') {
+            // the scale: a strip from one step to the most any ray took
+            const x0 = 12, y0 = pen.view.H - 26, w = Math.min(180, pen.view.W * 0.35)
+            pen.image(x0, y0, w, 9, 32, 1, i => ramp(i / 31))
+            pen.labelPx(x0, y0 - 16, '1 step', { role: 'ink', size: 12, kind: 'mono' })
+            pen.labelPx(x0 + w, y0 - 16, `${top} steps`, { role: 'ink', size: 12, kind: 'mono', align: 'right' })
+        }
+    },
+    readout(s) {
+        if (!s._steps) return ''
+        return `${FILM[0]} × ${FILM[1]} rays · on average ${s._steps.avg.toFixed(1)} steps a ray, the most ${s._steps.most}` +
+            (s.stepscale > 1 ? ` · step scale ${s.stepscale.toFixed(2)}: steps longer than the distance` : '') + ' · drag to turn'
+    },
 }
 
 export const mount = () => boot({ figures })
