@@ -336,8 +336,9 @@ for (const [name, { mod }] of modules) {
 /* THE CHAPTERS' OWN NUMBERS: what a page's prose quotes from its figures, held here so a change to the code they run
    (noise.js, widgets.js) fails until the prose is read again ------------------------------------------------------ */
 {
-    const { caught } = await import('../ch/reading.js')
+    const { caught, caught3 } = await import('../ch/reading.js')
     ok('ch.0: a piece 0.6 long catches 4 of 36 rays at r = 1 and 2 at r = 2 (the flat world\'s 1/r)', caught(1) === 4 && caught(2) === 2, `${caught(1)}, ${caught(2)}`)
+    ok('ch.0: ...and in 3D a patch 0.6 a side catches 4 x 4 = 16 at r = 1 and 2 x 2 = 4 at r = 2 (1/r^2)', caught3(1) === 16 && caught3(2) === 4, `${caught3(1)}, ${caught3(2)}`)
 }
 {
     const S = await import('../ch/shapes.js'), W = await import('../../help/widgets.js')
@@ -533,6 +534,9 @@ for (const [name, { mod }] of modules) {
     const d = E.discover(2, 1), d8 = E.discover(2, 8)
     ok('ch.16: the first sample finds the ball (28 hits) and the bar behind the wall (2)', E.figures.discovery.readout({ seed: 2, samples: 1 }).includes('the ball: 28 hits') && E.figures.discovery.readout({ seed: 2, samples: 1 }).includes('the bar behind the wall: 2 hits'), E.figures.discovery.readout({ seed: 2, samples: 1 }))
     ok('ch.16: cells only gain hits as samples add up', d8.cells.size >= d.cells.size)
+    const epoch = +/export const EMIT_EPOCH = (\d+)/.exec(readFileSync(join(REPO, 'lib/pathtracer/core/raytrace_main.js'), 'utf8'))[1]
+    ok('ch.16: the figure lists its cells as often as raytrace_main.js EMIT_EPOCH rebuilds the list, nothing after one sample', epoch === E.EMIT_EPOCH
+        && E.figures.discovery.readout({ seed: 2, samples: 1 }).includes('none listed yet') && E.figures.discovery.readout({ seed: 2, samples: 8 }).includes('cells listed'), epoch)
 }
 
 {

@@ -200,8 +200,10 @@ export function makePen(ctx, view, theme, handles = []) {
             ctx.restore()
         },
         /** text at a point in PIXELS, for what sits on the figure rather than in its world (a chart's title, a strip) */
-        labelPx(x, y, text, { role = 'ink', size = 13, align = 'left', base = 'top', kind = 'hand' } = {}) {
-            ctx.save(); ctx.font = font(kind, size); ctx.textAlign = align; ctx.textBaseline = base; ctx.fillStyle = col(role); ctx.fillText(text, x, y); ctx.restore()
+        labelPx(x, y, text, { role = 'ink', size = 13, align = 'left', base = 'top', kind = 'hand', angle = 0 } = {}) {
+            // angle turns the text about (x, y): -pi/2 writes it upwards, along a vertical line
+            ctx.save(); ctx.font = font(kind, size); ctx.textAlign = align; ctx.textBaseline = base; ctx.fillStyle = col(role)
+            ctx.translate(x, y); ctx.rotate(angle); ctx.fillText(text, 0, 0); ctx.restore()
         },
         /**
          * A PICTURE: W x H pixels in the rectangle (x, y, w, h) of the canvas, in CSS pixels; rgbAt(i, j) gives pixel

@@ -99,7 +99,7 @@ export const figures = {
             const { rec, info, L } = onePath(s.seed, s.rho, s.pixel, s.maxB)
             const last = rec[rec.length - 1]
             return `${info.bounces} bounce${info.bounces === 1 ? '' : 's'} · ` + (info.end === 'lamp'
-                ? `found the lamp carrying β ${last.beta.toFixed(3)} = ${s.rho.toFixed(2)}^${info.bounces}: brings back β × the lamp's brightness, 1 = ${L.toFixed(3)}`
+                ? `found the lamp carrying β ${last.beta.toFixed(3)} = ${s.rho.toFixed(2)}^${info.bounces}: brings back β × the lamp's brightness (1) = ${L.toFixed(3)}`
                 : `stopped at the limit of ${s.maxB} bounce${s.maxB === 1 ? '' : 's'} without finding the lamp: brings back 0`)
         },
     },

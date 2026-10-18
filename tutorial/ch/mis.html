@@ -15,9 +15,9 @@
   <div>
     <p class="eyebrow">Part IV · Path tracing · Chapter 15</p>
     <h1>Two ways to the light</h1>
-    <p class="lede">Chapter 14 found light by aiming at it: pick a point on a lamp and send a shadow ray. Chapter 13 found
+    <p class="lede">Chapter 14 found light by aiming at it: pick a point on a lamp and send a <a data-g="shadow-ray">shadow ray</a>. Chapter 13 found
       it by chance: bounce the way the surface scatters, and see whether the bounce meets a lamp. Each is good where
-      the other is bad. Multiple importance sampling uses both at once and weighs every answer by how good its way was at
+      the other is bad. <a data-g="mis">Multiple importance sampling</a> uses both at once and weighs every answer by how good its way was at
       finding it, so the picture gets the best of each.</p>
   </div>
   <div class="titleblock" data-auto></div>
@@ -27,7 +27,7 @@
   <div class="prose">
     <h2><span class="n">1</span>Each way fails somewhere</h2>
     <p data-step="plates:few">Four plates, from nearly a mirror (top row, σ 0.02) to quite rough (bottom row, σ 0.6), and
-      four lamps over them, from tiny to long, each giving the same light in all (the ticks under each lamp show the
+      four lamps over them, from tiny to long, each giving off the same total light (a short lamp is brighter for its size; the ticks under each lamp show the
       side it glows from). A <a data-g="glossy">glossy</a> plate reflects light mostly near its mirror direction; σ is
       how far its reflection spreads around it, as an angle in radians (0.02 is about 1°, 0.6 about 34°). The camera
       sees each lamp reflected somewhere along each plate: the tiny lamp near the left end, the long one near the right.
@@ -38,7 +38,8 @@
       chapter 14's next-event estimation, <a data-g="nee">NEE</a>. <strong>The plate strategy</strong> (middle) picks a
       direction the way the plate itself reflects, and looks whether it meets a lamp: chapter 13's bounce, called BSDF
       sampling after the <a data-g="bsdf">BSDF</a>, the formula for how a surface reflects. The right column uses
-      both, weighed. After 8 samples the three differ a lot. Point at a strip to read that point's estimate, its error
+      both, weighed. All three are estimates of the same picture and settle on it in the end; they differ in how fast.
+      After 8 samples the three differ a lot. Point at a strip to read that point's estimate, its error
       bar and the exact answer.</p>
     <p data-step="plates:many">After 256 samples, look at where each is still streaked. <strong>The lamp strategy</strong>
       is noisy on the sharp plates, worst under the long lamp: a point picked anywhere on it is almost never in the
@@ -62,8 +63,9 @@
           <dt>p<sub>plate</sub></dt><dd>how likely the plate strategy is to give it</dd>
         </dl>
         <p>Dividing by <var>p</var> is chapter 12's rule: a direction picked often must count for little each time, one
-          picked rarely for a lot, so that on average every direction counts once. An estimate is noisy where its
-          <var>p</var> is small but the light is not: a rare direction carrying a lot, divided by a tiny <var>p</var>.</p>
+          picked rarely for a lot, so that on average every direction counts once (a <a data-g="pdf">probability
+          density</a>). An estimate is noisy where its <var>p</var> is small but the light is not: a rare direction
+          carrying a lot, divided by a tiny <var>p</var>, a bright streak in the picture.</p>
         <p>Why weights that add up to 1 count each direction once: over many samples the lamp strategy brings back the
           whole of a direction's light, on average, and so does the plate strategy. Counted in full, both together
           would count it twice. Multiply the lamp strategy's samples by <var>w</var><sub>lamp</sub>(ω) and the plate
@@ -77,7 +79,11 @@
         <p>The squares lean harder towards the likelier strategy than the plain ratio would, so a direction only one
           strategy was likely to find counts almost entirely through it; Veach found the squares usually the least noisy
           of the recipes he tried (his chapter 9). With the second figure's numbers, 5.86 against 0.66: 5.86² = 34.3,
-          0.66² = 0.44, and 34.3 / 34.7 = 0.99.</p>
+          0.66² = 0.44, and 34.3 / 34.7 = 0.99, where the plain ratio would give 5.86 / 6.52 = 0.90.</p>
+        <p>That is also why the streaks go. A streak is a rare, lucky find by the weak strategy: a direction its
+          <var>p</var> makes unlikely, divided by that small <var>p</var>. In that same direction the other strategy's
+          <var>p</var> is large, so the lucky find is multiplied by a weight near 0, and its light comes in instead,
+          steadily, through the strategy that finds it often.</p>
       </div>
     </details>
   </div>
@@ -97,7 +103,9 @@
       smaller from here (a short lamp, or a far one seen edge-on); a lamp more than 80° away is off the plot. The
       plate's is a bell around its mirror direction. The bottom plot shows the weights MIS gives each. On the rough
       plate under the tiny lamp, the plate's bell is low and wide and the lamp's hump is tall: the tiny lamp's light
-      counts almost entirely through the lamp strategy (weight 0.99).</p>
+      counts almost entirely through the lamp strategy (weight 0.99, the narrow <span data-say="light">orange</span>
+      spike in the bottom plot). Elsewhere the plate's weight is 1, but there is no lamp there (shaded): no light
+      arrives from those directions, so their weights count nothing. Only the stretches under a lamp matter.</p>
     <p data-step="weights:sharp">On the sharp plate under the long lamp, the plate's bell is a narrow spike far above the
       long lamp's low hump, and the weights turn round: in the mirror direction, the plate's way counts entirely. Move
       the point along the plate and change the plate, and watch the weights follow whichever density is higher. Where
@@ -129,13 +137,13 @@
       the maths' <var>f</var>) and how likely its own sampling was to pick it (<code>lobesPdf</code>, the maths'
       <var>p</var><sub>plate</sub>), and the shadow ray carries the weighted contribution:</p>
     <pre data-src="lib/pathtracer/core/materials_pbr.js" data-sym="let f = lobesEval(lobes, L, neeMinAlpha);" data-to="let contrib = res.r.beta * f * NoL * le * (w / dS);"
-         data-why="L is the direction picked; NoL is cos θ; le is the maths' Le; pS is the lamp strategy's density for L (the maths' p_lamp), and dS what the contribution is divided by, the same number here, kept apart because other kinds of light divide by something else. fast is a quick preview mode that does no plate-side weighing at all, so its shadow rays count in full and nothing is counted twice." data-hash="f53ec978"></pre>
+         data-why="L is the direction picked; NoL is cos θ; le is the maths' Le; pS is the lamp strategy's density for L (the maths' p_lamp), and dS what the contribution is divided by, the same number here, kept apart because other kinds of light divide by something else. res.r.beta is the path's throughput, chapter 13's β (nothing to do with the power heuristic's 2). select(a, b, c) is b when c is true and a otherwise: WGSL's order, the reverse of JavaScript's c ? b : a. fast is a quick preview mode that does no plate-side weighing at all, so its shadow rays count in full and nothing is counted twice." data-hash="f53ec978"></pre>
     <p>The plate side's weight is worked out at the bounce, when the direction is chosen, but used later: whether the
       ray meets a light is only known when it arrives, maybe many rounds later. So the weight is computed here and
       carried on the ray. This part is for the sun and the sky; chapter 16 does the same for glowing surfaces, with the
       density kept as <code>prevPdf</code>:</p>
     <pre data-src="lib/pathtracer/core/materials_pbr.js" data-sym="let above = dot(nrm, res.r.dir) > 0.0 &amp;&amp; !smp.isDelta;" data-to="res.r.prevPdf = select(-1.0, pBout, above);"
-         data-why="above: the direction leaves the surface on the lit side and is not a perfect mirror's or clear glass's single direction, so the lamp strategy could have picked it. pLout is the lamp strategy's density there (its share of shadow rays times the sun and sky's density), and stays 0 otherwise; pBout the plate's. sunmis is the weight the ray applies if it reaches the sky or the sun: 1 where pLout is 0." data-hash="9e417a46"></pre>
+         data-why="above: the direction leaves the surface on the lit side and is not a perfect mirror's or clear glass's single direction, so the lamp strategy could have picked it. pLout is the lamp strategy's density there: the sun and sky's own density, times the share of shadow rays sent neither to lamps' faces nor to glowing surfaces (the two 1 − …); it stays 0 otherwise. pBout is the plate's density (pOut, worked out once above). prevPdf of −1 means "the lamp strategy could not have picked this". sunmis is the weight the ray applies if it reaches the sky or the sun: 1 where pLout is 0." data-hash="9e417a46"></pre>
   </div>
 </section>
 
@@ -146,8 +154,9 @@
     <div data-claim="code">
       <p><strong>Only against a way that could have found it.</strong> A direction the lamp strategy could never pick
         (below the surface, or a perfect mirror's single direction, which aiming cannot hit) keeps weight 1: weighing it
-        against a density of zero would be right, but weighing it against a density that is <em>not</em> zero where it
-        should be loses light (the two stories below).</p>
+        against a density of zero would be right. Weighing it against the lamp strategy's density where that should be
+        zero but is not gives it a weight below 1, and the lamp strategy never makes up the rest: light lost (the glass
+        ball, in section 5).</p>
     </div>
     <div data-claim="measured">
       <p><strong>Both must estimate the same thing.</strong> MIS is unbiased only if the two strategies multiply in the
@@ -155,9 +164,12 @@
         <code>roadmap/PLAN.md</code>, "Emissive surfaces as lights"), the lamp strategy evaluated its own approximation
         of the material while the bounce sampled the real one. A setting decides what share of shadow rays go to
         glowing surfaces, and the picture's brightness moved with it: −1.2% with no shadow rays at all, −0.9% at a share
-        of 0.2, 0 at 0.5 (the default, which the others are measured against), +0.5% at 0.9. Each strategy's weight
-        grows with how often it is used, so when the two estimate different things, the mix of them moves with the
-        share. With the lamp strategy asking the material the bounce samples, the second run's rows all agreed within
+        of 0.2, 0 at 0.5 (the default, which the others are measured against), +0.5% at 0.9. The share is a factor of
+        the lamp strategy's density (a direction is picked only if a shadow ray goes that way at all), so a bigger share
+        means a bigger <var>p</var><sub>lamp</sub> and a bigger weight: when the two estimate different things, the mix
+        of them moves with the share. Which row was right, the document does not say; with no shadow rays only the
+        bounce counts, with the real material, so that row is the likelier one (inferred), and the default read about
+        1% too bright. With the lamp strategy asking the material the bounce samples, the second run's rows all agreed within
         0.25%. The code now says so beside the call: "what the sampler samples".</p>
     </div>
   </div>
@@ -168,9 +180,12 @@
     <h2><span class="n">5</span>What went wrong before</h2>
     <ul>
       <li><strong>A glass ball with a plain shadow.</strong> Under the sun a glass ball should cast a shadow with a
-        bright spot in it, the sun focused through the glass (a <a data-g="caustic">caustic</a>, chapter 18). A ray
-        refracted out of glass towards the sun was weighed against the lamp strategy, whose density the sun's cone gave
-        as not zero there, although the lamp strategy only ever aims at directions above the surface. And the plate
+        bright spot in it, the sun focused through the glass (a <a data-g="caustic">caustic</a>, chapter 18). The light
+        that makes the spot comes the long way round: a path from the camera reaches the floor in the shadow, bounces up
+        into the ball, and leaves it on the far side, refracted towards the sun. At that last point, on the ball's
+        surface, "above the surface" means the side the ray came from, and the lamp strategy only ever aims there; the
+        refracted ray goes through, to the other side. Yet it was weighed against the lamp strategy, whose density the
+        sun's cone gave as not zero. And the plate
         side's own density was 0: clear glass refracts into one single direction, which a density spread over directions
         cannot describe, so the code counts it as 0. Its weight came out 0² / (0² + p<sub>lamp</sub>²) = 0; the lamp
         strategy never produced it either; so the sun through glass was counted by neither, and a glass ball cast a plain

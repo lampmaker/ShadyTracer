@@ -70,18 +70,26 @@
       written to follow ShadyTracer's rules, and where ShadyTracer has a piece of JavaScript that does the job (the
       formula for a shape, the way two shapes melt together, its random numbers, its lens: each explained in its
       chapter), the figure runs that very code.</p>
+    <p>The figures show the renderer at work, so here it is in brief (chapter 1 builds it). The picture is a grid of
+      pixels. For each pixel the renderer sends a <em>ray</em>, a line with a start and a direction, out from the eye
+      through that pixel: a camera ray. That is backwards to the way light goes, into the eye, and it is done on
+      purpose: only the light that reaches the eye makes the picture, so the renderer starts where that light ends.
+      It finds the first surface the ray hits, and from there sends a shadow ray towards each lamp: if nothing is in the
+      way, the lamp lights that point. Then the ray bounces on, as light does, and the light it meets on the way is
+      added up into the pixel.</p>
     <p>The menu at the top right of every page chooses a <em>style</em>, the look of the pages and their figures. Within
       a style, the same colour and line mean the same thing in every figure. This is the key, drawn in the style you are
-      reading in (a step of the march is a circle for a reason chapter 2 gives; why rays leave the eye rather than enter
-      it, chapter 1). A circled cross (⊕) is a handle: drag it with the mouse or a finger, or click it and use the
-      arrow keys. A figure that is three-dimensional turns when you drag its background.</p>
+      reading in. Most of its entries you will meet in the next few chapters (a step of the march is a circle for a
+      reason chapter 2 gives); come back to it when a figure puzzles you. A circled cross (⊕) is a handle: drag it with
+      the mouse or a finger, or click it and use the arrow keys. A figure that is three-dimensional turns when you drag
+      its background.</p>
     <p>Below each figure: its controls (sliders, switches), and a line of text, its readout, that says in numbers what
       the figure is showing now. When a paragraph says "the readout", it means that line.</p>
   </div>
   <figure class="fig" data-fig="key">
-    <figcaption>The key: a <a data-g="camera-ray">camera ray</a>, a lamp's light, a <a data-g="shadow-ray">shadow
-      ray</a>, a blocked ray, a <a data-g="normal">normal</a>, a step of the <a data-g="march">march</a>, a solid shape,
-      and a handle.</figcaption>
+    <figcaption>The key: a <a data-g="camera-ray">camera ray</a>, a lamp's light, a glowing line, a
+      <a data-g="shadow-ray">shadow ray</a>, a blocked ray, a <a data-g="normal">normal</a>, a step of the
+      <a data-g="march">march</a>, a solid shape, and a handle.</figcaption>
   </figure>
 </section>
 
@@ -92,19 +100,26 @@
       world</a>. A slice can be drawn whole, and its shapes dragged. The ideas are the same as in ShadyTracer's 3D
       scenes, but a few numbers are not, and this figure shows why. A lamp sends its light out in every direction. In
       the flat world it spreads around a circle; in 3D, over a sphere.</p>
-    <p data-step="spread:far">Drag the handle out to twice the distance. The circle is twice as long, so the same piece
-      of surface catches half the rays: the light falls as 1/<var>r</var>. A sphere twice as far has four times the
-      area, so in 3D the same piece gets a quarter: 1/<var>r</var>². The flat world's light weakens more slowly than
-      the real world's.</p>
-    <p>The same happens to other laws: anything that spreads light over directions spreads it over a half-circle in the
-      flat world and over a half-sphere in 3D, so the numbers in its formula differ too (chapter 8 shows one). Wherever
-      a formula changes between flat and 3D, the page says so, and the figures that need the real laws are 3D.</p>
+    <p data-step="spread:near">The lamp's rays are drawn 10° apart, round the circle in the flat world and each way over
+      the sphere in 3D. At a distance <var>r</var> = 1 the piece of surface catches 4 of the flat world's 36, and the
+      square patch in 3D catches 4 × 4 = 16 (the dots where they cross it).</p>
+    <p data-step="spread:far">Drag the handle out to twice the distance. The circle round the lamp is 2π<var>r</var>
+      long, twice as long now, so the same piece of surface catches half the rays, 2: the light falls as
+      1/<var>r</var>. A sphere's area is 4π<var>r</var>², four times as large at twice the distance, so in 3D the same
+      patch catches half as many rays each way, 2 × 2 = 4, a quarter: 1/<var>r</var>². The flat world's light weakens
+      more slowly than the real world's. (In between, the counts jump: a piece catches whole rays. The laws describe
+      the light, which is spread evenly; the drawn rays only sample it.)</p>
+    <p>The same happens to other laws. A lamp shines every way, but a surface sends light out to one side only, its
+      front: the light leaving a surface spreads over a half-circle in the flat world and over a half-sphere in 3D, so
+      the numbers in its formula differ too (chapter 8 shows one). Wherever a formula changes between flat and 3D, the
+      page says so, and the figures that need the real laws are 3D.</p>
   </div>
   <figure class="fig" data-fig="spread">
-    <figcaption>A lamp's light spreading. Left, the flat world: 36 rays, and a piece of surface (the thick arc at the
-      top of the dashed circle) catching some of them, drawn bold; drag the handle (⊕), or set the distance with the
-      slider, to move the piece further away. Right, 3D: the same light over a sphere, and the same piece, a small
-      square patch seen in perspective at its top, with the rays that reach its corners.</figcaption>
+    <figcaption>A lamp's light spreading, its rays drawn as the key draws a lamp's light. Left, the flat world: 36
+      rays, and a piece of surface (the thick arc at the top of the dashed circle, drawn as a solid shape) catching
+      some of them, drawn bold; drag the handle (⊕), or set the distance with the slider, to move the piece further
+      away. Right, 3D: the same light over a sphere, the same piece as a small square patch seen at a slant at its top,
+      and the rays it catches, each to a dot where it crosses the patch; in the corner, the patch close up.</figcaption>
   </figure>
 </section>
 
@@ -114,7 +129,9 @@
     <p>Code is never copied into a page. Each piece is named (a file and a function, or a line it starts with), and
       your browser reads it from ShadyTracer's own files when the page opens, so it is the code as it is today. Above
       it: the file and its lines (a link to them on GitHub), the language, and a line of plain words saying what to
-      look for. Here is a short one, the formula chapter 3 uses to melt two shapes together:</p>
+      look for. Here is a short one, the formula chapter 3 uses to melt two shapes together. You are not meant to
+      follow it yet: it is here to show what a piece of code looks like on a page, and the line above it is what to
+      read. Chapter 3 explains it.</p>
     <pre data-src="help/widgets.js" data-sym="export const smin"
          data-why="a and b are two distances, k how far the melting reaches. With k at 0 or less it is the plain smaller of the two (Math.min); otherwise it takes a little off where a and b are within k of each other. Math.abs is a number's size without its sign." data-hash="6a4c9896"></pre>
     <p>ShadyTracer's code is in two languages. The parts that run on the main processor are JavaScript. The parts the
@@ -138,8 +155,8 @@
     <div data-claim="measured">
       <p><strong>Measured</strong>: someone ran it and wrote the number down. A speed, or anything about the picture the
         renderer makes, is measured on a real graphics card, and the page says whose and which card (chapter 14's cost of
-        shadow rays is one). A count or a calculation can be measured by a program on any computer (in an imitation of
-        the GPU's numbers, say), and the page names that program. Either way it says the number and where it is
+        shadow rays is one). A count or a calculation can be measured by a program on any computer (in a program that
+        imitates the GPU's own arithmetic, with its 32-bit numbers, say: chapter 4), and the page names that program. Either way it says the number and where it is
         recorded.</p>
     </div>
     <div data-claim="code">
@@ -152,8 +169,9 @@
     </div>
     <p>Why not measure speed on any computer? Because ShadyTracer's speed is the graphics card's, and a computer without
       one can only imitate it, slowly and differently. So every number about speed comes from someone's own card; when
-      a page says <em>the user</em>, as the project's own notes do, it means the person who works on ShadyTracer and
-      measures it on their own cards: NVIDIA ones, of the Pascal family or the newer Ampere. They
+      a page says <em>the user</em>, as the project's own notes do, it means ShadyTracer's developer, the person who
+      builds it and measures it on their own graphics cards. There are two, both made by NVIDIA, of the generations it
+      calls Pascal (older) and Ampere (newer). They
       open ShadyTracer, choose <strong>View › Tests</strong> and press a test's button; a table of results appears
       with a <strong>Copy</strong> button, and that table is pasted back into the project's notes. Its first line names
       the exact code it ran, then the picture's size and the graphics card
@@ -174,16 +192,22 @@
     <p>The quickest way is the published copy: open <a href="https://lampmaker.github.io/ShadyTracer/">lampmaker.github.io/ShadyTracer</a>
       in a browser with <a data-g="webgpu">WebGPU</a>. To run your own copy, and read and change its code, you need two
       common programs installed first: <strong>git</strong>, which fetches the code, and <strong>Python 3</strong>,
-      whose one-line web server serves it (any web server will do). Then, in a terminal:</p>
+      whose one-line web server serves it (any web server will do). Then open a terminal, the window you type commands
+      into (Terminal on a Mac, PowerShell on Windows, any terminal on Linux), and type these three commands, one at a
+      time, pressing Enter after each:</p>
     <pre class="cmd">git clone --recursive https://github.com/lampmaker/ShadyTracer.git
 cd ShadyTracer
 python3 -m http.server 8000</pre>
-    <p>and open <code>http://localhost:8000/</code>. What it needs:</p>
+    <p>The first fetches the code into a new folder, the second goes into it, and the third starts a web server there,
+      which keeps running until you close the terminal. Then open <code>http://localhost:8000/</code> in the browser:
+      <code>localhost</code> is your own computer, and 8000 the number the server listens on, so the address asks your
+      own computer for the files the server is serving. What it needs:</p>
     <ul>
       <li><strong>A browser with WebGPU</strong>: Chrome or Edge 113 or later, Firefox 141 or later on Windows, or
-        Safari 26 or later.</li>
+        Safari 26 or later. Not sure? Open the published copy: if a picture appears, your browser has it.</li>
       <li><strong>Real graphics hardware</strong>, not a software imitation of it. The results in these chapters were
-        measured on NVIDIA cards.</li>
+        measured on NVIDIA cards, which is where the numbers come from, not a demand of the program: ShadyTracer's
+        README asks only for a real graphics card.</li>
       <li><strong>A web server</strong>, even the one-line one above: opened straight from the disk
         (<code>file://</code>), the page does not work. ShadyTracer's README says why: WebGPU is only given to a page
         the browser counts as a "secure context", and one served from <code>localhost</code> is. This tutorial is
@@ -193,8 +217,8 @@ python3 -m http.server 8000</pre>
         <code>--recursive</code>, <code>git submodule update --init</code> fetches them.</li>
     </ul>
     <p>Nothing of ShadyTracer's own is built or installed: the files in the repository are the program. If a scene you made stops the program
-      from starting, add <code>?safe</code> to the address: it starts without compiling your scene (and does so by
-      itself after a start that never finished).</p>
+      from starting, add <code>?safe</code> to the address: it starts without compiling your scene, that is, without
+      turning it into code for the graphics card (and does so by itself after a start that never finished).</p>
   </div>
 </section>
 
@@ -205,17 +229,21 @@ python3 -m http.server 8000</pre>
       <code>node</code>, a program that runs JavaScript outside a browser (install it too). They check everything that
       can be checked without a graphics card, and come in three kinds, by the end of their names:</p>
     <ul>
-      <li><code>*.test.mjs</code>: plain checks, no graphics card. GitHub runs all of them on every proposed change (a
+      <li><code>*.test.mjs</code> (any name ending in <code>.test.mjs</code>: the * stands for the rest of the name):
+        plain checks, no graphics card. GitHub runs all of them on every proposed change (a
         <em>pull request</em>), and so should you before you propose one: the list is in <code>CLAUDE.md</code>, the
         repository's notes for whoever changes the code, and the check on GitHub reads it from there
         (<cite data-src=".github/workflows/test.yml" data-sym="for t in lib/pathtracer/core/check-shaders.mjs"></cite>).</li>
       <li><code>*.gpu.mjs</code>: run the real kernels on a graphics card simulated in software (they need the
-        <code>webgpu</code> package for node). Slow, and a check of correctness, never of speed.</li>
+        <code>webgpu</code> package for node, installed with <code>npm i -g webgpu</code>, and lavapipe, a graphics
+        card done in software; each test says so when one is missing). Slow, and a check of correctness, never of
+        speed.</li>
       <li><code>*.check.mjs</code>: open the pages in a browser that a program drives, with no window (they need
         Playwright, a tool for that).</li>
     </ul>
-    <p>And one more, to run before every change: <code>node lib/pathtracer/core/check-shaders.mjs</code>. It loads every
-      kernel against every example scene and checks what a browser would otherwise only find when the page fails to
+    <p>And one more, to run before every change: <code>node lib/pathtracer/core/check-shaders.mjs</code>. Most kernels' code
+      depends on the scene they draw (chapter 24), so it puts every kernel together with every example scene, as the
+      page would, and checks what a browser would otherwise only find when the page fails to
       start. Its first comment says why it exists:</p>
     <pre data-src="lib/pathtracer/core/check-shaders.mjs" data-sym="/* A BACKTICK IN A WGSL COMMENT ENDS THE SHADER" data-to="that simply never renders."
          data-why="A kernel is a piece of text inside JavaScript, between backticks. A backtick typed inside it ends the text early, and the error shows up somewhere else entirely." data-hash="8d46fd7c"></pre>
@@ -239,7 +267,8 @@ python3 -m http.server 8000</pre>
     <ul>
       <li>In the flat world figure, set the distance to 1.0 and then to 2.0 (the handle or the slider). Count the bold
         rays that reach the piece each time (the readout counts them too).</li>
-      <li>Open ShadyTracer, press F1, and find the page on signed distance functions. Then read chapter 2 here: the
+      <li>Open ShadyTracer, press F1, and find the page on signed distance functions (shapes described by how far each
+        point is from them). Then read chapter 2 here: the
         Help says how to use them, the chapter how they work.</li>
       <li>In your own copy, run <code>node lib/pathtracer/core/check-shaders.mjs</code>. Then open
         <code>lib/pathtracer/core/lens.js</code>, find the comment that starts <code>/* a point of the lens's disc</code>

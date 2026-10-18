@@ -132,7 +132,15 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   reader could say each chapter's idea back, and was lost where a step of maths assumed calculus, where a number in the
   text did not show its working against the readout (0.48 from a formula giving 0.175; 0.96 from numbers giving 0.98),
   or where a word named a colour or line the figure drew otherwise. Each chapter was revised for it, every finding
-  fixed or answered in `REVIEWS.md`.
+  fixed or answered in `REVIEWS.md`. A fourth round read the same eight again: round 3's fixes held, and the readers
+  found three figures that did not show what their paragraphs said. Chapter 16's tight boxes were drawn off the canvas
+  (`pen.rect` takes world units and was handed pixels); chapter 17's streak ran off the top of its picture; chapter 0's
+  3D side could not be counted (it now catches 16 rays at r = 1 and 4 at r = 2, with a close-up). Chapter 16 now lists
+  its cells as often as the engine does (every second sample, `EMIT_EPOCH`, tested against `raytrace_main.js`), so a
+  one-sample picture aims at nothing yet; chapter 17 explains why a lens focuses and why a point camera cannot see a
+  floor through glass, and shows the grain of a 2-sample picture; chapter 0 says how the renderer works before its key,
+  and what a terminal and `localhost:8000` are. The key gained a glowing line. `tutorial/review/affected.mjs` died once
+  the branch's diff passed `execFileSync`'s 1 MB default (ENOBUFS); its buffer is raised.
 - **Where to read more** (you: "add a box with recommended external references, eg where you learned the info. Inigo
   quilez definitely needs to be named. Probably more than once"): reading boxes beside the sections they belong to,
   every chapter at least one, from one list (`tutorial/kit/reading.js`) whose every link was opened and checked. Inigo
@@ -163,6 +171,8 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   pages run, not that they read well.
 
 What to look at:
+- **Chapter 16's first figure**: 1 sample (boxes, nothing circled), then 8. Chapter 17's side view, *near*: the ray from
+  the lens's top edge, in its own colour, and its mark on the picture; and its 3D picture's *the first 2* samples. Chapter 0's lamp figure at r = 1 and 2.
 - **The new styles.** Lab notebook's new lettering; Chalkboard (try it dark); the three drafting versions side by side
   on `tutorial/styles.html`. Do the drafting ones read the colours right: the text says "black" where they draw black?
 - **Pointing at a chart.** Any chart: chapter 13's bars and curves, chapter 15's strips and densities, chapter 16's

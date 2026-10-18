@@ -185,6 +185,18 @@ export const figures = {
                 hoverX: v => `${v.toFixed(0)}° from straight up`, hoverY: v => v.toFixed(2),
             })
             for (const d of [-80, -40, 0, 40, 80]) pen.labelPx(X(d) - 12, bot.y + bot.h + 4, `${d}°`, { role: 'soft', size: 11, kind: 'mono' })
+            // the directions where no lamp lies, shaded: no light arrives there, so their weights count nothing
+            {
+                const { ctx } = pen
+                ctx.save(); ctx.fillStyle = pen.col('faint'); ctx.globalAlpha = 0.16
+                let a = null
+                ts.forEach((t, i) => {
+                    const none = !pl(t), last = i === ts.length - 1
+                    if (none && a === null) a = deg(t)
+                    if (a !== null && (!none || last)) { ctx.fillRect(X(a), bot.y, X(deg(t)) - X(a), bot.h); a = null }
+                })
+                ctx.restore()
+            }
             const { ctx } = pen, xm = X(deg(mirrorAngle(s.x)))
             ctx.save(); ctx.strokeStyle = pen.col('accent'); ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(xm, top.y); ctx.lineTo(xm, bot.y + bot.h); ctx.stroke(); ctx.restore()
             pen.labelPx(xm + 4, top.y + top.h - 16, 'mirror direction', { role: 'accent', size: 12 })

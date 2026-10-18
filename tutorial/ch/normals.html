@@ -40,14 +40,17 @@
       radius is 0.95), and on the curved surface both arrows were a little off: forward by 3.9°, central by 0.6°. The
       surface bends within the step. Here the step is a tenth of that: forward is 0.5° off, central 0.0°. Halve the step
       and forward's error halves, but central's falls to a quarter: forward measures the slope half a step to one side of
-      the point, central measures it centred on the point. So central is far better for the same step, and costs twice
-      the looks.</p>
+      the point, central measures it centred on the point. (Here forward fell to an eighth, not a tenth: the halving
+      rule holds once the step is small, and 0.3 is a third of the circle's radius.) So central is far better for the
+      same step, and costs twice the looks. ShadyTracer's renderer still uses forward differences: three looks in 3D
+      instead of six, at a step so small (section 3) that forward's error does not show.</p>
     <p data-step="slope:crease">Near a <em>crease</em>, where the circle meets the box, a step can land on the other
       shape. Here the probe is on the circle, a short way from the crease: the central differences' looks to the left
       and below land in the box's field, and their arrow leans 20° towards the box's own normal (straight up from its
       top). The forward looks go right and up,
       away from the box, and stay within 7°.</p>
-    <p data-step="slope:creaseSmall">With a step a tenth as big, no look reaches the box, and both are right again. A
+    <p data-step="slope:creaseSmall">With a step a tenth as big, no look reaches the box, and both are nearly right
+      again (forward 0.8° off, central 0.0°). A
       differences normal blurs every crease over about one step's width; with ShadyTracer's step, a hair's breadth
       (section 3), nobody sees it.</p>
     <details class="maths">
@@ -77,9 +80,10 @@
     </ul></aside>
   </div>
   <figure class="fig" data-fig="slope">
-    <figcaption>A circle and a box, joined; the thin lines are places of equal distance. At the probe: the exact normal,
-      and the normal by forward differences (two looks, the plain dots, right and up) and by central ones (four, the
-      ringed dots: two of them where forward's are), each arrow labelled (where two arrows agree, their labels sit
+    <figcaption>A circle and a box, joined; the thin lines are places of equal distance. At the probe: the exact normal
+      (<span data-say="normal">purple</span>), and the normal by forward differences (<span data-say="cam">blue</span>:
+      two looks, the plain dots, right and up) and by central ones (<span data-say="accent">red</span>: four, the
+      ringed dots, two of them where forward's are), each arrow labelled (where two arrows agree, their labels sit
       together). Drag the probe; the slider sets the step, in the figure's units.</figcaption>
   </figure>
 </section>
@@ -104,26 +108,36 @@
       at about 0.7 mrad. The renderer's floor is lower than that because it is only a floor: the step it really takes is
       the surface tolerance, which is usually larger (section 3).</p>
     <p data-step="grain:tiny">A shape much smaller than its distance from the origin is different: a circle of radius
-      one millimetre, a metre away. Here f32's part stays small at every step (the <span data-say="blocked">red</span> curve; the renderer's own floor
-      test finds the same, and puts it down to the shape's numbers being its own size), but at 128 spacings, 15 µm, the
-      step is a fair part of the circle's size, and its normal is off by 7.7 mrad, smoothly.</p>
+      one millimetre, a metre away. Here f32's part stays small at every step (the <span data-say="blocked">red</span>
+      curve; the renderer's own floor test finds the same, and puts it down to the shape's numbers being its own size).
+      That backwards-sounding result has a reason: the circle's distance is worked out from the point less its centre,
+      two numbers near a metre whose difference is about a millimetre and comes out exactly, and from then on every
+      number is millimetre-sized, with f32's spacing a thousand times finer than at a metre. But at 128 spacings, 15
+      µm, the step is a fair part of the circle's size, and its normal is off by 7.7 mrad, smoothly.</p>
   </div>
   <figure class="fig" data-fig="grain">
     <figcaption>Left: the circle (drawn large whatever its size), its surface a thick ring lit from the upper left, with a
       shine, through its normals by forward differences worked out in f32 at the chosen step; the dashed circle inside
       only marks it. Outside it, a tick for each normal, as long as its error (a tick as long as the circle's radius
-      would be 200 mrad). Right: the worst angle error around it (bold) against the step, on scales where each mark is
-      ten times the last, and its two parts: f32's rounding and the step's own error. The dashed line is the renderer's
-      floor of 128 spacings.</figcaption>
+      would be 200 mrad). Right: the worst angle error around it (bold) against the step, and its two parts: f32's
+      rounding (dashed, <span data-say="blocked">red</span>) and the step's own error. Both scales are logarithmic: up
+      the side each mark is ten times the last, and along the bottom the steps are in spacings of f32 (1, 16, 128 …). The
+      dashed upright line is the renderer's floor of 128 spacings.</figcaption>
   </figure>
 </section>
 
 <section class="plain wide" id="floor">
   <div class="prose">
     <h2><span class="n">3</span>The step ShadyTracer takes</h2>
-    <p>The renderer's step for a normal is its surface tolerance at the point (chapter 2), never smaller than a floor of
-      128 × 2⁻²³ times the point's largest coordinate. That is 128 to 256 spacings of f32 there, depending on where the
-      coordinate sits between two powers of two; the figure above counts the floor as 128.</p>
+    <p>The renderer's step for a normal is its surface tolerance at the point (chapter 2): the distance at which a ray
+      counts as having hit. One number does both jobs, because a normal by differences only has to see the surface at
+      the scale the march sees it. Unless a scene sets its own, the tolerance is a ten-thousandth of the scene's size,
+      never coarser than a millimetre: 0.1 mm for a scene a metre across.</p>
+    <p>It is never smaller than a floor of 128 × 2⁻²³ times the point's largest coordinate. 2⁻²³ (about 0.00000012) is
+      f32's spacing just above 1: a number between 1 and 2 is kept in steps of 2⁻²³, between 2 and 4 in steps twice
+      that, and so on. So 2⁻²³ times a coordinate is one to two spacings there, and the floor is 128 to 256 spacings,
+      depending on where the coordinate sits between two powers of two; the figure above counts it as 128. At a metre
+      from the middle of the scene, that is 15 µm.</p>
     <pre data-src="lib/pathtracer/core/tolerances.js" data-sym="// THE ONE TOLERANCE." data-to="whatever the setting."
          data-why="marchTol is the tolerance at point p, in metres, the larger of three: the setting (UB.eps, or at 0 the automatic one the scene sets, sceneEps and autoEps), a never-zero minimum (TOL_MIN_M, a nanometre), and the floor. A tolerance set finer than the floor is not given." data-hash="f851cec4"></pre>
     <div data-claim="measured">
@@ -131,10 +145,13 @@
         through <code>Math.fround</code>, 2026-10-07; not on a GPU): the worst noise in a normal by differences, on spheres
         and turned boxes a tenth to a third of their distance from the origin, at a step of K spacings, was about 700
         mrad at K = 1, 150 at 4, 44 at 16, 11 at 64, 5 at 128 and 2 at 256 (<code>lib/pathtracer/PRECISION.md</code>).
-        The figure above is the same sum in 2D, and its numbers are of the same size. The same document says what the
-        floor is <em>not</em> for: in the emulation every march ended at a tolerance of a single spacing. (The comment
-        above also says the march "can stall" below about a hundred spacings; the emulation did not find that, and the
-        floor test claims only what it found.)</p>
+        The figure above is the same kind of sum in 2D, with fewer numbers in it to round, so smaller errors at small
+        steps: 2.2 mrad at 128 against 5. The document states no threshold; its rule is that "below a hundred or so
+        spacings, a surface's shading is f32's pattern", and 128 is the first power of two past that, where the noise is
+        about 5 mrad, a third of a degree (inferred: the document does not say why 128 rather than 100). So the floor is
+        for the normal's noise. It is <em>not</em> for the march: in the same emulation every march ended at a tolerance
+        of a single spacing. The code's comment above also says the march "can stall" below about a hundred spacings;
+        the emulation did not find that, and this page goes by what was found.</p>
     </div>
   </div>
 </section>
@@ -195,8 +212,11 @@
   <div class="prose">
     <h2><span class="n">6</span>What went wrong before</h2>
     <ul>
-      <li><strong>A normal that was not one unit long.</strong> The GPU's <code>sign(0)</code> is 0, which made normals
-        of the wrong length on an axis (chapter 2); the newer shapes use a comparison instead.</li>
+      <li><strong>A normal that was not one unit long.</strong> <code>sign(x)</code> gives −1, 0 or 1, the side of zero
+        x is on. A normal built from the signs of the point's coordinates (an octahedron's, where this was measured) loses
+        a part of its arrow exactly on an axis or a fold, where a coordinate is 0 and its sign 0: an arrow shorter than
+        one unit. The newer shapes ask "is it at or above zero?" instead, <code>select(-1, 1, x &gt;= 0)</code>, which is
+        always −1 or 1 (the comment at the top of <code>shapes.js</code>).</li>
       <li><strong>A normal that was not a number</strong> deleted its surface: making a zero arrow one unit long divides
         by zero, and the surface then fails the facing test every surface goes through (chapter 3). Every normalize in the
         newer shapes is guarded.</li>

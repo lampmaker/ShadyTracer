@@ -96,7 +96,18 @@ export const figures = {
             const [x, y] = s.probe, L = 0.85
             const tip = (n, l = L) => [x + n[0] * l, y + n[1] * l]
             // each arrow's name beyond its tip, at a distance of its own, so names of arrows pointing alike do not collide
-            const name = (n, text, role, l) => pen.label(tip(n, l), text, { role, size: 14, align: 'center', bg: true })
+            /* each arrow's name beyond its tip, at a distance of its own, so names of arrows pointing alike do not collide;
+               pulled back along the arrow, all three by the same amount, where the farthest would leave the drawing (an
+               arrow pointing up from near the top hid two of the three names) */
+            const lMax = n => {
+                const m = 16 / pen.view.s, [x0, x1] = [(m * pen.view.s - pen.view.ox) / pen.view.s, (pen.view.W - m * pen.view.s - pen.view.ox) / pen.view.s]
+                const [y1, y0] = [(pen.view.oy - m * pen.view.s) / pen.view.s, (pen.view.oy - pen.view.H + m * pen.view.s) / pen.view.s]
+                let t = Infinity
+                if (n[0] > 1e-9) t = Math.min(t, (x1 - x) / n[0]); if (n[0] < -1e-9) t = Math.min(t, (x0 - x) / n[0])
+                if (n[1] > 1e-9) t = Math.min(t, (y1 - y) / n[1]); if (n[1] < -1e-9) t = Math.min(t, (y0 - y) / n[1])
+                return t
+            }
+            const name = (n, text, role, l) => pen.label(tip(n, Math.min(l, lMax(n) - (L + 0.68 - l))), text, { role, size: 14, align: 'center', bg: true })
             const ex = exact(x, y)
             pen.ray(s.probe, tip(ex), { role: 'normal', w: 1.6 })
             name(ex, 'exact', 'normal', L + 0.16)
@@ -158,9 +169,10 @@ export const figures = {
                 x: [0, 16], y: [-1, 3.3], xticks: [], yticks: [-1, 0, 1, 2, 3], fmt: v => String(+(10 ** v).toPrecision(1)),
                 hoverX: i => `spacing ${KS[Math.round(i)] < 0.01 ? KS[Math.round(i)].toExponential(1) : +KS[Math.round(i)].toPrecision(2)}`, hoverY: v => `${(10 ** v).toPrecision(2)} mrad`,
                 series: [
-                    { name: 'from the step', pts: curve('step'), role: 'soft', w: 1 },
-                    { name: 'f32 noise', pts: curve('noise'), role: 'blocked', w: 1 },
+                    // the worst first, so its two parts are drawn over it: the f32 part dashed, seen where it is the worst
                     { name: 'worst', pts: curve('all'), role: 'ink', w: 1.6 },
+                    { name: 'from the step', pts: curve('step'), role: 'soft', w: 1 },
+                    { name: 'f32 noise', pts: curve('noise'), role: 'blocked', w: 1.3, dash: [5, 3] },
                     { pts: [[s.k, lg(grainErrors(s.frac, K).all)]], role: 'accent', kind: 'dots', r: 4.5 },
                 ],
             })

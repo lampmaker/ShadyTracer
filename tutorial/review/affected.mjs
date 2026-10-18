@@ -73,7 +73,8 @@ export function affected(changes, all = ties()) {
 
 /** The changed files and their changed lines (new side) since the branch left `base`, working tree included. */
 export function changesSince(base) {
-    const git = (...a) => execFileSync('git', a, { cwd: REPO, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
+    // the diff of a branch that adds the tutorial itself passed execFileSync's default 1 MB and killed the run (ENOBUFS)
+    const git = (...a) => execFileSync('git', a, { cwd: REPO, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 1 << 30 })
     const from = git('merge-base', base, 'HEAD').trim()
     const files = new Map()
     for (const line of git('diff', '-U0', '--no-color', from).split('\n')) {

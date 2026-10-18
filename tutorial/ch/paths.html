@@ -41,20 +41,21 @@
     <details class="maths">
       <summary><span class="tag">The maths</span>The path's estimate</summary>
       <div class="body">
-        <p>A path with bounces at points 1, 2, … <var>k</var> that ends on a light of radiance <var>L</var><sub>e</sub>
-          returns</p>
+        <p>A path with bounces at points 1, 2, … <var>k</var> that ends on a light of brightness <var>L</var><sub>e</sub>
+          (its radiance, chapter 5) returns the light times the product of one factor a bounce; ∏ means "multiply
+          together", as Σ means "add together", here the factors of bounces 1 to <var>k</var>:</p>
         <p class="eq"><var>L</var> = β<sub><var>k</var></sub> <var>L</var><sub>e</sub>, &nbsp; β<sub><var>k</var></sub> =
           ∏<sub><var>i</var>=1…<var>k</var></sub> <span class="frac"><span><var>f</var><sub><var>i</var></sub> cos θ<sub><var>i</var></sub></span><span><var>p</var><sub><var>i</var></sub></span></span></p>
         <dl class="terms">
           <dt>f</dt><dd>how much light the surface sends from the new direction towards the old (its BSDF, chapter 8)</dd>
-          <dt>cos θ</dt><dd>the slant the light arrives at, as in chapter 1</dd>
+          <dt>cos θ</dt><dd>the slant the light arrives at: θ is its angle from the surface's normal, the arrow straight out of it, as in chapter 1</dd>
           <dt>p</dt><dd>how likely the random direction was to be picked (its probability density)</dd>
         </dl>
-        <p>For a matte surface of albedo ρ with directions picked in proportion to cos θ, every factor is exactly ρ:
-          the formula's <var>f</var> cos θ and <var>p</var> cancel all but the albedo. Averaged over many paths, these
-          estimates add up the light arriving after any number of bounces: the <em>rendering equation</em>, solved one
-          random path at a time. (∏ means "multiply together", as Σ means "add together": here the factors of bounces 1 to
-          <var>k</var>.)</p>
+        <p>For a matte surface of albedo ρ (the share it passes on), <var>f</var> = ρ/π, and with directions picked in
+          proportion to cos θ, <var>p</var> = cos θ/π (chapter 8 says where the π comes from). So each factor is
+          (ρ/π) cos θ / (cos θ/π) = ρ: everything cancels but the albedo. Averaged over many paths, these estimates add up
+          the light arriving after any number of bounces, which is what the <em>rendering equation</em> asks: the light
+          leaving a point is the light it gives off plus all the light arriving at it, passed on.</p>
       </div>
     </details>
   </div>
@@ -71,7 +72,7 @@
     <p data-step="cap:light">In a closed room a path never runs out of walls to hit, so a renderer has to stop it
       somewhere. The simplest rule is a cap: at most so many bounces. Whatever light the path would have found after
       that is lost. This figure traces paths from every pixel of the eye's film, each up to 40 bounces, and reads each
-      path's running total as it stood after 0 bounces, after 1, after 2, and so on: what that path would have brought
+      path's running total (the light it has gathered so far, not its β) as it stood after 0 bounces, after 1, after 2, and so on: what that path would have brought
       back with that cap. A cap of 0 is the lamp seen straight from the eye. Each bar is the average over all paths, in
       units of the lamp's brightness, against the <span data-say="accent">red</span> line, a cap of 40. With walls of albedo 0.8, a cap of 1 keeps 46%
       of the light, 3 keeps 72%, 8 keeps 95%.</p>
@@ -84,7 +85,10 @@
   <figure class="fig" data-fig="cap">
     <figcaption>The room's average light, in units of the lamp's brightness, with a cap of 0, 1, 2, 3, 4, 6, 8, 12, 20
       and 40 bounces (evenly spaced, though the caps are not): each bar is the average over every path read at that cap,
-      with its error bar; the <span data-say="accent">red</span> line is the cap of 40. It fills in as paths are traced.</figcaption>
+      with its error bar; the <span data-say="accent">red</span> line is the cap of 40. It fills in as paths are traced.
+      Each setting's plot is scaled to fit: the white room is about twice as bright as the light one. A cap of 40 is all
+      but the whole answer in the light room (0.8⁴⁰ is 0.0001), and a little short in the white one, where a path still
+      carries 0.95⁴⁰ = 0.13 after 40 bounces, if it gets that far.</figcaption>
   </figure>
 </section>
 
@@ -97,9 +101,12 @@
       to its β (kept between 0.1 and 0.95), and stops otherwise. A path that goes on divides its β by <var>p</var>, so it
       carries more, exactly making up for its stopped companions: on average, nothing is lost. In numbers: ten paths
       each carrying β = 0.2 would bring back 10 × 0.2 = 2 lamps' worth of light between them. Roulette keeps each with
-      a chance of 0.2: about two go on, each now carrying 0.2 / 0.2 = 1, and 2 × 1 is 2 again. The plot shows how many
+      a chance of 0.2: about two go on, each now carrying 0.2 / 0.2 = 1, and 2 × 1 is 2 again. That is true of every
+      survivor: with <var>p</var> equal to β, β / <var>p</var> is exactly 1, so a path that survives carries full
+      strength again, and goes on as long as a fresh one would. The plot shows how many
       paths end after each number of bounces, without roulette (thin <span data-say="soft">grey</span>) and with it (bold <span data-say="cam">blue</span>). Without it, a path
-      ends only when it finds the lamp (or at the cap of 40); with it, most paths end soon after the third bounce.</p>
+      ends only when it finds the lamp (or at the cap of 40); with it, most paths end soon after the third bounce, and
+      the survivors, back at full strength, make the long tail.</p>
     <p>The readout compares the two over the same paths; once all 24,000 are traced the averages agree within their
       error bars. With roulette a path costs 4.7 rays instead of 10.0, and its result is noisier: an error bar of 0.0028
       against 0.0020. But the rays one path without roulette costs buy 10.0 / 4.7 = 2.1 paths with it, and an error bar
@@ -109,10 +116,15 @@
     <p data-step="roulette:unfair">Now switch off <strong>Survivors divide β by p</strong>. The game is no longer fair: a
       path that goes on keeps its β as it was, nothing makes up for the ones stopped, and the average falls to about
       two-thirds of the light (0.233 against 0.346 once all the paths are in). That is a bias: no number of samples
-      brings it back. The other controls move where roulette starts and change the walls. In a dark room (0.5), the
-      error bar for the same rays is 0.68 of the other's, a clear win; with white walls (0.95) it is 1.60, a loss: every
-      bounce there passes on 95%, so a path stopped early would still have brought back a lot. Point at the curves to
-      read them.</p>
+      brings it back. Its error bar, for the same rays, reads smaller than the fair game's (about 0.73 of it): an error
+      bar measures how much the tries disagree with each other, never whether they agree on the right answer (chapter
+      12). Without the survivors' boost the tail is gone too: a path that survives keeps its small β, and is soon
+      stopped.</p>
+    <p>Switch the boost back on, and the other controls move where roulette starts and change the walls. In a dark room
+      (0.5), the error bar for the same rays is 0.68 of the other's, a clear win; with white walls (0.95) it is 1.60, a
+      loss. There β stays high, so roulette stops few paths and saves few rays (7.4 a path instead of 10.0), while every
+      path it does stop still carried a lot of light, which the survivors make up in jumps (the readout's numbers; the
+      reason is this page's reading of them). Point at the curves to read them.</p>
     <details class="maths">
       <summary><span class="tag">The maths</span>Why nothing is lost</summary>
       <div class="body">
@@ -152,33 +164,39 @@
          data-why="beta is the throughput, three numbers (red, green, blue). lobesSample picks one of the surface's parts (a matte part, a shiny one: its lobes, chapter 9) and a direction from it, using PRNG(), four fresh random numbers in [0, 1) (chapter 12); smp.w is the weight of the direction drawn. For a plain matte surface that weight is its colour, as in this chapter's figures, because the matte draw picks directions in proportion to cos θ. The comment's F G2/G1 is chapter 9's; marching a ray is following it to the next surface (chapter 2)." data-hash="f9c19e32"></pre>
     <p>Then the cap and the roulette, at the end of every bounce:</p>
     <pre data-src="lib/pathtracer/core/tracebasics.js" data-sym="// the hard bounce cap" data-to="res.r.beta /= p;" data-max="55"
-         data-why="res.r.bounces counts the surfaces the path has hit; UB. is a setting handed to the GPU, so UB.maxbounce is Max Bounces. max3rgb is the largest of the three channels: p follows the brightest colour the path still carries. PRNG().x is one random number in [0, 1). uRRStart is 3, RR_MIN_P 0.1 and RR_MAX_P 0.95. UB.rr is the setting, off by default. The comment's 'energy conservation' is this chapter's 'on average nothing is lost'." data-hash="46c8b109"></pre>
+         data-why="res.r.bounces counts the surfaces the path has hit; UB. is a setting handed to the GPU, so UB.maxbounce is Max Bounces. max3rgb is the largest of the three channels: p follows the brightest colour the path still carries. PRNG().x is one random number in [0, 1). uRRStart is 3, RR_MIN_P 0.1 and RR_MAX_P 0.95. UB.rr is the setting, off by default. The comment's 'energy conservation' is this chapter's 'on average nothing is lost'. In the long comment: RR is Russian roulette; the wavefront is the rounds of section 5; the adaptive iteration budget, the number of rounds as it used to adapt; trimmedLuma, the picture's average brightness with its brightest and darkest pixels left out; a dispatch, one kernel's launch; rays flushed, rays still going when the last round ended them." data-hash="46c8b109"></pre>
   </div>
 </section>
 
 <section class="plain wide" id="tricks">
   <div class="prose">
     <h2><span class="n">5</span>Tricks and trade-offs</h2>
-    <p>Each is stamped with how it is known; point at a stamp to see what it means.</p>
+    <p>First, how ShadyTracer runs its paths, which decides what roulette can save. It does not trace each path on
+      its own. It moves every path of a sample one step at a time, all together, in <em>rounds</em> (chapter 22): each
+      round runs five <a data-g="kernel">kernels</a> in turn, over the paths still going. Until version 0.10.0 the number
+      of rounds a sample got adapted to its paths: fewer when they ended early. Since then every sample gets the most a
+      path could need: Max Bounces + 1, plus rounds for marching, since a long march to the next surface can take more
+      than one round. A round costs time even when only a few paths are left in it, like a bus that drives its whole
+      route for two passengers, though a nearly empty round costs less than a full one.</p>
+    <p>Each trick below is stamped with how it is known; point at a stamp to see what it means.</p>
     <div data-claim="measured">
       <p><strong>Roulette is fair, measured.</strong> Four runs on the user's graphics card (chapter 0: an NVIDIA of
         the Pascal family), 1024 × 1024, 32 samples, with roulette off and on and a cap of 10 and 40, all landed within 0.15% of each
         other (the comment above, and <code>docs/TESTING.md</code>, "Russian roulette is unbiased").</p>
     </div>
     <div data-claim="measured">
-      <p><strong>And still off.</strong> ShadyTracer does not trace each path on its own. It moves every path of a sample
-        one step at a time, all together, in <em>rounds</em> (chapter 22): each round runs five
-        <a data-g="kernel">kernels</a> in turn. A round costs time even when only a few
-        paths are left in it, like a bus that drives its whole route for two passengers. So the same bench measured
-        roulette at +0.9% time per sample, inside the noise, although it cut the rays still going when the last round
-        ended them from 1416 to 360: fewer rays, the same rounds, no time saved. The comment's verdict: it should earn its keep in a scene
+      <p><strong>And still off.</strong> The same bench measured roulette at +0.9% time per sample, inside the noise.
+        Without roulette, 1416 rays were still going when the last round ended them; with it, 360. Fewer rays, the same
+        rounds, no time saved. The comment's verdict: it should earn its keep in a scene
         deep enough for the rounds to shrink, "and that is the case to find before changing the default".</p>
     </div>
     <div data-claim="code">
       <p><strong>The rounds no longer shrink.</strong> That verdict speaks of rounds that can shrink. Since version 0.10.0 every sample gets the most a path could need, Max Bounces + 1 plus its
         marching (<cite data-src="lib/pathtracer/core/raytrace_main.js" data-sym="const worstCase = Math.max(2" data-to="+ chunks)"></cite>),
-        so roulette can save only the work inside each round, never a round. Whether that is ever worth it is not
-        measured.</p>
+        so roulette can save only the work inside each round, never a round: a round over fewer paths does less work. On
+        the user's card an added, nearly empty round cost 0.13 to 0.42 ms of the graphics card's time (the comment on
+        the round budget in <code>raytrace_main.js</code>). Whether roulette's saving inside the rounds is ever worth it is
+        not measured.</p>
     </div>
     <div data-claim="code">
       <p><strong>A weight of zero ends the path.</strong> A direction that carries nothing (a reflection that would go
@@ -212,7 +230,7 @@
   <div class="prose">
     <h2><span class="n">7</span>Try it</h2>
     <ul>
-      <li>In the first figure, find a path that bounces more than ten times. What is its β when it finds the lamp?</li>
+      <li>In the first figure, raise the bounce limit to 20 and find a path that bounces more than ten times. What is its β when it finds the lamp?</li>
       <li>In the second, compare dark walls with white ones: at which cap does each keep 95% of its light?</li>
       <li>In ShadyTracer, set Max Bounces to 1 and then to 10 in the Render settings, in a room scene. Where does the
         picture darken most?</li>

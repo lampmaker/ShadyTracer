@@ -39,11 +39,14 @@
       from the tries is only as good as the tries, and it settles after a few dozen.</p>
     <p data-step="darts:lots">After 81,920 darts the estimate is 3.1440 ± 0.0057. The true value is 0.4 error bars away.
       An error bar is not a wall: about one estimate in three lands more than one bar away, one in twenty more than two.
+      (Those two shares come from the bell-shaped curve that averages of many tries follow, a result to take on trust
+      here; the figure lets you check it, below.)
       The readout counts the bars each time; <strong>Start again</strong> throws new darts. And the bar only measures
       how much the tries disagree with each other. Dice loaded the same way every time (section 4) make tries that
       agree on a wrong answer, and the bar shrinks round it just the same: it can see <a data-g="noise">noise</a>, never
       <a data-g="bias">bias</a>.</p>
-    <p>A pixel is the same game. Each <a data-g="sample">sample</a> sends one random path through the pixel and brings
+    <p>A pixel is the same game. A <em>path</em> is a ray from the eye that bounces off surfaces until it finds light
+      (chapter 13 follows one). Each <a data-g="sample">sample</a> sends one random path through the pixel and brings
       back the light it found, the pixel's value is the average of what its samples brought back, and the noise in a
       young picture is each pixel's estimate still wandering.</p>
   </div>
@@ -58,12 +61,12 @@
   <div class="prose">
     <h2><span class="n">2</span>Four times the work, half the error</h2>
     <p>How fast does it settle? Here are 240 separate estimates of π for each number of darts <var>N</var>, each dot one
-      estimate. With 4 darts they scatter over the whole range, and sit only on 1, 2, 3 or 4 (each dart adds 0 or 1 to
+      estimate. With 4 darts they scatter over the whole range, and sit only on 0, 1, 2, 3 or 4 (0 is rare; each dart adds 0 or 1 to
       the estimate); with 16, half as far; with 64, half again. The solid bar beside each column is how far they spread,
       measured from the dots (their <a data-g="stddev">standard deviation</a>); the dashed one is the prediction, the
       spread of one dart divided by √<var>N</var>. Four times the darts, half the spread: that rule holds for every
       Monte Carlo estimate, and it is why a noisy picture needs four times the samples to look twice as clean. The
-      measured spread is itself worked out from 240 dots, so it wanders too, by about 5% (<strong>New darts</strong>
+      measured spread is itself worked out from 240 dots, so it wanders too, typically by about 5% and now and then by twice that (<strong>New darts</strong>
       shows it): at <var>N</var> = 256 it may read 0.093 against the predicted 0.103. With 960 dots a column it wanders
       half as much: the same √N rule, applied to the spread itself. Point at a column to read its numbers.</p>
     <details class="maths">
@@ -73,9 +76,13 @@
           How far it lands from that average, squared and averaged, is its <em>variance</em>: a score of 4 is 4 − π
           away, a score of 0 is π away, and</p>
         <p class="eq">σ² = <var>p</var>(4 − π)² + (1 − <var>p</var>) π² = 16 <var>p</var>(1 − <var>p</var>)</p>
-        <p>(put π = 4<var>p</var> in and it simplifies). Its square root, the standard deviation, is σ =
+        <p>(put π = 4<var>p</var> in: 16<var>p</var>(1 − <var>p</var>)² + 16<var>p</var>²(1 − <var>p</var>) =
+          16<var>p</var>(1 − <var>p</var>)). Its square root, the standard deviation, is σ =
           4√(<var>p</var>(1 − <var>p</var>)) = 1.642. Now the √<var>N</var>. For tries that do not depend on each other,
-          variances add: the sum of <var>N</var> darts has variance <var>N</var>σ², so it spreads by √<var>N</var> σ.
+          variances add. For two tries, the squared distance of their sum from its average is the first's squared
+          distance, plus the second's, plus twice the first's distance times the second's; and when the tries do not
+          depend on each other, that last product is as often positive as negative, and averages to 0. So the sum of
+          <var>N</var> darts has variance <var>N</var>σ², and spreads by √<var>N</var> σ.
           The average is that sum divided by <var>N</var>, and so is its spread:</p>
         <p class="eq">σ<sub>mean</sub> = <span class="frac"><span>√<var>N</var> σ</span><span><var>N</var></span></span> = <span class="frac"><span>σ</span><span>√<var>N</var></span></span></p>
         <dl class="terms">
@@ -118,8 +125,14 @@
       <var>n</var> samples each weighs 1/<var>n</var>, so <var>S</var> = <var>n</var> · (1/<var>n</var>)² =
       1/<var>n</var>, and the error bar the code works out, √(<var>S</var> · <var>V</var> / (1 − <var>S</var>)), becomes
       √(<var>V</var> / (<var>n</var> − 1)): the darts' <var>s</var>/√<var>N</var> exactly, with <var>s</var> worked out
-      the usual way (dividing by <var>n</var> − 1, which corrects for measuring the scatter about the samples' own
-      average rather than the true answer). For 2, 4 and 9 that is √(8.67/2) = 2.08. <var>S</var> is kept, rather
+      the way statisticians do, dividing by <var>n</var> − 1 rather than <var>n</var> (it corrects for measuring the
+      scatter about the samples' own average, which sits closer to them than the true answer does). For 2, 4 and 9 that
+      is √(8.67/2) = 2.08.</p>
+    <p>Both are updated a sample at a time, with <var>d</var> the new sample's distance from the <em>old</em> average.
+      For 2, 4 and 9: after 2, <var>V</var> = 0 and <var>S</var> = 1. After 4 (<var>w</var> = ½, <var>d</var> = 4 − 2
+      = 2): <var>V</var> = (1 − ½)(0 + ½ × 2²) = 1, <var>S</var> = (1 − ½)² × 1 + ½² = ½. After 9 (<var>w</var> = ⅓,
+      <var>d</var> = 9 − 3 = 6): <var>V</var> = ⅔ × (1 + ⅓ × 6²) = 8.67, <var>S</var> = (⅔)² × ½ + (⅓)² = ⅓. The same
+      8.67 and ⅓ as from all three at once. <var>S</var> is kept, rather
       than worked out from <var>n</var>, because the average can also forget old samples (section 6), and then the
       weights are not equal.</p>
     <pre data-src="lib/pathtracer/core/wavefront.js" data-sym="/* THE ERROR BAR, kept beside the mean" data-to="moments[idx * 2u + 1u] = (1.0 - w) * (1.0 - w) * s0 + w * w;"
@@ -151,10 +164,18 @@
       GPU's usual kind of number, an <a data-g="f32">f32</a>, which keeps 24 significant binary digits, the way a
       calculator that shows seven digits turns 12,345,678 into 12,345,680. Every state below 2²⁴ (about 16.8 million)
       fits whole. Larger ones are rounded to the nearest multiple of 2, 4, 8 …, and every state from 2²⁹ up, which is
-      seven-eighths of all of them, becomes a multiple of 64 or more. Divided by 671,040 (which is 64 × 10,485), those
-      land only on a grid of points 1/10,485 apart. A window 0.0001 wide holds one of those points or two.</p>
+      seven-eighths of all of them, becomes a multiple of 64 or more: from 2²⁹ a state has 30 binary digits, six more
+      than f32 keeps, and dropping six binary digits leaves multiples of 2⁶ = 64. (From 2³⁰, multiples of 128; from
+      2³¹, of 256.) Divided by 671,040, which is 64 × 10,485, a multiple of 64 lands on a multiple of 1/10,485. A
+      multiple of 256 would seem to land only on a coarser grid, 256/671,040, about 1/2600, but <code>fract</code> keeps
+      only what is after the point, and as the numbers wrap round past each whole number, multiples of 256 fall on every
+      point of the 1/10,485 grid in turn. So seven-eighths of all states land on that grid, and the rest, below 2²⁹, on
+      finer ones. A window 0.0001 wide holds one of those points or two: on average 1.05. One point carries about
+      1/1.05 of seven-eighths of the window's fair share, plus a little of the finer eighth, which is why the bars read
+      0.95 and 1.83 rather than exactly 1 and 2.</p>
     <p data-step="grid:tiny">In windows of 0.00001, narrower than the grid, some get almost nothing (0.01 of their
-      share) and some nearly nine times. PCG4D's output, the top 24 bits of its state divided by 2²⁴, is a grid
+      share), some a little (the low bars: windows between the coarse grid's points, reached only by finer grids of the
+      states below 2²⁹), and some nearly nine times (a window that holds a coarse point). PCG4D's output, the top 24 bits of its state divided by 2²⁴, is a grid
       1/16,777,216 apart with every point equally likely. A window of 0.00001 holds 167 or 168 of those points, so its
       share is within half a percent of fair (the readout's 0.995×), and the wider the window, the closer.</p>
     <p>Why would a window matter? A small, bright sun is a small window: of all the random numbers a bounce can draw,
@@ -180,9 +201,10 @@
          data-why="NOISE_H is the generator's state, four 32-bit numbers. pcg4d scrambles all four together (multiplications mix bits upward, the shift by 16 brings high bits down); PRNG keeps each lane's top 24 bits, divided by 2^24: four numbers in [0, 1) a call." data-hash="a7e83f28"></pre>
     <div data-claim="measured">
       <p><strong>The comment's numbers and this page's differ.</strong> The comment says the old output's share of a
-        0.0001 window "ranged from 0.08x to 3.2x" and calls the grid "about 1/2600". Counting every one of the 2³² states
+        0.0001 window "ranged from 0.08x to 3.2x", at 0.001 "from 0.96x to 1.29x", and calls the grid "about 1/2600", the
+        multiples of 256 without the wrap of section 4. Counting every one of the 2³² states
         through the formula it gives (this tutorial's test does, in node, and once checked it against 63 million random
-        states) gives 0.95× to 1.83× and a grid of 1/10,485, as in the figure. The old code is not in the repository's
+        states) gives 0.95× to 1.83×, 0.96× to 1.04×, and a grid of 1/10,485, as in the figure. The old code is not in the repository's
         history, which starts at version 0.46.0, so whether it did more than the formula says cannot be checked. Either
         way the comment's point stands: a bias in small windows that no number of samples removes.</p>
     </div>
@@ -207,7 +229,9 @@
         estimation</a>, chapter 14) switched off, a sun 5° across is found only when a bounce happens to go into it:
         about 50,000 times in 37 million paths (1188 × 969 pixels, 32 samples each, on the user's graphics card, an
         NVIDIA Pascal; <code>docs/TESTING.md</code>, the section "BSDF parity"). The document puts the standard error near
-        0.45%; 1/√50,000 is 0.45%. Light that arrives through rare events is as noisy as the count of those events.</p>
+        0.45%; 1/√50,000 is 0.45%. Light that arrives through rare events is as noisy as the count of those events: the
+        sun's light comes only through the hits, a count of rare hits wanders by about its own square root (50,000 ±
+        224), and so its share of the picture wanders by 1/√(hits), whatever the number of paths around them.</p>
     </div>
     <div data-claim="code">
       <p><strong>A true mean, not a window.</strong> The average can forget old samples, which keeps a moving picture
@@ -222,7 +246,9 @@
     <div data-claim="code">
       <p><strong>No sum of squares.</strong> The textbook variance, the mean of the squares less the square of the mean,
         subtracts two nearly equal numbers wherever the noise is small beside the light, and in 32-bit numbers that
-        leaves nothing. The update in section 3 never forms either sum.</p>
+        leaves nothing. With a calculator that keeps seven digits: samples 1000.1 and 1000.3 have squares 1,000,200 and
+        1,000,600 (their last digits gone), whose mean is 1,000,400; their mean, 1000.2, squared is 1,000,400 too. The
+        difference is 0, and the true variance, 0.01, is lost. The update in section 3 never forms either sum.</p>
     </div>
   </div>
 </section>
@@ -233,8 +259,8 @@
     <ul>
       <li><strong>Loaded dice</strong>: the old generator, section 4.</li>
       <li><strong>A light that leaked into the next sample.</strong> Each pixel has a slot where a sample's light is
-        added up before <code>resolve</code> takes it. <code>resolve</code> used to stop at once for a pixel no path
-        landed on this sample, before clearing its slot, so light a <a data-g="shadow-ray">shadow ray</a> had added there
+        added up before <code>resolve</code> takes it. <code>resolve</code> used to stop at once for a pixel "whose
+        camera path then did not count" in a sample (the comment's words), before clearing its slot, so light a <a data-g="shadow-ray">shadow ray</a> had added there
         was counted in the next sample instead. It now takes and clears every slot first (the comments in
         <code>prog_resolve</code>).</li>
       <li><strong>Large pictures that would not run.</strong> The GPU runs a kernel in groups of threads, here 64 pixels
@@ -250,7 +276,8 @@
   <div class="prose">
     <h2><span class="n">8</span>Try it</h2>
     <ul>
-      <li>In the darts figure, press <strong>Start again</strong> a dozen times at 20 darts and count how often π is
+      <li>In the darts figure, press <strong>Throw 4 times as many</strong> once (80 darts, past the few dozen a bar needs) and then
+        <strong>Start again</strong> a dozen times, throwing once more each time, and count how often π is
         more than one error bar away. About a third?</li>
       <li>In the dice figure, choose windows of 0.0001 and move <strong>where</strong>. Do the old bars' heights ever
         change pattern?</li>

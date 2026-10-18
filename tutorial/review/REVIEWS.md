@@ -278,8 +278,112 @@ Two readers also asked what a stamped *measured* number was when it came from a 
 | Radius in fig. 1, diameter in fig. 2; ball colours; samples 4 or 48; "dashed" three ways; where the picture column is. | **Fixed**, each (an aperture card; the balls named red, blue, gold; the axis labelled; the column said to be drawn for reading). |
 | "no page"; orbiting, orthographic. | **Fixed.** |
 
+## Round 4, 2026-10-18 (chapters 0, 3, 4, 12, 13, 15, 16, 17, after round 3's changes)
+
+A fresh reader a chapter again, the same brief. Reports:
+[reading](reports/2026-10-18-round4/reading.md), [shapes](reports/2026-10-18-round4/shapes.md),
+[normals](reports/2026-10-18-round4/normals.md), [montecarlo](reports/2026-10-18-round4/montecarlo.md),
+[paths](reports/2026-10-18-round4/paths.md), [mis](reports/2026-10-18-round4/mis.md),
+[emitters](reports/2026-10-18-round4/emitters.md), [lens](reports/2026-10-18-round4/lens.md).
+
+**What the round showed.** Round 3's fixes held: no reader was lost where the last one was. The new losses were one
+level down, in the words the fixes brought (a symbol defined in another chapter, "the user", a step of algebra said
+in a clause), and in three figures that did not show what their paragraphs said: chapter 16's tight boxes were drawn
+off the canvas (the kit's `pen.rect` takes world units and was handed pixels), chapter 17's streak ran off the top of
+its picture, and chapter 0's 3D side could not be counted. Each was found by a reader looking for what the text
+promised, which no test of ours looks for.
+
+### Chapter 0, How to read this
+
+| Finding | |
+|---|---|
+| The key lists camera rays, shadow rays and march steps before anything says how a renderer works. | **Fixed.** The renderer in brief before the key (a ray a pixel from the eye, backwards on purpose, a shadow ray to each lamp, bounces), and "come back to it" said. |
+| Fig. 2's rays grey like the key's shadow ray, its piece red like "blocked"; the 3D side not countable. | **Fixed.** Every ray the lamp's colour (faint or bold), the piece a solid shape; the 3D rays 10° apart each way, 16 caught at r = 1 and 4 at r = 2, with a close-up of the patch; tested (`caught3`). |
+| A whole circle, then a half-circle. | **Fixed.** A lamp shines every way, a surface to its front only. |
+| 2πr and 4πr² only on the figure; counts between the steps. | **Fixed.** Both in the text; the counts jump because a piece catches whole rays. |
+| Section 6 for a beginner: terminal, localhost:8000, WebGPU, NVIDIA. | **Fixed**, each. The commands "run together" was the text copy: the page shows them on three lines, now also said. |
+| The code examples not to be understood yet; "the user"; "the GPU's numbers"; "loads against a scene". | **Fixed**, each. |
+| The irradiance, march, kernel and normal cards. | **Fixed.** |
+
+### Chapter 3, Building and bending shapes
+
+| Finding | |
+|---|---|
+| The fold excerpt's note said the solid kept is the most negative distance. | **Fixed.** The one nearest zero: the solid the point is least deep in. |
+| §5's bound: why each noise layer is as steep, where 1.875 is from, 17.2 meaning two things, why the band is twice the reach. | **Fixed**, each; the second 17.2 said to be the same number by chance. |
+| Two families of shape functions against the comment; the fillet's arrows crossing. | **Fixed.** The builder's `N…` functions return a normal, the library's `sd…` ones none; arrows on a hollow cross a little way out. |
+| L against L² in the fold-out; "matrix". | **Fixed.** |
+| WGSL and shader never said; the `t` line; "round and shell (excerpts above)"; warp's k. | **Fixed**, each. |
+
+### Chapter 4, Which way is up
+
+| Finding | |
+|---|---|
+| Which differences ShadyTracer uses, and why. | **Fixed.** Forward: three looks instead of six, at a step too small for its error to show. |
+| §3 in plain words: the step, why it is the tolerance, 2⁻²³. | **Fixed.** The tolerance is where a ray counts as a hit, a ten-thousandth of the scene (0.1 mm a metre); 2⁻²³ is f32's spacing above 1; the floor is 15 µm a metre out. |
+| The rule behind 128. | **Answered**: the document states no threshold; its "below a hundred or so" and 128 the first power of two past it, said as inferred. |
+| Fig. 2's axis, the f32 curve, why the small circle is less noisy. | **Fixed.** Both log scales described; the f32 part dashed red; the circle's numbers are millimetre-sized after its first subtraction. |
+| The sign(0) story said "box". | **Fixed.** An octahedron's normal, as the code's comment says. |
+
+### Chapter 12, Dice and averages
+
+| Finding | |
+|---|---|
+| The grid paragraph: why 64, why 1/10,485 survives `fract`, 0.95 and 1.83. | **Fixed**, step by step: from 2²⁹ six binary digits dropped, multiples of 64; 671,040 = 64 × 10,485. |
+| V and S through 2, 4, 9; d from the old average. | **Fixed.** Worked a sample at a time to the same 8.67 and ⅓. |
+| "Variances add"; "1 in 3 and 1 in 20". | **Fixed.** The cross term averaging to 0 shown; the bell curve's shares to take on trust, checked by the figure. |
+| The small contradictions (5% against 10%, a 20-dart try, "no path landed"). | **Fixed.** |
+| What a path is, for a reader arriving here. | **Fixed**, a sentence. |
+
+### Chapter 13, Following a path
+
+| Finding | |
+|---|---|
+| Rounds before §5; what roulette can still save. | **Fixed.** |
+| A survivor's β becomes 1. | **Fixed.** With p = β, β/p is 1: the tail of long paths, the unfair curve, the ceiling explained by it. |
+| The unfair game's error bar. | **Fixed.** It reads smaller (0.73 of the fair one's): a bar sees disagreement, never bias. |
+| The fold-out: ∏, θ, L_e, ρ, f and p. | **Fixed.** f = ρ/π, p = cos θ/π, and the cancellation to ρ shown. |
+| The second comment's jargon; "the user's graphics card"; the kernel card's count. | **Fixed** in the notes and the card. |
+
+### Chapter 15, Two ways to the light
+
+| Finding | |
+|---|---|
+| Fig. 2: where the weights matter. | **Fixed.** The stretches with no lamp shaded; the tiny lamp's spike pointed at. |
+| Why MIS removes streaks. | **Fixed.** A lucky find times a weight near 0; the plain ratio's 0.90 beside 0.99. |
+| The glass ball and glossy plastic, step by step. | **Fixed.** |
+| Which measured brightness was true; how the share enters the weight. | **Fixed**, the first as inferred (the document does not say). |
+| The code's names; cards at first use. | **Fixed.** |
+
+### Chapter 16, Every glowing thing is a light
+
+| Finding | |
+|---|---|
+| p_plate and p_lamp never defined; density only in §4. | **Fixed.** Both defined in §1 as each way's chance per unit of direction, density linked to its card. |
+| The tight boxes nowhere; a hit cell not circled at one sample; the bar's dashes; the grid like the paper. | **Fixed.** The boxes were drawn off the canvas: now drawn. The list is made every second sample (`EMIT_EPOCH`, tested against raytrace_main.js), so after one nothing is circled yet, and the readout says so; a one-hit cell's circle is only the margin, drawn solid; the glowing line added to the key; the grid dotted and darker. |
+| The fold-out's calculus (|cos| adding up to 2) and 3D notation. | **Fixed.** The lines as a rectangle of choices, |cos φ| averaging 2/π over a half turn (checked by throwing angles, chapter 12's way); the 3D line marked for later, its symbols named. |
+| Logarithms. | **Fixed.** log₂ counts doublings; multiplying adds codes, 0.9 takes away 0.15 of a stop. |
+| How brighter parts send more light with crossings spread evenly; which way a photon leaves. | **Fixed.** Each photon carries the glow where it started (the comment's flux Le / density); the probe's direction from its comment. |
+| Fig. 2's lines (only some drawn), "bar" three ways, the clipped title; Fig. 3's labels. | **Fixed.** The rod, columns, "at most 60 drawn"; the marks' names written along their own lines. |
+| The code: the 3D-to-1D index, the cone test, why densities add, why only spheres holding y; WGSL, u32, exp2, select. | **Fixed** in the excerpts' notes. |
+| 1.6e9; "0.6%" sounding small; "card"; two estimates. | **Fixed.** 1.5e9 (the comments' 1.6, chapter 5 to work it out); 0.6% is how much of the picture that light was; a graphics card; the two-estimates story told in words, chapter 15 named. |
+
+### Chapter 17, The camera's lens
+
+| Finding | |
+|---|---|
+| "A free choice cannot hit a point" needs path tracing; SDS. | **Fixed.** Before the excerpt now: a path's random choice at a matte point, glass deciding the rest, a shadow ray that cannot bend, from both ends; SDS spelled out. |
+| Why a lens focuses; "an opening". | **Fixed.** Glass bends light so one distance meets again; the renderer runs it backwards. The heading "A lens brings one distance to a point". |
+| dirCam; fwd's sign; "less off"; lensDisc. | **Fixed.** dirCam is the pixel's point one unit out, −1 along fwd, which points backwards; "minus off"; the disc's √u. |
+| The one-unit picture not shown. | **Fixed.** Drawn, short and grey, "picture, 1 out", the column said to be it drawn larger. |
+| Two identical handles; the clipped label; the streak at the top; no ray matched to its spot; the colours. | **Fixed.** Handles labelled F and "the point"; labels right-aligned; the point lowered (the streak stays inside); the lens's top-edge ray and its landing in one colour; colours named per style. |
+| The fold-out's division step, 1/2F, why the half-height. | **Fixed**, each worked. |
+| Fig. 2 blocky, no grain shown, no units, radius against diameter, "many samples". | **Fixed.** 128 × 80; a step after the first 2 samples, and a control to stop there; metres; the radius R in both figures (the program's aperture said to be its double); 48 or 4. |
+| The black-prism story told three times. | **Fixed.** Told once, in §3; §5 points to it. |
+
 ## Next round
 
-The pages stay drafts. Round 2's changes are smaller than round 1's, and most are words; a third read is worth it when
-a chapter is next rewritten, or when the user's own reading finds what these readers cannot: whether a figure feels
-right to drag, and whether a real student keeps going.
+The pages stay drafts. Every written chapter has now had two readers; the second round's changes are smaller than
+the first's, and most are words. A third read is worth it when a chapter is next rewritten (chapters 16, 17 and 0 had
+sections rewritten in round 4, so they come first), or when the user's own reading finds what these readers cannot:
+whether a figure feels right to drag, and whether a real student keeps going.

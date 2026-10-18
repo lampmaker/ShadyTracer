@@ -3,7 +3,8 @@
 //
 //   discovery  paths through a room with two glowing things in it, one in plain view and one round a corner: every
 //              path that hits one records where, in a 16 x 16 grid as materials_pbr.js emitDeposit does in 16^3; each
-//              cell with hits becomes a box, the tight bounds of its hits, and a circle round it for aiming at
+//              cell with hits becomes a box, the tight bounds of its hits, and once the list is made (every second
+//              sample, as the engine does) a circle round it for aiming at
 //   crofton    random lines through a circle: how many cross each shape inside, against its perimeter (Cauchy-Crofton),
 //              and the angles they cross at -- a glowing surface's own spread of directions, for free
 //   code       the brightness the grid keeps, in 32 bits: the old linear code against the log code (tracebasics.js
@@ -37,6 +38,9 @@ const CAM = { eye: [0.3, 1.6], dir: Math.atan2(1.8 - 1.6, 4.9 - 0.3), fov: 80 * 
 // the grid over the room's square: EG cells each way, as the engine's 16 (over +-emitHalf, in 3D)
 export const EG = 16
 const G0 = [-0.7, -0.6], GS = 8.2 / EG
+// the list of targets is rebuilt every EMIT_EPOCH samples (raytrace_main.js), from what the cells hold then: until the
+// first rebuild a cell has hits and a box, and nothing aims at it yet
+export const EMIT_EPOCH = 2
 const cellOf = (x, y) => { const i = Math.floor((x - G0[0]) / GS), j = Math.floor((y - G0[1]) / GS); return i >= 0 && j >= 0 && i < EG && j < EG ? i + EG * j : -1 }
 
 /** paths a sample per pixel, every hit of a glowing thing deposited: { cells: Map(cell -> { lo, hi, n }), hits } */
@@ -66,7 +70,7 @@ export const RC = 2
 export const CROFTON_SHAPES = [
     { name: 'disc', len: 2 * Math.PI * 0.45, d: (x, y) => circle(x + 0.8, y - 0.6, 0.45) },
     { name: 'box', len: 2 * (1.2 + 0.5), d: (x, y) => box(x - 0.6, y + 0.7, 0.6, 0.25) },
-    { name: 'bar', len: 1.0, seg: [[0.9, 0.2], [0.9, 1.2]] },
+    { name: 'rod', len: 1.0, seg: [[0.9, 0.2], [0.9, 1.2]] },
 ]
 /** where a line (angle a, offset p) crosses each shape, and at what angle to the shape's normal */
 function crossings(a, p) {
@@ -119,7 +123,9 @@ export const LUM_K = 2 ** 24 / 80
 export const lumEncode = lum => Math.floor(Math.min(Math.max(Math.log2(Math.max(lum, 1e-30)) + 40, 0), 80) * Math.fround(LUM_K)) + 1
 export const lumDecode = q => q > 0 ? 2 ** ((q - 1) / Math.fround(LUM_K) - 40) : 0
 // two scale marks of everyday light (about: not measured here), and the two the comment names
-const MARKS = [[0.01, 'a dark night, about'], [100, 'a lit page, about'], [2e4, 'a bright panel'], [1.6e9, 'the sun in a mirror']]
+// the sun in a mirror at the renderer's default 100,000 lux, by photometry.js discLuminance (chapter 5): 1.49e9, not the
+// comments' 1.6e9
+const MARKS = [[0.01, 'night, ~0.01'], [100, 'a lit page, ~100'], [2e4, 'a bright panel, 20,000'], [1.488e9, 'the sun in a mirror, 1.5e9']]
 
 export const figures = {
     discovery: {
@@ -140,15 +146,22 @@ export const figures = {
             for (const k of cells.keys()) { const i = k % EG, j = Math.floor(k / EG); ctx.fillRect(pen.X(G0[0] + i * GS), pen.Y(G0[1] + (j + 1) * GS), GS * pen.view.s, GS * pen.view.s) }
             ctx.restore()
             for (let i = 0; i <= EG; i++) {
-                pen.line([G0[0] + i * GS, G0[1]], [G0[0] + i * GS, G0[1] + EG * GS], { role: 'faint', w: 0.45, dash: [2, 4], exact: true })
-                pen.line([G0[0], G0[1] + i * GS], [G0[0] + EG * GS, G0[1] + i * GS], { role: 'faint', w: 0.45, dash: [2, 4], exact: true })
+                pen.line([G0[0] + i * GS, G0[1]], [G0[0] + i * GS, G0[1] + EG * GS], { role: 'soft', w: 0.5, dash: [1, 3], exact: true, alpha: 0.7 })
+                pen.line([G0[0], G0[1] + i * GS], [G0[0] + EG * GS, G0[1] + i * GS], { role: 'soft', w: 0.5, dash: [1, 3], exact: true, alpha: 0.7 })
             }
             for (const sh of roomWith(s.ball).shapes) pen.flat(sh, { id: sh.name, role: sh.emit ? 'light' : 'solid' })
             for (const rec of shown) for (const seg of rec) pen.ray(seg.a, seg.b, { role: seg.lamp ? 'light' : 'cam', w: 0.6, alpha: 0.45, arrow: false })
+            const listed = s.samples >= EMIT_EPOCH
             for (const c of cells.values()) {
-                pen.rect(pen.X(c.lo[0]) - 2, pen.Y(c.hi[1]) - 2, pen.X(c.hi[0]) - pen.X(c.lo[0]) + 4, pen.Y(c.lo[1]) - pen.Y(c.hi[1]) + 4, { role: 'accent', lineW: 1.4 })
+                // the tight box round the cell's hits, a few pixels out so a box of one hit (no size) still shows: pen.rect
+                // takes world units (it was once handed pixels, which put every box off the canvas, and a reader found none)
+                const m = pen.world(3)
+                pen.rect(c.lo[0] - m, c.lo[1] - m, c.hi[0] - c.lo[0] + 2 * m, c.hi[1] - c.lo[1] + 2 * m, { role: 'accent', lineW: 1.4 })
+                if (!listed) continue
                 const b = boxCircle(c)
-                pen.circle(b.c, b.r, { role: 'accent', w: 0.8, dash: [4, 4], exact: true })
+                // a cell of one hit has a box of no size and a circle of only the margin, as the publish kernel's: drawn
+                // solid when that small, since a dashed circle a few pixels round shows nothing
+                pen.circle(b.c, b.r, { role: 'accent', w: 0.8, dash: b.r * pen.view.s > 8 ? [4, 4] : [], exact: true })
             }
             pen.eye(CAM.eye, CAM.dir, { size: 18 })
             pen.handle('ball', [s.ball[0], s.ball[1] + 0.55], { role: 'light' })
@@ -157,7 +170,8 @@ export const figures = {
             const { cells } = discover(s.seed, s.samples, s.ball), by = { ball: [0, 0], bar: [0, 0] }
             for (const [k, c] of cells) { const t = by[G0[0] + (k % EG + 0.5) * GS > 5.2 ? 'bar' : 'ball']; t[0] += c.n; t[1]++ }
             const say = (name, [n, k]) => n ? `${name}: ${n} hits in ${k} cell${k === 1 ? '' : 's'}` : `${name}: not found yet`
-            return `${s.samples} sample${s.samples === 1 ? '' : 's'} of ${CAM.pixels} paths · ${say('the ball', by.ball)} · ${say('the bar behind the wall', by.bar)}`
+            const list = s.samples >= EMIT_EPOCH ? `${cells.size} cells listed as targets` : `none listed yet (the list is made every ${EMIT_EPOCH} samples)`
+            return `${s.samples} sample${s.samples === 1 ? '' : 's'} of ${CAM.pixels} paths · ${say('the ball', by.ball)} · ${say('the bar behind the wall', by.bar)} · ${list}`
         },
     },
 
@@ -187,7 +201,7 @@ export const figures = {
             const hist = new Array(BINS).fill(0)
             for (const cs of c.cosines) hist[Math.min(BINS - 1, Math.floor(Math.acos(Math.min(1, cs)) / (Math.PI / 2) * BINS))]++
             const tot = Math.max(1, c.cosines.length), w = Math.PI / 2 / BINS
-            pen.labelPx(rect.x - 30, rect.y - 20, 'share of crossings, by angle from the normal', { role: 'soft', size: 12 })
+            pen.labelPx(rect.x - 30, rect.y - 20, 'crossings, by angle from the normal', { role: 'soft', size: 12 })
             plot(pen, rect, {
                 x: [0, 90], y: [0, 0.2], xticks: [0, 30, 60, 90], yticks: [0, 0.1, 0.2], fmt: v => v >= 1 ? `${v}°` : v.toFixed(1),
                 hoverX: v => `${(v - 45 / BINS).toFixed(1)}° to ${(v + 45 / BINS).toFixed(1)}°`, hoverY: v => `${(100 * v).toFixed(1)}%`,
@@ -224,17 +238,18 @@ export const figures = {
             for (const k of [-12, -8, -4, 0, 4, 8, 12]) pen.labelPx(X(k) - 14, rect.y + rect.h + 4, `1e${k}`, { role: 'soft', size: 11, kind: 'mono' })
             pen.labelPx(rect.x + rect.w / 2 - 80, rect.y + rect.h + 20, 'brightness, cd/m² (each step ×10,000)', { role: 'soft', size: 12 })
             const { ctx } = pen
-            // each mark's name at a height clear of both curves there (the old one hugs 0 until 1e4, then climbs; the log
-            // one rises steadily): read off the figure, so moving a mark means moving its height
-            const AT = [0.14, 0.14, 0.4, 0.5]
+            // each mark's name written up along its own line, from the bottom, so no name crosses another mark's line
+            // (written across, they ran into each other and into the old code's climb, and a reader took the sun's name
+            // for the panel's). The two at the right sit left of their lines, clear of that climb just right of 1e4.
             MARKS.forEach(([v, name], i) => {
                 const x = X(Math.log10(v))
                 ctx.save(); ctx.strokeStyle = pen.col('accent'); ctx.setLineDash([3, 4]); ctx.beginPath(); ctx.moveTo(x, rect.y); ctx.lineTo(x, rect.y + rect.h); ctx.stroke(); ctx.restore()
-                // names right of the middle are written leftward, so the last one stays on the canvas
-                const right = x > rect.x + rect.w * 0.7
-                pen.labelPx(right ? x - 3 : x + 3, Y(AT[i]), name, { role: 'accent', size: 11, align: right ? 'right' : 'left' })
+                const left = i >= 2
+                pen.labelPx(left ? x - 2 : x + 2, Y(0.03), name, { role: 'accent', size: 11, angle: -Math.PI / 2, base: left ? 'bottom' : 'top' })
             })
-            pen.labelPx(X(5.3), Y(0.97), 'old: flat above 1e5', { role: 'blocked', size: 11 })
+            // in two lines, so it ends before the sun's line
+            pen.labelPx(X(5.3), Y(0.97), 'old: flat', { role: 'blocked', size: 11 })
+            pen.labelPx(X(5.3), Y(0.97) + 13, 'above 1e5', { role: 'blocked', size: 11 })
             pen.labelPx(X(-11.5), Y(0.42), 'log code: a step every 0.000005 of a stop', { role: 'cam', size: 12 })
             // the brightness chosen: a line, and where each code puts it
             const v = 10 ** s.lg, x = X(s.lg)

@@ -26,31 +26,40 @@
 <section class="scene" id="discovery">
   <div class="prose">
     <h2><span class="n">1</span>Found by the paths that hit them</h2>
-    <p data-step="discovery:one">Paths bounce through this room as in chapter 13. When one hits something that glows, it
-      notes where: in which cell of a coarse grid over the scene (the dashed grid, 16 × 16 here; 16 × 16 × 16 in
-      ShadyTracer), widening that cell's box, the tightest box round every hit it has had (the small rectangles), and
-      keeping the brightest glow seen there. A cell with hits (shaded) becomes a target for aiming: the dashed circle
-      round its box. After one sample of 48 paths, 28 have hit the ball in plain view; 2 have hit the bar behind the
-      wall, by bouncing over it. The faint lines are the latest paths that found a glow: <span data-say="cam">blue</span>
-      while they bounce, <span data-say="light">orange</span> on the piece that hits it.</p>
-    <p data-step="discovery:eight">After 8 samples both are listed, in a few cells each: from now on the renderer aims at
-      them, as at a lamp, picking a cell (brighter and larger ones more often) and then a direction into its circle.
-      Drag the ball behind the wall, or into a corner, and see how many samples it takes to be found.</p>
+    <p data-step="discovery:one">Paths bounce through this room as in chapter 13. A coarse grid lies over the scene (the
+      dotted lines, 16 × 16 here; 16 × 16 × 16 in ShadyTracer). When a path hits something that glows, it notes in which
+      cell. Each cell keeps two things: its <em>box</em>, the tightest rectangle round every hit it has had (drawn solid,
+      a few pixels out), and the brightest glow seen there. Cells with hits are shaded. After one <a data-g="sample">sample</a> (one path from
+      each of the 48 pixels), 28 paths have hit the ball in plain view, and 2 have hit the bar behind the wall, by
+      bouncing over it. The faint lines are the latest paths that found a glow: <span data-say="cam">blue</span> while
+      they bounce, <span data-say="light">orange</span> on the piece that hits it. The short dashes along the bar are
+      how these figures draw a glowing line (the key on the contents page).</p>
+    <p data-step="discovery:one">Nothing aims at these cells yet. Every second sample the renderer turns the cells with
+      hits into its list of targets
+      (<cite data-src="lib/pathtracer/core/raytrace_main.js" data-sym="export const EMIT_EPOCH = 2"></cite>), and this is
+      the first.</p>
+    <p data-step="discovery:eight">After 8 samples the list has been made four times, and both glows are on it. Each
+      listed cell gets a circle round its box (dashed): from now on the renderer aims at it as at a lamp, picking a cell
+      (brighter and larger ones more often) and then a direction into its circle. A cell of a single hit has a box of no
+      size, so its circle is only the small margin added to every one: a small solid ring. Drag the ball behind the
+      wall, or into a corner, and see how many samples it takes to be found.</p>
     <p data-step="discovery:many">After 64 samples, every part of both glows that paths reach has a cell.</p>
     <p>And before a glow is found? It is lit only by the paths that happen to hit it, exactly as in chapter 13, and that
-      is still right. Take a bounce whose direction meets the bar before the bar is listed. Under
-      <a data-g="mis">MIS</a> (chapter 15) its weight is <var>p</var><sub>plate</sub>² / (<var>p</var><sub>plate</sub>²
-      + <var>p</var><sub>lamp</sub>²), and the aiming strategy's density <var>p</var><sub>lamp</sub> for that direction
-      is 0, since nothing aims at the bar yet: the weight is 1, and the hit counts in full. Once the bar is listed, the
-      same direction gets a weight between 0 and 1, and the aiming strategy brings the rest. Either way the light is
-      counted once: the picture is <a data-g="unbiased">unbiased</a> from the first sample, only noisier until the glow
-      is found. The code says it in one line
+      is still right. Chapter 15 weighs each way of reaching a light by how likely each way was to pick the direction it
+      came by. For one direction, <var>p</var><sub>plate</sub> is the bounce's chance of picking it and
+      <var>p</var><sub>lamp</sub> is aiming's, each as a <a data-g="pdf">density</a>: a chance per unit of direction (section 4
+      says how directions are measured). Take a bounce whose direction meets the bar before the bar is listed. Under
+      <a data-g="mis">MIS</a> its weight is <var>p</var><sub>plate</sub>² / (<var>p</var><sub>plate</sub>² +
+      <var>p</var><sub>lamp</sub>²), and <var>p</var><sub>lamp</sub> is 0, since nothing aims at the bar yet: the weight
+      is 1, and the hit counts in full. Once the bar is listed, the same direction gets a weight between 0 and 1, and the
+      aiming brings the rest. Either way the light is counted once: the picture is <a data-g="unbiased">unbiased</a> from
+      the first sample, only noisier until the glow is found. The code says it in one line
       (<cite data-src="lib/pathtracer/core/materials_pbr.js" data-sym="yet, whose NEE density is 0. That is why this is unbiased from the first sample."></cite>).</p>
   </div>
   <figure class="fig" data-fig="discovery">
     <figcaption>A room with a glowing ball in view of the eye and a glowing bar behind a wall, both drawn in the glow's
-      colour. Dashed grid: the cells; shaded: the cells hit so far, each with the
-      tightest box round its hits and the dashed circle the renderer aims into. Faint: the latest paths that found a
+      colour. Dotted grid: the cells; shaded: the cells hit so far, each with the
+      tightest box round its hits (solid) and, once the cells are listed, the dashed circle the renderer aims into. Faint: the latest paths that found a
       glow. Choose how many samples, and drag the ball (its circled cross) somewhere the eye cannot see it.</figcaption>
   </figure>
 </section>
@@ -60,37 +69,50 @@
     <h2><span class="n">2</span>Random lines</h2>
     <p data-step="crofton:few">Section 1 traced from the eye and waited to hit a glow. Light tracing (chapters 18 and 19)
       goes the other way: it starts light <em>at</em> a glowing surface and follows it out, from random points of it,
-      in random directions, as many from each part as it gives off. That needs a random point on the surface, and for a
+      in random directions, each carrying the brightness of the part it left. That needs a random point on the surface, and for a
       shape known only by its distance formula (chapter 2: how far is the nearest surface, nothing more) there is no
       list of its surface to pick from. Finding where a line crosses a shape is easy, though: it is what the renderer
       does all day, marching along a ray. So ShadyTracer uses a fact of geometry. Draw random lines through a circle
       round the shapes (a random direction, a random offset from the middle); in ShadyTracer that circle is each found
       box's sphere from section 1. Where a line crosses a glowing surface, start a photon there, leaving the surface
-      along the line.</p>
+      along the line. (Which way along it, and past what, the code's comment says: the line is followed from its far
+      end back, through anything that does not glow, and the first glowing surface met from outside starts the
+      photon, so a lens round an LED is passed through, not taken for the light:
+      <cite data-src="lib/pathtracer/core/tracebasics.js" data-sym="THE PROBE -- how an emitter photon finds where to start."></cite>.)</p>
     <p data-step="crofton:many">Count the crossings and each shape is crossed in proportion to the length of its outline:
       with 40,000 lines through the dashed circle (radius 2), the disc (radius 0.45) is crossed 17,972 times, and its
-      length alone predicts 18,000. And the angles the lines cross at (the bars) are spread exactly as a matte glowing
+      length alone predicts 18,000 (only the first 60 lines are drawn; the counts are of all of them). And the angles
+      the lines cross at (the columns of the chart) are spread exactly as a matte glowing
       surface sends out its light: most straight out along its <a data-g="normal">normal</a> (the direction straight
       out of the surface), fewer at a slant, in proportion to the cosine of the angle from the normal (the dots; this is
       Lambert's law for a matte surface). So the crossings are points spread evenly over every surface, with
-      directions spread the right way, for a shape the method knows nothing about. In 3D it is the same with lines
-      through a sphere and the area of the surface: the Cauchy–Crofton formula.</p>
+      directions spread the right way, for a shape the method knows nothing about. A brighter part sends out more
+      light not by more photons but by brighter ones: each carries the glow where it started. In 3D it is the same with
+      lines through a sphere and the area of the surface: the Cauchy–Crofton formula.</p>
     <details class="maths">
       <summary><span class="tag">The maths</span>Lines through a circle</summary>
       <div class="body">
-        <p>A line is picked by an angle θ in [0, π) and an offset <var>p</var> in [−<var>R</var>, <var>R</var>], both
-          uniformly. θ stops at π because a line has no front: turned by half a turn it is the same line. So the lines
-          through the circle fill a range π × 2<var>R</var> = 2π<var>R</var>. Now a short piece of curve, of length
-          <var>ds</var>. Lines at angle φ from its normal see it as a width |cos φ| <var>ds</var> across them (its shadow
-          in their direction), so that width of offsets crosses it; added up over every angle, |cos φ| over a half turn
-          adds up to 2. The lines crossing the piece fill a range 2 <var>ds</var>, out of 2π<var>R</var>, and a curve
-          of length ℓ is crossed, on average,</p>
-        <p class="eq">expected crossings of a curve of length ℓ = <span class="frac"><span>2ℓ</span><span>2π<var>R</var></span></span> = <span class="frac"><span>ℓ</span><span>π<var>R</var></span></span> a line</p>
-        <p>times a line. The 2 is that sum of |cos φ|. And because each angle's lines cross in proportion to cos φ, the
-          angles at the crossings come out spread as ½ cos φ, which is the flat world's matte emission. In 3D a line
-          through a sphere of radius <var>r</var> crosses a piece of surface <var>dA</var> in direction ω with density
-          |<var>n</var>·ω| <var>dA</var> <var>d</var>ω / (4π²<var>r</var>²), which is the matte emission measure
-          itself.</p>
+        <p>A line is picked by two numbers: an angle θ in [0, π) and an offset <var>p</var> in [−<var>R</var>,
+          <var>R</var>], both uniformly. θ stops at π because a line has no front: turned by half a turn it is the same
+          line. Draw every choice as a point of a rectangle π wide (the angle) and 2<var>R</var> tall (the offset): all
+          the lines through the circle fill that rectangle, of area π × 2<var>R</var> = 2π<var>R</var>, and the chance
+          that a random line is in some set of lines is the share of the rectangle that set covers.</p>
+        <p>Now a short, nearly straight piece of curve, of length <var>s</var>. Lines at angle φ from its normal see it as
+          a width <var>s</var> |cos φ| across them, its shadow in their direction: of the lines at that angle, those
+          whose offset falls in that width cross it. So at each angle the piece covers a height <var>s</var> |cos φ| of
+          the rectangle. Across the rectangle's width π, |cos φ| goes from 1 (lines straight at the piece) to 0 (lines
+          along it) and back; its average over a half turn is 2/π, about 0.64 (throw random angles and average
+          |cos φ|, chapter 12's way, and you get 0.637). So the piece covers an area π × <var>s</var> × 2/π =
+          2<var>s</var>, out of 2π<var>R</var>. A longer curve is many short pieces, so a curve of length ℓ is crossed,
+          on average,</p>
+        <p class="eq">expected crossings of a curve of length ℓ = <span class="frac"><span>2ℓ</span><span>2π<var>R</var></span></span> = <span class="frac"><span>ℓ</span><span>π<var>R</var></span></span></p>
+        <p>times a line. (A crossing is counted each time: a line through the disc crosses its outline twice.) And
+          because at each angle the share of lines crossing is in proportion to |cos φ|, the angles at the crossings come
+          out spread in proportion to cos φ, which is the flat world's matte emission: the chart.</p>
+        <p>For later, in the notation of chapter 5 and the textbooks: in 3D a line through a sphere of radius
+          <var>r</var> crosses a small patch of surface, of area <var>dA</var>, going in a small bundle of directions
+          <var>d</var>ω round ω, with chance |<var>n</var>·ω| <var>dA</var> <var>d</var>ω / (4π²<var>r</var>²), where
+          <var>n</var>·ω is the cosine of the angle from the normal: the matte emission's own measure.</p>
       </div>
     </details>
     <aside class="refs"><span class="tag">Read more</span><ul>
@@ -103,29 +125,36 @@
     </ul></aside>
   </div>
   <figure class="fig" data-fig="crofton">
-    <figcaption>Random lines through the dashed circle, their crossings of a circle, a box and a bar drawn as dots.
-      Right: the angle of every crossing from the surface's normal (bars) against a matte surface's cosine (dots).
-      Choose how many lines, or draw new ones; point at a bar to read it.</figcaption>
+    <figcaption>Random lines through the dashed circle (at most 60 of them drawn), their crossings of a disc, a box and a rod
+      drawn as dots. Right: the angle of every crossing from the surface's normal (columns) against a matte surface's
+      cosine (dots). Choose how many lines, or draw new ones; point at a column to read it.</figcaption>
   </figure>
 </section>
 
 <section class="scene" id="code">
   <div class="prose">
     <h2><span class="n">3</span>How bright, in 32 bits</h2>
-    <p>The grid keeps the brightest glow each cell has seen, in one 32-bit whole number a cell. Thousands of paths, each
-      on its own thread of the GPU, write to it at once. Two that read the old value at the same moment and each write
+    <p>The grid keeps the brightest glow each cell has seen, in one 32-bit whole number a cell. Thousands of paths
+      write to it at once, each worked on by its own <a data-g="thread">thread</a>, one of the many small processors of the GPU running
+      side by side (chapter 21). Two that read the old value at the same moment and each write
       their own would lose one of the two, so the grid is kept with an operation the GPU does in one step for every
       thread safely, "keep the larger" (<code>atomicMax</code>), which works on whole numbers. So the brightness has to
       become a whole number whose order is the brightness's order.</p>
     <p>It used to be the brightness, capped at 100,000, times 16: fine while glowing materials were "5 per channel" (80
       codes), useless once they were in real units, candela per square metre (chapter 5), where a bright panel is
-      20,000 and the sun seen in a mirror 1.6 billion, and everything above the cap ranked equal. Below 1/16 it was 0,
+      20,000 and the sun seen in a mirror about 1.5 billion (the code's comments say 1.6; chapter 5 works it out), and
+      everything above the cap ranked equal. Below 1/16 it was 0,
       the same as never seen. On the figure's scale, where each step is ten thousand times the last, that old code
       hugs zero, climbs over the last steps before 100,000 and is flat after.</p>
-    <p>The log code counts doublings instead: every doubling of brightness gets the same number of codes, 209,715 (a
-      doubling is what photographers call a <em>stop</em>). 80 stops, from 2⁻⁴⁰ to 2⁴⁰, fill 2²⁴ codes, in order. The
+    <p>The log code counts doublings instead. The logarithm of base 2, log₂ <var>x</var>, is how many times 1 must be
+      doubled to reach <var>x</var>: log₂ 8 = 3, log₂ 1 = 0, log₂ ½ = −1, and it works between whole numbers too
+      (log₂ 20,000 ≈ 14.3). Code a brightness by its log₂ and every doubling of brightness gets the same number of
+      codes, 209,715 (a doubling is what photographers call a <em>stop</em>). 80 stops, from 2⁻⁴⁰ to 2⁴⁰, fill 2²⁴
+      codes, in order. And multiplying a brightness by a number adds the same count of codes whatever the brightness:
+      doubling adds one stop's codes, halving takes them away, and multiplying by 0.9 takes away 0.15 of a stop. The
       comment does not say why 2²⁴ and not all 32 bits; a likely reason (inferred) is that the code is worked out in a
-      32-bit float, which counts whole numbers exactly only up to 2²⁴ (chapter 12).</p>
+      <a data-g="f32">32-bit floating-point number</a>, the GPU's usual kind, which counts whole numbers exactly only up to 2²⁴ (chapter
+      12).</p>
   </div>
   <figure class="fig" data-fig="code">
     <figcaption>The whole number kept for a brightness, as a share of the largest: the old code (rising, then flat
@@ -140,9 +169,9 @@
     <h2><span class="n">4</span>How ShadyTracer does it</h2>
     <p>The deposit, from every path that hits a glowing surface:</p>
     <pre data-src="lib/pathtracer/core/materials_pbr.js" data-sym="fn emitDeposit"
-         data-why="A hit outside the grid's cube is not kept (the early return). u is the hit's place in the cube, 0 to 1 each way, kept as a whole number up to 16777215 = 2^24 - 1. Each cell keeps 8 numbers: its box's lowest corner (0 to 2, atomicMin) and highest (3 to 5, atomicMax), its brightest glow as the log code (6), and how many hits it has had (7). The three numbers 0.2126, 0.7152, 0.0722 weigh red, green and blue by how bright each looks (luminance, chapter 6)." data-hash="d9222c97"></pre>
+         data-why="WGSL, the GPU's language (chapter 21); u32 is its 32-bit whole number, and learn the buffer, one long list of them, that the grid lives in. A hit outside the grid's cube is not kept (the early return). u is the hit's place in the cube, 0 to 1 each way, kept as a whole number up to 16777215 = 2^24 - 1. v is its cell, 0 to EG - 1 (EG = 16) each way, and cell numbers the 16 × 16 × 16 cells in one list, row after row and layer after layer: x + 16 (y + 16 z). Each cell keeps 8 numbers: its box's lowest corner (0 to 2, atomicMin) and highest (3 to 5, atomicMax), its brightest glow as the log code (6), and how many hits it has had (7). The three numbers 0.2126, 0.7152, 0.0722 weigh red, green and blue by how bright each looks (luminance, chapter 6)." data-hash="d9222c97"></pre>
     <pre data-src="lib/pathtracer/core/tracebasics.js" data-sym="/* EMITTER BRIGHTNESS, LOG-ENCODED" data-to="fn lumDecode"
-         data-why="It is WGSL kept in a JavaScript string, as every kernel's code is (chapter 22). LUM_K codes for each doubling of brightness; the +1 keeps 0 for a cell never hit. LUM_DECAY fades a cell's glow by a tenth each time the list is rebuilt (the hit count fades the same way): a glow that is switched off, or moved, stops being hit and drops out instead of being aimed at for ever. In the log code, multiplying by 0.9 is subtracting a fixed number of codes." data-hash="e6e9ecf2"></pre>
+         data-why="It is WGSL kept in a JavaScript string, as every kernel's code is (chapter 22). LUM_K codes for each doubling of brightness; the +1 keeps 0 for a cell never hit. LUM_DECAY fades a cell's glow by a tenth each time the list is rebuilt (the hit count fades the same way): a glow that is switched off, or moved, stops being hit and drops out instead of being aimed at for ever. In the log code, multiplying by 0.9 is subtracting a fixed number of codes, log₂ 0.9 × LUM_K. lumDecode turns a code back into a brightness: exp2(y) is 2^y, the opposite of log₂, and select(a, b, c) is b when c holds and a when it does not, so the code 0 reads back as 0." data-hash="e6e9ecf2"></pre>
     <div data-claim="code">
       <p><strong>A number in the comment, checked.</strong> The comment gives the log code's step as "2e-5 of a stop".
         From its own constants it is 80 stops over 2²⁴ codes, 4.8 × 10⁻⁶ of a stop: finer than it says.</p>
@@ -151,17 +180,17 @@
       brightest glow times its size squared (roughly its power), and the scores become the chances of picking each.
       Aiming (chapter 14's <a data-g="nee">NEE</a>) then picks a box and a direction uniformly within the cone its
       sphere fills as seen from the point. Both halves of MIS ask for the <em>density</em> of that choice: its chance
-      per unit of direction, chapter 15's <var>p</var><sub>lamp</sub>. Directions in 3D are measured by <em>solid
-      angle</em>, the area a bundle of them covers on a sphere of radius 1 (the whole sphere is 4π); a cone of half-angle
+      per unit of direction, chapter 15's <var>p</var><sub>lamp</sub>. Directions in 3D are measured by <a data-g="solid-angle">solid
+      angle</a>, the area a bundle of them covers on a sphere of radius 1 (the whole sphere is 4π); a cone of half-angle
       α, the angle from its middle to its edge, covers 2π(1 − cos α).</p>
     <pre data-src="lib/pathtracer/core/tracebasics.js" data-sym="fn emitConePdf"
-         data-why="For every box: if the point is outside its sphere and the direction is inside its cone, add the box's chance divided by the cone's solid angle, 2π(1 − cos α); omc is 1 − cos α. A point inside a sphere is skipped: from inside, the sphere fills every direction and is no cone, and aiming never picks such a box (the same test where it aims)." data-hash="bc8a50df"></pre>
+         data-why="For every box: if the point is outside its sphere and the direction is inside its cone, add the box's chance divided by the cone's solid angle, 2π(1 − cos α); emitF(b, 3) is the sphere's radius r, and omc, from coneOneMinusCos, is 1 − cos α. They add because aiming picks a box first and then a direction: the chance of a direction is the sum, over every box whose cone holds it, of the chance of picking that box times that box's density for it (where cones overlap, two boxes could have given it). The test inside the cone uses the dot product: dot(a, b) is |a| |b| cos of the angle between them, so with dir of length 1 and dc the way to the sphere's middle, of length √d2, the angle is within α when dot(dir, dc) ≥ cos α √d2. A point inside a sphere is skipped: from inside, the sphere fills every direction and is no cone, and aiming never picks such a box (the same test where it aims)." data-hash="bc8a50df"></pre>
     <p>And the lines for light tracing, Crofton's density, which needs nothing about the shape but the spheres. A photon
       stands for all the light leaving its patch of surface along its line; lines come through that patch at a rate given
       by this density, so each photon's brightness is divided by it, chapter 12's rule again: what is picked often counts
       for little each time.</p>
     <pre data-src="lib/pathtracer/core/tracebasics.js" data-sym="fn emitLineDensity"
-         data-why="emitF(b, 4) is the box's chance and emitF(b, 6) its Crofton factor, 1/(4π² r²): the density of the line a photon started on, which its brightness is divided by." data-hash="853a9b64"></pre>
+         data-why="emitF(b, 4) is the box's chance and emitF(b, 6) its Crofton factor, 1/(4π² r²): the density of the line a photon started on, which its brightness is divided by. Only boxes whose sphere holds the photon's starting point y count: a line through a sphere that does not hold y could not have started a photon there, so that box could not have given this line." data-hash="853a9b64"></pre>
   </div>
 </section>
 
@@ -173,8 +202,8 @@
       <p><strong>Aiming at found glow pays.</strong> On the showcase scene lit only by a glowing sphere, aiming at the
         discovered glow cost 2.3 times as much per sample and still reached a given noise 1.4 times sooner than not
         aiming; light tracing cost 47% more per sample and bought nothing there (<code>roadmap/PLAN.md</code>, "Emissive
-        surfaces as lights", second run). The document names no card for that run; the run before it was on the user's
-        NVIDIA Ampere.</p>
+        surfaces as lights", second run). The document names no graphics card for that run; the run before it was on
+        the user's NVIDIA Ampere (chapter 0 says who "the user" is).</p>
     </div>
     <div data-claim="code">
       <p><strong>Too many glows is noisier, never wrong.</strong> At most 64 boxes are listed. A glow past that is not
@@ -197,9 +226,14 @@
         <a data-g="caustic">caustic</a>) can be found two ways: by camera paths, and by <a data-g="photon">photons</a>
         from the surface (chapters 18 and 19). The renderer splits the work: camera paths are marked to leave that light
         to the photons. In the first run on hardware the marking was made only while the sun's photons existed, so with
-        the sun off both counted it, and the picture read 0.6% too bright.</li>
-      <li><strong>Two estimates of two things</strong>: aiming evaluated its own approximation of the materials while
-        bounces sampled the real ones, so brightness moved with the share of shadow rays (chapter 15's last story).</li>
+        the sun off both counted it, and the picture read 0.6% too bright. Small, because light counted twice adds its own
+        amount again: that light was only about 0.6% of the picture (the second run notes this glow throws little of it
+        into view). Wrong all the same.</li>
+      <li><strong>Two estimates of two things</strong>: aiming worked out how much light a surface passes on from its
+        own simplified copy of the materials, while bounces used the real ones. MIS adds the two ways' shares of one
+        amount, and these were shares of two different amounts, so the picture's brightness moved with how often shadow
+        rays were aimed at the glow: 1.2% darker than the default with none aimed, 0.5% brighter with 9 in 10 (chapter 15 tells it
+        whole).</li>
       <li><strong>A sum that overflowed.</strong> The cell keeps the brightest glow, not the sum: a glow filling the
         screen is a million hits a sample, and their sum would wrap round a 32-bit number within one (the comment in
         <code>emitDeposit</code>).</li>
@@ -218,7 +252,7 @@
         quickly once the glow is found.</li>
     </ul>
     <h3>Words from this chapter</h3>
-    <ul class="words" data-words="emitter nee mis normal photon caustic unbiased"></ul>
+    <ul class="words" data-words="emitter sample pdf nee mis unbiased normal photon thread f32 solid-angle caustic"></ul>
   </div>
 </section>
 

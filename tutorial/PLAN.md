@@ -216,7 +216,8 @@ step cache's grid around a scene (26).
    follows the code (`review/affected.mjs`).
 2. Every style's fonts kept in the repository (`kit/fonts/`, `fetch.mjs`, their licences): the tutorial loads nothing
    from elsewhere. Then "How to read this", the rest of Part I and Part IV (the flat world grows a glossy surface,
-   MIS, Russian roulette and a lens), each read once by a blank reader and revised (round 3 in `REVIEWS.md`). Asked
+   MIS, Russian roulette and a lens), each read by two blank readers in turn and revised (rounds 3 and 4 in
+   `REVIEWS.md`). Asked
    for on the way: every figure interactive (controls where there were none, every chart read out under the pointer,
    chapter 14's room calmer), the notebook lettered by hand, four more styles (Chalkboard and three versions of the
    drafting sheet), and colour words that follow the style.
