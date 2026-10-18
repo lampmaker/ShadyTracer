@@ -51,7 +51,7 @@ export const CHAPTERS = [
 
     C('surfaces', 'diffuse', 'Diffuse and mirror', 'Where light goes when it hits a matte surface or a mirror; a test that no light is made or lost.', 'draft',
         [`${K}materials.js`, `${K}materials_pbr.js`]),
-    C('surfaces', 'microfacets', 'Rough and shiny', 'Rough and shiny surfaces as many tiny mirrors, without losing light.', 'planned',
+    C('surfaces', 'microfacets', 'Rough and shiny', 'Rough and shiny surfaces as many tiny mirrors, without losing light.', 'draft',
         [`${K}microfacet.js`, `${K}materials_pbr.js`]),
     C('surfaces', 'glass', 'Glass', 'Light bending into glass, reflecting off it, and coloured by it.', 'planned',
         [`${P}optics/fresnel.js`, `${K}materials_pbr.js`]),

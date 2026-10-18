@@ -160,8 +160,12 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
    furnace in the flat world, exact on every path at albedo 1, the cap's loss, a black control; makeDiffuse, makeMirror,
    the metal and matte branches of lobesSample, Schlick, ALPHA_MIN; the measured furnace; the 4% coat that made the
    floor a plastic → materials.js, materials_pbr.js. *Read:* pbr-diffuse, pbr-specular, pbr-conductor, rtiow.
-9. **Rough and shiny**: microfacets, GGX, Smith, visible-normal sampling, albedo tables, Kulla–Conty. *Read* (named in
-   the code's comments, links to be checked): Walter et al. 2007, Heitz 2014, Dupuy & Benyoub 2023, Kulla & Conty 2017.
+9. **Rough and shiny** (draft): microfacets and GGX, a white metal's lobe in the plane of the light, directions drawn
+   by visible normals and those lost into the surface; E, the share one reflection keeps, worked out on the renderer's
+   warped 32 x 32 grid against the plain grid it replaced (0.97850, the comment's own number) and a fine reference, and
+   what a compensated white metal then reads (E_true / E_table); the old density against the true one, 1 straight on,
+   0.154 to 1.623 at 60 degrees. The GGX is a teaching mirror of microfacet.js's WGSL, tested against closed forms ->
+   microfacet.js, materials_pbr.js. *Read:* pbr-microfacet, heitz2014, dupuy2023, kulla2017, turquin2019.
 10. **Glass**: Snell, Fresnel from the IOR, total internal reflection, Beer–Lambert, which medium a ray is in.
 11. **Rainbows**: dispersion from n_d and the Abbe number, a wavelength per channel, coatings → spectral.js.
 

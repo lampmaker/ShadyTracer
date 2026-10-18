@@ -677,6 +677,30 @@ for (const [name, { mod }] of modules) {
     ok('ch.8: a roughness of 0.02 is an alpha of 0.0004, under ALPHA_MIN 0.001: still a mirror; the first blur at 0.0316', 0.02 ** 2 < AM && Math.sqrt(AM).toFixed(4) === '0.0316')
 }
 
+{
+    const M = await import('../ch/microfacets.js'), MFs = readFileSync(join(REPO, 'lib/pathtracer/core/microfacet.js'), 'utf8')
+    // GGX's D is a density of facet normals: the projected area sums to 1, D(h) cos theta_h over the half-sphere
+    const sumD = a => { let acc = 0; const N = 2000; for (let k = 0; k < N; k++) { const t = (k + 0.5) / N * Math.PI / 2; acc += M.D([Math.sin(t), 0, Math.cos(t)], a) * Math.cos(t) * Math.sin(t) * 2 * Math.PI * (Math.PI / 2 / N) } return acc }
+    ok('ch.9: the mirror\'s GGX D integrates to 1 (projected), at alpha 0.05, 0.3 and 1', [0.05, 0.3, 1].every(a => Math.abs(sumD(a) - 1) < 2e-3), [0.05, 0.3, 1].map(sumD).join(' '))
+    // the visible-normal draw has the density it claims: a histogram of reflected directions against G1 D / (4 o.z)
+    const a = 0.3, o = [Math.sin(0.7), 0, Math.cos(0.7)], R = rng(5), n = 200000, cap = 0.25
+    let inCone = 0; const c = [0, 0, 1]
+    for (let k = 0; k < n; k++) { const i = M.reflect(o, M.vndf(o, a, [R(), R()])); if (i[2] > 0 && i[0] * c[0] + i[1] * c[1] + i[2] * c[2] > Math.cos(cap)) inCone++ }
+    let want = 0; const NT = 200, NP = 200
+    for (let t = 0; t < NT; t++) for (let q = 0; q < NP; q++) { const th = (t + 0.5) / NT * cap, ph = (q + 0.5) / NP * 2 * Math.PI, i = [Math.sin(th) * Math.cos(ph), Math.sin(th) * Math.sin(ph), Math.cos(th)]; want += M.pdfReflect(o, i, a) * Math.sin(th) * (cap / NT) * (2 * Math.PI / NP) }
+    ok('ch.9: directions drawn by visible normals land in a cone as often as G1 D / (4 o.z) says', Math.abs(inCone / n - want) < 4 * Math.sqrt(want / n), `${inCone / n} against ${want}`)
+    ok('ch.9: Smith G1 <= 1, G2 <= G1', [[0.3, 0.2], [0.9, 0.6], [0.05, 1]].every(([t1, t2]) => { const w1 = [Math.sin(t1), 0, Math.cos(t1)], w2 = [-Math.sin(t2), 0, Math.cos(t2)]; return M.G1(w1, 0.5) <= 1 && M.G2(w1, w2, 0.5) <= M.G1(w1, 0.5) }))
+    // the old grid's number, as microfacet.js's comment records it; the warped grid closer; the old density right straight on
+    ok('ch.9: the plain 32 x 32 grid gives 0.97850 at roughness 0.3, 60 degrees (the comment\'s number); converged about 0.9751; warped 0.97556',
+        M.albedo(0.5, 0.3, 32, false).toFixed(5) === '0.97850' && Math.abs(M.albedo(0.5, 0.3, 400, true) - 0.9751) < 2e-4 && M.albedo(0.5, 0.3, 32, true).toFixed(5) === '0.97556' && MFs.includes('0.97850 for 0.97505'))
+    const r = (f, st) => M.figures[f].readout({ ...M.figures[f].state, ...M.figures[f].steps[st] })
+    ok('ch.9: the old density is the true one straight down, 0.154 to 1.623 of it at 60 degrees, from 0.023 at 80', r('oldpdf', 'straight').includes('1.000 to 1.000') && r('oldpdf', 'slant').includes('0.154 to 1.623') && r('oldpdf', 'grazing').includes('0.023 to'), r('oldpdf', 'slant'))
+    ok('ch.9: the page\'s numbers: E 0.8012 at roughness 0.6, 40 degrees; a compensated metal at roughness 0.3 reads 0.9965 with the plain table', r('lobe', 'rough').includes('E = 0.8012') && r('albedo', 'r03').includes('reads 0.9965'), r('albedo', 'r03'))
+    // the mirror's formulas are microfacet.js's, line for line where the WGSL can be read
+    ok('ch.9: the mirror follows the WGSL: Lambda, G2, D and the reflect density', /return 0\.5 \* \(-1\.0 \+ sqrt\(1\.0 \+ t2\)\);/.test(MFs) && /return 1\.0 \/ \(1\.0 \+ mfLambda\(o, a\) \+ mfLambda\(i, a\)\);/.test(MFs)
+        && /return 1\.0 \/ \(MF_PI \* a\.x \* a\.y \* t \* t\);/.test(MFs) && /return mfG1\(o, a\) \* mfD\(h, a\) \/ \(4\.0 \* o\.z\);/.test(MFs))
+}
+
 /* THE EXCERPT LOCATOR ON ITS OWN ----------------------------------------------------------------------------------- */
 {
     const text = [

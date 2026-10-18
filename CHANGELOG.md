@@ -17,7 +17,7 @@ as PLAN.md does.
 
 ## 0.67.2 — 2026-10-18
 
-**A developer tutorial beside the program: its plan, its figure kit, eight styles and its first fifteen chapters**
+**A developer tutorial beside the program: its plan, its figure kit, eight styles and its first sixteen chapters**
 (you: "a tutorial for shadytracer, parallel to the program … that explains the inner workings of the code … interactive,
 2D visualisations … a solid toolkit for that so it looks the same everywhere … start with a plan and list of contents,
 then a few pages … make a few mockups of different styles"). Nothing in the application changed: the tutorial is
@@ -49,8 +49,10 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   `autoexposure.js` runs it, mirrored on an outdoor scene and a lamp-lit room, black voting as it used to; the six
   tone curves ported from `rendertoscreen.js`; 8 bits kept linearly against sRGB); chapter 8, *Diffuse and mirror* (a matte point's bounce
   directions and cos θ circle, a room whose wall becomes a mirror the shadow rays cannot see through, the white furnace
-  in the flat world, which gains mirrors); chapter 2, *Shapes as distances*; chapter 14, *Aim at the
-  light* (next event estimation); the contents map; a glossary of 108 terms, each linked from the pages with a card on
+  in the flat world, which gains mirrors); chapter 9, *Rough and shiny* (a GGX lobe and its
+  visible-normal draws, E against the renderer's old and new table grids, the old density right only straight on, on
+  a teaching mirror of `microfacet.js` that reproduces its comment's 0.97850); chapter 2, *Shapes as distances*; chapter 14, *Aim at the
+  light* (next event estimation); the contents map; a glossary of 112 terms, each linked from the pages with a card on
   hover or tap.
 - **The kit** (`tutorial/kit/`): one pen draws every figure in the style's colours and line; a figure is a spec with
   state, controls, drag handles and steps that the paragraphs beside it trigger as they scroll by. The figures trace a
@@ -188,6 +190,8 @@ What to look at:
   light. Do the swatches look as your screen shows ShadyTracer?
 - **Chapter 8, Diffuse and mirror**: drag the lamp round the matte point; the room's wall made a mirror; the furnace
   at albedo 1, then 0.7, then a bounce limit of 1.
+- **Chapter 9, Rough and shiny**: drag the light round the rough metal at roughness 0.6; the table chart at 0.3; the
+  old density at 60° and 80°.
 - **Chapter 16's first figure**: 1 sample (boxes, nothing circled), then 8. Chapter 17's side view, *near*: the ray from
   the lens's top edge, in its own colour, and its mark on the picture; and its 3D picture's *the first 2* samples. Chapter 0's lamp figure at r = 1 and 2.
 - **The new styles.** Lab notebook's new lettering; Chalkboard (try it dark); the three drafting versions side by side

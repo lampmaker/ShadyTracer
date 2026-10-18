@@ -154,6 +154,12 @@ real student.
 3. Why can the renderer not aim a shadow ray through a mirror, and how is a lamp seen in a mirror found?
 4. What is a white furnace, what should it show, and why does it need a black control?
 
+**microfacets** (Rough and shiny)
+1. What is a microfacet, and what does the roughness change?
+2. Why does one reflection off a rough metal lose some light, and how does ShadyTracer give it back?
+3. What was wrong with the old table of E, and why did warping its grid fix it?
+4. What was wrong with the old sampler's density, and why could a test looking straight down not see it?
+
 **emitters** (Every glowing thing is a light)
 1. How does the renderer find glowing shapes nobody told it about?
 2. Why is the picture right even before a glowing shape has been found?
