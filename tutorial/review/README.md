@@ -94,6 +94,14 @@ real student.
 6. The twist divides by √(1 + c²). What does the page say is wrong with that, and how sure is it?
 7. Why does a ray marched through an undivided noise relief never stop, and what does the shell save?
 
+**normals** (Which way is up)
+1. What is a normal, and how is it related to the distance field?
+2. How does the renderer find a normal for a shape that does not give one, and how many extra looks does it take?
+3. Why are central differences more accurate than forward ones for the same step, and what do they cost?
+4. Why is a very small step a bad idea on a GPU?
+5. What is the floor of 128 spacings, and how was 128 chosen?
+6. What did turning off the shapes' own normals cost, and what does the page say is not known about it?
+
 **nee** (Aim at the light)
 1. Why does a picture lit by a small lamp stay noisy for a long time?
 2. What does next event estimation do at each bounce?

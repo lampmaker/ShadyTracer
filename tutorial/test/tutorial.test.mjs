@@ -406,6 +406,34 @@ for (const [name, { mod }] of modules) {
     ok('ch.3: ...and the overlap step\'s probe, inside the glass, is called water', S.figures.fold.readout(S.figures.fold.steps.overlap).endsWith('in: water'))
 }
 
+{
+    const N = await import('../ch/normals.js'), { f32Floor } = await import('../../lib/pathtracer/core/tolerances.js')
+    // forward differences' error shrinks like h, central ones' like h^2, on the circle
+    const p = N.figures.slope.steps.round.probe, ex = N.exact(...p), ang = n => Math.acos(Math.min(1, n[0] * ex[0] + n[1] * ex[1]))
+    const fw = h => ang(N.forward(N.field, ...p, h)), ce = h => ang(N.central(N.field, ...p, h))
+    ok('ch.4: forward differences\' error falls like the step, central ones\' like its square', Math.abs(fw(0.02) / fw(0.002) - 10) < 1.5 && Math.abs(ce(0.02) / ce(0.002) - 100) < 15,
+        `${(fw(0.02) / fw(0.002)).toFixed(2)}, ${(ce(0.02) / ce(0.002)).toFixed(1)}`)
+    let worst = 0
+    for (let i = 0; i < 300; i++) {
+        const q = [-2.6 + 5.2 * ((i * 0.618034) % 1), -1.6 + 3.2 * ((i * 0.754878) % 1)], dc = Math.hypot(q[0] - 0.75, q[1] - 0.15) - 0.95
+        if (dc > N.field(...q) + 0.01) continue                // the box is nearer, or nearly: its corners are another test
+        const c = N.central(N.field, ...q, 1e-6), e = N.exact(...q)
+        worst = Math.max(worst, Math.hypot(c[0] - e[0], c[1] - e[1]))
+    }
+    ok('ch.4: the exact normal is the field\'s slope where the circle is nearer', worst < 1e-4, worst)
+    // the readouts the prose quotes
+    const r = k => N.figures.slope.readout(N.figures.slope.steps[k])
+    ok('ch.4: on the circle 3.9 and 0.6 degrees at h 0.3; near the crease 6.9 and 20.5; a tenth the step 0.8 and 0.0',
+        r('round').includes('3.9° off') && r('round').includes('0.6° off') && r('crease').includes('6.9° off') && r('crease').includes('20.5° off')
+        && r('creaseSmall').includes('0.8° off') && r('creaseSmall').includes('0.0° off'), [r('round'), r('crease'), r('creaseSmall')].join(' | '))
+    const g = (frac, k) => N.grainErrors(frac, 2 ** k)
+    ok('ch.4: the f32 figure: 2.2 mrad at 128 spacings, 110 at 2, the step\'s own 11 at 16384, 7.7 for a radius of a thousandth at 128',
+        g(0.1, 7).all.toFixed(1) === '2.2' && Math.round(g(0.1, 1).all / 10) === 11 && Math.round(g(0.1, 14).step) === 11 && g(0.001, 7).all.toFixed(1) === '7.7',
+        [g(0.1, 7).all, g(0.1, 1).all, g(0.1, 14).step, g(0.001, 7).all].map(v => v.toFixed(2)).join(' '))
+    const q = N.grainPoint(0.1, 0.3).p
+    ok('ch.4: the figure\'s step at 128 spacings is the renderer\'s floor (tolerances.js f32Floor), in f32', N.stepAt(128, q) === Math.fround(f32Floor([q[0], q[1], 0])))
+}
+
 /* THE EXCERPT LOCATOR ON ITS OWN ----------------------------------------------------------------------------------- */
 {
     const text = [

@@ -32,7 +32,8 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   falls as 1/r and 3D's as 1/r², excerpts and stamps, where a measured number comes from, running the program and its
   tests); chapter 1, *Rays make a picture*; chapter 3, *Building and bending shapes* (the three joins hard and blended,
   the blend's normal and the warped fillet, which solid a point is in, a twist's step bound, a noise relief and its
-  shell); chapter 2, *Shapes as distances*; chapter 14, *Aim at the
+  shell); chapter 4, *Which way is up* (normals by a shape's own formula, forward and central differences, the f32
+  grain below the renderer's floor of 128 spacings, emulated with `Math.fround` as `floor.test.mjs` does); chapter 2, *Shapes as distances*; chapter 14, *Aim at the
   light* (next event estimation); the contents map; a glossary of 82 terms, each linked from the pages with a card on
   hover or tap.
 - **The kit** (`tutorial/kit/`): one pen draws every figure in the style's colours and line; a figure is a spec with

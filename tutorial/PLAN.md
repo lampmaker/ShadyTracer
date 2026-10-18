@@ -123,8 +123,11 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
    (c + √(c² + 4)) / 2 (the flat world's swirl, and a 3D plate measured by the test at 1.14); the noise relief raw,
    divided and with its shell, a ray rocking for 300 steps → scene_api.js, modifiers.js, codegen.js combine,
    noise.js. *Read:* iq-distfunctions, iq-interior, iq-fbmsdf, iq-smin.
-4. **Which way is up**: normals from the field's slope, analytic against three extra evaluations. *Read:* iq-normals
-   (Quilez's tetrahedron of four evaluations against central differences).
+4. **Which way is up** (draft): the normal as the field's gradient; a shape's own against forward differences (the
+   shade kernel's 3 looks) and central ones (the pick's 6), their errors as h and h², a crease; the same differences
+   in an f32 emulation, the grain below the floor of 128 spacings and the step's own error above it; fastnormals off
+   at 4.3× (measured, Pascal) and why that much is not known → tracebasics.js hitNormal, tolerances.js, sdf.js
+   Nsphere, PRECISION.md. *Read:* iq-normals.
 
 **II. What light is**
 5. **Measuring light**: lm, cd, lx, cd/m²; inverse-square and cosine laws; emitters in cd/m²; the sun's disc in double

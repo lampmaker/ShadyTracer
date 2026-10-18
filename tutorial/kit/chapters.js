@@ -39,8 +39,8 @@ export const CHAPTERS = [
         ['help/widgets.js', `${K}shapes.js`, `${K}tolerances.js`]),
     C('rays', 'shapes', 'Building and bending shapes', 'Joining, melting, twisting and roughening shapes, and keeping them safe to trace.', 'draft',
         [`${K}scene_api.js`, `${K}shapes.js`, `${K}noise.js`, 'builder/modifiers.js', 'builder/codegen.js', 'help/widgets.js']),
-    C('rays', 'normals', 'Which way is up', 'Which way a surface faces, and what it costs to find out.', 'planned',
-        [`${K}pick.js`]),
+    C('rays', 'normals', 'Which way is up', 'Which way a surface faces, and what it costs to find out.', 'draft',
+        [`${K}pick.js`, `${K}tracebasics.js`, `${K}tolerances.js`, `${K}sdf.js`, 'lib/pathtracer/PRECISION.md', `${K}test/floor.test.mjs`]),
 
     C('light', 'photometry', 'Measuring light', 'The units of light (lumen, candela, lux), how light weakens with distance and slant, the sun.', 'planned',
         [`${K}photometry.js`, `${K}sdf.js`]),
