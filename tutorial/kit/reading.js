@@ -76,6 +76,8 @@ export const READING = [
     R('wiki-tonemapping', 'Wikipedia', 'Tone mapping', 'encyclopedia article', 'https://en.wikipedia.org/wiki/Tone_mapping'),
     R('khronos-neutral', 'Khronos', 'Khronos PBR Neutral tone mapper', 'specification, 2024', 'https://github.com/KhronosGroup/ToneMapping/tree/main/PBR_Neutral', { credited: 'lib/pathtracer/core/rendertoscreen.js' }),
     R('hable-filmic', 'John Hable', 'Filmic tonemapping operators', 'article, 2010', 'https://filmicworlds.com/blog/filmic-tonemapping-operators/', { credited: 'lib/pathtracer/core/rendertoscreen.js' }),
+    R('wiki-fresnel', 'Wikipedia', 'Fresnel equations', 'encyclopedia article', 'https://en.wikipedia.org/wiki/Fresnel_equations'),
+    R('wiki-beer', 'Wikipedia', 'Beer–Lambert law', 'encyclopedia article', 'https://en.wikipedia.org/wiki/Beer%E2%80%93Lambert_law'),
     R('wiki-crofton', 'Wikipedia', 'Crofton formula', 'encyclopedia article', 'https://en.wikipedia.org/wiki/Crofton_formula'),
 
     // random numbers on a GPU

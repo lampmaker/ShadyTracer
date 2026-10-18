@@ -701,6 +701,31 @@ for (const [name, { mod }] of modules) {
         && /return 1\.0 \/ \(MF_PI \* a\.x \* a\.y \* t \* t\);/.test(MFs) && /return mfG1\(o, a\) \* mfD\(h, a\) \/ \(4\.0 \* o\.z\);/.test(MFs))
 }
 
+{
+    const G = await import('../ch/glass.js'), FR = await import('../../lib/pathtracer/optics/fresnel.js')
+    // the pane's passes, summed, are fresnel.js's closed forms, clear and absorbing
+    let worst = 0
+    for (const th of [0, 30, 45, 70, 85]) for (const [c, d] of [[1, 0], [0.5, 1], [0.2, 4]]) {
+        const P = G.slabPasses(th, 1.5, c, d, 200), want = d > 0 ? FR.absorbingSlabT(th, 1.5, 1, c, d) : FR.slabT(th, 1.5).model
+        worst = Math.max(worst, Math.abs(P.T - want))
+    }
+    ok('ch.10: the pane\'s bounces, summed, are (1 - R)/(1 + R) and absorbingSlabT', worst < 1e-12, worst)
+    // Snell at the interface; 4% straight on; total internal reflection past the critical angle; p is 0 at Brewster's
+    const a = G.interfaceAt(45, 1.5, 'air'), b = G.interfaceAt(30, 1.5, 'glass')
+    ok('ch.10: Snell both ways, 4% straight on, nothing refracted past 41.81 degrees, p 0 at Brewster', Math.abs(Math.sin(45 * Math.PI / 180) - 1.5 * Math.sin(a.thetaT * Math.PI / 180)) < 1e-12
+        && Math.abs(1.5 * Math.sin(30 * Math.PI / 180) - Math.sin(b.thetaT * Math.PI / 180)) < 1e-12 && Math.abs(G.interfaceAt(0, 1.5, 'air').R - 0.04) < 1e-12
+        && G.interfaceAt(41.9, 1.5, 'glass').t === null && G.interfaceAt(41.7, 1.5, 'glass').t !== null && G.criticalDeg(1.5).toFixed(2) === '41.81'
+        && G.interfaceAt(G.brewsterDeg(1.5, 'air'), 1.5, 'air').p < 1e-20)
+    // the ball: rays near the axis meet at its paraxial focus n / 2(n - 1)
+    ok('ch.10: a ball\'s near-axis rays meet at n / 2(n - 1), for glass, water and diamond', [1.5, 1.33, 2.42].every(n => Math.abs(G.axisCross(0.001, n) - G.ballFocus(n)) < 1e-5))
+    const r = (f, st) => G.figures[f].readout({ ...G.figures[f].state, ...G.figures[f].steps[st] })
+    ok('ch.10: the page\'s numbers: 28.13 degrees and 5.0% (s 9.2, p 0.8); 48.59 from inside; 90.2 / 90.4 / 90.7%; 45.5 / 50.9% at 78; 45.6 / 41.1 / 52.9% absorbing; 1.500 and 1.104; 2.015; 0.852',
+        r('snell', 'air').includes('bends to 28.13°') && r('snell', 'air').includes('s 9.2%, p 0.8%, unpolarised 5.0%') && r('snell', 'inside').includes('bends to 48.59°')
+        && r('slab', 'clear').includes('90.2% the first time, 90.4% with every bounce') && r('slab', 'clear').includes('slab: 90.7%') && r('slab', 'steep').includes('45.5% the first time, 50.9%')
+        && r('slab', 'absorbing').includes('t = 45.6%') && r('slab', 'absorbing').includes('41.1% with every bounce') && r('slab', 'absorbing').includes('absorbed 52.9%')
+        && r('ball', 'glass').includes('meet 1.500') && r('ball', 'glass').includes('0.9 off at 1.104') && r('ball', 'water').includes('meet 2.015') && r('ball', 'diamond').includes('meet 0.852'), r('slab', 'absorbing'))
+}
+
 /* THE EXCERPT LOCATOR ON ITS OWN ----------------------------------------------------------------------------------- */
 {
     const text = [

@@ -166,7 +166,13 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
    what a compensated white metal then reads (E_true / E_table); the old density against the true one, 1 straight on,
    0.154 to 1.623 at 60 degrees. The GGX is a teaching mirror of microfacet.js's WGSL, tested against closed forms ->
    microfacet.js, materials_pbr.js. *Read:* pbr-microfacet, heitz2014, dupuy2023, kulla2017, turquin2019.
-10. **Glass**: Snell, Fresnel from the IOR, total internal reflection, Beer–Lambert, which medium a ray is in.
+10. **Glass** (draft): Snell and Fresnel at one interface, from the air and from inside, s, p and the unpolarised
+   average the renderer uses, Brewster's angle and total internal reflection; a pane with every bounce counted to
+   (1 - R) / (1 + R), the polarised answer beside it, and Beer-Lambert with a colour depth; parallel light through a
+   ball to its focus -- all on optics/fresnel.js's own fresnel, refract, slabT and absorbingSlabT; the engine's
+   fresnelDielectric, the smooth interface branch, the medium beyond and rayTransmittance; the optics-refraction rows;
+   Fresnel from a slider, rough glass past the critical angle, the mirror under water -> optics/fresnel.js,
+   materials_pbr.js. *Read:* pbr-specular, wiki-fresnel, wiki-beer, walter2007, rtiow.
 11. **Rainbows**: dispersion from n_d and the Abbe number, a wavelength per channel, coatings → spectral.js.
 
 **IV. Path tracing**

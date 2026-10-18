@@ -160,6 +160,13 @@ real student.
 3. What was wrong with the old table of E, and why did warping its grid fix it?
 4. What was wrong with the old sampler's density, and why could a test looking straight down not see it?
 
+**glass** (Glass)
+1. What do Snell's law and Fresnel's law each decide when light meets glass?
+2. What is total internal reflection, and when does it happen?
+3. Why does a pane let through (1 − R)/(1 + R) of the light, and how does the renderer get that without adding a series?
+4. How does the renderer know which material is on the other side of a surface?
+5. How does coloured glass absorb more when it is thicker?
+
 **emitters** (Every glowing thing is a light)
 1. How does the renderer find glowing shapes nobody told it about?
 2. Why is the picture right even before a glowing shape has been found?

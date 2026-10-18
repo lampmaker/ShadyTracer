@@ -53,7 +53,7 @@ export const CHAPTERS = [
         [`${K}materials.js`, `${K}materials_pbr.js`]),
     C('surfaces', 'microfacets', 'Rough and shiny', 'Rough and shiny surfaces as many tiny mirrors, without losing light.', 'draft',
         [`${K}microfacet.js`, `${K}materials_pbr.js`]),
-    C('surfaces', 'glass', 'Glass', 'Light bending into glass, reflecting off it, and coloured by it.', 'planned',
+    C('surfaces', 'glass', 'Glass', 'Light bending into glass, reflecting off it, and coloured by it.', 'draft',
         [`${P}optics/fresnel.js`, `${K}materials_pbr.js`]),
     C('surfaces', 'dispersion', 'Rainbows', 'Why glass splits white light into colours, and how a renderer follows each colour.', 'planned',
         [`${K}spectral.js`]),
