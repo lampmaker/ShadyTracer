@@ -42,7 +42,7 @@ export const READING = [
     R('pbr-sampling', PBR, 'Physically Based Rendering (4th ed.), 8: Sampling and reconstruction', 'free online book', 'https://pbr-book.org/4ed/Sampling_and_Reconstruction'),
     R('pbr-montecarlo', PBR, 'Physically Based Rendering (4th ed.), 2: Monte Carlo integration', 'free online book', 'https://pbr-book.org/4ed/Monte_Carlo_Integration'),
     R('pbr-lights', PBR, 'Physically Based Rendering (4th ed.), 12.6: Light sampling', 'free online book', 'https://pbr-book.org/4ed/Light_Sources/Light_Sampling'),
-    R('pbr-roulette', PBR, 'Physically Based Rendering (4th ed.), 2.2: Improving efficiency (Russian roulette and splitting)', 'free online book', 'https://pbr-book.org/4ed/Monte_Carlo_Integration/Improving_Efficiency'),
+    R('pbr-efficiency', PBR, 'Physically Based Rendering (4th ed.), 2.2: Improving efficiency (importance sampling, multiple importance sampling, Russian roulette)', 'free online book', 'https://pbr-book.org/4ed/Monte_Carlo_Integration/Improving_Efficiency'),
     R('pbr-pathtracer', PBR, 'Physically Based Rendering (4th ed.), 13.4: A better path tracer', 'free online book', 'https://pbr-book.org/4ed/Light_Transport_I_Surface_Reflection/A_Better_Path_Tracer'),
     R('kajiya1986', 'James T. Kajiya', 'The rendering equation', 'paper, SIGGRAPH 1986'),
     R('veach1997', 'Eric Veach', 'Robust Monte Carlo methods for light transport simulation', 'PhD thesis, Stanford University, 1997', 'https://graphics.stanford.edu/papers/veach_thesis/'),

@@ -36,7 +36,8 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   grain below the renderer's floor of 128 spacings, emulated with `Math.fround` as `floor.test.mjs` does); chapter 12,
   *Dice and averages* (π from darts with the renderer's own error bar, the spread against 1/√N, the old random numbers
   against PCG4D's); chapter 13, *Following a path* (a path's throughput, the bounce cap's lost light, Russian roulette
-  off against on, as the engine plays it); chapter 2, *Shapes as distances*; chapter 14, *Aim at the
+  off against on, as the engine plays it); chapter 15, *Two ways to the light* (Veach's plates in the flat world:
+  lamp points, plate directions and MIS from the same random numbers, and the two densities and their weights); chapter 2, *Shapes as distances*; chapter 14, *Aim at the
   light* (next event estimation); the contents map; a glossary of 82 terms, each linked from the pages with a card on
   hover or tap.
 - **The kit** (`tutorial/kit/`): one pen draws every figure in the style's colours and line; a figure is a spec with

@@ -485,6 +485,29 @@ for (const [name, { mod }] of modules) {
         Math.abs(z) < 1 && (r.costOff / r.off.cnt).toFixed(1) === '10.0' && (r.costOn / r.on.cnt).toFixed(1) === '4.7' && (1 / Math.sqrt(eff)).toFixed(2) === '0.96', `z ${z.toFixed(2)}, eff ${eff.toFixed(3)}`)
 }
 
+{
+    const M = await import('../ch/mis.js'), { rng } = await import('../kit/flatland.js')
+    const tb = readFileSync(join(REPO, 'lib/pathtracer/core/tracebasics.js'), 'utf8')
+    ok('ch.15: the flat world\'s misWeight is the power heuristic tracebasics.js writes, and the two weights sum to 1',
+        /fn misWeight\(pThis: f32, pOther: f32\) -> f32 \{\s*let a = pThis \* pThis;\s*let b = pOther \* pOther;\s*return a \/ max\(a \+ b, 1e-20\);/.test(tb)
+        && [[1, 2], [0.3, 7], [5, 0.01]].every(([a, b]) => Math.abs(M.misWeight(a, b) + M.misWeight(b, a) - 1) < 1e-12))
+    ok('ch.15: every lamp gives the same light (radiance x length 0.4)', M.LAMPS.every(L => Math.abs(L.Le * L.len - 0.4) < 1e-12))
+    // each of the three estimates is the exact light on average: 6000 samples at a mirror point of each plate
+    let worst = 0
+    M.SIGMAS.forEach((sg, p) => {
+        const x = [1.5, 3.3, 5.1, 6.9][p], ex = M.exactAt(x, sg), R = rng(31 + p), sum = [0, 0, 0], sq = [0, 0, 0], n = 6000
+        for (let i = 0; i < n; i++) { const e = M.estimates(x, sg, R); for (let m = 0; m < 3; m++) { sum[m] += e[m]; sq[m] += e[m] * e[m] } }
+        for (let m = 0; m < 3; m++) { const mean = sum[m] / n, se = Math.sqrt((sq[m] / n - mean * mean) / n); worst = Math.max(worst, Math.abs(mean - ex) / se) }
+    })
+    ok('ch.15: lamp points, plate directions and MIS each average to the exact light (within 4 error bars)', worst < 4, worst.toFixed(2))
+    const run = st => { const s = { ...M.figures.plates.state, ...st }; M.figures.plates.work.reset(s); while (M.figures.plates.work.add(s, 1e9)); return M.figures.plates.readout(s) }
+    const r256 = run({ max: 256 })
+    ok('ch.15: after 256 samples the error bars are 13%, 12% and 6% of the light', r256.includes('lamps 13%') && r256.includes('directions 12%') && r256.includes('MIS 6%'), r256)
+    const w = k => M.figures.weights.readout({ ...M.figures.weights.state, ...M.figures.weights.steps[k] })
+    ok('ch.15: the weights figure: 0.99 for the tiny lamp on the rough plate, 1.00 for the sharp plate under the long lamp',
+        w('rough').includes('weights 0.99 for the lamp') && w('sharp').includes('1.00 for the plate'), [w('rough'), w('sharp')].join(' | '))
+}
+
 /* THE EXCERPT LOCATOR ON ITS OWN ----------------------------------------------------------------------------------- */
 {
     const text = [

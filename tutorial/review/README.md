@@ -117,6 +117,13 @@ real student.
 4. Why does ShadyTracer still leave Russian roulette off?
 5. What was the 6 to 8% brightening, and what did it teach?
 
+**mis** (Two ways to the light)
+1. Where does picking a point on a lamp do badly, and where does picking a direction from the surface do badly? Why?
+2. What does MIS do with the two estimates, and why is nothing counted twice?
+3. In the weights figure, what decides which strategy gets the larger weight?
+4. Why did a glass ball once cast a plain shadow?
+5. Why must both strategies use the same material, and what happened when they did not?
+
 **nee** (Aim at the light)
 1. Why does a picture lit by a small lamp stay noisy for a long time?
 2. What does next event estimation do at each bounce?

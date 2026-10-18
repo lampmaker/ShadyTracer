@@ -152,11 +152,15 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
     bounce cap's lost light (46/72/95% at caps 1/3/8 for walls of 0.8, less for white ones), a bias; Russian roulette as
     tracebasics.js plays it, off against on (the same average, 4.7 rays a path for 10.0), measured unbiased on Pascal
     and still off, and why; the removed [0, 10] clamp → materials_pbr.js THE BOUNCE, tracebasics.js's cap and roulette,
-    flatland.js tracePath (rr, info). *Read:* rtiow, pbr-roulette, pbr-pathtracer, kajiya1986.
+    flatland.js tracePath (rr, info). *Read:* rtiow, pbr-efficiency, pbr-pathtracer, kajiya1986.
 14. **Aim at the light** (draft): next event estimation, shadow rays, choosing among lights, where it cannot help.
     *Read:* rtrest, pbr-lights, pbr-spheres, pbr-pathtracer, veach1997.
-15. **Two ways to the light**: MIS and the power heuristic; delta directions keep weight 1. *Read:* veach1997 (chapter
-    9), rtrest's mixture densities.
+15. **Two ways to the light** (draft): Veach's plates in the flat world (four glossy plates, four lamps of equal light,
+    lamp points against plate directions against MIS, each exact on average; 13% / 12% / 6% error at 256 samples); the
+    two densities and the power heuristic's weights at one point; misWeight, the lamp side and the carried other half;
+    weight 1 where aiming could not have found it, the glass ball's plain shadow, glossy plastic lit by chance, the
+    first emitter run's bias (Ampere) → tracebasics.js misWeight, materials_pbr.js. *Read:* veach1997 (chapter 9),
+    pbr-efficiency, rtrest.
 16. **Every glowing thing is a light**: emitter discovery, unbiased from the first sample.
 17. **The camera's lens**: thin lens, focus, depth of field.
 
