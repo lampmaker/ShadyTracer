@@ -68,8 +68,8 @@ export const CHAPTERS = [
         [`${K}tracebasics.js`, `${K}materials_pbr.js`]),
     C('paths', 'emitters', 'Every glowing thing is a light', 'Finding the glowing surfaces in a scene, so they can be aimed at too.', 'draft',
         [`${K}tracebasics.js`, `${K}materials_pbr.js`, `${K}wavefront.js`]),
-    C('paths', 'lens', 'The camera\'s lens', 'A camera with a lens: focus and blur.', 'planned',
-        [`${K}lens.js`]),
+    C('paths', 'lens', 'The camera\'s lens', 'A camera with a lens: focus and blur.', 'draft',
+        [`${K}lens.js`, `${K}genrays.js`, 'lib/camera.js', 'tutorial/kit/space.js']),
 
     C('hard', 'caustics', 'Caustics', 'Light focused through glass onto a floor, and why the camera cannot find it.', 'planned',
         [`${K}tracebasics.js`, `${K}genrays.js`]),

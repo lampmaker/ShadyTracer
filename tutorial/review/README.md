@@ -130,6 +130,12 @@ real student.
 3. How can random lines start light from the surface of a shape the renderer knows nothing about?
 4. Why is the brightness kept as a logarithm, and what went wrong with the old code?
 
+**lens** (The camera's lens)
+1. How does the renderer make a pixel's ray through a lens instead of a pinhole?
+2. Why is a point at the focus distance sharp and a nearer one blurred? How big is the blur?
+3. What does a wider aperture do to the picture?
+4. Why was the lens first added, and what part of that reason is gone now?
+
 **nee** (Aim at the light)
 1. Why does a picture lit by a small lamp stay noisy for a long time?
 2. What does next event estimation do at each bounce?

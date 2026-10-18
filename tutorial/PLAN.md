@@ -166,7 +166,11 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
     against perimeters and their cosine spread; the brightness code, linear against log (the comment's "2e-5 of a stop"
     is 4.8e-6 by its own constants); emitConePdf, emitLineDensity; 2.3× a sample and 1.4× sooner (PLAN.md) →
     materials_pbr.js emitDeposit, tracebasics.js LUM_CODE. *Read:* wiki-crofton, pbr-lights, pbr-spheres.
-17. **The camera's lens**: thin lens, focus, depth of field.
+17. **The camera's lens** (draft): the thin lens from the side, its blur by lens.js lensImage against 2R |1/F − 1/D|;
+    a 3D picture through the lens (space.js cameraRayLens on lensDisc and lensRay), three balls, the focus and
+    aperture the reader's; why the lens was added (light → glass → floor → glass → eye) and what it no longer does
+    since 0.61.0; the lens's area cancelling in a connection → lens.js, genrays.js, lib/camera.js. *Read:* rtiow
+    (Defocus Blur), pbr-camera.
 
 **V. Light the camera can't find**
 18. **Caustics**: light → glass → floor → eye; light tracing; a split of path space.

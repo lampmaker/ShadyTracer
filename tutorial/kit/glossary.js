@@ -30,6 +30,8 @@ export const GLOSSARY = [
     G('sample', 'sample', 'One try at the whole picture: one ray (or path) through every pixel. A picture is the average of many samples; the more there are, the less each pixel\'s average wanders (its noise).', 'montecarlo', ['spp', 'noise']),
     G('spp', 'samples per pixel', 'How many samples have been averaged into each pixel so far. ShadyTracer keeps adding them while the picture stands still.', 'montecarlo', ['sample']),
     G('lens', 'lens (thin lens)', 'A camera with a lens instead of a pinhole: rays start from anywhere on the lens and meet again at one distance, the focus. Things nearer or further are blurred; how far the sharp region reaches is the depth of field.', 'lens', ['pinhole']),
+    G('depth-of-field', 'depth of field', 'The range of distances that look sharp through a lens. A wider opening (aperture) makes it shallower: things nearer or farther than the focus blur more.', 'lens', ['lens', 'circle-of-confusion'], ['pbr-camera']),
+    G('circle-of-confusion', 'circle of confusion', 'The blurred spot a point makes in a picture taken through a lens when it is not at the distance the lens is focused on. Its size grows with the lens\'s width and with how far the point is from the focus.', 'lens', ['depth-of-field']),
     G('flatland', 'flat world', 'The tutorial\'s 2D stand-in for the renderer: the same ideas in a slice, so they can be drawn. Some formulas differ (light spreads around a circle, not a sphere), and the pages say where.', 'reading'),
 
     // distances

@@ -526,6 +526,26 @@ for (const [name, { mod }] of modules) {
     ok('ch.16: cells only gain hits as samples add up', d8.cells.size >= d.cells.size)
 }
 
+{
+    const L = await import('../ch/lens.js'), { cameraRayLens, cameraRay3 } = await import('../kit/space.js')
+    let worst = 0
+    for (const [R, D, h, F] of [[0.6, 3.2, 0.9, 6], [0.3, 9, -1.2, 4], [1.1, 2, 2.5, 9.5], [0.05, 7, 0, 7.2]]) worst = Math.max(worst, Math.abs(L.blurSeen(R, D, h, F) - L.blurFormula(R, D, F)))
+    ok('ch.17: lens.js lensImage gives the thin lens\'s blur, 2R |1/F - 1/D| over tan(fov/2), and none at the focus', worst < 1e-12 && L.blurSeen(0.6, 6, 0.9, 6) < 1e-12, worst)
+    const r = L.figures.thin.readout({ ...L.figures.thin.state, ...L.figures.thin.steps.near })
+    ok('ch.17: the near step\'s blur is 0.48 of the half-height, 240 pixels of 1000', r.includes('blur 0.4808') && r.includes('240 pixels'), r)
+    const cam = { eye: [0.2, -0.4, 1.1], target: [4, 1, 0.3], fov: 0.7 }, a = cameraRayLens(cam, 7, 33, 80, 50, 0.21, 0.83, 0, 3, 0.5, 0.5), b = cameraRay3(cam, 7, 33, 80, 50, 0.21, 0.83)
+    ok('ch.17: a lens of radius 0 is the pinhole\'s ray, from the eye', a.o.every((v, k) => v === cam.eye[k]) && a.d.every((v, k) => Math.abs(v - b[k]) < 1e-15))
+    // every ray from the lens for one picture point meets the pinhole's ray at the focus distance along the axis
+    const F = 3.7, f = (() => { const d = [cam.target[0] - cam.eye[0], cam.target[1] - cam.eye[1], cam.target[2] - cam.eye[2]], l = Math.hypot(...d); return d.map(v => v / l) })()
+    let gap = 0
+    for (const [l1, l2] of [[0.1, 0.2], [0.9, 0.7], [0.5, 0.05]]) {
+        const q = cameraRayLens(cam, 7, 33, 80, 50, 0.21, 0.83, 0.3, F, l1, l2), t = F / (q.d[0] * f[0] + q.d[1] * f[1] + q.d[2] * f[2]) - ((q.o[0] - cam.eye[0]) * f[0] + (q.o[1] - cam.eye[1]) * f[1] + (q.o[2] - cam.eye[2]) * f[2]) / (q.d[0] * f[0] + q.d[1] * f[1] + q.d[2] * f[2])
+        const P = q.o.map((v, k) => v + q.d[k] * t), tb = F / (b[0] * f[0] + b[1] * f[1] + b[2] * f[2]), Pb = cam.eye.map((v, k) => v + b[k] * tb)
+        gap = Math.max(gap, Math.hypot(P[0] - Pb[0], P[1] - Pb[1], P[2] - Pb[2]))
+    }
+    ok('ch.17: through the lens, a picture point\'s rays all meet the pinhole\'s on the focus plane', gap < 1e-12, gap)
+}
+
 /* THE EXCERPT LOCATOR ON ITS OWN ----------------------------------------------------------------------------------- */
 {
     const text = [

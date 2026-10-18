@@ -11,7 +11,10 @@
 //   march3, normal3, ...     sphere tracing in 3D, as the march kernel does it
 //   trace3(world, o, d, ...) one path's radiance [r, g, b], with or without next event estimation
 //   shade3(world, o, d, ...) what the cheap views show: steps taken, normals, or direct sunlight with its shadow
+//   cameraRay3, cameraRayLens  a picture's rays: through a pinhole, or from a lens with depth of field (lens.js's own)
 //======================================================================================================================
+
+import { lensDisc, lensRay } from '../../lib/pathtracer/core/lens.js'
 
 const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
@@ -88,6 +91,16 @@ export function cameraRay3(cam, i, j, W, H, u = 0.5, v = 0.5) {
     const fy = Math.tan(cam.fov / 2), fx = fy * W / H
     const x = ((i + u) / W) * 2 - 1, y = 1 - ((j + v) / H) * 2
     return norm(add(f, add(scl(r, x * fx), scl(up, y * fy))))
+}
+
+/* ...THROUGH A LENS: the same picture point's ray from a point of a disc of radius R round the eye, aimed at where the
+   pinhole's ray meets the plane F along the axis -- lens.js's own lensDisc and lensRay, the engine's arithmetic. R = 0
+   is the pinhole's ray. Returns { o, d }. */
+export function cameraRayLens(cam, i, j, W, H, u, v, R, F, l1, l2) {
+    const f = norm(sub(cam.target, cam.eye)), r = norm(cross(f, [0, 0, 1])), up = cross(r, f)
+    const fy = Math.tan(cam.fov / 2), fx = fy * W / H
+    const x = ((i + u) / W) * 2 - 1, y = 1 - ((j + v) / H) * 2
+    return lensRay(x, y, lensDisc(R, l1, l2), { pos: cam.eye, right: r, up, fwd: scl(f, -1), fx, fy, F })
 }
 
 /** A cosine-weighted direction about n (pdf cos / pi): Lambert's own, which makes a diffuse bounce's weight rho. */
