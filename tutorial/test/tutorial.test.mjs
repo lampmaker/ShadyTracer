@@ -559,6 +559,43 @@ for (const [name, { mod }] of modules) {
     ok('ch.17: through the lens, a picture point\'s rays all meet the pinhole\'s on the focus plane', gap < 1e-12, gap)
 }
 
+{
+    const P = await import('../ch/photometry.js'), { sunCone, discLuminance } = await import('../../lib/pathtracer/core/photometry.js')
+    // the panel: every pixel's covered share, summed, against the square's exact illuminance, and against I / d^2 far off
+    const errs = [1, 2, 4, 8, 10].map(d => Math.abs(P.panelSeen(d, 0.5).E / P.panelE(d, 0.5) - 1))
+    ok('ch.5: a panel\'s pixels, each its covered share, bring the eye its exact lux, 4Ls atan s, within 0.02% from 1 m to 10 m', Math.max(...errs) < 2e-4, errs.map(e => e.toExponential(1)).join(' '))
+    ok('ch.5: ...which tends to L a^2 / d^2 once the panel is small beside its distance', Math.abs(P.panelE(100, 0.5) / (P.PANEL_L * 0.25 / 1e4) - 1) < 1e-4)
+    const near = P.panelSeen(2, 0.5), far = P.panelSeen(4, 0.5)
+    ok('ch.5: the page\'s counts: 294 whole and 106 edge pixels at 2 m, 39 and 61 at 4 m; 61.2 and 15.5 lux', near.whole === 294 && near.part === 106 && far.whole === 39 && far.part === 61
+        && near.E.toFixed(1) === '61.2' && far.E.toFixed(1) === '15.5', `${near.whole} ${near.part} ${far.whole} ${far.part} ${near.E} ${far.E}`)
+    // the sun: L cos summed over the disc's directions gives back the illuminance it was derived from
+    const c = sunCone(0.53), L = discLuminance(1e5, c.half), N = 4000
+    let E = 0
+    for (let k = 0; k < N; k++) { const t = (k + 0.5) / N * c.half; E += L * Math.cos(t) * Math.sin(t) * 2 * Math.PI * c.half / N }
+    ok('ch.5: discLuminance: 1.488e9 cd/m2 at 0.53 degrees, and L cos over the disc sums back to 100,000 lux', Math.abs(L / 1.488e9 - 1) < 1e-3 && Math.abs(E / 1e5 - 1) < 1e-6, `${L} ${E}`)
+    ok('ch.5: the comments\' numbers: the half-angle 0.004625 (not 0.00465 "across"), 1 - cos 1.07e-5 (not 1.08e-5), about 180 f32 steps below 1',
+        Math.abs(c.half - 0.0046251) < 1e-7 && Math.abs(c.oneMinusCos - 1.0696e-5) < 1e-9 && Math.round((1 - Math.fround(Math.cos(c.half))) / 2 ** -24) === 179, (1 - Math.fround(Math.cos(c.half))) / 2 ** -24)
+    ok('ch.5: L x solid angle is 2 / (1 + cos) of the exact: 0.0005% at the real sun, 0.19% at 10 degrees across, 1% near 23',
+        Math.abs(P.solidAngleError(c.half) - 5.35e-6) < 5e-8 && Math.abs(P.solidAngleError(sunCone(10).half) - 0.0019) < 1e-4 && Math.abs(P.solidAngleError(sunCone(22.8).half) - 0.01) < 3e-4)
+    // a cosine-weighted bounce off a level floor lands in the disc as often as its projected solid angle says
+    const R = rng(91), half = sunCone(10).half, el = Math.PI / 4, sd = [Math.cos(el), 0, Math.sin(el)], M = 400000
+    let hit = 0
+    for (let k = 0; k < M; k++) {
+        const r = Math.sqrt(R()), ph = 2 * Math.PI * R(), d = [r * Math.cos(ph), r * Math.sin(ph), Math.sqrt(1 - r * r)]
+        if (d[0] * sd[0] + d[1] * sd[1] + d[2] * sd[2] >= Math.cos(half)) hit++
+    }
+    const want = P.findChance(half, el) * M
+    ok('ch.5: a random bounce finds a 10-degree sun at 45 degrees 1 time in 186, within 4 counting errors', Math.abs(hit - want) < 4 * Math.sqrt(want) && Math.round(1 / P.findChance(half, el)) === 186, `${hit} against ${want.toFixed(0)}`)
+    // the floor: rho E / pi is the test's own expected column (docs/TESTING.md, third run)
+    const T = readFileSync(join(REPO, 'docs/TESTING.md'), 'utf8')
+    const want3 = [['both', 45, '21826.0'], ['sun', 45, '18006.3'], ['sky', 45, '3819.7'], ['sun', 20, '8709.5']]
+    ok('ch.5: rho E / pi gives the expected column of the measured floor rows, which TESTING.md records with them', want3.every(([m, h, x]) => P.floorL(h, 0.8, m !== 'sky', m !== 'sun').toFixed(1) === x)
+        && P.MEASURED.every(([, , v]) => T.includes(`| ${v.toFixed(1)} |`)), want3.map(([m, h]) => P.floorL(h, 0.8, m !== 'sky', m !== 'sun').toFixed(1)).join(' '))
+    const tests = readFileSync(join(REPO, 'lib/pathtracer/tests.js'), 'utf8'), sch = readFileSync(join(REPO, 'lib/pathtracer/core/uniforms.schema.js'), 'utf8')
+    ok('ch.5: the figures\' 100,000 and 15,000 lux and albedo 0.8 are the renderer\'s defaults and the test\'s floor', P.SUN_E === +/sunIlluminance:\s*\{ type: 'f32', def: (\d+)/.exec(sch)[1]
+        && P.SKY_E === +/skyIlluminance:\s*\{ type: 'f32', def: (\d+)/.exec(sch)[1] && /const FLOOR_ALBEDO = 0\.8\b/.test(tests))
+}
+
 /* THE EXCERPT LOCATOR ON ITS OWN ----------------------------------------------------------------------------------- */
 {
     const text = [

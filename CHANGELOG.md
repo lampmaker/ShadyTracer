@@ -17,7 +17,7 @@ as PLAN.md does.
 
 ## 0.67.2 — 2026-10-18
 
-**A developer tutorial beside the program: its plan, its figure kit, eight styles and its first eleven chapters**
+**A developer tutorial beside the program: its plan, its figure kit, eight styles and its first twelve chapters**
 (you: "a tutorial for shadytracer, parallel to the program … that explains the inner workings of the code … interactive,
 2D visualisations … a solid toolkit for that so it looks the same everywhere … start with a plan and list of contents,
 then a few pages … make a few mockups of different styles"). Nothing in the application changed: the tutorial is
@@ -40,8 +40,11 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   lamp points, plate directions and MIS from the same random numbers, and the two densities and their weights);
   chapter 16, *Every glowing thing is a light* (glow found by the paths that hit it, Crofton's random lines, the
   brightness code); chapter 17, *The camera's lens* (the thin lens's blur by `lens.js`'s own `lensImage`, and a 3D
-  picture with depth of field through its `lensDisc` and `lensRay`); chapter 2, *Shapes as distances*; chapter 14, *Aim at the
-  light* (next event estimation); the contents map; a glossary of 82 terms, each linked from the pages with a card on
+  picture with depth of field through its `lensDisc` and `lensRay`); chapter 5, *Measuring light* (lumens, candela, lux
+  and luminance; a glowing panel whose pixels read the same at any distance while its lux falls as 1/d²; the sun's
+  luminance from its illuminance and width by `photometry.js`'s own `discLuminance`; a white floor's ρE/π against the
+  user's measured rows, 21,826 against 21,827.2); chapter 2, *Shapes as distances*; chapter 14, *Aim at the
+  light* (next event estimation); the contents map; a glossary of 98 terms, each linked from the pages with a card on
   hover or tap.
 - **The kit** (`tutorial/kit/`): one pen draws every figure in the style's colours and line; a figure is a spec with
   state, controls, drag handles and steps that the paragraphs beside it trigger as they scroll by. The figures trace a
@@ -171,6 +174,8 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   pages run, not that they read well.
 
 What to look at:
+- **Chapter 5, Measuring light**: drag the panel from 2 m to 8 m and point at its pixels; widen the sun to 10°; the floor's
+  chart beside your card's numbers. Are the four units clear before the sun arrives?
 - **Chapter 16's first figure**: 1 sample (boxes, nothing circled), then 8. Chapter 17's side view, *near*: the ray from
   the lens's top edge, in its own colour, and its mark on the picture; and its 3D picture's *the first 2* samples. Chapter 0's lamp figure at r = 1 and 2.
 - **The new styles.** Lab notebook's new lettering; Chalkboard (try it dark); the three drafting versions side by side

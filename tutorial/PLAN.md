@@ -131,8 +131,13 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
    Nsphere, PRECISION.md. *Read:* iq-normals.
 
 **II. What light is**
-5. **Measuring light**: lm, cd, lx, cd/m²; inverse-square and cosine laws; emitters in cd/m²; the sun's disc in double
-   precision; the ρE/π check → photometry.js.
+5. **Measuring light** (draft): flux, intensity, illuminance and luminance; a glowing panel whose pixels read its
+   luminance at any distance while the lux at the eye falls as 1/d² (each pixel its covered share, summed against the
+   square's exact 4Ls·atan s); the sun by its illuminance and width, its luminance by photometry.js discLuminance, the
+   chance a bounce finds it; a white floor's ρE/π against the user's measured rows (TESTING.md, third run); the disc in
+   64-bit numbers and one edge (sdf.js inSunDisc); lumens to luminance (builder/lights.js fluxFactor); the old
+   unitless sun and the rim's fireflies → photometry.js, sdf.js, builder/lights.js, builder/sources.js. *Read:*
+   pbr-radiometry, pbr-radint, wiki-photometry, wiki-lambert.
 6. **Colour**: cones, colour matching, xy, Rec.709, CCT and Duv → colorimetry.js.
 7. **From light to pixels**: EV100, auto-exposure ("black does not vote"), tone curves, gamut clip, sRGB.
 

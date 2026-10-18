@@ -42,8 +42,8 @@ export const CHAPTERS = [
     C('rays', 'normals', 'Which way is up', 'Which way a surface faces, and what it costs to find out.', 'draft',
         [`${K}pick.js`, `${K}tracebasics.js`, `${K}tolerances.js`, `${K}sdf.js`, 'lib/pathtracer/PRECISION.md', `${K}test/floor.test.mjs`]),
 
-    C('light', 'photometry', 'Measuring light', 'The units of light (lumen, candela, lux), how light weakens with distance and slant, the sun.', 'planned',
-        [`${K}photometry.js`, `${K}sdf.js`]),
+    C('light', 'photometry', 'Measuring light', 'The units of light (lumen, candela, lux), how light weakens with distance and slant, the sun.', 'draft',
+        [`${K}photometry.js`, `${K}sdf.js`, 'builder/lights.js', 'builder/sources.js']),
     C('light', 'colour', 'Colour', 'How three numbers stand for a colour, and what colour temperature means.', 'planned',
         [`${K}colorimetry.js`, `${K}spectral.js`]),
     C('light', 'pixels', 'From light to pixels', 'From light to the brightness of a screen: exposure and tone.', 'planned',

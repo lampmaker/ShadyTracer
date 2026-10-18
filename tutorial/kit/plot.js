@@ -53,7 +53,8 @@ export function plot(pen, rect, o) {
             for (const [x, y] of s.pts) { ctx.globalAlpha = 0.75; ctx.fillRect(X(x) - bw / 2, Y(y), bw, Y(Math.max(y0, 0)) - Y(y)) }
             ctx.globalAlpha = 1
         } else if (s.kind === 'dots') {
-            for (const [x, y] of s.pts) { ctx.beginPath(); ctx.arc(X(x), Y(y), s.r ?? 2.4, 0, 6.2832); ctx.fill() }
+            // ring: hollow, so a dot of another series at the same place still shows inside it
+            for (const [x, y] of s.pts) { ctx.beginPath(); ctx.arc(X(x), Y(y), s.r ?? 2.4, 0, 6.2832); if (s.ring) { ctx.lineWidth = 1.6; ctx.stroke() } else ctx.fill() }
         } else {
             ctx.setLineDash(s.dash ?? [])
             ctx.beginPath(); s.pts.forEach(([x, y], i) => i ? ctx.lineTo(X(x), Y(y)) : ctx.moveTo(X(x), Y(y))); ctx.stroke()

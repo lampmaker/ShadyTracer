@@ -37,6 +37,8 @@ export const READING = [
     R('rtiow', RT, 'Ray Tracing in One Weekend', 'free online book', 'https://raytracing.github.io/books/RayTracingInOneWeekend.html'),
     R('rtrest', RT, 'Ray Tracing: The Rest of Your Life', 'free online book', 'https://raytracing.github.io/books/RayTracingTheRestOfYourLife.html'),
     R('pbr', PBR, 'Physically Based Rendering: From Theory to Implementation (4th ed.)', 'free online book', 'https://pbr-book.org/4ed/contents'),
+    R('pbr-radiometry', PBR, 'Physically Based Rendering (4th ed.), 4.1: Radiometry', 'free online book', 'https://pbr-book.org/4ed/Radiometry,_Spectra,_and_Color/Radiometry'),
+    R('pbr-radint', PBR, 'Physically Based Rendering (4th ed.), 4.2: Working with radiometric integrals', 'free online book', 'https://pbr-book.org/4ed/Radiometry,_Spectra,_and_Color/Working_with_Radiometric_Integrals'),
     R('pbr-camera', PBR, 'Physically Based Rendering (4th ed.), 5.2: Projective camera models', 'free online book', 'https://pbr-book.org/4ed/Cameras_and_Film/Projective_Camera_Models'),
     R('pbr-spheres', PBR, 'Physically Based Rendering (4th ed.), 6.2: Spheres', 'free online book', 'https://pbr-book.org/4ed/Shapes/Spheres'),
     R('pbr-sampling', PBR, 'Physically Based Rendering (4th ed.), 8: Sampling and reconstruction', 'free online book', 'https://pbr-book.org/4ed/Sampling_and_Reconstruction'),
@@ -51,6 +53,8 @@ export const READING = [
     R('finch2009', 'Tony Finch', 'Incremental calculation of weighted mean and variance', 'note, University of Cambridge Computing Service, 2009', null, { credited: 'lib/pathtracer/core/wavefront.js' }),
 
     // geometry the renderer leans on
+    R('wiki-photometry', 'Wikipedia', 'Photometry (optics)', 'encyclopedia article', 'https://en.wikipedia.org/wiki/Photometry_(optics)'),
+    R('wiki-lambert', 'Wikipedia', 'Lambert\'s cosine law', 'encyclopedia article', 'https://en.wikipedia.org/wiki/Lambert%27s_cosine_law'),
     R('wiki-crofton', 'Wikipedia', 'Crofton formula', 'encyclopedia article', 'https://en.wikipedia.org/wiki/Crofton_formula'),
 
     // random numbers on a GPU

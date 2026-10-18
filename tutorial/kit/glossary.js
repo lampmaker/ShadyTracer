@@ -60,6 +60,7 @@ export const GLOSSARY = [
 
     // light
     G('intensity', 'intensity', 'How strongly a small lamp shines in one direction. The light it puts on a surface then falls with distance and slant. Measured in candela.', 'photometry', ['candela', 'irradiance']),
+    G('lumen', 'lumen (lm)', 'The unit of a lamp\'s total light out, its flux, counted by how bright each colour looks to the eye. A household LED bulb gives about 800 lumens; one candela in every direction is 4π, about 12.6.', 'photometry', ['candela', 'intensity']),
     G('candela', 'candela (cd)', 'The unit intensity is measured in. A candle flame shines about one candela in each direction; a 100-watt bulb about a hundred.', 'photometry', ['intensity']),
     G('lux', 'lux (lx)', 'The unit illuminance is measured in: one candela shining on a surface one metre away, straight on, gives it one lux. A bright office is about 500 lux; sunlight can reach 100,000.', 'photometry', ['illuminance']),
     G('exposure', 'exposure', 'How much the measured light is brightened or darkened to make a picture that is neither too dark nor too bright, as a camera sets it.', 'pixels'),

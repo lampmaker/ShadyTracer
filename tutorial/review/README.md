@@ -124,6 +124,15 @@ real student.
 4. Why did a glass ball once cast a plain shadow?
 5. Why must both strategies use the same material, and what happened when they did not?
 
+**photometry** (Measuring light)
+1. What are lumens, candela, lux and candela per square metre each a measure of, and which one does a pixel hold?
+2. A glowing panel is moved twice as far away. What happens to one pixel on it, and to the light it puts on the eye? Why?
+3. The sun is set by its illuminance and its width. How does its luminance follow, and why does a wider sun not make a
+   brighter picture?
+4. Why does a white floor in the sun come out at ρE/π, and how close did the measurement come?
+5. Why does ShadyTracer work out the sun's disc on the main processor rather than the graphics card?
+6. What went wrong when two parts of the renderer tested "inside the sun" differently?
+
 **emitters** (Every glowing thing is a light)
 1. How does the renderer find glowing shapes nobody told it about?
 2. Why is the picture right even before a glowing shape has been found?
