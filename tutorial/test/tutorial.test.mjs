@@ -726,6 +726,33 @@ for (const [name, { mod }] of modules) {
         && r('ball', 'glass').includes('meet 1.500') && r('ball', 'glass').includes('0.9 off at 1.104') && r('ball', 'water').includes('meet 2.015') && r('ball', 'diamond').includes('meet 0.852'), r('slab', 'absorbing'))
 }
 
+{
+    const X = await import('../ch/dispersion.js'), SP = await import('../../lib/pathtracer/core/spectral.js'), SPs = readFileSync(join(REPO, 'lib/pathtracer/core/spectral.js'), 'utf8')
+    // Cauchy through n_d and V_d: exact at d and in F - C; BK7 within 6e-5 of its catalogue
+    const nd = 1.75, vd = 28, F = SP.cauchyN(nd, vd, SP.LAMBDA_F), C = SP.cauchyN(nd, vd, SP.LAMBDA_C)
+    ok('ch.11: Cauchy is n_d at d and gives (n_d - 1)/V_d between F and C; BK7 within 6e-5 of its catalogue', Math.abs(SP.cauchyN(nd, vd, SP.LAMBDA_D) - nd) < 1e-12 && Math.abs((nd - 1) / (F - C) - vd) < 1e-9
+        && Math.abs(SP.cauchyN(1.5168, 64.17, SP.LAMBDA_F) - 1.52238) < 6e-5 && Math.abs(SP.cauchyN(1.5168, 64.17, SP.LAMBDA_C) - 1.51432) < 6e-5)
+    // through the prism: Snell at both faces for each wavelength; at least deviation the d line leaves level-symmetric; no dispersion, one angle
+    const fl = st => X.figures.prism.readout({ ...X.figures.prism.state, ...X.figures.prism.steps[st] })
+    ok('ch.11: the flint fans blue 3.24 degrees more than red, BK7 0.71, none 0.00', fl('flint').includes('blue bent 3.24°') && fl('bk7').includes('blue bent 0.71°') && fl('none').includes('blue bent 0.00°'), fl('flint'))
+    const d = X.throughPrism(SP.LAMBDA_D, 1.75, 28, 31)
+    ok('ch.11: at a tilt of 31 degrees the flint\'s yellow ray leaves 31 degrees down: least deviation, symmetric', Math.abs(d.angle - 31) < 0.2, d.angle)
+    // the draw: each channel's weight averages exactly 1; at most 3
+    const exact = [0, 1, 2].map(c => SP.SPEC_PICK.reduce((a, p, k) => a + (p > 0 ? SP.SPEC_WEIGHTS[k][c] : 0), 0))
+    const maxw = Math.max(...SP.SPEC_PICK.flatMap((p, k) => p > 0 ? SP.SPEC_WEIGHTS[k].map(w => w / p) : []))
+    ok('ch.11: the draw\'s weights average exactly 1 in each channel, and never pass 3', exact.every(v => Math.abs(v - 1) < 1e-12) && maxw <= 3 + 1e-12)
+    ok('ch.11: 20,000 draws average 0.993, 1.014, 0.993', X.figures.draw.readout({ n: 20000, seed: 1 }).includes('R 0.993, G 1.014, B 0.993'))
+    // the coating: a constant reflectance is that reflectance in every channel; the edge at 45 degrees is the bench's 551.8 nm
+    ok('ch.11: a coating that reflects 0.3 everywhere reflects 0.3 in every channel; the edge at 45 degrees moves to 551.8 nm, the bench\'s', SP.edgeRGB(0.3, 0.3, 600, 20).every(v => Math.abs(v - 0.3) < 1e-12)
+        && X.coatEdge(600, 45).toFixed(1) === '551.8' && readFileSync(join(REPO, 'docs/TESTING.md'), 'utf8').includes('the edge at 551.8 nm'))
+    // the comments' numbers, checked: 15 bits, 40 differences, red 0 from 460 to 552 nm in this fit
+    const zero = []; for (let l = 440; l <= 560; l += 0.5) if (SP.rgbBar(l)[0] === 0) zero.push(l)
+    ok('ch.11: the tag holds 15 bits from bit 17; 40 bins; red\'s weight 0 from 460 to 552 nm', SP.LAMBDA_SHIFT === 17 && 32 - SP.LAMBDA_SHIFT === 15 && SP.SPEC_BINS === 40 && zero[0] === 460 && zero[zero.length - 1] === 552
+        && SPs.includes('is 41 softplus') && SPs.includes('upper 16 bits'), `${zero[0]}-${zero[zero.length - 1]}`)
+    const tail = SP.SPEC_PICK.reduce((a, p, k) => a + (SP.SPEC_LO + k * SP.SPEC_STEP >= 730 ? p : 0), 0)
+    ok('ch.11: the fit\'s red end: red 0 from 733 nm, and those bins drawn 1.25e-5 of the time', SP.rgbBar(733)[0] === 0 && SP.rgbBar(732)[0] > 0 && tail.toExponential(2) === '1.25e-5', tail)
+}
+
 /* THE EXCERPT LOCATOR ON ITS OWN ----------------------------------------------------------------------------------- */
 {
     const text = [

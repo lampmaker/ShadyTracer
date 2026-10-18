@@ -173,7 +173,12 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
    fresnelDielectric, the smooth interface branch, the medium beyond and rayTransmittance; the optics-refraction rows;
    Fresnel from a slider, rough glass past the critical angle, the mirror under water -> optics/fresnel.js,
    materials_pbr.js. *Read:* pbr-specular, wiki-fresnel, wiki-beer, walter2007, rtiow.
-11. **Rainbows**: dispersion from n_d and the Abbe number, a wavelength per channel, coatings → spectral.js.
+11. **Rainbows** (draft): white light through a prism, 31 wavelengths each at its own index (spectral.js cauchyN,
+   optics/fresnel.js refract), the flint against BK7 at least deviation; n(lambda) through n_d and V_d with BK7's
+   catalogue against it; the wavelength draw and its weights averaging exactly 1, drawn live; a dichroic coat's edge
+   moving with the tilt and each channel's reflectance (edgeAt, edgeRGB); the shading kernel's dispersion block; the
+   comments' stale bit count, softplus count, red's range and BK7 accuracy; the green reflections of 0.44.1 ->
+   spectral.js, materials_pbr.js. *Read:* wiki-dispersion, wiki-abbe, wiki-cauchy, pbr-spectra.
 
 **IV. Path tracing**
 12. **Dice and averages** (draft): π from darts with measure.js's error bar, 240 estimates a column against 1/√N,

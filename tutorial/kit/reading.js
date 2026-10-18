@@ -51,6 +51,7 @@ export const READING = [
     R('kulla2017', 'Christopher Kulla, Alejandro Conty', 'Revisiting physically based shading at Imageworks', 'course talk, SIGGRAPH 2017', 'https://blog.selfshadow.com/publications/s2017-shading-course/', { credited: 'lib/pathtracer/core/microfacet.js' }),
     R('turquin2019', 'Emmanuel Turquin', 'Practical multiple scattering compensation for microfacet models', 'technical memo, Industrial Light & Magic, 2019', 'https://blog.selfshadow.com/publications/turquin/ms_comp_final.pdf', { credited: 'lib/pathtracer/core/microfacet.js' }),
     R('walter2007', 'Bruce Walter, Stephen R. Marschner, Hongsong Li, Kenneth E. Torrance', 'Microfacet models for refraction through rough surfaces', 'paper, Eurographics Symposium on Rendering, 2007', null, { credited: 'lib/pathtracer/core/materials_pbr.js' }),
+    R('pbr-spectra', PBR, 'Physically Based Rendering (4th ed.), 4.5: Representing spectral distributions', 'free online book', 'https://pbr-book.org/4ed/Radiometry,_Spectra,_and_Color/Representing_Spectral_Distributions'),
     R('pbr-camera', PBR, 'Physically Based Rendering (4th ed.), 5.2: Projective camera models', 'free online book', 'https://pbr-book.org/4ed/Cameras_and_Film/Projective_Camera_Models'),
     R('pbr-spheres', PBR, 'Physically Based Rendering (4th ed.), 6.2: Spheres', 'free online book', 'https://pbr-book.org/4ed/Shapes/Spheres'),
     R('pbr-sampling', PBR, 'Physically Based Rendering (4th ed.), 8: Sampling and reconstruction', 'free online book', 'https://pbr-book.org/4ed/Sampling_and_Reconstruction'),
@@ -78,6 +79,9 @@ export const READING = [
     R('hable-filmic', 'John Hable', 'Filmic tonemapping operators', 'article, 2010', 'https://filmicworlds.com/blog/filmic-tonemapping-operators/', { credited: 'lib/pathtracer/core/rendertoscreen.js' }),
     R('wiki-fresnel', 'Wikipedia', 'Fresnel equations', 'encyclopedia article', 'https://en.wikipedia.org/wiki/Fresnel_equations'),
     R('wiki-beer', 'Wikipedia', 'Beer–Lambert law', 'encyclopedia article', 'https://en.wikipedia.org/wiki/Beer%E2%80%93Lambert_law'),
+    R('wiki-dispersion', 'Wikipedia', 'Dispersion (optics)', 'encyclopedia article', 'https://en.wikipedia.org/wiki/Dispersion_(optics)'),
+    R('wiki-abbe', 'Wikipedia', 'Abbe number', 'encyclopedia article', 'https://en.wikipedia.org/wiki/Abbe_number'),
+    R('wiki-cauchy', 'Wikipedia', 'Cauchy\'s equation', 'encyclopedia article', 'https://en.wikipedia.org/wiki/Cauchy%27s_equation'),
     R('wiki-crofton', 'Wikipedia', 'Crofton formula', 'encyclopedia article', 'https://en.wikipedia.org/wiki/Crofton_formula'),
 
     // random numbers on a GPU

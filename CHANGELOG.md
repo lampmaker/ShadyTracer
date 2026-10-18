@@ -17,7 +17,7 @@ as PLAN.md does.
 
 ## 0.67.2 — 2026-10-18
 
-**A developer tutorial beside the program: its plan, its figure kit, eight styles and its first seventeen chapters**
+**A developer tutorial beside the program: its plan, its figure kit, eight styles and its first eighteen chapters**
 (you: "a tutorial for shadytracer, parallel to the program … that explains the inner workings of the code … interactive,
 2D visualisations … a solid toolkit for that so it looks the same everywhere … start with a plan and list of contents,
 then a few pages … make a few mockups of different styles"). Nothing in the application changed: the tutorial is
@@ -53,8 +53,10 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   visible-normal draws, E against the renderer's old and new table grids, the old density right only straight on, on
   a teaching mirror of `microfacet.js` that reproduces its comment's 0.97850); chapter 10, *Glass* (Snell and
   Fresnel at an interface, a pane's bounces summed to (1 − R)/(1 + R) and Beer–Lambert, parallel light through a
-  ball, all on `optics/fresnel.js`); chapter 2, *Shapes as distances*; chapter 14, *Aim at the
-  light* (next event estimation); the contents map; a glossary of 114 terms, each linked from the pages with a card on
+  ball, all on `optics/fresnel.js`); chapter 11, *Rainbows* (white light through a prism at each wavelength's
+  index, Cauchy through n_d and the Abbe number, the wavelength draw whose weights average to 1, a dichroic coat on
+  three channels); chapter 2, *Shapes as distances*; chapter 14, *Aim at the
+  light* (next event estimation); the contents map; a glossary of 116 terms, each linked from the pages with a card on
   hover or tap.
 - **The kit** (`tutorial/kit/`): one pen draws every figure in the style's colours and line; a figure is a spec with
   state, controls, drag handles and steps that the paragraphs beside it trigger as they scroll by. The figures trace a
@@ -196,6 +198,8 @@ What to look at:
   old density at 60° and 80°.
 - **Chapter 10, Glass**: drag the ray past the critical angle from inside; the pane at 78° and coloured; the ball at
   index 1.33, 1.5 and 2.42.
+- **Chapter 11, Rainbows**: the prism's fan with the Abbe number slid from 90 to 15; draw 10,000 wavelengths; tilt
+  the coating to 45°.
 - **Chapter 16's first figure**: 1 sample (boxes, nothing circled), then 8. Chapter 17's side view, *near*: the ray from
   the lens's top edge, in its own colour, and its mark on the picture; and its 3D picture's *the first 2* samples. Chapter 0's lamp figure at r = 1 and 2.
 - **The new styles.** Lab notebook's new lettering; Chalkboard (try it dark); the three drafting versions side by side

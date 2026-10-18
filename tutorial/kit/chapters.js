@@ -55,8 +55,8 @@ export const CHAPTERS = [
         [`${K}microfacet.js`, `${K}materials_pbr.js`]),
     C('surfaces', 'glass', 'Glass', 'Light bending into glass, reflecting off it, and coloured by it.', 'draft',
         [`${P}optics/fresnel.js`, `${K}materials_pbr.js`]),
-    C('surfaces', 'dispersion', 'Rainbows', 'Why glass splits white light into colours, and how a renderer follows each colour.', 'planned',
-        [`${K}spectral.js`]),
+    C('surfaces', 'dispersion', 'Rainbows', 'Why glass splits white light into colours, and how a renderer follows each colour.', 'draft',
+        [`${K}spectral.js`, `${K}materials_pbr.js`]),
 
     C('paths', 'montecarlo', 'Dice and averages', 'Averages of random tries: why they are noisy, and how fast the noise falls.', 'draft',
         [`${K}measure.js`, `${K}noise.js`, `${K}tracebasics.js`, `${K}wavefront.js`, `${K}uniforms.schema.js`]),

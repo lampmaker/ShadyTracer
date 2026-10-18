@@ -167,6 +167,13 @@ real student.
 4. How does the renderer know which material is on the other side of a surface?
 5. How does coloured glass absorb more when it is thicker?
 
+**dispersion** (Rainbows)
+1. Why does a prism split white light, and what do n_d and the Abbe number say about a glass?
+2. When does a ray in ShadyTracer get a wavelength, and what happens to its three channels then?
+3. Why do the channels' weights average to exactly 1, and why does that keep white light white?
+4. Why does a prism's reflection stay white and free of colour noise?
+5. How does a coloured coating work on three channels without any wavelength?
+
 **emitters** (Every glowing thing is a light)
 1. How does the renderer find glowing shapes nobody told it about?
 2. Why is the picture right even before a glowing shape has been found?
