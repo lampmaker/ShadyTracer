@@ -46,8 +46,8 @@ export const CHAPTERS = [
         [`${K}photometry.js`, `${K}sdf.js`, 'builder/lights.js', 'builder/sources.js']),
     C('light', 'colour', 'Colour', 'How three numbers stand for a colour, and what colour temperature means.', 'draft',
         [`${K}colorimetry.js`, `${K}spectral.js`, 'builder/lights.js']),
-    C('light', 'pixels', 'From light to pixels', 'From light to the brightness of a screen: exposure and tone.', 'planned',
-        [`${K}autoexposure.js`, `${K}rendertoscreen.js`, `${P}develop.js`]),
+    C('light', 'pixels', 'From light to pixels', 'From light to the brightness of a screen: exposure and tone.', 'draft',
+        [`${K}autoexposure.js`, `${K}rendertoscreen.js`, `${P}develop.js`, `${K}photometry.js`]),
 
     C('surfaces', 'diffuse', 'Diffuse and mirror', 'Where light goes when it hits a matte surface or a mirror; a test that no light is made or lost.', 'planned',
         [`${K}materials.js`]),

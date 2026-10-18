@@ -624,6 +624,36 @@ for (const [name, { mod }] of modules) {
     ok('ch.6: the hot bodies\' line is 3.8e-4 from the table at worst, at 2856 K (the comment: "about 3e-4")', worst.toExponential(1) === '3.8e-4' && REF[errs.indexOf(worst)][0] === 2856, worst)
 }
 
+{
+    const X = await import('../ch/pixels.js'), PH = await import('../../lib/pathtracer/core/photometry.js'), AE = readFileSync(join(REPO, 'lib/pathtracer/core/autoexposure.js'), 'utf8')
+    // the meter mirror: one luminance everywhere meters at its own bin's centre, a third of a stop from the exact EV
+    const one = X.meter(new Array(1000).fill(500))
+    ok('ch.7: the meter on a scene of one luminance gives that luminance\'s EV, within half a bin', Math.abs(one.evAvg - PH.meterEV100(500)) <= 44 / 128 / 2 + 1e-9 && one.ev === one.evAvg, `${one.evAvg} ${PH.meterEV100(500)}`)
+    // black below the floor does not vote; with blackVotes it drags the average down once past the 10% cut
+    const room = X.pixels('room', 0), dark = X.pixels('room', 0.6)
+    ok('ch.7: black pixels change nothing unless they vote', Math.abs(X.meter(room).ev - X.meter(dark).ev) < 1e-12 && X.meter(dark, { blackVotes: true }).evAvg < X.meter(dark).evAvg - 5)
+    // the page's numbers
+    const r = st => X.figures.meter.readout({ ...X.figures.meter.state, ...X.figures.meter.steps[st] })
+    ok('ch.7: the page\'s meter numbers: outdoors EV 15.87 (white 7.16e+4), the room 4.86 protected to 6.82, black voting 1.07', r('outdoors').includes('EV 15.87') && r('outdoors').includes('7.16e+4')
+        && r('room').includes('EV 4.86') && r('room').includes('chosen: EV 6.82') && r('unprotected').includes('chosen: EV 4.86') && r('black').includes('chosen: EV 1.07'), r('room'))
+    // the mirror's constants are the kernel's, and its last step the kernel's lines
+    const aeConst = k => +new RegExp(`export const ${k} = (-?[\\d.]+)`).exec(AE)[1]
+    ok('ch.7: the mirror\'s constants are autoexposure.js\'s, and the kernel takes the darker of the average and the highlight rule', ['AE_BINS', 'AE_LOG_MIN', 'AE_LOG_MAX', 'AE_LOW', 'AE_HIGH', 'AE_PROTECT'].every(k => aeConst(k) === X[k])
+        && X.meter(room).ev === Math.max(X.meter(room).evAvg, X.meter(room).evHi)
+        && /let evTarget = max\(meterEV100\(exp2\(logL\)\), evHi\);/.test(AE) && /let evHi = logHi - log2\(EV_CLIP\) - max\(UB\.aeHeadroom, 0\.0\);/.test(AE) && /if \(Y >= exp2\(AE_LOG_MIN\)\)/.test(AE))
+    // the meter's average lands at 12.5/120 of white, which sRGB shows at about 0.36
+    ok('ch.7: a metered luminance shows at 12.5/120 = 0.104 of white, and sRGB lifts it to 0.356', Math.abs(1234 * PH.ev100ToScale(PH.meterEV100(1234)) - 12.5 / 120) < 1e-12 && X.srgb(12.5 / 120).toFixed(3) === '0.356')
+    // the tone ports at points their formulas give by hand
+    const g = (id, v) => X.display([v, v, v], id)[0]
+    ok('ch.7: the tone ports: none clips at white; Neutral is the identity less its toe offset below 0.76 (0.5 shows sRGB(0.46)); Reinhard is L/(1+L); Hable 1 at its white 11.2/2',
+        Math.abs(g('none', 1) - 1) < 1e-12 && g('none', 3) === g('none', 1) && Math.abs(g('neutral', 0.5) - X.srgb(0.46)) < 1e-12 && Math.abs(X.toneReinhard([1, 1, 1])[0] - 0.5) < 1e-12 && Math.abs(X.toneHable([5.6, 5.6, 5.6])[0] - 1) < 1e-12)
+    ok('ch.7: every curve keeps grey grey and rises with the light', X.CURVES.every(([id]) => { let prev = -1; for (let st = -8; st <= 4; st += 0.5) { const c = X.display([2 ** st, 2 ** st, 2 ** st], id); if (Math.abs(c[0] - c[1]) > 2e-3 || Math.abs(c[1] - c[2]) > 2e-3 || c[0] < prev - 1e-9) return false; prev = c[0] } return true }))
+    const rc = st => X.figures.curve.readout({ curve: st })
+    ok('ch.7: the page\'s curve numbers: none 99 at 3 stops under, Neutral 240 at white, AgX 202 at white', rc('none').includes('shows 99 of 255') && rc('neutral').includes('at white 240') && rc('agx').includes('at white 202'))
+    const re = X.figures.encode.readout({ top: 0.1 })
+    ok('ch.7: the darkest tenth gets 27 codes kept linearly, 90 as sRGB', re.includes('27 of the 256 codes kept linearly, 90 kept as sRGB'), re)
+}
+
 /* THE EXCERPT LOCATOR ON ITS OWN ----------------------------------------------------------------------------------- */
 {
     const text = [

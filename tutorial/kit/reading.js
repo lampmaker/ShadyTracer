@@ -62,6 +62,11 @@ export const READING = [
     R('wiki-planckian', 'Wikipedia', 'Planckian locus', 'encyclopedia article', 'https://en.wikipedia.org/wiki/Planckian_locus'),
     R('wiki-rec709', 'Wikipedia', 'Rec. 709', 'encyclopedia article', 'https://en.wikipedia.org/wiki/Rec._709'),
     R('wiki-gamut', 'Wikipedia', 'Gamut', 'encyclopedia article', 'https://en.wikipedia.org/wiki/Gamut'),
+    R('wiki-ev', 'Wikipedia', 'Exposure value', 'encyclopedia article', 'https://en.wikipedia.org/wiki/Exposure_value'),
+    R('wiki-srgb', 'Wikipedia', 'sRGB', 'encyclopedia article', 'https://en.wikipedia.org/wiki/SRGB'),
+    R('wiki-tonemapping', 'Wikipedia', 'Tone mapping', 'encyclopedia article', 'https://en.wikipedia.org/wiki/Tone_mapping'),
+    R('khronos-neutral', 'Khronos', 'Khronos PBR Neutral tone mapper', 'specification, 2024', 'https://github.com/KhronosGroup/ToneMapping/tree/main/PBR_Neutral', { credited: 'lib/pathtracer/core/rendertoscreen.js' }),
+    R('hable-filmic', 'John Hable', 'Filmic tonemapping operators', 'article, 2010', 'https://filmicworlds.com/blog/filmic-tonemapping-operators/', { credited: 'lib/pathtracer/core/rendertoscreen.js' }),
     R('wiki-crofton', 'Wikipedia', 'Crofton formula', 'encyclopedia article', 'https://en.wikipedia.org/wiki/Crofton_formula'),
 
     // random numbers on a GPU

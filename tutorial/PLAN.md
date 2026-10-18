@@ -145,7 +145,13 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
    and the display clipping once (lights.js lightRGB, wavefront.js badDeposit, rendertoscreen.js); the measured
    colour rows; photons once clipped one by one → colorimetry.js, spectral.js, builder/lights.js. *Read:* pbr-color,
    wiki-cie1931, wyman2013, wiki-planckian, krystek1985, wiki-rec709.
-7. **From light to pixels**: EV100, auto-exposure ("black does not vote"), tone curves, gamut clip, sRGB.
+7. **From light to pixels** (draft): EV and white at 1.2 × 2^EV; the meter as autoexposure.js runs it (128 log bins,
+   the middle 10-90 % averaged, the brightest 5 % within the headroom, black not voting), mirrored and shown on an
+   outdoor scene and a lamp-lit room; the six tone curves ported from rendertoscreen.js, grey and coloured ramps
+   through them; 8 bits kept linearly against sRGB; a picture kept as light and developed later (measured to the bit);
+   the firefly clamp in multiples of white; the old 2.2 multiplier, black voting, the clamp in cd/m² →
+   autoexposure.js, rendertoscreen.js, develop.js, photometry.js. *Read:* wiki-ev, khronos-neutral, hable-filmic,
+   wiki-tonemapping, wiki-srgb.
 
 **III. What surfaces do**
 8. **Diffuse and mirror**: the BSDF, energy conservation, the white furnace.

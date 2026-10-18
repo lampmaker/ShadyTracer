@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>From light to pixels · ShadyTracer, inside out</title>
+<link rel="stylesheet" href="../kit/kit.css">
+<script type="module" src="pixels.js"></script>
+</head>
+<body data-chapter="pixels">
+<p class="kit-offline">This page runs from a web server, not from a file: in the repository run <code>python3 -m http.server 8000</code> and open http://localhost:8000/tutorial/.</p>
+<main class="sheet">
+
+<header class="sheet-head">
+  <div>
+    <p class="eyebrow">Part II · What light is · Chapter 7</p>
+    <h1>From light to pixels</h1>
+    <p class="lede">ShadyTracer's picture is light, in candela per square metre, from a dark corner's 0.6 to the sun's
+      1.5 billion. A screen shows numbers from 0 to 1, in 256 steps a channel. Between the two is what a camera does:
+      choose how bright to show the scene (its exposure), decide what happens to light brighter than white (a tone
+      curve), and store the result so that 256 steps are enough for the eye (sRGB).</p>
+  </div>
+  <div class="titleblock" data-auto></div>
+</header>
+
+<section class="scene" id="meter">
+  <div class="prose">
+    <h2><span class="n">1</span>How bright to show it</h2>
+    <p data-step="meter:outdoors">The <a data-g="exposure">exposure</a> is a single number: the luminance that will show
+      as white. Everything is divided by it, and 1 is white. ShadyTracer gives it as a camera does, by an
+      <a data-g="ev">EV</a> (exposure value): each step of EV halves the light the camera lets in, so white is
+      1.2 × 2<sup>EV</sup> cd/m². A sunny scene is about EV 15, an office about 7.</p>
+    <p data-step="meter:outdoors">Which EV? A camera's light meter answers by averaging the scene. ShadyTracer does it on
+      the graphics card every frame: it sorts the pixels' luminances into a <em>histogram</em>, 128 bins over 2⁻¹⁰ to
+      2³⁴ cd/m², a third of a stop each; it drops the darkest 10% and the brightest 10% (deep shadow, the sun, a few
+      very bright noisy pixels), and averages the rest on the log scale. The figure is a sunny scene, with chapter 5's
+      floor in it: the middle 80% average 7,460 cd/m², which a meter calls EV 15.87, and white is 71,600. The sunlit
+      floor shows at 0.3 of white; the sun, far off the right of the scale, is clipped whatever happens.</p>
+    <p data-step="meter:room">A lamp-lit room is harder. Most of it is dim walls and a dark corner, and the lamp lights a
+      small desk. The average, 3.6 cd/m², would set EV 4.86, and the desk, at 600, would be 17 times white: blown out.
+      So the meter has a second rule: the brightest 5% may be at most 2 stops above white (the <em>headroom</em>, a
+      setting). Here that asks for EV 6.82, white at 135, and the meter takes the darker of the two. The desk keeps its
+      shape; the corner goes darker.</p>
+    <p data-step="meter:unprotected">With a headroom of 12 stops the rule never binds, and the average alone decides:
+      EV 4.86, the desk white.</p>
+    <p data-step="meter:black">Black is not part of the scene. A pixel that sees nothing (behind every object, a sky that
+      is switched off) is below the histogram's floor, and does not vote. It used to count, in the darkest bin. Here
+      60% of the picture is black and voting, as it used to: past the 10% cut, black is in the average, which falls to
+      0.019 cd/m², and only the highlight rule holds the exposure at EV 1.07, white at 2.5, everything lit blown out.
+      Switch <strong>Black votes</strong> off to see the meter as it is.</p>
+    <details class="maths">
+      <summary><span class="tag">The maths</span>EV, the meter, and where the average lands</summary>
+      <div class="body">
+        <p>White, the luminance that just clips at an EV of <var>v</var> (ISO 100):</p>
+        <p class="eq"><var>L</var><sub>white</sub> = 1.2 × 2<sup><var>v</var></sup> cd/m²</p>
+        <p>A reflected-light meter reading an average luminance <var>L</var> (ISO 2720's constant 12.5):</p>
+        <p class="eq"><var>v</var> = log₂(<var>L</var> × 100 / 12.5)</p>
+        <p>Put that <var>v</var> back in the first: the average shows at 12.5 / (100 × 1.2) = 0.104 of white, a tenth.
+          The sRGB step of section 3 lifts 0.104 to 0.356 on the screen, the mid-grey a camera means by "18% grey". The
+          average is on the log scale, so it is the geometric mean: a pixel a hundred times brighter weighs no more than
+          one a hundred times darker.</p>
+      </div>
+    </details>
+  </div>
+  <figure class="fig" data-fig="meter">
+    <figcaption>Top: a scene's pixels by luminance, on a scale where each mark is 32 times the last (2⁵), with the
+      meter's 10% and 90% cuts (dotted), the average of what lies between them, the brightest 5%, and white at the EV
+      chosen. Bottom: the scene's parts as the display shows them at that EV. Choose the scene, how much of it is black,
+      the headroom, and whether black votes; point at the histogram to read a bin.</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="curve">
+  <div class="prose">
+    <h2><span class="n">2</span>Above white</h2>
+    <p data-step="curve:none">Divided by white, a scene still has light above 1: a lamp, a sunlit sheet of paper, a
+      caustic. The plainest display clips it: everything over white is white, and a bright colour loses its shape, a
+      flat patch at full strength. That is the first <a data-g="tone-curve">tone curve</a>, none: grey light 3 stops
+      under white shows 99 of 255, and from white up, 255.</p>
+    <p data-step="curve:neutral">ShadyTracer's default is Khronos's <em>PBR Neutral</em>, a curve made for showing
+      products and materials as they are: it leaves light alone up to 0.76 of white (apart from a small lift of the
+      darkest tones, its toe), and above that compresses the brightest channel smoothly towards 1, keeping the hue and
+      desaturating only a little where it compresses. Grey at white shows 240 of 255, at 4 stops over, 255. A colour
+      keeps its colour until it is very bright.</p>
+    <p data-step="curve:agx">AgX, a filmic curve, starts its shoulder far below white and turns bright saturated colours
+      towards white, as film and camera sensors do: the orange light on the right turns pale well before white, and is
+      nearly white by 4 stops over. It is a look, chosen for a picture; ShadyTracer offers six, and the picture's light in candela per square
+      metre is the same under each.</p>
+  </div>
+  <figure class="fig" data-fig="curve">
+    <figcaption>Left: what the screen shows (0 to 1) for grey light from 8 stops under white to 4 over, under each tone
+      curve of ShadyTracer's display (the chosen one bold); then the sRGB step of section 3. Right: grey, an orange and a
+      blue light, from 6 stops under white to 4 over, through the chosen curve. Choose the curve; point at the plot to
+      read it.</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="encode">
+  <div class="prose">
+    <h2><span class="n">3</span>Eight bits, spent where the eye looks</h2>
+    <p data-step="encode:dark">A screen's pixel keeps each channel in 8 bits, 256 steps. Kept in proportion to the light,
+      the darkest tenth of the range would get 27 of them, and the eye, which tells dark tones apart far more finely
+      than bright ones, sees the steps as bands. <a data-g="srgb">sRGB</a>, the standard every screen and image file
+      assumes, stores light through a curve that spends more steps on the dark: the same tenth gets 90. Both strips are
+      the light from black to a tenth of white, stored the two ways and shown as it would then be displayed.</p>
+    <p data-step="encode:all">Over the whole range both keep all 256 steps; only where they put them differs.
+      ShadyTracer's display ends with the exact sRGB curve: <var>v</var> × 12.92 for the darkest light, up to 0.0031308,
+      and 1.055 <var>v</var><sup>1/2.4</sup> − 0.055 above it.</p>
+  </div>
+  <figure class="fig" data-fig="encode">
+    <figcaption>The same ramp of light, from black up to the share of white the slider sets, stored in 8 bits in
+      proportion to the light (top) and through the sRGB curve (bottom), each shown as it would be displayed, with how
+      many different values it kept.</figcaption>
+  </figure>
+</section>
+
+<section class="plain wide" id="engine">
+  <div class="prose">
+    <h2><span class="n">4</span>How ShadyTracer does it</h2>
+    <p>The two relations of the fold-out, in the file where every light setting becomes a number, and written into the
+      graphics card's code from the same constants:</p>
+    <pre data-src="lib/pathtracer/core/photometry.js" data-sym="* EXPOSURE IN EV100, the way a camera means it." data-to="fn meterEV100(L: f32) -> f32"
+         data-why="EV_CLIP is the 1.2 and METER_K the 12.5. EXPOSURE_WGSL is the same two functions as WGSL text, built from the same constants, so the meter on the graphics card and the Meter button on the main processor cannot disagree about what an EV is." data-hash="fa886230"></pre>
+    <p>The meter's last step, on the graphics card, after the histogram's middle has been averaged:</p>
+    <pre data-src="lib/pathtracer/core/autoexposure.js" data-sym="let logL = acc / max(kept, 1e-9);" data-to="aeState[1] = 1.0;"
+         data-why="logL is the average in log₂; logHi where the brightest 5% start. max() takes the darker exposure (a higher EV is darker). aeState stays on the graphics card: the display reads it in the same frame, and nothing waits for the main processor. aeSpeed, 0.1 by default, closes a tenth of the gap a frame, so a noisy first picture does not make the exposure flicker." data-hash="955c0cf7"></pre>
+    <p>And every pixel on its way to the screen, in this order: exposure, into the gamut (chapter 6), the tone curve,
+      sRGB, then the contrast, saturation and brightness settings on the encoded picture
+      (<cite data-src="lib/pathtracer/core/rendertoscreen.js" data-sym="/* EXPOSURE, THEN THE TONE CURVE, THEN sRGB, THEN THE GRADING." data-to="Contrast, saturation and brightness act on the encoded picture, as they did. */"></cite>):</p>
+    <pre data-src="lib/pathtracer/core/rendertoscreen.js" data-sym="var rgb = gamutClip(centerRGB * scale);" data-to="rgb = select(hi, lo, rgb &lt;= VEC3(0.0031308));"
+         data-why="scale is 1 / white, from the manual EV or the meter's. switch picks the tone curve by the setting's number (1 is PBR Neutral, the default). select(a, b, c) is b where c holds: the straight 12.92 part for the darkest light, the power curve above." data-hash="acb8cf02"></pre>
+    <div data-claim="code">
+      <p><strong>A number in the comment, checked.</strong> <code>photometry.js</code> says the meter puts the average
+        "at about 18% of the clipping point". By its own two constants it is 12.5 / 120, 10.4%, as its test says; the
+        18% is the mid-grey a camera means, which sRGB shows at about 0.36. The exposure setting's comment describes
+        tone curves 0 to 2, while the setting offers 0 to 6.</p>
+    </div>
+  </div>
+</section>
+
+<section class="plain wide" id="tricks">
+  <div class="prose">
+    <h2><span class="n">5</span>Tricks and trade-offs</h2>
+    <p>Each is stamped with how it is known; point at a stamp to see what it means.</p>
+    <div data-claim="code">
+      <p><strong>A picture kept as light.</strong> A picture rendered to be saved is kept as light, 16 bytes a pixel,
+        and <em>developed</em> afterwards with its own exposure and tone curve, through the same function the display
+        uses (<code>displayPixel</code>): the exposure can be chosen after a render that took minutes, and a picture
+        saved untouched cannot differ from the view (<code>lib/pathtracer/develop.js</code>).</p>
+    </div>
+    <div data-claim="measured">
+      <p><strong>The same picture, to the bit.</strong> A 480 × 270 render developed untouched equals the display's own
+        output pixel for pixel with a manual exposure; with auto-exposure, 4 of its 518,400 values are 1/255 off, the EV
+        turned into a multiplier on the main processor rather than the graphics card (headless on a GTX 1080 Ti, the
+        user's Pascal card, <code>CHANGELOG.md</code> 0.27.0).</p>
+    </div>
+    <div data-claim="code">
+      <p><strong>A cap in the exposure's own units.</strong> An optional firefly clamp caps what one path may add to a
+        pixel, in multiples of display white, not in candela per square metre, and never below white
+        (<code>uniforms.schema.js</code>, the setting's note). Off by default: capped, the picture is no longer a
+        measurement.</p>
+    </div>
+  </div>
+</section>
+
+<section class="plain wide" id="before">
+  <div class="prose">
+    <h2><span class="n">6</span>What went wrong before</h2>
+    <ul>
+      <li><strong>A picture tuned by eye.</strong> The display was a multiplier of 2.2 and a "gamma" of 1.0: no sRGB
+        curve at all, set by eye against a sky of no particular brightness. EV and the exact curve replaced it (the
+        comment above the exposure settings,
+        <cite data-src="lib/pathtracer/core/uniforms.schema.js" data-sym="/* EV100, as a camera means it: 15 is a sunlit scene" data-to="divides by the luminance that clips at this EV and encodes to sRGB; see rendertoscreen.js. */"></cite>).</li>
+      <li><strong>Black voted.</strong> A scene lit only by a glowing object, more than half of it black (the emitter
+        benchmark's median pixel is 0), metered at the histogram's floor once the black passed the 10% cut, and the
+        exposure blew out everything lit (the comment in the histogram kernel, <code>autoexposure.js</code>).</li>
+      <li><strong>A firefly clamp that darkened the sun.</strong> The clamp was in cd/m². A sunlit white floor is about
+        20,000 cd/m², from one shadow ray a path, so any cap low enough to touch the speckles flattened every sunlit
+        surface: "the user saw the whole scene go dark and low in contrast at every value they tried"
+        (<code>wavefront.js</code>, above the deposit). Earlier still it clamped each channel to 10,000 separately,
+        which changed the hue of whatever it touched.</li>
+      <li><strong>An exposure fixed before the render.</strong> A save wrote the 8-bit picture, so the exposure and the
+        tone curve had to be right before a render that could take minutes. Now a save keeps the light.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="plain" id="try">
+  <div class="prose">
+    <h2><span class="n">7</span>Try it</h2>
+    <ul>
+      <li>In the first figure, choose the room and slide the headroom from 0 to 12. Which part of the room do you lose
+        each way?</li>
+      <li>Add black pixels with <strong>Black votes</strong> on, then off. How much black does it take to fool the old
+        meter, and why that much?</li>
+      <li>In the second figure, compare the orange light under PBR Neutral and AgX. Which keeps its colour longer?</li>
+      <li>In ShadyTracer, open the exposure settings, switch auto-exposure off, and set EV 15 outdoors, then EV 7: what
+        happens to the sky, and to a lamp? Then try each tone curve on a lit glass object.</li>
+    </ul>
+    <aside class="refs"><span class="tag">Read more</span><ul>
+      <li data-ref="wiki-ev">Exposure value: what a stop is, and the EV of everyday scenes.</li>
+      <li data-ref="khronos-neutral">The PBR Neutral tone curve's specification, the default here, with why it is shaped
+        as it is.</li>
+      <li data-ref="hable-filmic">Filmic curves from a games programmer, with the Uncharted 2 curve the Hable option
+        is.</li>
+      <li data-ref="wiki-tonemapping">Tone mapping in general, from photography to games.</li>
+      <li data-ref="wiki-srgb">The sRGB standard and its transfer curve.</li>
+    </ul></aside>
+    <h3>Words from this chapter</h3>
+    <ul class="words" data-words="exposure ev tone-curve srgb luminance"></ul>
+  </div>
+</section>
+
+<nav class="tabs" data-auto></nav>
+</main>
+</body>
+</html>

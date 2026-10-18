@@ -140,6 +140,13 @@ real student.
 4. What do a colour temperature and a Duv say about a light?
 5. How are three LEDs mixed to a target colour, and when can they not reach it?
 
+**pixels** (From light to pixels)
+1. What does an EV set, and how does ShadyTracer choose one by itself?
+2. Why does the meter drop the darkest and brightest tenth, and why does a lamp-lit room need a second rule?
+3. What went wrong when black pixels counted?
+4. What does a tone curve do, and how do PBR Neutral and AgX differ?
+5. Why is a picture stored as sRGB rather than in proportion to the light?
+
 **emitters** (Every glowing thing is a light)
 1. How does the renderer find glowing shapes nobody told it about?
 2. Why is the picture right even before a glowing shape has been found?
