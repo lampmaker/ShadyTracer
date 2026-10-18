@@ -36,7 +36,9 @@ const base = `http://localhost:${server.address().port}/tutorial/`
 const shots = process.argv[2] ? resolve(process.argv[2]) : null
 if (shots) await mkdir(shots, { recursive: true })
 
-const PAGES = ['index.html', 'glossary.html', 'styles.html', 'ch/rays.html', 'ch/distances.html', 'ch/nee.html']
+// every written chapter, from the contents: a list typed here once covered the first three and nothing after them
+const { CHAPTERS } = await import('../kit/chapters.js')
+const PAGES = ['index.html', 'glossary.html', 'styles.html', ...CHAPTERS.filter(c => c.file).map(c => c.file)]
 const { STYLES: LIST } = await import('../kit/styles.js')
 const STYLES = Object.fromEntries(LIST.map(st => [st.id, st.face]))      // every style there is, and a face of it to check loaded
 let failed = 0

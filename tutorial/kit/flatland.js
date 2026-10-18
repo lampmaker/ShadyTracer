@@ -151,18 +151,25 @@ export const lampsOf = world => world.shapes.map((s, i) => s.emit > 0 && s.kind 
  *   nee: true    at every bounce a shadow ray to a random point of a random lamp; a bounce that hits a lamp after the
  *                first then adds nothing (it was counted by the shadow ray: counting both would count it twice).
  *                ShadyTracer weighs the two instead of choosing (MIS, chapter "mis").
- * `record`, if given, receives the path's pieces for drawing: { kind: 'eye'|'bounce'|'shadow'|'blocked', a, b }, with
- * `lamp: true` on the piece that ends on a lamp whose light is counted.
+ * `record`, if given, receives the path's pieces for drawing: { kind: 'eye'|'bounce'|'shadow'|'blocked', a, b, beta },
+ * with `lamp: true` on the piece that ends on a lamp whose light is counted, and `beta` the throughput the piece carries.
+ *   rr: { start, min, max }   Russian roulette as tracebasics.js plays it: from `start` bounces on, the path goes on with
+ *                probability p = clamp(beta, min, max) and its survivors carry beta / p. Off (null), no number is drawn
+ *                for it, so a path without it is the path it always was.
+ * `info`, if given, is filled with how the path went: { bounces, end: 'sky'|'lamp'|'cap'|'roulette', upTo }, upTo[b]
+ * the light it had gathered by the end of bounce b -- what a cap of b bounces would have returned.
  */
-export function tracePath(world, ox, oy, dx, dy, { nee = false, maxBounce = 4, rand, eps = 1e-3, record = null, lampPick } = {}) {
+export function tracePath(world, ox, oy, dx, dy, { nee = false, maxBounce = 4, rand, eps = 1e-3, record = null, lampPick, rr = null, info = null } = {}) {
     let L = 0, beta = 1, x = ox, y = oy
     const lamps = lampsOf(world)                 // asked every time: a figure moves and adds shapes
+    if (info) { info.bounces = 0; info.end = 'cap'; info.upTo = [] }
+    const done = end => { if (info) { info.end = end; while (info.upTo.length <= maxBounce) info.upTo.push(L) } return L }
     for (let b = 0; b <= maxBounce; b++) {
         march(world, x, y, dx, dy, { eps }, HIT)
-        if (record) record.push({ kind: b === 0 ? 'eye' : 'bounce', a: [x, y], b: [HIT.x, HIT.y] })
-        if (!HIT.hit) { L += beta * (world.sky || 0); break }
+        if (record) record.push({ kind: b === 0 ? 'eye' : 'bounce', a: [x, y], b: [HIT.x, HIT.y], beta })
+        if (!HIT.hit) { L += beta * (world.sky || 0); return done('sky') }
         const sh = world.shapes[HIT.i]
-        if (sh.emit > 0) { if (b === 0 || !nee) { L += beta * sh.emit; if (record) record[record.length - 1].lamp = true } break }   // lamps glow and reflect nothing
+        if (sh.emit > 0) { if (b === 0 || !nee) { L += beta * sh.emit; if (record) record[record.length - 1].lamp = true } return done('lamp') }   // lamps glow and reflect nothing
         let [nx, ny] = normalAt(world, HIT.x, HIT.y, HIT.i)
         if (nx * dx + ny * dy > 0) { nx = -nx; ny = -ny }                    // the side the ray came from
         const px = HIT.x + nx * 4 * eps, py = HIT.y + ny * 4 * eps
@@ -183,11 +190,19 @@ export function tracePath(world, ox, oy, dx, dy, { nee = false, maxBounce = 4, r
         }
         // the bounce: cosine-weighted, so f cos / pdf = (rho / 2) cos / (cos / 2) = rho
         beta *= rho
+        if (info) { info.bounces = b + 1; info.upTo.push(L) }
+        if (rr && b < maxBounce && b + 1 >= rr.start) {
+            const p = Math.min(rr.max, Math.max(rr.min, beta))
+            if (rand() > p) return done('roulette')
+            beta /= p
+        }
         ;[dx, dy] = cosineDir(nx, ny, rand())
         x = px; y = py
     }
-    return L
+    return done('cap')
 }
+/** tracebasics.js's roulette: from the third bounce, p clamped to [0.1, 0.95] (uRRStart, RR_MIN_P, RR_MAX_P) */
+export const ENGINE_RR = { start: 3, min: 0.1, max: 0.95 }
 
 /** Irradiance at (x, y) with normal n from the scene's light, estimated by one direction: what NEE (`nee`) or a
  *  bounce (not) finds. The two estimators the path tracer chooses between, alone, for the test's closed forms. */

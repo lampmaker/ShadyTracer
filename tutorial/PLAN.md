@@ -148,8 +148,11 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
     follow from its formula: 0.95×–1.83× at 0.0001, not 0.08×–3.2×), seeds, the sun found 50,000 times in 37 M samples.
     *Read:* pbr-montecarlo, finch2009, jarzynski2020 (the hash ShadyTracer's random numbers come from, credited in
     tracebasics.js), oneill-pcg.
-13. **Following a path**: the rendering equation in words, throughput, importance sampling, Russian roulette (off,
-    and why).
+13. **Following a path** (draft): one path's throughput β bounce by bounce, the rendering equation in a fold-out; the
+    bounce cap's lost light (46/72/95% at caps 1/3/8 for walls of 0.8, less for white ones), a bias; Russian roulette as
+    tracebasics.js plays it, off against on (the same average, 4.7 rays a path for 10.0), measured unbiased on Pascal
+    and still off, and why; the removed [0, 10] clamp → materials_pbr.js THE BOUNCE, tracebasics.js's cap and roulette,
+    flatland.js tracePath (rr, info). *Read:* rtiow, pbr-roulette, pbr-pathtracer, kajiya1986.
 14. **Aim at the light** (draft): next event estimation, shadow rays, choosing among lights, where it cannot help.
     *Read:* rtrest, pbr-lights, pbr-spheres, pbr-pathtracer, veach1997.
 15. **Two ways to the light**: MIS and the power heuristic; delta directions keep weight 1. *Read:* veach1997 (chapter

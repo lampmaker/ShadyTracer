@@ -466,6 +466,25 @@ for (const [name, { mod }] of modules) {
     ok('ch.12: seven-eighths of the states are at or above 2^29, where f32 keeps multiples of 64: a grid of 64 / 671040 = 1/10485', 64 / DIV === 1 / 10485 && (2 ** 32 - 2 ** 29) / 2 ** 32 === 7 / 8)
 }
 
+{
+    const P = await import('../ch/paths.js'), { ENGINE_RR } = await import('../kit/flatland.js')
+    const p = P.onePath(17, 0.8)
+    ok('ch.13: the first figure\'s path bounces four times and finds the lamp carrying 0.8^4 = 0.41', p.info.end === 'lamp' && p.info.bounces === 4 && Math.abs(p.L - 0.8 ** 4) < 1e-12
+        && p.rec.map(r => r.beta).every((b, k) => Math.abs(b - 0.8 ** k) < 1e-12), JSON.stringify(p.info))
+    const tb = readFileSync(join(REPO, 'lib/pathtracer/core/tracebasics.js'), 'utf8')
+    ok('ch.13: the flat world\'s roulette is tracebasics.js\'s: from bounce 3, p in [0.1, 0.95]', ENGINE_RR.start === +/const uRRStart: u32 = (\d+)u;/.exec(tb)[1]
+        && ENGINE_RR.min === +/const RR_MIN_P: FLOAT = ([\d.]+);/.exec(tb)[1] && ENGINE_RR.max === +/const RR_MAX_P: FLOAT = ([\d.]+);/.exec(tb)[1])
+    const run = (fig, over = {}) => { const s = { ...fig.state, ...over }; fig.work.reset(s); while (fig.work.add(s, 1e9)); return s }
+    const c = run(P.figures.cap), all = c.caps.at(-1).Y, sh = k => Math.round(100 * c.caps[[0, 1, 2, 3, 4, 6, 8, 12, 20, 40].indexOf(k)].Y / all)
+    const w = run(P.figures.cap, { rho: 0.95 }), shw = k => Math.round(100 * w.caps[[0, 1, 2, 3, 4, 6, 8, 12, 20, 40].indexOf(k)].Y / w.caps.at(-1).Y)
+    ok('ch.13: a cap of 1, 3, 8 keeps 46, 72, 95% of the light at albedo 0.8; 3 and 8 keep 46 and 76% at 0.95', sh(1) === 46 && sh(3) === 72 && sh(8) === 95 && shw(3) === 46 && shw(8) === 76,
+        `${sh(1)} ${sh(3)} ${sh(8)} / ${shw(3)} ${shw(8)}`)
+    const r = run(P.figures.roulette), se = m => Math.sqrt(m.S * m.V / (1 - m.S)), z = (r.on.Y - r.off.Y) / Math.hypot(se(r.off), se(r.on))
+    const eff = (se(r.off) ** 2 * r.costOff) / (se(r.on) ** 2 * r.costOn)
+    ok('ch.13: roulette on and off agree within their error bars; 10.0 and 4.7 rays a path; for equal rays 0.96 of the error bar',
+        Math.abs(z) < 1 && (r.costOff / r.off.cnt).toFixed(1) === '10.0' && (r.costOn / r.on.cnt).toFixed(1) === '4.7' && (1 / Math.sqrt(eff)).toFixed(2) === '0.96', `z ${z.toFixed(2)}, eff ${eff.toFixed(3)}`)
+}
+
 /* THE EXCERPT LOCATOR ON ITS OWN ----------------------------------------------------------------------------------- */
 {
     const text = [

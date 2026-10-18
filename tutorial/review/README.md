@@ -110,6 +110,13 @@ real student.
 5. What was wrong with the old random number generator, and why could more samples not fix it?
 6. The page disagrees with a comment in the code. About what, and how sure is it?
 
+**paths** (Following a path)
+1. What is a path's throughput, and how does it change at each bounce?
+2. What does a cap on the number of bounces do to the picture, and why is it worse in a white room?
+3. How does Russian roulette stop paths early without making the picture darker?
+4. Why does ShadyTracer still leave Russian roulette off?
+5. What was the 6 to 8% brightening, and what did it teach?
+
 **nee** (Aim at the light)
 1. Why does a picture lit by a small lamp stay noisy for a long time?
 2. What does next event estimation do at each bounce?

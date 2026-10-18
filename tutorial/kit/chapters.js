@@ -60,8 +60,8 @@ export const CHAPTERS = [
 
     C('paths', 'montecarlo', 'Dice and averages', 'Averages of random tries: why they are noisy, and how fast the noise falls.', 'draft',
         [`${K}measure.js`, `${K}noise.js`, `${K}tracebasics.js`, `${K}wavefront.js`, `${K}uniforms.schema.js`]),
-    C('paths', 'paths', 'Following a path', 'Following light bounce by bounce, and choosing the bounces that matter.', 'planned',
-        [`${K}materials_pbr.js`, `${K}tracebasics.js`]),
+    C('paths', 'paths', 'Following a path', 'Following light bounce by bounce, and choosing the bounces that matter.', 'draft',
+        [`${K}materials_pbr.js`, `${K}tracebasics.js`, `${K}uniforms.schema.js`, 'tutorial/kit/flatland.js']),
     C('paths', 'nee', 'Aim at the light', 'Aiming a ray at the lamp at every bounce: next event estimation.', 'draft',
         [`${K}tracebasics.js`, `${K}materials_pbr.js`]),
     C('paths', 'mis', 'Two ways to the light', 'Two ways of finding light, combined without counting it twice.', 'planned',

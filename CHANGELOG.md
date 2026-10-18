@@ -35,7 +35,8 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   shell); chapter 4, *Which way is up* (normals by a shape's own formula, forward and central differences, the f32
   grain below the renderer's floor of 128 spacings, emulated with `Math.fround` as `floor.test.mjs` does); chapter 12,
   *Dice and averages* (π from darts with the renderer's own error bar, the spread against 1/√N, the old random numbers
-  against PCG4D's); chapter 2, *Shapes as distances*; chapter 14, *Aim at the
+  against PCG4D's); chapter 13, *Following a path* (a path's throughput, the bounce cap's lost light, Russian roulette
+  off against on, as the engine plays it); chapter 2, *Shapes as distances*; chapter 14, *Aim at the
   light* (next event estimation); the contents map; a glossary of 82 terms, each linked from the pages with a card on
   hover or tap.
 - **The kit** (`tutorial/kit/`): one pen draws every figure in the style's colours and line; a figure is a spec with
@@ -111,6 +112,10 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   into the note and the page showed `data-hash="…">` in the middle of it. A tag now ends at the first `>` outside quotes
   (the stamper, `affected.mjs` and the test alike), the test stamps a page with such a note, and every page is checked
   for an attribute written inside another.
+- **Two kit bugs, found by the new chapters:** a progressive figure was drawn once before its work was reset, so
+  one that keeps its sums in state made by `reset` failed in the browser while the test, which resets first, passed
+  (`kit/figure.js` resets first now); and `tutorial/test/pages.check.mjs` checked a list of six pages typed in when there
+  were six, so no new chapter was ever opened in a browser by it (it reads the written chapters from the contents now).
 - **Checked:** `node tutorial/test/tutorial.test.mjs` (in CI) holds the pages, links, glossary and excerpts to the
   contents and today's source, draws every figure and step into a recording canvas, and tests the flat world against
   2D closed forms (a point light's I h / (x² + h²), a lamp's L (sin φ₂ − sin φ₁), a room traced with and without NEE

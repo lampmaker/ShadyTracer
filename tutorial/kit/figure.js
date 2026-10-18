@@ -172,8 +172,10 @@ export function mountFigure(el, spec, { name = '' } = {}) {
     doc.addEventListener('visibilitychange', kick)
     win.matchMedia?.('(prefers-color-scheme: dark)').addEventListener?.('change', onTheme)
 
-    // drawn once now, wherever it is on the page, so a page is whole at rest; work waits until the figure is seen
-    fit(); render(); reset()
+    // drawn once now, wherever it is on the page, so a page is whole at rest; work waits until the figure is seen. Its
+    // work is reset first: a figure that keeps its sums in state made by reset would otherwise be drawn without them
+    // (chapter 13's two did, and only a browser showed it: the test resets before it draws)
+    fit(); if (spec.work) spec.work.reset(state); render(); reset()
     return {
         state, render: () => { dirty = true; kick() }, reset,
         set(k, v) { state[k] = v; changed(k) },
