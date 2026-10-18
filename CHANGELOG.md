@@ -17,7 +17,7 @@ as PLAN.md does.
 
 ## 0.67.2 — 2026-10-18
 
-**A developer tutorial beside the program: its plan, its figure kit, four styles and the first three chapters**
+**A developer tutorial beside the program: its plan, its figure kit, eight styles and its first eleven chapters**
 (you: "a tutorial for shadytracer, parallel to the program … that explains the inner workings of the code … interactive,
 2D visualisations … a solid toolkit for that so it looks the same everywhere … start with a plan and list of contents,
 then a few pages … make a few mockups of different styles"). Nothing in the application changed: the tutorial is
@@ -74,14 +74,43 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   says both and keeps the comment's point: a bias in small windows that no number of samples removes.
 - **A third comment number, smaller:** `tracebasics.js` LUM_CODE says the log code's step is "2e-5 of a stop"; from
   its own constants (80 stops over 2²⁴ codes) it is 4.8e-6. Chapter 16 says so; the comment is unchanged.
-- **Four styles, for every reader** (you: "make the style a dropdown, expect to add more styles later. We'll keep this
-  in for everyone. give them names"): *Lab notebook*, *Blueprint*, *Drafting sheet* and *Risograph*, each light and
-  dark, chosen by name from the menu at the top right of every page and kept on the reader's device. They are listed
-  once, in `tutorial/kit/styles.js`; a new style is a CSS file, its `@import` and an entry there, and the test fails if
-  a style misses a token or a dark colour. `tutorial/styles.html` shows each with a labelled sample and its key to the
-  figures' colours, its cards made from the list. Their typefaces are kept in the repository (`tutorial/kit/fonts/`,
-  29 latin and greek woff2 files of 12 families, each family's OFL licence beside them, THIRD_PARTY.md), fetched once
-  by `tutorial/kit/fonts/fetch.mjs`: the tutorial loads nothing from another site.
+- **A comment's verdict out of date, reported, not changed:** the Russian roulette comment in `tracebasics.js` says
+  roulette "should earn its keep in a scene deep enough for the budget to shrink". Since 0.10.0 the number of rounds a
+  sample gets is the worst case, never shrunk (`raytrace_main.js`, "THE ITERATION BUDGET IS THE WORST CASE"), so
+  roulette can save only the work inside a round. Chapter 13 says both, stamped read in code; whether that work is ever
+  worth saving is not measured.
+- **Eight styles, for every reader** (you: "make the style a dropdown, expect to add more styles later. We'll keep this
+  in for everyone. give them names"; then "use different fonts for the lab notebook; more hand drawn technical. Add
+  more Styles. I like the drafting sheet, but make versions with sans serif, thin lines, minimalistic as well"):
+  *Lab notebook*, lettered throughout in Architects Daughter, an architect's even hand (it was Kalam headings over a
+  book face); *Chalkboard*, chalk on a green board in the dark and marker on a whiteboard in the light; *Blueprint*;
+  *Drafting sheet*, and three versions of it: *Drafting, sans serif* (IBM Plex, condensed capitals), *Drafting, fine
+  line* (hairlines, light Jost capitals, no grain) and *Minimal* (no frame, a white page, thin lines, Inter); and
+  *Risograph*. Each is light and dark, chosen by name from the menu at the top right of every page and kept on the
+  reader's device. They are listed once, in `tutorial/kit/styles.js`; a new style is a CSS file, its `@import` and an
+  entry there, and the test fails if a style misses a token or a dark colour. `tutorial/styles.html` shows each with a
+  labelled sample and its key to the figures' colours, its cards made from the list. Their typefaces are kept in the
+  repository (`tutorial/kit/fonts/`, 42 latin and greek woff2 files of 20 families, each family's OFL licence beside
+  them, THIRD_PARTY.md), fetched once by `tutorial/kit/fonts/fetch.mjs`: the tutorial loads nothing from another site.
+- **Colour words follow the style.** The text names what a figure draws by its colour ("blue while they bounce"), and
+  the drafting styles draw it black and orange-red. Each style now names its own colours (`--say-*` tokens), and a
+  word marked `data-say="cam"` is rewritten to the style's own when the page opens or the style changes, here and on a
+  styles-page card alike; a figure's own labels ask the pen (`pen.say`). The test checks every marked word names a role
+  every style names.
+- **Every figure answers the hand** (you: "make images more interactive … try to make every chart, graph etc
+  interactive, even if it is a little bit"): every chart reads out the values under the pointer (a tap on a phone), in
+  a box beside it, from the kit (`kit/plot.js`, `pen.hover`, `pen.tip`), and the hand-drawn ones (the darts' spreads,
+  the old random numbers' windows, the MIS plates' strips) say what they are pointed at too. Figures that had nothing
+  to touch got controls: chapter 13's roulette (the walls, where roulette starts, and survivors keeping their β, the
+  unfair game, which loses a third of the light: 0.233 against 0.346), its one path (the walls' albedo, a bounce
+  limit, which pixel), chapter 12's spreads (how many estimates a column), chapter 15's plates (samples, new random
+  numbers), chapter 16's glow finder (drag the ball out of sight, new paths), its random lines (new lines) and its
+  brightness codes (a brightness of your choosing, both codes and what each reads back as), chapter 17's focus plane
+  (drag it).
+- **Chapter 14's room, quieter** (you: "show only NEE too. the image shows a lot of random lines, moving, its hard to
+  see"): *Without NEE*, *NEE only* and *Both*, in the flat room and the 3D one; the flat room's drawn paths are three
+  of the chosen pixel, traced from their own seed and still until *Other paths*, the pixel or the room changes (they
+  were the last few the pictures traced, replaced every third sample), and *Show paths* hides them.
 - **Shapes you can move** (you: "make SDF elements draggable (the blend mode is not very visible now, the shapes are
   too far apart)"): in chapter 2's distance field the circle and the box start touching, both drag by a handle at
   their middle, and a blend slider (shown only while they are blended) widens the fillet. The ball, the block and the
@@ -99,7 +128,11 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   readers, on the revised pages, answered every quiz question from the page alone and found the numbers consistent;
   what they found next (why one eye ray is enough, why aiming is quiet, why a ray inside a ball does not stop, a
   WGSL excerpt labelled JavaScript, colours shared between meanings in three styles) is fixed too, each finding
-  answered in `REVIEWS.md`.
+  answered in `REVIEWS.md`. A third round read the eight new chapters (0, 3, 4, 12, 13, 15, 16, 17) once each: every
+  reader could say each chapter's idea back, and was lost where a step of maths assumed calculus, where a number in the
+  text did not show its working against the readout (0.48 from a formula giving 0.175; 0.96 from numbers giving 0.98),
+  or where a word named a colour or line the figure drew otherwise. Each chapter was revised for it, every finding
+  fixed or answered in `REVIEWS.md`.
 - **Where to read more** (you: "add a box with recommended external references, eg where you learned the info. Inigo
   quilez definitely needs to be named. Probably more than once"): reading boxes beside the sections they belong to,
   every chapter at least one, from one list (`tutorial/kit/reading.js`) whose every link was opened and checked. Inigo
@@ -130,6 +163,12 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   pages run, not that they read well.
 
 What to look at:
+- **The new styles.** Lab notebook's new lettering; Chalkboard (try it dark); the three drafting versions side by side
+  on `tutorial/styles.html`. Do the drafting ones read the colours right: the text says "black" where they draw black?
+- **Pointing at a chart.** Any chart: chapter 13's bars and curves, chapter 15's strips and densities, chapter 16's
+  codes. Is the box in the way, and is it there when a finger taps on a phone?
+- **Chapter 14's room**: *NEE only*, *Other paths*, *Show paths*. Is it calm enough to follow now?
+- **Chapter 13's roulette**: switch off *Survivors divide β by p* and watch the average fall.
 - **The reading boxes.** Chapter 2 above all: are these the sources you would send a student to, and is anything you
   learned from missing?
 - **Chapter 1, sections 5 and 6**: the shadow ray now meets the lit ball, then a point in the block's shadow; and the

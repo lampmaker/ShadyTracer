@@ -153,8 +153,9 @@ export const lampsOf = world => world.shapes.map((s, i) => s.emit > 0 && s.kind 
  *                ShadyTracer weighs the two instead of choosing (MIS, chapter "mis").
  * `record`, if given, receives the path's pieces for drawing: { kind: 'eye'|'bounce'|'shadow'|'blocked', a, b, beta },
  * with `lamp: true` on the piece that ends on a lamp whose light is counted, and `beta` the throughput the piece carries.
- *   rr: { start, min, max }   Russian roulette as tracebasics.js plays it: from `start` bounces on, the path goes on with
- *                probability p = clamp(beta, min, max) and its survivors carry beta / p. Off (null), no number is drawn
+ *   rr: { start, min, max, divide }   Russian roulette as tracebasics.js plays it: from `start` bounces on, the path goes
+ *                on with probability p = clamp(beta, min, max) and its survivors carry beta / p. `divide: false` is the
+ *                unfair game a chapter shows beside it, survivors keeping beta as it was. Off (null), no number is drawn
  *                for it, so a path without it is the path it always was.
  * `info`, if given, is filled with how the path went: { bounces, end: 'sky'|'lamp'|'cap'|'roulette', upTo }, upTo[b]
  * the light it had gathered by the end of bounce b -- what a cap of b bounces would have returned.
@@ -194,7 +195,7 @@ export function tracePath(world, ox, oy, dx, dy, { nee = false, maxBounce = 4, r
         if (rr && b < maxBounce && b + 1 >= rr.start) {
             const p = Math.min(rr.max, Math.max(rr.min, beta))
             if (rand() > p) return done('roulette')
-            beta /= p
+            if (rr.divide !== false) beta /= p
         }
         ;[dx, dy] = cosineDir(nx, ny, rand())
         x = px; y = py

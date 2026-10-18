@@ -74,14 +74,19 @@ export function exactAt(x, s, n = 4000) {
 }
 
 const film = () => Array.from({ length: 3 }, () => SIGMAS.map(() => Array.from({ length: PIXN }, () => ({ Y: 0, V: 0, S: 0, cnt: 0 }))))
-const NAMES = ['picking a point on a lamp', 'picking a direction from the plate', 'both, weighed (MIS)']
+const NAMES = ['the lamp strategy', 'the plate strategy', 'both, weighed (MIS)']
+export const LAMP_NAMES = ['tiny', 'small', 'large', 'long']
 
 export const figures = {
     plates: {
         aspect: 1.15,
         world: { x: [-2.1, 10.4], y: [-6.9, 4.5] },
         state: { seed: 1, spp: 0, max: 8 },
-        steps: { few: { max: 8 }, many: { max: 256 } },
+        controls: [
+            { type: 'seg', key: 'max', label: 'samples a pixel', options: [[8, '8'], [64, '64'], [256, '256'], [1024, '1,024']] },
+            { type: 'button', label: 'New random numbers', act: s => { s.seed++ } },
+        ],
+        steps: { few: { max: 8, seed: 1 }, many: { max: 256, seed: 1 } },
         work: {
             reset(s) { s.spp = 0; s.film = film() },
             add(s, ms) {
@@ -97,13 +102,15 @@ export const figures = {
         draw(pen, s) {
             // THE SCENE: the plate, the lamps over it, the camera above
             pen.line([X0 - 0.1, 0], [X1 + 0.1, 0], { role: 'solid', w: 1.6, id: 'plate' })
-            for (const L of LAMPS) pen.bar([L.c - L.len / 2, H], [L.c + L.len / 2, H], { id: `lamp${L.len}` })
+            // the lamps face down: their ticks on the side they glow from
+            for (const L of LAMPS) pen.bar([L.c - L.len / 2, H], [L.c + L.len / 2, H], { id: `lamp${L.len}`, both: false })
+            LAMPS.forEach((L, k) => pen.label([L.c, H + 0.32], LAMP_NAMES[k], { role: 'soft', size: 12, align: 'center' }))
             pen.eye(CAM, Math.atan2(-CAM[1], 4 - CAM[0]), { size: 18 })
             // one mirror ray for each lamp: where on the plate the camera sees it reflected
             for (const L of LAMPS) { const xm = CAM[0] + (L.c - CAM[0]) * CAM[1] / (CAM[1] + H); pen.ray(CAM, [xm, 0], { role: 'faint', w: 0.7, arrow: false }); pen.ray([xm, 0], [L.c, H], { role: 'faint', w: 0.7, arrow: false }) }
-            pen.label([4.2, -0.45], 'the plate, seen by the camera from 0.2 to 8.6', { role: 'soft', size: 13, align: 'center' })
+            pen.label([4.2, -0.45], 'the plate: each strip below is it, left to right, a point of it a column', { role: 'soft', size: 13, align: 'center' })
             // THE FILMS: a strip a plate (rows: sharp to rough) for each strategy (columns)
-            const { ctx } = pen, x0 = pen.X(-2.0), x1 = pen.X(10.3), gap = 10, cw = (x1 - x0 - 2 * gap) / 3, y0 = pen.Y(-1.3), rh = (pen.Y(-6.6) - y0) / SIGMAS.length
+            const { ctx } = pen, x0 = pen.X(-1.15), x1 = pen.X(10.3), gap = 10, cw = (x1 - x0 - 2 * gap) / 3, y0 = pen.Y(-1.3), rh = (pen.Y(-6.6) - y0) / SIGMAS.length
             const tone = v => Math.round(255 * Math.pow(1 - Math.exp(-Math.max(0, v) / 0.6), 1 / 1.6))
             for (let m = 0; m < 3; m++) {
                 const cx = x0 + m * (cw + gap)
@@ -114,9 +121,19 @@ export const figures = {
                     for (let i = 0; i < PIXN; i++) { const g = tone(s.film[m][p][i].Y); ctx.fillStyle = `rgb(${g},${g},${g})`; ctx.fillRect(cx + i * pw, py + 2, pw + 0.5, rh - 8) }
                     ctx.strokeStyle = pen.col('ink'); ctx.lineWidth = 1; ctx.strokeRect(cx, py + 2, cw, rh - 8)
                     ctx.restore()
-                    if (m === 0) pen.labelPx(cx + 3, py + rh - 22, `σ ${sg}`, { role: 'accent', size: 12, kind: 'mono' })
                 })
             }
+            // each row's roughness beside it, off the strips; σ in radians (and in degrees, as the second figure reads)
+            SIGMAS.forEach((sg, p) => pen.labelPx(x0 - 4, y0 + p * rh + (rh - 8) / 2 - 6, `σ ${sg}`, { role: 'accent', size: 11, kind: 'mono', align: 'right' }))
+            // THE POINTER on a strip: that point of the plate, its estimate and error bar, and the exact light there
+            for (let m = 0; m < 3; m++) SIGMAS.forEach((sg, p) => {
+                const cx = x0 + m * (cw + gap), py = y0 + p * rh, q = pen.hover({ x: cx, y: py + 2, w: cw, h: rh - 8 })
+                if (!q) return
+                const i = Math.min(PIXN - 1, Math.floor((q.x - cx) / (cw / PIXN))), px = s.film[m][p][i], x = pixelX(i)
+                ctx.save(); ctx.strokeStyle = pen.col('accent'); ctx.lineWidth = 1.5; ctx.strokeRect(cx + i * cw / PIXN - 1, py + 1, cw / PIXN + 2, rh - 6); ctx.restore()
+                pen.tip(q.x, q.y, [`${NAMES[m]}, σ ${sg} (${(sg * 180 / Math.PI).toFixed(1)}°), x ${x.toFixed(2)}`,
+                    `${px.Y.toFixed(3)} ± ${(standardError(px.V, px.S) ?? 0).toFixed(3)} after ${px.cnt}`, `exact: ${exactAt(x, sg, 600).toFixed(3)}`])
+            })
         },
         readout(s) {
             const rel = m => { let se = 0, y = 0; for (const row of s.film[m]) for (const px of row) { se += standardError(px.V, px.S) ?? 0; y += px.Y } return y > 0 ? se / y : 0 }
@@ -144,28 +161,38 @@ export const figures = {
             plot(pen, top, {
                 x: [-80, 80], y: [-2, 2.2], yticks: [-2, -1, 0, 1, 2], xticks: [], fmt: v => String(+(10 ** v).toPrecision(1)),
                 series: [
-                    { pts: ts.map(t => [deg(t), Math.max(-2.5, lg(pl(t)))]), role: 'light', w: 1.6 },
-                    { pts: ts.map(t => [deg(t), Math.max(-2.5, lg(lobePdf(s.x, t, sg)))]), role: 'cam', w: 1.6 },
+                    { name: 'lamps', pts: ts.map(t => [deg(t), Math.max(-2.5, lg(pl(t)))]), role: 'light', w: 1.6 },
+                    { name: 'plate', pts: ts.map(t => [deg(t), Math.max(-2.5, lg(lobePdf(s.x, t, sg)))]), role: 'cam', w: 1.6 },
                 ],
+                hoverX: v => `${v.toFixed(0)}° from straight up`, hoverY: v => v <= -2.5 ? '0' : (10 ** v).toPrecision(2),
+            })
+            // each lamp's hump named, where it is seen from this point (a lamp past 80° is off the plot)
+            LAMPS.forEach((L, k) => {
+                const a = Math.atan2(L.c - s.x, H) * 180 / Math.PI
+                if (Math.abs(a) > 78) return
+                const xx = top.x + (a + 80) / 160 * top.w, yy = top.y + top.h - (lg(lightPdf(k, Math.hypot(L.c - s.x, H))) + 2) / 4.2 * top.h
+                // staggered: two lamps seen close together (small and large, from the left) would write over each other
+                pen.labelPx(xx, Math.max(top.y, yy - 16 - (k % 2) * 13), LAMP_NAMES[k], { role: 'light', size: 11, align: 'center' })
             })
             pen.labelPx(bot.x - 34, bot.y - 18, 'the weight MIS gives each', { role: 'soft', size: 13 })
             const { X } = plot(pen, bot, {
                 // the x labels (degrees) are written below: plot's one format would give the y ticks degrees too
                 x: [-80, 80], y: [0, 1.05], yticks: [0, 0.5, 1], xticks: [], fmt: v => String(v),
                 series: [
-                    { pts: ts.map(t => [deg(t), (pl(t) || lobePdf(s.x, t, sg)) ? misWeight(pl(t), lobePdf(s.x, t, sg)) : 0]), role: 'light', w: 1.6 },
-                    { pts: ts.map(t => [deg(t), (pl(t) || lobePdf(s.x, t, sg)) ? misWeight(lobePdf(s.x, t, sg), pl(t)) : 0]), role: 'cam', w: 1.6 },
+                    { name: 'lamps', pts: ts.map(t => [deg(t), (pl(t) || lobePdf(s.x, t, sg)) ? misWeight(pl(t), lobePdf(s.x, t, sg)) : 0]), role: 'light', w: 1.6 },
+                    { name: 'plate', pts: ts.map(t => [deg(t), (pl(t) || lobePdf(s.x, t, sg)) ? misWeight(lobePdf(s.x, t, sg), pl(t)) : 0]), role: 'cam', w: 1.6 },
                 ],
+                hoverX: v => `${v.toFixed(0)}° from straight up`, hoverY: v => v.toFixed(2),
             })
             for (const d of [-80, -40, 0, 40, 80]) pen.labelPx(X(d) - 12, bot.y + bot.h + 4, `${d}°`, { role: 'soft', size: 11, kind: 'mono' })
             const { ctx } = pen, xm = X(deg(mirrorAngle(s.x)))
             ctx.save(); ctx.strokeStyle = pen.col('accent'); ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(xm, top.y); ctx.lineTo(xm, bot.y + bot.h); ctx.stroke(); ctx.restore()
-            pen.labelPx(xm + 4, top.y + 2, 'mirror direction', { role: 'accent', size: 12 })
-            pen.labelPx(bot.x + 4, bot.y + bot.h + 22, 'the direction, from straight up · lamps: the light colour · the plate: the camera-ray colour', { role: 'soft', size: 12 })
+            pen.labelPx(xm + 4, top.y + top.h - 16, 'mirror direction', { role: 'accent', size: 12 })
+            pen.labelPx(bot.x + 4, bot.y + bot.h + 22, `the direction, from straight up · the lamps: ${pen.say('light')} · the plate: ${pen.say('cam')}`, { role: 'soft', size: 12 })
         },
         readout(s) {
             const sg = SIGMAS[s.plate], t = mirrorAngle(s.x), h = lampAlong(s.x, t), pl = h ? lightPdf(h.k, h.r) : 0, pb = lobePdf(s.x, t, sg)
-            return `plate σ ${sg} at x ${s.x.toFixed(2)} · in the mirror direction: ${h ? `lamp ${['smallest', 'small', 'large', 'largest'][h.k]}, its density ${pl.toFixed(2)}` : 'no lamp'}, the plate's ${pb.toFixed(2)} · weights ${misWeight(pl, pb).toFixed(2)} for the lamp, ${misWeight(pb, pl).toFixed(2)} for the plate`
+            return `plate σ ${sg} at x ${s.x.toFixed(2)} · in the mirror direction: ${h ? `the ${LAMP_NAMES[h.k]} lamp, its density ${pl.toFixed(2)}` : 'no lamp'}, the plate's ${pb.toFixed(2)} · weights ${misWeight(pl, pb).toFixed(2)} for the lamp, ${misWeight(pb, pl).toFixed(2)} for the plate`
         },
     },
 }

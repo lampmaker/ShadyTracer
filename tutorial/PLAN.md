@@ -1,7 +1,8 @@
 # ShadyTracer, inside out: the tutorial's plan
 
-*Status 2026-10-18: first round written (contents, glossary, chapters 1, 2 and 14, four styles), with 3D figures where
-they show more; each page read by a blank reader and revised from what it found (`review/REVIEWS.md`). This file is the
+*Status 2026-10-18: two rounds written (contents, glossary, chapters 0 to 4 and 12 to 17, eight styles), with 3D
+figures where they show more and every figure answering the pointer; each page read by a blank reader and revised from
+what it found (`review/REVIEWS.md`). This file is the
 plan; `kit/chapters.js` is the contents the pages read, and the two must agree.*
 
 ## What it is, and for whom
@@ -86,11 +87,11 @@ planned chapter. A new file a chapter is about goes into its `code`.
 
 | file | what |
 |---|---|
-| `kit.css`, `styles/*.css`, `styles.js` | layout and components; a style is tokens, a texture and a frame, named in `styles.js` (adding one: its file, its `@import`, its entry) |
-| `page.js` | a page's start: bar, title block, glossary cards, chapter links, excerpts, figures and steps |
+| `kit.css`, `styles/*.css`, `styles.js` | layout and components; a style is tokens, a texture and a frame, named in `styles.js` (adding one: its file, its `@import`, its entry), with its own words for its colours (`--say-*`) |
+| `page.js` | a page's start: bar, title block, glossary cards, chapter links, excerpts, figures and steps; colour words (`data-say`) rewritten to the style's |
 | `figure.js`, `controls.js` | a live figure from a spec: canvas, handles, controls, scroll steps, progressive work |
-| `pen.js` | every line, ray, shape, label and glyph, in the style's colours and line character |
-| `plot.js` | small charts in the same ink |
+| `pen.js` | every line, ray, shape, label and glyph, in the style's colours and line character; the pointer (`hover`, `tip`) and the style's colour words (`say`) |
+| `plot.js` | small charts in the same ink, read out under the pointer |
 | `flatland.js` | the flat world: SDF shapes, sphere tracing, a camera, a path tracer with and without NEE |
 | `space.js` | 3D: an orbiting camera for drawings, sphere tracing, a camera, cheap views (steps, normals, sun) and a path tracer with and without NEE |
 | `excerpt.js` | finds a symbol in a source file: the page and the test share it |
@@ -214,9 +215,13 @@ step cache's grid around a scene (26).
    the contents and the glossary, each read by a blank reader and revised; reading boxes; the rule that the tutorial
    follows the code (`review/affected.mjs`).
 2. Every style's fonts kept in the repository (`kit/fonts/`, `fetch.mjs`, their licences): the tutorial loads nothing
-   from elsewhere. Then "How to read this", the rest of Part I and Part IV (the flat world grows a mirror, a glossy
-   surface, MIS, Russian roulette and a lens as they are needed).
-3. Then Parts II, III, V; then the machine and speed (VI, VII), which lean most on measured numbers; then VIII and IX.
+   from elsewhere. Then "How to read this", the rest of Part I and Part IV (the flat world grows a glossy surface,
+   MIS, Russian roulette and a lens), each read once by a blank reader and revised (round 3 in `REVIEWS.md`). Asked
+   for on the way: every figure interactive (controls where there were none, every chart read out under the pointer,
+   chapter 14's room calmer), the notebook lettered by hand, four more styles (Chalkboard and three versions of the
+   drafting sheet), and colour words that follow the style.
+3. Then Parts II and III (chapters 5 to 11), V; then the machine and speed (VI, VII), which lean most on measured
+   numbers; then VIII and IX.
 
 ## Checks
 

@@ -156,10 +156,11 @@ export const figures = {
             const { X, Y } = plot(pen, rect, {
                 // the y ticks are powers of ten; the x labels (spacings, not their logarithm) are written below
                 x: [0, 16], y: [-1, 3.3], xticks: [], yticks: [-1, 0, 1, 2, 3], fmt: v => String(+(10 ** v).toPrecision(1)),
+                hoverX: i => `spacing ${KS[Math.round(i)] < 0.01 ? KS[Math.round(i)].toExponential(1) : +KS[Math.round(i)].toPrecision(2)}`, hoverY: v => `${(10 ** v).toPrecision(2)} mrad`,
                 series: [
-                    { pts: curve('step'), role: 'soft', w: 1 },
-                    { pts: curve('noise'), role: 'blocked', w: 1 },
-                    { pts: curve('all'), role: 'ink', w: 1.6 },
+                    { name: 'from the step', pts: curve('step'), role: 'soft', w: 1 },
+                    { name: 'f32 noise', pts: curve('noise'), role: 'blocked', w: 1 },
+                    { name: 'worst', pts: curve('all'), role: 'ink', w: 1.6 },
                     { pts: [[s.k, lg(grainErrors(s.frac, K).all)]], role: 'accent', kind: 'dots', r: 4.5 },
                 ],
             })
@@ -174,7 +175,8 @@ export const figures = {
             pen.labelPx(X(8.6), Y(lg(grainErrors(s.frac, 2 ** 14).step)) - 6, "the step's own error", { role: 'soft', size: 12, base: 'bottom' })
         },
         readout(s) {
-            const K = 2 ** s.k, e = grainErrors(s.frac, K), { h } = grainNormal(s.frac, 0.3, K)
+            // the step at the circle's centre, so the same K reads the same length whatever the circle's size
+            const K = 2 ** s.k, e = grainErrors(s.frac, K), h = stepAt(K, grainPoint(s.frac, 0).c)
             const um = h * 1e6
             return `step ${K} spacings = ${um < 1 ? um.toFixed(3) : um.toPrecision(3)} µm at 1 m from the origin · worst angle ${e.all.toPrecision(2)} mrad (f32's part ${e.noise.toPrecision(2)}, the step's own ${e.step.toPrecision(2)})`
         },

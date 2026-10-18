@@ -5,7 +5,7 @@
 //            bar, kept by core/measure.js's stepMoments and standardError -- the renderer's own per-pixel arithmetic
 //   spread   many estimates of the same number from N darts each, for N = 4, 16, 64, 256: how far they scatter, and
 //            the 1/sqrt(N) that says how fast they close in
-//   grid     the renderer's old random numbers against its new: the share of the draws that land in small windows of
+//   grid     the renderer's old random numbers against its new: the share of all states that land in small windows of
 //            [0, 1), worked out exactly for a perfectly uniform 32-bit state, for the old output fract(f32(state) /
 //            671040) and for PCG4D's (its top 24 bits)
 //======================================================================================================================
@@ -37,11 +37,12 @@ export function darts(seed, n) {
 /** one dart's spread: the score is 4 with probability pi/4, so its standard deviation is 4 sqrt(p (1 - p)) */
 export const DART_SD = 4 * Math.sqrt(Math.PI / 4 * (1 - Math.PI / 4))
 
-/* SPREAD: for each N, ESTIMATES estimates, each the average of N darts */
-const NS = [4, 16, 64, 256], ESTIMATES = 240
+/* SPREAD: for each N, `count` estimates (240 unless chosen), each the average of N darts */
+const NS = [4, 16, 64, 256]
 const spreadCache = new Map()
-export function spread(seed) {
-    if (spreadCache.has(seed)) return spreadCache.get(seed)
+export function spread(seed, ESTIMATES = 240) {
+    const key = `${seed}|${ESTIMATES}`
+    if (spreadCache.has(key)) return spreadCache.get(key)
     const R = rng(seed * 40503 + 99)
     const out = NS.map(N => {
         const est = []
@@ -49,7 +50,8 @@ export function spread(seed) {
         const m = est.reduce((a, b) => a + b, 0) / est.length, sd = Math.sqrt(est.reduce((a, b) => a + (b - m) ** 2, 0) / (est.length - 1))
         return { N, est, sd }
     })
-    spreadCache.set(seed, out)
+    if (spreadCache.size > 12) spreadCache.clear()
+    spreadCache.set(key, out)
     return out
 }
 
@@ -112,15 +114,17 @@ export const figures = {
             plot(pen, rect, {
                 x: [0, top], y: [2.2, 4.2], yticks: [2.5, 3, Math.PI, 3.5, 4], xticks: [],
                 fmt: v => Math.abs(v - Math.PI) < 1e-9 ? 'π' : v.toFixed(1),
+                hoverX: v => `after ${Math.round(2 ** v)} darts`, hoverY: v => v.toFixed(4),
                 series: [
-                    { pts: d.track.map(([i, m, e]) => [lg(i), m + e]), role: 'faint', w: 1 },
-                    { pts: d.track.map(([i, m, e]) => [lg(i), m - e]), role: 'faint', w: 1 },
-                    { pts: d.track.map(([i, m]) => [lg(i), m]), role: 'cam', w: 1.5 },
+                    { tip: false, pts: d.track.map(([i, m, e]) => [lg(i), m + e]), role: 'faint', w: 1 },
+                    { tip: false, pts: d.track.map(([i, m, e]) => [lg(i), m - e]), role: 'faint', w: 1 },
+                    // its error bar carried for the pointer's readout, not drawn: the faint lines draw it
+                    { name: 'estimate', pts: d.track.map(([i, m, e]) => [lg(i), m, e]), role: 'cam', w: 1.5, errorBars: false },
                     { pts: [[0, Math.PI], [top, Math.PI]], role: 'accent', w: 1 },
                 ],
             })
             for (let k = 0; k <= top; k += Math.max(2, Math.ceil(top / 6 / 2) * 2)) pen.labelPx(rect.x + k / top * rect.w - 10, rect.y + rect.h + 4, String(2 ** k), { role: 'soft', size: 11, kind: 'mono' })
-            pen.labelPx(rect.x + rect.w / 2 - 50, rect.y + rect.h + 20, 'darts thrown', { role: 'soft', size: 12 })
+            pen.labelPx(rect.x + rect.w / 2 - 100, rect.y + rect.h + 20, 'darts thrown (a log scale)', { role: 'soft', size: 12 })
         },
         readout(s) {
             const d = darts(s.seed, s.n), k = Math.round(d.mean * d.n / 4)
@@ -131,11 +135,14 @@ export const figures = {
     spread: {
         aspect: 1.9,
         world: { x: [0, 10], y: [0, 5.2] },
-        state: { seed: 1 },
-        controls: [{ type: 'button', label: 'New darts', act: s => { s.seed++ } }],
+        state: { seed: 1, count: 240 },
+        controls: [
+            { type: 'button', label: 'New darts', act: s => { s.seed++ } },
+            { type: 'seg', key: 'count', label: 'estimates a column', options: [[60, '60'], [240, '240'], [960, '960']] },
+        ],
         draw(pen, s) {
-            const sp = spread(s.seed), { W, H } = pen.view, rect = { x: W * 0.1, y: H * 0.08, w: W * 0.86, h: H * 0.78 }
-            const { X, Y } = plot(pen, rect, {
+            const sp = spread(s.seed, s.count), { W, H } = pen.view, rect = { x: W * 0.1, y: H * 0.08, w: W * 0.86, h: H * 0.78 }
+            const { X, Y } = plot(pen, rect, { hover: false,
                 // from 0.8: four darts give 1.0 about one time in thirty, and those dots belong in the picture
                 x: [0, 4], y: [0.8, 4.4], xticks: [], yticks: [1, 2, 3, Math.PI, 4],
                 fmt: v => Math.abs(v - Math.PI) < 1e-9 ? 'π' : v.toFixed(1),
@@ -158,9 +165,15 @@ export const figures = {
                 pen.labelPx(cx - 30, rect.y + rect.h + 6, `N = ${N}`, { role: 'ink', size: 13, kind: 'mono' })
                 pen.labelPx(cx - 40, rect.y + rect.h + 22, `spread ${sd.toFixed(3)}`, { role: 'soft', size: 12, kind: 'mono' })
             })
+            // THE POINTER on a column: its numbers
+            const q = pen.hover(rect)
+            if (q) {
+                const c = Math.max(0, Math.min(3, Math.floor((q.x - rect.x) / rect.w * 4))), { N, est, sd } = sp[c], m = est.reduce((a, b) => a + b, 0) / est.length
+                pen.tip(q.x, q.y, [`N = ${N} darts an estimate, ${est.length} estimates`, `their average ${m.toFixed(4)}`, `spread measured ${sd.toFixed(3)}`, `predicted 1.642/√${N} = ${(DART_SD / Math.sqrt(N)).toFixed(3)}`])
+            }
         },
         readout(s) {
-            const sp = spread(s.seed)
+            const sp = spread(s.seed, s.count)
             return sp.map(({ N, sd }) => `N ${N}: ${sd.toFixed(3)} (1.642/√N = ${(DART_SD / Math.sqrt(N)).toFixed(3)})`).join(' · ')
         },
     },
@@ -177,10 +190,10 @@ export const figures = {
         draw(pen, s) {
             const rows = windows(s.at, s.width), { W, H } = pen.view, rect = { x: W * 0.1, y: H * 0.1, w: W * 0.86, h: H * 0.72 }
             const top = Math.max(2, ...rows.map(r => r.old)) * 1.1
-            pen.labelPx(rect.x - 34, rect.y - 22, 'share of the draws in each window, × what it should be', { role: 'soft', size: 13 })
+            pen.labelPx(rect.x - 34, rect.y - 22, 'share of all states in each window, × its fair share', { role: 'soft', size: 13 })
             const { X, Y } = plot(pen, rect, {
-                x: [0, rows.length], y: [0, top], xticks: [], fmt: v => v.toFixed(1),
-                series: [{ pts: [[0, 1], [rows.length, 1]], role: 'accent', w: 1 }],
+                hover: false, x: [0, rows.length], y: [0, top], xticks: [], fmt: v => v.toFixed(1),
+                series: [],
             })
             const { ctx } = pen, bw = rect.w / rows.length
             rows.forEach((r, i) => {
@@ -189,9 +202,19 @@ export const figures = {
                 ctx.fillStyle = pen.col('cam'); ctx.fillRect(X(i) + bw * 0.52, Y(r.now), bw * 0.36, Y(0) - Y(r.now))
                 ctx.restore()
             })
+            // the fair share, dashed and over the bars, in ink: not the old bars' red
+            ctx.save(); ctx.strokeStyle = pen.col('ink'); ctx.lineWidth = 1.2; ctx.setLineDash([6, 4])
+            ctx.beginPath(); ctx.moveTo(X(0), Y(1)); ctx.lineTo(X(rows.length), Y(1)); ctx.stroke(); ctx.restore()
+            // THE POINTER on a pair of bars: the window and both shares
+            const q = pen.hover(rect)
+            if (q) {
+                const i = Math.max(0, Math.min(rows.length - 1, Math.floor((q.x - rect.x) / bw))), a = s.at + i * s.width
+                ctx.save(); ctx.strokeStyle = pen.col('ink'); ctx.lineWidth = 1; ctx.strokeRect(X(i) + 1, rect.y, bw - 2, rect.h); ctx.restore()
+                pen.tip(q.x, q.y, [`window ${a.toFixed(5)} to ${(a + s.width).toFixed(5)}`, `old output: ${rows[i].old.toFixed(3)}× its share`, `PCG4D: ${rows[i].now.toFixed(4)}× its share`])
+            }
             pen.labelPx(rect.x, rect.y + rect.h + 6, `${s.at.toFixed(2)}`, { role: 'soft', size: 11, kind: 'mono' })
             pen.labelPx(rect.x + rect.w - 60, rect.y + rect.h + 6, `${(s.at + rows.length * s.width).toPrecision(5)}`, { role: 'soft', size: 11, kind: 'mono' })
-            pen.labelPx(rect.x + rect.w / 2 - 110, rect.y + rect.h + 22, 'the old output (left bars), PCG4D (right)', { role: 'soft', size: 12 })
+            pen.labelPx(rect.x + rect.w / 2 - 140, rect.y + rect.h + 22, `the old output (${pen.say('blocked')}, left), PCG4D (${pen.say('cam')}, right)`, { role: 'soft', size: 12 })
         },
         readout(s) {
             const rows = windows(s.at, s.width), o = rows.map(r => r.old), n = rows.map(r => r.now)

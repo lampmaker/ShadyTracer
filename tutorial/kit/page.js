@@ -56,6 +56,19 @@ export function currentStyle(doc = document) {
     const s = store.get(KEY_STYLE)
     return styleOf(s) ? s : DEFAULT_STYLE
 }
+/* COLOUR WORDS FOLLOW THE STYLE. A page names what a figure draws by its colour ("blue while they bounce"), and each
+   style draws it in its own: the drafting sheets in black and orange-red. A word marked <span data-say="cam">blue</span>
+   is rewritten to the style's name for that role (its --say-cam token), wherever the element sits, so a card on the
+   styles page in another style says its own. The page's word is kept: its capital says how to write the new one. */
+export function sayColours(doc) {
+    const cs = doc.defaultView.getComputedStyle
+    for (const el of doc.querySelectorAll('[data-say]')) {
+        const w = cs(el).getPropertyValue('--say-' + el.dataset.say).trim().replace(/^["']|["']$/g, '')
+        if (!w) continue
+        el.dataset.word ??= el.textContent
+        el.textContent = /^[A-Z]/.test(el.dataset.word) ? w[0].toUpperCase() + w.slice(1) : w
+    }
+}
 export function setStyle(doc, name) {
     doc.documentElement.dataset.style = name
     store.set(KEY_STYLE, name)
@@ -217,7 +230,8 @@ async function excerpts(doc) {
             const html = highlight(lines)
             const lang = languageOf(src, lines, text, hit.first)
             fig.innerHTML = `<figcaption><a class="src" href="${ghLink(src, hit.first, hit.last)}">${esc(src)} · lines ${hit.first}–${hit.last}</a>` +
-                `<span class="lang">${lang}${lines.some(l => l.includes('${')) ? ' · highlighted parts are filled in when the kernel is built' : ''}</span>${drift}${why}</figcaption>` +
+                // a ${...} in WGSL is filled in when the kernel is built; in JavaScript it is an ordinary template string
+                `<span class="lang">${lang}${lang === 'WGSL' && lines.some(l => l.includes('${')) ? ' · highlighted parts are filled in when the kernel is built' : ''}</span>${drift}${why}</figcaption>` +
                 `<div class="scroll"><pre><code>${html.map((h, k) => `<span class="ln">${hit.first + k}</span><span class="lc">${h || ' '}</span>`).join('')}</code></pre></div>`
             fig.dataset.src = src; fig.dataset.first = hit.first; fig.dataset.last = hit.last
         }
@@ -331,6 +345,9 @@ export function boot({ figures = {}, styles = true, allFonts = false } = {}) {
     stamps(doc)
     glossaryLinks(doc)
     refs(doc)
+    sayColours(doc)
+    doc.addEventListener('kit:theme', () => sayColours(doc))
+    doc.defaultView.matchMedia?.('(prefers-color-scheme: dark)').addEventListener?.('change', () => sayColours(doc))
     const mounted = figuresOf(doc, figures)
     const done = excerpts(doc)
     loadRevision().then(() => { titleBlock(doc, id); done.then(() => relinkExcerpts(doc)) })

@@ -28,18 +28,19 @@
     <p>This chapter builds on two ideas from earlier ones: a picture is an average of many random samples per pixel
       (<a data-ch="montecarlo">Dice and averages</a>), and each sample follows a <a data-g="path">path</a> that bounces
       from surface to surface in random directions until it happens to meet a light (<a data-ch="paths">Following a
-      path</a>). Neither chapter is written yet; the figure below shows what you need. Each bounce keeps only part of
+      path</a>); the figure below shows what you need from them. Each bounce keeps only part of
       the light, a share called the surface's <a data-g="albedo">albedo</a>: after two bounces off surfaces that keep
       70%, 0.7 × 0.7 = 0.49 of it is left.</p>
     <p data-step="room:off">The figure is a small flat room with a lamp near the ceiling, a ball and a box on the floor,
       and an eye on the left with one row of pixels (the eye's screen is not drawn; each pixel is one direction out of
       the eye). Every pixel sends paths into the room. A path that hits the lamp brings its light back; a path that
-      never does brings back nothing. The drawn lines are the last few paths of one pixel: blue while they bounce,
-      orange on the piece that found the lamp, when one does. The circled cross on that pixel's ray chooses which
-      pixel: drag it. The lamp, the ball and the box drag by their circled crosses too.</p>
-    <p>The first strip under the room is the picture so far, one grey square a pixel (the red frame marks the pixel
+      never does brings back nothing. The drawn lines are three paths of one pixel: <span data-say="cam">blue</span> while they bounce, <span data-say="light">orange</span> on
+      the piece that found the lamp, when one does. <strong>Other paths</strong> draws three more, and <strong>Show
+      paths</strong> hides them. The circled cross on that pixel's ray chooses which pixel: drag it. The lamp, the ball
+      and the box drag by their circled crosses too.</p>
+    <p>The first strip under the room is the picture so far, one grey square a pixel (the <span data-say="accent">red</span> frame marks the pixel
       whose paths are drawn). The dots below it are each pixel's value with its <a data-g="error-bar">error bar</a>: how
-      far off the average may still be. It is speckled, and it settles slowly. The lamp is small, so most paths miss it,
+      far off the average may still be (point at them to read one). It is speckled, and it settles slowly. The lamp is small, so most paths miss it,
       and the few that hit it make a pixel much too bright for one sample. That speckle is
       <a data-g="noise">noise</a>.</p>
   </div>
@@ -57,8 +58,8 @@
       (<a data-g="diffuse">diffuse</a>) floor sends it on in a random direction: any direction is possible, those close
       to straight up a bit more likely. (The surface itself sends light equally brightly every way; the figure picks
       directions near straight up more often because, by the cosine law, those carry more light, and it divides by that
-      choice, as section 3 explains.) The figure draws 70 such directions. The orange ones happen to point at the lamp
-      and find its light; the grey ones find nothing. The readout's second estimate, aiming, is the next section's.</p>
+      choice, as section 3 explains.) The figure draws 70 such directions. The <span data-say="light">orange</span> ones happen to point at the lamp
+      and find its light; the <span data-say="soft">grey</span> ones find nothing. The readout's second estimate, aiming, is the next section's.</p>
     <p data-step="aim:small">Make the lamp small. It gives off the same total light (it gets brighter as it shrinks),
       so the exact light at the point hardly changes. But now almost no random direction finds the lamp, and when one
       does, it brings back a lot. The answer is still right <em>on average</em>: in the readout, the estimate from 3000
@@ -74,7 +75,7 @@
       overhead is the patch's size divided by π, and 0.000067 / π is one in 47,000.</aside>
   </div>
   <figure class="fig" data-fig="aim">
-    <figcaption>One point on a floor under a lamp. Bouncing: random directions, orange where they find the lamp, grey
+    <figcaption>One point on a floor under a lamp. Bouncing: random directions, <span data-say="light">orange</span> where they find the lamp, <span data-say="soft">grey</span>
       where they miss. Aiming: shadow rays to random points of the lamp. The readout compares both estimates with the
       exact light there.</figcaption>
   </figure>
@@ -94,7 +95,7 @@
       lamp (the fold-out below says how). Bouncing gives nothing, nothing, nothing, then far too much; aiming gives
       about the right amount every time. Tries that agree settle fast.</p>
     <p data-step="aim:block">Shadows still work. Put something in the way of part of the lamp: the shadow rays that hit
-      it (red, stopped where they are blocked) bring back nothing, and the estimate drops from about 0.21 to the light
+      it (<span data-say="blocked">red</span>, stopped where they are blocked) bring back nothing, and the estimate drops from about 0.21 to the light
       that really gets past, about 0.05.</p>
     <details class="maths">
       <summary><span class="tag">The maths</span>What a shadow ray adds, and why it divides</summary>
@@ -143,7 +144,7 @@
   </div>
   <figure class="fig" data-fig="aim">
     <figcaption>The same point, now with shadow rays (dashed): each goes to a random point of the lamp. Blocked ones are
-      red, drawn to where they stop.</figcaption>
+      <span data-say="blocked">red</span>, drawn to where they stop.</figcaption>
   </figure>
 </section>
 
@@ -151,8 +152,9 @@
   <div class="prose">
     <h2><span class="n">4</span>In a whole picture</h2>
     <p data-step="room:both">Back to the room, now traced both ways at once: the same number of paths per pixel, one
-      picture without NEE and one with it. The grey dots are the picture without NEE, the blue ones with it; the dashed
-      lines in the room are the shadow rays (red and dotted where something blocks them). The pictures head for the same thing (their dots agree within the error
+      picture without NEE and one with it. The <span data-say="soft">grey</span> dots are the picture without NEE, the <span data-say="cam">blue</span> ones with it
+      (<strong>NEE only</strong> shows that one alone); the dashed lines in the room are the shadow rays (<span data-say="blocked">red</span> and dotted
+      where something blocks them). The pictures head for the same thing (their dots agree within the error
       bars), but the one with NEE gets there much sooner. The readout gives the average error bar of each.</p>
     <p data-step="room:small">Shrink the lamp. Without NEE, the picture gets worse and worse: a lamp nothing can find by
       chance is a lamp the picture never sees. A point light, with no size at all, could never be hit; only NEE could
@@ -175,8 +177,8 @@
     </ul></aside>
   </div>
   <figure class="fig" data-fig="room">
-    <figcaption>The room traced without and with NEE, the same number of samples each. Grey dots: without NEE; blue:
-      with. The red frame on the strips marks the pixel whose paths are drawn. Both pictures head for the same answer;
+    <figcaption>The room traced without and with NEE, the same number of samples each. <span data-say="soft">Grey</span> dots: without NEE; <span data-say="cam">blue</span>:
+      with. The <span data-say="accent">red</span> frame on the strips marks the pixel whose paths are drawn. Both pictures head for the same answer;
       one gets there much sooner.</figcaption>
   </figure>
 </section>

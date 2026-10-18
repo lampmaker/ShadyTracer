@@ -17,8 +17,10 @@ import { circle, box } from '../../help/widgets.js'
 
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v))
 
-/* THE ROOM: a glowing ball in view, and a glowing bar behind a wall the camera cannot see past */
-export const ROOM = {
+/* THE ROOM: a glowing ball in view (where the reader drags it), and a glowing bar behind a wall the camera cannot see
+   past */
+export const BALL = [2.6, 2.6]
+export const roomWith = (ball = BALL) => ({
     sky: 0,
     shapes: [
         { kind: 'box', c: [3.4, -0.3], h: [4.1, 0.3], albedo: 0.7, name: 'floor' },
@@ -26,10 +28,11 @@ export const ROOM = {
         { kind: 'box', c: [-0.4, 2.05], h: [0.3, 2.65], albedo: 0.7, name: 'left' },
         { kind: 'box', c: [7.2, 2.05], h: [0.3, 2.65], albedo: 0.7, name: 'right' },
         { kind: 'box', c: [5.2, 1.6], h: [0.12, 1.6], albedo: 0.7, name: 'wall' },
-        { kind: 'circle', c: [2.6, 2.6], r: 0.35, albedo: 0, emit: 2, name: 'ball' },
+        { kind: 'circle', c: ball, r: 0.35, albedo: 0, emit: 2, name: 'ball' },
         { kind: 'segment', a: [6.2, 0.4], b: [6.2, 2.4], r: 0.02, emit: 2, name: 'bar' },
     ],
-}
+})
+export const ROOM = roomWith()
 const CAM = { eye: [0.3, 1.6], dir: Math.atan2(1.8 - 1.6, 4.9 - 0.3), fov: 80 * Math.PI / 180, pixels: 48 }
 // the grid over the room's square: EG cells each way, as the engine's 16 (over +-emitHalf, in 3D)
 export const EG = 16
@@ -37,11 +40,11 @@ const G0 = [-0.7, -0.6], GS = 8.2 / EG
 const cellOf = (x, y) => { const i = Math.floor((x - G0[0]) / GS), j = Math.floor((y - G0[1]) / GS); return i >= 0 && j >= 0 && i < EG && j < EG ? i + EG * j : -1 }
 
 /** paths a sample per pixel, every hit of a glowing thing deposited: { cells: Map(cell -> { lo, hi, n }), hits } */
-export function discover(seed, samples) {
-    const R = rng(seed * 7919 + 5), cells = new Map(), shown = []
+export function discover(seed, samples, ball = BALL) {
+    const R = rng(seed * 7919 + 5), cells = new Map(), shown = [], room = roomWith(ball)
     for (let s = 0; s < samples; s++) for (let i = 0; i < CAM.pixels; i++) {
         const [ox, oy, dx, dy] = cameraRay(CAM, i, R()), rec = []
-        tracePath(ROOM, ox, oy, dx, dy, { maxBounce: 6, rand: R, record: rec })
+        tracePath(room, ox, oy, dx, dy, { maxBounce: 6, rand: R, record: rec })
         const last = rec[rec.length - 1]
         if (!last?.lamp) continue
         const [x, y] = last.b, k = cellOf(x, y)
@@ -49,7 +52,7 @@ export function discover(seed, samples) {
         const c = cells.get(k) ?? { lo: [x, y], hi: [x, y], n: 0 }
         c.lo = [Math.min(c.lo[0], x), Math.min(c.lo[1], y)]; c.hi = [Math.max(c.hi[0], x), Math.max(c.hi[1], y)]; c.n++
         cells.set(k, c)
-        if (shown.length < 60) shown.push(rec)
+        shown.push(rec); if (shown.length > 24) shown.shift()      // the latest paths that found a glow
     }
     return { cells, shown }
 }
@@ -61,7 +64,7 @@ const boxCircle = c => { const m = [(c.lo[0] + c.hi[0]) / 2, (c.lo[1] + c.hi[1])
    through the circle. So a curve of length l is crossed l / (pi RC) times a line, on average. */
 export const RC = 2
 export const CROFTON_SHAPES = [
-    { name: 'circle', len: 2 * Math.PI * 0.45, d: (x, y) => circle(x + 0.8, y - 0.6, 0.45) },
+    { name: 'disc', len: 2 * Math.PI * 0.45, d: (x, y) => circle(x + 0.8, y - 0.6, 0.45) },
     { name: 'box', len: 2 * (1.2 + 0.5), d: (x, y) => box(x - 0.6, y + 0.7, 0.6, 0.25) },
     { name: 'bar', len: 1.0, seg: [[0.9, 0.2], [0.9, 1.2]] },
 ]
@@ -122,22 +125,36 @@ export const figures = {
     discovery: {
         aspect: 1.55,
         world: { x: [-0.9, 7.7], y: [-0.75, 4.95] },
-        state: { seed: 2, samples: 1 },
-        controls: [{ type: 'seg', key: 'samples', label: 'samples', options: [[1, '1 sample'], [8, '8'], [64, '64']] }],
-        steps: { one: { samples: 1 }, eight: { samples: 8 }, many: { samples: 64 } },
+        state: { seed: 2, samples: 1, ball: BALL },
+        controls: [
+            { type: 'seg', key: 'samples', label: 'samples', options: [[1, '1 sample'], [8, '8'], [64, '64']] },
+            { type: 'button', label: 'New paths', act: s => { s.seed++ } },
+        ],
+        steps: { one: { samples: 1, seed: 2, ball: BALL }, eight: { samples: 8, seed: 2, ball: BALL }, many: { samples: 64, seed: 2, ball: BALL } },
+        // the glowing ball anywhere left of the wall, clear of the walls round it
+        drag: { ball: (s, p) => { s.ball = [clamp(p[0], 0.45, 4.6), clamp(p[1], 0.45, 3.65)] } },
         draw(pen, s) {
-            const { cells, shown } = discover(s.seed, s.samples)
-            for (const sh of ROOM.shapes) pen.flat(sh, { id: sh.name, role: sh.emit ? 'light' : 'solid' })
-            for (const rec of shown.slice(0, 24)) for (const seg of rec) pen.ray(seg.a, seg.b, { role: seg.lamp ? 'light' : 'cam', w: 0.6, alpha: 0.45, arrow: false })
+            const { cells, shown } = discover(s.seed, s.samples, s.ball), { ctx } = pen
+            // the grid, its cells with hits shaded: drawn dashed, so it is not the paper's
+            ctx.save(); ctx.fillStyle = pen.col('accent'); ctx.globalAlpha = 0.1
+            for (const k of cells.keys()) { const i = k % EG, j = Math.floor(k / EG); ctx.fillRect(pen.X(G0[0] + i * GS), pen.Y(G0[1] + (j + 1) * GS), GS * pen.view.s, GS * pen.view.s) }
+            ctx.restore()
+            for (let i = 0; i <= EG; i++) {
+                pen.line([G0[0] + i * GS, G0[1]], [G0[0] + i * GS, G0[1] + EG * GS], { role: 'faint', w: 0.45, dash: [2, 4], exact: true })
+                pen.line([G0[0], G0[1] + i * GS], [G0[0] + EG * GS, G0[1] + i * GS], { role: 'faint', w: 0.45, dash: [2, 4], exact: true })
+            }
+            for (const sh of roomWith(s.ball).shapes) pen.flat(sh, { id: sh.name, role: sh.emit ? 'light' : 'solid' })
+            for (const rec of shown) for (const seg of rec) pen.ray(seg.a, seg.b, { role: seg.lamp ? 'light' : 'cam', w: 0.6, alpha: 0.45, arrow: false })
             for (const c of cells.values()) {
                 pen.rect(pen.X(c.lo[0]) - 2, pen.Y(c.hi[1]) - 2, pen.X(c.hi[0]) - pen.X(c.lo[0]) + 4, pen.Y(c.lo[1]) - pen.Y(c.hi[1]) + 4, { role: 'accent', lineW: 1.4 })
                 const b = boxCircle(c)
                 pen.circle(b.c, b.r, { role: 'accent', w: 0.8, dash: [4, 4], exact: true })
             }
             pen.eye(CAM.eye, CAM.dir, { size: 18 })
+            pen.handle('ball', [s.ball[0], s.ball[1] + 0.55], { role: 'light' })
         },
         readout(s) {
-            const { cells } = discover(s.seed, s.samples), by = { ball: [0, 0], bar: [0, 0] }
+            const { cells } = discover(s.seed, s.samples, s.ball), by = { ball: [0, 0], bar: [0, 0] }
             for (const [k, c] of cells) { const t = by[G0[0] + (k % EG + 0.5) * GS > 5.2 ? 'bar' : 'ball']; t[0] += c.n; t[1]++ }
             const say = (name, [n, k]) => n ? `${name}: ${n} hits in ${k} cell${k === 1 ? '' : 's'}` : `${name}: not found yet`
             return `${s.samples} sample${s.samples === 1 ? '' : 's'} of ${CAM.pixels} paths · ${say('the ball', by.ball)} · ${say('the bar behind the wall', by.bar)}`
@@ -148,8 +165,11 @@ export const figures = {
         aspect: 1.6,
         world: { x: [-2.4, 5.6], y: [-2.3, 2.7] },
         state: { seed: 1, n: 40 },
-        controls: [{ type: 'seg', key: 'n', label: 'lines', options: [[40, '40 lines'], [2000, '2,000'], [40000, '40,000']] }],
-        steps: { few: { n: 40 }, many: { n: 40000 } },
+        controls: [
+            { type: 'seg', key: 'n', label: 'lines', options: [[40, '40 lines'], [2000, '2,000'], [40000, '40,000']] },
+            { type: 'button', label: 'New lines', act: s => { s.seed++ } },
+        ],
+        steps: { few: { n: 40, seed: 1 }, many: { n: 40000, seed: 1 } },
         draw(pen, s) {
             const c = crofton(s.seed, s.n)
             pen.circle([0, 0], RC, { role: 'soft', w: 1, dash: [5, 5], id: 'bound' })
@@ -167,13 +187,14 @@ export const figures = {
             const hist = new Array(BINS).fill(0)
             for (const cs of c.cosines) hist[Math.min(BINS - 1, Math.floor(Math.acos(Math.min(1, cs)) / (Math.PI / 2) * BINS))]++
             const tot = Math.max(1, c.cosines.length), w = Math.PI / 2 / BINS
-            pen.labelPx(rect.x - 30, rect.y - 20, 'angle of each crossing from the normal', { role: 'soft', size: 12 })
+            pen.labelPx(rect.x - 30, rect.y - 20, 'share of crossings, by angle from the normal', { role: 'soft', size: 12 })
             plot(pen, rect, {
                 x: [0, 90], y: [0, 0.2], xticks: [0, 30, 60, 90], yticks: [0, 0.1, 0.2], fmt: v => v >= 1 ? `${v}°` : v.toFixed(1),
+                hoverX: v => `${(v - 45 / BINS).toFixed(1)}° to ${(v + 45 / BINS).toFixed(1)}°`, hoverY: v => `${(100 * v).toFixed(1)}%`,
                 series: [
-                    { pts: hist.map((h, i) => [(i + 0.5) * 90 / BINS, h / tot]), role: 'light', kind: 'bars' },
+                    { name: 'crossings', pts: hist.map((h, i) => [(i + 0.5) * 90 / BINS, h / tot]), role: 'light', kind: 'bars' },
                     // a Lambertian surface: the share in a bin is the integral of cos over it (out of 1 over 0 to pi/2)
-                    { pts: Array.from({ length: BINS }, (_, i) => [(i + 0.5) * 90 / BINS, Math.sin((i + 1) * w) - Math.sin(i * w)]), role: 'accent', kind: 'dots', r: 3 },
+                    { name: 'cosine', pts: Array.from({ length: BINS }, (_, i) => [(i + 0.5) * 90 / BINS, Math.sin((i + 1) * w) - Math.sin(i * w)]), role: 'accent', kind: 'dots', r: 3 },
                 ],
             })
         },
@@ -186,33 +207,45 @@ export const figures = {
     code: {
         aspect: 1.9,
         world: { x: [0, 10], y: [0, 5.2] },
-        state: {},
-        draw(pen) {
+        state: { lg: 2 },
+        controls: [{ type: 'slider', key: 'lg', label: 'a brightness, 10 to the', min: -12, max: 12, step: 0.1, fmt: v => v.toFixed(1) }],
+        draw(pen, s) {
             const { W, H } = pen.view, rect = { x: W * 0.12, y: H * 0.1, w: W * 0.84, h: H * 0.68 }
             const xs = Array.from({ length: 241 }, (_, i) => -12 + 24 * i / 240)
             pen.labelPx(rect.x - 40, rect.y - 20, 'the code kept, as a share of the largest it can be', { role: 'soft', size: 13 })
             const { X, Y } = plot(pen, rect, {
                 x: [-12, 12], y: [0, 1.05], xticks: [], yticks: [0, 0.5, 1], fmt: v => String(v),
+                hoverX: v => `${(10 ** v).toPrecision(2)} cd/m²`, hoverY: v => v.toFixed(4),
                 series: [
-                    { pts: xs.map(x => [x, oldCode(10 ** x) / oldCode(1e6)]), role: 'blocked', w: 1.6 },
-                    { pts: xs.map(x => [x, lumEncode(10 ** x) / lumEncode(1e30)]), role: 'cam', w: 1.6 },
+                    { name: 'old', pts: xs.map(x => [x, oldCode(10 ** x) / oldCode(1e6)]), role: 'blocked', w: 1.6 },
+                    { name: 'log', pts: xs.map(x => [x, lumEncode(10 ** x) / lumEncode(1e30)]), role: 'cam', w: 1.6 },
                 ],
             })
             for (const k of [-12, -8, -4, 0, 4, 8, 12]) pen.labelPx(X(k) - 14, rect.y + rect.h + 4, `1e${k}`, { role: 'soft', size: 11, kind: 'mono' })
             pen.labelPx(rect.x + rect.w / 2 - 80, rect.y + rect.h + 20, 'brightness, cd/m² (each step ×10,000)', { role: 'soft', size: 12 })
             const { ctx } = pen
+            // each mark's name at a height clear of both curves there (the old one hugs 0 until 1e4, then climbs; the log
+            // one rises steadily): read off the figure, so moving a mark means moving its height
+            const AT = [0.14, 0.14, 0.4, 0.5]
             MARKS.forEach(([v, name], i) => {
                 const x = X(Math.log10(v))
                 ctx.save(); ctx.strokeStyle = pen.col('accent'); ctx.setLineDash([3, 4]); ctx.beginPath(); ctx.moveTo(x, rect.y); ctx.lineTo(x, rect.y + rect.h); ctx.stroke(); ctx.restore()
                 // names right of the middle are written leftward, so the last one stays on the canvas
                 const right = x > rect.x + rect.w * 0.7
-                pen.labelPx(right ? x - 3 : x + 3, rect.y + 6 + i * 16, name, { role: 'accent', size: 11, align: right ? 'right' : 'left' })
+                pen.labelPx(right ? x - 3 : x + 3, Y(AT[i]), name, { role: 'accent', size: 11, align: right ? 'right' : 'left' })
             })
-            pen.labelPx(X(5.6), Y(0.86), 'old: all the same above 1e5', { role: 'blocked', size: 12 })
+            pen.labelPx(X(5.3), Y(0.97), 'old: flat above 1e5', { role: 'blocked', size: 11 })
             pen.labelPx(X(-11.5), Y(0.42), 'log code: a step every 0.000005 of a stop', { role: 'cam', size: 12 })
+            // the brightness chosen: a line, and where each code puts it
+            const v = 10 ** s.lg, x = X(s.lg)
+            ctx.save(); ctx.strokeStyle = pen.col('ink'); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(x, rect.y); ctx.lineTo(x, rect.y + rect.h); ctx.stroke(); ctx.restore()
+            for (const [y, role] of [[oldCode(v) / oldCode(1e6), 'blocked'], [lumEncode(v) / lumEncode(1e30), 'cam']]) {
+                ctx.save(); ctx.fillStyle = pen.col(role); ctx.beginPath(); ctx.arc(x, Y(y), 4.5, 0, 6.2832); ctx.fill(); ctx.restore()
+            }
         },
-        readout() {
-            return MARKS.map(([v, name]) => `${name} (${v} cd/m²): old ${oldCode(v)}, log ${lumEncode(v)}`).join(' · ')
+        readout(s) {
+            const v = 10 ** s.lg, o = oldCode(v), q = lumEncode(v)
+            return `a brightness of ${v.toPrecision(3)} cd/m² · the old code keeps ${o.toLocaleString('en')}, which reads back as ${(o / 16).toPrecision(3)}${v > 1e5 ? ' (everything above 100,000 reads the same)' : v < 1 / 16 ? ' (0: the same as never seen)' : ''} · the log code keeps ${q.toLocaleString('en')}, which reads back as ${lumDecode(q).toPrecision(4)}`
         },
     },
 }

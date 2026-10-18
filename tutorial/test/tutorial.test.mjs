@@ -134,7 +134,9 @@ for (const g of GLOSSARY) {
 
 /* THE PAGES ------------------------------------------------------------------------------------------------------- */
 const KNOWN = new Set(['data-g', 'data-ch', 'data-fig', 'data-step', 'data-src', 'data-sym', 'data-nth', 'data-in', 'data-to', 'data-max', 'data-doc',
-    'data-why', 'data-hash', 'data-claim', 'data-auto', 'data-words', 'data-chapter', 'data-open-style', 'data-style', 'data-ref'])
+    'data-why', 'data-hash', 'data-claim', 'data-auto', 'data-words', 'data-chapter', 'data-open-style', 'data-style', 'data-ref', 'data-say'])
+// a colour word marked for its style's name (page.js sayColours): a role every style names (kit.css's --say-* tokens)
+const SAY = new Set([...readFileSync(join(TUT, 'kit/kit.css'), 'utf8').matchAll(/--say-(\w+):/g)].map(m => m[1]))
 const excerpted = new Set(), drift = []
 const srcCache = new Map(), src = p => { if (!srcCache.has(p)) srcCache.set(p, readFileSync(join(REPO, p), 'utf8')); return srcCache.get(p) }
 const modules = new Map()          // page -> its module's exports
@@ -157,6 +159,7 @@ for (const f of pages) {
         T.flatMap(t => Object.values(t.attrs).filter(v => /\bdata-[\w-]+="/.test(v))).join(' | ').slice(0, 200))
     for (const t of T) {
         for (const k of Object.keys(t.attrs)) if (k.startsWith('data-')) ok(`${name}: data-* attributes are the kit's`, KNOWN.has(k), `<${t.tag} ${k}>`)
+        if (t.attrs['data-say'] != null) ok(`${name}: a colour word names a role every style names (data-say="${t.attrs['data-say']}")`, SAY.has(t.attrs['data-say']))
         const a = t.attrs
         if (a['data-g'] != null) ok(`${name}: glossary term "${a['data-g']}" exists`, !!term(a['data-g']))
         if (a['data-words'] != null) for (const w of a['data-words'].trim().split(/\s+/)) ok(`${name}: word "${w}" is in the glossary`, !!term(w))
@@ -483,6 +486,12 @@ for (const [name, { mod }] of modules) {
     const eff = (se(r.off) ** 2 * r.costOff) / (se(r.on) ** 2 * r.costOn)
     ok('ch.13: roulette on and off agree within their error bars; 10.0 and 4.7 rays a path; for equal rays 0.96 of the error bar',
         Math.abs(z) < 1 && (r.costOff / r.off.cnt).toFixed(1) === '10.0' && (r.costOn / r.on.cnt).toFixed(1) === '4.7' && (1 / Math.sqrt(eff)).toFixed(2) === '0.96', `z ${z.toFixed(2)}, eff ${eff.toFixed(3)}`)
+    const ratio = m => { const e = (se(m.off) ** 2 * m.costOff) / (se(m.on) ** 2 * m.costOn); return (1 / Math.sqrt(e)).toFixed(2) }
+    const u = run(P.figures.roulette, P.figures.roulette.steps.unfair), dk = run(P.figures.roulette, { rho: 0.5 }), wh = run(P.figures.roulette, { rho: 0.95 })
+    ok('ch.13: survivors that keep their beta lose a third of the light (0.233 against 0.346); for equal rays 0.68 in a dark room, 1.60 with white walls',
+        u.on.Y.toFixed(3) === '0.233' && u.off.Y.toFixed(3) === '0.346' && ratio(dk) === '0.68' && ratio(wh) === '1.60', `${u.on.Y} ${u.off.Y} ${ratio(dk)} ${ratio(wh)}`)
+    const q = P.onePath(17, 0.6, 20, 8)
+    ok('ch.13: the one path\'s beta is the walls\' albedo to the power of its bounces, whatever the albedo', q.rec.every((r, k) => Math.abs(r.beta - 0.6 ** k) < 1e-12))
 }
 
 {
@@ -532,7 +541,7 @@ for (const [name, { mod }] of modules) {
     for (const [R, D, h, F] of [[0.6, 3.2, 0.9, 6], [0.3, 9, -1.2, 4], [1.1, 2, 2.5, 9.5], [0.05, 7, 0, 7.2]]) worst = Math.max(worst, Math.abs(L.blurSeen(R, D, h, F) - L.blurFormula(R, D, F)))
     ok('ch.17: lens.js lensImage gives the thin lens\'s blur, 2R |1/F - 1/D| over tan(fov/2), and none at the focus', worst < 1e-12 && L.blurSeen(0.6, 6, 0.9, 6) < 1e-12, worst)
     const r = L.figures.thin.readout({ ...L.figures.thin.state, ...L.figures.thin.steps.near })
-    ok('ch.17: the near step\'s blur is 0.48 of the half-height, 240 pixels of 1000', r.includes('blur 0.4808') && r.includes('240 pixels'), r)
+    ok('ch.17: the near step\'s blur is 2R|1/F - 1/D| = 0.175, over tan 20 deg = 0.364: 0.48 of the half-height, 240 pixels of 1000', r.includes('= 0.1750') && r.includes('= 0.364: 0.4808') && r.includes('measured from the rays: 0.4808') && r.includes('240 pixels'), r)
     const cam = { eye: [0.2, -0.4, 1.1], target: [4, 1, 0.3], fov: 0.7 }, a = cameraRayLens(cam, 7, 33, 80, 50, 0.21, 0.83, 0, 3, 0.5, 0.5), b = cameraRay3(cam, 7, 33, 80, 50, 0.21, 0.83)
     ok('ch.17: a lens of radius 0 is the pinhole\'s ray, from the eye', a.o.every((v, k) => v === cam.eye[k]) && a.d.every((v, k) => Math.abs(v - b[k]) < 1e-15))
     // every ray from the lens for one picture point meets the pinhole's ray at the focus distance along the axis

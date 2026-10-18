@@ -34,12 +34,23 @@ export function room(rho) {
 const PIX = 40
 const CAM = { eye: [0.35, 3.2], dir: Math.atan2(0.9 - 3.2, 5.5 - 0.35), fov: 70 * Math.PI / 180, pixels: PIX }
 
-/* ONE PATH, for the first figure: a camera ray through the middle pixels, traced to the lamp or the cap */
-export function onePath(seed, rho) {
+/* ONE PATH, for the first figure: a camera ray through one pixel (the middle ones unless chosen), traced to the lamp
+   or the cap */
+export function onePath(seed, rho, pixel = 18 + (seed % 5), maxBounce = 8) {
     const R = rng(seed * 7919 + 13), rec = [], info = {}
-    const [ox, oy, dx, dy] = cameraRay(CAM, 18 + (seed % 5), 0.5)
-    const L = tracePath(room(rho), ox, oy, dx, dy, { maxBounce: 8, rand: R, record: rec, info })
+    const [ox, oy, dx, dy] = cameraRay(CAM, pixel, 0.5)
+    const L = tracePath(room(rho), ox, oy, dx, dy, { maxBounce, rand: R, record: rec, info })
     return { rec, info, L }
+}
+/** the pixel whose ray passes nearest the world point p */
+function pixelNear(p) {
+    let best = 0, bd = Infinity
+    for (let i = 0; i < PIX; i++) {
+        const [ox, oy, dx, dy] = cameraRay(CAM, i, 0.5), t = (p[0] - ox) * dx + (p[1] - oy) * dy
+        const d = Math.hypot(ox + dx * t - p[0], oy + dy * t - p[1])
+        if (t > 0 && d < bd) { bd = d; best = i }
+    }
+    return best
 }
 
 /* MANY PATHS: every pixel of the camera's film, a sample at a time, each path traced to MAXB bounces and read at every
@@ -61,11 +72,16 @@ export const figures = {
     path: {
         aspect: 1.55,
         world: { x: [-0.9, 7.7], y: [-0.75, 4.95] },
-        state: { seed: 17, rho: 0.8 },
-        controls: [{ type: 'button', label: 'Another path', act: s => { s.seed++ } }],
-        steps: { one: { seed: 17, rho: 0.8 } },
+        state: { seed: 17, rho: 0.8, pixel: 20, maxB: 8 },
+        controls: [
+            { type: 'button', label: 'Another path', act: s => { s.seed++ } },
+            { type: 'slider', key: 'rho', label: 'walls\' albedo', min: 0.3, max: 0.95, step: 0.05, fmt: v => v.toFixed(2) },
+            { type: 'slider', key: 'maxB', label: 'bounce limit', min: 1, max: 20, step: 1, fmt: v => String(v) },
+        ],
+        steps: { one: { seed: 17, rho: 0.8, pixel: 20, maxB: 8 } },
+        drag: { pixel: (s, p) => { s.pixel = pixelNear(p) } },
         draw(pen, s) {
-            const { rec, info } = onePath(s.seed, s.rho)
+            const { rec, info } = onePath(s.seed, s.rho, s.pixel, s.maxB)
             for (const sh of room(s.rho).shapes) pen.flat(sh, { id: sh.name })
             rec.forEach((seg, k) => {
                 pen.ray(seg.a, seg.b, { role: seg.lamp ? 'light' : 'cam', w: seg.lamp ? 1.8 : 1.2, arrow: true, id: `p${k}` })
@@ -74,15 +90,17 @@ export const figures = {
                 if (k > 0) pen.dot(seg.a, { role: 'accent', r: 3.2 })
             })
             pen.eye(CAM.eye, CAM.dir, { size: 18 })
+            const [ox, oy, dx, dy] = cameraRay(CAM, s.pixel, 0.5)
+            pen.handle('pixel', [ox + dx * 0.9, oy + dy * 0.9], { label: 'which pixel' })
             pen.label([3.4, 4.2], 'lamp', { role: 'soft', size: 13, align: 'center' })
             void info
         },
         readout(s) {
-            const { rec, info, L } = onePath(s.seed, s.rho)
+            const { rec, info, L } = onePath(s.seed, s.rho, s.pixel, s.maxB)
             const last = rec[rec.length - 1]
             return `${info.bounces} bounce${info.bounces === 1 ? '' : 's'} · ` + (info.end === 'lamp'
-                ? `found the lamp carrying β ${last.beta.toFixed(3)}: brings back β × 1 = ${L.toFixed(3)}`
-                : `stopped at the cap without finding the lamp: brings back 0`)
+                ? `found the lamp carrying β ${last.beta.toFixed(3)} = ${s.rho.toFixed(2)}^${info.bounces}: brings back β × the lamp's brightness, 1 = ${L.toFixed(3)}`
+                : `stopped at the limit of ${s.maxB} bounce${s.maxB === 1 ? '' : 's'} without finding the lamp: brings back 0`)
         },
     },
 
@@ -106,11 +124,12 @@ export const figures = {
         draw(pen, s) {
             const { W, H } = pen.view, rect = { x: W * 0.1, y: H * 0.1, w: W * 0.86, h: H * 0.72 }
             const top = Math.max(0.05, ...s.caps.map(c => c.Y)) * 1.2
-            pen.labelPx(rect.x - 34, rect.y - 22, 'the room\'s average light, by the most bounces a path may take', { role: 'soft', size: 13 })
+            pen.labelPx(rect.x - 34, rect.y - 22, 'the room\'s average light (the lamp\'s brightness is 1), by the most bounces a path may take', { role: 'soft', size: 13 })
             const { X, Y } = plot(pen, rect, {
                 x: [-0.5, CAPS.length - 0.5], y: [0, top], xticks: [], fmt: v => v.toFixed(2),
+                hoverX: k => `a cap of ${CAPS[Math.round(k)]} bounce${CAPS[Math.round(k)] === 1 ? '' : 's'}`, hoverY: v => v.toFixed(4),
                 series: [
-                    { pts: CAPS.map((c, k) => [k, s.caps[k].Y, standardError(s.caps[k].V, s.caps[k].S) ?? 0]), role: 'cam', kind: 'bars' },
+                    { name: 'light', pts: CAPS.map((c, k) => [k, s.caps[k].Y, standardError(s.caps[k].V, s.caps[k].S) ?? 0]), role: 'cam', kind: 'bars' },
                     { pts: [[-0.5, s.caps[CAPS.length - 1].Y], [CAPS.length - 0.5, s.caps[CAPS.length - 1].Y]], role: 'accent', w: 1 },
                 ],
             })
@@ -127,8 +146,14 @@ export const figures = {
     roulette: {
         aspect: 1.9,
         world: { x: [0, 10], y: [0, 5.2] },
-        state: { rho: 0.8, seed: 1, spp: 0, max: 600 },
-        steps: { both: { rho: 0.8 } },
+        state: { rho: 0.8, seed: 1, spp: 0, max: 600, start: ENGINE_RR.start, divide: true },
+        controls: [
+            { type: 'seg', key: 'rho', label: 'walls', options: [[0.5, 'Dark (0.5)'], [0.8, 'Light (0.8)'], [0.95, 'White (0.95)']] },
+            { type: 'slider', key: 'start', label: 'roulette from bounce', min: 1, max: 10, step: 1, fmt: v => String(v) },
+            { type: 'toggle', key: 'divide', label: 'Survivors divide β by p' },
+            { type: 'button', label: 'New paths', act: s => { s.seed++ } },
+        ],
+        steps: { both: { rho: 0.8, start: ENGINE_RR.start, divide: true, seed: 1 }, unfair: { rho: 0.8, start: ENGINE_RR.start, divide: false, seed: 1 } },
         work: {
             reset(s) { s.spp = 0; s.off = moments(); s.on = moments(); s.costOff = 0; s.costOn = 0; s.lenOff = new Array(41).fill(0); s.lenOn = new Array(41).fill(0) },
             add(s, ms) {
@@ -136,7 +161,7 @@ export const figures = {
                 return samplePaths(s, ms, (world, ox, oy, dx, dy, R) => {
                     s.off = stepMoments(s.off, tracePath(world, ox, oy, dx, dy, { maxBounce: MAXB, rand: R, info }))
                     s.costOff += info.bounces + 1; s.lenOff[Math.min(40, info.bounces)]++
-                    s.on = stepMoments(s.on, tracePath(world, ox, oy, dx, dy, { maxBounce: MAXB, rand: R, info, rr: ENGINE_RR }))
+                    s.on = stepMoments(s.on, tracePath(world, ox, oy, dx, dy, { maxBounce: MAXB, rand: R, info, rr: { ...ENGINE_RR, start: s.start, divide: s.divide } }))
                     s.costOn += info.bounces + 1; s.lenOn[Math.min(40, info.bounces)]++
                 })
             },
@@ -147,15 +172,16 @@ export const figures = {
             pen.labelPx(rect.x - 34, rect.y - 22, 'how many paths end after each number of bounces (share of all)', { role: 'soft', size: 13 })
             const { X } = plot(pen, rect, {
                 x: [0, 30], y: [0, top], xticks: [0, 3, 10, 20, 30], fmt: v => v >= 1 || v === 0 ? String(Math.round(v)) : v.toFixed(2),
+                hoverX: k => `ending after ${Math.round(k)} bounce${Math.round(k) === 1 ? '' : 's'}`, hoverY: v => `${(100 * v).toFixed(1)}%`,
                 series: [
-                    { pts: s.lenOff.slice(0, 31).map((c, k) => [k, c / n]), role: 'soft', w: 1.4 },
-                    { pts: s.lenOn.slice(0, 31).map((c, k) => [k, c / n]), role: 'cam', w: 1.8 },
+                    { name: 'off', pts: s.lenOff.slice(0, 31).map((c, k) => [k, c / n]), role: 'soft', w: 1.4 },
+                    { name: 'on', pts: s.lenOn.slice(0, 31).map((c, k) => [k, c / n]), role: 'cam', w: 1.8 },
                 ],
             })
             const { ctx } = pen
-            ctx.save(); ctx.strokeStyle = pen.col('accent'); ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(X(3), rect.y); ctx.lineTo(X(3), rect.y + rect.h); ctx.stroke(); ctx.restore()
-            pen.labelPx(X(3) + 4, rect.y + 2, 'roulette starts', { role: 'accent', size: 12 })
-            pen.labelPx(X(12), rect.y + rect.h * 0.25, 'off: thin line · on: bold', { role: 'soft', size: 12 })
+            ctx.save(); ctx.strokeStyle = pen.col('accent'); ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(X(s.start), rect.y); ctx.lineTo(X(s.start), rect.y + rect.h); ctx.stroke(); ctx.restore()
+            pen.labelPx(X(s.start) + 4, rect.y + 2, 'roulette starts', { role: 'accent', size: 12 })
+            pen.labelPx(X(12), rect.y + rect.h * 0.25, `off: thin ${pen.say('soft')} · on: bold ${pen.say('cam')}`, { role: 'soft', size: 12 })
         },
         readout(s) {
             const se = m => standardError(m.V, m.S) ?? 0, n = Math.max(1, s.off.cnt)

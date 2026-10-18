@@ -27,53 +27,69 @@
   <div class="prose">
     <h2><span class="n">1</span>A lens is an opening with a focus</h2>
     <p data-step="thin:focused">ShadyTracer's lens is a <a data-g="lens">thin lens</a>: a disc of radius <var>R</var>
-      round the eye (here, seen from the side, the thick bar), focused at a distance <var>F</var> (the dashed line). To
-      make a pixel's ray, start from a random point of the disc and aim at the point where the pinhole's ray for that
-      pixel crosses the focus plane. A point on the focus plane is reached from every point of the lens by the rays of
+      round the eye (here, seen from the side, the thick bar; the eye drawn just behind it marks where the pinhole
+      was), focused at a distance <var>F</var> (the red dashed line, the <a data-g="focus-plane">focus plane</a>; drag
+      it by its foot). The rule is one sentence: <strong>each pixel looks at one point of the focus plane, and all its
+      rays aim there</strong>, each from a random point of the lens. That point is where the pinhole's ray for the pixel
+      crosses the focus plane. So a point on the focus plane is reached from every point of the lens by the rays of
       one pixel: the rays drawn from across the lens all meet there, and the picture (the column on the right) shows it
-      as one dot.</p>
+      as one dot. The column is drawn there for reading, not where a film would be: the renderer has no film, a pixel
+      is a direction, and the column shows which pixel each ray belongs to, top at the top.</p>
     <p data-step="thin:near">Drag the point nearer. Now the rays from across the lens that pass through it are the rays
-      of different pixels: carried on, they cross the focus plane at different heights. On the picture the point
-      spreads into a streak, its <a data-g="circle-of-confusion">blur</a>. Its size is
-      2<var>R</var> |1/<var>F</var> − 1/<var>D</var>| (over the picture's half-height): here 0.48, about 240 pixels of a
+      of different pixels: carried on (dashed), they cross the focus plane at different heights, and each height is
+      another pixel's point. On the picture the point spreads into a streak, its blur (in 3D a disc, the
+      <a data-g="circle-of-confusion">circle of confusion</a>). Its size is 2<var>R</var> |1/<var>F</var> −
+      1/<var>D</var>|: here 2 × 0.6 × |1/6 − 1/3.2| = 0.175, measured on a picture one unit in front of the eye. The
+      picture's half-height there is tan(<a data-g="fov">fov</a>/2), half the field of view's spread at one unit, which
+      for this camera's 40° is 0.364; so the blur is 0.175 / 0.364 = 0.48 of the half-height, about 240 pixels of a
       picture 1000 high. Larger lens, larger blur; nearer the focus, smaller.</p>
     <p data-step="thin:pinhole">Shrink the lens to nothing (<var>R</var> = 0) and every ray starts at the eye: the
-      pinhole, sharp everywhere. In ShadyTracer a radius of 0 is the pinhole exactly, the same ray, and draws no extra
-      random number, so a picture without a lens is the one it always was.</p>
+      pinhole, sharp everywhere. In ShadyTracer a radius of 0 is the pinhole exactly, the same ray from the same random
+      numbers, so a picture without a lens is the one it always was.</p>
     <details class="maths">
       <summary><span class="tag">The maths</span>The blur</summary>
       <div class="body">
-        <p>From a lens point at height <var>a</var>, a point at distance <var>D</var> and height <var>h</var> is seen in
-          the direction that crosses the focus plane at height <var>a</var> + (<var>h</var> − <var>a</var>)
-          <var>F</var>/<var>D</var>, which through the pinhole is the picture position</p>
+        <p>A ray from the lens point at height <var>a</var> to the point at distance <var>D</var> and height
+          <var>h</var> rises <var>h</var> − <var>a</var> over a distance <var>D</var> (similar triangles), so at the
+          focus plane, a distance <var>F</var> out, it is at height <var>a</var> + (<var>h</var> − <var>a</var>)
+          <var>F</var>/<var>D</var>. That point belongs to the pixel whose pinhole ray passes through it, from the eye at
+          height 0: that ray rises its height over <var>F</var>, so divide by <var>F</var> to get the picture position,
+          on a picture one unit in front of the eye:</p>
         <p class="eq"><var>y</var> = <span class="frac"><span><var>h</var></span><span><var>D</var></span></span> + <var>a</var> (<span class="frac"><span>1</span><span><var>F</var></span></span> − <span class="frac"><span>1</span><span><var>D</var></span></span>)</p>
-        <p>(in units of the distance to a picture one unit away). Over the lens, <var>a</var> runs from −<var>R</var> to
-          <var>R</var>, so the blur is 2<var>R</var> |1/<var>F</var> − 1/<var>D</var>|: zero at the focus, growing with
-          the lens and with the distance from the focus measured in 1/<var>D</var>. In 3D the streak is a disc, the
-          <em>circle of confusion</em>.</p>
+        <p>Over the lens, <var>a</var> runs from −<var>R</var> to <var>R</var>, so the blur is 2<var>R</var>
+          |1/<var>F</var> − 1/<var>D</var>|: zero at the focus, growing with the lens, and growing with the difference
+          between 1/<var>F</var> and 1/<var>D</var> (so a point twice as far as the focus blurs less than one half as
+          far: |1/<var>F</var> − 1/2<var>F</var>| is half of |1/<var>F</var> − 2/<var>F</var>|). Divide by
+          tan(fov/2), the picture's half-height at one unit, for the share of the half-height. In 3D the streak is a
+          disc, the <em>circle of confusion</em>.</p>
       </div>
     </details>
   </div>
   <figure class="fig" data-fig="thin">
-    <figcaption>A thin lens from the side: the lens (thick bar) round the eye, the plane in focus (dashed), and a point
-      you drag (⊕). Rays from points across the lens through it, carried on to the focus plane (dashed). Right: where
-      they land on the picture, by lens.js's own <code>lensImage</code>. Sliders set the lens's radius and its focus.</figcaption>
+    <figcaption>A thin lens from the side: the lens (thick bar) round the eye, the axis (faint), the plane in focus (red
+      dashed; drag it by its foot), and a point you drag (⊕). Rays from points across the lens through the point, and
+      carried on to the focus plane (dashed). Right: where they land on the picture, by lens.js's own
+      <code>lensImage</code>. Sliders set the lens's radius and its focus.</figcaption>
   </figure>
 </section>
 
 <section class="scene" id="picture">
   <div class="prose">
     <h2><span class="n">2</span>Depth of field</h2>
-    <p data-step="dof:pinhole">The same in 3D, a picture made the way the renderer makes it: each pixel averages many
-      rays, each from a random point of the lens. Three balls stand at three distances. With no aperture, a pinhole,
-      all three are sharp.</p>
-    <p data-step="dof:middle">With an aperture of 0.25 (the lens's diameter) focused on the middle ball, the near and the
-      far one blur, each by its own 1/<var>D</var> from the focus. This is <a data-g="depth-of-field">depth of
+    <p data-step="dof:pinhole">The same in 3D, a picture made the way the renderer makes it. A real lens gathers light
+      through every point of its opening at once, and a pixel shows the average over all of them. The renderer cannot
+      trace them all, so each <a data-g="sample">sample</a> takes one random point of the lens for every pixel
+      (chapter 12): averaged over samples, the picture becomes that average, and the blur appears as samples add up,
+      grainy at first. Three balls stand at three distances: red near, blue in the middle, gold far. With no
+      <a data-g="aperture">aperture</a>, a pinhole, all three are sharp; 4 samples a pixel are enough, since there is
+      nothing to average over the lens.</p>
+    <p data-step="dof:middle">With an aperture of 0.25 (the lens's diameter, twice the radius <var>R</var> of the first
+      figure) focused on the middle ball, the near and the far one blur, each by its own 1/<var>D</var> from the focus. This is <a data-g="depth-of-field">depth of
       field</a>: the range of distances that look sharp.</p>
     <p data-step="dof:near">Focused on the near ball, it sharpens and the others go soft.</p>
-    <p data-step="dof:wide">A wider aperture, 0.6, shrinks the range that looks sharp: the far balls are much softer
-      now. Each picture takes a few dozen samples a pixel to lose its grain: the blur is itself an average over the
-      lens.</p>
+    <p data-step="dof:wide">A wider aperture, 0.6, shrinks the range that looks sharp: the middle and the far ball are much
+      softer now. Each picture takes a few dozen samples a pixel to lose its grain (48 here): the blur is itself an
+      average over the lens.</p>
     <aside class="refs"><span class="tag">Read more</span><ul>
       <li data-ref="rtiow">Its chapter "Defocus Blur" adds this same thin lens to a small ray tracer: a random point on
         a disc, aimed at the focus plane.</li>
@@ -91,23 +107,33 @@
 <section class="plain wide" id="code">
   <div class="prose">
     <h2><span class="n">3</span>How ShadyTracer does it</h2>
-    <p>The lens's own file starts by saying why it exists:</p>
     <pre data-src="lib/pathtracer/core/lens.js" data-sym="// WHY. The camera was a pinhole, a point." data-to="0.61.0 (below); the depth of field stays."
          data-why="A path through glass onto a floor and back through glass to the eye has no free direction left at its end, so neither a photon nor the camera could ever find it through a point. A lens is an area a photon can pass through." data-hash="1cea6da8"></pre>
-    <p>The camera ray, in the kernel that makes them:</p>
+    <p>Why a lens, beyond depth of field: a path from a lamp, into glass, onto a floor, back out through the glass to the
+      eye is fixed at every step but one. Glass bends (refracts) light by a rule, so each turn through it is decided; a
+      matte (diffuse) floor scatters light every way, so the path is free there, and only there. With a point for an
+      eye, the last refraction must send the light at exactly that point, and a free choice at the floor has no chance
+      of hitting a single point. A lens is an area, which a choice can hit. The lens's own file says so:</p>
+    <p>The camera ray, in the <a data-g="kernel">kernel</a> that makes them, piece by piece: right, up and fwd are the
+      camera's three directions (fwd points backwards, out of the scene, so −fwd looks into it). The bracket is the
+      pinhole's ray before it is made one unit long: it goes exactly one unit forward. Times <var>F</var>
+      (<code>UB.camLens.y</code>; <code>UB</code> holds the values handed to the GPU) it reaches the focus plane.
+      Less <code>off</code>, the lens point's offset from the eye, it is the way from the lens point to that point of
+      the focus plane; <code>normalize</code> makes it one unit long.</p>
     <pre data-src="lib/pathtracer/core/genrays.js" data-sym="/* THROUGH THE LENS (0.43.0; lens.js)" data-to="dir = normalize((right * dirCam.x + up * dirCam.y + fwd * dirCam.z) * UB.camLens.y - off);"
-         data-why="camLens.x is the lens's radius, camLens.y its focus distance. rnd is one draw of four random numbers: xy jitter the ray within its pixel, zw pick the lens point. At a radius of 0 the branch is skipped and the pinhole's ray stands." data-hash="c4f32b35"></pre>
-    <p>The camera hands the kernels half its aperture and its focus, or the distance to what it looks at when no focus is
-      set, so an orbiting view stays focused on its target
+         data-why="camLens.x is the lens's radius, camLens.y its focus distance. rnd is one draw of four random numbers, made for every ray whether there is a lens or not: xy move the ray about within its pixel (jitter, chapter 1), zw pick the lens point. At a radius of 0 the branch is skipped, zw go unused, and the pinhole's ray stands." data-hash="c4f32b35"></pre>
+    <p>The camera hands the kernels half its aperture (the radius) and its focus, or the distance to what it looks at
+      when no focus is set, so a view you turn round its target stays focused on it
       (<cite data-src="lib/camera.js" data-sym="(cachedUniforms.camLens = [persp ?"></cite>). An orthographic camera has
-      no lens.</p>
+      no lens: it is the kind with no perspective, every ray parallel.</p>
   </div>
 </section>
 
 <section class="plain wide" id="tricks">
   <div class="prose">
     <h2><span class="n">4</span>Tricks and trade-offs</h2>
-    <p>Each is stamped with how it is known; point at a stamp to see what it means.</p>
+    <p>Each is stamped with how it is known; point at a stamp to see what it means. The first is for readers who have
+      read chapters 18 and 19.</p>
     <div data-claim="code">
       <p><strong>The lens's area cancels.</strong> When light found by tracing from a lamp is connected to the camera, the
         connection picks a point on the lens, and the pixel's value is an average over the lens: one divides by the
@@ -116,8 +142,8 @@
         pixel's value, written as a measurement").</p>
     </div>
     <div data-claim="code">
-      <p><strong>No lens, no change.</strong> A radius of 0 takes no random number and gives the pinhole's ray, so turning
-        the lens on or off changes nothing else in a picture's random stream.</p>
+      <p><strong>No lens, no change.</strong> The lens's two random numbers are drawn whether there is a lens or not, so
+        turning the lens on or off changes nothing else in the sequence of random numbers a picture uses.</p>
     </div>
   </div>
 </section>
@@ -134,9 +160,9 @@
         the pixel they crossed. That counted the floor behind glass only when a photon happened through: white specks in
         the user's picture of 2026-10-15. The photon map (chapter 19) took that light over in 0.61.0, through any
         aperture or none, and the lens kept only its depth of field.</li>
-      <li><strong>Focal length and aperture with no page.</strong> Depth-of-field controls once existed that nothing
-        showed; they went in 0.22.6, and the lens came back as aperture and focus in 0.43.0 (the comment in
-        <code>lib/camera.js</code>).</li>
+      <li><strong>Focal length and aperture that did nothing.</strong> Depth-of-field settings once existed that no part
+        of the renderer used; they were removed in version 0.22.6, and the lens came back, working, as aperture and focus
+        in 0.43.0 (the comment in <code>lib/camera.js</code>).</li>
     </ul>
   </div>
 </section>
@@ -152,7 +178,7 @@
         settle more slowly where it is blurred.</li>
     </ul>
     <h3>Words from this chapter</h3>
-    <ul class="words" data-words="lens pinhole circle-of-confusion depth-of-field camera-ray photon"></ul>
+    <ul class="words" data-words="lens aperture focus-plane pinhole circle-of-confusion depth-of-field fov sample camera-ray photon"></ul>
   </div>
 </section>
 

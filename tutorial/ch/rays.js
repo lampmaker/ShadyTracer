@@ -271,7 +271,8 @@ export const figures = {
             const r = { x: pen.X(0.55), y: pen.Y(-1.2), w: pen.X(6.35) - pen.X(0.55), h: pen.Y(-2.75) - pen.Y(-1.2) }
             plot(pen, r, {
                 x: [0, 400], y: [0, 1], xlabel: 'samples', ylabel: 'pixel value', yticks: [0, 0.5, 1],
-                series: [{ pts: [[0, g.cover], [400, g.cover]], role: 'accent', w: 1 }, { pts: s.hist, role: 'cam', w: 1.6 }],
+                hoverX: v => `after ${Math.round(v)} samples`, hoverY: v => v.toFixed(3),
+                series: [{ name: 'the ball covers', pts: [[0, g.cover], [400, g.cover]], role: 'accent', w: 1 }, { name: 'the pixel', pts: s.hist, role: 'cam', w: 1.6 }],
             })
             pen.label([6.35, -1.2 - (1 - g.cover) * 1.55], 'what the ball covers', { role: 'accent', size: 12, align: 'right', dy: -9 })
         },

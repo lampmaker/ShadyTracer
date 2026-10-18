@@ -52,13 +52,16 @@ export const figures = {
             for (let i = 0; i <= 48; i++) { const t = i / 48 * 2 * Math.PI; eq.push([BALL[0] + R * Math.cos(t), BALL[1] + 0.32 * R * Math.sin(t)]) }
             pen.poly(eq, { role: 'faint', w: 0.8, exact: true })
             const top = [BALL[0], BALL[1] + R], q = PATCH / 2
-            pen.poly([[top[0] - q, top[1] - 0.06], [top[0] + q, top[1] - 0.06], [top[0] + q * 0.8, top[1] + 0.1], [top[0] - q * 0.8, top[1] + 0.1], [top[0] - q, top[1] - 0.06]], { role: 'accent', w: 2, exact: true })
+            const patch = [[top[0] - q, top[1] - 0.06], [top[0] + q, top[1] - 0.06], [top[0] + q * 0.8, top[1] + 0.1], [top[0] - q * 0.8, top[1] + 0.1]]
+            // the rays from the lamp to the patch's corners: the cone of light it catches, narrower as it moves away
+            for (const c of patch) pen.ray(BALL, c, { role: 'light', w: 1.1, arrow: false })
+            pen.poly([...patch, patch[0]], { role: 'accent', w: 2, exact: true })
             pen.bulb(BALL, { r: 6 })
             pen.label([BALL[0], -2.35], '3D: over a sphere, 4πr² of area', { align: 'center', role: 'soft', size: 14 })
         },
         readout(s) {
             const n = caught(s.r)
-            return `r = ${s.r.toFixed(2)} · flat: ${n} of ${RAYS} rays reach the piece, its light falls as 1/r (×${(1 / s.r).toFixed(2)} of r = 1) · 3D: as 1/r² (×${(1 / (s.r * s.r)).toFixed(2)})`
+            return `r = ${s.r.toFixed(2)} · flat: ${n} of ${RAYS} rays reach the piece, its light falls as 1/r (×${(1 / s.r).toFixed(2)} of r = 1) · 3D: as 1/r² (×${(1 / (s.r * s.r)).toFixed(2)} of r = 1)`
         },
     },
 }

@@ -26,12 +26,13 @@
   <div class="prose">
     <h2><span class="n">1</span>What this tutorial is</h2>
     <p>ShadyTracer is a <a data-g="renderer">renderer</a>: a program that makes pictures of 3D scenes, in a web
-      browser, on the graphics card. This tutorial explains how it works inside, from the first ray to every trick
+      browser, on the graphics card (the <a data-g="gpu">GPU</a>). This tutorial explains how it works inside, from the first ray to every trick
       that makes it fast, for someone who wants to understand its code, build a renderer of their own, or improve this
       one. It sits beside the program and is not part of it.</p>
     <p>It is not a manual. How to <em>use</em> ShadyTracer (build a scene, light it, render it) is in the program's own
       Help: press <strong>F1</strong>, or open <strong>Help › Contents</strong>.</p>
-    <p>Every chapter has the same parts, in the same order:</p>
+    <p>Every chapter after this one has the same parts, in the same order. On a first reading, the maths, the code and
+      what went wrong before can all wait: the idea and its figure carry the chapter.</p>
     <ol>
       <li><strong>The question</strong>, in a line and a picture.</li>
       <li><strong>The idea</strong>, in plain words beside a live figure. Paragraphs with a dot beside them move the
@@ -50,12 +51,12 @@
       <summary><span class="tag">The maths</span>What a fold-out looks like</summary>
       <div class="body">
         <p>Like this: the equation, then each part of it named. For example, the brightness a lamp gives a surface
-          straight in front of it, <var>r</var> away, in 3D:</p>
+          straight in front of it, <var>r</var> away, in 3D (at a slant it gives less: chapter 1):</p>
         <p class="eq"><var>E</var> = <span class="frac"><span><var>I</var></span><span><var>r</var><sup>2</sup></span></span></p>
         <dl class="terms">
           <dt>E</dt><dd>the light arriving on each bit of the surface (its <a data-g="irradiance">irradiance</a>)</dd>
           <dt>I</dt><dd>how strongly the lamp shines (its <a data-g="intensity">intensity</a>)</dd>
-          <dt>r</dt><dd>the distance; why it is squared is the next section</dd>
+          <dt>r</dt><dd>the distance; why it is squared is section 3</dd>
         </dl>
       </div>
     </details>
@@ -66,10 +67,13 @@
   <div class="prose">
     <h2><span class="n">2</span>Reading a figure</h2>
     <p>The figures are drawn and computed in your browser while you read: each one is a small renderer of its own,
-      written to follow ShadyTracer's rules, and where ShadyTracer has a piece of JavaScript that does the job (a shape,
-      a blend, a random number generator, a lens), the figure runs that very code.</p>
-    <p>Within a style, the same colour and line mean the same thing in every figure. This is the key, drawn in the style
-      you are reading in. A circled cross (⊕) is a handle: drag it with the mouse or a finger, or click it and use the
+      written to follow ShadyTracer's rules, and where ShadyTracer has a piece of JavaScript that does the job (the
+      formula for a shape, the way two shapes melt together, its random numbers, its lens: each explained in its
+      chapter), the figure runs that very code.</p>
+    <p>The menu at the top right of every page chooses a <em>style</em>, the look of the pages and their figures. Within
+      a style, the same colour and line mean the same thing in every figure. This is the key, drawn in the style you are
+      reading in (a step of the march is a circle for a reason chapter 2 gives; why rays leave the eye rather than enter
+      it, chapter 1). A circled cross (⊕) is a handle: drag it with the mouse or a finger, or click it and use the
       arrow keys. A figure that is three-dimensional turns when you drag its background.</p>
     <p>Below each figure: its controls (sliders, switches), and a line of text, its readout, that says in numbers what
       the figure is showing now. When a paragraph says "the readout", it means that line.</p>
@@ -92,15 +96,15 @@
       of surface catches half the rays: the light falls as 1/<var>r</var>. A sphere twice as far has four times the
       area, so in 3D the same piece gets a quarter: 1/<var>r</var>². The flat world's light weakens more slowly than
       the real world's.</p>
-    <p>The same happens to every law with a direction in it. A matte surface sends its light back over a half-circle in
-      the flat world and over a half-sphere in 3D, so its numbers differ too (½ in one, 1/π in the other: chapter 8).
-      Wherever a formula changes between flat and 3D, the page says so, and the figures that need the real laws are
-      3D.</p>
+    <p>The same happens to other laws: anything that spreads light over directions spreads it over a half-circle in the
+      flat world and over a half-sphere in 3D, so the numbers in its formula differ too (chapter 8 shows one). Wherever
+      a formula changes between flat and 3D, the page says so, and the figures that need the real laws are 3D.</p>
   </div>
   <figure class="fig" data-fig="spread">
     <figcaption>A lamp's light spreading. Left, the flat world: 36 rays, and a piece of surface (the thick arc at the
-      top of the dashed circle) catching some of them, drawn bold; drag the handle (⊕) to move the piece further away.
-      Right, 3D: the same light over a sphere, the same piece on it.</figcaption>
+      top of the dashed circle) catching some of them, drawn bold; drag the handle (⊕), or set the distance with the
+      slider, to move the piece further away. Right, 3D: the same light over a sphere, and the same piece, a small
+      square patch seen in perspective at its top, with the rays that reach its corners.</figcaption>
   </figure>
 </section>
 
@@ -110,15 +114,15 @@
     <p>Code is never copied into a page. Each piece is named (a file and a function, or a line it starts with), and
       your browser reads it from ShadyTracer's own files when the page opens, so it is the code as it is today. Above
       it: the file and its lines (a link to them on GitHub), the language, and a line of plain words saying what to
-      look for. Here is one, from the file that holds ShadyTracer's version number:</p>
-    <pre data-src="version.js" data-sym="Why both: every number that decided anything here" data-to="this names the whole page, in every result, report and file."
-         data-why="Why the program knows exactly which version of its code is running: a number measured on someone's graphics card is only worth what is known about the code that made it." data-hash="f26cae82"></pre>
+      look for. Here is a short one, the formula chapter 3 uses to melt two shapes together:</p>
+    <pre data-src="help/widgets.js" data-sym="export const smin"
+         data-why="a and b are two distances, k how far the melting reaches. With k at 0 or less it is the plain smaller of the two (Math.min); otherwise it takes a little off where a and b are within k of each other. Math.abs is a number's size without its sign." data-hash="6a4c9896"></pre>
     <p>ShadyTracer's code is in two languages. The parts that run on the main processor are JavaScript. The parts the
       graphics card runs are <a data-g="kernel">kernels</a> written in <a data-g="wgsl">WGSL</a>, which sit inside the
       JavaScript files as long pieces of text. A label above each piece says which it is.</p>
     <p>A short reference to a line, such as
-      <cite data-src="version.js" data-sym="export const VERSION ="></cite>, is a file name and a line number: follow it
-      to see that line. Each piece of code was checked against the words around it when the page was written. If the
+      <cite data-src="version.js" data-sym="export const VERSION ="></cite> (where the program's version number is set),
+      is a file name and a line number: follow it to see that line. Each piece of code was checked against the words around it when the page was written. If the
       code has changed since, the page says so above the piece ("changed since this page was checked"), and the words
       may no longer fit.</p>
     <p>The comments in ShadyTracer's code are long, and they matter: they say <em>why</em> the code is written as it is,
@@ -132,8 +136,11 @@
     <p>The people who write ShadyTracer hold every statement to one question: do I <em>know</em> this, or do I
       <em>think</em> it? Wherever it matters, the chapters say which, with a stamp. Point at a stamp to see its card.</p>
     <div data-claim="measured">
-      <p><strong>Measured</strong>: someone ran it on a real graphics card and wrote the number down. The page says who,
-        on which card, the number, and where it is recorded. Chapter 14's cost of shadow rays is one.</p>
+      <p><strong>Measured</strong>: someone ran it and wrote the number down. A speed, or anything about the picture the
+        renderer makes, is measured on a real graphics card, and the page says whose and which card (chapter 14's cost of
+        shadow rays is one). A count or a calculation can be measured by a program on any computer (in an imitation of
+        the GPU's numbers, say), and the page names that program. Either way it says the number and where it is
+        recorded.</p>
     </div>
     <div data-claim="code">
       <p><strong>Read in code</strong>: the code does this, and the page links the line. It says what the code
@@ -144,12 +151,17 @@
         it.</p>
     </div>
     <p>Why not measure speed on any computer? Because ShadyTracer's speed is the graphics card's, and a computer without
-      one can only imitate it, slowly and differently. So every number about speed comes from someone's own card. They
+      one can only imitate it, slowly and differently. So every number about speed comes from someone's own card; when
+      a page says <em>the user</em>, as the project's own notes do, it means the person who works on ShadyTracer and
+      measures it on their own cards: NVIDIA ones, of the Pascal family or the newer Ampere. They
       open ShadyTracer, choose <strong>View › Tests</strong> and press a test's button; a table of results appears
       with a <strong>Copy</strong> button, and that table is pasted back into the project's notes. Its first line names
-      the exact code it ran, because the test bench writes it there:</p>
-    <pre data-src="lib/pathtracer/tests.js" data-sym="/* WHICH BUILD, when the host says" data-to="timing wall clock`"
-         data-why="The line at the top of every table of results: the version and revision of the code, the picture's size, and the graphics card." data-hash="50007e59"></pre>
+      the exact code it ran, then the picture's size and the graphics card
+      (<cite data-src="lib/pathtracer/tests.js" data-sym="/* WHICH BUILD, when the host says"></cite>). The code is named
+      by its version and its <em>revision</em>, the exact saved state of the files, as the program's version file
+      describes:</p>
+    <pre data-src="version.js" data-sym="//   await loadRevision()" data-to="what a saved file records as `app`"
+         data-why="Three things the file offers the rest of the program, each with an example of what it gives: 'ShadyTracer 0.1.0 · 1819ac6 (main)' is a version (0.1.0), a revision (1819ac6, a short code for one saved state of the files) and the line of work it was on (main)." data-hash="9ceb40fa"></pre>
     <p>The tests themselves are rows in one file, <code>lib/pathtracer/tests.js</code>, so a new measurement is a new
       row, not a new program (<a href="https://github.com/lampmaker/ShadyTracer/blob/main/docs/TESTING.md">docs/TESTING.md</a>
       says why).</p>
@@ -160,7 +172,9 @@
   <div class="prose">
     <h2><span class="n">6</span>Running ShadyTracer</h2>
     <p>The quickest way is the published copy: open <a href="https://lampmaker.github.io/ShadyTracer/">lampmaker.github.io/ShadyTracer</a>
-      in a browser with <a data-g="webgpu">WebGPU</a>. To run your own copy, and read and change its code:</p>
+      in a browser with <a data-g="webgpu">WebGPU</a>. To run your own copy, and read and change its code, you need two
+      common programs installed first: <strong>git</strong>, which fetches the code, and <strong>Python 3</strong>,
+      whose one-line web server serves it (any web server will do). Then, in a terminal:</p>
     <pre class="cmd">git clone --recursive https://github.com/lampmaker/ShadyTracer.git
 cd ShadyTracer
 python3 -m http.server 8000</pre>
@@ -168,15 +182,17 @@ python3 -m http.server 8000</pre>
     <ul>
       <li><strong>A browser with WebGPU</strong>: Chrome or Edge 113 or later, Firefox 141 or later on Windows, or
         Safari 26 or later.</li>
-      <li><strong>A real graphics card.</strong> The results in these chapters were measured on NVIDIA cards.</li>
+      <li><strong>Real graphics hardware</strong>, not a software imitation of it. The results in these chapters were
+        measured on NVIDIA cards.</li>
       <li><strong>A web server</strong>, even the one-line one above: opened straight from the disk
-        (<code>file://</code>), the page does not work, because WebGPU needs a secure context and
-        <code>localhost</code> counts as one (ShadyTracer's README). This tutorial is served the same way:
-        <code>http://localhost:8000/tutorial/</code>.</li>
-      <li><strong><code>--recursive</code></strong>: two of the libraries it needs are separate repositories inside it.
-        In a copy made without it, <code>git submodule update --init</code> fetches them.</li>
+        (<code>file://</code>), the page does not work. ShadyTracer's README says why: WebGPU is only given to a page
+        the browser counts as a "secure context", and one served from <code>localhost</code> is. This tutorial is
+        served the same way: <code>http://localhost:8000/tutorial/</code>.</li>
+      <li><strong><code>--recursive</code></strong>: the code is kept in a <em>repository</em>, a folder git keeps the
+        history of, and two of the libraries it needs are repositories of their own inside it. In a copy made without
+        <code>--recursive</code>, <code>git submodule update --init</code> fetches them.</li>
     </ul>
-    <p>Nothing is built or installed: the files in the repository are the program. If a scene you made stops the program
+    <p>Nothing of ShadyTracer's own is built or installed: the files in the repository are the program. If a scene you made stops the program
       from starting, add <code>?safe</code> to the address: it starts without compiling your scene (and does so by
       itself after a start that never finished).</p>
   </div>
@@ -185,15 +201,18 @@ python3 -m http.server 8000</pre>
 <section class="plain wide" id="tests">
   <div class="prose">
     <h2><span class="n">7</span>Running the tests</h2>
-    <p>Most of what can be checked without a graphics card is, by small programs run with <code>node</code>. They come
-      in three kinds, by the end of their name:</p>
+    <p>This section is for when you change the code. ShadyTracer checks itself with small programs, run with
+      <code>node</code>, a program that runs JavaScript outside a browser (install it too). They check everything that
+      can be checked without a graphics card, and come in three kinds, by the end of their names:</p>
     <ul>
-      <li><code>*.test.mjs</code>: plain checks, no graphics card. Every pull request runs all of them on GitHub, and so
-        should you before you change anything: the list is in <code>CLAUDE.md</code>, and the check on GitHub reads it
-        from there (<cite data-src=".github/workflows/test.yml" data-sym="for t in lib/pathtracer/core/check-shaders.mjs"></cite>).</li>
+      <li><code>*.test.mjs</code>: plain checks, no graphics card. GitHub runs all of them on every proposed change (a
+        <em>pull request</em>), and so should you before you propose one: the list is in <code>CLAUDE.md</code>, the
+        repository's notes for whoever changes the code, and the check on GitHub reads it from there
+        (<cite data-src=".github/workflows/test.yml" data-sym="for t in lib/pathtracer/core/check-shaders.mjs"></cite>).</li>
       <li><code>*.gpu.mjs</code>: run the real kernels on a graphics card simulated in software (they need the
         <code>webgpu</code> package for node). Slow, and a check of correctness, never of speed.</li>
-      <li><code>*.check.mjs</code>: open pages in a browser with no window (they need Playwright).</li>
+      <li><code>*.check.mjs</code>: open the pages in a browser that a program drives, with no window (they need
+        Playwright, a tool for that).</li>
     </ul>
     <p>And one more, to run before every change: <code>node lib/pathtracer/core/check-shaders.mjs</code>. It loads every
       kernel against every example scene and checks what a browser would otherwise only find when the page fails to
@@ -218,15 +237,17 @@ python3 -m http.server 8000</pre>
   <div class="prose">
     <h2><span class="n">8</span>Try it</h2>
     <ul>
-      <li>In the flat world figure, put the circle at 1.0 and then at 2.0. Count the bold rays that reach the piece each
-        time (the readout counts them too).</li>
+      <li>In the flat world figure, set the distance to 1.0 and then to 2.0 (the handle or the slider). Count the bold
+        rays that reach the piece each time (the readout counts them too).</li>
       <li>Open ShadyTracer, press F1, and find the page on signed distance functions. Then read chapter 2 here: the
         Help says how to use them, the chapter how they work.</li>
-      <li>In your own copy, run <code>node lib/pathtracer/core/check-shaders.mjs</code>. Then put a backtick in a
-        comment inside a kernel, run it again, and see what it says. Take the backtick out.</li>
+      <li>In your own copy, run <code>node lib/pathtracer/core/check-shaders.mjs</code>. Then open
+        <code>lib/pathtracer/core/lens.js</code>, find the comment that starts <code>/* a point of the lens's disc</code>
+        (inside the kernel text, after <code>LENS_WGSL</code>), put a backtick in it, run the check again, and see what
+        it says. Take the backtick out.</li>
     </ul>
     <h3>Words from this chapter</h3>
-    <ul class="words" data-words="renderer flatland irradiance intensity camera-ray shadow-ray normal march kernel wgsl webgpu claim-measured claim-code claim-inferred"></ul>
+    <ul class="words" data-words="renderer gpu flatland irradiance intensity camera-ray shadow-ray normal march kernel wgsl webgpu claim-measured claim-code claim-inferred"></ul>
   </div>
 </section>
 

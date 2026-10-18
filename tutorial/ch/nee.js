@@ -132,17 +132,19 @@ export const figures = {
     room: {
         aspect: 1.15,
         world: { x: [-0.8, 7.6], y: [-3.9, 4.75] },
-        state: { size: 0.6, lampX: 3.0, view: 'off', spp: 0, seed: 1, off: film(), on: film(), paths: { off: [], on: [] }, px: 30, ymax: 0.5, ball: [2.3, 0.62], blockAt: [4.7, 0.8] },
+        state: { size: 0.6, lampX: 3.0, view: 'off', spp: 0, seed: 1, off: film(), on: film(), px: 30, ymax: 0.5, ball: [2.3, 0.62], blockAt: [4.7, 0.8], paths: true, pathSeed: 1 },
         controls: [
             { type: 'slider', key: 'size', label: 'lamp size', min: 0.05, max: 2.5, step: 0.05, fmt: v => v.toFixed(2) },
-            { type: 'seg', key: 'view', options: [['off', 'Without NEE'], ['both', 'Both']] },
+            { type: 'seg', key: 'view', options: [['off', 'Without NEE'], ['on', 'NEE only'], ['both', 'Both']] },
+            { type: 'toggle', key: 'paths', label: 'Show paths' },
+            { type: 'button', key: 'pathSeed', label: 'Other paths', act: s => { s.pathSeed++ } },
             { type: 'button', label: 'Start again', act: s => { s.seed++ } },
         ],
         steps: {
-            off: { view: 'off', size: 0.6 },
-            both: { view: 'both', size: 0.6 },
-            small: { view: 'both', size: 0.12 },
-            big: { view: 'both', size: 2.4 },
+            off: { view: 'off', size: 0.6, paths: true },
+            both: { view: 'both', size: 0.6, paths: true },
+            small: { view: 'both', size: 0.12, paths: true },
+            big: { view: 'both', size: 2.4, paths: true },
         },
         drag: {
             lamp: (s, p) => { s.lampX = clamp(p[0], 0.8, 6.2) },
@@ -160,9 +162,9 @@ export const figures = {
                 s.px = best
             },
         },
-        keep: ['pixel', 'view'],
+        keep: ['pixel', 'view', 'paths', 'pathSeed'],
         work: {
-            reset(s) { s.spp = 0; s.off = film(); s.on = film(); s.paths = { off: [], on: [] }; s.ymax = 0.5 },
+            reset(s) { s.spp = 0; s.off = film(); s.on = film(); s.ymax = 0.5 },
             add(s, ms) {
                 const world = roomWorld(s), t0 = performance.now()
                 do {
@@ -170,10 +172,7 @@ export const figures = {
                     for (let i = 0; i < PIX; i++) {
                         for (const which of ['off', 'on']) {
                             const [ox, oy, dx, dy] = cameraRay(CAM, i, R())
-                            const rec = i === s.px && s.spp % 3 === 0 ? [] : null
-                            const y = tracePath(world, ox, oy, dx, dy, { nee: which === 'on', maxBounce: 4, rand: R, record: rec })
-                            step(s[which][i], y)
-                            if (rec) { s.paths[which].push(rec); if (s.paths[which].length > 4) s.paths[which].shift() }
+                            step(s[which][i], tracePath(world, ox, oy, dx, dy, { nee: which === 'on', maxBounce: 4, rand: R }))
                         }
                     }
                     s.spp++
@@ -184,12 +183,21 @@ export const figures = {
         draw(pen, s) {
             const world = roomWorld(s)
             for (const sh of world.shapes) pen.flat(sh, { id: sh.name })
-            // the selected pixel's last few paths: eye rays and bounces, and (with NEE) the shadow rays
-            const show = s.view === 'off' ? ['off'] : ['on']
-            for (const w of show) for (const rec of s.paths[w] ?? []) for (const seg of rec) {
-                // a bounce that ends on the lamp and is counted is drawn in the lamp's colour: the paths that found it
-                const role = seg.kind === 'shadow' ? 'shadow' : seg.kind === 'blocked' ? 'blocked' : seg.lamp ? 'light' : 'cam'
-                pen.ray(seg.a, seg.b, { role, w: seg.lamp ? 1.6 : seg.kind === 'eye' ? 1.1 : 0.8, alpha: seg.lamp ? 1 : 0.75, arrow: false })
+            /* THREE PATHS OF THE CHOSEN PIXEL: eye rays and bounces, and (with NEE) the shadow rays. Traced here from their
+               own seed, not taken from the pictures' samples: they used to be the last few the pictures traced, replaced
+               every third sample, and a figure of lines that never stood still was hard to read (the user, 2026-10-18).
+               Now they change only when asked (Other paths) or when the pixel or the room does. */
+            if (s.paths) {
+                const R = rng(s.pathSeed * 104729 + s.px * 31 + 7)
+                for (let k = 0; k < 3; k++) {
+                    const rec = [], [ox, oy, dx, dy] = cameraRay(CAM, s.px, R())
+                    tracePath(world, ox, oy, dx, dy, { nee: s.view !== 'off', maxBounce: 4, rand: R, record: rec })
+                    for (const seg of rec) {
+                        // a bounce that ends on the lamp and is counted is drawn in the lamp's colour: the paths that found it
+                        const role = seg.kind === 'shadow' ? 'shadow' : seg.kind === 'blocked' ? 'blocked' : seg.lamp ? 'light' : 'cam'
+                        pen.ray(seg.a, seg.b, { role, w: seg.lamp ? 1.6 : seg.kind === 'eye' ? 1.1 : 0.8, alpha: seg.lamp ? 1 : 0.75, arrow: false })
+                    }
+                }
             }
             pen.eye(CAM.eye, CAM.dir, { size: 18 })
             const [ox, oy, dx, dy] = cameraRay(CAM, s.px)
@@ -198,7 +206,7 @@ export const figures = {
             pen.handle('ball', s.ball, { role: 'soft' }); pen.handle('block', s.blockAt, { role: 'soft' })
 
             // THE FILMS: each pixel's average as a grey, and below, every pixel's value with its error bar
-            const cur = Math.max(1e-3, ...s.on.map(p => p[0]))
+            const cur = Math.max(1e-3, ...s[s.view === 'off' ? 'off' : 'on'].map(p => p[0]))
             s.ymax = Math.max(s.ymax * 0.97, cur * 1.25)
             const strip = (f, y, label) => {
                 const x0 = pen.X(-0.2), x1 = pen.X(7.0), cw = (x1 - x0) / PIX, py = pen.Y(y), ch = 18
@@ -213,19 +221,21 @@ export const figures = {
                 ctx.restore()
                 pen.labelPx(x0, py + ch + 3, label, { role: 'soft', size: 12 })
             }
-            strip(s.off, -0.75, 'the picture without NEE')
-            if (s.view === 'both') strip(s.on, -1.45, 'the picture with NEE')
+            if (s.view !== 'on') strip(s.off, -0.75, 'the picture without NEE')
+            if (s.view !== 'off') strip(s.on, s.view === 'on' ? -0.75 : -1.45, 'the picture with NEE')
             const r = { x: pen.X(0.15), y: pen.Y(-2.2), w: pen.X(7.0) - pen.X(0.15), h: pen.Y(-3.65) - pen.Y(-2.2) }
             // without NEE grey, with NEE blue: red is the figures' colour for a ray that is blocked
-            const series = [{ pts: s.off.map((p, i) => [i + 0.5, p[0], seOf(p)]), role: 'soft', kind: 'dots', r: 1.9 }]
-            if (s.view === 'both') series.push({ pts: s.on.map((p, i) => [i + 0.5, p[0], seOf(p)]), role: 'cam', kind: 'dots', r: 1.9 })
-            plot(pen, r, { x: [0, PIX], y: [0, s.ymax], xlabel: 'pixel', ylabel: 'brightness, with error bars', xticks: [], yticks: [0], series })
+            const series = []
+            if (s.view !== 'on') series.push({ name: 'without NEE', pts: s.off.map((p, i) => [i + 0.5, p[0], seOf(p)]), role: 'soft', kind: 'dots', r: 1.9 })
+            if (s.view !== 'off') series.push({ name: 'with NEE', pts: s.on.map((p, i) => [i + 0.5, p[0], seOf(p)]), role: 'cam', kind: 'dots', r: 1.9 })
+            plot(pen, r, { x: [0, PIX], y: [0, s.ymax], xlabel: 'pixel', ylabel: 'brightness, with error bars', xticks: [], yticks: [0], series,
+                hoverX: v => `pixel ${Math.floor(v) + 1} of ${PIX}` })
         },
         readout(s) {
             const off = relError(s.off), on = relError(s.on)
             const p = v => Number.isFinite(v) ? `±${(100 * v).toFixed(1)}%` : '—'
             return s.view === 'both' ? `${s.spp} samples per pixel · average error bar: without NEE ${p(off)}, with NEE ${p(on)}`
-                : `${s.spp} samples per pixel · average error bar ${p(off)}`
+                : `${s.spp} samples per pixel · average error bar ${s.view === 'on' ? 'with' : 'without'} NEE ${p(s.view === 'on' ? on : off)}`
         },
     },
 }
@@ -257,12 +267,15 @@ figures.room3 = {
     aspect: 2.25,
     budget: 14,
     world: { x: [0, 1], y: [0, 1] },
-    state: { size: 0.22, spp: 0, cursor: 0, seed: 1, off: film3(), on: film3(), exp: 0 },
+    state: { size: 0.22, spp: 0, cursor: 0, seed: 1, off: film3(), on: film3(), exp: 0, show: 'both' },
     controls: [
         { type: 'slider', key: 'size', label: 'lamp size', min: 0.06, max: 0.6, step: 0.02, fmt: v => v.toFixed(2) },
+        { type: 'seg', key: 'show', options: [['off', 'Without NEE'], ['on', 'NEE only'], ['both', 'Both']] },
         { type: 'button', label: 'Start again', act: s => { s.seed++ } },
     ],
-    steps: { both: { size: 0.22 }, small: { size: 0.08 }, big: { size: 0.55 } },
+    // both pictures are traced whichever is shown, so choosing one does not start them again
+    keep: ['show'],
+    steps: { both: { size: 0.22, show: 'both' }, small: { size: 0.08, show: 'both' }, big: { size: 0.55, show: 'both' } },
     work: {
         reset(s) { s.spp = 0; s.cursor = 0; s.off = film3(); s.on = film3(); s.exp = 0 },
         add(s, ms) {
@@ -287,8 +300,9 @@ figures.room3 = {
         // one exposure for both, from the NEE picture's average once it has one: the same light shown the same way
         if (s.spp > 0 && !s.exp) { let t = 0; for (let k = 0; k < W * H; k++) t += s.on.m[k][0]; s.exp = 0.45 / Math.max(1e-6, t / (W * H)) }
         const exp = s.exp || 1
-        const gap = 14, w = (pen.view.W - gap) / 2, h = Math.min(pen.view.H - 22, w * H / W)
-        for (const [x, which, label] of [[0, 'off', 'without NEE'], [w + gap, 'on', 'with NEE']]) {
+        const gap = 14, one = s.show !== 'both', h = Math.min(pen.view.H - 22, (one ? pen.view.W : (pen.view.W - gap) / 2) * H / W), w = h * W / H
+        const shown = one ? [[(pen.view.W - w) / 2, s.show, s.show === 'on' ? 'with NEE' : 'without NEE']] : [[0, 'off', 'without NEE'], [w + gap, 'on', 'with NEE']]
+        for (const [x, which, label] of shown) {
             const f = s[which]
             pen.image(x, 0, w, h, W, H, (i, j) => { const k = j * W + i, m = n(k); return [f.rgb[k * 3] / m, f.rgb[k * 3 + 1] / m, f.rgb[k * 3 + 2] / m] }, { exposure: exp })
             pen.labelPx(x, h + 5, label, { role: 'soft', size: 13 })

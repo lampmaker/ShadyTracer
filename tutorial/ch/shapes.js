@@ -251,7 +251,7 @@ export const figures = {
         state: { ball: [0.15, -0.2], probe: [0.35, -0.05] },
         steps: {
             nested: { ball: [0.15, -0.2], probe: [0.35, -0.05] },
-            water: { ball: [0.15, -0.2], probe: [-1.0, -0.9] },
+            water: { ball: [0.15, -0.2], probe: [0.87, -0.2] },
             overlap: { ball: [1.15, 0.45], probe: [1.0, 0.36] },
         },
         drag: {
@@ -359,9 +359,10 @@ export const figures = {
             plot(pen, box, {
                 x: [n0 + 0.5, r.pts.length + 0.5], y: [-m, m], yticks: [-m / 1.15, 0, m / 1.15], xticks: [n0 + 1, r.pts.length],
                 fmt: v => Math.abs(v) >= 1 ? String(Math.round(v)) : v.toFixed(3),
-                series: [{ pts: last.map((p, i) => [n0 + i + 1, p[2]]), role: 'soft', w: 1 },
-                    { pts: last.map((p, i) => [n0 + i + 1, p[2]]).filter((q, i) => truth(last[i][0], last[i][1]) >= -0.004), role: 'cam', kind: 'dots', r: 2.2 },
-                    { pts: last.map((p, i) => [n0 + i + 1, p[2]]).filter((q, i) => truth(last[i][0], last[i][1]) < -0.004), role: 'blocked', kind: 'dots', r: 2.2 }],
+                hoverX: v => `step ${Math.round(v)}`, hoverY: v => v.toFixed(4),
+                series: [{ name: 'distance', pts: last.map((p, i) => [n0 + i + 1, p[2]]), role: 'soft', w: 1 },
+                    { tip: false, pts: last.map((p, i) => [n0 + i + 1, p[2]]).filter((q, i) => truth(last[i][0], last[i][1]) >= -0.004), role: 'cam', kind: 'dots', r: 2.2 },
+                    { tip: false, pts: last.map((p, i) => [n0 + i + 1, p[2]]).filter((q, i) => truth(last[i][0], last[i][1]) < -0.004), role: 'blocked', kind: 'dots', r: 2.2 }],
             })
         },
         readout(s) {

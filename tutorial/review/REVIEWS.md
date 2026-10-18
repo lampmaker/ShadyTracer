@@ -164,6 +164,120 @@ colours shared between meanings in the styles.
 | The styles sample's circles and θ unexplained. | **Fixed** in each card's caption. |
 | The page's sticky bar over the figures in screenshots, naming the page's style above another style's card; no dark card shown. | **Answered**: the bar stays at the top while a reader scrolls, and names the style the page is read in, which is the menu's job; the Dark / Light button shows every card dark, as the page says. |
 
+## Round 3, 2026-10-18 (chapters 0, 3, 4, 12, 13, 15, 16, 17, first read)
+
+One fresh reader a chapter, the brief in `README.md` with each page's questions. Reports:
+[reading](reports/2026-10-18-round3/reading.md), [shapes](reports/2026-10-18-round3/shapes.md),
+[normals](reports/2026-10-18-round3/normals.md), [montecarlo](reports/2026-10-18-round3/montecarlo.md),
+[paths](reports/2026-10-18-round3/paths.md), [mis](reports/2026-10-18-round3/mis.md),
+[emitters](reports/2026-10-18-round3/emitters.md), [lens](reports/2026-10-18-round3/lens.md).
+
+**What the round showed.** Every reader could say back each chapter's idea, and the figures carried it; the readers
+were lost in the same three places on every page: a step of maths written as if the reader had calculus ("variances
+add", "the 2 in 2ℓ", "the gradient"), a number in the text that the figure's readout did not show the working of
+(0.48 from a formula giving 0.175, 0.96 from numbers giving 0.98, 10.0 rays against a readout of 9.9), and a word
+naming a colour or a line the figure did not draw that way ("bold" for blue, "the line at 1" in the old bars' red).
+Two readers also asked what a stamped *measured* number was when it came from a count in node: the card now says.
+
+### Chapter 0, How to read this
+
+| Finding | |
+|---|---|
+| The first excerpts unreadable (tests.js lines), "the kernel is built" label on JavaScript. | **Fixed.** A short excerpt instead (help/widgets.js `smin`, explained word by word); the "filled in when the kernel is built" note only on WGSL. |
+| What to install; "Nothing is built or installed"; section 7 for whom. | **Fixed.** git and Python 3 named first, node for the tests; "nothing of ShadyTracer's own is built"; §7 "for when you change the code", with pull request, CLAUDE.md and Playwright said in a line each. |
+| "the next section" pointing at the wrong one; what can be skipped. | **Fixed.** The parts that can wait on a first reading are named. |
+| The matte ½ / 1/π sentence. | **Fixed.** Said as "spreads over a half-circle in the flat world, a half-sphere in 3D", the numbers left to chapter 8. |
+| Fig. 2's 3D side: no rays reaching the patch; two names for what is dragged. | **Fixed.** The rays to the patch's corners drawn; one name, the handle, with a slider beside it. |
+| Who "the user" is, whose card. | **Fixed.** Said once here (the person who works on ShadyTracer and measures it on their own NVIDIA cards, Pascal or Ampere); the chapters use it that way. |
+
+### Chapter 3, Building and bending shapes
+
+| Finding | |
+|---|---|
+| "many" against "most" normals; the measured card against counts in node; k as divisor or multiplier. | **Fixed**, each: the builder's shapes give a normal, the library's plain ones none; the card covers a count by a program; k is how far the blend reaches. |
+| The twist fold-out needed matrices; arc length. | **Fixed.** A move along the axis turns into rθ around it; the largest stretch found by trying every direction (cos θ, sin θ), the algebra left as a check. |
+| The blend's gradient step needs calculus. | **Fixed.** Labelled as a step of calculus, with a check a reader can do (equal distances mix the normals half and half). |
+| When a march stops; why an overshoot repeats; the plot rescaling. | **Fixed.** §5 says both, and that the plot's scale follows its steps. |
+| Two rules for surface and medium shown with one probe position. | **Fixed.** A step with the probe in the water nearest the glass's surface. |
+| §6 too long; `.w`, `.xyz`, `dot(a,a)`. | **Fixed.** Each excerpt names its lines to read; the swizzles and the dot product said once. |
+
+### Chapter 4, Which way is up
+
+| Finding | |
+|---|---|
+| The gradient and h against h² taught with calculus. | **Fixed.** A hill: a step east climbs 3 cm, north 1 cm, the arrow (3, 1) points uphill; "halve the step, forward's error halves, central's quarters", because forward measures half a step off the point; the Taylor series only named. |
+| The measured stamp on an emulation; "stall" against "every march ended"; 128 or 128 to 256. | **Fixed.** The card; the comment's "can stall" quoted and set against what the emulation found; 128 to 256 spacings, the figure counting 128. |
+| Fig. 2's ring, dashed circle, ticks, log axes; curves named by colour. | **Fixed** in the caption, each; the curves named by their labels, the colour word following the style. |
+| Fig. 1's grey rings, h's unit, the dots' legend, a hidden arrow label. | **Fixed.** Lines of equal distance; h in the figure's units against the circle's 0.95; plain and ringed dots; labels kept together where arrows agree. |
+| shader, kernel, GPU, frame and sample said once. | **Fixed**, at first use, with their cards. |
+
+### Chapter 12, Dice and averages
+
+| Finding | |
+|---|---|
+| §3 (the error bar a pixel keeps) unreadable: kernel, why w = 1/cnt, what V and S mean, why √(S·V/(1−S)) is the darts' s/√N. | **Fixed.** The running average by example (2, 4, 9: 2, 3, 5); V as the scatter about the average (8.67 for those three), S as the sum of the squared weights, 1/n for a true mean, so the bar is √(V/(n−1)) = 2.08 for them: the darts' s/√N with the usual n − 1. |
+| The old generator's grid: state, f32, "top 24 bits" against "seven-eighths". | **Fixed.** The state a whole number to 4.3 billion; f32 like a calculator showing seven digits; every state below 2²⁴ fits whole, those from 2²⁹ up (7/8 of them) become multiples of 64; 671,040 = 64 × 10,485, so the grid is 1/10,485. |
+| Why the sun's window falls elsewhere on the grid for each pixel. | **Fixed**, as the comment says it: each surface turns the numbers into directions about its own normal. |
+| "Why √N" never shows why; 4√(p(1−p)) from nowhere; "s² is the spread". | **Fixed.** The variance of a 4-or-0 score worked to 16p(1−p); variances add, so a sum spreads by √N σ and an average by σ/√N; s is the spread. |
+| The zero-width error bar at the start of fig. 1; can a bar see loaded dice? | **Fixed.** The first twelve darts all land inside: the bar says ±0 at an estimate of 4; and a bar sees noise, never bias, the bridge to §4. |
+| "drawn bold" for blue darts; "twice the darts" for labels ×4; the line at 1 in the old bars' red; PCG4D's 0.995× called fair. | **Fixed.** Colours named (and following the style); the log scale named; the fair-share line dashed in ink over the bars; a 0.00001 window holds 167 or 168 of PCG4D's points, within half a percent. |
+| "37 million samples" against the sample card; Pascal, NEE, tone curve, false colour, the window's 21; slot, workgroup, 4,194,240. | **Fixed.** 37 million paths (1188 × 969 pixels, 32 samples); each term said where it is used, 21 from S settling near 1/(2N+1); groups of 64 pixels, 64 × 65,535 = 4,194,240. |
+| Cards for standard deviation, kernel, bias. | **Fixed.** A standard deviation card; kernel and bias linked at first use. |
+| The comment-against-page box too long. | **Fixed.** Shortened to the two numbers, how they were counted, and why the old code cannot be checked. |
+
+### Chapter 13, Following a path
+
+| Finding | |
+|---|---|
+| 0.96 cannot be worked out; 10.0 against the readout's 9.9. | **Fixed.** The arithmetic shown (10.0 / 4.7 = 2.1 paths for the rays of one; 0.0028 / √2.1 = 0.0019 against 0.0020: 0.96), with the numbers once all 24,000 paths are in (the reader saw a figure still filling). |
+| Rounds, kernel launches, "flushed", "a small win" against "not paid for it". | **Fixed.** Rounds explained (five kernels a round, a bus that drives its whole route for two passengers); rays still going at the last round; rays counted against time. Reading the code for it found the comment's "rounds to shrink" out of date: since 0.10.0 every sample runs the worst case (raytrace_main.js), now said with a stamp. |
+| Fig. 2: one path read at every cap?; what the average is; cap 0; "bold line" for a thin red one; the skipped caps; no unit. | **Fixed**, each, in the text and caption. |
+| The bounce comment's jargon; PRNG().x; "the flat world"; "extra terms for a coat" not in the excerpt. | **Fixed** in the excerpts' notes; the coat sentence removed. |
+| A number example for roulette; the 0.95 ceiling; "pdf" in the firefly card. | **Fixed.** Ten paths at β 0.2; the ceiling stops a path at β ≥ 1 never stopping; the card says probability density. |
+| Why the unfair comparison came out brighter. | **Answered**: neither the comment nor the test says, and the code that did it is gone; the page says so. |
+| "energy conservation" in the code against the prose. | **Fixed.** The note says it means the same: on average nothing lost. |
+| Why from the eye; "ray" against "bounce"; Pascal and "the user". | **Fixed.** |
+
+### Chapter 15, Two ways to the light
+
+| Finding | |
+|---|---|
+| The fold-out's integral; f, θ, L_e undefined; the code's names not mapped. | **Fixed.** "Adds up the light from every direction"; each symbol defined; NoL, le, pS, dS mapped onto them. |
+| How weights summing to 1 count once; how two different directions pair up; why squares. | **Fixed.** Each strategy brings back a direction's whole light on average, so weights adding to 1 count it once; each sample weighed at its own direction with both densities; squares lean harder to the likelier strategy (Veach found them usually the least noisy), worked with the figure's 5.86 and 0.66. |
+| Six names for the two strategies. | **Fixed.** "the lamp strategy" (NEE) and "the plate strategy" (BSDF sampling), defined once, used throughout, in the figure too. |
+| The third excerpt 34 lines for the sun and sky in a lamp chapter. | **Fixed.** Cut to `above`, `pLout` and `sunmis`, said to be the sun's and sky's half. |
+| The measured percentages: against what, what share. | **Fixed.** The setting named (the share of shadow rays aimed at glowing surfaces), the run at the default 0.5 the reference, and why a mismatch moves with the share. |
+| Glass ball: its own density 0?; what its shadow should look like; the 10⁹ in the formula. | **Fixed.** Clear glass refracts into one direction, which a density cannot describe, so the code counts 0, and 0² / (0² + p²) = 0; a caustic in the shadow; p² / (p² + (10⁹)²) is 0. |
+| Fig. 1: barcode strips, σ labels on the strips, no units, unexplained ticks, "speckled" for streaks. | **Fixed.** The plate is a line, a strip column a point of it; σ beside each row with its degrees; the ticks the side a lamp glows from. |
+| Fig. 2: log scale; humps unnamed; colours named by role; both weights 0; "flat-topped". | **Fixed.** Each hump named, a lamp past 80° said to be off the plot; both weights 0 where neither strategy picks the direction (the guard's 0/0). |
+| "fast ... counts in full" sounds like counting twice; dS and pS the same. | **Fixed** in the note: the fast mode weighs nothing on the plate side; dS kept apart for other lights. |
+
+### Chapter 16, Every glowing thing is a light
+
+| Finding | |
+|---|---|
+| "Unbiased from the first sample" not taught; MIS and unbiased without cards; the step showing nothing about before. | **Fixed.** The argument with the weights: before the bar is listed p_lamp is 0, the hit's weight 1; after, between 0 and 1 with the rest from aiming. The code's line cited. |
+| Fig. 1: boxes promised, none seen; the grid not drawn; lines and ticks unexplained; the same paths at every step. | **Fixed.** The grid dashed (not the paper's), cells hit shaded, the boxes said to be small, the paths the latest ones that found a glow. |
+| Why lines rather than points; which way the light leaves; the circle and the boxes' spheres; normal, matte = cosine. | **Fixed**, each. |
+| The fold-out's 2 in 2ℓ; why θ stops at π. | **Fixed.** |cos φ| over a half turn adds up to 2; a line has no front. |
+| "capped at 100,000" read as the code's cap; 24 against 32 bits; log and stop; atomics; Fig. 3's labels overlapping; "rising, then flat". | **Fixed.** The brightness is capped; a doubling gets 209,715 codes; why one step for every thread; the labels placed clear of both curves; the old curve's look on a ×10,000 scale. Why 2²⁴: **answered** as inferred (an f32 counts whole numbers exactly to 2²⁴), the comment not saying. |
+| Density, solid angle, α; why divide by the line density; the 8 slots; LUM_DECAY. | **Fixed** in the text and the excerpts' notes. |
+| §6's "split with the photons" and "two estimates". | **Fixed.** The split explained; the second points to chapter 15's last story. |
+| The measured stamp naming no card. | **Answered**: the document names none for that run; the page says so, and names the card of the run before. |
+
+### Chapter 17, The camera's lens
+
+| Finding | |
+|---|---|
+| 0.48 from a formula giving 0.175. | **Fixed.** 0.175 on a picture one unit away, ÷ tan 20° = 0.364 for the half-height: 0.48; the readout shows both steps. |
+| Why random lens points, averaged; sample and grain. | **Fixed.** A lens gathers through all its points at once; a sample takes one for every pixel. |
+| The rule "each pixel looks at one point of the focus plane" only implied. | **Fixed**, said in bold, with a focus-plane card. |
+| The genrays line opaque. | **Fixed.** Walked through: the bracket goes one unit forward, × F reaches the focus plane, − off starts it at the lens point, normalize. |
+| Why a point camera cannot see the floor through glass. | **Fixed.** A paragraph before the lens.js comment: refraction decided, a diffuse floor free, a point never hit by a free choice. |
+| "takes no random number" against four drawn. | **Fixed.** The four are drawn either way; at radius 0 the last two go unused. |
+| Radius in fig. 1, diameter in fig. 2; ball colours; samples 4 or 48; "dashed" three ways; where the picture column is. | **Fixed**, each (an aperture card; the balls named red, blue, gold; the axis labelled; the column said to be drawn for reading). |
+| "no page"; orbiting, orthographic. | **Fixed.** |
+
 ## Next round
 
 The pages stay drafts. Round 2's changes are smaller than round 1's, and most are words; a third read is worth it when

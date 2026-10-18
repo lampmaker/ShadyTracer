@@ -59,13 +59,19 @@ export const figures = {
             near: { R: 0.6, F: 6, P: [3.2, 0.9] },
             pinhole: { R: 0, F: 6, P: [3.2, 0.9] },
         },
-        drag: { P: (s, p) => { s.P = [clamp(p[0], 1.2, 10), clamp(p[1], -2.6, 2.6)] } },
+        drag: {
+            P: (s, p) => { s.P = [clamp(p[0], 1.2, 10), clamp(p[1], -2.6, 2.6)] },
+            // the focus plane by its foot, as the slider moves it
+            F: (s, p) => { s.F = Math.round(clamp(p[0], 2, 9.5) * 10) / 10 },
+        },
         draw(pen, s) {
             const [D, h] = s.P
             // the axis, the focus plane, the lens
             pen.line([-0.6, 0], [10.2, 0], { role: 'faint', w: 0.7, dash: [2, 5], exact: true })
+            pen.label([1.0, -0.18], 'the axis', { role: 'faint', size: 11 })
             pen.line([s.F, -3.1], [s.F, 3.1], { role: 'accent', w: 1, dash: [6, 5], id: 'focus' })
             pen.label([s.F, 3.15], 'in focus', { role: 'accent', size: 13, align: 'center' })
+            pen.handle('F', [s.F, -2.95], { role: 'accent' })
             if (s.R > 0) pen.line([0, -s.R], [0, s.R], { role: 'glass', w: 5, cap: 'butt', exact: true })
             pen.eye([-0.35, 0], 0, { size: 16 })
             // rays from points across the lens through the point, on to the focus plane
@@ -87,10 +93,11 @@ export const figures = {
             ctx.fillRect(px - 8, mid - y1 * half - 1.5, 16, Math.max(3, (y1 - y0) * half))
             ctx.restore()
             pen.labelPx(px - 46, bot + 8, 'the picture', { role: 'soft', size: 12 })
+            pen.labelPx(px - 46, bot + 22, '(where it lands)', { role: 'soft', size: 11 })
         },
         readout(s) {
-            const [D, h] = s.P, seen = blurSeen(s.R, D, h, s.F), px = seen / 2 * PICTURE_PX
-            return `point at distance D = ${D.toFixed(2)}, focus F = ${s.F.toFixed(1)}, lens radius ${s.R.toFixed(2)} · blur ${seen.toFixed(4)} of the picture's half-height, 2R|1/F − 1/D| / tan(fov/2) = ${blurFormula(s.R, D, s.F).toFixed(4)} · ${px < 1 ? 'under a pixel' : `${px.toFixed(0)} pixels`} in a picture 1000 high`
+            const [D, h] = s.P, seen = blurSeen(s.R, D, h, s.F), px = seen / 2 * PICTURE_PX, raw = 2 * s.R * Math.abs(1 / s.F - 1 / D)
+            return `point at distance D = ${D.toFixed(2)}, focus F = ${s.F.toFixed(1)}, lens radius R = ${s.R.toFixed(2)} · 2R|1/F − 1/D| = ${raw.toFixed(4)}, ÷ tan(fov/2) = ${FY.toFixed(3)}: ${blurFormula(s.R, D, s.F).toFixed(4)} of the picture's half-height (measured from the rays: ${seen.toFixed(4)}) · ${px < 1 ? 'under a pixel' : `${px.toFixed(0)} pixels`} in a picture 1000 high`
         },
     },
 
@@ -99,7 +106,7 @@ export const figures = {
         world: { x: [0, 1], y: [0, 1] },
         state: { aperture: 0.25, focus: 'blue', spp: 0 },
         controls: [
-            { type: 'seg', key: 'focus', label: 'focused on', options: [['red', 'The near ball'], ['blue', 'The middle'], ['gold', 'The far ball']] },
+            { type: 'seg', key: 'focus', label: 'focused on', options: [['red', 'The near ball (red)'], ['blue', 'The middle (blue)'], ['gold', 'The far ball (gold)']] },
             { type: 'slider', key: 'aperture', label: 'aperture (diameter)', min: 0, max: 0.6, step: 0.05, fmt: v => v.toFixed(2) },
         ],
         steps: { pinhole: { aperture: 0, focus: 'blue' }, middle: { aperture: 0.25, focus: 'blue' }, near: { aperture: 0.25, focus: 'red' }, wide: { aperture: 0.6, focus: 'red' } },
@@ -126,7 +133,7 @@ export const figures = {
         },
         readout(s) {
             const F = BALL_DEPTHS[['red', 'blue', 'gold'].indexOf(s.focus)]
-            return `${s.spp} sample${s.spp === 1 ? '' : 's'} a pixel · focused at ${F.toFixed(2)} (the balls are at ${BALL_DEPTHS.map(d => d.toFixed(2)).join(', ')}) · aperture ${s.aperture.toFixed(2)}${s.aperture === 0 ? ': a pinhole, everything sharp' : ''}`
+            return `${s.spp} sample${s.spp === 1 ? '' : 's'} a pixel (${s.aperture > 0 ? '48 to settle the blur' : '4 are enough: nothing to average over the lens'}) · focused at ${F.toFixed(2)} (the red, blue and gold balls are at ${BALL_DEPTHS.map(d => d.toFixed(2)).join(', ')}) · aperture ${s.aperture.toFixed(2)}, a lens radius of ${(s.aperture / 2).toFixed(3)}${s.aperture === 0 ? ': a pinhole, everything sharp' : ''}`
         },
     },
 }

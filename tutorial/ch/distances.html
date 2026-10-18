@@ -77,7 +77,7 @@
   </div>
   <figure class="fig" data-fig="field">
     <figcaption>A distance field. Drag the probe: the circle around it reaches the nearest surface, and no surface crosses
-      it. Inside a shape it is drawn red and dashed: there the distance is negative.</figcaption>
+      it. Inside a shape it is drawn <span data-say="blocked">red</span> and dashed: there the distance is negative.</figcaption>
   </figure>
 </section>
 
@@ -186,7 +186,7 @@
     <p data-step="lipschitz:lie">So if a formula ever says the nearest surface is further than it really is, the ray
       can step through it. Here is an easy way to get that wrong: take the circle's formula and squeeze it sideways, by
       half, to make an ellipse. The shape looks right. But moving one unit across now changes the formula by two: it
-      grows twice as fast as any distance can, and claims twice the room. The red circles claim to be empty and are
+      grows twice as fast as any distance can, and claims twice the room. The <span data-say="blocked">red</span> circles claim to be empty and are
       not, and the very first step lands inside the shape. Squeeze it harder and the ray steps right over it.</p>
     <p data-step="lipschitz:fix">The fix is to know how much faster than a real distance the formula can change (here:
       two, one over the squeeze) and divide by it. The steps get shorter, the ray takes one more, and every circle is
@@ -225,7 +225,7 @@
     </ul></aside>
   </div>
   <figure class="fig" data-fig="lipschitz">
-    <figcaption>A circle squeezed into an ellipse. Its raw formula claims too much empty space (red circles), and the
+    <figcaption>A circle squeezed into an ellipse. Its raw formula claims too much empty space (<span data-say="blocked">red</span> circles), and the
       ray lands inside; divided by its steepest slope, every circle is truly empty.</figcaption>
   </figure>
 </section>

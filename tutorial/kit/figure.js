@@ -12,6 +12,8 @@
 //     budget: ms,                the milliseconds of work a frame (9 unless said)
 //     changed(state, key),       optional: a control or handle moved `key` (to rebuild derived things)
 //     keep: [key, ...],          keys whose change redraws without restarting `work`
+//     hover: true,               redraw as the pointer moves (pen.pointer, pen.hover): only needed by a figure that
+//                                reads pen.pointer itself; one that calls pen.hover() or plot() is redrawn anyway
 //     orbit: true,               a 3D figure: dragging where there is no handle turns state.yaw (and state.pitch, with a
 //                                mouse; on a touch screen a vertical drag still scrolls the page), the arrow keys too
 //     readout(state) -> text }   a line under the figure, read out to screen readers
@@ -45,6 +47,8 @@ export function readTheme(el) {
         colors, rough: num('--pen-rough', 0), double: num('--pen-double', 0) > 0, width: num('--pen-width', 1.5),
         misreg: num('--pen-misreg', 0), fill: str('--pen-fill') || 'wash',
         fonts: { hand: str('--f-hand') || 'cursive', mono: str('--f-mono') || 'monospace', body: str('--f-body') || 'serif' },
+        // what the style calls each role's colour (kit.css's --say-* tokens), for a figure that names one: pen.say
+        say: Object.fromEntries(['cam', 'light', 'shadow', 'blocked', 'accent', 'soft', 'normal', 'glass'].map(r => [r, str('--say-' + r).replace(/^["']|["']$/g, '')])),
     }
 }
 
@@ -68,6 +72,7 @@ export function mountFigure(el, spec, { name = '' } = {}) {
     el.insertBefore(readout, cap)
 
     let theme = readTheme(el), W = 0, H = 0, dpr = 1, view = null, handles = [], dirty = true, raf = 0, visible = true, t0 = performance.now()
+    let pointer = null, usesPointer = !!spec.hover
     const aspect = spec.aspect ?? 1.5
 
     /* sized to its box; true if the size changed. Setting a canvas's width clears it, so an unchanged size is left alone
@@ -95,8 +100,10 @@ export function mountFigure(el, spec, { name = '' } = {}) {
         ctx.clearRect(0, 0, W, H)
         handles = []
         const pen = makePen(ctx, view, theme, handles)
+        pen.pointer = pointer
         try { spec.draw(pen, state, (performance.now() - t0) / 1000) }
         catch (e) { console.error(`figure ${name}:`, e); ctx.fillStyle = theme.colors.blocked; ctx.font = '13px monospace'; ctx.fillText('this figure failed: ' + e.message, 10, 20) }
+        usesPointer = !!spec.hover || pen.usedPointer
         if (spec.readout) readout.textContent = spec.readout(state) ?? ''
     }
     let more = false
@@ -135,7 +142,11 @@ export function mountFigure(el, spec, { name = '' } = {}) {
         state.pitch = Math.min(1.45, Math.max(0.05, (state.pitch ?? 0.3) + dy * 0.006))
         changed('orbit')
     }
+    // where the pointer is, for a figure whose last draw asked (pen.hover): a tap on a touch screen sets it too
+    const point = e => { const [x, y] = at(e); pointer = { x, y }; if (usesPointer) { dirty = true; kick() } }
+    canvas.addEventListener('pointerleave', () => { pointer = null; if (usesPointer) { dirty = true; kick() } })
     canvas.addEventListener('pointerdown', e => {
+        point(e)
         const h = nearestHandle(at(e))
         if (h && spec.drag?.[h.id]) held = h.id
         else if (spec.orbit) { held = '\u21bb'; last = at(e) }
@@ -146,7 +157,8 @@ export function mountFigure(el, spec, { name = '' } = {}) {
     canvas.addEventListener('pointermove', e => {
         if (held === '\u21bb') { const p = at(e); turn(p[0] - last[0], e.pointerType === 'touch' ? 0 : p[1] - last[1]); last = p; e.preventDefault(); return }
         if (held) { spec.drag[held](state, toWorld(at(e))); changed(held); e.preventDefault(); return }
-        canvas.style.cursor = nearestHandle(at(e)) ? 'grab' : spec.orbit ? 'move' : ''
+        canvas.style.cursor = nearestHandle(at(e)) ? 'grab' : spec.orbit ? 'move' : usesPointer ? 'crosshair' : ''
+        point(e)
     })
     const drop = () => { held = null; canvas.style.cursor = '' }
     canvas.addEventListener('pointerup', drop); canvas.addEventListener('pointercancel', drop)

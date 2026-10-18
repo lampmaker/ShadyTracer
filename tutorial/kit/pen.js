@@ -117,6 +117,30 @@ export function makePen(ctx, view, theme, handles = []) {
         view, theme, ctx, X, Y, P, col,
         /** world length in pixels, and back */
         px: l => l * s, world: p => p / s,
+        /** the style's word for a role's colour ('blue' in the notebook, 'black' in a drafting sheet), for a label */
+        say: role => theme.say?.[role] || role,
+
+        /* THE POINTER, for what answers it without a handle (a chart's values under it). figure.js sets `pointer` to
+           { x, y } in CSS pixels, or null, before each draw, and redraws on a move only if the last draw asked:
+           hover() is the asking, so a figure that never calls it is never redrawn by a mouse passing over it. */
+        pointer: null, usedPointer: false,
+        /** the pointer if it is inside `rect` ({ x, y, w, h } pixels, or the whole canvas), else null */
+        hover(rect = { x: 0, y: 0, w: view.W, h: view.H }) {
+            pen.usedPointer = true
+            const p = pen.pointer
+            return p && p.x >= rect.x && p.x <= rect.x + rect.w && p.y >= rect.y && p.y <= rect.y + rect.h ? p : null
+        },
+        /** a small box of text lines beside the pixel point (x, y), kept inside the canvas: what the pointer is on */
+        tip(x, y, lines, { size = 12 } = {}) {
+            if (!lines.length) return
+            ctx.save(); ctx.font = font('mono', size); ctx.textBaseline = 'top'
+            const w = Math.max(...lines.map(l => ctx.measureText(l).width)) + 12, h = lines.length * (size + 4) + 8
+            const bx = x + 14 + w > view.W ? x - 14 - w : x + 14, by = Math.max(2, Math.min(view.H - h - 2, y - h / 2))
+            ctx.fillStyle = col('paper'); ctx.globalAlpha = 0.92; ctx.fillRect(bx, by, w, h); ctx.globalAlpha = 1
+            ctx.strokeStyle = col('soft'); ctx.lineWidth = 1; ctx.strokeRect(bx + 0.5, by + 0.5, w - 1, h - 1)
+            ctx.fillStyle = col('ink'); lines.forEach((l, i) => ctx.fillText(l, bx + 6, by + 5 + i * (size + 4)))
+            ctx.restore()
+        },
 
         line(a, b, o = {}) { strokePx([P(a), P(b)], o) },
         poly(pts, o = {}) { strokePx(pts.map(P), o) },
