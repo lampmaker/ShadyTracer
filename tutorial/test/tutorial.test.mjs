@@ -596,6 +596,34 @@ for (const [name, { mod }] of modules) {
         && P.SKY_E === +/skyIlluminance:\s*\{ type: 'f32', def: (\d+)/.exec(sch)[1] && /const FLOOR_ALBEDO = 0\.8\b/.test(tests))
 }
 
+{
+    const K = await import('../ch/colour.js'), C = await import('../../lib/pathtracer/core/colorimetry.js')
+    // the screen's triangle is Rec.709's, from colorimetry.js's own matrix; its white D65
+    const want = [[0.64, 0.33], [0.30, 0.60], [0.15, 0.06]]
+    ok('ch.6: the triangle is Rec.709\'s primaries and its white D65, from the renderer\'s matrix', K.PRIMARIES.every((p, i) => Math.hypot(p[0] - want[i][0], p[1] - want[i][1]) < 2e-4)
+        && Math.hypot(K.D65[0] - 0.3127, K.D65[1] - 0.3290) < 2e-4)
+    // a hot body through the fit lands on the standard's line to within the fit's error, as the page says
+    const bb = T => C.xyToCctDuv(...K.lightXYZ({ mode: 'bb', T }).xy)
+    ok('ch.6: a hot body through the fitted curves reads 3024 K, Duv +0.0004, at 3000 K, and within 1% and 0.001 from 2700 to 10,000 K', Math.round(bb(3000).cct) === 3024 && bb(3000).duv.toFixed(4) === '0.0004'
+        && [2700, 4000, 6500, 10000].every(T => Math.abs(bb(T).cct / T - 1) < 0.01 && Math.abs(bb(T).duv) < 1e-3))
+    // the page's numbers, from the figures' own readouts
+    const r = (f, st) => K.figures[f].readout({ ...K.figures[f].state, ...K.figures[f].steps[st] })
+    ok('ch.6: the page\'s numbers: 6500 K is 1.042, 0.984, 1.034; the royal blue 1.452, −2.568, 35.011, clipped 1.127, 0, 10.533', r('match', 'white').includes('1.042, 0.984, 1.034')
+        && r('xy', 'blue').includes('1.452, −2.568, 35.011') && r('xy', 'blue').includes('on the screen: 1.127, 0.000, 10.533'), r('xy', 'blue'))
+    ok('ch.6: the user\'s three LEDs to 4000 K: 310.5 / 673.0 / 16.5 lm, their mix at the target; 1500 K needs −0.6 lm of blue', r('mix', 'mix').includes('red 310.5 lm + green 673.0 lm + blue 16.5 lm')
+        && r('mix', 'warm').includes('blue -0.6 lm') && r('mix', 'warm').includes('not reachable'))
+    const P = [[0.69, 0.3], [0.205, 0.7], [0.15, 0.025]], T4 = C.planckXy(4000), m = C.mixToTarget(P, T4, 1000), got = K.mixedXy(P, m.flux)
+    ok('ch.6: ...and the three lights summed have exactly the target\'s chromaticity', Math.hypot(got[0] - T4[0], got[1] - T4[1]) < 1e-12)
+    // the clip keeps luminance; a swatch never leaves 0-255
+    const blue = C.rgbFromXy(0.15, 0.025), c = C.gamutClip(blue), Y = v => 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]
+    ok('ch.6: the display\'s clip keeps the luminance and leaves no negative channel; a swatch stays in 0-255', Math.abs(Y(c) - Y(blue)) < 1e-12 && Math.min(...c) >= 0
+        && K.swatchRGB(blue).every(v => v >= 0 && v <= 255))
+    // the locus comment's "within about 3e-4": 3.8e-4 at 2856 K against the test's table
+    const REF = [[2000, 0.5267, 0.4133], [2856, 0.4476, 0.4074], [3000, 0.4369, 0.4041], [4000, 0.3805, 0.3768], [5000, 0.3451, 0.3516], [6500, 0.3135, 0.3236], [10000, 0.2807, 0.2884]]
+    const errs = REF.map(([T, x, y]) => { const p = C.planckXy(T); return Math.hypot(p[0] - x, p[1] - y) }), worst = Math.max(...errs)
+    ok('ch.6: the hot bodies\' line is 3.8e-4 from the table at worst, at 2856 K (the comment: "about 3e-4")', worst.toExponential(1) === '3.8e-4' && REF[errs.indexOf(worst)][0] === 2856, worst)
+}
+
 /* THE EXCERPT LOCATOR ON ITS OWN ----------------------------------------------------------------------------------- */
 {
     const text = [

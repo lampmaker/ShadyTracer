@@ -39,6 +39,9 @@ export const READING = [
     R('pbr', PBR, 'Physically Based Rendering: From Theory to Implementation (4th ed.)', 'free online book', 'https://pbr-book.org/4ed/contents'),
     R('pbr-radiometry', PBR, 'Physically Based Rendering (4th ed.), 4.1: Radiometry', 'free online book', 'https://pbr-book.org/4ed/Radiometry,_Spectra,_and_Color/Radiometry'),
     R('pbr-radint', PBR, 'Physically Based Rendering (4th ed.), 4.2: Working with radiometric integrals', 'free online book', 'https://pbr-book.org/4ed/Radiometry,_Spectra,_and_Color/Working_with_Radiometric_Integrals'),
+    R('pbr-color', PBR, 'Physically Based Rendering (4th ed.), 4.6: Color', 'free online book', 'https://pbr-book.org/4ed/Radiometry,_Spectra,_and_Color/Color'),
+    R('wyman2013', 'Chris Wyman, Peter-Pike Sloan, Peter Shirley', 'Simple analytic approximations to the CIE XYZ color matching functions', 'paper, Journal of Computer Graphics Techniques, 2013', 'https://jcgt.org/published/0002/02/01/', { credited: 'lib/pathtracer/core/spectral.js' }),
+    R('krystek1985', 'Michael Krystek', 'An algorithm to calculate correlated colour temperature', 'paper, Color Research and Application, 1985', null, { credited: 'lib/pathtracer/core/colorimetry.js' }),
     R('pbr-camera', PBR, 'Physically Based Rendering (4th ed.), 5.2: Projective camera models', 'free online book', 'https://pbr-book.org/4ed/Cameras_and_Film/Projective_Camera_Models'),
     R('pbr-spheres', PBR, 'Physically Based Rendering (4th ed.), 6.2: Spheres', 'free online book', 'https://pbr-book.org/4ed/Shapes/Spheres'),
     R('pbr-sampling', PBR, 'Physically Based Rendering (4th ed.), 8: Sampling and reconstruction', 'free online book', 'https://pbr-book.org/4ed/Sampling_and_Reconstruction'),
@@ -55,6 +58,10 @@ export const READING = [
     // geometry the renderer leans on
     R('wiki-photometry', 'Wikipedia', 'Photometry (optics)', 'encyclopedia article', 'https://en.wikipedia.org/wiki/Photometry_(optics)'),
     R('wiki-lambert', 'Wikipedia', 'Lambert\'s cosine law', 'encyclopedia article', 'https://en.wikipedia.org/wiki/Lambert%27s_cosine_law'),
+    R('wiki-cie1931', 'Wikipedia', 'CIE 1931 color space', 'encyclopedia article', 'https://en.wikipedia.org/wiki/CIE_1931_color_space'),
+    R('wiki-planckian', 'Wikipedia', 'Planckian locus', 'encyclopedia article', 'https://en.wikipedia.org/wiki/Planckian_locus'),
+    R('wiki-rec709', 'Wikipedia', 'Rec. 709', 'encyclopedia article', 'https://en.wikipedia.org/wiki/Rec._709'),
+    R('wiki-gamut', 'Wikipedia', 'Gamut', 'encyclopedia article', 'https://en.wikipedia.org/wiki/Gamut'),
     R('wiki-crofton', 'Wikipedia', 'Crofton formula', 'encyclopedia article', 'https://en.wikipedia.org/wiki/Crofton_formula'),
 
     // random numbers on a GPU

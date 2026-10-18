@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Colour · ShadyTracer, inside out</title>
+<link rel="stylesheet" href="../kit/kit.css">
+<script type="module" src="colour.js"></script>
+</head>
+<body data-chapter="colour">
+<p class="kit-offline">This page runs from a web server, not from a file: in the repository run <code>python3 -m http.server 8000</code> and open http://localhost:8000/tutorial/.</p>
+<main class="sheet">
+
+<header class="sheet-head">
+  <div>
+    <p class="eyebrow">Part II · What light is · Chapter 6</p>
+    <h1>Colour</h1>
+    <p class="lede">Chapter 5 measured how bright light is. A light also has a colour, and a renderer has to carry it on
+      every ray. ShadyTracer carries three numbers a ray, red, green and blue. This chapter is why three are enough for
+      the eye, what they mean exactly, why one of them can be negative, and how a light given the way a lamp's
+      datasheet gives it (a colour temperature, or a point on a chart) becomes those three.</p>
+  </div>
+  <div class="titleblock" data-auto></div>
+</header>
+
+<section class="scene" id="match">
+  <div class="prose">
+    <h2><span class="n">1</span>Three numbers for a colour</h2>
+    <p data-step="match:green">Light comes in wavelengths, from violet at about 380 nanometres to deep red at about 780,
+      and a light's <a data-g="spectrum">spectrum</a> says how much of it there is at each. The eye does not see the
+      spectrum. It has three kinds of cone cell, each sensitive to a broad range of wavelengths, and all it keeps of a
+      light is how strongly each kind responds: three numbers. Two lights with different spectra that give the same
+      three look exactly the same.</p>
+    <p data-step="match:green">In 1931 the CIE, the body that sets these standards, fixed the three, from experiments in
+      which people matched colours, as <a data-g="colour-matching">colour-matching functions</a>: x̄, ȳ and z̄, the three curves in the figure. Weigh a
+      spectrum by each curve and add up over the wavelengths, and you have its X, Y and Z, the numbers every colour
+      standard since is built on. ȳ is the eye's sensitivity to brightness, so Y is chapter 5's luminance. Here the
+      light is a narrow band of green at 530 nm (the dashed curve, its shape only): mostly ȳ, a little x̄. Slide its
+      wavelength along by its handle.</p>
+    <p data-step="match:white">Now a hot body, the glow of something heated (a lamp's filament, the sun), at 6500 K: a
+      broad spectrum over every wavelength, and three numbers close to equal. That is about what daylight's white is.
+      Its <em>exact</em> red, green and blue (the next section says what those are) come out 1.042, 0.984 and 1.034.</p>
+    <p data-step="match:warm">At 2700 K, a warm lamp, the spectrum leans to the red, and so does its colour: X is 1.11 of
+      Y, Z only 0.32.</p>
+    <p>The curves here are not the CIE's table but a fit to it, a few bell curves added together, which ShadyTracer
+      uses for its coloured coatings and prisms (chapters 10 and 11); its test holds it against published values of the
+      table. A fit has errors: a hot body at 3000 K through these curves reads 3024 K, Duv +0.0004, on the standard's
+      line of hot bodies that the next sections use.</p>
+  </div>
+  <figure class="fig" data-fig="match">
+    <figcaption>The eye's three colour-matching functions, x̄, ȳ and z̄, over the wavelengths (spectral.js's fit), and a
+      light's spectrum (dashed, scaled to fit). Top right: its colour on this screen. Choose a narrow band, its
+      wavelength (or drag its handle) and width, or a hot body and its temperature; point at the curves to read
+      them.</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="xy">
+  <div class="prose">
+    <h2><span class="n">2</span>A map of colours</h2>
+    <p data-step="xy:warm">X, Y and Z mix colour and brightness. Divide each by their sum, and the brightness drops out:
+      <var>x</var> = X / (X + Y + Z) and <var>y</var> = Y / (X + Y + Z) are a light's
+      <a data-g="chromaticity">chromaticity</a>, and every colour is one point on this map. Round its curved edge are
+      the single wavelengths of the first figure, 460 nm to 620 marked; every real light lies inside, since it is a sum
+      of them. Two lights mixed lie on the straight line between their points.</p>
+    <p data-step="xy:warm">A screen makes colours from three lights of its own, its primaries: the dashed triangle is
+      those of Rec.709, the standard ShadyTracer's red, green and blue are. The screen can show only what lies inside
+      its triangle, its <a data-g="gamut">gamut</a>. The <span data-say="light">orange</span> line is where the hot bodies lie, 1000 K at the red end
+      to 15,000 K at the blue, and the ringed dot is D65, the standard daylight white a Rec.709 screen shows for equal
+      red, green and blue. Drag the point. On the right, its red, green and blue at luminance 1, and below them what
+      the screen shows.</p>
+    <p data-step="xy:warm">The point is now on the hot bodies' line at 3000 K. A light near the line has a
+      <a data-g="cct">colour temperature</a>: the temperature of the nearest hot body. How far it is from the line is
+      its <a data-g="duv">Duv</a>, measured square to the line on an older map, CIE 1960's, where equal distances look
+      more nearly equally different. This is how lamps are specified: "3000 K, Duv 0".</p>
+    <p data-step="xy:green">Here, 4000 K at a Duv of +0.02: off the line towards green, a colour a lighting designer would
+      call greenish and a standard would reject (they allow a few thousandths).</p>
+    <p data-step="xy:blue">And here a royal-blue LED, a colour lamps really use, far outside the triangle. Its red, green
+      and blue at luminance 1 are 1.45, −2.57 and 35.0. A negative green: no amount of the screen's three lights mixes
+      to it, and the sum needs green taken away. ShadyTracer keeps that negative number on the ray. Every material
+      multiplies each channel by a number of 0 or more, which keeps sums of colours exact, so a detector turns the
+      three back into exactly the X, Y and Z the LED was given. Only the screen cannot show it, and clips it at the very
+      end, keeping its luminance: 1.13, 0 and 10.5.</p>
+    <details class="maths">
+      <summary><span class="tag">The maths</span>From a spectrum to the screen's red, green and blue</summary>
+      <div class="body">
+        <p>With <var>S</var>(λ) the spectrum, X, Y and Z are sums over the wavelengths, every nanometre here:</p>
+        <p class="eq">X = Σ <var>S</var>(λ) x̄(λ),&nbsp;&nbsp; Y = Σ <var>S</var>(λ) ȳ(λ),&nbsp;&nbsp; Z = Σ <var>S</var>(λ) z̄(λ)</p>
+        <p>Rec.709's red, green and blue are three particular X, Y, Z triples, the columns of a 3 × 3 matrix
+          <var>M</var>: a colour R, G, B is <var>M</var> times (R, G, B) in XYZ. Going back, (R, G, B) =
+          <var>M</var>⁻¹ (X, Y, Z), and nothing in that stops a channel being negative. The middle row of <var>M</var> is
+          Y: 0.2126 R + 0.7152 G + 0.0722 B, chapter 5's luminance. From a chromaticity and a luminance Y back to XYZ:
+          X = <var>x</var> Y / <var>y</var>, Z = (1 − <var>x</var> − <var>y</var>) Y / <var>y</var>.</p>
+        <p>Because all of it is a matrix times a vector, it is linear: the XYZ of two lights added is their XYZs added,
+          and so are their R, G, B. That is what makes a negative channel safe to carry, and mixing exact (section
+          3).</p>
+      </div>
+    </details>
+  </div>
+  <figure class="fig" data-fig="xy">
+    <figcaption>The chromaticity diagram, each point in the colour this screen can show nearest it: the single
+      wavelengths round the edge (in nm), the screen's Rec.709 triangle (dashed), the hot bodies' line with temperatures
+      in kelvin, D65 white (ringed), and a point you drag. Right: its exact red, green and blue at luminance 1, what the
+      screen shows after clipping, and its colour. Point at the diagram to read any colour's x, y and temperature.</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="mix">
+  <div class="prose">
+    <h2><span class="n">3</span>Mixing lights</h2>
+    <p data-step="mix:mix">A white LED lamp is often three or more coloured LEDs mixed, and the question is how much of
+      each. Because colours add as XYZ, it is one sum: the three LEDs' XYZ per lumen, times the lumens of each, must be
+      the target's XYZ. Three unknowns, three equations, solved at once. These are the LEDs of the user's own luminaire,
+      a red, a green and a royal blue (the handles), mixed to 4000 K at 1000 lumens: 310.5 lumens of red, 673.0 of
+      green and 16.5 of blue, the split the user's own colour tool gave.</p>
+    <p data-step="mix:cool">Cooler, 6500 K: more blue (30.8 lm) and green, less red. Drag an LED and the triangle and the
+      split move with it.</p>
+    <p data-step="mix:warm">Warmer, 1500 K: the target has moved outside the triangle, below the line from red to green.
+      The solve still answers, with −0.6 lumens of blue. No LED gives negative light: three lights can mix only to
+      colours inside their triangle.</p>
+  </div>
+  <figure class="fig" data-fig="mix">
+    <figcaption>Three LEDs on the chromaticity diagram (drag them by their handles), the triangle they can mix to, the
+      hot bodies' line, and the target, set by its temperature and Duv. Right: the lumens of each LED for 1000 in all,
+      by colorimetry.js's own <code>mixToTarget</code>. <strong>The user's LEDs</strong> puts them back.</figcaption>
+  </figure>
+</section>
+
+<section class="plain wide" id="engine">
+  <div class="prose">
+    <h2><span class="n">4</span>How ShadyTracer does it</h2>
+    <p>Why the renderer carries a colour this way, in the words of the file that does it:</p>
+    <pre data-src="lib/pathtracer/core/colorimetry.js" data-sym="// WHY THIS EXISTS. A light used to be a Rec.709 RGB hue and a luminance." data-to="// Only a DISPLAY has to clip, and does (gamutClip, luminance kept)."
+         data-why="'Neutral optics' are materials that treat red, green and blue alike, as clear plastic and aluminium nearly do. PMMA is acrylic. 'Additive mixing is exact in XYZ' is the maths fold-out's linearity." data-hash="1b17258b"></pre>
+    <p>A light can be given three ways, and each becomes the same thing: its exact red, green and blue, scaled so its
+      luminance is 1 (its brightness is set separately, chapter 5):</p>
+    <pre data-src="builder/lights.js" data-sym="export function lightRGB(L)" data-to="return Y > 0 ? rgb.map(v => v / Y) : [1, 1, 1]"
+         data-why="colourBy is how the light was given: 'cct' a temperature and a Duv, 'xy' a chromaticity, 'rgb' three numbers. cctDuvToXy finds the point on the hot bodies' line and steps Duv square to it; rgbFromXy is the fold-out's M⁻¹. Y is the luminance, by LUMA, the matrix's middle row." data-hash="1ecb685b"></pre>
+    <p>Where light is added into a pixel, a negative channel is let through and only a negative luminance refused:</p>
+    <pre data-src="lib/pathtracer/core/wavefront.js" data-sym="/* A NEGATIVE CHANNEL IS ALLOWED, negative LUMINANCE is not." data-to="return badFloat(c.x) || badFloat(c.y)"
+         data-why="WGSL, the graphics card's language (chapter 21). badFloat is true for infinity and 'not a number', the results of a division by zero; dot(c, LUMA) is the luminance. A deposit failing this test is dropped." data-hash="5bf9c0d9"></pre>
+    <p>And the screen clips once, a pixel at a time, keeping the luminance
+      (<cite data-src="lib/pathtracer/core/rendertoscreen.js" data-sym="/* INTO THE DISPLAY'S GAMUT, once, here:" data-to="var rgb = gamutClip(centerRGB * scale);"></cite>),
+      with this:</p>
+    <pre data-src="lib/pathtracer/core/colorimetry.js" data-sym="export function gamutClip(rgb)" data-to="return rgb.map(c => Math.max(0, Y + (c - Y) * t))"
+         data-why="lo is the most negative channel. Every channel is moved towards Y, the grey of the same luminance, by the share t that just brings lo to 0: Y + (c − Y) t keeps the luminance, because the luminance of Y in every channel is Y." data-hash="0d6d7fe5"></pre>
+    <p>The mix of section 3 is three lines: each LED's XYZ per lumen as a column, the target's XYZ, and the inverse:</p>
+    <pre data-src="lib/pathtracer/core/colorimetry.js" data-sym="export function mixToTarget(primaries, target, total = 1)" data-to="return { flux, reachable: flux.every(f => f >= -1e-9) }"
+         data-why="xyToXYZ(x, y, 1) is a light of chromaticity x, y and luminance 1: one lumen's XYZ in units where Y counts lumens. M has those three as its columns; inv3 is the inverse of a 3 × 3 matrix. −1e-9, not 0, so a flux that is 0 but for rounding still counts as reachable." data-hash="11af43ec"></pre>
+    <div data-claim="code">
+      <p><strong>A number in the comment, checked.</strong> The file's header gives its line of hot bodies as "within
+        about 3e-4 of the true locus in xy". Against the seven tabulated points its own test holds it to (which allows
+        5e-4), the furthest is 3.8 × 10⁻⁴, at 2856 K: about right, a little over.</p>
+    </div>
+  </div>
+</section>
+
+<section class="plain wide" id="tricks">
+  <div class="prose">
+    <h2><span class="n">5</span>Tricks and trade-offs</h2>
+    <p>Each is stamped with how it is known; point at a stamp to see what it means.</p>
+    <div data-claim="code">
+      <p><strong>Three channels, not a wavelength per ray.</strong> A renderer could trace one wavelength at a time and
+        turn it into a colour at the end. ShadyTracer chose not to: "a white source traced one wavelength at a time is
+        colour noise everywhere" (<code>roadmap/PLAN.md</code>, <em>Colour, the hybrid</em>, agreed 2026-09-27). Three
+        channels are exact for a light given by its chromaticity, through materials that treat the three alike. Only
+        where a material sorts wavelengths, a prism or a coloured coating, does a ray take a wavelength (chapter
+        11).</p>
+    </div>
+    <div data-claim="measured">
+      <p><strong>Exact, measured.</strong> A detector in the optics trace read back the colour each light was given
+        (the <code>optics-colour</code> test, the user's Pascal card, 2026-09-27, <code>docs/TESTING.md</code>): a 3000 K
+        light to 9 × 10⁻¹¹ in u′v′, a 6500 K one through glass 5 × 10⁻⁹, the royal blue 8 × 10⁻⁹. The LED mixes read
+        0.0012 and 0.0005, the counting noise of about 1650 blue rays: each ray comes from one LED, picked at random,
+        and the blue one gives few.</p>
+    </div>
+    <div data-claim="measured">
+      <p><strong>A colour converges after its brightness.</strong> The same three LEDs mixed to 4000 K, lighting a
+        floor in the picture (the <code>optics-light</code> test, Pascal): the first press read the right lux but 4247
+        K, from a sensor 3 × 3 pixels wide that had caught about 17 blue photons, where one standard deviation is 250 K.
+        Read over the whole frame, about a million hits, it gave 3999.9 K.</p>
+    </div>
+  </div>
+</section>
+
+<section class="plain wide" id="before">
+  <div class="prose">
+    <h2><span class="n">6</span>What went wrong before</h2>
+    <ul>
+      <li><strong>Every photon clipped.</strong> Light carried by photons was clipped into the screen's gamut as each one
+        was added to a pixel. A mix of saturated LEDs is white only if their exact colours add up; clipped one by one,
+        each lost its negative channel, and the mix shifted. Now only the screen clips, once
+        (<code>roadmap/PLAN.md</code>, <em>Colour, the hybrid</em>).</li>
+      <li><strong>A coloured light that lit its scene white.</strong> The table of light sources the optics trace reads
+        left the colour out (the comment in <code>builder/sources.js</code>).</li>
+      <li><strong>A Duv that was not one.</strong> The colour tool ShadyTracer's formulas came from measured Duv in u′v′,
+        the later map where v′ is 1.5 times the 1960 map's v, so its "0.02" was not a Duv of 0.02; ShadyTracer measures
+        it in 1960 uv, as the standard does (<code>colorimetry.js</code>'s header).</li>
+      <li><strong>A colour that could not be specified.</strong> A light used to be a red, green and blue and a
+        luminance: "fine for a picture and wrong for LED work", where a light is a chromaticity and a flux.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="plain" id="try">
+  <div class="prose">
+    <h2><span class="n">7</span>Try it</h2>
+    <ul>
+      <li>In the first figure, slide a narrow band from 450 to 650 nm. Where is its exact red negative, and where its
+        blue? Widen the band: what happens to its colour, and why?</li>
+      <li>In the second, drag the point along the edge of the triangle, then just outside it. Which channel goes
+        negative outside each side?</li>
+      <li>In the third, drag the green LED towards the hot bodies' line. Which targets can the three no longer reach?</li>
+      <li>In ShadyTracer, give a light a colour temperature (a light's colour can be set by CCT and Duv) and light a
+        white wall with it: 2700 K, then 6500 K.</li>
+    </ul>
+    <aside class="refs"><span class="tag">Read more</span><ul>
+      <li data-ref="pbr-color">Colour in a textbook renderer: spectra, XYZ, RGB colour spaces and their gamuts.</li>
+      <li data-ref="wiki-cie1931">The 1931 experiments, the colour-matching functions, and the chromaticity diagram.</li>
+      <li data-ref="wyman2013">The fit of the colour-matching functions this chapter's first figure draws, as
+        <code>spectral.js</code> credits it.</li>
+      <li data-ref="wiki-planckian">The hot bodies' line, colour temperature and Duv, with the CIE 1960 map they are
+        measured on.</li>
+      <li data-ref="krystek1985">The formula for the hot bodies' line that <code>colorimetry.js</code> uses, as it credits
+        it.</li>
+      <li data-ref="wiki-rec709">The standard behind ShadyTracer's red, green and blue: its primaries and white.</li>
+    </ul></aside>
+    <h3>Words from this chapter</h3>
+    <ul class="words" data-words="spectrum colour-matching chromaticity gamut cct duv luminance"></ul>
+  </div>
+</section>
+
+<nav class="tabs" data-auto></nav>
+</main>
+</body>
+</html>

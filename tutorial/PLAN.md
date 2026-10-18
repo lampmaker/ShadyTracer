@@ -138,7 +138,13 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
    64-bit numbers and one edge (sdf.js inSunDisc); lumens to luminance (builder/lights.js fluxFactor); the old
    unitless sun and the rim's fireflies → photometry.js, sdf.js, builder/lights.js, builder/sources.js. *Read:*
    pbr-radiometry, pbr-radint, wiki-photometry, wiki-lambert.
-6. **Colour**: cones, colour matching, xy, Rec.709, CCT and Duv → colorimetry.js.
+6. **Colour** (draft): three cones, three numbers; a narrow band or a hot body against the colour-matching functions
+   (spectral.js cmf, the fit), its XYZ, xy and exact Rec.709 RGB; the chromaticity diagram with the triangle, the hot
+   bodies' line and a point dragged to its CCT, Duv, exact and clipped RGB (colorimetry.js); three LEDs mixed by
+   mixToTarget, the user's split 310.5 / 673.0 / 16.5 lm, a target outside the triangle; the negative channel carried
+   and the display clipping once (lights.js lightRGB, wavefront.js badDeposit, rendertoscreen.js); the measured
+   colour rows; photons once clipped one by one → colorimetry.js, spectral.js, builder/lights.js. *Read:* pbr-color,
+   wiki-cie1931, wyman2013, wiki-planckian, krystek1985, wiki-rec709.
 7. **From light to pixels**: EV100, auto-exposure ("black does not vote"), tone curves, gamut clip, sRGB.
 
 **III. What surfaces do**

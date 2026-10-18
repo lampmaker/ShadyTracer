@@ -133,6 +133,13 @@ real student.
 5. Why does ShadyTracer work out the sun's disc on the main processor rather than the graphics card?
 6. What went wrong when two parts of the renderer tested "inside the sun" differently?
 
+**colour** (Colour)
+1. Why are three numbers enough to describe a colour to the eye, and where do X, Y and Z come from?
+2. What is a chromaticity, and why do two lights mixed lie on the line between them?
+3. What does a negative red, green or blue mean, and why does ShadyTracer keep it instead of clipping it?
+4. What do a colour temperature and a Duv say about a light?
+5. How are three LEDs mixed to a target colour, and when can they not reach it?
+
 **emitters** (Every glowing thing is a light)
 1. How does the renderer find glowing shapes nobody told it about?
 2. Why is the picture right even before a glowing shape has been found?
