@@ -35,6 +35,7 @@ export const READING = [
     // ray tracing from nothing, and from everything
     R('rtiow', RT, 'Ray Tracing in One Weekend', 'free online book', 'https://raytracing.github.io/books/RayTracingInOneWeekend.html'),
     R('rtrest', RT, 'Ray Tracing: The Rest of Your Life', 'free online book', 'https://raytracing.github.io/books/RayTracingTheRestOfYourLife.html'),
+    R('pbr', PBR, 'Physically Based Rendering: From Theory to Implementation (4th ed.)', 'free online book', 'https://pbr-book.org/4ed/contents'),
     R('pbr-camera', PBR, 'Physically Based Rendering (4th ed.), 5.2: Projective camera models', 'free online book', 'https://pbr-book.org/4ed/Cameras_and_Film/Projective_Camera_Models'),
     R('pbr-spheres', PBR, 'Physically Based Rendering (4th ed.), 6.2: Spheres', 'free online book', 'https://pbr-book.org/4ed/Shapes/Spheres'),
     R('pbr-sampling', PBR, 'Physically Based Rendering (4th ed.), 8: Sampling and reconstruction', 'free online book', 'https://pbr-book.org/4ed/Sampling_and_Reconstruction'),

@@ -28,7 +28,9 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   photons, haze, the GPU and wavefront tracing, to every speed trick and how its cost was measured. Each chapter has the
   same shape: the question, the idea with a live figure, the maths in a fold-out, the real code, the tricks stamped
   measured / read in code / inferred, what went wrong before, things to try.
-- **Written as drafts:** chapter 1, *Rays make a picture*; chapter 2, *Shapes as distances*; chapter 14, *Aim at the
+- **Written as drafts:** chapter 0, *How to read this* (a chapter's parts, the figure key, why the flat world's light
+  falls as 1/r and 3D's as 1/r², excerpts and stamps, where a measured number comes from, running the program and its
+  tests); chapter 1, *Rays make a picture*; chapter 2, *Shapes as distances*; chapter 14, *Aim at the
   light* (next event estimation); the contents map; a glossary of 82 terms, each linked from the pages with a card on
   hover or tap.
 - **The kit** (`tutorial/kit/`): one pen draws every figure in the style's colours and line; a figure is a spec with
@@ -87,6 +89,11 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   is still aligned"): a new section in CLAUDE.md makes it part of every PR. `node tutorial/review/affected.mjs` lists the
   chapters a branch touches: excerpts whose lines changed, citations, modules a figure runs, and chapters, planned
   ones too, that are about a changed file (`code` in `kit/chapters.js`, each path checked to exist).
+- **A stamp written into a sentence, found and fixed:** `tutorial/stamp.mjs` took the first `>` after `<pre` as the
+  tag's end, and chapter 2's excerpt of the 2D distance functions says `(x, y) => …` in its note, so the stamp went
+  into the note and the page showed `data-hash="…">` in the middle of it. A tag now ends at the first `>` outside quotes
+  (the stamper, `affected.mjs` and the test alike), the test stamps a page with such a note, and every page is checked
+  for an attribute written inside another.
 - **Checked:** `node tutorial/test/tutorial.test.mjs` (in CI) holds the pages, links, glossary and excerpts to the
   contents and today's source, draws every figure and step into a recording canvas, and tests the flat world against
   2D closed forms (a point light's I h / (x² + h²), a lamp's L (sin φ₂ − sin φ₁), a room traced with and without NEE

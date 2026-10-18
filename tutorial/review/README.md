@@ -58,6 +58,15 @@ real student.
 
 ## The questions, by page
 
+**reading** (How to read this)
+1. What are the parts of a chapter, and which can you skip on a first reading?
+2. A paragraph has a dot beside it. What does it do?
+3. Why does the light from a lamp fall off as 1/r in the flat world but as 1/r² in 3D?
+4. A piece of code on a page says "changed since this page was checked". What does that tell you?
+5. What is the difference between a claim stamped *measured* and one stamped *read in code*?
+6. Why are speed numbers never measured on a computer without a graphics card?
+7. What do you need to run ShadyTracer yourself, and what do you type?
+
 **rays** (Rays make a picture)
 1. Why does a ray tracer usually start its rays at the eye instead of at the lamp?
 2. What decides which direction a pixel's ray points in?

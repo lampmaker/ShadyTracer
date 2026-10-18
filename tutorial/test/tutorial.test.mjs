@@ -31,7 +31,8 @@ const notes = []
 const walk = d => readdirSync(d).flatMap(f => { const p = join(d, f); return statSync(p).isDirectory() ? (f === 'test' ? [] : walk(p)) : [p] })
 const pages = walk(TUT).filter(f => f.endsWith('.html'))
 const attrsOf = s => { const a = {}; for (const m of s.matchAll(/([\w-]+)="([^"]*)"/g)) a[m[1]] = m[2].replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&'); return a }
-const tags = html => [...html.matchAll(/<([a-zA-Z][\w-]*)\b([^>]*)>/g)].map(m => ({ tag: m[1].toLowerCase(), attrs: attrsOf(m[2]), raw: m[2] }))
+// a tag ends at the first > outside quotes: an attribute may hold one (a data-why writing `=>`)
+const tags = html => [...html.matchAll(/<([a-zA-Z][\w-]*)\b((?:[^>"]|"[^"]*")*)>/g)].map(m => ({ tag: m[1].toLowerCase(), attrs: attrsOf(m[2]), raw: m[2] }))
 
 /* THE CONTENTS ----------------------------------------------------------------------------------------------------- */
 ok('chapter ids are unique', new Set(CHAPTERS.map(c => c.id)).size === CHAPTERS.length)
@@ -118,6 +119,19 @@ for (const g of GLOSSARY) {
     ok(`glossary "${g.id}": its sources are in the reading list`, (g.read ?? []).every(id => reading(id)), (g.read ?? []).join(' '))
 }
 
+/* THE STAMPER: a tag ends at the first > outside quotes, so a data-why writing `=>` keeps its words, and a second
+   stamp replaces the attribute, not text that looks like one ------------------------------------------------------ */
+{
+    const { stampPage } = await import('../stamp.mjs')
+    const file = 'one\ntwo\nthree\n', read = () => file
+    const page = '<pre data-src="x.js" data-sym="two" data-why="f = (x) => x"></pre>'
+    const once = stampPage(page, read).html, h = locate(file, optionsOf(k => ({ 'data-sym': 'two' })[k])).hash
+    ok('stamp: the hash goes at the end of the tag, not into a > inside an attribute', once === `<pre data-src="x.js" data-sym="two" data-why="f = (x) => x" data-hash="${h}"></pre>`, once)
+    const stale = '<pre data-src="x.js" data-sym="two" data-why="a data-hash=&quot;0&quot; b" data-hash="0"></pre>'
+    ok('stamp: a stale hash replaced in its attribute only', stampPage(stale, read).html === `<pre data-src="x.js" data-sym="two" data-why="a data-hash=&quot;0&quot; b" data-hash="${h}"></pre>`, stampPage(stale, read).html)
+    ok('stamp: a stamped page unchanged', stampPage(once, read).changed === 0 && stampPage(once, read).html === once)
+}
+
 /* THE PAGES ------------------------------------------------------------------------------------------------------- */
 const KNOWN = new Set(['data-g', 'data-ch', 'data-fig', 'data-step', 'data-src', 'data-sym', 'data-nth', 'data-in', 'data-to', 'data-max', 'data-doc',
     'data-why', 'data-hash', 'data-claim', 'data-auto', 'data-words', 'data-chapter', 'data-open-style', 'data-style', 'data-ref'])
@@ -138,6 +152,9 @@ for (const f of pages) {
         try { mod = await import(pathToFileURL(p).href) } catch (e) { ok(`${name}: its module imports in node`, false, e.stack?.split('\n').slice(0, 3).join(' | ')) }
         modules.set(name, { mod, path: p })
     }
+    // a stamp written into an attribute's text (stamp.mjs once ended a tag at the > of a data-why's `=>`)
+    ok(`${name}: no attribute's text holds an attribute`, !T.some(t => Object.values(t.attrs).some(v => /\bdata-[\w-]+="/.test(v))),
+        T.flatMap(t => Object.values(t.attrs).filter(v => /\bdata-[\w-]+="/.test(v))).join(' | ').slice(0, 200))
     for (const t of T) {
         for (const k of Object.keys(t.attrs)) if (k.startsWith('data-')) ok(`${name}: data-* attributes are the kit's`, KNOWN.has(k), `<${t.tag} ${k}>`)
         const a = t.attrs
@@ -182,7 +199,7 @@ for (const f of pages) {
     }
     if (name.startsWith('ch/')) ok(`${name}: says where its ideas come from (a reading box)`, html.includes('<aside class="refs">'))
     // a file:line typed by hand goes stale: every one is a <cite data-src data-sym>
-    const typed = [...html.replace(/<(pre|cite)\b[^>]*>/g, '').matchAll(/\b[\w./-]+\.(?:js|mjs|md|css|html):\d+/g)].map(m => m[0])
+    const typed = [...html.replace(/<(pre|cite)\b(?:[^>"]|"[^"]*")*>/g, '').matchAll(/\b[\w./-]+\.(?:js|mjs|md|css|html):\d+/g)].map(m => m[0])
     ok(`${name}: no file:line typed by hand`, !typed.length, typed.join(' '))
 }
 

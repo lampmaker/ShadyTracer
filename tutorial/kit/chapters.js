@@ -30,8 +30,8 @@ const C = (part, id, title, line, status = 'planned', code = []) => ({ part, id,
 const P = 'lib/pathtracer/', K = 'lib/pathtracer/core/'
 
 export const CHAPTERS = [
-    C('start', 'reading', 'How to read this', 'What the figures, stamps and fold-outs mean; running the program and its tests.', 'planned',
-        [`${P}tests.js`, 'docs/TESTING.md']),
+    C('start', 'reading', 'How to read this', 'What the figures, stamps and fold-outs mean; running the program and its tests.', 'draft',
+        [`${P}tests.js`, 'docs/TESTING.md', `${K}check-shaders.mjs`, '.github/workflows/test.yml', 'tutorial/kit/legend.js']),
 
     C('rays', 'rays', 'Rays make a picture', 'How a picture is made by sending a ray through every pixel, and why from the eye.', 'draft',
         [`${K}genrays.js`, 'lib/camera.js']),

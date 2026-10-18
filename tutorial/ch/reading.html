@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>How to read this · ShadyTracer, inside out</title>
+<link rel="stylesheet" href="../kit/kit.css">
+<script type="module" src="reading.js"></script>
+</head>
+<body data-chapter="reading">
+<p class="kit-offline">This page runs from a web server, not from a file: in the repository run <code>python3 -m http.server 8000</code> and open http://localhost:8000/tutorial/.</p>
+<main class="sheet">
+
+<header class="sheet-head">
+  <div>
+    <p class="eyebrow">Start here · Chapter 0</p>
+    <h1>How to read this</h1>
+    <p class="lede">What the parts of every chapter are for, how to read a figure, a stamp and a piece of code, and how
+      to run ShadyTracer and its tests yourself, so that you can check what the chapters say against the real
+      thing.</p>
+  </div>
+  <div class="titleblock" data-auto></div>
+</header>
+
+<section class="plain" id="what">
+  <div class="prose">
+    <h2><span class="n">1</span>What this tutorial is</h2>
+    <p>ShadyTracer is a <a data-g="renderer">renderer</a>: a program that makes pictures of 3D scenes, in a web
+      browser, on the graphics card. This tutorial explains how it works inside, from the first ray to every trick
+      that makes it fast, for someone who wants to understand its code, build a renderer of their own, or improve this
+      one. It sits beside the program and is not part of it.</p>
+    <p>It is not a manual. How to <em>use</em> ShadyTracer (build a scene, light it, render it) is in the program's own
+      Help: press <strong>F1</strong>, or open <strong>Help › Contents</strong>.</p>
+    <p>Every chapter has the same parts, in the same order:</p>
+    <ol>
+      <li><strong>The question</strong>, in a line and a picture.</li>
+      <li><strong>The idea</strong>, in plain words beside a live figure. Paragraphs with a dot beside them move the
+        figure when you scroll to them, or click them.</li>
+      <li><strong>The maths</strong>, folded away in a box. Every chapter reads without it: open it when you want the
+        real equation, with every letter named.</li>
+      <li><strong>How ShadyTracer does it</strong>: pieces of its real code.</li>
+      <li><strong>Tricks and trade-offs</strong>, each stamped with how sure it is (section 5).</li>
+      <li><strong>What went wrong before</strong>: the bugs the code's own comments tell, and why the code looks the
+        way it does because of them.</li>
+      <li><strong>Try it</strong>: things to do in the figures, and in ShadyTracer.</li>
+      <li><strong>Words from this chapter</strong>, and boxes with <strong>where to read more</strong>: the books and
+        articles the ideas come from.</li>
+    </ol>
+    <details class="maths">
+      <summary><span class="tag">The maths</span>What a fold-out looks like</summary>
+      <div class="body">
+        <p>Like this: the equation, then each part of it named. For example, the brightness a lamp gives a surface
+          straight in front of it, <var>r</var> away, in 3D:</p>
+        <p class="eq"><var>E</var> = <span class="frac"><span><var>I</var></span><span><var>r</var><sup>2</sup></span></span></p>
+        <dl class="terms">
+          <dt>E</dt><dd>the light arriving on each bit of the surface (its <a data-g="irradiance">irradiance</a>)</dd>
+          <dt>I</dt><dd>how strongly the lamp shines (its <a data-g="intensity">intensity</a>)</dd>
+          <dt>r</dt><dd>the distance; why it is squared is the next section</dd>
+        </dl>
+      </div>
+    </details>
+  </div>
+</section>
+
+<section class="scene" id="figures">
+  <div class="prose">
+    <h2><span class="n">2</span>Reading a figure</h2>
+    <p>The figures are drawn and computed in your browser while you read: each one is a small renderer of its own,
+      written to follow ShadyTracer's rules, and where ShadyTracer has a piece of JavaScript that does the job (a shape,
+      a blend, a random number generator, a lens), the figure runs that very code.</p>
+    <p>Within a style, the same colour and line mean the same thing in every figure. This is the key, drawn in the style
+      you are reading in. A circled cross (⊕) is a handle: drag it with the mouse or a finger, or click it and use the
+      arrow keys. A figure that is three-dimensional turns when you drag its background.</p>
+    <p>Below each figure: its controls (sliders, switches), and a line of text, its readout, that says in numbers what
+      the figure is showing now. When a paragraph says "the readout", it means that line.</p>
+  </div>
+  <figure class="fig" data-fig="key">
+    <figcaption>The key: a <a data-g="camera-ray">camera ray</a>, a lamp's light, a <a data-g="shadow-ray">shadow
+      ray</a>, a blocked ray, a <a data-g="normal">normal</a>, a step of the <a data-g="march">march</a>, a solid shape,
+      and a handle.</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="flat">
+  <div class="prose">
+    <h2><span class="n">3</span>The flat world</h2>
+    <p data-step="spread:near">Most figures show a slice of a scene, seen from the side: a <a data-g="flatland">flat
+      world</a>. A slice can be drawn whole, and its shapes dragged. The ideas are the same as in ShadyTracer's 3D
+      scenes, but a few numbers are not, and this figure shows why. A lamp sends its light out in every direction. In
+      the flat world it spreads around a circle; in 3D, over a sphere.</p>
+    <p data-step="spread:far">Drag the handle out to twice the distance. The circle is twice as long, so the same piece
+      of surface catches half the rays: the light falls as 1/<var>r</var>. A sphere twice as far has four times the
+      area, so in 3D the same piece gets a quarter: 1/<var>r</var>². The flat world's light weakens more slowly than
+      the real world's.</p>
+    <p>The same happens to every law with a direction in it. A matte surface sends its light back over a half-circle in
+      the flat world and over a half-sphere in 3D, so its numbers differ too (½ in one, 1/π in the other: chapter 8).
+      Wherever a formula changes between flat and 3D, the page says so, and the figures that need the real laws are
+      3D.</p>
+  </div>
+  <figure class="fig" data-fig="spread">
+    <figcaption>A lamp's light spreading. Left, the flat world: 36 rays, and a piece of surface (the thick arc at the
+      top of the dashed circle) catching some of them, drawn bold; drag the handle (⊕) to move the piece further away.
+      Right, 3D: the same light over a sphere, the same piece on it.</figcaption>
+  </figure>
+</section>
+
+<section class="plain wide" id="code">
+  <div class="prose">
+    <h2><span class="n">4</span>Reading the code</h2>
+    <p>Code is never copied into a page. Each piece is named (a file and a function, or a line it starts with), and
+      your browser reads it from ShadyTracer's own files when the page opens, so it is the code as it is today. Above
+      it: the file and its lines (a link to them on GitHub), the language, and a line of plain words saying what to
+      look for. Here is one, from the file that holds ShadyTracer's version number:</p>
+    <pre data-src="version.js" data-sym="Why both: every number that decided anything here" data-to="this names the whole page, in every result, report and file."
+         data-why="Why the program knows exactly which version of its code is running: a number measured on someone's graphics card is only worth what is known about the code that made it." data-hash="f26cae82"></pre>
+    <p>ShadyTracer's code is in two languages. The parts that run on the main processor are JavaScript. The parts the
+      graphics card runs are <a data-g="kernel">kernels</a> written in <a data-g="wgsl">WGSL</a>, which sit inside the
+      JavaScript files as long pieces of text. A label above each piece says which it is.</p>
+    <p>A short reference to a line, such as
+      <cite data-src="version.js" data-sym="export const VERSION ="></cite>, is a file name and a line number: follow it
+      to see that line. Each piece of code was checked against the words around it when the page was written. If the
+      code has changed since, the page says so above the piece ("changed since this page was checked"), and the words
+      may no longer fit.</p>
+    <p>The comments in ShadyTracer's code are long, and they matter: they say <em>why</em> the code is written as it is,
+      often by telling what went wrong before. The chapters quote them, and say so when a comment has gone out of date.</p>
+  </div>
+</section>
+
+<section class="plain wide" id="stamps">
+  <div class="prose">
+    <h2><span class="n">5</span>How sure is each claim?</h2>
+    <p>The people who write ShadyTracer hold every statement to one question: do I <em>know</em> this, or do I
+      <em>think</em> it? Wherever it matters, the chapters say which, with a stamp. Point at a stamp to see its card.</p>
+    <div data-claim="measured">
+      <p><strong>Measured</strong>: someone ran it on a real graphics card and wrote the number down. The page says who,
+        on which card, the number, and where it is recorded. Chapter 14's cost of shadow rays is one.</p>
+    </div>
+    <div data-claim="code">
+      <p><strong>Read in code</strong>: the code does this, and the page links the line. It says what the code
+        <em>does</em>, never what it costs: how long something takes is only ever measured.</p>
+    </div>
+    <div data-claim="inferred">
+      <p><strong>Inferred</strong>: a reasonable guess, not yet tested, written as a guess. The page says what would test
+        it.</p>
+    </div>
+    <p>Why not measure speed on any computer? Because ShadyTracer's speed is the graphics card's, and a computer without
+      one can only imitate it, slowly and differently. So every number about speed comes from someone's own card. They
+      open ShadyTracer, choose <strong>View › Tests</strong> and press a test's button; a table of results appears
+      with a <strong>Copy</strong> button, and that table is pasted back into the project's notes. Its first line names
+      the exact code it ran, because the test bench writes it there:</p>
+    <pre data-src="lib/pathtracer/tests.js" data-sym="/* WHICH BUILD, when the host says" data-to="timing wall clock`"
+         data-why="The line at the top of every table of results: the version and revision of the code, the picture's size, and the graphics card." data-hash="50007e59"></pre>
+    <p>The tests themselves are rows in one file, <code>lib/pathtracer/tests.js</code>, so a new measurement is a new
+      row, not a new program (<a href="https://github.com/lampmaker/ShadyTracer/blob/main/docs/TESTING.md">docs/TESTING.md</a>
+      says why).</p>
+  </div>
+</section>
+
+<section class="plain wide" id="run">
+  <div class="prose">
+    <h2><span class="n">6</span>Running ShadyTracer</h2>
+    <p>The quickest way is the published copy: open <a href="https://lampmaker.github.io/ShadyTracer/">lampmaker.github.io/ShadyTracer</a>
+      in a browser with <a data-g="webgpu">WebGPU</a>. To run your own copy, and read and change its code:</p>
+    <pre class="cmd">git clone --recursive https://github.com/lampmaker/ShadyTracer.git
+cd ShadyTracer
+python3 -m http.server 8000</pre>
+    <p>and open <code>http://localhost:8000/</code>. What it needs:</p>
+    <ul>
+      <li><strong>A browser with WebGPU</strong>: Chrome or Edge 113 or later, Firefox 141 or later on Windows, or
+        Safari 26 or later.</li>
+      <li><strong>A real graphics card.</strong> The results in these chapters were measured on NVIDIA cards.</li>
+      <li><strong>A web server</strong>, even the one-line one above: opened straight from the disk
+        (<code>file://</code>), the page does not work, because WebGPU needs a secure context and
+        <code>localhost</code> counts as one (ShadyTracer's README). This tutorial is served the same way:
+        <code>http://localhost:8000/tutorial/</code>.</li>
+      <li><strong><code>--recursive</code></strong>: two of the libraries it needs are separate repositories inside it.
+        In a copy made without it, <code>git submodule update --init</code> fetches them.</li>
+    </ul>
+    <p>Nothing is built or installed: the files in the repository are the program. If a scene you made stops the program
+      from starting, add <code>?safe</code> to the address: it starts without compiling your scene (and does so by
+      itself after a start that never finished).</p>
+  </div>
+</section>
+
+<section class="plain wide" id="tests">
+  <div class="prose">
+    <h2><span class="n">7</span>Running the tests</h2>
+    <p>Most of what can be checked without a graphics card is, by small programs run with <code>node</code>. They come
+      in three kinds, by the end of their name:</p>
+    <ul>
+      <li><code>*.test.mjs</code>: plain checks, no graphics card. Every pull request runs all of them on GitHub, and so
+        should you before you change anything: the list is in <code>CLAUDE.md</code>, and the check on GitHub reads it
+        from there (<cite data-src=".github/workflows/test.yml" data-sym="for t in lib/pathtracer/core/check-shaders.mjs"></cite>).</li>
+      <li><code>*.gpu.mjs</code>: run the real kernels on a graphics card simulated in software (they need the
+        <code>webgpu</code> package for node). Slow, and a check of correctness, never of speed.</li>
+      <li><code>*.check.mjs</code>: open pages in a browser with no window (they need Playwright).</li>
+    </ul>
+    <p>And one more, to run before every change: <code>node lib/pathtracer/core/check-shaders.mjs</code>. It loads every
+      kernel against every example scene and checks what a browser would otherwise only find when the page fails to
+      start. Its first comment says why it exists:</p>
+    <pre data-src="lib/pathtracer/core/check-shaders.mjs" data-sym="/* A BACKTICK IN A WGSL COMMENT ENDS THE SHADER" data-to="that simply never renders."
+         data-why="A kernel is a piece of text inside JavaScript, between backticks. A backtick typed inside it ends the text early, and the error shows up somewhere else entirely." data-hash="8d46fd7c"></pre>
+    <p>This tutorial has its own checks: <code>node tutorial/test/tutorial.test.mjs</code> (run on GitHub with the
+      others) holds every page, link, glossary word and piece of code to today's files and tests the figures' renderers
+      against answers worked out by hand; <code>node tutorial/test/pages.check.mjs</code> opens every page in every
+      style. And <code>node tutorial/review/affected.mjs</code> lists the chapters a change to ShadyTracer touches, so
+      the tutorial is read again whenever the code it explains changes.</p>
+    <aside class="refs"><span class="tag">Read beside this tutorial</span><ul>
+      <li data-ref="rtiow">Builds a small ray tracer from nothing, step by step, in C++: the friendliest place to try what
+        these chapters explain with your own code.</li>
+      <li data-ref="pbr">The textbook renderers are built from, free online: every idea in this tutorial, done fully,
+        with the maths and the code of a complete renderer. Where a chapter here stops, it goes on.</li>
+    </ul></aside>
+  </div>
+</section>
+
+<section class="plain" id="try">
+  <div class="prose">
+    <h2><span class="n">8</span>Try it</h2>
+    <ul>
+      <li>In the flat world figure, put the circle at 1.0 and then at 2.0. Count the bold rays that reach the piece each
+        time (the readout counts them too).</li>
+      <li>Open ShadyTracer, press F1, and find the page on signed distance functions. Then read chapter 2 here: the
+        Help says how to use them, the chapter how they work.</li>
+      <li>In your own copy, run <code>node lib/pathtracer/core/check-shaders.mjs</code>. Then put a backtick in a
+        comment inside a kernel, run it again, and see what it says. Take the backtick out.</li>
+    </ul>
+    <h3>Words from this chapter</h3>
+    <ul class="words" data-words="renderer flatland irradiance intensity camera-ray shadow-ray normal march kernel wgsl webgpu claim-measured claim-code claim-inferred"></ul>
+  </div>
+</section>
+
+<nav class="tabs" data-auto></nav>
+</main>
+</body>
+</html>

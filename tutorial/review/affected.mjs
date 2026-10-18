@@ -33,7 +33,9 @@ export function ties() {
     for (const f of walk(TUT).filter(f => f.endsWith('.html'))) {
         const page = relative(TUT, f), html = readFileSync(f, 'utf8')
         const chapter = /<body[^>]*data-chapter="([^"]*)"/.exec(html)?.[1] || null
-        for (const m of html.matchAll(/<(pre|cite)\b([^>]*\bdata-src="[^"]*"[^>]*)>/g)) {
+        // a tag ends at the first > outside quotes (a data-why may write `=>`)
+        for (const m of html.matchAll(/<(pre|cite)\b((?:[^>"]|"[^"]*")*)>/g)) {
+            if (!/\bdata-src="/.test(m[2])) continue
             const a = attrsOf(m[2]), tie = { page, chapter, kind: m[1] === 'pre' ? 'excerpt' : 'citation', file: a['data-src'], sym: a['data-sym'] }
             try { const hit = locate(readFileSync(join(REPO, tie.file), 'utf8'), optionsOf(k => a[k])); Object.assign(tie, { first: hit.first, last: m[1] === 'pre' ? hit.last : hit.first }) }
             catch (e) { tie.missing = e.message }
@@ -56,7 +58,9 @@ export function ties() {
 export function affected(changes, all = ties()) {
     const hits = []
     for (const ch of changes) {
-        if (ch.file.startsWith('tutorial/')) continue
+        // version.js: every PR raises VERSION, so it would list chapter 0 every time; the stamp on chapter 0's
+        // excerpt of it (tutorial.test.mjs) still says when the lines shown change
+        if (ch.file.startsWith('tutorial/') || ch.file === 'version.js') continue
         for (const t of all) {
             const same = t.kind === 'about' && t.file.endsWith('/') ? ch.file.startsWith(t.file) : ch.file === t.file
             if (!same) continue

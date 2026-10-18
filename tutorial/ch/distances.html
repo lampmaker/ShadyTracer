@@ -236,7 +236,7 @@
     <p>The figures above use the help's own 2D distance functions, which are written to match the renderer's 3D ones in
       <code>sdf.js</code>:</p>
     <pre data-src="help/widgets.js" data-sym="const circle" data-to="}" data-doc="yes"
-         data-why="A circle is one subtraction. A box, hx and hy its half-width and half-height: fold the point into one corner (abs), measure how far it is past each side (dx, dy, negative if not past it). Outside both sides: the distance to the corner, by Pythagoras. Outside one: the distance past that side (the other is clipped to 0 by max). Inside: the larger of the two, both negative, the nearest side. len is the length of an arrow; (x, y) = data-hash="dd9359d6"> … is JavaScript for a function of x and y." data-hash="dd9359d6"></pre>
+         data-why="A circle is one subtraction. A box, hx and hy its half-width and half-height: fold the point into one corner (abs), measure how far it is past each side (dx, dy, negative if not past it). Outside both sides: the distance to the corner, by Pythagoras. Outside one: the distance past that side (the other is clipped to 0 by max). Inside: the larger of the two, both negative, the nearest side. len is the length of an arrow; (x, y) => … is JavaScript for a function of x and y." data-hash="dd9359d6"></pre>
     <p>In the renderer, sphere tracing is the <code>march</code> kernel, written in <a data-g="wgsl">WGSL</a>, the
       language of programs for the graphics card. The GPU runs it for thousands of rays at once, each on one of its
       workers (a <a data-g="thread">thread</a>), and each runs this loop. <code>sceneAt</code> asks

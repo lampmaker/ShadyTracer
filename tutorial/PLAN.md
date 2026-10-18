@@ -103,8 +103,11 @@ Status: **draft** = written this round, for judging the direction; everything el
 chapter teaches → its main figure → the code it walks through. *Read:* the sources its reading boxes will name (ids in
 `kit/reading.js`; a source not yet in the list is named in words, and goes in once its link is checked).
 
-**Start here**: Contents (the map) · Glossary · **0. How to read this** (the figure legend, the stamps, fold-outs,
-excerpts; running the app and its tests).
+**Start here**: Contents (the map) · Glossary · **0. How to read this** (draft): a chapter's eight parts, fold-outs,
+the figure key, the flat world's 1/r against 3D's 1/r² (a lamp's rays caught by a piece of surface, drag the distance),
+excerpts and their stamps of staleness, the three stamps and where a measured number comes from (View › Tests, its
+first line), running the app and its tests → version.js, tests.js's result header, check-shaders.mjs's first comment,
+the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
 
 **I. Seeing with rays**
 1. **Rays make a picture** (draft): pinhole camera, one ray per pixel, tracing from the eye, shadow rays, the cosine
