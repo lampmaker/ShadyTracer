@@ -66,8 +66,8 @@ export const CHAPTERS = [
         [`${K}tracebasics.js`, `${K}materials_pbr.js`]),
     C('paths', 'mis', 'Two ways to the light', 'Two ways of finding light, combined without counting it twice.', 'draft',
         [`${K}tracebasics.js`, `${K}materials_pbr.js`]),
-    C('paths', 'emitters', 'Every glowing thing is a light', 'Finding the glowing surfaces in a scene, so they can be aimed at too.', 'planned',
-        [`${K}tracebasics.js`]),
+    C('paths', 'emitters', 'Every glowing thing is a light', 'Finding the glowing surfaces in a scene, so they can be aimed at too.', 'draft',
+        [`${K}tracebasics.js`, `${K}materials_pbr.js`, `${K}wavefront.js`]),
     C('paths', 'lens', 'The camera\'s lens', 'A camera with a lens: focus and blur.', 'planned',
         [`${K}lens.js`]),
 

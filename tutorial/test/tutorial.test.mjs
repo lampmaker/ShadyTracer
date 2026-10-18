@@ -508,6 +508,24 @@ for (const [name, { mod }] of modules) {
         w('rough').includes('weights 0.99 for the lamp') && w('sharp').includes('1.00 for the plate'), [w('rough'), w('sharp')].join(' | '))
 }
 
+{
+    const E = await import('../ch/emitters.js'), tb = readFileSync(join(REPO, 'lib/pathtracer/core/tracebasics.js'), 'utf8')
+    const K = +/const LUM_K: f32 = ([\d.]+);/.exec(tb)[1], decay = +/const LUM_DECAY: u32 = (\d+)u;/.exec(tb)[1]
+    ok('ch.16: the log code\'s constants are tracebasics.js\'s: 2^24 / 80 codes a stop, a tenth\'s fade', K === E.LUM_K && decay === Math.round(-Math.log2(0.9) * K)
+        && /lumEncode\(lum: f32\) -> u32 \{ return u32\(clamp\(log2\(max\(lum, 1e-30\)\) \+ 40\.0, 0\.0, 80\.0\) \* LUM_K\) \+ 1u; \}/.test(tb))
+    ok('ch.16: the log code keeps order and comes back within a step (4.8e-6 of a stop), 1e-12 to 1e12', [1e-12, 1e-3, 1, 2e4, 1.6e9, 1e12].every((v, i, a) =>
+        Math.abs(Math.log2(E.lumDecode(E.lumEncode(v)) / v)) <= 80 / 2 ** 24 && (i === 0 || E.lumEncode(v) > E.lumEncode(a[i - 1]))) && Math.abs(80 / 2 ** 24 - 4.77e-6) < 1e-8)
+    ok('ch.16: the old code: 0 below 1/16, the same for everything from 1e5 up', E.oldCode(0.05) === 0 && E.oldCode(1e5) === E.oldCode(1.6e9))
+    const c = E.crofton(1, 40000)
+    ok('ch.16: random lines cross each shape as its length predicts, within 4 counting errors', E.CROFTON_SHAPES.every((sh, k) => Math.abs(c.count[k] - c.n * sh.len / (Math.PI * E.RC)) < 4 * Math.sqrt(c.n * sh.len / (Math.PI * E.RC))),
+        c.count.join(' '))
+    const BINS = 12, h = new Array(BINS).fill(0); for (const cs of c.cosines) h[Math.min(BINS - 1, Math.floor(Math.acos(Math.min(1, cs)) / (Math.PI / 2) * BINS))]++
+    ok('ch.16: ...at angles spread as a matte surface\'s cosine', h.every((v, i) => Math.abs(v / c.cosines.length - (Math.sin((i + 1) * Math.PI / 24) - Math.sin(i * Math.PI / 24))) < 0.006))
+    const d = E.discover(2, 1), d8 = E.discover(2, 8)
+    ok('ch.16: the first sample finds the ball (28 hits) and the bar behind the wall (2)', E.figures.discovery.readout({ seed: 2, samples: 1 }).includes('the ball: 28 hits') && E.figures.discovery.readout({ seed: 2, samples: 1 }).includes('the bar behind the wall: 2 hits'), E.figures.discovery.readout({ seed: 2, samples: 1 }))
+    ok('ch.16: cells only gain hits as samples add up', d8.cells.size >= d.cells.size)
+}
+
 /* THE EXCERPT LOCATOR ON ITS OWN ----------------------------------------------------------------------------------- */
 {
     const text = [

@@ -124,6 +124,12 @@ real student.
 4. Why did a glass ball once cast a plain shadow?
 5. Why must both strategies use the same material, and what happened when they did not?
 
+**emitters** (Every glowing thing is a light)
+1. How does the renderer find glowing shapes nobody told it about?
+2. Why is the picture right even before a glowing shape has been found?
+3. How can random lines start light from the surface of a shape the renderer knows nothing about?
+4. Why is the brightness kept as a logarithm, and what went wrong with the old code?
+
 **nee** (Aim at the light)
 1. Why does a picture lit by a small lamp stay noisy for a long time?
 2. What does next event estimation do at each bounce?

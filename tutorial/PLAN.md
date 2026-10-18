@@ -161,7 +161,11 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
     weight 1 where aiming could not have found it, the glass ball's plain shadow, glossy plastic lit by chance, the
     first emitter run's bias (Ampere) → tracebasics.js misWeight, materials_pbr.js. *Read:* veach1997 (chapter 9),
     pbr-efficiency, rtrest.
-16. **Every glowing thing is a light**: emitter discovery, unbiased from the first sample.
+16. **Every glowing thing is a light** (draft): discovery by the paths that hit a glow (a 16 × 16 grid in the flat
+    world, the bar behind a wall found by bounces), unbiased from the first sample; Crofton's random lines, crossings
+    against perimeters and their cosine spread; the brightness code, linear against log (the comment's "2e-5 of a stop"
+    is 4.8e-6 by its own constants); emitConePdf, emitLineDensity; 2.3× a sample and 1.4× sooner (PLAN.md) →
+    materials_pbr.js emitDeposit, tracebasics.js LUM_CODE. *Read:* wiki-crofton, pbr-lights, pbr-spheres.
 17. **The camera's lens**: thin lens, focus, depth of field.
 
 **V. Light the camera can't find**

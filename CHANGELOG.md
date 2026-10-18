@@ -37,7 +37,9 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   *Dice and averages* (π from darts with the renderer's own error bar, the spread against 1/√N, the old random numbers
   against PCG4D's); chapter 13, *Following a path* (a path's throughput, the bounce cap's lost light, Russian roulette
   off against on, as the engine plays it); chapter 15, *Two ways to the light* (Veach's plates in the flat world:
-  lamp points, plate directions and MIS from the same random numbers, and the two densities and their weights); chapter 2, *Shapes as distances*; chapter 14, *Aim at the
+  lamp points, plate directions and MIS from the same random numbers, and the two densities and their weights);
+  chapter 16, *Every glowing thing is a light* (glow found by the paths that hit it, Crofton's random lines, the
+  brightness code); chapter 2, *Shapes as distances*; chapter 14, *Aim at the
   light* (next event estimation); the contents map; a glossary of 82 terms, each linked from the pages with a card on
   hover or tap.
 - **The kit** (`tutorial/kit/`): one pen draws every figure in the style's colours and line; a figure is a spec with
@@ -69,6 +71,8 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   test, in node): 0.95× to 1.83× and 0.96× to 1.04×, on a grid of 1/10,485 for seven-eighths of the states (the grid
   wraps 3200 times, which 1/2600 leaves out). The old code is not in the history, which starts at 0.46.0. Chapter 12
   says both and keeps the comment's point: a bias in small windows that no number of samples removes.
+- **A third comment number, smaller:** `tracebasics.js` LUM_CODE says the log code's step is "2e-5 of a stop"; from
+  its own constants (80 stops over 2²⁴ codes) it is 4.8e-6. Chapter 16 says so; the comment is unchanged.
 - **Four styles, for every reader** (you: "make the style a dropdown, expect to add more styles later. We'll keep this
   in for everyone. give them names"): *Lab notebook*, *Blueprint*, *Drafting sheet* and *Risograph*, each light and
   dark, chosen by name from the menu at the top right of every page and kept on the reader's device. They are listed
