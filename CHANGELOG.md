@@ -33,7 +33,9 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   tests); chapter 1, *Rays make a picture*; chapter 3, *Building and bending shapes* (the three joins hard and blended,
   the blend's normal and the warped fillet, which solid a point is in, a twist's step bound, a noise relief and its
   shell); chapter 4, *Which way is up* (normals by a shape's own formula, forward and central differences, the f32
-  grain below the renderer's floor of 128 spacings, emulated with `Math.fround` as `floor.test.mjs` does); chapter 2, *Shapes as distances*; chapter 14, *Aim at the
+  grain below the renderer's floor of 128 spacings, emulated with `Math.fround` as `floor.test.mjs` does); chapter 12,
+  *Dice and averages* (π from darts with the renderer's own error bar, the spread against 1/√N, the old random numbers
+  against PCG4D's); chapter 2, *Shapes as distances*; chapter 14, *Aim at the
   light* (next event estimation); the contents map; a glossary of 82 terms, each linked from the pages with a card on
   hover or tap.
 - **The kit** (`tutorial/kit/`): one pen draws every figure in the style's colours and line; a figure is a spec with
@@ -59,6 +61,12 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   test (node, 64-bit, on a copy of the modifier's arithmetic): a plate tilted 45° at the edge of a twist's extent keeps a
   slope of 1.14 after the division, so a 0.9 step can be about 3% longer than the distance; a twisted box stays under 1.
   Chapter 3 shows it in the flat world and says so; the modifier is unchanged.
+- **A comment's numbers that its own formula does not give, reported, not changed:** `tracebasics.js` says the old
+  random number output `fract(f32(state) / 671040)` put 0.08× to 3.2× of a window's share into windows of 0.0001 and
+  0.96× to 1.29× into windows of 0.001, on a grid of about 1/2600. Every one of the 2³² states counted (the tutorial's
+  test, in node): 0.95× to 1.83× and 0.96× to 1.04×, on a grid of 1/10,485 for seven-eighths of the states (the grid
+  wraps 3200 times, which 1/2600 leaves out). The old code is not in the history, which starts at 0.46.0. Chapter 12
+  says both and keeps the comment's point: a bias in small windows that no number of samples removes.
 - **Four styles, for every reader** (you: "make the style a dropdown, expect to add more styles later. We'll keep this
   in for everyone. give them names"): *Lab notebook*, *Blueprint*, *Drafting sheet* and *Risograph*, each light and
   dark, chosen by name from the menu at the top right of every page and kept on the reader's device. They are listed

@@ -143,8 +143,11 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
 11. **Rainbows**: dispersion from n_d and the Abbe number, a wavelength per channel, coatings → spectral.js.
 
 **IV. Path tracing**
-12. **Dice and averages**: Monte Carlo, 1/√N, the per-pixel error bar, PCG4D. *Read:* pbr-montecarlo, jarzynski2020
-    (the hash ShadyTracer's random numbers come from, credited in tracebasics.js).
+12. **Dice and averages** (draft): π from darts with measure.js's error bar, 240 estimates a column against 1/√N,
+    resolve's V and S, the old generator's windows against PCG4D's counted exactly (the comment's numbers do not
+    follow from its formula: 0.95×–1.83× at 0.0001, not 0.08×–3.2×), seeds, the sun found 50,000 times in 37 M samples.
+    *Read:* pbr-montecarlo, finch2009, jarzynski2020 (the hash ShadyTracer's random numbers come from, credited in
+    tracebasics.js), oneill-pcg.
 13. **Following a path**: the rendering equation in words, throughput, importance sampling, Russian roulette (off,
     and why).
 14. **Aim at the light** (draft): next event estimation, shadow rays, choosing among lights, where it cannot help.

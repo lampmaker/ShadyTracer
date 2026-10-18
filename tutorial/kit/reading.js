@@ -45,7 +45,11 @@ export const READING = [
     R('pbr-pathtracer', PBR, 'Physically Based Rendering (4th ed.), 13.4: A better path tracer', 'free online book', 'https://pbr-book.org/4ed/Light_Transport_I_Surface_Reflection/A_Better_Path_Tracer'),
     R('veach1997', 'Eric Veach', 'Robust Monte Carlo methods for light transport simulation', 'PhD thesis, Stanford University, 1997', 'https://graphics.stanford.edu/papers/veach_thesis/'),
 
+    // averages with error bars
+    R('finch2009', 'Tony Finch', 'Incremental calculation of weighted mean and variance', 'note, University of Cambridge Computing Service, 2009', null, { credited: 'lib/pathtracer/core/wavefront.js' }),
+
     // random numbers on a GPU
+    R('oneill-pcg', 'Melissa E. O\'Neill', 'PCG, a family of better random number generators', 'website', 'https://www.pcg-random.org/'),
     R('jarzynski2020', 'Mark Jarzynski, Marc Olano', 'Hash functions for GPU rendering', 'paper, Journal of Computer Graphics Techniques, 2020', 'https://jcgt.org/published/0009/03/02/', { credited: 'lib/pathtracer/core/tracebasics.js' }),
 ]
 

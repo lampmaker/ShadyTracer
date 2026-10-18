@@ -102,6 +102,14 @@ real student.
 5. What is the floor of 128 spacings, and how was 128 chosen?
 6. What did turning off the shapes' own normals cost, and what does the page say is not known about it?
 
+**montecarlo** (Dice and averages)
+1. How can random darts work out π?
+2. What does an error bar say, and what does it not promise?
+3. To halve the noise in a picture, how many more samples does it need, and why?
+4. How does the renderer know each pixel's error bar without knowing the right answer?
+5. What was wrong with the old random number generator, and why could more samples not fix it?
+6. The page disagrees with a comment in the code. About what, and how sure is it?
+
 **nee** (Aim at the light)
 1. Why does a picture lit by a small lamp stay noisy for a long time?
 2. What does next event estimation do at each bounce?

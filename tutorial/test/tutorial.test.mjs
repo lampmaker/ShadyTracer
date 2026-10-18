@@ -434,6 +434,38 @@ for (const [name, { mod }] of modules) {
     ok('ch.4: the figure\'s step at 128 spacings is the renderer\'s floor (tolerances.js f32Floor), in f32', N.stepAt(128, q) === Math.fround(f32Floor([q[0], q[1], 0])))
 }
 
+{
+    const M = await import('../ch/montecarlo.js')
+    const d = M.darts(4, 81920)
+    ok('ch.12: 81,920 darts (seed 4): 3.1440 ± 0.0057, 0.4 error bars from pi; 20 give 3.4',
+        d.mean.toFixed(4) === '3.1440' && d.se.toFixed(4) === '0.0057' && (Math.abs(d.mean - Math.PI) / d.se).toFixed(1) === '0.4' && M.darts(4, 20).mean === 3.4)
+    ok('ch.12: the error bar from measure.js is the textbook s / sqrt(N) for a true mean', Math.abs(d.se - M.DART_SD / Math.sqrt(81920)) / d.se < 0.01, `${d.se} against ${M.DART_SD / Math.sqrt(81920)}`)
+    const sp = M.spread(1)
+    ok('ch.12: 240 estimates a column scatter as 1.642 / sqrt(N), within the 15% such a count allows', sp.every(({ N, sd }) => Math.abs(sd / (M.DART_SD / Math.sqrt(N)) - 1) < 0.15), sp.map(c => c.sd.toFixed(3)).join(' '))
+    // THE OLD OUTPUT, every state counted: f32(state) is an integer, so the output is exactly (v mod 671040) / 671040 and
+    // the whole distribution is a count on 671040 points. States below 2^24 convert exactly; above, about 2^(e-23) states
+    // round to each multiple of 2^(e-23).
+    const DIV = 671040, counts = new Float64Array(DIV)
+    for (let v = 0; v < 2 ** 24; v++) counts[v % DIV]++
+    for (let e = 24; e < 32; e++) { const sp2 = 2 ** (e - 23); for (let m = 2 ** 23; m < 2 ** 24; m++) counts[(m * sp2) % DIV] += sp2 }
+    const pre = new Float64Array(DIV + 1); for (let k = 0; k < DIV; k++) pre[k + 1] = pre[k] + counts[k]
+    const share = (a, b) => (pre[Math.min(DIV, Math.ceil(b * DIV))] - pre[Math.ceil(a * DIV)]) / pre[DIV]
+    const range = w => { let lo = Infinity, hi = 0; for (let i = 0; i < Math.round(1 / w); i++) { const r = share(i * w, (i + 1) * w) / w; lo = Math.min(lo, r); hi = Math.max(hi, r) } return [lo, hi] }
+    const [lo4, hi4] = range(1e-4), [lo3, hi3] = range(1e-3)
+    ok('ch.12: the old output, every state counted: windows of 0.0001 get 0.95x to 1.83x their share, of 0.001 0.96x to 1.04x',
+        lo4.toFixed(2) === '0.95' && hi4.toFixed(2) === '1.83' && lo3.toFixed(2) === '0.96' && hi3.toFixed(2) === '1.04', [lo4, hi4, lo3, hi3].map(v => v.toFixed(3)).join(' '))
+    // ...and the figure's quicker count agrees with it, window by window
+    // (a point of the 671040 lying exactly on a window's edge falls either side of it in floating point, and oldShare
+    // decides it afresh for each wrap of the line: so each window is held to within one point's fair share of it)
+    const gap = w => Math.max(...M.windows(0.3, w).map(r => Math.abs(r.old - share(r.a, r.a + w) / w))), point = w => 1 / (DIV * w)
+    ok('ch.12: the figure\'s count of the old output (oldShare) is the full count\'s, window by window, within one point',
+        [1e-3, 1e-4, 1e-5].every(w => gap(w) < point(w)), [1e-3, 1e-4, 1e-5].map(w => `${gap(w).toExponential(1)} < ${point(w).toExponential(1)}`).join(' '))
+    const g = k => M.figures.grid.readout(M.figures.grid.steps[k])
+    ok('ch.12: the dice figure says what the page says: 0.96-1.04, 0.95-1.83, 0.01-8.76; PCG4D 1.000',
+        g('wide').includes('0.96× to 1.04×') && g('narrow').includes('0.95× to 1.83×') && g('tiny').includes('0.01× to 8.76×') && g('narrow').includes('PCG4D: 1.000× to 1.000×'), [g('wide'), g('narrow'), g('tiny')].join(' | '))
+    ok('ch.12: seven-eighths of the states are at or above 2^29, where f32 keeps multiples of 64: a grid of 64 / 671040 = 1/10485', 64 / DIV === 1 / 10485 && (2 ** 32 - 2 ** 29) / 2 ** 32 === 7 / 8)
+}
+
 /* THE EXCERPT LOCATOR ON ITS OWN ----------------------------------------------------------------------------------- */
 {
     const text = [
