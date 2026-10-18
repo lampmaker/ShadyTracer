@@ -17,9 +17,24 @@ The author's own libraries, separate repositories under MIT and included as git 
 Not code, but owed: the signed distance functions follow
 [Inigo Quilez's articles](https://iquilezles.org/articles/distfunctions/).
 
-Not in the repository: the tutorial's styles (`tutorial/kit/styles.js`) load their typefaces from
-[Google Fonts](https://fonts.google.com/) when a page is opened, each under the SIL Open Font License. They are to be
-kept in `tutorial/kit/fonts/`, with their licences, and listed here.
+The tutorial's typefaces, in `tutorial/kit/fonts/` (fetched once from [Google Fonts](https://fonts.google.com/) by
+`tutorial/kit/fonts/fetch.mjs`, latin and greek faces only), each under the
+[SIL Open Font License 1.1](https://openfontlicense.org/), whose text and copyright are kept beside the files as
+`<family>-OFL.txt`:
+
+| Family | Used by the style | Licence file |
+|---|---|---|
+| Kalam | Lab notebook | `kalam-OFL.txt` |
+| Literata | Lab notebook | `literata-OFL.txt` |
+| IBM Plex Mono | Lab notebook | `ibmplexmono-OFL.txt` |
+| Saira Stencil One | Blueprint | `sairastencilone-OFL.txt` |
+| Barlow | Blueprint | `barlow-OFL.txt` |
+| B612 Mono | Blueprint | `b612mono-OFL.txt` |
+| Spectral, Spectral SC | Drafting sheet | `spectral-OFL.txt`, `spectralsc-OFL.txt` |
+| Courier Prime | Drafting sheet | `courierprime-OFL.txt` |
+| Bricolage Grotesque | Risograph | `bricolagegrotesque-OFL.txt` |
+| Atkinson Hyperlegible | Risograph | `atkinsonhyperlegible-OFL.txt` |
+| DM Mono | Risograph | `dmmono-OFL.txt` |
 
 ## The MIT licence
 

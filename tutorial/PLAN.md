@@ -187,9 +187,9 @@ step cache's grid around a scene (26).
 1. **This round**: the plan, the toolkit, four styles kept for every reader (a named menu), chapters 1, 2 and 14,
    the contents and the glossary, each read by a blank reader and revised; reading boxes; the rule that the tutorial
    follows the code (`review/affected.mjs`).
-2. Next: keep every style's fonts in the repository (`kit/fonts/`, with their licences) so the tutorial loads nothing
-   from elsewhere; "How to read this", then Part I and Part IV in order (the flat world grows mirrors, glass and MIS as
-   they are needed).
+2. Every style's fonts kept in the repository (`kit/fonts/`, `fetch.mjs`, their licences): the tutorial loads nothing
+   from elsewhere. Then "How to read this", the rest of Part I and Part IV (the flat world grows a mirror, a glossy
+   surface, MIS, Russian roulette and a lens as they are needed).
 3. Then Parts II, III, V; then the machine and speed (VI, VII), which lean most on measured numbers; then VIII and IX.
 
 ## Checks

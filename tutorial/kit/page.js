@@ -44,14 +44,11 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;',
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']
 
 /* STYLE AND THEME ---------------------------------------------------------------------------------------------------- */
+/* The faces are the repository's (kit/fonts/fonts.css, imported by kit.css), and a browser fetches a face only when
+   something is drawn in it. Asking for a style's own face now starts it before the first canvas label needs it (a
+   canvas draws in a fallback face until then, and figure.js redraws when the face arrives). */
 function loadFonts(doc, ids) {
-    for (const id of ids) {
-        const st = styleOf(id)
-        if (!st?.fonts) continue
-        const href = `https://fonts.googleapis.com/css2?${st.fonts}&display=swap`
-        if (doc.head.querySelector(`link[href="${href}"]`)) continue
-        const l = doc.createElement('link'); l.rel = 'stylesheet'; l.href = href; doc.head.appendChild(l)
-    }
+    for (const id of ids) { const st = styleOf(id); if (st?.face) doc.fonts?.load(st.face).catch(() => { }) }
 }
 export function currentStyle(doc = document) {
     const q = new URL(doc.defaultView.location.href).searchParams.get('style')
@@ -317,7 +314,7 @@ function figuresOf(doc, specs) {
 
 /**
  * Start the page. `figures` are the page module's specs by name; `styles: false` leaves the style menu out; `allFonts`
- * loads every style's faces (the styles page shows them all).
+ * starts every style's faces at once (the styles page shows them all).
  */
 export function boot({ figures = {}, styles = true, allFonts = false } = {}) {
     const doc = document

@@ -11,6 +11,7 @@
   toggle, page.js). Each style defines both, on [data-style=...] so a card on the styles page can show a style that is
   not the page's own.
 ======================================================================================================================*/
+@import url("fonts/fonts.css");          /* every style's faces, kept in the repository (fonts/fetch.mjs) */
 @import url("styles/notebook.css");
 @import url("styles/blueprint.css");
 @import url("styles/drafting.css");

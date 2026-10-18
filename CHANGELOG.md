@@ -53,7 +53,9 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   dark, chosen by name from the menu at the top right of every page and kept on the reader's device. They are listed
   once, in `tutorial/kit/styles.js`; a new style is a CSS file, its `@import` and an entry there, and the test fails if
   a style misses a token or a dark colour. `tutorial/styles.html` shows each with a labelled sample and its key to the
-  figures' colours, its cards made from the list. Their fonts still come from Google Fonts (THIRD_PARTY.md); keeping them in the repository is the next round's.
+  figures' colours, its cards made from the list. Their typefaces are kept in the repository (`tutorial/kit/fonts/`,
+  29 latin and greek woff2 files of 12 families, each family's OFL licence beside them, THIRD_PARTY.md), fetched once
+  by `tutorial/kit/fonts/fetch.mjs`: the tutorial loads nothing from another site.
 - **Shapes you can move** (you: "make SDF elements draggable (the blend mode is not very visible now, the shapes are
   too far apart)"): in chapter 2's distance field the circle and the box start touching, both drag by a handle at
   their middle, and a blend slider (shown only while they are blended) widens the fillet. The ball, the block and the

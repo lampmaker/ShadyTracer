@@ -27,7 +27,7 @@ if (!out) { console.log('usage: node tutorial/review/extract.mjs <out-dir> [page
 const PAGES = process.argv.length > 3 ? process.argv.slice(3)
     : [...CHAPTERS.filter(c => c.file).map(c => c.file), 'index.html', 'glossary.html', 'styles.html']
 
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.md': 'text/plain' }
+const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2', '.json': 'application/json', '.md': 'text/plain' }
 const server = createServer(async (req, res) => {
     try {
         const path = join(repo, decodeURIComponent(new URL(req.url, 'http://x').pathname))

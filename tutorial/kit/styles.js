@@ -10,7 +10,8 @@
 //   name    what the menu and the styles page call it
 //   line    what it looks like, in a few words
 //   about   a sentence for the styles page
-//   fonts   its Google Fonts families (css2 query): loaded from Google for now, to be kept in the repository instead
+//   fonts   its typefaces, as a Google Fonts css2 query: what kit/fonts/fetch.mjs fetched once into kit/fonts (run it again
+//           after changing one); the pages load them from there, never from Google
 //   face    one of its faces as document.fonts.check takes it, for the browser check to say whether it loaded
 //======================================================================================================================
 

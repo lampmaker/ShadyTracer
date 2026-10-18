@@ -71,7 +71,9 @@ for (const f of pages.filter(f => f.includes('/ch/'))) {
    colours for light and for dark both (a style missing a dark colour would show the default's in the reader's) ---- */
 {
     const { STYLES } = await import('../kit/styles.js')
-    const kit = readFileSync(join(TUT, 'kit/kit.css'), 'utf8')
+    const kit = readFileSync(join(TUT, 'kit/kit.css'), 'utf8'), fontsCss = readFileSync(join(TUT, 'kit/fonts/fonts.css'), 'utf8')
+    ok('the typefaces: kit.css imports kit/fonts/fonts.css first, and no page or module asks Google for one', kit.includes('@import url("fonts/fonts.css")')
+        && !walk(TUT).some(f => /\.(js|html|css)$/.test(f) && !f.includes('/kit/fonts/') && readFileSync(f, 'utf8').includes('fonts.googleapis.com')))
     const block = sel => { const i = kit.indexOf(sel); return kit.slice(i, kit.indexOf('}', i)) }
     const all = [...block(':where(:root) {').matchAll(/(--[\w-]+):/g)].map(m => m[1])
     const dark = [...block(':where(:root[data-theme="dark"]) {').matchAll(/(--[\w-]+):/g)].map(m => m[1])
@@ -84,6 +86,15 @@ for (const f of pages.filter(f => f.includes('/ch/'))) {
         const missing = all.filter(t => !count(t)), noDark = dark.filter(t => count(t) < 3)
         ok(`style "${st.id}": sets every token`, !missing.length, missing.join(' '))
         ok(`style "${st.id}": sets every colour for dark too, under the media query and data-theme both`, !noDark.length, noDark.join(' '))
+        // its typefaces are the repository's: every family it names has its faces in kit/fonts/fonts.css, each file
+        // there, and the family's licence beside them (THIRD_PARTY.md); nothing loads from Google
+        const fams = [...st.fonts.matchAll(/family=([^:&]+)/g)].map(m => m[1].replace(/\+/g, ' '))
+        for (const fam of fams) {
+            const rules = [...fontsCss.matchAll(/@font-face \{([^}]*)\}/g)].map(m => m[1]).filter(r => r.includes(`font-family: '${fam}'`))
+            ok(`style "${st.id}": ${fam} is kept in kit/fonts, its files and its licence there`, rules.length > 0
+                && rules.every(r => existsSync(join(TUT, 'kit/fonts', /url\("([^"]+)"\)/.exec(r)[1])))
+                && existsSync(join(TUT, 'kit/fonts', fam.toLowerCase().replace(/[^a-z0-9]/g, '') + '-OFL.txt')))
+        }
         ok(`style "${st.id}": its dark blocks are its own`, css.includes(`:root[data-theme="dark"][data-style="${st.id}"]`) && css.includes(`:root:not([data-theme="light"])[data-style="${st.id}"]`))
     }
 }

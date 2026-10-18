@@ -5,8 +5,8 @@
 // step moves its figure; the theme chosen survives a reload. Whether a page looks good is the user's to judge; with a
 // directory given, a screenshot of each page goes there to help.
 //
-// Fonts come from Google Fonts in the mockup round, so each style's faces are reported as loaded or not: a screenshot
-// in fallback faces is not the style, and should not be passed off as it.
+// Each style's faces are reported as loaded or not (they are the repository's, kit/fonts): a screenshot in fallback
+// faces is not the style, and should not be passed off as it.
 //
 // OPTIONAL, AND LOUD ABOUT IT, as the repository's other checks: it needs Playwright's Chromium.
 import { createServer } from 'node:http'
@@ -22,7 +22,7 @@ try { ({ chromium } = await import('playwright')) } catch {
 }
 if (!chromium) { console.log('(tutorial pages check SKIPPED: no playwright. npm i -g playwright to get it.)'); process.exit(0) }
 
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.md': 'text/plain' }
+const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2', '.json': 'application/json', '.md': 'text/plain' }
 const server = createServer(async (req, res) => {
     try {
         const path = join(repo, decodeURIComponent(new URL(req.url, 'http://x').pathname))
