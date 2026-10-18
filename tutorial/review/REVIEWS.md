@@ -483,9 +483,48 @@ diagram's edge crossing the whole map (the fitted curves fold back past 427 and 
 | The white beam drawn orange; G grey; no key on fig. 2; "exactly, over the draw". | **Fixed**, each. |
 | Abbe 0, "exactly F − C", select's order, PRNG, the tag's 32,766. | **Fixed**, each. |
 
+## Round 6, 2026-10-18 (chapters 5 to 11, after round 5's changes)
+
+A fresh reader a chapter again, the same brief. Reports:
+[photometry](reports/2026-10-18-round6/photometry.md), [colour](reports/2026-10-18-round6/colour.md),
+[pixels](reports/2026-10-18-round6/pixels.md), [diffuse](reports/2026-10-18-round6/diffuse.md),
+[microfacets](reports/2026-10-18-round6/microfacets.md), [glass](reports/2026-10-18-round6/glass.md),
+[dispersion](reports/2026-10-18-round6/dispersion.md).
+
+**What the round showed.** Round 5's fixes held: the "divide by the chance" gap was gone wherever a reader met it,
+though two asked for it worked with numbers, now done. What was left was mostly one step of reasoning said as a
+fact (why a patch of sky lights a floor by its shadow's area, why the cosine pick has a π, why both faces of a pane
+reflect alike), and three of round 5's own sentences that were wrong: chapter 9's "top tenth" of a range that is
+its last hundredth, chapter 7's 18% grey "shown at 0.36" (it shows at 0.46), and chapter 5's "two sky-only rows"
+with one listed.
+
+| Chapter | Finding | |
+|---|---|---|
+| 5 | 348.2 pixels' worth against the readout's 294 + 106. | **Fixed.** The readout gives the covered area too. |
+| 5 | Why a patch lights the floor by its shadow's area; why sin α; the small-angle steps. | **Fixed.** The patch's Ω, its slant and its shadow's cos θ match; the edge a ring at height cos α; sin² = (1 − cos)(1 + cos). |
+| 5 | "Two edges to one sun" not followable; the /π and the 45°. | **Fixed.** The two ways to reach the sun said, and why the rim's bounce counted 10⁵ too much; the pick's /π; 45° from the ground and from straight up alike. |
+| 5 | "Two sky-only rows" with one listed; radians first used before defined; the try-it already answered. | **Fixed**, each (the rows in metres and in millimetres). |
+| 6 | What X, Y, Z are; the curves not the cones. | **Fixed.** The 1931 matching, its negative amounts, and what the curves are and are not. |
+| 6 | "Only a screen has a ceiling" against a clip that leaves 10.5. | **Fixed.** The clip removes negatives; values over 1 are chapter 7's. |
+| 6 | The mix on the line, the maps (xy, uv, u′v′), "far outside", the greenish swatch, two ringed dots, Y as lumens. | **Fixed**, each: a two-line proof in the fold-out, u and v's formulas, "just past its blue corner", yellow-green, D65 labelled. |
+| 7 | Logarithms; "the brightest 5%" meaning where they begin; evHi; the fold-out's middle step. | **Fixed**, each: log₂ before the histogram, 541 / 4, the rule's algebra, L_white = 9.6 L. |
+| 7 | 18% grey "at 0.36". | **Wrong, fixed.** 10.4% shows at 0.356, 18% at 0.46. |
+| 7 | "Changes light little" against 82 and 99; "27" codes; the sun "off the scale"; the swatches' curve; v twice. | **Fixed**, each. The setting's comment also calls Neutral "linear to 0.76", now said beside the 0 to 2 it lists. |
+| 8 | Why a matte bounce does not count a lamp it hits. | **Fixed.** The shadow ray already counted it; at a mirror there is none. |
+| 8 | Why p = cos θ/π; how the cosine pick is made; the circle is the cosine; "u in the fold-out". | **Fixed.** The pressed disc run backwards (√u), the chances adding to 1, the angle in a semicircle. |
+| 8 | "The gap shows (0.9963)", the average; the delta's "1 out of infinitely many"; the luminance and intensity cards. | **Fixed**, each. |
+| 9 | "The top tenth … 0.99 to 1". | **Wrong, fixed.** The last hundredth, given a tenth of the points; the squeeze shown with 0.94 to 0.96. |
+| 9 | Light against view; the two random numbers and the rim before section 2 uses them. | **Fixed** in section 1. |
+| 9 | What E's loss counts; the fold-out's algebra; G₂ ≤ G₁; the lobe's scale; 0.991 against 0.997. | **Fixed**, each; the sphere's average marked inferred. |
+| 10 | The branch weights with numbers; both faces the same R; sin θc = 1/n; the 4.5%; "every bounce" adding nothing. | **Fixed**, each. |
+| 10 | WGSL's refract "returns nothing"; sin2T; exp and ln; the diamond's 0.852 beside 0.704; "meant to fail". | **Fixed**, each. |
+| 11 | Why not three indices, or a wavelength for every ray; one pick worked through. | **Fixed.** Both asked and answered first; the 440-450 nm bin's weights, 0.21, 0, 2.79. |
+| 11 | R for the reflectance and for red; §7's green reflections against "stay white"; the tag's formula; the gap's 0.00805 against 0.00806; 0.0029 of what. | **Fixed**, each. |
+| 11 | The beam inside the prism orange; the excerpt stopping before acc grows. | **Fixed.** Inside drawn in ink; the excerpt to `acc += p`, read and stamped. |
+
 ## Next round
 
-The pages stay drafts. Every written chapter has now had two readers; the second round's changes are smaller than
-the first's, and most are words. A third read is worth it when a chapter is next rewritten (chapters 16, 17 and 0 had
+The pages stay drafts. Every written chapter has now had two readers (chapters 5 to 11 in rounds 5 and 6); the
+second round's changes are smaller than the first's, and most are words. A third read is worth it when a chapter is next rewritten (chapters 16, 17 and 0 had
 sections rewritten in round 4, so they come first), or when the user's own reading finds what these readers cannot:
 whether a figure feels right to drag, and whether a real student keeps going.

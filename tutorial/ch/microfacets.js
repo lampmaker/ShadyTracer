@@ -92,7 +92,7 @@ export const figures = {
         },
         readout(s) {
             const E = albedoCached(Math.cos(s.view * DEG), s.r, 32, true)
-            return `roughness ${s.r.toFixed(2)} (α = ${(s.r * s.r).toFixed(4)}), light ${Math.abs(s.view)}° from the normal · one reflection off a white metal keeps E = ${E.toFixed(4)} of it; ${(100 * (1 - E)).toFixed(2)}% goes into the surface between the facets and is lost to a single reflection`
+            return `roughness ${s.r.toFixed(2)} (α = ${(s.r * s.r).toFixed(4)}), light ${Math.abs(s.view)}° from the normal · one reflection off a white metal keeps E = ${E.toFixed(4)} of it; ${(100 * (1 - E)).toFixed(2)}% is lost to a single reflection, into the surface between the facets or hidden on its way out`
         },
     },
 

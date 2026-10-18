@@ -40,8 +40,9 @@
       Polarising sunglasses block s light, and with it most of the glare.</p>
     <p data-step="snell:inside">From inside the glass out, at 30°, the ray bends away from the normal, to 48.59°.</p>
     <p data-step="snell:tir">At 50° there is no angle to bend to: sin θ<sub>2</sub> would have to be 1.15. Past the
-      <em>critical angle</em>, 41.81° for glass, all the light reflects: <a data-g="tir">total internal reflection</a>,
-      which keeps light inside an optical fibre and makes the far side of an aquarium a mirror.</p>
+      <em>critical angle</em> all the light reflects: <a data-g="tir">total internal reflection</a>. The critical angle
+      is where the bent ray would just skim the surface, θ<sub>2</sub> = 90°: Snell gives sin θ<sub>c</sub> =
+      1/<var>n</var>, 41.81° for glass. It keeps light inside an optical fibre and makes the far side of an aquarium a mirror.</p>
     <details class="maths">
       <summary><span class="tag">The maths</span>Fresnel's two reflectances</summary>
       <div class="body">
@@ -83,7 +84,13 @@
       chance 1 − <var>R</var>. By chapter 8's rule it divides what each branch carries by that branch's chance:
       <var>R</var>/<var>R</var> = 1 for the reflection, (1 − <var>R</var>)/(1 − <var>R</var>) = 1 for the pass. So every
       path carries all its light one way or the other, and the share of many paths that come out below is the share of
-      the light that does: the sum, worked out by counting.</p>
+      the light that does: the sum, worked out by counting. At one face: of 1000 paths about 50 reflect and 950 pass,
+      each carrying its full light, so the counts are the shares, 5% and 95%.</p>
+    <p data-step="slab:clear">Both faces reflect the same 5.0%, though the bottom one is met from inside at 28.13°:
+      that is the same crossing as the top's, run the other way (28.13° inside bends back out to 45°), and Fresnel's law
+      gives one crossing the same share from either side. (Figure 1's 30° from inside is a different crossing.) On top
+      the figure also shows 4.5% coming back up: what reflected off the bottom face and got out through the top,
+      0.95 × 0.05 × 0.95.</p>
     <p data-step="slab:clear">One shortcut: the renderer averages s and p afresh at every surface. Real light keeps its
       polarisation from one face to the next, so the exact answer works the series out for s light and for p light,
       each with its own reflectance, and averages the two results: 90.7% here. A note in ShadyTracer's optics code
@@ -110,7 +117,8 @@
       exactly that colour is left: of each channel (red, green and blue, each kept separately), after one depth the
       colour's share, after two depths its square. With a colour of 0.5 at a depth of one pane's thickness, a ray
       straight down would keep 50%. The slanted path across is longer than the thickness, 1/cos 28.13° = 1.134 of it,
-      so it keeps 0.5<sup>1.134</sup> = 45.6%. Counting every bounce, 41.1% gets through, and 52.9% of the light is
+      so it keeps 0.5<sup>1.134</sup> = 45.6%. Through the pane, 41.1% gets out the first time, and the later passes,
+      absorbed twice as much on each round trip, add almost nothing: 41.1% in all, and 52.9% of the light is
       absorbed.</p>
   </div>
   <figure class="fig" data-fig="slab">
@@ -125,7 +133,8 @@
   <div class="prose">
     <h2><span class="n">3</span>A glass ball</h2>
     <p data-step="ball:glass">Parallel light through a glass ball, as from the sun: each ray bends in at the front and out
-      at the back, towards the axis. Rays near the axis meet 1.5 radii from the centre, half a radius behind the ball
+      at the back, towards the axis (the faint dashed line through its centre). A ball's normal at any point points
+      straight out from its centre, along the radius. Rays near the axis meet 1.5 radii from the centre, half a radius behind the ball
       (the dot); the outer ones bend more and cross nearer, at 1.104 for a ray 0.9 out. That spread is why a ball makes
       a blurred focus, and on a floor under it a bright <a data-g="caustic">caustic</a> ring and spot (chapter 18 is
       how the renderer finds those).</p>
@@ -150,11 +159,11 @@
     <h2><span class="n">4</span>How ShadyTracer does it</h2>
     <p>The fold-out's Fresnel, as the graphics card computes it at every crossing:</p>
     <pre data-src="lib/pathtracer/core/microfacet.js" data-sym="/* Exact Fresnel reflectance of a dielectric interface for unpolarised light." data-to="return 0.5 * (rs * rs + rp * rp);"
-         data-why="WGSL (chapter 21). eta is n incident over n transmitted. sin2T ≥ 1 is total internal reflection. The JavaScript twin the figures use, optics/fresnel.js's fresnel, is the same formula, and the bench compares the two." data-hash="076b4340"></pre>
+         data-why="WGSL (chapter 21). eta is n incident over n transmitted. sin2T is sin²θ_T, the refracted angle's sine squared (not sin 2T), so sin2T ≥ 1 is total internal reflection. The JavaScript twin the figures use, optics/fresnel.js's fresnel, is the same formula, and the bench compares the two." data-hash="076b4340"></pre>
     <p>At a smooth glass surface a path reflects with the chance ps, the Fresnel at its angle, or refracts with the rest;
       each branch divides by its own chance, as section 2 says:</p>
     <pre data-src="lib/pathtracer/core/materials_pbr.js" data-sym="// a smooth interface's facet is the normal: ps is its Fresnel, exactly" data-to="s.ev = EV_DELTA; s.isDelta = true;"
-         data-why="Everything here is in the surface's own frame, its normal along z, so (−o.x, −o.y, o.z) is o mirrored in the surface: the reflection. lb holds the material at this point; lb.o is the direction back the way the path came. pd is the chance of the matte base (0 for clear glass), and sub the random number pick rescaled to the rest. coatFresnel is the Fresnel of section 1 (scaled for a coloured coat, chapter 11), so for plain glass the reflection's weight coatFresnel / ps is 1, and the refraction's (1 − F)/(1 − ps) is 1 times the glass's colour: section 2's rule. refract is WGSL's own, with etaT the ratio of indices; under total internal reflection it returns nothing, i.z is then not below 0, and the weight stays 0. transTint is the colour a glass with no colour depth takes per crossing (one with a depth absorbs along the way instead, below). EV_DELTA marks the bounce a delta (chapter 8)." data-hash="fb4e0a2d"></pre>
+         data-why="Everything here is in the surface's own frame, its normal along z, so (−o.x, −o.y, o.z) is o mirrored in the surface: the reflection. lb holds the material at this point; lb.o is the direction back the way the path came. pd is the chance of the matte base (0 for clear glass), and sub the random number pick rescaled to the rest. coatFresnel is the Fresnel of section 1 (scaled for a coloured coat, chapter 11), so for plain glass the reflection's weight coatFresnel / ps is 1, and the refraction's (1 − F)/(1 − ps) is 1 times the glass's colour: section 2's rule. refract is WGSL's own, with etaT the ratio of indices (n incident over n transmitted); under total internal reflection it returns (0, 0, 0), so i.z is not below 0 and s.w stays at the 0 it started with (that case is reached only past the Fresnel's own 100%, which the pick already sends to the reflection). transTint is the colour a glass with no colour depth takes per crossing (one with a depth absorbs along the way instead, below). EV_DELTA marks the bounce a delta (chapter 8)." data-hash="fb4e0a2d"></pre>
     <p>Which index is on the other side? The ray carries the index of the material it is in (<code>Ray.n</code>), and a
       surface it meets says nothing about what lies behind it: glass in water, a bubble in glass. So a transparent
       surface asks the scene, at a point a hair beyond it, which material is there:</p>
@@ -167,7 +176,7 @@
     <p>And the absorption of section 2, applied where a ray arrives, for the whole distance it travelled in the
       material:</p>
     <pre data-src="lib/pathtracer/core/tracebasics.js" data-sym="/* What survives of the light the ray has carried since absLtot" data-to="return exp(-mu * (max(r.ltot - r.absLtot, 0.0) / max(r.n, 1e-4)));"
-         data-why="mu is the material's absorption per metre and channel, −ln(colour) / colour depth (materials.js's mediumMu), so exp(−mu d) = colour^(d / depth): section 2's colour, once per depth. ltot is the ray's optical length, the length travelled times the index, so dividing by n gives metres; absLtot is where it stood when it entered this material." data-hash="6a207280"></pre>
+         data-why="mu is the material's absorption per metre and channel, −ln(colour) / colour depth (materials.js's mediumMu), so exp(−mu d) = colour^(d / depth): the same as section 2's colour, once per depth, written with e (exp(x) is eˣ, ln its undoing, e^ln(c) = c). ltot is the ray's optical length, the length travelled times the index, which the ray keeps for other uses; dividing by n gives metres. absLtot is where it stood when it entered this material." data-hash="6a207280"></pre>
   </div>
 </section>
 
@@ -190,8 +199,8 @@
     </div>
     <div data-claim="measured">
       <p><strong>A gap thinner than the step off a surface.</strong> Two slabs 0.5 mm apart at the automatic tolerance
-        read as one slab, 0.9228 where two give 0.857: the test fails there, and is meant to show where the renderer's
-        limit lies, since the step a ray takes off a surface is longer than the gap. At a tolerance of 10 µm it
+        read as one slab, 0.9228 where two give 0.857. The test is there to show where the renderer's limit lies, and
+        that row fails at the automatic tolerance: the step a ray takes off a surface is longer than the gap. At a tolerance of 10 µm it
         passes.</p>
     </div>
   </div>

@@ -31,18 +31,23 @@
       <a data-g="ev">EV</a> (exposure value): each step of EV, called a <em>stop</em>, halves the light the camera lets
       in, so white is 1.2 × 2<sup>EV</sup> cd/m², and a higher EV is a darker picture. A sunny scene is about EV 15, an
       office about 7.</p>
+    <p data-step="meter:outdoors">A word first, since light runs over so many doublings: log₂ <var>x</var> is how many
+      times 1 must be doubled to make <var>x</var>. log₂ 8 = 3, log₂ 1 = 0, log₂ ¼ = −2. On a log₂ scale every doubling
+      is one equal step, which is how both a camera and the eye treat light.</p>
     <p data-step="meter:outdoors">Which EV? A camera's light meter answers by averaging the scene. ShadyTracer does it on
       the graphics card every frame: it sorts the pixels' luminances into a <em>histogram</em>, 128 bins over 2⁻¹⁰ to
       2³⁴ cd/m², a third of a stop each; it drops the darkest 10% and the brightest 10% (deep shadow, the sun, a few
       very bright noisy pixels), and averages the rest on the log scale: the average of their logarithms, so that 1 and
       100 average to 10, not 50.5 (every ×10 counts the same; this is the geometric mean). The figure is a sunny scene, with chapter 5's
       floor in it: the middle 80% average 7,460 cd/m², which a meter calls EV 15.87, and white is 71,600. The sunlit
-      floor shows at 0.3 of white; the sun, far off the right of the scale, is clipped whatever happens.</p>
+      floor shows at 0.3 of white; the sun, at the far right of the scale near 2<sup>30.5</sup>, is clipped whatever
+      happens. (The swatches show the scene's parts through PBR Neutral, the default tone curve of section 2.)</p>
     <p data-step="meter:room">A lamp-lit room is harder. Most of it is dim walls and a dark corner, and the lamp lights a
       small desk. The average, 3.6 cd/m², would set EV 4.86, and the desk, at 600, would be 17 times white: blown out.
-      So the meter has a second rule: the brightest 5% may be at most 2 stops above white (the <em>headroom</em>, a
-      setting). Here that asks for EV 6.82, white at 135, and the meter takes the darker of the two, the higher EV. The
-      desk is still over white, 4.4 times (section 2 is what happens to light over white), but no longer 17 times; the
+      So the meter has a second rule, about the brightness where the brightest 5% of the pixels begin: it may be at
+      most 2 stops (4 times) above white (the <em>headroom</em>, a setting). Here the brightest 5% begin at 541 cd/m², so white must be at least 541 / 4: EV 6.82, white at 135, and
+      the meter takes the darker of the two, the higher EV. The desk's brightest parts are still over white, 4.4
+      times (section 2 is what happens to light over white), but no longer 17 times; the
       corner goes darker. (Why 10% for the cuts and 5% here: they are the meter's settings, read in its code, not laws;
       the 5% is the part of the picture the rule protects.)</p>
     <p data-step="meter:unprotected">With a headroom of 12 stops the rule never binds, and the average alone decides:
@@ -50,7 +55,8 @@
     <p data-step="meter:black">Black is not part of the scene. A pixel that sees nothing (behind every object, a sky that
       is switched off) is below the histogram's floor, and does not vote. It used to count, in the darkest bin. Here
       60% of the picture is black and voting, as it used to: past the 10% cut, black is in the average, which falls to
-      0.019 cd/m², and only the highlight rule holds the exposure at EV 1.07, white at 2.5, everything lit blown out.
+      0.019 cd/m², and only the highlight rule holds the exposure at EV 1.07, white at 2.5, everything lit blown out
+      (an EV can be below 0: white is then under 1.2 cd/m²).
       Even that rule is fooled: the desk, 7.4% of the room, is only 3.0% of a picture that is 60% black, so "the
       brightest 5%" now reaches down into the walls (2<sup>3.33</sup> cd/m²), and it is the walls the rule keeps
       within 2 stops of white.
@@ -64,12 +70,16 @@
         <p>A reflected-light meter reading an average luminance <var>L</var> (12.5 is the meter's calibration constant,
           from the standard ISO 2720 that light meters follow):</p>
         <p class="eq"><var>v</var> = log₂(<var>L</var> × 100 / 12.5)</p>
-        <p>Put that <var>v</var> back in the first (2<sup>log₂ x</sup> is x again): the average shows at 12.5 / (100 ×
-          1.2) = 0.104 of white, a tenth. The sRGB step of section 3 lifts 0.104 to 0.356 on the screen: a mid-grey.
+        <p>Put that <var>v</var> back in the first (2<sup>log₂ x</sup> is x again): <var>L</var><sub>white</sub> = 1.2
+          × <var>L</var> × 100 / 12.5 = 9.6 <var>L</var>, so the average shows at 1 / 9.6 = 0.104 of white, a tenth. The sRGB step of section 3 lifts 0.104 to 0.356 on the screen: a mid-grey.
           Photographers call the tone a meter aims for "18% grey", after a grey card that reflects 18% of the light; by
-          these two constants a meter puts the average at 10.4% of white, a little darker. The average is on the log
+          these two constants a meter puts the average at 10.4% of white, darker by about 0.8 of a stop. The average is on the log
           scale, so a pixel a hundred times brighter than the rest pulls it up exactly as far as one a hundred times
           darker pulls it down.</p>
+        <p>The highlight rule in the same terms: if the brightest 5% begin at 2<sup><var>h</var></sup> cd/m² and may be
+          at most <var>H</var> stops over white, white is at least 2<sup><var>h</var> − <var>H</var></sup>, and 1.2 ×
+          2<sup><var>v</var></sup> = 2<sup><var>h</var> − <var>H</var></sup> gives <var>v</var> = <var>h</var> −
+          log₂ 1.2 − <var>H</var>: the code's <code>evHi</code>.</p>
       </div>
     </details>
   </div>
@@ -92,8 +102,8 @@
       code (section 3), drawn against stops, a log scale. And a colour clips one channel at a time: the orange light's
       red reaches 1 first and stops, while its green goes on rising, so it turns yellow before it turns white.</p>
     <p data-step="curve:neutral">ShadyTracer's default is Khronos's <em>PBR Neutral</em>, a curve made for showing
-      products and materials as they are: it changes light little up to 0.76 of white, and above that compresses the
-      brightest channel smoothly towards 1, keeping the hue and
+      products and materials as they are: up to 0.76 of white it changes light only a little (the dark tones the
+      most, next paragraph), and above that compresses the brightest channel smoothly towards 1, keeping the hue and
       desaturating only a little where it compresses. Grey at white shows 240 of 255, at 4 stops over, 255. A colour
       keeps its colour until it is very bright.</p>
     <p data-step="curve:neutral">Below 0.76 the change is small but not nothing: the curve takes 0.04 of white off every
@@ -118,13 +128,14 @@
   <div class="prose">
     <h2><span class="n">3</span>Eight bits, spent where the eye looks</h2>
     <p data-step="encode:dark">A screen's pixel keeps each channel in 8 bits, 256 steps. Kept in proportion to the light,
-      the darkest tenth of the range would get 27 of them, and the eye, which tells dark tones apart far more finely
+      the darkest tenth of the range would get 27 of them (codes 0 to 26), and the eye, which tells dark tones apart far more finely
       than bright ones, sees the steps as bands. <a data-g="srgb">sRGB</a>, the standard every screen and image file
       assumes, stores light through a curve that spends more steps on the dark: the same tenth gets 90. Both strips are
       the light from black to a tenth of white, stored the two ways and shown as it would then be displayed.</p>
     <p data-step="encode:all">Over the whole range both have all 256 steps to use; only where they put them differs.
-      ShadyTracer's display ends with the exact sRGB curve: <var>v</var> × 12.92 for the darkest light, up to 0.0031308,
-      and 1.055 <var>v</var><sup>1/2.4</sup> − 0.055 above it.</p>
+      ShadyTracer's display ends with the exact sRGB curve, for a channel's light <var>c</var> between 0 and 1:
+      <var>c</var> × 12.92 for the darkest light, up to 0.0031308, and 1.055 <var>c</var><sup>1/2.4</sup> − 0.055 above
+      it. A power below 1 lifts small numbers most: 0.1 becomes 0.349.</p>
   </div>
   <figure class="fig" data-fig="encode">
     <figcaption>The same ramp of light, from black up to the share of white the slider sets, stored in 8 bits in
@@ -150,9 +161,10 @@
          data-why="scale is 1 / white, from the manual EV or the meter's. switch picks the tone curve by the setting's number (1 is PBR Neutral, the default). select(a, b, c) is b where c holds: the straight 12.92 part for the darkest light, the power curve above." data-hash="acb8cf02"></pre>
     <div data-claim="code">
       <p><strong>A number in the comment, checked.</strong> <code>photometry.js</code> says the meter puts the average
-        "at about 18% of the clipping point". By its own two constants it is 12.5 / 120, 10.4%, as its test says; the
-        18% is the mid-grey a camera means, which sRGB shows at about 0.36. The exposure setting's comment describes
-        tone curves 0 to 2, while the setting offers 0 to 6.</p>
+        "at about 18% of the clipping point". By its own two constants it is 12.5 / 120, 10.4%, as its test says, which
+        sRGB shows at 0.356; 18% would show at 0.46. And the comment above the exposure setting in
+        <code>uniforms.schema.js</code> lists tone curves 0 to 2, while the setting offers 0 to 6, and calls Neutral
+        "linear up to 0.76 of white", which its 0.04 off every channel (section 2) makes not quite so.</p>
     </div>
   </div>
 </section>

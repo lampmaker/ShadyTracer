@@ -101,7 +101,7 @@ export const figures = {
             if (f.t) {
                 pen.ray([0, 0], [f.t[0] * L, f.t[1] * L], { role: 'light', w: 0.6 + 3 * (1 - f.R), alpha: 0.4 + 0.6 * (1 - f.R), id: 'refr' })
                 pen.label([f.t[0] * L * 1.05 + 0.1, f.t[1] * L * 1.06], `refracted ${pct(1 - f.R)}`, { role: 'light', size: 12 })
-            } else pen.label([0.3, -sg * 1.2], 'no refraction: total internal reflection', { role: 'blocked', size: 12 })
+            } else pen.label([-2.9, -sg * 1.7], 'no refraction: total internal reflection', { role: 'blocked', size: 12 })
             pen.handle('theta', src, { role: 'light' })
             // the reflectance at every angle, from this side
             const { W, H } = pen.view, rect = { x: pen.X(3.9), y: pen.Y(2.05), w: pen.X(8.4) - pen.X(3.9), h: pen.Y(-1.85) - pen.Y(2.05) }
@@ -205,7 +205,7 @@ export const figures = {
         },
         readout(s) {
             const f = ballFocus(s.n), near = axisCross(0.02, s.n), far = axisCross(0.9, s.n)
-            if (f <= 1) return `index ${s.n.toFixed(2)}: rays near the axis cross it inside the ball, ${frontFocus(s.n).toFixed(3)} past the centre (n / (n − 1) − 1), and leave spreading apart: no focus behind the ball (n / (2(n − 1)) = ${f.toFixed(3)} is under 1)`
+            if (f <= 1) return `index ${s.n.toFixed(2)}: rays near the axis cross it inside the ball, ${frontFocus(s.n).toFixed(3)} past the centre (the front face's own focus, n / (n − 1) − 1), and leave spreading apart: no focus behind the ball (the formula for one, n / (2(n − 1)), gives ${f.toFixed(3)}, inside it, so it does not apply)`
             return `index ${s.n.toFixed(2)}: rays near the axis meet ${f.toFixed(3)} from the centre (n / (2(n − 1))) · traced, a ray 0.02 off the axis crosses it at ${near == null ? '—' : near.toFixed(3)}, one 0.9 off at ${far == null ? '— (it never leaves)' : far.toFixed(3)}${far != null && near != null ? (far < near ? ': the outer rays focus nearer' : ': here the outer rays cross further out') : ''}`
         },
     },

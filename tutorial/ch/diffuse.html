@@ -32,7 +32,7 @@
       from every direction: you cannot tell where you stand from how bright a sheet of paper is. Its
       <a data-g="albedo">albedo</a> ρ is the share of the light it sends back, 0.7 here; the rest it absorbs.</p>
     <p data-step="matte:slant">The lamp (drag it round) is 35° off the point's <a data-g="normal">normal</a> and 2.6
-      away. It puts 0.3151 on the point: cos 35° / 2.6, since in the flat world light spreads round a circle and so
+      away. It puts E = 0.3151 on the point (its illuminance): cos 35° / 2.6, since in the flat world light spreads round a circle and so
       falls as one over the distance, not its square (chapter 0). The floor sends back 0.7 of that, and spreads it so
       that it looks the same from everywhere, 0.1103 (point anywhere above the floor to read it).</p>
     <p data-step="matte:slant">Two words keep apart what "bright" means here (chapter 5). How bright the floor
@@ -40,7 +40,9 @@
       from every side. Its <a data-g="intensity">intensity</a> is the light the whole patch sends one way: its luminance
       times the area you see, and from a slant the same patch looks narrower, by the cosine. So the intensity is largest
       straight up and falls towards the floor: the dashed circle, whose distance from the point in each direction is that
-      intensity. A circle through the point is exactly the cosine.</p>
+      intensity. A circle through the point is exactly the cosine: from a point on a circle, its centre straight above,
+      the chord in a direction θ from straight up is the diameter times cos θ (the angle in a semicircle is a right
+      angle).</p>
     <p data-step="matte:grazing">Move the lamp to 75°. Less light arrives (0.0995, the cosine law again), so the floor is
       dimmer, but still equally bright from every side: the circle shrinks, and keeps its shape.</p>
     <p><strong>Picking at random, and dividing by the chance.</strong> A renderer follows light backwards: a
@@ -57,7 +59,9 @@
       surface scatters the same whichever way the light came, so the renderer picks the same either way. A direction
       picked like that passes on <var>f</var> cos θ divided by its own chance, and for a matte surface that is exactly
       ρ (the fold-out): every matte bounce multiplies a path's <a data-g="throughput">throughput</a>, the share of the
-      light found further on that still reaches the eye, by its albedo and nothing else.</p>
+      light found further on that still reaches the eye, by its albedo and nothing else. (It is f cos θ because a
+      surface's light out is f times the light arriving, and the light arriving from a direction counts by its cosine:
+      chapter 1's slant.)</p>
     <details class="maths">
       <summary><span class="tag">The maths</span>Why ρ/π, and why the cosine draw weighs ρ</summary>
       <div class="body">
@@ -73,19 +77,23 @@
           and a surface that looks <var>L</var> from everywhere sends out π<var>L</var> in all (the same disc, turned
           round), so it looks ρπ/π = ρ. Both are true: <var>f</var>π = ρ, and <var>f</var> = ρ/π. In the flat world the
           half-circle pressed onto the floor is a line 2 long, so <var>f</var> = ρ/2.</p>
-        <p>The renderer picks ω<sub>i</sub> with chance per unit of direction <var>p</var> = cos θ/π. One picked
+        <p>The renderer picks ω<sub>i</sub> with chance per unit of direction <var>p</var> = cos θ/π: the cosine, divided
+          by π because the chances over every direction must add up to 1, and the cosine adds up to π over the
+          half-sphere (the pressed disc again). It is made by running the pressed disc backwards: pick a point evenly in
+          the floor's unit disc (at radius √<var>u</var> for a random <var>u</var>, which keeps it even) and lift it
+          straight up onto the dome. One picked
           direction stands for the whole sum as (<var>f</var> cos θ / <var>p</var>) <var>L</var><sub>i</sub>, the
           pocket-money rule above (chapter 12 shows the average comes out right), and <var>f</var> cos θ / <var>p</var>
           = (ρ/π) cos θ / (cos θ/π) = ρ.</p>
-        <p>A mirror has no such <var>p</var>: all its light goes one way, a direction with chance 1 out of infinitely
-          many. It is called a <a data-g="delta">delta</a>, and it can only be followed, never aimed at.</p>
+        <p>A mirror has no such <var>p</var>: all its light goes one way, all the chance on one direction, an infinite
+          density there and 0 everywhere else. It is called a <a data-g="delta">delta</a>, and it can only be followed, never aimed at.</p>
       </div>
     </details>
   </div>
   <figure class="fig" data-fig="matte">
     <figcaption>One point of a matte floor (the dot) under a lamp you drag round it (its handle). Thin lines: 48 bounce
-      directions picked as the renderer picks them. Dashed circle: the intensity the point sends each way, cos θ times
-      the light the floor sends back (its albedo times the light arriving); the dotted line is the normal. Point above
+      directions picked as the renderer picks them. Dashed circle: the intensity the point sends each way, in
+      proportion to cos θ, and as big as the light the floor sends back (its albedo times the light arriving); the dotted line is the normal. Point above
       the floor to read how bright the floor looks from there. Set the albedo, or pick new directions.</figcaption>
   </figure>
 </section>
@@ -97,13 +105,15 @@
       matte bounce a <a data-g="shadow-ray">shadow ray</a> aims at a random point of the lamp. The right wall is
       matte. The lamp shines with a brightness of 1, every wall keeps 0.7 of the light at each bounce, and the strip below
       is the eye's picture, 56 pixels (pixel 1 looks highest, towards the ceiling; pixel 56 lowest, at the floor), its
-      average 0.1320 once 96 paths a pixel are in.</p>
+      average 0.1320 once 96 paths a pixel are in (a sample is one path through every pixel, so 96 samples). A box
+      stands on the floor.</p>
     <p data-step="mirror:mirror">Now the right wall is a mirror reflecting 95% of the light. The eye sees the room again
       in it, the lamp included: pixel 26 reads 0.950, the lamp's 1 times the mirror's 0.95. No shadow ray found that.
       At a mirror a path has no choice to make, it goes on along the reflection, and a shadow ray from the mirror to a
       random point of the lamp would almost never lie along it. So the renderer does not aim at a mirror bounce; the
-      path finds the lamp, or not, by going on, and counts what it finds in full: since aiming could never have found
-      that light, nothing found it twice (chapter 15 is the full rule for when both ways can).</p>
+      path finds the lamp, or not, by going on, and counts what it finds in full. At a matte bounce it is the other
+      way round: the shadow ray has already counted the lamp, so a bounce that happens to hit it adds nothing, or the
+      lamp would be counted twice (chapter 15 is the full rule for when both ways can).</p>
     <p>In ShadyTracer a metal's colour is its reflectance straight on (how much of each colour it reflects when you look
       at it square on), and towards grazing, when you look along it, every metal reflects more, up to all of it
       (Schlick's formula, below).</p>
@@ -134,7 +144,8 @@
       bounces more than once, darkest (bracketed on the strip: the eye sees only the gap's mouth, pixels 17 to 19, since
       the left disc hides the rest of it). The picture's average is 0.8128.</p>
     <p data-step="furnace:cap">At albedo 1 again, but with paths stopped after one bounce: the light that needed a second
-      bounce to escape the gap is lost, and the gap shows (0.9963). A furnace finds a renderer's losses as well as a
+      bounce to escape the gap is lost, and the gap shows: its pixels read down to 0.83, the picture's average
+      0.9963. A furnace finds a renderer's losses as well as a
       material's.</p>
     <p data-step="furnace:control">And a black pair, albedo 0, as a control: it must show. A test that only ever
       passes might not be looking at all. ShadyTracer's furnace test gained a black sphere after a run in which it
@@ -159,9 +170,9 @@
     <p>At a bounce the renderer picks one piece of the material (metal, the coat, the matte base) with a chance, then a
       direction from that piece. The metal's mirror branch and the matte base, from the same function:</p>
     <pre data-src="lib/pathtracer/core/materials_pbr.js" data-sym="if (pick &lt; lb.metallic) {" data-to="s.ev = EV_DELTA; s.isDelta = true;"
-         data-why="lb.o is the direction back towards where the path came from, in the surface's own frame, z its normal: (−o.x, −o.y, o.z) is the reflection. s.w is what the path's throughput is multiplied by; fresnelSchlick3 is the metal's reflectance at that angle. EV_DELTA marks it a delta, which aiming could not have produced." data-hash="910db3d6"></pre>
+         data-why="pick is a random number between 0 and 1, so metallic 1 always takes this branch; lb holds the material at this point. lb.o is the direction back towards where the path came from, in the surface's own frame, z its normal: (−o.x, −o.y, o.z) is the reflection. s.w is what the path's throughput is multiplied by; fresnelSchlick3 is the metal's reflectance at that angle. EV_DELTA marks it a delta, which aiming could not have produced." data-hash="910db3d6"></pre>
     <pre data-src="lib/pathtracer/core/materials_pbr.js" data-sym="// ---- diffuse base" data-to="s.diffuse = true;"
-         data-why="rnd.y and rnd.z are two random numbers between 0 and 1 (u in the fold-out); r = √u and z = √(1 − u) put directions crowded near the normal in proportion to the cosine. For a pure Lambertian ecO, ecI and ecAvg (the coat's own reflectance) are 0 and ps is 0, so s.w is lb.base, the albedo: the fold-out's ρ." data-hash="db380ec2"></pre>
+         data-why="rnd.y and rnd.z are two random numbers between 0 and 1 (u is rnd.y). r = √u is the fold-out's point in the unit disc, phi its angle round the normal, and z = √(1 − u) the height that lifts it onto the dome: directions crowded near the normal in proportion to the cosine. For a pure Lambertian ecO, ecI and ecAvg (the coat's own reflectance) are 0 and ps is 0, so s.w is lb.base, the albedo: the fold-out's ρ." data-hash="db380ec2"></pre>
     <p>The metal's reflectance, rising from its colour straight on to 1 at grazing:</p>
     <pre data-src="lib/pathtracer/core/microfacet.js" data-sym="// Schlick for conductors, where F0 IS the parameter a user sets" data-to="return f0 + (vec3&lt;f32&gt;(1.0) - f0)"
          data-why="cosI is the cosine of the angle from the normal; f0 the colour. (1 − cos)⁵ is 0 straight on and 1 at grazing." data-hash="a42a6088"></pre>

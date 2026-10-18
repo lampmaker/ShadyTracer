@@ -35,11 +35,20 @@
       distance from the point in each direction is how much light goes that way. The thin lines are 60 directions picked
       at random the way the renderer picks a rough reflection (chapter 8: pick at random, divide by the chance). They
       are directions in 3D, most of them a little out of the page, shown by their shadow on it, all drawn the same
-      length: only where they point matters.</p>
+      length: only where they point matters. The lobe is only the slice of the light in the page itself, so a pick
+      that leaves the page can land, by its shadow, outside it.</p>
+    <p data-step="lobe:smooth">Two things about those picks, used later. The renderer starts its paths at the eye
+      (chapter 8), so strictly it picks reflections of the <em>view</em>; a reflection is as strong with light and view
+      swapped, so these figures put the light where the view would be and call it the light. And each pick is made
+      from two random numbers between 0 and 1: the first turns into a direction round the view, the second into how
+      far out: near 0, a facet facing the eye; near 1, the <em>rim</em> of what the eye sees, the facets seen edge-on.
+      The rim's facets are the most tilted, and theirs are the reflections that go into the surface.</p>
     <p data-step="lobe:rough">At roughness 0.6 the lobe is wide. And some of the picked directions now point into the
       surface (dashed, <span data-say="blocked">red</span>, inside the metal): reflected off one facet, they run into a
       neighbouring one. A single reflection loses that light; a real surface would bounce it again among its facets.
-      One reflection keeps 0.8012 of the light here.</p>
+      One reflection keeps 0.8012 of the light here, <var>E</var>. What it loses, 19.88%, is the picks that go into the
+      surface, and a share of the others too: a facet's reflection can be hidden by a neighbour on its way out (the
+      fold-out's <var>G</var><sub>2</sub> / <var>G</var><sub>1</sub>).</p>
     <p data-step="lobe:grazing">Light at a grazing 78° (nearly along the surface): the lobe leans and stretches along
       the surface. The share lost is a little smaller here, 17.76% against 19.88% at 40°: how much a single reflection
       loses depends on the angle in a way the next section charts.</p>
@@ -76,14 +85,19 @@
           <var>G</var><sub>1</sub>(ω<sub>o</sub>) <var>D</var>(<var>h</var>) / (4 cos θ<sub>o</sub>), and the weight
           <var>f</var> cos θ<sub>i</sub> over that chance is <var>F</var> <var>G</var><sub>2</sub> / <var>G</var><sub>1</sub>:
           never more than <var>F</var> (before section 2's compensation), and exactly the share of light kept when
-          averaged (section 2).</p>
+          averaged (section 2). The algebra, with every piece from the list above: <var>f</var> cos θ<sub>i</sub> ÷
+          (<var>G</var><sub>1</sub><var>D</var> / 4 cos θ<sub>o</sub>) = [<var>D</var><var>G</var><sub>2</sub><var>F</var>
+          / (4 cos θ<sub>o</sub> cos θ<sub>i</sub>)] cos θ<sub>i</sub> × 4 cos θ<sub>o</sub> / (<var>G</var><sub>1</sub>
+          <var>D</var>) = <var>F</var> <var>G</var><sub>2</sub> / <var>G</var><sub>1</sub>; and since Λ is never below
+          0, <var>G</var><sub>2</sub> is never more than <var>G</var><sub>1</sub>. That the chance works out to
+          <var>G</var><sub>1</sub><var>D</var> / (4 cos θ<sub>o</sub>) is to take on trust here (Heitz, below).</p>
       </div>
     </details>
   </div>
   <figure class="fig" data-fig="lobe">
     <figcaption>A rough white metal in the plane of the light: the light coming in (drag its handle), the mirror
       direction (dashed), the lobe of reflected light (bold, <span data-say="accent">red</span>: its distance from the
-      point is how much light goes that way), and 60 directions picked as the renderer picks them, shown by their shadow
+      point is how much light goes that way, scaled so its peak always reaches the same length), and 60 directions picked as the renderer picks them, shown by their shadow
       on the page, those going into the surface dashed inside it. Set the roughness, or pick new
       directions.</figcaption>
   </figure>
@@ -109,11 +123,15 @@
       section 4). Why: the second number, near 1, picks the facets the eye sees most edge-on, the most tilted ones, at
       the rim of what it sees, and theirs are the reflections that go below the surface. That rim is a thin strip of the
       grid, and a plain grid puts few points in it, so it saw too few of the losses. A white metal of roughness 0.3 read
-      0.997 in the furnace (the same comment).</p>
+      0.997 in the furnace (the same comment). A sphere shows every angle at once, so it reads something like an
+      average of the bottom chart's <span data-say="blocked">red</span> line, which runs from 0.991 at 0° to about
+      0.996 further out (inferred: the comment gives the sphere's reading, not how it was averaged).</p>
     <p data-step="albedo:r03">The grid is now squeezed towards that rim (the <span data-say="cam">blue</span> rings):
-      the second number becomes 1 − (1 − <var>v</var>)². The top tenth of the rim, from 0.99 to 1, now gets the grid's
-      points from 0.9 to 1, ten times as many. Each of them then counts for less, 2(1 − <var>v</var>) times (0.1 at
-      <var>v</var> = 0.95, where the strip is squeezed ten-fold), so the average is unchanged and only its error falls:
+      the second number becomes 1 − (1 − <var>v</var>)². The last hundredth of the range, from 0.99 to 1, now gets the
+      grid's points from 0.9 to 1: a tenth of them, ten times their old share. Near the rim the squeeze is ten-fold:
+      <var>v</var> from 0.94 to 0.96 moves the number only from 0.9964 to 0.9984, a step ten times smaller. So each of
+      those points stands for a tenth as much of the range, and counts 2(1 − <var>v</var>) = 0.1 times. Points
+      crowded into a strip, each counting for its strip's share: the average is unchanged and only its error falls,
       0.97556, and the metal within 0.1% of 1.</p>
     <p data-step="albedo:rough">At roughness 1 one reflection keeps less than half the light at 60° (0.451), and only
       0.307 straight on; the compensation more than doubles it. Here the loss comes from everywhere, not from a thin

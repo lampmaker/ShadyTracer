@@ -89,11 +89,13 @@ export const figures = {
                 pen.line(base.inside[0], base.inside[1], { role: 'ink', w: 1.6, exact: true })
                 if (base.out) pen.line(base.out.a, [base.out.a[0] + base.out.d[0] * 5, base.out.a[1] + base.out.d[1] * 5], { role: 'ink', w: 2, exact: true })
             } else for (const l of WAVES) {
+                // inside, the 31 colours lie within a hair of one another and the last drawn hid the rest (an orange
+                // beam inside a 'white' one, a reader's): the beam inside is the ink line drawn after this loop
                 const r = throughPrism(l, s.nd, s.vd, s.tilt)
                 if (!r) continue
-                line(r.inside[0], r.inside[1], waveColour(l), 1.2, 0.8)
                 if (r.out) line(r.out.a, [r.out.a[0] + r.out.d[0] * 5, r.out.a[1] + r.out.d[1] * 5], waveColour(l), 1.6)
             }
+            if (base && s.vd > 0) pen.line(base.inside[0], base.inside[1], { role: 'ink', w: 1.6, exact: true })
             if (base) pen.handle('tilt', base.src, { role: 'ink', label: 'white light' })
         },
         readout(s) {

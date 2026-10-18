@@ -104,6 +104,7 @@ function diagram(pen, { fill = true, ticks = true } = {}) {
         if (ticks) pen.label([x + 0.004, y - 0.03], `${T}`, { role: 'light', size: 10, align: 'center' })
     }
     pen.dot(D65, { role: 'ink', r: 2.6, ring: true })
+    if (ticks) pen.label([D65[0] - 0.012, D65[1] + 0.02], 'D65', { role: 'ink', size: 10, align: 'right' })
 }
 
 /** signed bars for three channels in world units, a zero line, values beyond `top` drawn to it with their number */

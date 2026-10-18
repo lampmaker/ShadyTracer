@@ -36,16 +36,17 @@ export function coverage(i, j, d, a) {
  *  bring the eye, each its reading times its solid angle times the cosine at the eye } */
 export function panelSeen(d, a, L = PANEL_L) {
     const du = 2 * TX / W, dv = 2 * T / H
-    let whole = 0, part = 0, E = 0
+    let whole = 0, part = 0, E = 0, cover = 0
     for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
         const c = coverage(i, j, d, a)
         if (c <= 0) continue
         if (c >= 1) whole++; else part++
+        cover += c
         const u = -TX + (i + 0.5) * du, v = T - (j + 0.5) * dv, r2 = 1 + u * u + v * v
         // the pixel's solid angle, du dv / r^3, times the cosine at the eye, 1 / r: what its reading adds to the eye's lux
         E += c * L * du * dv / (r2 * r2)
     }
-    return { whole, part, E }
+    return { whole, part, E, cover }
 }
 /** the exact illuminance on the axis from the square: 4 L s atan(s), s = X / sqrt(1 + X^2), X = a / 2d (a corner
  *  rectangle's form factor, four times); for a panel small beside its distance, L a^2 / d^2 */
@@ -105,7 +106,7 @@ export const figures = {
         },
         readout(s) {
             const p = panelSeen(s.d, s.a), ex = panelE(s.d, s.a)
-            return `a pixel wholly on the panel reads ${PANEL_L} cd/m², at any distance · ${p.whole} pixels wholly on it, ${p.part} at its edge (each reading its share) · the light they bring the eye, Σ reading × the pixel's solid angle × cos: ${fmt(p.E)} lux · exact for this square: ${fmt(ex)} lux${s.a / (2 * s.d) > T ? ' (the panel is wider than the view: the picture sees only part of it, so its sum is short)' : ''} · L a²/d² = ${fmt(PANEL_L * s.a * s.a / (s.d * s.d))} lux`
+            return `a pixel wholly on the panel reads ${PANEL_L} cd/m², at any distance · ${p.whole} pixels wholly on it, ${p.part} at its edge (each reading its share), together ${p.cover.toFixed(1)} pixels' worth · the light they bring the eye, Σ reading × the pixel's solid angle × cos: ${fmt(p.E)} lux · exact for this square: ${fmt(ex)} lux${s.a / (2 * s.d) > T ? ' (the panel is wider than the view: the picture sees only part of it, so its sum is short)' : ''} · L a²/d² = ${fmt(PANEL_L * s.a * s.a / (s.d * s.d))} lux`
         },
     },
 

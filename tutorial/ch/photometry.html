@@ -52,7 +52,8 @@
     <p data-step="distance:far">Drag the panel twice as far, to 4 m. A pixel wholly on it still reads 1000: the panel
       looks exactly as bright. What changes is how much of the picture it covers: counting each pixel at its edge by
       the share it sees, 348.2 pixels' worth at 2 m and 87.1 at 4 m, a quarter. With it the light it brings the eye
-      falls to a quarter too: 15.5 lux. That is the inverse square law of chapter 0, and it lives in how much of the
+      falls to a quarter too: 15.5 lux. (The readout gives both: the pixels wholly or partly on the panel, and the
+      area they add up to.) That is the inverse square law of chapter 0, and it lives in how much of the
       view the panel fills, not in the light along a ray. Along a ray, luminance does not change: a ray is one line of
       sight, and what it sees looks as bright from near as from far.</p>
     <p data-step="distance:farther">At 8 m the panel is small beside its distance, and the lux follows the simplest
@@ -83,20 +84,24 @@
         <p>A large one, or the sky: picture a glass dome of radius 1 over a point of the floor, the bright patches of
           sky painted on it. Shine a light straight down from above the dome, and each patch casts a shadow on the
           floor's disc of radius 1 under it. A patch of luminance <var>L</var> lights the point by <var>L</var> times the
-          area of its shadow. The shadow is the cosine law at work: a patch near the horizon sends its light in at a
-          grazing slant, and its shadow is squashed by just that much; one overhead keeps its size. (This is Nusselt's
-          way of seeing it.) Two cases follow:</p>
+          area of its shadow. Why: a small patch of the dome, of area Ω, is Ω of solid angle (the dome has radius 1), so
+          it would put <var>L</var>Ω on a surface facing it; the floor meets its light at a slant θ from straight up,
+          and the cosine law takes that down to <var>L</var>Ω cos θ. And a small patch tilted by θ from facing straight
+          down casts a shadow cos θ as big: Ω cos θ. The two match. (This is Nusselt's way of seeing it.) Two cases
+          follow:</p>
         <ul>
           <li>A whole sky of luminance <var>L</var> presses down onto the whole disc, of area π: <var>E</var> =
             π<var>L</var>.</li>
           <li>A round lamp straight overhead, of angular radius α (the angle from its middle to its edge), presses down
-            onto a circle of radius sin α: <var>E</var> = π <var>L</var> sin² α. For a lamp at a slant, the same
+            onto a circle of radius sin α (its edge is a ring on the dome α from the top, at height cos α and radius sin
+            α): <var>E</var> = π <var>L</var> sin² α. For a lamp at a slant, the same
             illuminance falls on a surface turned to face it, and a level floor gets cos θ of it.</li>
         </ul>
         <p>Many renderers write a small lamp's illuminance as <var>L</var> times its solid angle instead: the usual
           shortcut. The solid angle of a round lamp is 2π(1 − cos α) (the area of that cap of the unit sphere, a fact of
-          geometry), which for a small α is very nearly π sin² α, so the shortcut is close; it is off by (1 − cos α)/(1 +
-          cos α) of the answer, about α²/4 (α in radians: the angle measured as the length of arc it cuts from a circle
+          geometry), which for a small α is very nearly π sin² α, so the shortcut is close; since sin² α = (1 − cos α)(1 +
+          cos α), it is off by (1 − cos α)/(1 + cos α) of the answer, about α²/4 (for small α, cos α is close to 1 −
+          α²/2) (α in radians: the angle measured as the length of arc it cuts from a circle
           of radius 1, so 180° is π).</p>
       </div>
     </details>
@@ -117,13 +122,14 @@
       100,000 lux by default, and how wide its disc looks, 0.53°
       (<cite data-src="lib/pathtracer/core/uniforms.schema.js" data-sym="sunIlluminance:    { type: 'f32', def: 100000"></cite>).
       Its luminance follows from those two: <var>E</var> = π<var>L</var> sin² α (section 1: the disc's shadow on the
-      floor's unit disc is a circle of radius sin α), with α half of 0.53°, 0.00463 radians, gives <var>L</var> = 1.488
+      floor's unit disc is a circle of radius sin α), with α half of 0.53°, 0.00463 radians (an angle measured as the arc it cuts from a circle of radius 1: 180° is π), gives <var>L</var> = 1.488
       billion cd/m². The figure draws the disc at its true size over
       a point of the ground, and on the right its luminance for every width, at the same 100,000 lux.</p>
     <p data-step="sun:real">That luminance is a problem for a path tracer. The disc is 0.0000672 steradians, a speck of
       the sky. A ray bouncing off a matte ground goes in a random direction, more often near straight up (chapter 8
-      shows how: the chance of a direction goes with its cosine), and it finds the disc with the chance 0.0000672 ×
-      cos 45° / π, 1 time in 66,111 when the sun is 45° up. A few rays that find it bring back a billion; the rest
+      shows how: the chance of a direction goes as the cosine of its angle from straight up, divided by π so that the
+      chances add up to 1), and it finds the disc with the chance 0.0000672 × cos 45° / π, 1 time in 66,111 when the
+      sun is 45° up (45° from straight up as well as from the ground). A few rays that find it bring back a billion; the rest
       bring back nothing. That is why chapter 14 aims at the sun instead of waiting to hit it.</p>
     <p data-step="sun:wide">Widen the disc to 10° across. The illuminance is held at 100,000 lux, so its luminance drops
       to 4.19 million, and a random bounce finds it 1 time in 186. A bigger sun is a softer shadow, not a brighter
@@ -219,7 +225,7 @@
         1.0000, sky alone 0.9993, a 10° sun 1.0000, the same floor in millimetres 0.9999. One row is further off, 0.9984: sun
         and sky with aiming at the sun switched off and a 10° disc, so that only random bounces find it (section 2). Its
         noise was ten times the other rows', and it sits within that. The two sky-only rows, both 0.9993, are the one
-        steady remainder; the document's first suspect is the sky's own measurement (next), which is inferred.</p>
+        steady remainder (the scene in metres and in millimetres, both listed in the document); its first suspect is the sky's own measurement (next), which is inferred.</p>
     </div>
     <div data-claim="code">
       <p><strong>The sky is measured, then scaled.</strong> The sky's colours come from a model of sunlight scattered
@@ -247,12 +253,13 @@
         <code>photometry.js</code>'s header).</li>
       <li><strong>Two edges to one sun.</strong> The first run of section 3's test found the rows with the real sun at
         142 to 352 times the right mean, with their median right (<code>docs/TESTING.md</code>, "Physical units: the
-        first absolute check", Pascal). The chance of aiming at a direction still tested the disc as dot(L, S) ≥ cos α,
-        the luminance as section 4's cross product. Near the sun the cosine is about 180 steps below 1, so the two
-        disagreed on a thin ring at the rim. A ray there counted as aimed at the sun by one test and not by the other,
-        so it brought back the whole disc's luminance divided by the chance of an unaimed bounce finding it (chapter 8:
-        a rare find counts for more), about 10⁵ too much, in a few pixels. Since then there is one test, <code>inSunDisc</code>, and the
-        other was deleted so a second edge cannot come back.</li>
+        first absolute check", Pascal). A path reaches the sun two ways: by aiming a ray at it (chapter 14), and by a
+        bounce that happens to go there. Each asks whether a direction is inside the disc, and they asked differently:
+        the aiming by dot(L, S) ≥ cos α, the bounce by section 4's cross product. Near the sun the cosine is about 180
+        steps below 1, so the two disagreed on a thin ring at the rim. A bounce into that ring was taken as one the
+        aiming could never make, so it counted the whole disc's luminance divided by a bounce's tiny chance of finding
+        the sun (a rare find counts for more: chapter 8), about 10⁵ too much, in a few pixels. Since then there is one
+        test, <code>inSunDisc</code>, and the other was deleted so a second edge cannot come back.</li>
       <li><strong>A matte floor that was not quite matte.</strong> After that fix every row read 0.975, sun and sky,
         metres and millimetres alike. The light was right; the floor was not: its material sent 4% of its light off as
         a shine and reflected like an albedo of about 0.78. With a pure matte floor, the third run's 1.0001.</li>
@@ -271,7 +278,8 @@
     <ul>
       <li>In the first figure, drag the panel out to 10 m. Does a pixel wholly on it read any less? How many are left,
         and what does the lux do?</li>
-      <li>In the second, widen the disc until <var>L</var> × solid angle is 1% off. How wide is it then?</li>
+      <li>In the second, widen the disc until <var>L</var> × solid angle is 1% off (section 4 says about 23°), then
+        find where it is 0.1% off. Does the error grow as the width, or as its square?</li>
       <li>In the third, put the sun at 0°, then choose <strong>Sky only</strong>. Why does the line go flat?</li>
       <li>In ShadyTracer, choose <strong>View › Tests</strong> and run <em>Physical units: does a white floor come out at
         rho E / pi?</em> on your own card. Then switch the picture to <strong>lux on surfaces</strong> (one of the three

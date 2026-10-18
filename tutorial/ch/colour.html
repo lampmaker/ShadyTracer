@@ -34,7 +34,12 @@
     <p data-step="match:green">In 1931 the CIE, the body that sets these standards, fixed the three, from experiments in
       which people matched colours, as <a data-g="colour-matching">colour-matching functions</a>: x̄, ȳ and z̄, the three curves in the figure. Weigh a
       spectrum by each curve and add up over the wavelengths, and you have its X, Y and Z, the numbers every colour
-      standard since is built on. ȳ is the eye's sensitivity to brightness, so Y is chapter 5's luminance. Here the
+      standard since is built on. In the experiments a viewer matched a test light by mixing three lamps, and some
+      colours could be matched only by adding a lamp to the test side instead: a negative amount, already in 1931.
+      X, Y and Z are those results rearranged so that no curve is ever negative. They are not the cones' own curves,
+      nor red, green and blue (x̄ even has a second bump in the blue), but two lights the cones cannot tell apart
+      have the same X, Y and Z. ȳ is the eye's sensitivity to brightness, so Y is chapter 5's luminance (for a whole
+      lamp rather than a surface, its lumens). Here the
       light is a narrow band of green at 530 nm (the dashed curve, its shape only): mostly ȳ, a little x̄. Slide its
       wavelength along by its handle.</p>
     <p data-step="match:white">Now a hot body, the glow of something heated (a lamp's filament, the sun), at 6500 K: a
@@ -61,24 +66,29 @@
     <p data-step="xy:warm">X, Y and Z mix colour and brightness. Divide each by their sum, and the brightness drops out:
       <var>x</var> = X / (X + Y + Z) and <var>y</var> = Y / (X + Y + Z) are a light's
       <a data-g="chromaticity">chromaticity</a>, and every colour is one point on this map. Round its curved edge are
-      the single wavelengths of the first figure, 460 nm to 620 marked; every real light lies inside, since it is a sum
-      of them. Two lights mixed lie on the straight line between their points: their X, Y and Z add, and the mix's
-      point works out to an average of the two points, each counted by its own X + Y + Z, and an average of two points
+      the single wavelengths of the first figure (460 to 620 nm labelled); every real light lies inside, since it is a
+      sum of them. The straight edge closing it at the bottom, the line of purples, is no single wavelength: it is the
+      mixes of the deepest violet and the deepest red. Two lights mixed lie on the straight line between their points: their X, Y and Z add, and the mix's
+      point works out to an average of the two points, each counted by its own X + Y + Z (the fold-out shows it), and an average of two points
       always lies on the line between them.</p>
     <p data-step="xy:warm">A screen makes colours from three lights of its own, its primaries: the dashed triangle is
       those of Rec.709, the standard ordinary computer screens and television use, and the one ShadyTracer's red, green
       and blue are in. The screen can show only what lies inside
       its triangle, its <a data-g="gamut">gamut</a>. The <span data-say="light">orange</span> line is where the hot bodies lie, 1000 K at the red end
       to 15,000 K at the blue, and the ringed dot is D65, the standard daylight white a Rec.709 screen shows for equal
-      red, green and blue. Drag the point. On the right, its red, green and blue at luminance 1, and below them what
+      red, green and blue (the small ringed dot labelled D65). Drag the point (the larger ring). On the right, its red, green and blue at luminance 1, and below them what
       the screen shows.</p>
     <p data-step="xy:warm">The point is now on the hot bodies' line at 3000 K. A light near the line has a
       <a data-g="cct">colour temperature</a>: the temperature of the nearest hot body. How far it is from the line is
-      its <a data-g="duv">Duv</a>, measured at right angles to the line on an older map, CIE 1960's (its coordinates
-      are called u and v), where equal distances look more nearly equally different. This is how lamps are specified: "3000 K, Duv 0".</p>
-    <p data-step="xy:green">Here, 4000 K at a Duv of +0.02: off the line towards green, a colour a lighting designer would
-      call greenish and a standard would reject (they allow a few thousandths).</p>
-    <p data-step="xy:blue">And here a royal-blue LED, a colour lamps really use, far outside the triangle. Its red, green
+      its <a data-g="duv">Duv</a>, measured at right angles to the line on an older map, CIE 1960's, where equal
+      distances look more nearly equally different: positive towards green, negative towards pink. "Nearest" is judged
+      on that map too. Its coordinates u and v are x and y redrawn, u = 4<var>x</var> / (−2<var>x</var> +
+      12<var>y</var> + 3), v = 6<var>y</var> / (the same); the readout also gives u′ and v′, a 1976 stretch of it
+      (u′ = u, v′ = 1.5 v) that colour differences are quoted in. This is how lamps are specified: "3000 K, Duv 0".</p>
+    <p data-step="xy:green">Here, 4000 K at a Duv of +0.02: off the line towards green, a yellow-green that a lighting
+      designer would call greenish and a standard would reject (they allow a few thousandths).</p>
+    <p data-step="xy:blue">And here a royal-blue LED, a colour lamps really use, outside the triangle, just past its blue
+      corner: small as the distance looks, near the edge of purples it takes very large numbers. Its red, green
       and blue at luminance 1 are 1.45, −2.57 and 35.0. "At luminance 1" fixes only the colour, its brightness set later,
       so a number above 1 is no problem here: only a screen has a ceiling. Blue counts for little brightness (0.0722 of
       it, the fold-out's middle row), so a lot of it is needed: 0.2126 × 1.45 − 0.7152 × 2.57 + 0.0722 × 35.0 is 1.</p>
@@ -87,23 +97,30 @@
       the way treat the three channels alike (white, grey, clear glass), what arrives at a detector turns back into
       exactly the X, Y and Z the LED was given. Clipping earlier would break that: take two lights (0, −1, 3) and
       (0, 2, 0); added, (0, 1, 3); clipped first, (0, 0, 3) and (0, 2, 0), added (0, 2, 3), twice the green. So only
-      the screen clips, once, at the very end, keeping the luminance: 1.13, 0 and 10.5.</p>
+      the screen clips, once, at the very end, keeping the luminance: 1.13, 0 and 10.5. That clip only removes the
+      negative channel; a number above 1 is for the exposure and the tone curve to bring down (chapter 7).</p>
     <details class="maths">
       <summary><span class="tag">The maths</span>From a spectrum to the screen's red, green and blue</summary>
       <div class="body">
         <p>With <var>S</var>(λ) the spectrum, X, Y and Z are sums over the wavelengths, every nanometre here:</p>
         <p class="eq">X = Σ <var>S</var>(λ) x̄(λ),&nbsp;&nbsp; Y = Σ <var>S</var>(λ) ȳ(λ),&nbsp;&nbsp; Z = Σ <var>S</var>(λ) z̄(λ)</p>
         <p>Σ means "add up over every wavelength λ". Rec.709's red, green and blue are three particular X, Y, Z
-          triples, the columns of a 3 × 3 matrix <var>M</var>, a table of nine numbers. A colour R, G, B is <var>M</var>
+          triples, the columns of a 3 × 3 matrix <var>M</var>, a table of nine numbers (<var>M</var>₁₂ is row 1, column
+          2). A colour R, G, B is <var>M</var>
           times (R, G, B) in XYZ, which means three weighted sums: X = <var>M</var>₁₁R + <var>M</var>₁₂G +
           <var>M</var>₁₃B, and the same with the second row for Y and the third for Z. <var>M</var>⁻¹, its inverse, is
           the table that undoes it. Going back, (R, G, B) =
           <var>M</var>⁻¹ (X, Y, Z), and nothing in that stops a channel being negative. The middle row of <var>M</var> is
           Y: 0.2126 R + 0.7152 G + 0.0722 B, chapter 5's luminance. From a chromaticity and a luminance Y back to XYZ:
-          X = <var>x</var> Y / <var>y</var>, Z = (1 − <var>x</var> − <var>y</var>) Y / <var>y</var>.</p>
+          X = <var>x</var> Y / <var>y</var>, Z = (1 − <var>x</var> − <var>y</var>) Y / <var>y</var> (since X + Y + Z =
+          Y / <var>y</var>).</p>
         <p>Because all of it is weighted sums, the XYZ of two lights added is their XYZs added, and so are their R, G,
           B (it is <em>linear</em>). That is what makes a negative channel safe to carry, and mixing exact (section
           3).</p>
+        <p>And why a mix lies on the line: write S₁ = X₁ + Y₁ + Z₁ for the first light, so its x₁ = X₁/S₁, and the same
+          for the second. The mix's x is (X₁ + X₂)/(S₁ + S₂) = (S₁x₁ + S₂x₂)/(S₁ + S₂): an average of x₁ and x₂,
+          weighted by S₁ and S₂. The same holds for y, with the same weights, so the mix's point is that weighted
+          average of the two points: on the line between them, nearer the light with the larger S.</p>
       </div>
     </details>
   </div>
@@ -138,7 +155,8 @@
   <figure class="fig" data-fig="mix">
     <figcaption>Three LEDs on the chromaticity diagram (drag them by their handles), the triangle they can mix to, the
       hot bodies' line, and the target, set by its temperature and Duv. Right: the lumens of each LED for 1000 in all,
-      by colorimetry.js's own <code>mixToTarget</code>. <strong>The developer's LEDs</strong> puts them back.</figcaption>
+      by colorimetry.js's own <code>mixToTarget</code>. The dashed triangle is the LEDs' reach, the small dot the target.
+      <strong>The developer's LEDs</strong> puts them back.</figcaption>
   </figure>
 </section>
 
@@ -162,7 +180,7 @@
          data-why="lo is the most negative channel. Every channel is moved towards Y, the grey of the same luminance, by the share t that just brings lo to 0: Y + (c − Y) t keeps the luminance, because the luminance of Y in every channel is Y." data-hash="0d6d7fe5"></pre>
     <p>The mix of section 3 is three lines: each LED's XYZ per lumen as a column, the target's XYZ, and the inverse:</p>
     <pre data-src="lib/pathtracer/core/colorimetry.js" data-sym="export function mixToTarget(primaries, target, total = 1)" data-to="return { flux, reachable: flux.every(f => f >= -1e-9) }"
-         data-why="xyToXYZ(x, y, 1) is a light of chromaticity x, y and luminance 1: one lumen's XYZ in units where Y counts lumens. M has those three as its columns; inv3 is the inverse of a 3 × 3 matrix. −1e-9, not 0, so a flux that is 0 but for rounding still counts as reachable." data-hash="11af43ec"></pre>
+         data-why="xyToXYZ(x, y, 1) is a light of chromaticity x, y and luminance 1: one lumen's XYZ: for a whole light, Y is its lumens. M has those three as its columns; inv3 is the inverse of a 3 × 3 matrix. −1e-9, not 0, so a flux that is 0 but for rounding still counts as reachable." data-hash="11af43ec"></pre>
     <div data-claim="code">
       <p><strong>A number in the comment, checked.</strong> The file's header gives its line of hot bodies as "within
         about 3e-4 of the true locus in xy". Against the seven tabulated points its own test holds it to (which allows
@@ -184,7 +202,9 @@
         11).</p>
     </div>
     <div data-claim="measured">
-      <p><strong>Exact, measured.</strong> A detector in the optics trace read back the colour each light was given
+      <p><strong>Exact, measured.</strong> ShadyTracer's optics view traces rays from the lights themselves (photons,
+        chapter 18) into a detector, a surface that adds up the light it catches. A detector read back the colour each
+        light was given
         (the <code>optics-colour</code> test, the user's Pascal card, 2026-09-27, <code>docs/TESTING.md</code>): a 3000 K
         light to 9 × 10⁻¹¹ in u′v′, a 6500 K one through glass 5 × 10⁻⁹, the royal blue 8 × 10⁻⁹. The LED mixes read
         0.0012 and 0.0005, the counting noise of about 1650 blue rays: each ray comes from one LED, picked at random,

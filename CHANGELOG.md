@@ -155,7 +155,17 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   one-sample picture aims at nothing yet; chapter 17 explains why a lens focuses and why a point camera cannot see a
   floor through glass, and shows the grain of a 2-sample picture; chapter 0 says how the renderer works before its key,
   and what a terminal and `localhost:8000` are. The key gained a glowing line. `tutorial/review/affected.mjs` died once
-  the branch's diff passed `execFileSync`'s 1 MB default (ENOBUFS); its buffer is raised.
+  the branch's diff passed `execFileSync`'s 1 MB default (ENOBUFS); its buffer is raised. Rounds five and six read
+  chapters 5 to 11, two fresh readers each. The first found one gap in five of them, picking a direction with chance
+  p and dividing by p, used as if known before chapter 12 teaches it: chapter 8 now teaches it where a renderer first
+  picks a direction (a pupil asked at random, the answer times 30). They also found four statements that were wrong,
+  each checked and fixed: the diamond ball's rays "going round" (no ray lit from outside is trapped in a ball: it
+  meets the far side at the angle it was bent to; the rays cross inside at 0.704 radii, now marked), the colour
+  diagram's edge crossing the map (the fitted curves fold back past 427 and 644 nm, and the edge was drawn from 380
+  to 700), PBR Neutral's "lift" of the dark tones (it takes 0.04 off), and grazing light losing more to one
+  reflection (it loses less). The second round found three of the first round's own sentences wrong (chapter 9's
+  "top tenth" of a range that is its last hundredth, chapter 7's 18% grey "at 0.36", chapter 5's two rows with one
+  listed), now fixed, and steps of reasoning said as facts, each now shown.
 - **Where to read more** (you: "add a box with recommended external references, eg where you learned the info. Inigo
   quilez definitely needs to be named. Probably more than once"): reading boxes beside the sections they belong to,
   every chapter at least one, from one list (`tutorial/kit/reading.js`) whose every link was opened and checked. Inigo
