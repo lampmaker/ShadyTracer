@@ -216,7 +216,8 @@ export const figures = {
             strip(s.off, -0.75, 'the picture without NEE')
             if (s.view === 'both') strip(s.on, -1.45, 'the picture with NEE')
             const r = { x: pen.X(0.15), y: pen.Y(-2.2), w: pen.X(7.0) - pen.X(0.15), h: pen.Y(-3.65) - pen.Y(-2.2) }
-            const series = [{ pts: s.off.map((p, i) => [i + 0.5, p[0], seOf(p)]), role: 'accent', kind: 'dots', r: 1.9 }]
+            // without NEE grey, with NEE blue: red is the figures' colour for a ray that is blocked
+            const series = [{ pts: s.off.map((p, i) => [i + 0.5, p[0], seOf(p)]), role: 'soft', kind: 'dots', r: 1.9 }]
             if (s.view === 'both') series.push({ pts: s.on.map((p, i) => [i + 0.5, p[0], seOf(p)]), role: 'cam', kind: 'dots', r: 1.9 })
             plot(pen, r, { x: [0, PIX], y: [0, s.ymax], xlabel: 'pixel', ylabel: 'brightness, with error bars', xticks: [], yticks: [0], series })
         },

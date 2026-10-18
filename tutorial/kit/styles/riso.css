@@ -1,12 +1,12 @@
-/* RISOGRAPH -- two fluorescent inks printed one over the other on grainy paper: pink for light,
-   blue for the camera, a little out of register; bold grotesque headings, a very legible body. Dark: the same inks on
-   black stock. A style: tokens, texture and frame (kit/styles.js names it); kit.css holds the layout. */
+/* RISOGRAPH -- fluorescent inks printed one over the other on grainy paper, a little out of register: pink for light,
+   blue for the camera, teal for shadow rays, orange for a ray stopped short, purple (pink over blue) for a normal; bold
+   grotesque headings, a very legible body. Dark: the same inks on black stock. A style: tokens, texture and frame (kit/styles.js names it); kit.css holds the layout. */
 :root[data-style="riso"], [data-style="riso"] {
     --paper: #f3eee3; --paper-deep: #e1d9c8; --paper-raised: #fbf8f1;
     --ink: #1f3660; --ink-soft: #4a5d80; --ink-faint: #8e98aa; --grid: rgba(31, 54, 96, .06); --rule: #1f3660;
     --accent: #ff3d9f; --accent-soft: rgba(255, 61, 159, .12);
-    --c-cam: #0074bd; --c-light: #ff3d9f; --c-shadow: #00857f; --c-blocked: #ff3d9f; --c-solid: #1f3660;
-    --c-fill: rgba(0, 116, 189, .5); --c-glass: #00857f; --c-normal: #00857f; --c-hit: #1f3660; --c-step: rgba(0, 116, 189, .3);
+    --c-cam: #0074bd; --c-light: #ff3d9f; --c-shadow: #00857f; --c-blocked: #ff7a1a; --c-solid: #1f3660;
+    --c-fill: rgba(0, 116, 189, .5); --c-glass: #00857f; --c-normal: #6c3ab0; --c-hit: #1f3660; --c-step: rgba(0, 116, 189, .3);
     --code-bg: rgba(0, 116, 189, .06); --code-ink: #1f3660; --code-comment: #6b7890; --code-kw: #d8197f; --code-num: #00857f;
     --stamp-measured: #00857f; --stamp-code: #0074bd; --stamp-inferred: #d8197f;
     --f-display: 'Bricolage Grotesque', 'Arial Black', system-ui, sans-serif; --f-body: 'Atkinson Hyperlegible', 'Segoe UI', system-ui, sans-serif;
@@ -20,8 +20,8 @@
         --paper: #171515; --paper-deep: #0c0b0b; --paper-raised: #211e1e;
         --ink: #f2ede4; --ink-soft: #c8c1b6; --ink-faint: #8a847b; --grid: rgba(255, 255, 255, .05); --rule: #f2ede4;
         --accent: #ff5cc0; --accent-soft: rgba(255, 92, 192, .15);
-        --c-cam: #4cb8ff; --c-light: #ff5cc0; --c-shadow: #3fe0c5; --c-blocked: #ff5cc0; --c-solid: #f2ede4;
-        --c-fill: rgba(76, 184, 255, .5); --c-glass: #3fe0c5; --c-normal: #3fe0c5; --c-hit: #f2ede4; --c-step: rgba(76, 184, 255, .32);
+        --c-cam: #4cb8ff; --c-light: #ff5cc0; --c-shadow: #3fe0c5; --c-blocked: #ff9a4d; --c-solid: #f2ede4;
+        --c-fill: rgba(76, 184, 255, .5); --c-glass: #3fe0c5; --c-normal: #b88cff; --c-hit: #f2ede4; --c-step: rgba(76, 184, 255, .32);
         --code-bg: rgba(76, 184, 255, .07); --code-ink: #f2ede4; --code-comment: #9d978d; --code-kw: #ff7ccc; --code-num: #3fe0c5;
         --stamp-measured: #3fe0c5; --stamp-code: #4cb8ff; --stamp-inferred: #ff7ccc;
         --tex: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 .9 0 0 0 0 .95 0 0 0 .06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
@@ -32,8 +32,8 @@
     --paper: #171515; --paper-deep: #0c0b0b; --paper-raised: #211e1e;
     --ink: #f2ede4; --ink-soft: #c8c1b6; --ink-faint: #8a847b; --grid: rgba(255, 255, 255, .05); --rule: #f2ede4;
     --accent: #ff5cc0; --accent-soft: rgba(255, 92, 192, .15);
-    --c-cam: #4cb8ff; --c-light: #ff5cc0; --c-shadow: #3fe0c5; --c-blocked: #ff5cc0; --c-solid: #f2ede4;
-    --c-fill: rgba(76, 184, 255, .5); --c-glass: #3fe0c5; --c-normal: #3fe0c5; --c-hit: #f2ede4; --c-step: rgba(76, 184, 255, .32);
+    --c-cam: #4cb8ff; --c-light: #ff5cc0; --c-shadow: #3fe0c5; --c-blocked: #ff9a4d; --c-solid: #f2ede4;
+    --c-fill: rgba(76, 184, 255, .5); --c-glass: #3fe0c5; --c-normal: #b88cff; --c-hit: #f2ede4; --c-step: rgba(76, 184, 255, .32);
     --code-bg: rgba(76, 184, 255, .07); --code-ink: #f2ede4; --code-comment: #9d978d; --code-kw: #ff7ccc; --code-num: #3fe0c5;
     --stamp-measured: #3fe0c5; --stamp-code: #4cb8ff; --stamp-inferred: #ff7ccc;
     --tex: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 .9 0 0 0 0 .95 0 0 0 .06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");

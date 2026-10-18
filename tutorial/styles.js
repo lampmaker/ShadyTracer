@@ -49,7 +49,8 @@ export const cardsHTML = () => STYLES.map(st => `
       <h3>${esc(st.name)}</h3>
       <p class="eyebrowish">${esc(st.line)}</p>
       <figure class="fig" data-fig="sample-${st.id}"><figcaption>${esc(st.name)}: a ray from the eye stepping towards a
-        ball, and the shadow ray from where it lands to the lamp (drag the lamp)</figcaption></figure>
+        ball (each circle one step, reaching the nearest surface: chapter 2), and the shadow ray from where it lands to
+        the lamp; θ is the angle between the normal and the way to the lamp (chapter 1). Drag the lamp.</figcaption></figure>
       <p>${esc(st.about)}</p>
       <figure class="fig key" data-fig="key-${st.id}"><figcaption>${esc(st.name)}: what each colour and line means</figcaption></figure>
       <div class="open">

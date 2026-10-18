@@ -104,10 +104,11 @@ export const figures = {
             { type: 'button', label: 'Throw 400 more', act: s => { s.mode = 'lamp'; s.batches = Math.min(25, s.batches + 1) }, when: s => s.mode === 'lamp' },
         ],
         steps: {
+            // each step whole in what it shows, so it reads the same whichever paragraph came before it
             idea: { mode: 'eye', pixels: 12, fov: 52, shadow: false },
-            forward: { mode: 'lamp', batches: 1, shadow: false },
-            backward: { mode: 'eye', shadow: false },
-            pixels: { mode: 'eye', pixels: 28, shadow: false },
+            forward: { mode: 'lamp', batches: 1, pixels: 12, fov: 52, shadow: false },
+            backward: { mode: 'eye', pixels: 12, fov: 52, shadow: false },
+            pixels: { mode: 'eye', pixels: 28, fov: 52, shadow: false },
             fov: { mode: 'eye', fov: 104, pixels: 28, shadow: false },
             // a pixel whose ray meets the lit ball, and one whose point is in shadow: chosen when drawn (the room can
             // have been rearranged by then), not by number
@@ -223,7 +224,7 @@ export const figures = {
     edge: {
         aspect: 1.45,
         world: { x: [-0.45, 6.6], y: [-3.15, 2.5] },
-        state: { jitter: false, n: 0, hits: 0, us: [], hist: [], width: 12, offset: 0.5, seed: 3 },
+        state: { jitter: false, n: 0, hits: 0, us: [], hist: [], width: 12, offset: 0.4, seed: 3 },     // 0.4: the middle ray just misses
         controls: [
             { type: 'toggle', key: 'jitter', label: 'Jitter' },
             { type: 'slider', key: 'offset', label: 'edge', min: 0, max: 1, step: 0.01, fmt: v => `${Math.round(v * 100)}%` },
@@ -250,14 +251,15 @@ export const figures = {
             pen.label([BALL.c[0], BALL.c[1] + BALL.r + 0.3], 'ball', { align: 'center', role: 'soft' })
             const far = 6.3
             const dir = a => [Math.cos(a) * far, Math.sin(a) * far]
-            pen.line([0, 0], dir(g.a0 - g.w / 2), { role: 'ink', w: 0.9, id: 'w0' })
-            pen.line([0, 0], dir(g.a0 + g.w / 2), { role: 'ink', w: 0.9, id: 'w1' })
+            pen.line([0, 0], dir(g.a0 - g.w / 2), { role: 'faint', w: 0.9, id: 'w0' })
+            pen.line([0, 0], dir(g.a0 + g.w / 2), { role: 'faint', w: 0.9, id: 'w1' })
             pen.label(dir(g.a0 - g.w / 2), 'one pixel sees this wedge', { role: 'soft', size: 13, align: 'right', dy: 14 })
             for (const u of s.us) {
                 const a = g.a0 + (u - 0.5) * g.w, hit = hitsBall(s, u)
                 const t = hit ? hitT(a) : far
-                pen.ray([0, 0], [Math.cos(a) * t, Math.sin(a) * t], { role: hit ? 'cam' : 'soft', w: 0.8, alpha: hit ? 0.75 : 0.35, arrow: false })
+                pen.ray([0, 0], [Math.cos(a) * t, Math.sin(a) * t], { role: hit ? 'cam' : 'soft', w: s.jitter ? 0.8 : 1.4, alpha: hit ? 0.75 : s.jitter ? 0.35 : 0.8, arrow: false })
             }
+            if (!s.jitter && s.us.length) pen.label([Math.cos(g.a0) * 4.2, Math.sin(g.a0) * 4.2], 'every try: the same ray, through the middle', { role: 'soft', size: 12, dy: 24 })
             pen.eye([0, 0], g.a0, { size: 20 })
             // the pixel: its average, between the ball's colour and the sky's
             const avg = s.n ? s.hits / s.n : 0
@@ -280,8 +282,8 @@ export const figures = {
     },
 }
 
-/* LIGHT AT A SLANT: a beam w wide, from a lamp far enough away that its rays are parallel, meets a floor at theta from
-   the normal. It lights a patch w / cos(theta) long, so each piece of floor gets cos(theta) of what it would straight
+/* LIGHT AT A SLANT: a beam b wide (b, not w: w is the picture's width in section 10), from a lamp far enough away that its rays are parallel, meets a floor at theta from
+   the normal. It lights a patch b / cos(theta) long, so each piece of floor gets cos(theta) of what it would straight
    on: the cosine law, drawn instead of stated. */
 figures.slant = {
     aspect: 1.55,
@@ -300,12 +302,12 @@ figures.slant = {
             pen.ray([x - d[0] * 2.4, -d[1] * 2.4], [x, 0], { role: 'light', w: 1, exact: false, id: 'b' + k })
         }
         pen.line([-half, 0.02], [half, 0.02], { role: 'accent', w: 3.2, exact: true })
-        pen.dim([-half, 0], [half, 0], `lit: w / cos θ = ${(W / c).toFixed(2)}`, { role: 'accent', off: 30 })
+        pen.dim([-half, 0], [half, 0], `lit: b / cos θ = ${(W / c).toFixed(2)} m`, { role: 'accent', off: 30 })
         // the beam's own width, across it
         const m = [-d[0] * 1.7, -d[1] * 1.7]
-        pen.dim([m[0] - q[0] * W / 2, m[1] - q[1] * W / 2], [m[0] + q[0] * W / 2, m[1] + q[1] * W / 2], `w = ${W.toFixed(2)}`, { role: 'soft', off: 18 })
+        pen.dim([m[0] - q[0] * W / 2, m[1] - q[1] * W / 2], [m[0] + q[0] * W / 2, m[1] + q[1] * W / 2], `b = ${W.toFixed(2)} m`, { role: 'soft', off: -18 })
         pen.ray([0, 0], [0, 1.45], { role: 'normal', w: 1.1, exact: false, id: 'normal' })
-        pen.label([0, 1.45], 'normal', { role: 'normal', size: 13, dx: 6, dy: -4 })
+        pen.label([0, 1.45], 'normal', { role: 'normal', size: 13, dx: 8, dy: 4 })
         if (s.theta > 2) pen.angle([0, 0], Math.PI / 2, Math.atan2(-d[1], -d[0]), 0.62, 'θ', { role: 'normal' })
         const lamp = [-d[0] * R, -d[1] * R]
         pen.bulb(lamp)

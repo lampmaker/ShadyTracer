@@ -29,7 +29,7 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   same shape: the question, the idea with a live figure, the maths in a fold-out, the real code, the tricks stamped
   measured / read in code / inferred, what went wrong before, things to try.
 - **Written as drafts:** chapter 1, *Rays make a picture*; chapter 2, *Shapes as distances*; chapter 14, *Aim at the
-  light* (next event estimation); the contents map; a glossary of 74 terms, each linked from the pages with a card on
+  light* (next event estimation); the contents map; a glossary of 82 terms, each linked from the pages with a card on
   hover or tap.
 - **The kit** (`tutorial/kit/`): one pen draws every figure in the style's colours and line; a figure is a spec with
   state, controls, drag handles and steps that the paragraphs beside it trigger as they scroll by. The figures trace a
@@ -67,7 +67,11 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   ray hit the block, not the ball; chapter 2's squeezed circle stepped right over the shape while its readout said it
   stopped at the surface; chapter 14's blocked lamp was hidden entirely. All fixed, with a new figure for the cosine law
   (chapter 1, *Light at a slant*), the NEE fold-out rewritten, the sun's numbers made to agree, and two kit bugs found
-  by them: a hidden control still showing, and an angle mark drawn the long way round.
+  by them: a hidden control still showing, and an angle mark drawn the long way round. A second round of fresh
+  readers, on the revised pages, answered every quiz question from the page alone and found the numbers consistent;
+  what they found next (why one eye ray is enough, why aiming is quiet, why a ray inside a ball does not stop, a
+  WGSL excerpt labelled JavaScript, colours shared between meanings in three styles) is fixed too, each finding
+  answered in `REVIEWS.md`.
 - **Where to read more** (you: "add a box with recommended external references, eg where you learned the info. Inigo
   quilez definitely needs to be named. Probably more than once"): reading boxes beside the sections they belong to,
   every chapter at least one, from one list (`tutorial/kit/reading.js`) whose every link was opened and checked. Inigo

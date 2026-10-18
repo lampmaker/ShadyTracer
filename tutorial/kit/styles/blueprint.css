@@ -5,7 +5,7 @@
     --paper: #eef0f4; --paper-deep: #d5d9e3; --paper-raised: #f7f8fb;
     --ink: #222e74; --ink-soft: #4a548c; --ink-faint: #8a91b6; --grid: rgba(34, 46, 116, .085); --grid-major: rgba(34, 46, 116, .15); --rule: #222e74;
     --accent: #b0235c; --accent-soft: rgba(176, 35, 92, .09);
-    --c-cam: #1d55c7; --c-light: #c0531a; --c-shadow: #222e74; --c-blocked: #b0235c; --c-solid: #222e74;
+    --c-cam: #1d55c7; --c-light: #c0531a; --c-shadow: #5b6b8c; --c-blocked: #b0235c; --c-solid: #222e74;
     --c-fill: rgba(34, 46, 116, .5); --c-glass: #127f9c; --c-normal: #0f7d58; --c-hit: #222e74; --c-step: rgba(29, 85, 199, .3);
     --code-bg: rgba(34, 46, 116, .05); --code-ink: #222e74; --code-comment: #6c74a3; --code-kw: #b0235c; --code-num: #c0531a;
     --stamp-measured: #1f7a55; --stamp-code: #1d55c7; --stamp-inferred: #c0531a;

@@ -119,18 +119,19 @@ export const figures = {
     march: {
         aspect: 1.45,
         world: { x: [-3.85, 4.0], y: [-2.75, 2.75] },
-        state: { from: [-3.3, 0.35], aim: [1.8, 0.9], stepscale: 0.9, eps: 0.01, radius: 3.6, ...MARCH_AT },
+        state: { from: [-3.3, 0.35], aim: [1.2, 0.7], stepscale: 0.9, eps: 0.01, radius: 3.6, ...MARCH_AT },
         controls: [
             { type: 'slider', key: 'stepscale', label: 'step scale', min: 0.3, max: 1.8, step: 0.05, fmt: v => v.toFixed(2) },
             { type: 'slider', key: 'eps', label: 'tolerance', min: 0.002, max: 0.3, step: 0.002, fmt: v => v.toFixed(3) },
         ],
         steps: {
-            march: { from: [-3.3, 0.35], aim: [1.8, 0.9], stepscale: 0.9, eps: 0.01, ...MARCH_AT },
+            // aim away from the ball's own handle, overshoot crossing the wall away from its handle, escape inside the frame
+            march: { from: [-3.3, 0.35], aim: [1.2, 0.7], stepscale: 0.9, eps: 0.01, ...MARCH_AT },
             graze: { from: [-3.3, -1.45], aim: [0.7, -0.18], stepscale: 0.9, eps: 0.01, ...MARCH_AT },
             // the grazing ray again: at a large tolerance, a ray that would slip past the block's corner stops beside it
             tolerance: { from: [-3.3, -1.45], aim: [0.7, -0.18], stepscale: 0.9, eps: 0.1, ...MARCH_AT },
-            overshoot: { from: [-3.3, 0.95], aim: [1.8, 0.75], stepscale: 1.7, eps: 0.01, ...MARCH_AT },
-            escape: { from: [-3.3, 2.1], aim: [1.8, 2.5], stepscale: 0.9, eps: 0.01, ...MARCH_AT },
+            overshoot: { from: [-3.3, -0.5], aim: [3.0, 1.35], stepscale: 1.7, eps: 0.01, ...MARCH_AT },
+            escape: { from: [-3.3, 1.9], aim: [1.8, 2.2], stepscale: 0.9, eps: 0.01, ...MARCH_AT },
         },
         drag: {
             from: (s, p) => { s.from = [clamp(p[0], -3.8, 3.9), clamp(p[1], -2.6, 2.6)] },

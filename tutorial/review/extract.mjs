@@ -62,7 +62,11 @@ for (const page of PAGES) {
         shots[f.n] = []
         if (!f.steps.length) { const file = `fig-${f.n}.png`; await el.screenshot({ path: join(dir, file) }); shots[f.n].push(['as it starts', file]) }
         for (const st of f.steps) {
-            await p.evaluate(([n, s]) => { const fig = document.querySelector(`figure.fig[data-n="${n}"]`); [...fig.closest('section').querySelectorAll(`[data-step="${s}"]`)][0].click() }, [f.n, st])
+            // clicked, and clicked again if a paragraph scrolling through the page's reading band took the figure
+            // back (the two screenshots of one figure came out the same in round 2 that way)
+            const click = () => p.evaluate(([n, s]) => { const fig = document.querySelector(`figure.fig[data-n="${n}"]`); const el = [...fig.closest('section').querySelectorAll(`[data-step="${s}"]`)][0]; el.click(); return el.classList.contains('on') }, [f.n, st])
+            await click(); await p.waitForTimeout(300)
+            if (!await p.evaluate(([n, s]) => [...document.querySelector(`figure.fig[data-n="${n}"]`).closest('section').querySelectorAll(`[data-step="${s}"]`)][0].classList.contains('on'), [f.n, st])) await click()
             await p.waitForTimeout(slow ? 4000 : 500)
             const file = `fig-${f.n}-${st.split(':')[1]}.png`
             await el.screenshot({ path: join(dir, file) })

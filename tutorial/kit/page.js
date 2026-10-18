@@ -196,7 +196,8 @@ async function excerpts(doc) {
     await Promise.all([...pres, ...cites].map(async el => {
         const src = el.dataset.src, opts = optionsOf(k => el.getAttribute(k))
         let hit = null, err = null
-        try { hit = locate(await fetchText(src), opts) } catch (e) { err = e }
+        let text = null
+        try { text = await fetchText(src); hit = locate(text, opts) } catch (e) { err = e }
         if (el.tagName === 'CITE') {
             const base = src.split('/').pop()
             const a = doc.createElement('a')
@@ -217,7 +218,7 @@ async function excerpts(doc) {
                 ? ` <span class="drift" title="checked at ${esc(el.dataset.hash)}, now ${hit.hash}">· changed since this page was checked</span>` : ''
             const lines = hit.lines
             const html = highlight(lines)
-            const lang = languageOf(src, lines)
+            const lang = languageOf(src, lines, text, hit.first)
             fig.innerHTML = `<figcaption><a class="src" href="${ghLink(src, hit.first, hit.last)}">${esc(src)} · lines ${hit.first}–${hit.last}</a>` +
                 `<span class="lang">${lang}${lines.some(l => l.includes('${')) ? ' · highlighted parts are filled in when the kernel is built' : ''}</span>${drift}${why}</figcaption>` +
                 `<div class="scroll"><pre><code>${html.map((h, k) => `<span class="ln">${hit.first + k}</span><span class="lc">${h || ' '}</span>`).join('')}</code></pre></div>`

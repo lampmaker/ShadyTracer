@@ -169,7 +169,36 @@ export function optionsOf(get) {
 }
 
 /** What language a file's excerpt is, for the label: the engine's kernels are WGSL inside .js files. */
-export const languageOf = (src, lines) =>
+export const languageOf = (src, lines, text = null, first = 0) =>
     /\.md$/.test(src) ? 'Markdown'
+        : text && first && /\.m?js$/.test(src) ? (insideTemplate(text, first) ? 'WGSL' : 'JavaScript')
         : lines.some(l => /\bfn\s+\w+\s*\(|\bvar<|\bVEC[234]\b|\bu32\b|\bf32\b|let\s+\w+\s*:\s*\w/.test(l)) ? 'WGSL'
             : 'JavaScript'
+
+/* Whether line `first` of a .js file lies inside a template literal: the engine's WGSL is written as one, so an excerpt
+   in it is WGSL however much its lines look like JavaScript, and one outside it is JavaScript however much its comment
+   talks of f32 (the guess by keywords, kept for when the file's text is not at hand, called shapes.js's header WGSL).
+   A small scanner, not a count of backticks: a JavaScript comment can hold one backtick, and a template can hold
+   ${...} with templates inside it. It knows code, comments, quoted strings and templates; a regular expression
+   literal holding a quote would fool it, and none of the engine's files has one before its WGSL. */
+function insideTemplate(text, first) {
+    if (!text || !first) return false
+    let end = 0
+    for (let k = 1; k < first && end >= 0; k++) end = text.indexOf('\n', end) + 1
+    const stack = []                                 // 'code' (with its brace depth) or 'tpl', innermost last
+    let mode = 'code', depth = 0
+    for (let i = 0; i < end; i++) {
+        const c = text[i], d = text[i + 1]
+        if (mode === 'tpl') {
+            if (c === '\\') i++
+            else if (c === '`') { mode = 'code'; ({ depth } = stack.pop() ?? { depth: 0 }) }
+            else if (c === '$' && d === '{') { stack.push({ mode: 'tpl' }); mode = 'code'; depth = 0; i++ }
+        } else if (c === '/' && d === '/') { const n = text.indexOf('\n', i); i = n < 0 ? end : n }
+        else if (c === '/' && d === '*') { const n = text.indexOf('*/', i + 2); i = n < 0 ? end : n + 1 }
+        else if (c === '"' || c === "'") { let k = i + 1; while (k < end && text[k] !== c && text[k] !== '\n') k += text[k] === '\\' ? 2 : 1; i = k }
+        else if (c === '`') { stack.push({ mode: 'code', depth }); mode = 'tpl' }
+        else if (c === '{') depth++
+        else if (c === '}') { if (depth > 0) depth--; else if (stack.length && stack[stack.length - 1].mode === 'tpl') { stack.pop(); mode = 'tpl' } }
+    }
+    return mode === 'tpl'
+}

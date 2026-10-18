@@ -40,7 +40,8 @@
     <p class="lede">ShadyTracer is a <a data-g="path-tracing">path tracer</a> that runs in your browser: it makes a
       picture by following rays of light backwards from the camera, bouncing them around the scene at random, and
       averaging what they find. This tutorial is how it works, from the first ray to every trick that makes it fast:
-      rays, distances, light, glass, noise, photons, haze and the graphics card. For anyone who wants to understand
+      rays, distances, light, glass, <a data-g="noise">noise</a>, <a data-g="photon">photons</a>, haze and the graphics
+      card. For anyone who wants to understand
       ShadyTracer's code, build their own <a data-g="renderer">renderer</a>, or improve this one.</p>
   </div>
   <div class="titleblock" data-auto></div>
@@ -60,7 +61,8 @@
       <p>Read chapter 1, <a data-ch="rays">Rays make a picture</a>, then chapter 2, <a data-ch="distances">Shapes as
         distances</a>. Chapter 14, <a data-ch="nee">Aim at the light</a>, can be read straight after them: it says what it
         borrows from the chapters in between, which are not written yet. To see the program itself, open
-        ShadyTracer in a browser with WebGPU (a recent Chrome or Edge, on a computer with a graphics card).</p>
+        ShadyTracer in a browser with <a data-g="webgpu">WebGPU</a> (a recent Chrome or Edge, on a computer with a graphics
+        card).</p>
     </div>
   </div>
 </section>
@@ -89,7 +91,10 @@
         files when you open the page, with a link to the exact lines.</p>
     </div>
     <figure class="fig" data-fig="legend">
-      <figcaption>The figures' colours and lines, in the style you are viewing.</figcaption>
+      <figcaption>The figures' colours and lines, in the style you are viewing: a <a data-g="camera-ray">camera
+        ray</a>, a lamp's light, a <a data-g="shadow-ray">shadow ray</a>, a blocked ray, a
+        <a data-g="normal">normal</a>, a step of the <a data-g="march">march</a> (its circle reaches the nearest
+        surface), a solid shape, and a handle.</figcaption>
     </figure>
   </div>
 </section>
@@ -108,7 +113,8 @@
       <div data-claim="inferred"><p>A reasonable guess, not yet tested. The page says what would test it.</p></div>
     </div>
     <p>These pages come in several styles, each light or dark: the <strong>Style</strong> menu at the top right
-      switches the style, the <strong>Dark</strong> / <strong>Light</strong> button beside it the light, and the
+      switches the style, the <strong>Dark</strong> / <strong>Light</strong> button beside it between dark and light
+      pages, and the
       <a href="styles.html">styles</a> page shows every style with its key. Your choice is kept on this device.</p>
   </div>
 </section>

@@ -67,7 +67,9 @@ fixed or answered in `review/REVIEWS.md`.
   its middle (the field, the march, the rooms), so a reader can push two shapes together and watch a blend form.
 - **Every style, every figure.** A reader chooses the style (the bar's menu, `kit/styles.js`), so a figure takes its
   colours from roles, never from a value, and is checked in every style and theme (`test/pages.check.mjs`). Within a
-  style, no two roles a figure puts side by side (a camera ray and a normal) may share a colour.
+  style, no two roles a figure puts side by side (a camera ray and a normal, a lamp's ray and a blocked one) may look
+  alike: they differ in colour, or, in a style drawn in one ink (Drafting sheet), in their dashes, and the style's
+  description says which.
 - **Name what a figure shows.** Every colour a figure uses for a meaning is named in its caption or text the first time
   (orange: found the lamp; dashed: a shadow ray), every handle is said to be draggable, and a step's paragraph says only
   what its screenshot shows. The blank readers' worst findings were all a figure and its text disagreeing.

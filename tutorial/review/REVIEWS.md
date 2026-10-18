@@ -88,7 +88,84 @@ project's own developers. Two were real bugs in the kit: a control hidden by `wh
 | The definition runs into the chapter note ("absorbed.Planned"). | **Answered**: on the page they are separate lines; the extraction ran them together. `extract.mjs` now separates them. |
 | Styles: the sample figure unexplained; θ inside the ball; no handle; the dark versions never shown; "the button beside it"; "side by side" but stacked; print words. | **Fixed.** The θ was a kit bug (the angle mark went the long way round, `pen.angle` now takes the short one), fixed in every figure. The sample is captioned and labelled, its lamp draggable; each card shows the style's key; the descriptions are in plain words; the button named (Dark / Light) and said to switch the cards too; "side by side" gone. |
 
+## Round 2, 2026-10-18 (after round 1's changes)
+
+Fresh readers, the same brief, the questions with one added a page (light at 60°, where to read more, a camera ray at
+the lamp). Reports: [rays](reports/2026-10-18-round2/rays.md), [distances](reports/2026-10-18-round2/distances.md),
+[nee](reports/2026-10-18-round2/nee.md), [contents, glossary, styles](reports/2026-10-18-round2/index-glossary-styles.md).
+
+**What the round showed.** Round 1's worst findings did not come back: every reader answered every quiz question from
+the page, and chapter 14's reader checked the page's numbers against each other and found them consistent (the sun's,
+the costs, the error bars falling as 1/√N between a screenshot and a readout). What came instead was the next layer:
+the reasons behind statements ("why is one eye ray enough?", "why is aiming quiet?", "why doesn't a ray inside the
+ball stop?"), figures and steps that still did not match their words in smaller ways, a code label that was wrong, and
+colours shared between meanings in the styles.
+
+### Chapter 1
+
+| Finding | |
+|---|---|
+| Fig. 3's pixels and field-of-view screenshots identical. | **Fixed.** Each step now sets everything it shows (a step patches the figure's state, and the pixels step did not set the field of view); the extractor also clicks a step again if a paragraph scrolling through took the figure back. |
+| Why one eye ray is enough when the lamp needed many. | **Fixed.** §2: it asks the lamp directly, with the shadow ray of §5; from the lamp nothing is aimed. |
+| §10: why √(N·w/h); why wider tiles give a pixel two rays; tilesY. | **Fixed.** Derived (tilesX × tilesY = N, tilesX / tilesY = w / h); a 4-pixel, 3-tile example of a pixel catching two rays or none; tilesY's 396 rows; and the code line that turns a ray's point into its pixel, quoted. |
+| "the floor behind the block", though the point is in front of it. | **Fixed.** "just in front of the block, on the side away from the lamp". |
+| Fig. 7's still view: three dark lines, no blue or grey, and at 50% the middle ray is a tie. | **Fixed.** The wedge's sides are faint, the ray labelled "every try: the same ray", the edge starts at 40% (the middle ray misses, the ball covers 40%), and Try it asks why 50% is the tie. |
+| No stair steps shown; "one direction" against "a wedge". | **Fixed.** §7 says §1 simplified, and points at the staircase in the 3D figure's corner picture. |
+| Fold-out: u's range, which end is −1, "right" in a side view, a worked example, the 3D field of view vertical. | **Fixed**, all five, with the example worked (N = 12, 52°: 24° from ahead). |
+| d and w each with two meanings; θ printed as ϑ. | **Fixed.** Distance is r and the beam's width b; θ out of the italic that drew it as ϑ. |
+| `fwd` pointing backwards; `rayFirst`, `max(1u…)`, `clamp`, `invProjection[0][0]`; the excerpt stopping before `origin`. | **Fixed.** Glossed, and the excerpt now ends at `origin = camPos`: the eye. |
+| "draws no extra random numbers" against `PRNG()` giving four, `zw` the lens's. | **Fixed.** Said exactly: the lens uses the other half of the four one call already gives, so it changes no other random choice (read in code, genrays.js). |
+| "Point at a stamp for what the others mean", with one kind of stamp; what ShadyTracer is. | **Fixed.** |
+| The normal card's "For an SDF". | **Fixed.** "For shapes made of distances (chapter 2)". |
+
+### Chapter 2
+
+| Finding | |
+|---|---|
+| "Stops when the distance is below a small number", yet rays inside the ball march on. | **Fixed.** §3 says the march goes by the distance's size, as it must to march through glass, so a ray that has stepped inside marches on, out of the far side; the tolerance is on the size. |
+| "Where the ray is, not how far it has gone" against the code's `ray.ltot > lmax`. | **Fixed.** The excerpt's caption: that is a safety limit with its own state (RAY_MAXITER), not an escape. |
+| The dot products and the scene's middle. | **Fixed.** §3 says the middle is (0, 0, 0) and spells both sums out (read in code: `dot(ray.pos, ray.pos) > UB.envRadius²`, `dot(ray.pos, ray.dir) > 0`). |
+| §5's leap from "never faster than you move" to "never more room than there is". | **Fixed.** The sentence that joins them; the fold-out works along y = 0 instead of "far from the middle". |
+| Handles on rays: the aim on the ball's handle, the wall's on the overshoot ray; the escape clipped. | **Fixed.** New start and aim points for the march, overshoot and escape steps, each checked (it hits; it escapes through the wall and the ball; it escapes inside the frame). |
+| Fig. 1's red dashed inside circle; "holds nothing else". | **Fixed.** The caption says both. |
+| Fig. 4: "the ball is gone" though a rim remains; blue in the step colours; Normals never mentioned. | **Fixed.** |
+| Fig. 5's steps invisible in the fix; step scale 1 against §2's 0.9. | **Fixed.** The text says the last steps are tiny, at the surface, and that this figure steps the whole distance on purpose. |
+| "Most rays need only a handful of steps" against 32.4 on average. | **Fixed.** "A ray aimed straight at a surface". |
+| The box's code (one side outside), `hx`, `=>`; `hit.s.w`, `UB`, `atomicAdd`, `shadeBuffer`, `moveBy`; the two 32s; WGSL unexplained; "normals of the wrong length". | **Fixed.** Glossed in the captions; the comment's 32 said to be the same 32; WGSL marked at first use; a normal "meant to be exactly one unit long". |
+| The shapes.js header and §6–8 written for developers. | **Answered** as in round 1: they stay, glossed, for the readers who will work on this code. |
+
+### Chapter 14
+
+| Finding | |
+|---|---|
+| Why aiming is quiet. | **Fixed.** §3: every aimed try brings back nearly the same amount; bouncing gives nothing, nothing, then far too much. |
+| "Don't count it twice" only a margin note, and wrong for a mirror. | **Fixed.** In the main text, with the condition: it holds after a bounce whose shadow ray could find the lamp; a camera ray and a mirror's reflection count. |
+| ρ/2 and ρ/π from nowhere; "spread evenly" against "straight up more likely". | **Fixed.** Said to be taken on trust here, what they make true (the light leaving adds up to ρ), and chapter 8 named; §2 says the surface is equally bright every way and the bounce favours straight up because those directions carry more light, then divides by that choice. |
+| The sun's /π unexplained where it first appears. | **Fixed** there. |
+| An excerpt of WGSL labelled JavaScript. | **Fixed** in the kit: `languageOf` now asks whether the excerpt lies inside the file's template string, by a small scanner (code, comments, quoted strings, nested templates), and the test holds it to a file built to fool a count of backticks. It also stopped calling shapes.js's JavaScript header WGSL because it mentions f32. |
+| The division by the share never shown; where cos θ_y, r², A live. | **Fixed.** A citation of the emitter's `(1.0 - fs) * es * …` and of `lightFaceDensity` (scene_api.js), whose r² / (A cos θ_y) is what dividing by it undoes (read in code). |
+| Red and blue reused: red for blocked and "without NEE", blue for paths and "with NEE". | **Fixed** for red: the without-NEE dots are grey. Blue stays the colour of the eye's paths, which the with-NEE picture is made of. |
+| "about a quarter (13 times)" against k² = 16. | **Fixed.** "a little over a quarter (0.28)", which squares to 13. |
+| The occlusion comment's "reaches the sky and deposits" with a lamp indoors. | **Fixed** in its caption: written when the sky was the only light; a shadow ray to a face, and one to a glowing surface, said as the code's comments say. |
+| The pdf of one point; ℓ a whole number. | **Fixed** in the fold-out. |
+| Fig. 1's ball and box unmentioned, which ⊕ drag, the orange segment not in the screenshot. | **Fixed** in the text ("when one does": the drawn paths are the last few, which need not include one that found the lamp). |
+| Excerpt 2's comment jargon, the occlusion excerpt's density, §9 needing mixtures and f32, the stale-number note a detour. | **Answered**: glossed where a beginner needs it, kept for developers, as in round 1. |
+
+### The contents, the glossary, the styles page
+
+| Finding | |
+|---|---|
+| The key's shape and handle ran into its words; the circle unexplained. | **Fixed.** One column, a row a meaning, a solid shape and a handle each a row; the caption links camera ray, shadow ray, normal and march, and says the circle reaches the nearest surface. |
+| Colours shared: Risograph's shadow ray and normal both teal (round 1's fix made that), its lamp and blocked rays both pink; Drafting's three meanings in orange-red; Blueprint's shadow ray close to its camera ray. | **Fixed.** Risograph: normal purple, blocked orange. Drafting: blocked black and dotted, its description saying its lines are told apart by their dashes and its one colour is for light and handles. Blueprint: shadow ray slate. The rule in the plan now says roles side by side must not look alike, by colour or by dash. |
+| "card" for a graphics card; "cost" unexplained. | **Fixed.** "graphics card"; the read-in-code stamp says cost means time and memory, only ever measured. |
+| noise, photons, WebGPU not linked; "the light" for light and dark mode. | **Fixed.** |
+| Glossary: sample per pixel or per picture; GPU against two million pixels; normal "on the height lines"; tile unparseable; matrix's "backward"; f32's origin; delta and glass's two directions; MIS's "counted twice"; candela/intensity and lux/irradiance circular; radiance's chain of units. | **Fixed**, each. |
+| Glossary: missing ray tracing, shader, march, shade, luminance, illuminance, exposure, bias. | **Fixed.** 82 entries now. |
+| The styles sample's circles and θ unexplained. | **Fixed** in each card's caption. |
+| The page's sticky bar over the figures in screenshots, naming the page's style above another style's card; no dark card shown. | **Answered**: the bar stays at the top while a reader scrolls, and names the style the page is read in, which is the menu's job; the Dark / Light button shows every card dark, as the page says. |
+
 ## Next round
 
-The three chapters, the contents, the glossary and the styles page are read again by fresh readers once this round's
-changes are in, with the same brief and questions; their reports go in `reports/` under that day, and the findings here.
+The pages stay drafts. Round 2's changes are smaller than round 1's, and most are words; a third read is worth it when
+a chapter is next rewritten, or when the user's own reading finds what these readers cannot: whether a figure feels
+right to drag, and whether a real student keeps going.

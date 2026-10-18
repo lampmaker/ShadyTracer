@@ -17,7 +17,7 @@ import { join, dirname, resolve, relative } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { CHAPTERS, PARTS, chapter } from '../kit/chapters.js'
 import { GLOSSARY, term } from '../kit/glossary.js'
-import { locate, optionsOf, hash } from '../kit/excerpt.js'
+import { locate, optionsOf, hash, languageOf } from '../kit/excerpt.js'
 import { makePen } from '../kit/pen.js'
 import { march, pointLightE, directE, tracePath, cameraRay, rng } from '../kit/flatland.js'
 import { march3, pointLightE3, directE3, trace3, cameraRay3, orbit, sampleCone } from '../kit/space.js'
@@ -322,6 +322,12 @@ for (const [name, { mod }] of modules) {
     e = null; try { locate(text, { sym: 'function foo', to: 'nowhere' }) } catch (x) { e = x }
     ok('excerpt: a `to` never reached is refused', /not within/.test(e?.message ?? ''))
     ok('excerpt: the hash ignores indenting', hash(['  a', '    b']) === hash(['a', '  b']) && hash(['a']) !== hash(['b']))
+    // the language: inside the file's template literal is WGSL however JavaScript-like the lines, outside it JavaScript
+    // however much it talks of f32 -- past a comment with one backtick in it, and a template with a template inside
+    const js = ['// a note with one ` in it', "const s = 'a ` too'", 'export const K = /* wgsl */ `', '  ${x ? `y` : ``}',
+        '  let pick = PRNG().x;', '`', 'const later = f32 => f32', '/* `', '*/', 'const after = 1'].join('\n')
+    ok('excerpt: a line inside the shader string is WGSL', languageOf('a.js', ['let pick = PRNG().x;'], js, 5) === 'WGSL')
+    ok('excerpt: ...a line after it JavaScript, f32 or not', languageOf('a.js', ['const later = f32 => f32'], js, 7) === 'JavaScript' && languageOf('a.js', ['x'], js, 10) === 'JavaScript')
 }
 
 /* WHAT THE PAGES IMPORT ------------------------------------------------------------------------------------------- */
