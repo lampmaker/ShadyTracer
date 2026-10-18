@@ -146,7 +146,7 @@ export const figures = {
                 fmt: v => `2^${v}`, hoverX: v => `${(2 ** v).toPrecision(3)} cd/m²`, hoverY: v => `${Math.round(v)} pixels`,
                 series: [{ name: 'pixels', pts: m.hist.map((n, i) => [AE_LOG_MIN + (i + 0.5) * w, n]), role: 'soft', kind: 'bars' }],
             })
-            pen.labelPx(rect.x, rect.y - 18, 'the pixels by luminance, log2 cd/m² (black, below 2⁻¹⁰, does not vote)', { role: 'soft', size: 12 })
+            pen.labelPx(rect.x, rect.y - 18, `the pixels by luminance, log2 cd/m² (black, below 2⁻¹⁰, ${s.votes ? 'voting, in the lowest bin' : 'does not vote'})`, { role: 'soft', size: 12 })
             const vline = (x, role, label, dy = 0, dash = [4, 4]) => {
                 const px = X(clamp(x, AE_LOG_MIN, AE_LOG_MAX)), { ctx } = pen
                 ctx.save(); ctx.strokeStyle = pen.col(role); ctx.lineWidth = 1.4; ctx.setLineDash(dash); ctx.beginPath(); ctx.moveTo(px, rect.y); ctx.lineTo(px, rect.y + rect.h); ctx.stroke(); ctx.restore()
@@ -170,7 +170,7 @@ export const figures = {
         readout(s) {
             const m = meter(pixels(s.scene, s.black), { headroom: s.headroom, blackVotes: s.votes })
             const chose = m.evHi > m.evAvg ? `darker, to keep the brightest 5% within ${s.headroom} EV of white` : 'the average\'s'
-            return `the middle 80% average 2^${m.logL.toFixed(2)} = ${(2 ** m.logL).toPrecision(3)} cd/m²: EV ${m.evAvg.toFixed(2)} · the brightest 5% from 2^${m.logHi.toFixed(2)}: no darker than EV ${m.evHi.toFixed(2)} · chosen: EV ${m.ev.toFixed(2)}, ${chose} · white is 1.2 × 2^EV = ${(EV_CLIP * 2 ** m.ev).toPrecision(3)} cd/m²`
+            return `the middle 80% average 2^${m.logL.toFixed(2)} = ${(2 ** m.logL).toPrecision(3)} cd/m²: EV ${m.evAvg.toFixed(2)} · the brightest 5% from 2^${m.logHi.toFixed(2)}: EV ${m.evHi.toFixed(2)} at least (no brighter) · chosen: EV ${m.ev.toFixed(2)}, ${chose} · white is 1.2 × 2^EV = ${(EV_CLIP * 2 ** m.ev).toPrecision(3)} cd/m²`
         },
     },
 
@@ -222,15 +222,16 @@ export const figures = {
             rows.forEach(([name, keep], k) => {
                 const y0 = H * (0.12 + 0.42 * k)
                 pen.labelPx(x0, y0 - 16, name, { role: 'soft', size: 12 })
-                let codes = new Set()
                 for (let i = 0; i < n; i++) {
-                    // from black to the slider's value, both ends included, as the readout counts them
+                    // from black to the slider's value, both ends included
                     const v = keep(s.top * i / (n - 1)), e = Math.round(255 * srgb(v))
-                    codes.add(v)
                     ctx.fillStyle = `rgb(${e},${e},${e})`; ctx.fillRect(x0 + i, y0, 1.2, H * 0.26)
                 }
                 ctx.strokeStyle = pen.col('ink'); ctx.lineWidth = 1; ctx.strokeRect(x0, y0, w, H * 0.26)
-                pen.labelPx(x0 + w, y0 + H * 0.26 + 4, `${codes.size} different values`, { role: 'soft', size: 11, align: 'right' })
+                // the codes in the range, as the readout counts them: the strip's pixels, one value each, skipped some of
+                // sRGB's finest steps near black and once said 220 where the text said 256 (a reader's)
+                const codes = k ? Math.round(255 * srgb(s.top)) + 1 : Math.round(255 * s.top) + 1
+                pen.labelPx(x0 + w, y0 + H * 0.26 + 4, `${codes} of the 256 codes in this range`, { role: 'soft', size: 11, align: 'right' })
             })
             pen.labelPx(x0, H * 0.92, `light from 0 to ${Math.round(100 * s.top)}% of white, left to right`, { role: 'soft', size: 11 })
         },

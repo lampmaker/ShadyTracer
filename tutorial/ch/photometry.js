@@ -81,7 +81,8 @@ export const figures = {
             const e = [0, 0], reach = 10.4
             pen.line([-0.5, 0], [10.6, 0], { role: 'faint', w: 0.6, dash: [2, 5], exact: true })
             for (const sg of [1, -1]) pen.line(e, [reach, sg * reach * T], { role: 'faint', w: 0.8, exact: true })
-            pen.bar([s.d, -s.a / 2], [s.d, s.a / 2], { id: 'panel', both: false })
+            // the glowing panel, a bright line facing the eye (a lamp's bar drew its marks on the side away from it)
+            pen.line([s.d, -s.a / 2], [s.d, s.a / 2], { role: 'light', w: 4, id: 'panel' })
             for (const sg of [1, -1]) pen.line(e, [s.d, sg * s.a / 2], { role: 'cam', w: 0.9, exact: true })
             pen.eye([-0.25, 0], 0, { size: 16 })
             pen.handle('d', [s.d, -s.a / 2 - 0.45], { role: 'light' })
@@ -202,7 +203,8 @@ export const figures = {
         readout(s) {
             const sun = s.mode !== 'sky', sky = s.mode !== 'sun', Es = sun ? sunHorizontal(SUN_E, s.elev) : 0, E = Es + (sky ? SKY_E : 0)
             const m = s.rho === 0.8 ? MEASURED.find(r => r[0] === s.mode && (s.mode === 'sky' || r[1] === s.elev)) : null
-            return `on the floor: the sun's 100,000 × sin ${s.elev}° = ${fmt(Es)} lux${sky ? ` + the sky's 15,000` : ''} = ${fmt(E)} lux · its luminance ρE/π = ${s.rho.toFixed(2)} × ${fmt(E)} / π = ${fmt(floorL(s.elev, s.rho, sun, sky))} cd/m²${m ? ` · measured on the user's card: ${m[2].toLocaleString('en')}` : ''}`
+            const sum = sun && sky ? `the sun's 100,000 × sin ${s.elev}° = ${fmt(Es)} lux + the sky's 15,000 = ${fmt(E)} lux` : sun ? `the sun's 100,000 × sin ${s.elev}° = ${fmt(E)} lux` : `the sky's ${fmt(E)} lux`
+            return `on the floor: ${sum} · its luminance ρE/π = ${s.rho.toFixed(2)} × ${fmt(E)} / π = ${fmt(floorL(s.elev, s.rho, sun, sky))} cd/m²${m ? ` · measured on the user's card: ${m[2].toLocaleString('en')}` : ''}`
         },
     },
 }

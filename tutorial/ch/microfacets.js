@@ -116,6 +116,11 @@ export const figures = {
                 ],
             })
             pen.labelPx(rect.x - 30, rect.y - 18, 'E: the share one reflection keeps, by the view\'s angle from the normal', { role: 'soft', size: 12 })
+            // a key in the chart's lower left, where the curve is high: which mark is which (a reader guessed)
+            const key = (k, role, text, ring) => { const y = rect.y + rect.h - 14 - 16 * k; pen.ctx.save(); pen.ctx.fillStyle = pen.col(role); pen.ctx.strokeStyle = pen.col(role); pen.ctx.lineWidth = 1.6; pen.ctx.beginPath()
+                if (ring === 'line') { pen.ctx.moveTo(rect.x + 10, y); pen.ctx.lineTo(rect.x + 26, y); pen.ctx.stroke() } else { pen.ctx.arc(rect.x + 18, y, 2.8, 0, 2 * Math.PI); ring ? pen.ctx.stroke() : pen.ctx.fill() }
+                pen.ctx.restore(); pen.labelPx(rect.x + 32, y, text, { role, size: 11, base: 'middle' }) }
+            key(2, 'ink', 'worked out finely', 'line'); key(1, 'blocked', 'the old plain 32 × 32 grid', false); key(0, 'cam', 'the warped 32 × 32 grid, as it is', true)
             // what a white metal reads in a furnace when the table is the plain or the warped grid: E_true / E_table
             plot(pen, rect2, {
                 // one fmt serves both axes, so the angles leave out 0 (it would print as 0.00)
@@ -127,6 +132,11 @@ export const figures = {
                 ],
             })
             pen.labelPx(rect2.x - 30, rect2.y - 18, 'a white metal in a furnace, where the table compensates: E_true / E_table', { role: 'soft', size: 12 })
+            // its key inside the chart's top left, above both lines (beside the title they overlapped)
+            for (const [k, role, text] of [[0, 'cam', 'with the warped table'], [1, 'blocked', 'with the plain table']]) {
+                const y = rect2.y + 8 + 13 * k; pen.ctx.save(); pen.ctx.strokeStyle = pen.col(role); pen.ctx.lineWidth = 1.4; pen.ctx.beginPath(); pen.ctx.moveTo(rect2.x + 8, y); pen.ctx.lineTo(rect2.x + 24, y); pen.ctx.stroke(); pen.ctx.restore()
+                pen.labelPx(rect2.x + 28, y, text, { role, size: 10, base: 'middle' })
+            }
         },
         readout(s) {
             const f = albedoCached(0.5, s.r, 160, true), p = albedoCached(0.5, s.r, 32, false), w = albedoCached(0.5, s.r, 32, true)
@@ -139,7 +149,8 @@ export const figures = {
         world: { x: [0, 1], y: [0, 1] },
         state: { view: 0, r: 0.4 },
         controls: [
-            { type: 'slider', key: 'view', label: 'the view', min: 0, max: 85, step: 1, fmt: v => `${v}° from the normal` },
+            // the light, as the text and readout say: by reciprocity the view's angle is the same chart, but one word for it
+            { type: 'slider', key: 'view', label: 'the light', min: 0, max: 85, step: 1, fmt: v => `${v}° from the normal` },
             { type: 'slider', key: 'r', label: 'roughness', min: 0.1, max: 1, step: 0.05, fmt: v => v.toFixed(2) },
         ],
         steps: { straight: { view: 0, r: 0.4 }, slant: { view: 60, r: 0.4 }, grazing: { view: 80, r: 0.4 } },
@@ -156,7 +167,7 @@ export const figures = {
                 ],
             })
             pen.labelPx(rect.x - 30, rect.y - 18, 'the old density over the true one, for each reflected direction (in the plane of incidence)', { role: 'soft', size: 12 })
-            pen.labelPx(rect.x + rect.w / 2, rect.y + rect.h + 22, `the reflected direction from the normal; the mirror direction is ${s.view}°`, { role: 'soft', size: 12, align: 'center' })
+            pen.labelPx(rect.x + rect.w / 2, rect.y + rect.h + 22, `the reflected direction from the normal: the light comes in at −${s.view}°, its mirror direction is ${s.view}°`, { role: 'soft', size: 12, align: 'center' })
         },
         readout(s) {
             const a = s.r * s.r, o = dirAt(-s.view), rs = []

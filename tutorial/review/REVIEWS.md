@@ -381,6 +381,108 @@ promised, which no test of ours looks for.
 | Fig. 2 blocky, no grain shown, no units, radius against diameter, "many samples". | **Fixed.** 128 × 80; a step after the first 2 samples, and a control to stop there; metres; the radius R in both figures (the program's aperture said to be its double); 48 or 4. |
 | The black-prism story told three times. | **Fixed.** Told once, in §3; §5 points to it. |
 
+## Round 5, 2026-10-18 (chapters 5 to 11, first read)
+
+A fresh reader a chapter, the same brief. Reports:
+[photometry](reports/2026-10-18-round5/photometry.md), [colour](reports/2026-10-18-round5/colour.md),
+[pixels](reports/2026-10-18-round5/pixels.md), [diffuse](reports/2026-10-18-round5/diffuse.md),
+[microfacets](reports/2026-10-18-round5/microfacets.md), [glass](reports/2026-10-18-round5/glass.md),
+[dispersion](reports/2026-10-18-round5/dispersion.md).
+
+**What the round showed.** One gap ran through five of the seven: "pick a direction with chance p and divide by p",
+which chapter 12 teaches, came up in chapters 5, 8, 9, 10 and 11 as if known. It is now taught where a renderer
+first picks a direction, chapter 8 (a pupil asked at random, the answer times 30), and the others point back to it.
+Four readers also caught what was wrong, not just unclear, and each was checked before it was changed: the diamond
+ball's rays "going round" (impossible: a ray bent in meets the far side at the same angle, below critical), the
+diagram's edge crossing the whole map (the fitted curves fold back past 427 and 644 nm, and the edge was drawn from
+380 to 700), PBR Neutral's "lift" of the dark tones (it takes 0.04 off them), and the grazing light that "loses more"
+(it loses less, 17.76% against 19.88%).
+
+### Chapter 5, Measuring light
+
+| Finding | |
+|---|---|
+| "Divided by the sky's small chance" and "1 time in 66,111" with nothing behind them. | **Fixed.** The bounce's chance worked (0.0000672 × cos 45° / π); the rim bug said in words: a rare find counts for more. |
+| "It has no length in it", against cd/m². | **Fixed.** What is meant: a scene twice as big, seen from twice as far, looks the same pixel for pixel. |
+| Sections 2 and 3 lean on a closed fold-out. | **Fixed.** Its two answers, πL and πL sin²α, said in the text; the "pressing down" a glass dome with a light above it; the cap's area and radians said. |
+| A quarter as many pixels, "39 whole and 61 at its edge, against 294 and 106". | **Fixed.** The covered area, counting edge pixels by share: 348.2 against 87.1. |
+| "That number is both the sun's luminance and the chance of aiming". | **Fixed.** 1 − cos α is the solid angle and the aiming's chance; the luminance needs sin²α; both 64-bit. |
+| "To a hundredth of a percent" against a row 0.07% off; the caption's "ten times the last" on a width axis that is not; "34,202 lux = 34,202 lux". | **Fixed**, each. |
+| Dot and cross products, 2 sin²(α/2), the 360, "UB", "host". | **Fixed** in the excerpts' notes. |
+| The panel's marks pointing away from the eye. | **Fixed.** A glowing line facing it. |
+| Radiance and luminance cards defining each other. | **Fixed.** Radiance's card says it in square metres and steradians. |
+
+### Chapter 6, Colour
+
+| Finding | |
+|---|---|
+| The diagram's outline crossed the map, and the triangle's corners lay outside it. | **Fixed.** The fit's locus runs back on itself past 427 and 644 nm (380 nm landed at (0.028, 0.035)); the edge is drawn between those turning points, closed by the purples, and tested. |
+| The 1500 K target "below the line from red to green". | **Fixed.** Past that edge, on the side away from blue. |
+| Matrices, M⁻¹, Σ, "linear". | **Fixed.** Three weighted sums written out; the inverse "the table that undoes it"; the mix's three equations shown. |
+| Why a mix lies on the line. | **Fixed.** An average of the two points, each counted by its X + Y + Z. |
+| RGB above 1, blue's 35, the dashed bar. | **Fixed.** "At luminance 1" fixes the colour only; the 0.0722 check written; bars in the channels' own colours (a style drew green as grey). |
+| Why clip only at the end; exactness's condition. | **Fixed.** Two lights clipped first give twice the green; exact through materials that treat the channels alike. |
+| CCT and Duv before section 2; "square to"; Rec.709; u′v′ in the readout; "the user's luminaire". | **Fixed**, each. |
+
+### Chapter 7, From light to pixels
+
+| Finding | |
+|---|---|
+| Neutral's "small lift" of the dark tones, against its own readout (82 against 99). | **Fixed.** It takes 0.04 of white off every channel, less off the darkest. |
+| The strip's "220 different values" against "all 256". | **Fixed.** The label counts the codes in the range, as the readout does. |
+| "No darker than EV 12.43" when 15.87 is chosen. | **Fixed.** "At least EV 12.43 (no brighter)". |
+| Stops, the log average, "18% grey", ISO. | **Fixed**, each: a stop at first use; 1 and 100 average to 10; the grey card, and the meter's 10.4%. |
+| "The desk keeps its shape" at 4.4× white; the black step's 5% moving to the walls. | **Fixed.** Still over white, no longer 17×; the desk is 3.0% of a picture 60% black. |
+| Why "none" bends; the orange turning yellow. | **Fixed.** The sRGB code on a log axis; one channel clipping before the others. |
+| Why saved light needs no sRGB; 518,400; "six" curves; mix, select, acc, kept; the header while black votes. | **Fixed**, each. |
+
+### Chapter 8, Diffuse and mirror
+
+| Finding | |
+|---|---|
+| Brightness, intensity and luminance used as if their difference were known. | **Fixed.** Luminance (how bright it looks) and intensity (what the patch sends one way) said apart. |
+| Throughput, paths, "divided by its own chance". | **Fixed.** A new paragraph: a path starts at the eye; pick at random, divide by the chance (the pupil example); throughput. |
+| The fold-out's "must be ρ of 1" when the point gets π. | **Fixed.** Receives π, sends ρπ, looks ρπ/π = ρ; both true, so fπ = ρ. ∫ … dω said in words. |
+| Fig. 2: no pixel numbers, which end is up, the dashed and red lines. | **Fixed.** The strip numbered, pixel 1 highest; shadow rays and blocked ones named. |
+| Fig. 3: which pixels are the gap; "ground"; ±. | **Fixed.** The gap bracketed (pixels 17 to 19: the eye sees only its mouth), tested; background; the error bar said. |
+| The flat world's 2.6; the blue lines the same whatever the lamp; makeMirror's specular; 1 against 1000 cd/m²; the lamp's 1; "march". | **Fixed**, each. |
+
+### Chapter 9, Rough and shiny
+
+| Finding | |
+|---|---|
+| "The grazing light hits more neighbouring facets", while its loss falls (19.88% to 17.76%). | **Fixed.** Less is lost there, said and tested. |
+| "Two errors no straight-down test could see": the old table was wrong straight on too. | **Fixed.** The lede names the two without that claim. |
+| Sampling and 1/p pointed at chapter 12, later. | **Fixed.** Chapter 8's rule; "draw" kept for painting, "pick" for the renderer. |
+| The rim and the weight 2(1 − v). | **Fixed.** The rim is the most edge-on facets; the top tenth of the range gets ten times the points, each counting a tenth. |
+| F₀, G₁, Λ undefined; the code's tan²θ; mfD against D. | **Fixed** in the fold-out and the notes; the anisotropy functions left out of the first excerpt (two excerpts now). |
+| Fig. 2's bottom chart without a key; fig. 3's "the view" against "light". | **Fixed.** Keys in both charts; "the light" throughout. |
+| The ≤ 1 stamp; roughness 1's warped grid no better; E's shape at 0.3. | **Fixed.** The claim holds before the compensation (up to 3.3× after); at roughness 1 the loss is not at a rim; 0.991 straight on, lowest near 85°. |
+| GPU names, "rows", 946 × 1061, "aiming at the sun". | **Fixed**, each said. |
+
+### Chapter 10, Glass
+
+| Finding | |
+|---|---|
+| Diamond: "rays near its edge go round, reflected". | **Wrong, fixed.** No ray lit from outside is trapped in a ball; why, in two sentences; the rays cross inside at 0.704, marked; tested. |
+| (1 − R)/(1 + R) with no working; why the random branch adds up. | **Fixed.** A fold-out sums the passes; each branch's chance divides out to 1. |
+| 45.6% with "a depth of one thickness"; "channel". | **Fixed.** The slant makes the path 1.134 thicknesses: 0.5^1.134. |
+| The medium excerpt was the opaque rule. | **Fixed.** `mediumBeyond`, the code that asks, with the opaque rule cited after it. |
+| s and p unlabelled; Brewster; sunglasses; why r is squared; sin² + cos² = 1. | **Fixed**, each; a key in the chart. |
+| The reflect/refract excerpt's names and frame. | **Fixed** in its note. |
+| "As the test expected"; "then 0.25"; transTint still per crossing. | **Fixed**, each. |
+
+### Chapter 11, Rainbows
+
+| Finding | |
+|---|---|
+| "Yellow-green often", while the tallest bars are at 445 nm. | **Wrong, fixed.** Two humps, blue near 445 (its whole response in a few bins) and orange near 590. |
+| "Chapter 12's rule again"; why (1, 1, 1) is white. | **Fixed.** Chapter 8's rule; white said. |
+| How a reflection is "decided before"; colour noise. | **Fixed.** The reflect-or-refract pick at the yellow index, said; colour noise defined. |
+| Red's 0.584 at a 600 nm edge. | **Fixed.** Each channel's response drawn under the strip; 41% of red's lies below 600 nm. |
+| The white beam drawn orange; G grey; no key on fig. 2; "exactly, over the draw". | **Fixed**, each. |
+| Abbe 0, "exactly F − C", select's order, PRNG, the tag's 32,766. | **Fixed**, each. |
+
 ## Next round
 
 The pages stay drafts. Every written chapter has now had two readers; the second round's changes are smaller than

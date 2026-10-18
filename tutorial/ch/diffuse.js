@@ -79,10 +79,32 @@ export function render(kind, s) {
     return r
 }
 
-/** a film drawn as a strip of grey pixels under the figure, brightness `k` times the value (1 is white) */
-function strip(pen, pix, x0, y0, x1, h, k, label) {
-    pen.image(pen.X(x0), pen.Y(y0), pen.X(x1) - pen.X(x0), pen.view.s * h, PIX, 1, i => { const v = k * pix[i].Y; return [v, v, v] })
-    pen.labelPx(pen.X(x0), pen.Y(y0 - h) + 4, label, { role: 'soft', size: 11 })
+/** a film drawn as a strip of grey pixels under the figure, brightness `k` times the value (1 is white), its pixels
+ *  numbered under it (a paragraph names "pixel 26": a reader has to be able to find it), and pixels `mark` bracketed */
+function strip(pen, pix, x0, y0, x1, h, k, label, mark = null) {
+    const px0 = pen.X(x0), w = pen.X(x1) - px0, top = pen.Y(y0), bot = top + pen.view.s * h, at = i => px0 + w * (i + 0.5) / PIX
+    pen.image(px0, top, w, pen.view.s * h, PIX, 1, i => { const v = k * pix[i].Y; return [v, v, v] })
+    // the title above the bracket's label when there is one (they overlapped)
+    pen.labelPx(px0, top - (mark ? 20 : 6), label, { role: 'soft', size: 11, base: 'bottom' })
+    for (const n of [1, 10, 20, 30, 40, 50, PIX]) pen.labelPx(at(n - 1), bot + 3, String(n), { role: 'soft', size: 9, align: 'center', base: 'top' })
+    if (mark?.pixels.length) {
+        const a = at(mark.pixels[0]) - w / PIX / 2, b = at(mark.pixels[mark.pixels.length - 1]) + w / PIX / 2
+        pen.ctx.save(); pen.ctx.strokeStyle = pen.col(mark.role); pen.ctx.lineWidth = 1.5
+        pen.ctx.beginPath(); pen.ctx.moveTo(a, top - 3); pen.ctx.lineTo(a, top - 1); pen.ctx.lineTo(b, top - 1); pen.ctx.lineTo(b, top - 3); pen.ctx.stroke(); pen.ctx.restore()
+        pen.labelPx(b + 6, top - 6, mark.label, { role: mark.role, size: 11, base: 'bottom' })
+    }
+}
+/* THE GAP, for its bracket on the furnace's strip: the pixels whose ray first meets a disc between the two centres,
+   on a face turned towards the other disc (the eye sees only the gap's mouth: deeper in, the left disc hides it) */
+export const gapPixels = () => {
+    const sh = furnaceOf(1, 'matte').shapes, x0 = sh[0].c[0], x1 = sh[1].c[0]
+    return Array.from({ length: PIX }, (_, i) => i).filter(i => {
+        const [ox, oy, dx, dy] = cameraRay(FCAM, i, 0.5)
+        let t = Infinity
+        for (const c of sh) { const fx = ox - c.c[0], fy = oy - c.c[1], b = fx * dx + fy * dy, D = b * b - (fx * fx + fy * fy - c.r * c.r); if (D > 0 && -b - Math.sqrt(D) > 0) t = Math.min(t, -b - Math.sqrt(D)) }
+        const x = ox + dx * t
+        return t < Infinity && x > x0 && x < x1
+    })
 }
 
 export const figures = {
@@ -138,7 +160,7 @@ export const figures = {
             for (const rec of s.shown) for (const seg of rec) pen.ray(seg.a, seg.b, { role: seg.kind === 'shadow' ? 'shadow' : seg.kind === 'blocked' ? 'blocked' : seg.lamp ? 'light' : 'cam', w: 0.7, alpha: 0.5, arrow: false, exact: true })
             pen.eye(CAM.eye, CAM.dir, { size: 18 })
             if (s.wall === 'mirror') pen.label([6.6, 4.0], 'mirror', { role: 'glass', size: 13, align: 'right' })
-            strip(pen, s.pix, 0, -0.75, 7, 0.45, 2.5, 'the eye\'s picture, 56 pixels, left to right as the eye sees')
+            strip(pen, s.pix, 0, -0.75, 7, 0.45, 2.5, 'the eye\'s picture: pixel 1 looks highest, pixel 56 lowest')
         },
         readout(s) {
             const top = s.pix.reduce((b, p, i) => p.Y > s.pix[b].Y ? i : b, 0)
@@ -171,7 +193,7 @@ export const figures = {
             for (const sh of furnaceOf(s.rho, s.surface).shapes) pen.flat(sh, { id: sh.name, role: sh.mirror ? 'glass' : 'solid' })
             for (const rec of s.shown) for (const seg of rec) pen.ray(seg.a, seg.b, { role: 'cam', w: 0.7, alpha: 0.5, arrow: false, exact: true })
             pen.eye(FCAM.eye, FCAM.dir, { size: 18 })
-            strip(pen, s.pix, 0, -0.65, 5.8, 0.45, 1, 'the eye\'s picture: the sky reads 1, white')
+            strip(pen, s.pix, 0, -0.65, 5.8, 0.45, 1, 'the eye\'s picture: the sky reads 1, white', { pixels: gapPixels(), label: 'the gap', role: 'accent' })
         },
         readout(s) {
             const m = mean(s.pix), lo = Math.min(...s.pix.map(p => p.Y)), hi = Math.max(...s.pix.map(p => p.Y))

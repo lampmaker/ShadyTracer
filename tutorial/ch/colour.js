@@ -47,9 +47,13 @@ export function lightXYZ(s) {
 /** the exact Rec.709 RGB of chromaticity xy at luminance 1 */
 export const exactRGB = xy => rgbFromXy(xy[0], xy[1])
 
-/* THE DIAGRAM'S EDGE: the chromaticity of every single wavelength, 380 to 700 nm (past 700 the colour no longer moves),
-   closed by the straight line of purples back to 380 */
-export const LOCUS = Array.from({ length: 321 }, (_, k) => XYZtoxy(cmf(380 + k)))
+/* THE DIAGRAM'S EDGE: the chromaticity of every single wavelength between its two corners, closed by the straight line
+   of purples. THE CORNERS ARE THE FIT'S TURNING POINTS, 427 nm (its lowest y) and 644 nm (its largest x): beyond them
+   the fitted curves (spectral.js) run back on themselves -- 380 nm lands at (0.028, 0.035) and 700 at (0.568, 0.432),
+   where the CIE's own stay at the corners -- and the edge drawn from 380 to 700 crossed the whole diagram (a reader's,
+   2026-10-18). Between them the fit is within about 0.005 of the CIE's. */
+export const LOCUS_LO = 427, LOCUS_HI = 644
+export const LOCUS = Array.from({ length: LOCUS_HI - LOCUS_LO + 1 }, (_, k) => XYZtoxy(cmf(LOCUS_LO + k)))
 const inside = (x, y) => {
     let c = false
     for (let i = 0, j = LOCUS.length - 1; i < LOCUS.length; j = i++) {
@@ -106,12 +110,14 @@ function diagram(pen, { fill = true, ticks = true } = {}) {
 function bars(pen, x0, y0, vals, { top = 2, h = 0.25, w = 0.06, gap = 0.03, names = ['R', 'G', 'B'], title } = {}) {
     if (title) pen.label([x0 - 0.01, y0 + h + 0.07], title, { role: 'soft', size: 11 })
     pen.line([x0 - 0.02, y0], [x0 + 3 * (w + gap), y0], { role: 'soft', w: 0.8, exact: true })
-    const roles = ['blocked', 'shadow', 'cam']
+    // the channels in their own colours, not the style's: a style's green was a grey, and its sketched outline read as a
+    // dashed bar (a reader's); a bar past the scale's top ends in an open tip
+    const CH = ['#cf4a3c', '#3c9a4a', '#3d5fc8']
     vals.forEach((v, i) => {
-        const x = x0 + i * (w + gap), hv = clamp(v / top, -1, 1) * h
-        pen.rect(x, Math.min(y0, y0 + hv), w, Math.abs(hv), { role: roles[i], fillStyle: pen.col(roles[i]), alpha: 0.75, lineW: 1 })
+        const x = x0 + i * (w + gap), hv = clamp(v / top, -1, 1) * h, { ctx } = pen
+        ctx.save(); ctx.fillStyle = CH[i]; ctx.globalAlpha = 0.8; ctx.fillRect(pen.X(x), pen.Y(Math.max(y0, y0 + hv)), pen.X(x + w) - pen.X(x), Math.abs(pen.Y(y0 + hv) - pen.Y(y0))); ctx.restore()
         pen.label([x + w / 2, y0 - 0.06 - (v < 0 ? Math.abs(hv) : 0)], names[i], { role: 'soft', size: 11, align: 'center' })
-        pen.label([x + w / 2, y0 + (v >= 0 ? hv : 0) + 0.035], Math.abs(v) >= 100 ? v.toFixed(0) : v.toFixed(2), { role: roles[i], size: 10, align: 'center' })
+        pen.label([x + w / 2, y0 + (v >= 0 ? hv : 0) + 0.035], Math.abs(v) >= 100 ? v.toFixed(0) : v.toFixed(2), { role: 'ink', size: 10, align: 'center' })
     })
 }
 
@@ -200,7 +206,7 @@ export const figures = {
         readout(s) {
             const [x, y] = s.P, c = xyToCctDuv(x, y), rgb = exactRGB(s.P), [u, v] = xyToUpVp(x, y)
             const temp = c.inRange && Math.abs(c.duv) <= 0.05 ? `${Math.round(c.cct)} K, Duv ${sgn(c.duv)}` : `no colour temperature (${c.inRange ? `Duv ${sgn(c.duv)}, past ±0.05` : 'past the line\'s end'})`
-            return `x, y = ${x.toFixed(4)}, ${y.toFixed(4)} (u′, v′ = ${u.toFixed(4)}, ${v.toFixed(4)}) · ${temp} · exact Rec.709 RGB at luminance 1: ${rgb.map(f3).join(', ')} · on the screen: ${gamutClip(rgb).map(f3).join(', ')}`
+            return `x, y = ${x.toFixed(4)}, ${y.toFixed(4)} (u′, v′ = ${u.toFixed(4)}, ${v.toFixed(4)}: the CIE 1976 map colour differences are given on, a stretch of the 1960 one Duv is measured on) · ${temp} · exact Rec.709 RGB at luminance 1: ${rgb.map(f3).join(', ')} · on the screen: ${gamutClip(rgb).map(f3).join(', ')}`
         },
     },
 
@@ -212,7 +218,7 @@ export const figures = {
         controls: [
             { type: 'slider', key: 'T', label: 'target', min: 1000, max: 15000, step: 100, fmt: v => `${v} K` },
             { type: 'slider', key: 'duv', label: 'Duv', min: -0.03, max: 0.03, step: 0.001, fmt: v => sgn(v) },
-            { type: 'button', label: 'The user\'s LEDs', act: s => { s.P = [[0.69, 0.3], [0.205, 0.7], [0.15, 0.025]] } },
+            { type: 'button', label: 'The developer\'s LEDs', act: s => { s.P = [[0.69, 0.3], [0.205, 0.7], [0.15, 0.025]] } },
         ],
         steps: {
             mix: { P: [[0.69, 0.3], [0.205, 0.7], [0.15, 0.025]], T: 4000, duv: 0 },

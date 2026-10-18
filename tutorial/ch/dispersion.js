@@ -61,6 +61,9 @@ export function throughPrism(lambda, nd, vd, tilt) {
     return { n, src, hit: Mid, inside: [Mid, x.q], out: o ? { a: x.q, d: [o[0], o[1]] } : null, angle: o ? -Math.atan2(o[1], o[0]) / DEG : null }
 }
 const WAVES = Array.from({ length: 31 }, (_, k) => 400 + 10 * k)
+/* THE CHANNELS IN THEIR OWN COLOURS, as a picture's colours are, not the style's: a style that draws its 'shadow' role
+   grey drew green as grey (a reader's) */
+const CHANNEL = [waveColour(610), waveColour(540), waveColour(455)]
 
 export const figures = {
     prism: {
@@ -79,8 +82,13 @@ export const figures = {
             pen.shape(PRISM, { role: 'glass', fill: 'fill', w: 1.6, id: 'prism' })
             const { ctx } = pen, line = (a, b, col, w, al = 1) => { ctx.save(); ctx.strokeStyle = col; ctx.lineWidth = w; ctx.globalAlpha = al; ctx.beginPath(); ctx.moveTo(pen.X(a[0]), pen.Y(a[1])); ctx.lineTo(pen.X(b[0]), pen.Y(b[1])); ctx.stroke(); ctx.restore() }
             const base = throughPrism(LAMBDA_D, s.nd, s.vd, s.tilt)
+            // white light in the page's ink (a white line would not show on a light page), and so all the way through when
+            // nothing disperses: the 31 colours drawn on top of one another left only the last, an orange (a reader's)
             if (base) pen.ray(base.src, base.hit, { role: 'ink', w: 2.4, id: 'white' })
-            for (const l of WAVES) {
+            if (base && !(s.vd > 0)) {
+                pen.line(base.inside[0], base.inside[1], { role: 'ink', w: 1.6, exact: true })
+                if (base.out) pen.line(base.out.a, [base.out.a[0] + base.out.d[0] * 5, base.out.a[1] + base.out.d[1] * 5], { role: 'ink', w: 2, exact: true })
+            } else for (const l of WAVES) {
                 const r = throughPrism(l, s.nd, s.vd, s.tilt)
                 if (!r) continue
                 line(r.inside[0], r.inside[1], waveColour(l), 1.2, 0.8)
@@ -122,6 +130,11 @@ export const figures = {
                 pen.labelPx(X(l) + 3, rect.y + 3, name, { role: 'soft', size: 12 })
             }
             pen.labelPx(rect.x, rect.y + rect.h + 22, 'wavelength, nm', { role: 'soft', size: 12 })
+            pen.labelPx(rect.x - 30, rect.y - 18, 'index of refraction n, by wavelength', { role: 'soft', size: 12 })
+            // which curve is which, at their right ends
+            const yAt = v => rect.y + rect.h * (1 - (v - lo) / (hi - lo))
+            pen.labelPx(rect.x + rect.w - 4, yAt(cauchyN(1.5168, 64.17, 780)) - 4, 'BK7', { role: 'cam', size: 11, align: 'right', base: 'bottom' })
+            pen.labelPx(rect.x + rect.w - 4, yAt(cauchyN(s.nd, s.vd, 780)) - 4, 'your glass', { role: 'accent', size: 11, align: 'right', base: 'bottom' })
         },
         readout(s) {
             const f = cauchyN(1.5168, 64.17, LAMBDA_F), c = cauchyN(1.5168, 64.17, LAMBDA_C)
@@ -143,35 +156,35 @@ export const figures = {
             const { W, H } = pen.view, rect = { x: W * 0.08, y: H * 0.08, w: W * 0.6, h: H * 0.7 }, { ctx } = pen
             const mid = k => SPEC_LO + (k + 0.5) * SPEC_STEP, top = Math.max(...SPEC_PICK) * 1.1
             plot(pen, rect, {
-                x: [SPEC_LO, SPEC_LO + SPEC_BINS * SPEC_STEP], y: [0, top], xticks: [400, 500, 600, 700], yticks: [], fmt: v => `${v}`,
-                hoverX: v => { const k = clamp(Math.floor((v - SPEC_LO) / SPEC_STEP), 0, SPEC_BINS - 1), p = SPEC_PICK[k], w = SPEC_WEIGHTS[k].map(x => p > 0 ? x / p : 0); return `${SPEC_LO + k * SPEC_STEP}-${SPEC_LO + (k + 1) * SPEC_STEP} nm: drawn ${(100 * p).toFixed(2)}% of the time; weights R ${w[0].toFixed(2)}, G ${w[1].toFixed(2)}, B ${w[2].toFixed(2)}` },
+                x: [SPEC_LO, SPEC_LO + SPEC_BINS * SPEC_STEP], y: [0, top], xticks: [400, 500, 600, 700], yticks: [0.02, 0.04, 0.06], fmt: v => v >= 1 ? `${v}` : `${(100 * v).toFixed(0)}%`,
+                hoverX: v => { const k = clamp(Math.floor((v - SPEC_LO) / SPEC_STEP), 0, SPEC_BINS - 1), p = SPEC_PICK[k], w = SPEC_WEIGHTS[k].map(x => p > 0 ? x / p : 0); return `${SPEC_LO + k * SPEC_STEP}-${SPEC_LO + (k + 1) * SPEC_STEP} nm: picked ${(100 * p).toFixed(2)}% of the time; weights R ${w[0].toFixed(2)}, G ${w[1].toFixed(2)}, B ${w[2].toFixed(2)}` },
                 hoverY: () => '', series: [{ name: 'chance', pts: SPEC_PICK.map((p, k) => [mid(k), p]), role: 'soft', kind: 'bars', tip: false }],
             })
             // each bin's bar in its own colour, under the plot's grey
             const X = v => rect.x + (v - SPEC_LO) / (SPEC_BINS * SPEC_STEP) * rect.w, Yp = v => rect.y + rect.h - v / top * rect.h, bw = rect.w / SPEC_BINS * 0.8
             SPEC_PICK.forEach((p, k) => { ctx.save(); ctx.fillStyle = waveColour(mid(k)); ctx.globalAlpha = 0.8; ctx.fillRect(X(mid(k)) - bw / 2, Yp(p), bw, rect.y + rect.h - Yp(p)); ctx.restore() })
-            pen.labelPx(rect.x - 20, rect.y - 18, 'the chance of each 10 nm bin being drawn (point at a bin for its weights)', { role: 'soft', size: 12 })
+            pen.labelPx(rect.x - 20, rect.y - 18, 'the chance of each 10 nm bin being picked (point at a bin for its weights)', { role: 'soft', size: 12 })
             // the running average of the three weights over the draws so far: towards 1 each
             const R = rng(s.seed * 7919 + 1), acc = [0, 0, 0]
             for (let i = 0; i < s.n; i++) { const d = specDraw(R()); for (let c = 0; c < 3; c++) acc[c] += d.w[c] }
-            const avg = acc.map(v => s.n ? v / s.n : 0), bx = W * 0.73, bwid = W * 0.055, h = H * 0.55, y0 = H * 0.78, roles = ['blocked', 'shadow', 'cam']
+            const avg = acc.map(v => s.n ? v / s.n : 0), bx = W * 0.73, bwid = W * 0.055, h = H * 0.55, y0 = H * 0.78
             pen.labelPx(bx - 6, H * 0.04, 'the weights\' average,', { role: 'soft', size: 11 })
-            pen.labelPx(bx - 6, H * 0.04 + 14, `${s.n.toLocaleString('en')} draws`, { role: 'soft', size: 11 })
+            pen.labelPx(bx - 6, H * 0.04 + 14, `${s.n.toLocaleString('en')} picks`, { role: 'soft', size: 11 })
             ctx.save(); ctx.strokeStyle = pen.col('ink'); ctx.setLineDash([4, 3]); ctx.beginPath(); ctx.moveTo(bx - 8, y0 - h / 1.5); ctx.lineTo(bx + 3 * bwid * 1.4, y0 - h / 1.5); ctx.stroke(); ctx.restore()
             pen.labelPx(bx + 3 * bwid * 1.4 + 3, y0 - h / 1.5 - 7, '1', { role: 'ink', size: 12 })
             avg.forEach((v, c) => {
                 const x = bx + c * bwid * 1.4, hh = Math.min(v, 1.45) / 1.5 * h
-                ctx.save(); ctx.fillStyle = pen.col(roles[c]); ctx.globalAlpha = 0.75; ctx.fillRect(x, y0 - hh, bwid, hh); ctx.restore()
+                ctx.save(); ctx.fillStyle = CHANNEL[c]; ctx.globalAlpha = 0.75; ctx.fillRect(x, y0 - hh, bwid, hh); ctx.restore()
                 pen.labelPx(x + bwid / 2, y0 + 4, ['R', 'G', 'B'][c], { role: 'soft', size: 12, align: 'center' })
-                pen.labelPx(x + bwid / 2, y0 - hh - 16, v.toFixed(3), { role: roles[c], size: 11, align: 'center' })
+                pen.labelPx(x + bwid / 2, y0 - hh - 16, v.toFixed(3), { role: 'ink', size: 11, align: 'center' })
             })
         },
         readout(s) {
             const R = rng(s.seed * 7919 + 1), acc = [0, 0, 0]
             for (let i = 0; i < s.n; i++) { const d = specDraw(R()); for (let c = 0; c < 3; c++) acc[c] += d.w[c] }
             const exact = [0, 1, 2].map(c => SPEC_PICK.reduce((a, p, k) => a + (p > 0 ? p * SPEC_WEIGHTS[k][c] / p : 0), 0))
-            return s.n ? `${s.n.toLocaleString('en')} wavelengths drawn: the weights average R ${(acc[0] / s.n).toFixed(3)}, G ${(acc[1] / s.n).toFixed(3)}, B ${(acc[2] / s.n).toFixed(3)} · exactly, over the draw: ${exact.map(v => v.toFixed(6)).join(', ')}`
-                : `no wavelengths drawn yet · exactly, over the draw, each channel's weight averages ${exact.map(v => v.toFixed(6)).join(', ')}`
+            return s.n ? `${s.n.toLocaleString('en')} wavelengths picked: the weights average R ${(acc[0] / s.n).toFixed(3)}, G ${(acc[1] / s.n).toFixed(3)}, B ${(acc[2] / s.n).toFixed(3)} · worked out exactly instead, every bin's chance times its weight added up: ${exact.map(v => v.toFixed(6)).join(', ')}`
+                : `no wavelengths picked yet · worked out exactly, every bin's chance times its weight added up, each channel's weight averages ${exact.map(v => v.toFixed(6)).join(', ')}`
         },
     },
 }
@@ -200,17 +213,27 @@ figures.coat = {
             series: [{ name: 'reflected', pts: ls.map(l => [l, coatR(l, e, s.width)]), role: 'accent', w: 2 }],
         })
         const { ctx } = pen
-        // the wavelengths' colours, under the axis's numbers
+        // the wavelengths' colours, under the axis's numbers, and under them each channel's response over the bins (its
+        // tallest bin full height): which wavelengths each channel stands for, so red's 0.584 can be seen to come from a
+        // range that starts below the edge
         for (let l = 380; l < 780; l += 4) { ctx.fillStyle = waveColour(l + 2); ctx.fillRect(X(l), rect.y + rect.h + 20, X(l + 4) - X(l) + 0.5, 7) }
+        const band = { y: rect.y + rect.h + 31, h: Math.max(14, H - (rect.y + rect.h + 31) - 4) }
+        for (let c = 0; c < 3; c++) {
+            const top = Math.max(...SPEC_WEIGHTS.map(w => w[c]))
+            ctx.save(); ctx.strokeStyle = CHANNEL[c]; ctx.lineWidth = 1.6; ctx.beginPath()
+            SPEC_WEIGHTS.forEach((w, k) => { const x = X(SPEC_LO + (k + 0.5) * SPEC_STEP), y = band.y + band.h * (1 - Math.max(w[c], 0) / top); k ? ctx.lineTo(x, y) : ctx.moveTo(x, y) })
+            ctx.stroke(); ctx.restore()
+        }
+        pen.labelPx(rect.x - 4, band.y + band.h / 2, 'channels', { role: 'soft', size: 10, align: 'right', base: 'middle' })
         pen.labelPx(rect.x, rect.y - 18, `the coating's reflectance; its edge at ${e.toFixed(1)} nm for light ${s.tilt}° from the normal`, { role: 'soft', size: 12 })
         // what each channel reflects: the reflectance averaged over that channel's wavelengths
-        const R = edgeRGB(0, 1, e, s.width), bx = W * 0.76, bw = W * 0.055, y0 = H * 0.76, h = H * 0.6, roles = ['blocked', 'shadow', 'cam']
+        const R = edgeRGB(0, 1, e, s.width), bx = W * 0.76, bw = W * 0.055, y0 = H * 0.76, h = H * 0.6
         pen.labelPx(bx - 8, H * 0.08, 'each channel reflects', { role: 'soft', size: 11 })
         R.forEach((v, c) => {
             const x = bx + c * bw * 1.45
-            ctx.save(); ctx.fillStyle = pen.col(roles[c]); ctx.globalAlpha = 0.75; ctx.fillRect(x, y0 - v * h, bw, v * h); ctx.restore()
+            ctx.save(); ctx.fillStyle = CHANNEL[c]; ctx.globalAlpha = 0.75; ctx.fillRect(x, y0 - v * h, bw, v * h); ctx.restore()
             pen.labelPx(x + bw / 2, y0 + 4, ['R', 'G', 'B'][c], { role: 'soft', size: 12, align: 'center' })
-            pen.labelPx(x + bw / 2, y0 - v * h - 16, v.toFixed(3), { role: roles[c], size: 11, align: 'center' })
+            pen.labelPx(x + bw / 2, y0 - v * h - 16, v.toFixed(3), { role: 'ink', size: 11, align: 'center' })
         })
     },
     readout(s) {

@@ -17,8 +17,9 @@
     <h1>Rough and shiny</h1>
     <p class="lede">Between the matte surface and the mirror of chapter 8 lies almost everything real: brushed metal,
       a varnished table, a plastic toy, whose reflections are blurred. ShadyTracer models them all one way, as a
-      surface of tiny mirrors tilted at random. This chapter is that model (GGX), how the renderer draws a direction from
-      it, and the two places it once went wrong in ways no straight-down test could see.</p>
+      surface of tiny mirrors tilted at random. This chapter is that model (GGX), how the renderer picks a direction from
+      it, and two places it once went wrong: a table of the light one reflection loses, and a sampler that was right
+      only for light coming straight down.</p>
   </div>
   <div class="titleblock" data-auto></div>
 </header>
@@ -30,31 +31,43 @@
       <a data-g="microfacet">microfacets</a>: flat pieces, each a mirror, far too small to see, tilted this way and that.
       Light reflects off each facet as off a mirror, and the tilts spread the reflections into a <em>lobe</em> round the
       mirror direction. The <a data-g="roughness">roughness</a> says how tilted the facets are. Here a white metal of
-      roughness 0.15 under light 40° from the normal (drag the light round): a narrow lobe, almost a mirror. The thin
-      lines are directions drawn the way the renderer draws a rough reflection, shown flattened onto the page.</p>
-    <p data-step="lobe:rough">At roughness 0.6 the lobe is wide. And some of the drawn directions now point into the
-      surface (drawn as blocked): reflected off one facet, they run into a neighbouring one. A single reflection loses
-      that light; a real surface would bounce it again among its facets. One reflection keeps 0.8012 of the light
-      here.</p>
-    <p data-step="lobe:grazing">Light at a grazing 78°: the lobe leans and stretches along the surface, more of what is
-      drawn hits neighbouring facets, and the facets facing the light are seen side-on.</p>
+      roughness 0.15 under light 40° from the normal (drag the light round): a narrow lobe, almost a mirror. The lobe's
+      distance from the point in each direction is how much light goes that way. The thin lines are 60 directions picked
+      at random the way the renderer picks a rough reflection (chapter 8: pick at random, divide by the chance). They
+      are directions in 3D, most of them a little out of the page, shown by their shadow on it, all drawn the same
+      length: only where they point matters.</p>
+    <p data-step="lobe:rough">At roughness 0.6 the lobe is wide. And some of the picked directions now point into the
+      surface (dashed, <span data-say="blocked">red</span>, inside the metal): reflected off one facet, they run into a
+      neighbouring one. A single reflection loses that light; a real surface would bounce it again among its facets.
+      One reflection keeps 0.8012 of the light here.</p>
+    <p data-step="lobe:grazing">Light at a grazing 78° (nearly along the surface): the lobe leans and stretches along
+      the surface. The share lost is a little smaller here, 17.76% against 19.88% at 40°: how much a single reflection
+      loses depends on the angle in a way the next section charts.</p>
     <p>ShadyTracer's facets follow the <a data-g="ggx">GGX</a> distribution, the one most renderers use: a few
       formulas give how many facets point each way (<var>D</var>), and how many of those are hidden from the light or
-      the eye by their neighbours (Smith's <var>G</var>). Its tilt, α, is the roughness squared: the roughness setting is
-      the "perceptual" one most renderers offer.</p>
+      the eye by their neighbours (Smith's <var>G</var>: <a data-g="masking">masking and shadowing</a>). Its tilt, α,
+      is the roughness squared: a roughness slider that way feels even to the eye ("perceptual"), and most renderers
+      offer it.</p>
     <details class="maths">
       <summary><span class="tag">The maths</span>The lobe in four pieces</summary>
       <div class="body">
-        <p>Light from ω<sub>i</sub> reflects towards ω<sub>o</sub> only off facets whose normal is halfway between,
-          <var>h</var> = (ω<sub>i</sub> + ω<sub>o</sub>) normalised. The reflection's BSDF:</p>
+        <p>Light from ω<sub>i</sub> (in) reflects towards ω<sub>o</sub> (out) only off facets whose normal is halfway
+          between, <var>h</var> = (ω<sub>i</sub> + ω<sub>o</sub>) normalised. Every angle θ is measured from the
+          surface's normal; θ<sub>h</sub> is the facet normal's. The reflection's <a data-g="bsdf">BSDF</a>:</p>
         <p class="eq"><var>f</var> = <span class="frac"><span><var>D</var>(<var>h</var>) <var>G</var><sub>2</sub>(ω<sub>o</sub>, ω<sub>i</sub>) <var>F</var>(ω<sub>o</sub>·<var>h</var>)</span><span>4 cos θ<sub>o</sub> cos θ<sub>i</sub></span></span></p>
         <dl class="terms">
-          <dt><var>D</var></dt><dd>how many facets point along <var>h</var>, per unit of solid angle: GGX's
+          <dt><var>D</var></dt><dd>how many facets point along <var>h</var>, per unit of
+            <a data-g="solid-angle">solid angle</a> (per bit of direction): GGX's
             1 / (π α² (tan²θ<sub>h</sub>/α² + 1)² cos⁴θ<sub>h</sub>)</dd>
-          <dt><var>G</var><sub>2</sub></dt><dd>the share of those facets seen from both directions, not hidden by
-            neighbours: 1 / (1 + Λ(ω<sub>o</sub>) + Λ(ω<sub>i</sub>)), Λ(ω) = (√(1 + α² tan²θ) − 1)/2</dd>
-          <dt><var>F</var></dt><dd>the facet's own Fresnel reflectance, the colour of a metal (chapter 8) or the
-            exact formula for glass and plastic (chapter 10)</dd>
+          <dt>Λ</dt><dd>how much of the surface a direction's neighbours hide, growing as the direction gets lower:
+            Λ(ω) = (√(1 + α² tan²θ) − 1)/2, 0 straight down. A direction (x, y, z) in the surface's frame, z along the
+            normal, has tan²θ = (x² + y²)/z², which is how the code writes it.</dd>
+          <dt><var>G</var><sub>1</sub></dt><dd>the share of facets seen from one direction: 1 / (1 + Λ(ω))</dd>
+          <dt><var>G</var><sub>2</sub></dt><dd>the share seen from both directions at once, not hidden by
+            neighbours: 1 / (1 + Λ(ω<sub>o</sub>) + Λ(ω<sub>i</sub>))</dd>
+          <dt><var>F</var></dt><dd>the facet's own Fresnel reflectance: how much of the light a facet reflects at the
+            angle it is met. <var>F</var><sub>0</sub> is that straight on, which for a metal is its colour (chapter 8);
+            glass and plastic use the exact formula (chapter 10)</dd>
           <dt>4 cos θ<sub>o</sub> cos θ<sub>i</sub></dt><dd>turns a density of facet normals into one of reflected
             directions, and the facets' area into the surface's</dd>
         </dl>
@@ -62,62 +75,80 @@
           each it sees (visible normals), and reflects about it. The chance of the reflected direction then works out to
           <var>G</var><sub>1</sub>(ω<sub>o</sub>) <var>D</var>(<var>h</var>) / (4 cos θ<sub>o</sub>), and the weight
           <var>f</var> cos θ<sub>i</sub> over that chance is <var>F</var> <var>G</var><sub>2</sub> / <var>G</var><sub>1</sub>:
-          never more than <var>F</var>, and exactly the share of light kept when averaged (section 2).</p>
+          never more than <var>F</var> (before section 2's compensation), and exactly the share of light kept when
+          averaged (section 2).</p>
       </div>
     </details>
   </div>
   <figure class="fig" data-fig="lobe">
-    <figcaption>A rough white metal in the plane of the light: the light coming in (drag it), the mirror direction
-      (dashed), the lobe of reflected light (bold), and 60 directions drawn as the renderer draws them, flattened onto the
-      page, those going into the surface drawn as blocked. Set the roughness, or draw new directions.</figcaption>
+    <figcaption>A rough white metal in the plane of the light: the light coming in (drag its handle), the mirror
+      direction (dashed), the lobe of reflected light (bold, <span data-say="accent">red</span>: its distance from the
+      point is how much light goes that way), and 60 directions picked as the renderer picks them, shown by their shadow
+      on the page, those going into the surface dashed inside it. Set the roughness, or pick new
+      directions.</figcaption>
   </figure>
 </section>
 
 <section class="scene" id="albedo">
   <div class="prose">
     <h2><span class="n">2</span>The light a reflection loses, and giving it back</h2>
-    <p data-step="albedo:r03">The share one reflection keeps, <var>E</var>, depends on the roughness and the view. The
-      top chart gives it for a white metal at roughness 0.3, at every angle from the normal: close to 1 straight on and
-      at grazing, lowest between. A real metal keeps the rest too, after a second or third bounce among its facets, so a
-      white metal in a white furnace (chapter 8) should vanish. The single-reflection model would show it darker.</p>
+    <p data-step="albedo:r03">The share one reflection keeps, <var>E</var>, depends on the roughness and the view. It
+      is an average: over all the directions the renderer might pick, of what each one keeps (0 for one that goes into
+      the surface). The top chart gives it for a white metal at roughness 0.3, at every angle from the normal: 0.991
+      straight on, falling slowly, lowest near 85° (0.886) and rising again at the very edge. A real metal keeps the rest
+      too, after a second or third bounce among its facets, so a white metal in a white furnace (chapter 8) should
+      vanish. The single-reflection model would show it darker.</p>
     <p data-step="albedo:r03">So ShadyTracer gives the light back. Before the first picture, the graphics card works out
       <var>E</var> for every roughness and angle into a table, and a metal's reflection is multiplied by 1 +
       F<sub>0</sub>(1/<var>E</var> − 1) (Turquin's compensation; for a white metal, 1/<var>E</var>). A white metal then
       reads exactly 1, if the table is right; with a table that is off, it reads <var>E</var><sub>true</sub> /
       <var>E</var><sub>table</sub>, the bottom chart.</p>
-    <p data-step="albedo:r03">The table was off. It was built from a plain 32 × 32 grid of draws (the red dots), which
-      at roughness 0.3 says 0.97850 seen 60° from the normal, against about 0.9751 converged (the comment in section 4
-      gives 0.97505): the reflections lost go below
-      the surface from a thin rim of the draws the plain grid barely touched, so it saw too few of them. A white metal of
-      roughness 0.3 read 0.997 in the furnace (the same comment). The grid is now squeezed towards that rim (the ringed dots): 0.97556, and
-      the metal within 0.1% of 1.</p>
-    <p data-step="albedo:rough">At roughness 1 one reflection keeps less than half the light at 60°, and the
-      compensation more than doubles it.</p>
+    <p data-step="albedo:r03">The table was off. Each entry is that average taken over a plain 32 × 32 grid of the two
+      random numbers a pick is made from, in place of random ones (the <span data-say="blocked">red</span> dots). At
+      roughness 0.3, seen 60° from the normal, it says 0.97850, against 0.97505 worked out finely (the comment in
+      section 4). Why: the second number, near 1, picks the facets the eye sees most edge-on, the most tilted ones, at
+      the rim of what it sees, and theirs are the reflections that go below the surface. That rim is a thin strip of the
+      grid, and a plain grid puts few points in it, so it saw too few of the losses. A white metal of roughness 0.3 read
+      0.997 in the furnace (the same comment).</p>
+    <p data-step="albedo:r03">The grid is now squeezed towards that rim (the <span data-say="cam">blue</span> rings):
+      the second number becomes 1 − (1 − <var>v</var>)². The top tenth of the rim, from 0.99 to 1, now gets the grid's
+      points from 0.9 to 1, ten times as many. Each of them then counts for less, 2(1 − <var>v</var>) times (0.1 at
+      <var>v</var> = 0.95, where the strip is squeezed ten-fold), so the average is unchanged and only its error falls:
+      0.97556, and the metal within 0.1% of 1.</p>
+    <p data-step="albedo:rough">At roughness 1 one reflection keeps less than half the light at 60° (0.451), and only
+      0.307 straight on; the compensation more than doubles it. Here the loss comes from everywhere, not from a thin
+      rim, so squeezing the grid buys nothing: both grids are off by up to about 0.15%, either way.</p>
   </div>
   <figure class="fig" data-fig="albedo">
     <figcaption>Top: <var>E</var>, the share of light one reflection off a white rough metal keeps, by the view's angle
-      from the normal: worked out finely (line), and on the renderer's 32 × 32 grid of draws, plain as it was and warped
-      as it is (dots). Bottom: what a white metal compensated by each table then reads, <var>E</var><sub>true</sub> /
-      <var>E</var><sub>table</sub>. Set the roughness; point at either chart to read it.</figcaption>
+      from the normal: worked out finely (line), and on the renderer's 32 × 32 grid, plain as it was
+      (<span data-say="blocked">red</span> dots) and warped as it is (<span data-say="cam">blue</span> rings). Bottom:
+      what a white metal compensated by each table then reads, <var>E</var><sub>true</sub> /
+      <var>E</var><sub>table</sub>, the plain table's line <span data-say="blocked">red</span>, the warped one's
+      <span data-say="cam">blue</span>. Set the roughness; point at either chart to read it.</figcaption>
   </figure>
 </section>
 
 <section class="scene" id="oldpdf">
   <div class="prose">
     <h2><span class="n">3</span>A density that was right only straight on</h2>
-    <p data-step="oldpdf:straight">Chapter 12's rule: a direction drawn with chance <var>p</var> is weighed by 1/<var>p</var>.
-      If the code that draws and the code that states <var>p</var> disagree, every estimate is biased. ShadyTracer's
-      old sampler used a formula for its density that is right when the light comes straight down. The chart is the old
-      density over the true one for every reflected direction. Straight down it is 1 everywhere: correct.</p>
-    <p data-step="oldpdf:slant">At 60° it runs from 0.154 to 1.623. Where it was too large the weights were too small,
-      and where too small too large: up to 6.5 times, a firefly. A clamp on the weights at 10 hid the fireflies and kept
-      the bias. A test that looks straight down at a floor can never see this, which is why the renderer's material test
-      looks at 70° off vertical.</p>
+    <p data-step="oldpdf:straight">Chapter 8's rule: a direction picked with chance <var>p</var> counts 1/<var>p</var>
+      times (its <a data-g="pdf">probability density</a>). If the code that picks and the code that states <var>p</var>
+      disagree, every direction counts the wrong number of times, and the picture is
+      <a data-g="bias">biased</a>: wrong in one direction, however many paths are averaged. ShadyTracer's old sampler
+      used a formula for its density that is right when the light comes straight down. The chart is the old density over
+      the true one for every reflected direction. Straight down it is 1 everywhere: correct.</p>
+    <p data-step="oldpdf:slant">At 60° it runs from 0.154 to 1.623. Where it was too large a direction counted too
+      little, and where too small too much: up to 6.5 times, a rare pixel far too bright, a
+      <a data-g="firefly">firefly</a>. A clamp, a cap on any one count at 10, hid the fireflies and kept the bias. A
+      test that looks straight down at a floor can never see this, which is why the renderer's material test looks at
+      70° off vertical.</p>
     <p data-step="oldpdf:grazing">At 80°, as low as 0.023: a weight 43 times too large.</p>
   </div>
   <figure class="fig" data-fig="oldpdf">
-    <figcaption>The old sampler's density over the true one for each reflected direction in the plane of the light; 1
-      (dashed) is right. Set the light's angle and the roughness; point at the curve to read it.</figcaption>
+    <figcaption>The old sampler's density over the true one for each reflected direction in the plane of the light (the
+      light comes in from the left, its mirror direction on the right); 1 (dashed) is right. Set the light's angle and
+      the roughness; point at the curve to read it.</figcaption>
   </figure>
 </section>
 
@@ -125,11 +156,13 @@
   <div class="prose">
     <h2><span class="n">4</span>How ShadyTracer does it</h2>
     <p>The model, in the file that holds the one GGX the renderer has:</p>
-    <pre data-src="lib/pathtracer/core/microfacet.js" data-sym="// Smith Lambda for GGX, anisotropic." data-to="return 1.0 / (MF_PI * a.x * a.y * t * t);"
-         data-why="WGSL (chapter 21). w is a direction in the surface's own frame, z the normal; a holds two alphas, one along each axis of the surface, equal unless the material is anisotropic (brushed: rougher one way than the other). The section 1 fold-out's Λ, G₁, G₂ and D." data-hash="2ae1ad83"></pre>
+    <pre data-src="lib/pathtracer/core/microfacet.js" data-sym="// Smith Lambda for GGX, anisotropic." data-to="fn mfG1(w: vec3&lt;f32&gt;, a: vec2&lt;f32&gt;) -&gt; f32 { return 1.0 / (1.0 + mfLambda(w, a)); }"
+         data-why="WGSL, the graphics card's language (chapter 21). w is a direction in the surface's own frame, z along the normal; a holds two alphas, one along each axis of the surface, equal unless the material is anisotropic (brushed: rougher one way than the other). With both equal to α, t2 is α² tan²θ: the fold-out's Λ, and G₁ from it." data-hash="2ea9aeea"></pre>
+    <pre data-src="lib/pathtracer/core/microfacet.js" data-sym="// height-correlated masking-shadowing" data-to="return 1.0 / (MF_PI * a.x * a.y * t * t);"
+         data-why="G₂ and D. For a facet normal h of length 1, h.z is cos θ and h.x² + h.y² is sin²θ, so t is cos²θ (tan²θ/α² + 1), and 1/(π α² t²) is the fold-out's D written another way." data-hash="dde4affb"></pre>
     <p>Drawing a visible facet normal, and the density of the reflection that follows:</p>
     <pre data-src="lib/pathtracer/core/microfacet.js" data-sym="/* A visible microfacet normal for view o (o.z > 0), by spherical caps" data-to="return mfG1(o, a) * mfD(h, a) / (4.0 * o.z);"
-         data-why="Stretching by alpha turns any roughness into roughness 1, where the visible normals are a simple cap of a sphere; the result is stretched back. The old density the comment names is section 3's." data-hash="faffd98d"></pre>
+         data-why="u holds the pick's two random numbers between 0 and 1. Stretching by alpha turns any roughness into roughness 1, where the facet normals the eye sees are a simple cap of a sphere; the result is stretched back. u.x turns into an angle round the view, u.y into a height z on that cap: u.y = 0 its top, u.y = 1 its rim, the facets seen most edge-on (section 2's rim). The old density the comment names is section 3's: Gv is G₁ of the view, NoH the cosine between normal and facet, VoH between view and facet." data-hash="faffd98d"></pre>
     <p>The weight of a rough metal's reflection, with the compensation of section 2 (<code>lb.cm</code>, 1 +
       F<sub>0</sub>(1/<var>E</var> − 1), from the table:
       <cite data-src="lib/pathtracer/core/materials_pbr.js" data-sym="lb.cm = VEC3(1.0) + m.baseColor * (1.0 / max(e1, 1e-3) - 1.0);"></cite>):</p>
@@ -137,12 +170,13 @@
          data-why="reflect(−o, h) mirrors the view about the facet. A reflection below the surface (i.z ≤ 0) keeps a weight of 0 and ends the path: the light section 1 shows lost." data-hash="1080984d"></pre>
     <p>And the table's grid, with why it is warped:</p>
     <pre data-src="lib/pathtracer/core/microfacet.js" data-sym="/* THE GRID IS WARPED, u.y = 1 - (1 - v)^2 with weight 2 (1 - v)." data-to="acc += 2.0 * (1.0 - v.y) * fr * mfG2(o, i3, a) / mfG1(o, a);"
-         data-why="v runs over the 32 × 32 grid; u is the draw it becomes, crowded towards u.y = 1, the rim of the visible cap; the weight 2(1 − v) makes up for the crowding, so the average is unchanged and only the error falls. fr is the Fresnel: a dielectric's for the coat's table, 1 for the metal's (isE1)." data-hash="e78d4c83"></pre>
+         data-why="v runs over the 32 × 32 grid; u is the pick it becomes, crowded towards u.y = 1, the rim of the visible cap; the weight 2(1 − v) makes up for the crowding, so the average is unchanged and only the error falls. fr is the Fresnel: a dielectric's for the coat's table, 1 for the metal's (isE1). The table is built by a kernel, a program run on the graphics card once for every entry (chapter 21); MF_SQRT_SAMPLES, 32, is filled in when it is built." data-hash="e78d4c83"></pre>
     <div data-claim="code">
       <p><strong>A claim in the comments, checked.</strong> The header and the bounce's comment say a reflection
-        "weighs at most F G2/G1 ≤ 1", which is why no clamp is needed. The metal's weight is also multiplied by the
-        compensation, which is 1 or more; a single weight can exceed 1, by design, and the furnace reads 1 because of
-        it.</p>
+        "weighs at most F G2/G1 ≤ 1", which is why no clamp is needed. That holds for the reflection alone. The metal's
+        weight is then multiplied by section 2's compensation, which is 1 or more, so a metal's single weight can exceed
+        1 (by up to 1/<var>E</var>, 3.3 times at roughness 1 straight on): by design, since the furnace reads 1 because
+        of it. The comment leaves the compensation out.</p>
     </div>
   </div>
 </section>
@@ -159,16 +193,20 @@
     </div>
     <div data-claim="measured">
       <p><strong>Predicted, then measured.</strong> A white metal on a sphere in a furnace shows exactly
-        <var>E</var><sub>true</sub> / <var>E</var><sub>table</sub>, so a row can be predicted without a graphics card.
-        Predicted 0.9998, 1.0006, 0.9971, 0.9999 for four metal rows; measured 0.9996, 1.0009, 0.9966, 1.0001 (the
-        user's Ampere card, 946 × 1061, 2026-09-29). After the warp, the isotropic metals at roughness 0.5, 0.3 and 0.15
-        read 1.0003, 1.0002 and 1.0002, each where its grid predicted (<code>roadmap/SURFACES.md</code>).</p>
+        <var>E</var><sub>true</sub> / <var>E</var><sub>table</sub>, so the furnace test can be predicted without a
+        graphics card. Predicted 0.9998, 1.0006, 0.9971, 0.9999 for four metals; measured 0.9996, 1.0009, 0.9966, 1.0001
+        (on ShadyTracer's developer's own graphics card, an Ampere, at 946 × 1061 pixels, 2026-09-29: chapter 0 says
+        where such numbers come from). After the warp, the metals at roughness 0.5, 0.3 and 0.15 read 1.0003, 1.0002
+        and 1.0002, each where its grid predicted (<code>roadmap/SURFACES.md</code>).</p>
     </div>
     <div data-claim="measured">
-      <p><strong>Sampling and evaluating agree.</strong> The same materials seen 70° off vertical, with aiming at the
-        sun and without, agree to under 1%: a plastic at roughness 0.3 18,557 against 18,635, a metal at 0.3 3,439.7
-        against 3,447.0. A matte floor, whose cosine draw cannot be wrong, differs by as much, 0.79%: that is the noise
-        of finding a 5° sun by chance (the user's Pascal card, <code>docs/TESTING.md</code>, "BSDF parity").</p>
+      <p><strong>Picking and evaluating agree.</strong> A surface lit by the sun can be rendered two ways: by its
+        picked directions alone, which find the sun by chance, or by also aiming a shadow ray at the sun and using the
+        BSDF's formula (chapter 14). If the picking and the formula disagree, so do the two pictures. Seen 70° off
+        vertical they agree to under 1%, in cd/m²: a plastic at roughness 0.3 18,557 against 18,635, a metal at 0.3
+        3,439.7 against 3,447.0. A matte floor, whose cosine pick cannot be wrong, differs by as much, 0.79%: that is the
+        noise of finding a 5° sun by chance (on the developer's older Pascal card, <code>docs/TESTING.md</code>, "BSDF
+        parity").</p>
     </div>
   </div>
 </section>
@@ -211,7 +249,7 @@
       <li data-ref="turquin2019">The compensation for metals, 1 + F₀(1/<var>E</var> − 1).</li>
     </ul></aside>
     <h3>Words from this chapter</h3>
-    <ul class="words" data-words="microfacet ggx roughness masking bsdf furnace"></ul>
+    <ul class="words" data-words="microfacet ggx roughness masking bsdf solid-angle pdf bias firefly furnace"></ul>
   </div>
 </section>
 

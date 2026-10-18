@@ -7,8 +7,9 @@
 //          reflection past the critical angle
 //   slab   a slab of glass, the light bouncing inside it: every pass that leaves, summed to (1 - R) / (1 + R), and with
 //          a colour depth, absorbed on the way (Beer-Lambert) -- against fresnel.js's slabT and absorbingSlabT
-//   ball   parallel light through a glass ball: refracted in, refracted out (or totally reflected), to a focus nearer
-//          for the rays further out
+//   ball   parallel light through a glass ball: refracted in, refracted out, to a focus nearer for the rays further
+//          out -- or, past an index of 2, crossing the axis inside the ball. Never totally reflected: a ray meets the far
+//          side at the angle it was bent to on the way in, below the critical angle (traceBall keeps the branch anyway)
 //
 // Fresnel and Snell have no dimension in them, so the flat drawings use the 3D formulas as they are (flatland.js's
 // header): every ray here is in the plane of the page.
@@ -70,6 +71,9 @@ export function traceBall(h, n, maxInside = 4) {
 const crossAxis = o => o && Math.abs(o.d[1]) > 1e-12 ? o.a[0] - o.a[1] * o.d[0] / o.d[1] : null
 /** the paraxial focus of a ball lens, from its centre: n R / (2 (n - 1)) */
 export const ballFocus = n => n / (2 * (n - 1))
+/** where rays near the axis cross it after the front face alone, from the centre: the front's own focus, n R / (n - 1)
+ *  behind it -- inside the ball when the index is over 2 */
+export const frontFocus = n => n / (n - 1) - 1
 export const axisCross = (h, n) => { const b = traceBall(h, n); return b ? crossAxis(b.out) : null }
 
 export const figures = {
@@ -113,9 +117,14 @@ export const figures = {
                 ],
             })
             pen.labelPx(rect.x - 20, rect.y - 18, `reflected share, ${s.side === 'glass' ? 'from inside the glass' : 'from the air'}`, { role: 'soft', size: 12 })
-            const mark = (deg, label) => { ctx.save(); ctx.strokeStyle = pen.col('soft'); ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(X(deg), rect.y); ctx.lineTo(X(deg), rect.y + rect.h); ctx.stroke(); ctx.restore(); pen.labelPx(X(deg) + 3, rect.y + rect.h - 30, label, { role: 'soft', size: 10 }) }
+            // which curve is which (a reader could not tell): a key in the chart's top left, where no curve is
+            const key = (k, dash, w, role, text) => { const y = rect.y + 10 + 14 * k; ctx.save(); ctx.strokeStyle = pen.col(role); ctx.lineWidth = w; ctx.setLineDash(dash); ctx.beginPath(); ctx.moveTo(rect.x + 8, y); ctx.lineTo(rect.x + 28, y); ctx.stroke(); ctx.restore()
+                pen.labelPx(rect.x + 32, y, text, { role, size: 10, base: 'middle' }) }
+            key(0, [4, 3], 1, 'soft', 's'); key(1, [1, 3], 1, 'soft', 'p'); key(2, [], 2, 'accent', 'their average')
+            const mark = (deg, label, up = 0) => { ctx.save(); ctx.strokeStyle = pen.col('soft'); ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(X(deg), rect.y); ctx.lineTo(X(deg), rect.y + rect.h); ctx.stroke(); ctx.restore(); pen.labelPx(X(deg) + 3, rect.y + rect.h - 30 - up, label, { role: 'soft', size: 10 }) }
             mark(brewsterDeg(s.n, s.side), 'p = 0')
-            if (s.side === 'glass' && s.n > 1) mark(criticalDeg(s.n), 'critical')
+            // from inside the two marks are a few degrees apart (33.7 and 41.8 at 1.5): the second one higher
+            if (s.side === 'glass' && s.n > 1) mark(criticalDeg(s.n), 'critical', 16)
             void W; void H
         },
         readout(s) {
@@ -142,7 +151,9 @@ export const figures = {
             pen.line([-3.3, 0], [3.3, 0], { role: 'glass', w: 1.4, exact: true }); pen.line([-3.3, -1], [3.3, -1], { role: 'glass', w: 1.4, exact: true })
             const th = s.theta * DEG, thT = Math.asin(Math.sin(th) / s.n), dx = Math.tan(thT), x0 = -2.6 + (s.theta > 60 ? -0.4 : 0)
             const out = 1.1, w = e => 0.4 + 4 * e, a = e => clamp(0.25 + 0.75 * Math.sqrt(e), 0, 1)
-            pen.ray([x0 - out * Math.sin(th) * 1.3, out * Math.cos(th) * 1.3], [x0, 0], { role: 'light', w: w(1), id: 'in' })
+            // the incoming ray, as long as fits: at 78 degrees a fixed length ran off the left edge
+            const inLen = Math.min(1.3, (x0 + 3.45) / (out * Math.sin(th) || 1))
+            pen.ray([x0 - out * Math.sin(th) * inLen, out * Math.cos(th) * inLen], [x0, 0], { role: 'light', w: w(1), id: 'in' })
             pen.ray([x0, 0], [x0 + out * Math.sin(th), out * Math.cos(th)], { role: 'light', w: w(P.R), alpha: a(P.R), id: 'r0' })
             let x = x0, y = 0
             for (let k = 0; k < P.inside.length; k++) {
@@ -186,11 +197,16 @@ export const figures = {
             }
             const f = ballFocus(s.n)
             if (f > 1) { pen.dot([f, 0], { role: 'accent', r: 4 }); pen.label([f, -0.28], 'focus near the axis', { role: 'accent', size: 11, align: 'center' }) }
-            else pen.label([1.6, -1.7], 'its near-axis focus is inside the ball', { role: 'accent', size: 11 })
+            else {
+                // the label below the ball with a leader, clear of the rays (on the dot it sat under them)
+                const c = frontFocus(s.n); pen.dot([c, 0], { role: 'accent', r: 4 })
+                pen.line([c, -0.06], [0.35, -1.18], { role: 'accent', w: 0.8, exact: true }); pen.label([0.35, -1.32], 'the rays cross here, inside the ball', { role: 'accent', size: 11, align: 'center' })
+            }
         },
         readout(s) {
             const f = ballFocus(s.n), near = axisCross(0.02, s.n), far = axisCross(0.9, s.n)
-            return `index ${s.n.toFixed(2)}: rays near the axis meet ${f.toFixed(3)} from the centre (n / 2(n − 1))${f <= 1 ? ', inside the ball itself' : ''} · traced, a ray 0.02 off the axis crosses it at ${near == null ? '—' : near.toFixed(3)}, one 0.9 off at ${far == null ? '— (it never leaves)' : far.toFixed(3)}${far != null && near != null ? (far < near ? ': the outer rays focus nearer' : ': here the outer rays cross further out') : ''}`
+            if (f <= 1) return `index ${s.n.toFixed(2)}: rays near the axis cross it inside the ball, ${frontFocus(s.n).toFixed(3)} past the centre (n / (n − 1) − 1), and leave spreading apart: no focus behind the ball (n / (2(n − 1)) = ${f.toFixed(3)} is under 1)`
+            return `index ${s.n.toFixed(2)}: rays near the axis meet ${f.toFixed(3)} from the centre (n / (2(n − 1))) · traced, a ray 0.02 off the axis crosses it at ${near == null ? '—' : near.toFixed(3)}, one 0.9 off at ${far == null ? '— (it never leaves)' : far.toFixed(3)}${far != null && near != null ? (far < near ? ': the outer rays focus nearer' : ': here the outer rays cross further out') : ''}`
         },
     },
 }

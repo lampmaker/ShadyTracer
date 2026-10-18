@@ -600,6 +600,15 @@ for (const [name, { mod }] of modules) {
     const K = await import('../ch/colour.js'), C = await import('../../lib/pathtracer/core/colorimetry.js')
     // the screen's triangle is Rec.709's, from colorimetry.js's own matrix; its white D65
     const want = [[0.64, 0.33], [0.30, 0.60], [0.15, 0.06]]
+    // the diagram's edge ends where the fitted curves turn back (a reader saw the old one, 380 to 700 nm, cross the map)
+    {
+        const SP = await import('../../lib/pathtracer/core/spectral.js'), xyAt = l => C.XYZtoxy(SP.cmf(l))
+        let lo = 0, hi = 0
+        for (let l = 380; l <= 470; l++) if (!lo || xyAt(l)[1] < xyAt(lo)[1]) lo = l
+        for (let l = 600; l <= 720; l++) if (!hi || xyAt(l)[0] > xyAt(hi)[0]) hi = l
+        ok('ch.6: the diagram\'s edge runs from the fit\'s lowest y (427 nm) to its largest x (644 nm), as the page says', lo === 427 && hi === 644 && K.LOCUS_LO === lo && K.LOCUS_HI === hi
+            && K.LOCUS.length === hi - lo + 1, `${lo} ${hi}`)
+    }
     ok('ch.6: the triangle is Rec.709\'s primaries and its white D65, from the renderer\'s matrix', K.PRIMARIES.every((p, i) => Math.hypot(p[0] - want[i][0], p[1] - want[i][1]) < 2e-4)
         && Math.hypot(K.D65[0] - 0.3127, K.D65[1] - 0.3290) < 2e-4)
     // a hot body through the fit lands on the standard's line to within the fit's error, as the page says
@@ -671,6 +680,11 @@ for (const [name, { mod }] of modules) {
     const w = D.render('furnace', { rho: 1, surface: 'matte', cap: 40, max: 48 }), wm = D.render('furnace', { rho: 1, surface: 'mirror', cap: 40, max: 48 })
     ok('ch.8: the white furnace: every pixel exactly 1, with no noise, matte and mirror', [w, wm].every(r => r.pix.every(p => p.Y === 1 && p.V === 0)))
     const fr = st => D.figures.furnace.readout(D.render('furnace', { ...D.figures.furnace.steps[st], max: 48 }))
+    {
+        const gp = D.gapPixels(), g = D.render('furnace', { rho: 0.7, surface: 'matte', cap: 40, max: 48 }).pix.map(p => p.Y), c = D.render('furnace', { rho: 1, surface: 'matte', cap: 1, max: 48 }).pix.map(p => p.Y)
+        const darkest = v => v.indexOf(Math.min(...v))
+        ok('ch.8: the gap the furnace\'s strip brackets is pixels 17 to 19, and its darkest pixel is in it, grey and capped', gp.join() === '16,17,18' && gp.includes(darkest(g)) && gp.includes(darkest(c)), `${gp} ${darkest(g)} ${darkest(c)}`)
+    }
     ok('ch.8: grey 0.8128, a cap of one bounce 0.9963', fr('grey').includes('average 0.8128') && fr('cap').includes('average 0.9963'), fr('cap'))
     // makeMirror's "tiny value (e.g., 0.02)": below ALPHA_MIN, still a delta; the first blur at sqrt(ALPHA_MIN)
     const AM = +/export const ALPHA_MIN = ([\d.e-]+)/.exec(MF)[1]
@@ -694,6 +708,11 @@ for (const [name, { mod }] of modules) {
     ok('ch.9: the plain 32 x 32 grid gives 0.97850 at roughness 0.3, 60 degrees (the comment\'s number); converged about 0.9751; warped 0.97556',
         M.albedo(0.5, 0.3, 32, false).toFixed(5) === '0.97850' && Math.abs(M.albedo(0.5, 0.3, 400, true) - 0.9751) < 2e-4 && M.albedo(0.5, 0.3, 32, true).toFixed(5) === '0.97556' && MFs.includes('0.97850 for 0.97505'))
     const r = (f, st) => M.figures[f].readout({ ...M.figures[f].state, ...M.figures[f].steps[st] })
+    const E = (deg, rough) => M.albedo(Math.cos(deg * Math.PI / 180), rough, 160, true)
+    let low = 0; for (let d = 0; d <= 89; d++) if (E(d, 0.3) < E(low, 0.3)) low = d
+    ok('ch.9: E at roughness 0.3 is 0.991 straight on and lowest near 85 degrees (0.886); at roughness 1, 0.307 straight on and 0.451 at 60; 19.88% lost at 40 degrees and 17.76% at 78, roughness 0.6',
+        E(0, 0.3).toFixed(3) === '0.991' && Math.abs(low - 85) <= 1 && E(85, 0.3).toFixed(3) === '0.886' && E(0, 1).toFixed(3) === '0.307' && E(60, 1).toFixed(3) === '0.451'
+        && r('lobe', 'rough').includes('19.88%') && r('lobe', 'grazing').includes('17.76%'), `${low} ${E(0, 1)}`)
     ok('ch.9: the old density is the true one straight down, 0.154 to 1.623 of it at 60 degrees, from 0.023 at 80', r('oldpdf', 'straight').includes('1.000 to 1.000') && r('oldpdf', 'slant').includes('0.154 to 1.623') && r('oldpdf', 'grazing').includes('0.023 to'), r('oldpdf', 'slant'))
     ok('ch.9: the page\'s numbers: E 0.8012 at roughness 0.6, 40 degrees; a compensated metal at roughness 0.3 reads 0.9965 with the plain table', r('lobe', 'rough').includes('E = 0.8012') && r('albedo', 'r03').includes('reads 0.9965'), r('albedo', 'r03'))
     // the mirror's formulas are microfacet.js's, line for line where the WGSL can be read
@@ -723,7 +742,12 @@ for (const [name, { mod }] of modules) {
         r('snell', 'air').includes('bends to 28.13°') && r('snell', 'air').includes('s 9.2%, p 0.8%, unpolarised 5.0%') && r('snell', 'inside').includes('bends to 48.59°')
         && r('slab', 'clear').includes('90.2% the first time, 90.4% with every bounce') && r('slab', 'clear').includes('slab: 90.7%') && r('slab', 'steep').includes('45.5% the first time, 50.9%')
         && r('slab', 'absorbing').includes('t = 45.6%') && r('slab', 'absorbing').includes('41.1% with every bounce') && r('slab', 'absorbing').includes('absorbed 52.9%')
-        && r('ball', 'glass').includes('meet 1.500') && r('ball', 'glass').includes('0.9 off at 1.104') && r('ball', 'water').includes('meet 2.015') && r('ball', 'diamond').includes('meet 0.852'), r('slab', 'absorbing'))
+        && r('ball', 'glass').includes('meet 1.500') && r('ball', 'glass').includes('0.9 off at 1.104') && r('ball', 'water').includes('meet 2.015') && r('ball', 'diamond').includes('inside the ball, 0.704 past the centre'), r('slab', 'absorbing'))
+    // past an index of 2 the near-axis rays cross inside the ball, at the front face's own focus; and no ray lit from
+    // outside is ever totally reflected inside a ball (the far side is met at the angle of the bend in, below critical)
+    const inside = n => { const sg = G.traceBall(0.001, n).segs[1]; return sg.a[0] + sg.a[1] / (sg.a[1] - sg.b[1]) * (sg.b[0] - sg.a[0]) }
+    ok('ch.10: a diamond ball\'s rays cross inside it at n / (n - 1) - 1 = 0.704; no ray in any ball totally reflected', [2.2, 2.42, 2.5].every(n => Math.abs(inside(n) - G.frontFocus(n)) < 1e-5)
+        && G.frontFocus(2.42).toFixed(3) === '0.704' && [1.05, 1.5, 2, 2.42, 2.5].every(n => Array.from({ length: 199 }, (_, k) => (k - 99) / 100).every(h => !G.traceBall(h, n).tir)))
 }
 
 {
