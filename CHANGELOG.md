@@ -30,7 +30,9 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   measured / read in code / inferred, what went wrong before, things to try.
 - **Written as drafts:** chapter 0, *How to read this* (a chapter's parts, the figure key, why the flat world's light
   falls as 1/r and 3D's as 1/r², excerpts and stamps, where a measured number comes from, running the program and its
-  tests); chapter 1, *Rays make a picture*; chapter 2, *Shapes as distances*; chapter 14, *Aim at the
+  tests); chapter 1, *Rays make a picture*; chapter 3, *Building and bending shapes* (the three joins hard and blended,
+  the blend's normal and the warped fillet, which solid a point is in, a twist's step bound, a noise relief and its
+  shell); chapter 2, *Shapes as distances*; chapter 14, *Aim at the
   light* (next event estimation); the contents map; a glossary of 82 terms, each linked from the pages with a card on
   hover or tap.
 - **The kit** (`tutorial/kit/`): one pen draws every figure in the style's colours and line; a figure is a spec with
@@ -50,6 +52,12 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   the sky), and two hundred is the chance for a direction picked evenly; a cosine-weighted bounce finds that sun about
   once in a hundred. The real sun is 0.000067 steradian (0.53° across, `photometry.js`), found by such a bounce about once
   in 47,000. Chapter 14 quotes the comment and says so; the comment itself is unchanged.
+- **A gap found in the twist's step bound, reported, not fixed:** the twist and bend modifiers
+  (`builder/modifiers.js`) divide distances by √(1 + c²), c = rate × extent, which is how much the twist stretches a move
+  along its axis; the most it stretches any move is (c + √(c² + 4)) / 2, up to 15% more. Measured by the tutorial's
+  test (node, 64-bit, on a copy of the modifier's arithmetic): a plate tilted 45° at the edge of a twist's extent keeps a
+  slope of 1.14 after the division, so a 0.9 step can be about 3% longer than the distance; a twisted box stays under 1.
+  Chapter 3 shows it in the flat world and says so; the modifier is unchanged.
 - **Four styles, for every reader** (you: "make the style a dropdown, expect to add more styles later. We'll keep this
   in for everyone. give them names"): *Lab notebook*, *Blueprint*, *Drafting sheet* and *Risograph*, each light and
   dark, chosen by name from the menu at the top right of every page and kept on the reader's device. They are listed

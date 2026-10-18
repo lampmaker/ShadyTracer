@@ -85,6 +85,15 @@ real student.
 6. What does a Lipschitz bound promise, and what is the fix when a formula breaks it?
 7. How does ShadyTracer decide that a ray has left the scene?
 
+**shapes** (Building and bending shapes)
+1. How do you cut one shape out of another using only their two distances?
+2. What does a smooth blend change, and what does its k control?
+3. Why did the fillet look warped before the fix, although the surface was in the right place?
+4. How does the renderer decide which solid a point is inside, and when can that answer be wrong?
+5. Why does twisting a shape make it unsafe to march, and what is done about it?
+6. The twist divides by √(1 + c²). What does the page say is wrong with that, and how sure is it?
+7. Why does a ray marched through an undivided noise relief never stop, and what does the shell save?
+
 **nee** (Aim at the light)
 1. Why does a picture lit by a small lamp stay noisy for a long time?
 2. What does next event estimation do at each bounce?

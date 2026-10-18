@@ -26,6 +26,7 @@ export const READING = [
     R('iq-distance', 'Inigo Quilez', 'Distance estimation', 'article, 2011', 'https://iquilezles.org/articles/distance/'),
     R('iq-interior', 'Inigo Quilez', 'Interior SDFs', 'article, 2020', 'https://iquilezles.org/articles/interiordistance/'),
     R('iq-normals', 'Inigo Quilez', 'Normals for an SDF', 'article, 2015', 'https://iquilezles.org/articles/normalsSDF/'),
+    R('iq-fbmsdf', 'Inigo Quilez', 'FBM detail in SDFs', 'article, 2019', 'https://iquilezles.org/articles/fbmsdf/'),
     R('iq-bounding', 'Inigo Quilez', 'SDF bounding volumes', 'article, 2019', 'https://iquilezles.org/articles/sdfbounding/'),
 
     // sphere tracing itself

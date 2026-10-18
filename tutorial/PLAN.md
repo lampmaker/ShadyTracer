@@ -117,10 +117,12 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
    march kernel, shapes.js's "exact or safe". *Read:* Inigo Quilez's 2D and 3D distance functions, his smooth minimum,
    distance estimation and interior SDFs (iq-distfunctions2d, iq-distfunctions, iq-smin, iq-distance, iq-interior,
    iq-raymarching); hart1996; keinert2014; iq-normals.
-3. **Building and bending shapes**: CSG, the smooth blend and its normal (the warped fillet), fold tracking surface and
-   medium, uniform scale, `warp(k)`, noise relief's Lipschitz bound → scene_api.js, noise.js. *Read:* Quilez again,
-   above all: iq-distfunctions (its operators: union, subtraction, rounding, onion, repetition, twist), iq-smin,
-   iq-interior.
+3. **Building and bending shapes** (draft): union, intersection and subtraction, hard and blended; the blend's normal
+   and the warped fillet; fold's surface (argmin |d|) and medium (least deep: right for nested solids, a guess for
+   overlapping ones); `warp(k)` and the twist's divisor √(1 + c²) against the map's largest stretch
+   (c + √(c² + 4)) / 2 (the flat world's swirl, and a 3D plate measured by the test at 1.14); the noise relief raw,
+   divided and with its shell, a ray rocking for 300 steps → scene_api.js, modifiers.js, codegen.js combine,
+   noise.js. *Read:* iq-distfunctions, iq-interior, iq-fbmsdf, iq-smin.
 4. **Which way is up**: normals from the field's slope, analytic against three extra evaluations. *Read:* iq-normals
    (Quilez's tetrahedron of four evaluations against central differences).
 

@@ -330,6 +330,82 @@ for (const [name, { mod }] of modules) {
     ok('3D: an orbiting camera puts its target in the middle', Math.abs(t[0]) < 1e-12 && Math.abs(t[1]) < 1e-12)
 }
 
+/* THE CHAPTERS' OWN NUMBERS: what a page's prose quotes from its figures, held here so a change to the code they run
+   (noise.js, widgets.js) fails until the prose is read again ------------------------------------------------------ */
+{
+    const { caught } = await import('../ch/reading.js')
+    ok('ch.0: a piece 0.6 long catches 4 of 36 rays at r = 1 and 2 at r = 2 (the flat world\'s 1/r)', caught(1) === 4 && caught(2) === 2, `${caught(1)}, ${caught(2)}`)
+}
+{
+    const S = await import('../ch/shapes.js'), W = await import('../../help/widgets.js')
+    // the blend's normal (scene_api.js csgUnion, mirrored) is the slope of the blended field, for two shapes with normals
+    const A = [0.3, 0.1], B = [-0.5, -0.2], rA = 0.7, rB = 0.6, k = 0.5
+    const at = (c, r, x, y) => { const dx = x - c[0], dy = y - c[1], l = Math.hypot(dx, dy); return [dx / l, dy / l, l - r] }
+    const f = (x, y) => W.smin(at(A, rA, x, y)[2], at(B, rB, x, y)[2], k)
+    let worst = 0
+    for (let i = 0; i < 400; i++) {
+        const x = -1.6 + 3 * ((i * 0.6180339) % 1), y = -1.2 + 2.4 * ((i * 0.7548776) % 1)
+        const n = S.csgUnion(at(A, rA, x, y), at(B, rB, x, y), k), h = 1e-5
+        const g = [(f(x + h, y) - f(x - h, y)) / (2 * h), (f(x, y + h) - f(x, y - h)) / (2 * h)], gl = Math.hypot(...g)
+        worst = Math.max(worst, Math.hypot(n[0] - g[0] / gl, n[1] - g[1] / gl), Math.abs(n[2] - f(x, y)))
+    }
+    ok('ch.3: a blend\'s normal, mix(grad a, grad b, t) made unit, is the blended field\'s slope (and its distance smin)', worst < 1e-5, worst.toExponential(2))
+    ok('ch.3: ...and a shape with no normal gives the join none (csgNormal)', S.csgUnion([0, 0, 0.1], [1, 0, 0.2], 0.5).slice(0, 2).every(v => v === 0))
+    // a relief divided before a blend: smin(x/c, y/c, k) = smin(x, y, k c) / c
+    let gap = 0
+    for (const [x, y, c] of [[0.1, 0.3, 2], [-0.2, 0.05, 3.5], [0.4, 0.41, 1.7], [1, -1, 4]]) gap = Math.max(gap, Math.abs(W.smin(x / c, y / c, 0.3) - W.smin(x, y, 0.3 * c) / c))
+    ok('ch.3: smin(x/c, y/c, k) = smin(x, y, kc)/c, why a relief under a blend is divided after it', gap < 1e-12, gap)
+    // the swirl's numbers, as the page quotes them
+    const st = d => S.steepest(1.2, d).worst
+    ok('ch.3: the swirl at turn 1.2: steepest 1.77 undivided, 1.13 divided by sqrt(1 + c^2), 1.00 by (c + sqrt(c^2 + 4)) / 2',
+        Math.abs(st('none') - 1.77) < 0.01 && Math.abs(st('sqrt') - 1.13) < 0.01 && Math.abs(st('exact') - 1.00) < 0.006, [st('none'), st('sqrt'), st('exact')].map(v => v.toFixed(3)).join(' '))
+    // ...and the probe's circle, as the steps say: into the arm undivided and divided by sqrt(1 + c^2), not by the
+    // exact divisor -- nor anywhere inside the extent with it (beyond, the swirl stretches more, and the page says so)
+    const cuts = (div, p) => { const g = S.swirlField(1.2, div), raw = S.swirlField(1.2, 'none'), d = g(...p); let mn = Infinity
+        for (let i = 0; i < 720; i++) { const a = i / 720 * 2 * Math.PI; mn = Math.min(mn, raw(p[0] + Math.cos(a) * d, p[1] + Math.sin(a) * d)) } return d > 0 && mn < -1e-4 }
+    const P = S.figures.swirl.steps.raw.probe
+    let exactCuts = 0
+    for (let i = 0; i < 900; i++) { const a = i * 2.39996, r = 0.99 * Math.sqrt((i + 0.5) / 900), p = [r * Math.cos(a), r * Math.sin(a)]; if (cuts('exact', p)) exactCuts++ }
+    ok('ch.3: the swirl\'s probe circle cuts the arm undivided and by sqrt(1 + c^2), never with the exact divisor inside the extent',
+        cuts('none', P) && cuts('sqrt', P) && !cuts('exact', P) && !exactCuts, `${exactCuts} probes`)
+    // the 3D twist (builder/modifiers.js: p turned by rate z, distances times 1/sqrt(1 + rate^2 extent^2)): the page's
+    // measured slopes, the largest found on a grid of points within the extent near the child
+    const twist = (rate, p) => { const a = rate * p[2], c = Math.cos(a), s = Math.sin(a); return [c * p[0] - s * p[1], s * p[0] + c * p[1], p[2]] }
+    const box3 = (q, b) => { const d = q.map((v, i) => Math.abs(v) - b[i]); return Math.hypot(...d.map(v => Math.max(v, 0))) + Math.min(Math.max(...d), 0) }
+    const slope3 = (g, lo, hi, ext, n = 26) => {
+        let w = 0
+        for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) for (let l = 0; l < n; l++) {
+            const p = [0, 1, 2].map((a, m) => lo[a] + (hi[a] - lo[a]) * ([i, j, l][m] + 0.5) / n)
+            if (Math.hypot(p[0], p[1]) > ext) continue
+            const h = 1e-5, gr = [0, 1, 2].map(a => { const u = [...p], v = [...p]; u[a] += h; v[a] -= h; return (g(u) - g(v)) / (2 * h) })
+            w = Math.max(w, Math.hypot(...gr))
+        }
+        return w
+    }
+    const c45 = Math.SQRT1_2, plate = q => box3([q[0] - 0.9, c45 * q[1] + c45 * q[2], -c45 * q[1] + c45 * q[2]], [0.08, 0.15, 0.03])
+    const plateSlope = slope3(p => plate(twist(0.8, p)) / Math.sqrt(1 + 0.64), [0.75, -0.25, -0.25], [1.05, 0.25, 0.25], 1.0, 34)
+    const B3 = [0.6, 0.6, 0.5], ext = Math.hypot(0.6, 0.6)
+    const boxSlope = slope3(p => box3(twist(1.2, p), B3) / Math.sqrt(1 + 1.44 * ext * ext), [-1, -1, -0.8], [1, 1, 0.8], ext)
+    ok('ch.3: a plate tilted 45 degrees at a twist\'s extent (rate 0.8, extent 1): slope 1.14 after the twist\'s division; a twisted box under 1',
+        Math.abs(plateSlope - 1.14) < 0.015 && boxSlope < 1 && boxSlope > 0.9, `${plateSlope.toFixed(3)}, box ${boxSlope.toFixed(3)}`)
+    // the relief figure's ray, as the page tells it: stuck undivided, 33 steps divided, 22 with the shell
+    const ray = mode => { const s = { ...S.figures.relief.steps[mode] }, l = Math.hypot(s.from[0], s.from[1] * 0.6), r = S.march(S.reliefField(s), s.from, [-s.from[0] / l, -s.from[1] * 0.6 / l]), t = S.reliefField({ ...s, mode: 'raw' }); return { n: r.pts.length, end: r.end, inside: r.pts.filter(([x, y]) => t(x, y) < -0.004).length } }
+    const raw = ray('raw'), div = ray('divided'), sh = ray('shell')
+    ok('ch.3: the relief\'s ray: undivided it rocks for 300 steps, half inside; divided 33 steps; with the shell 22',
+        raw.end === 'out of steps' && raw.n === 300 && Math.abs(raw.inside - 150) <= 3 && div.end === 'hit' && div.n === 33 && !div.inside && sh.end === 'hit' && sh.n === 22 && !sh.inside,
+        JSON.stringify({ raw, div, sh }))
+    ok('ch.3: the relief\'s slope bound is the modifier\'s: 1 + amount / size x 17.2 / 1.875', Math.abs(S.reliefSlope(0.12, 0.2) - (1 + 0.6 * 17.2 / 1.875)) < 1e-12)
+    // a ball wholly inside the pool: everywhere inside the ball, the fold says glass
+    const pool = (x, y) => W.circle(x + 0.2, y + 0.35, 1.45)
+    let wrong = 0
+    for (let i = 0; i < 2000; i++) {
+        const a = i * 2.39996, r = 0.62 * Math.sqrt((i + 0.5) / 2000), x = 0.15 + r * Math.cos(a), y = -0.2 + r * Math.sin(a)
+        if (S.fold(S.fold(S.emptyHit(), pool(x, y), 'water'), W.circle(x - 0.15, y + 0.2, 0.62), 'glass').a !== 'glass') wrong++
+    }
+    ok('ch.3: a solid wholly inside another is the one a point in it is least deep in', !wrong, `${wrong} points`)
+    ok('ch.3: ...and the overlap step\'s probe, inside the glass, is called water', S.figures.fold.readout(S.figures.fold.steps.overlap).endsWith('in: water'))
+}
+
 /* THE EXCERPT LOCATOR ON ITS OWN ----------------------------------------------------------------------------------- */
 {
     const text = [
