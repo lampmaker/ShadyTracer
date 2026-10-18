@@ -16,6 +16,10 @@
 @import url("styles/blueprint.css");
 @import url("styles/drafting.css");
 @import url("styles/riso.css");
+@import url("styles/chalkboard.css");
+@import url("styles/drafting-sans.css");
+@import url("styles/drafting-fine.css");
+@import url("styles/minimal.css");
 
 /* The defaults every style overrides: a plain, readable page if a style sheet failed to load. :where() gives them no
    specificity, so a style's tokens win whatever the order the sheets arrive in. */
@@ -31,6 +35,9 @@
     --f-hand: 'Comic Sans MS', 'Segoe Print', cursive; --f-mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
     --pen-rough: 0; --pen-double: 0; --pen-width: 1.5; --pen-misreg: 0; --pen-fill: wash;
     --tex: none; --radius: 2px;
+    /* what the text calls each role's colour: a word marked data-say="cam" is rewritten to the style's own (page.js
+       sayColours), so "blue while they bounce" reads "black" in a drafting sheet, which draws them black */
+    --say-cam: "blue"; --say-light: "orange"; --say-shadow: "green"; --say-blocked: "red"; --say-accent: "red"; --say-soft: "grey"; --say-normal: "purple"; --say-glass: "teal";
     color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {

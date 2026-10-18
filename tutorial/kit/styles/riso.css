@@ -12,6 +12,7 @@
     --f-display: 'Bricolage Grotesque', 'Arial Black', system-ui, sans-serif; --f-body: 'Atkinson Hyperlegible', 'Segoe UI', system-ui, sans-serif;
     --f-hand: 'DM Mono', ui-monospace, Menlo, monospace; --f-mono: 'DM Mono', ui-monospace, Menlo, Consolas, monospace;
     --pen-rough: .55; --pen-double: 0; --pen-width: 2.1; --pen-misreg: 1.6; --pen-fill: dots;
+    --say-cam: "blue"; --say-light: "pink"; --say-shadow: "teal"; --say-blocked: "orange"; --say-accent: "pink"; --say-soft: "grey"; --say-normal: "purple"; --say-glass: "teal";
     --radius: 6px;
     --tex: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .12 0 0 0 0 .2 0 0 0 0 .38 0 0 0 .13 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }

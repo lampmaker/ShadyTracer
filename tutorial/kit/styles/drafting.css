@@ -13,6 +13,7 @@
     --f-display: 'Spectral SC', 'Spectral', Georgia, serif; --f-body: 'Spectral', Georgia, 'Times New Roman', serif;
     --f-hand: 'Courier Prime', 'Courier New', monospace; --f-mono: 'Courier Prime', 'Courier New', ui-monospace, monospace;
     --pen-rough: 0; --pen-double: 0; --pen-width: 1.25; --pen-misreg: 0; --pen-fill: hatch;
+    --say-cam: "black"; --say-light: "orange-red"; --say-shadow: "black"; --say-blocked: "black"; --say-accent: "orange-red"; --say-soft: "grey"; --say-normal: "grey"; --say-glass: "black";
     --radius: 0;
     --tex: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.6' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .045 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
@@ -26,6 +27,7 @@
         --code-bg: rgba(255, 255, 255, .04); --code-ink: #ecebe6; --code-comment: #9b9a94; --code-kw: #ecebe6; --code-num: #ff6a3d;
         --stamp-measured: #ecebe6; --stamp-code: #ecebe6; --stamp-inferred: #ff6a3d;
         --tex: none;
+        --say-cam: "white"; --say-light: "orange-red"; --say-shadow: "white"; --say-blocked: "white"; --say-accent: "orange-red"; --say-soft: "grey"; --say-normal: "grey"; --say-glass: "white";
         color-scheme: dark;
     }
 }
@@ -38,6 +40,7 @@
     --code-bg: rgba(255, 255, 255, .04); --code-ink: #ecebe6; --code-comment: #9b9a94; --code-kw: #ecebe6; --code-num: #ff6a3d;
     --stamp-measured: #ecebe6; --stamp-code: #ecebe6; --stamp-inferred: #ff6a3d;
     --tex: none;
+    --say-cam: "white"; --say-light: "orange-red"; --say-shadow: "white"; --say-blocked: "white"; --say-accent: "orange-red"; --say-soft: "grey"; --say-normal: "grey"; --say-glass: "white";
     color-scheme: dark;
 }
 

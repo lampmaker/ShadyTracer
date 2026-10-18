@@ -12,6 +12,7 @@
     --f-display: 'Saira Stencil One', 'Arial Narrow', sans-serif; --f-body: 'Barlow', 'Segoe UI', system-ui, sans-serif;
     --f-hand: 'B612 Mono', ui-monospace, Menlo, monospace; --f-mono: 'B612 Mono', ui-monospace, Menlo, Consolas, monospace;
     --pen-rough: .28; --pen-double: 0; --pen-width: 1.4; --pen-misreg: 0; --pen-fill: hatch;
+    --say-cam: "blue"; --say-light: "orange"; --say-shadow: "grey"; --say-blocked: "crimson"; --say-accent: "crimson"; --say-soft: "grey"; --say-normal: "green"; --say-glass: "teal";
     --radius: 0;
     --tex: linear-gradient(var(--grid-major) 1px, transparent 1px), linear-gradient(90deg, var(--grid-major) 1px, transparent 1px),
         linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
@@ -26,6 +27,7 @@
         --c-fill: rgba(238, 245, 255, .45); --c-glass: #7fe3ff; --c-normal: #a6f0c6; --c-hit: #eef5ff; --c-step: rgba(255, 255, 255, .3);
         --code-bg: rgba(0, 0, 0, .2); --code-ink: #eef5ff; --code-comment: #9db6d6; --code-kw: #ffd166; --code-num: #ffb38a;
         --stamp-measured: #8ff0b8; --stamp-code: #a8d8ff; --stamp-inferred: #ffd166;
+        --say-cam: "white"; --say-light: "yellow"; --say-shadow: "pale blue"; --say-blocked: "salmon"; --say-accent: "yellow"; --say-soft: "pale blue"; --say-normal: "pale green"; --say-glass: "cyan";
         color-scheme: dark;
     }
 }
@@ -37,6 +39,7 @@
     --c-fill: rgba(238, 245, 255, .45); --c-glass: #7fe3ff; --c-normal: #a6f0c6; --c-hit: #eef5ff; --c-step: rgba(255, 255, 255, .3);
     --code-bg: rgba(0, 0, 0, .2); --code-ink: #eef5ff; --code-comment: #9db6d6; --code-kw: #ffd166; --code-num: #ffb38a;
     --stamp-measured: #8ff0b8; --stamp-code: #a8d8ff; --stamp-inferred: #ffd166;
+    --say-cam: "white"; --say-light: "yellow"; --say-shadow: "pale blue"; --say-blocked: "salmon"; --say-accent: "yellow"; --say-soft: "pale blue"; --say-normal: "pale green"; --say-glass: "cyan";
     color-scheme: dark;
 }
 

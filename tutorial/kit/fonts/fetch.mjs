@@ -37,7 +37,8 @@ for (const st of STYLES) {
         // one file can serve several weights (a variable font): kept once, named by what it first served
         if (!files.has(url)) files.set(url, `${slug(family)}-${weight.replace(/\s+/g, '-')}${style === 'italic' ? '-italic' : ''}-${subset}.woff2`)
         families.add(family)
-        faces.push({ family, style, weight, subset, file: files.get(url), range: prop('unicode-range') })
+        // two styles can share a family (IBM Plex Mono): its faces once
+        if (!faces.some(f => f.file === files.get(url) && f.family === family && f.style === style && f.weight === weight)) faces.push({ family, style, weight, subset, file: files.get(url), range: prop('unicode-range') })
     }
 }
 for (const [url, file] of files) get(url, join(DIR, file))
