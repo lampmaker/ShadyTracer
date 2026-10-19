@@ -237,7 +237,12 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   the engine's rule a short budget costs mostly samples, as the flush's comment says, and light only when very short
   (over 20 runs: the mean held at 12 and 10 iterations, fell 4% at 8 and 30% at 4); round seven had called that comment
   wrong, and the page and REVIEWS.md now say what the model shows.
-- **Chapters 25 to 31** (round nine, two readers each): chapter 31's first reader caught C's bins called 5° (they are
+- **Chapters 25 to 33** (round nine, two readers each): chapter 33's second reader caught "card" meaning a graphics card
+  and a card on the board in one paragraph, and a step opening one card's box showed `pen.tip` running a wide box off
+  the canvas's left edge (it checked only the right; now both, for every figure). Chapter 32's readers asked for
+  pictures, a whole path and the lamp's outline being picked from, now drawn; and one reader's question found the page
+  telling the old kit's error the wrong way round for its room (at four bounces aiming read brighter, the extra bounce
+  outweighing the thin lamp). Chapter 31's first reader caught C's bins called 5° (they are
   15°, 24 to a turn) and the Gaussian map's middle, 831 lux, called the blur's bias: over 120 runs it averages 913, 4.4%
   under the true 955, and 831 is that and the run's noise; its second found the 0.7 curve's clearest rise above 1 left
   unexplained (0.7 is added as 0.75 while the total is 1 to 4 million) and the polar diagram unreadable without knowing

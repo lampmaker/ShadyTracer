@@ -36,37 +36,42 @@
       a row of the <a data-g="benchmark">bench</a> (<code>lib/pathtracer/tests.js</code>, listed in docs/TESTING.md):
       it tells something only once someone with a real card presses it and pastes the numbers back. Until then it is
       code that has never run.</p>
-    <p data-step="board:never">The rows built and never pressed. Take the first: <em>is each error bar the real
-      noise?</em> Every pixel reports an <a data-g="error-bar">error bar</a> (chapter 12); the row renders a floor whose
-      every pixel should read the same, and compares how far neighbouring pixels really differ with what their error
-      bars claim. A pass reads 1; a failure says every error bar in the program is too wide or too narrow. Chapter 29's
-      figures show what it would see, but nobody has pressed it. The others ask whether the illuminance view reads the
-      lux a surface really gets (chapter 5), whether the surface tolerance follows a scene's size (chapter 30), whether
-      the far field gives a known source's curve (chapter 31), whether the photon map adds exactly its share
-      (chapter 19). Four ask only what something costs, not whether it is right: the frame buffer's compare-and-swap
-      (chapter 23), the occlusion queue (chapter 22), an iteration, the Quality presets. And one row has been pressed
-      once and is still open: an earlier test read light sampling 76% brighter with a sun twenty times the real one, in
-      a scene with a glowing object of its own, which light sampling does not cover; the row built to tell whether the
-      sun's disc or the sky is wrong was pressed once, and its answer is not recorded (chapter 14).</p>
-    <p data-step="board:unexplained">Measured on a real card, and nobody yet knows why. Take the furnace (chapter 29): an
-      object in a white sky of brightness 1, which a surface that loses no light must read as exactly 1. Rough glass
-      loses a little, because light that would bounce between the tiny facets of its rough surface is not followed: on
-      the Pascal card it read 0.9587, and a separate program on the processor, with the same model of the surface and
-      no code shared with the renderer, found the same loss (5.3% on the sphere, which fills 0.78 of the picture: 4.1%
-      over the whole). So 0.9587 is explained. Then on the Ampere card it read 0.9872 in one set of runs and 0.9440 in
-      every run since, its own sampling unchanged and a narrower picture accounting for at most a quarter of the
-      difference: "Not explained yet." The same question is on the other cards: the Noise library's
-      compile, about 4 s in one profile and 21 to 23 s in the benchmark on the same card (chapter 27); the same kernels
-      reading 184.7 to 255.5 ms from run to run, so that a comparison across runs is "good to about ±20%", the
-      <a data-g="drift">drift</a> (chapter 25);
-      one scene, re-authored in metres, 10% faster than its neighbours on the very same kernel text. These are the
-      most valuable cards: each is a number that should be one thing and is another.</p>
+    <p data-step="board:never">The rows built and never pressed (run, from the bench's menu, on a real graphics
+      card). Take the first: <em>is each error bar the real noise?</em> Every pixel reports an
+      <a data-g="error-bar">error bar</a> (chapter 12); the row renders a floor whose every pixel should read the same,
+      and compares how far neighbouring pixels really differ with what their error bars claim. A pass reads 1; a failure
+      says every error bar in the program is too wide or too narrow. Chapter 29's figures show what it would see, but
+      nobody has pressed it. Among the others: whether the illuminance view reads the lux a surface really gets
+      (chapter 5); whether the surface tolerance, the small distance at which a ray counts as touching a surface,
+      follows a scene's size (chapter 30); whether the far field gives a known source's curve (chapter 31); whether the
+      photon map adds exactly its share (chapter 19). Four ask only what something costs, not whether it is right.</p>
+    <p data-step="board:once">One row has been pressed once and is still open. Light sampling, aiming shadow rays at
+      the lights (chapter 14), once read 76% too bright with a sun twenty times the real one, in a scene with a glowing
+      object of its own that light sampling does not aim at, so the cause was unclear. This row was built to tell whether
+      the sun's disc or the sky is wrong; it was pressed once, and its answer was never written down.</p>
+    <p data-step="board:unexplained">Measured on a real graphics card, and nobody yet knows why. Take the first: on the
+      Ampere graphics card, the furnace's rough glass reads 0.9440 in every run since one set that read 0.9872, where on
+      the Pascal it read 0.9587 and that was explained. (Pascal and Ampere are the two NVIDIA graphics cards the user
+      measures on.) The furnace (chapter 29) is an object in a white sky of brightness 1, which a surface losing no
+      light must read as exactly 1. Rough glass loses a little, because light that would bounce between the tiny
+      facets of its rough surface is not followed; on the Pascal a separate program, with the same model of the surface
+      and no code shared with the renderer, found the same loss (5.3% on the sphere, which fills 0.78 of the picture:
+      4.1% over the whole, so 0.9587). Between the Ampere's two sets of runs the glass's sampling read nothing the code's changes
+      touched, and the narrower picture of the later runs (946 pixels across, not 1092) can account for at most a
+      quarter of the drop from 0.9872: "Not explained yet." Among the others: the Noise library's compile, about 4 s in one profile and 21 to 23 s in the benchmark on
+      the same graphics card (chapter 27); the same kernels reading 184.7 to 255.5 ms from run to run, 38% between the
+      fastest and the slowest, which is why the document calls a comparison across runs "good to about ±20%", the
+      <a data-g="drift">drift</a> (chapter 25); one scene, re-authored in metres, 10% faster than its neighbours on
+      the very same kernel text. Each is a number that should be one thing and is another: an unexplained number may
+      turn out to be a bug or a limit, and until someone finds out, nobody knows which.</p>
     <p data-step="board:designed">Designed and agreed, never built. Take the first: a tolerance for each pixel. Today
       one surface tolerance serves a whole scene (chapter 30), so in a large scene a small object close to the camera
-      gets one too coarse for it; the user asked for "different eps for different pixels", it was agreed, and the
-      engine's move to metres was built first to make it possible. The others: a probe for the thin air gap two slabs of
-      glass leave; a compensation for the light rough glass loses; shadow rays weighed through frosted glass; light
-      faces that reflect; a photon map for dust. Each design is written down where the card's source says.</p>
+      gets one too coarse for it; the user asked for "different eps for different pixels" (eps is the tolerance's name
+      in the code), it was agreed, and the engine was first moved to work in metres, so that one tolerance means the
+      same in every scene. The others: a probe for the thin air gap two slabs of glass leave; a compensation for the
+      light rough glass loses; shadow rays weighed through frosted glass; a light's face that reflects; a photon map for
+      dust; and picking the optics trace's light sources evenly instead of at random. Each design is written down where
+      the card's source says.</p>
     <p data-step="board:limit">Limits the documents state plainly. A <em>bug</em>, as this chapter uses the word, is
       the program doing what nobody meant, unknown until someone finds it: section 6 of chapter 32 tells two. A
       <em>limit</em> is known, measured or bounded, and says where the picture cannot be trusted: the surface tolerance
@@ -74,16 +79,18 @@
       left to chance (chapter 18); the <a data-g="bias">biases</a> the wavefront keeps (chapter 22); light's
       polarisation, which no face keeps track of (chapter 10).</p>
     <p data-step="board:found">Comments and documents that say what the code, or their own numbers, do not, found
-      while writing these chapters. Take the first: the comment on aiming at the sun says it is "a cone of about 0.03
-      steradian", but that was an old sun drawn 21 times too wide, covering 441 times the sky; the real sun is 0.000067
-      steradian (chapter 14). The others: a comment's arithmetic that its own constants do not give; a speed-up claimed
-      "on every scene" from one; line numbers the code has moved past; the plan calling the camera's depth of field
-      "not built" while further down it says the lens was built in 0.43.0. Each chapter that found one says so beside
-      the quote. None is changed here: whether to fix each is the code's owner's call.</p>
+      while writing these chapters. A wrong comment is neither a bug nor a limit, but it can hide either from the next
+      person who trusts it. Take the first: the comment on aiming at the sun says it is "a cone of about 0.03
+      steradian" (a steradian is a share of the whole sky, which is 4π of them); that was an old sun drawn 21 times
+      too wide, so covering 21 × 21 = 441 times the sky the real one does, 0.000067 steradian (chapter 14). Among the
+      others: a comment's arithmetic that its own constants do not give; a speed-up claimed "on every scene" from
+      one; line numbers the code has moved past; the plan calling the camera's depth of field "not built" while
+      further down it says the lens was built in 0.43.0. Each chapter that found one says so beside the quote. None is
+      changed here: whether to fix each is the code's owner's call.</p>
   </div>
   <figure class="fig" data-fig="board">
-    <figcaption>Every open item from ShadyTracer's documents, and the comments this tutorial found wrong, as cards by
-      kind (<code>tutorial/kit/open.js</code>, every card's words checked against its file by the test). Choose a kind to
+    <figcaption>Every open item from ShadyTracer's documents, and the comments this tutorial found saying what the code
+      does not, as cards by kind (<code>tutorial/kit/open.js</code>, every card's words checked against its file by the test). Choose a kind to
       see its cards' words; point at a card for its source and the chapter that teaches it.</figcaption>
   </figure>
 </section>
@@ -95,14 +102,17 @@
       the person who has one, its result pasted back with the version line that names the build. Then the row's status
       in docs/TESTING.md changes, and this board with it. A row is closed when its answer is known, whether it passes or
       not: a check that fails has told something, and a check never run has told nothing.</p>
-    <p>When that happens, or a comment is fixed, a card's quote no longer matches its file. The tutorial's test then
-      fails, and since the repository runs that test on every proposed change (its CI), the change cannot pass until the
-      board is brought up to date in the same change. That is how the board stays true without anyone remembering to
-      update it.</p>
+    <p>The chain from there to the board: the result is pasted back; someone updates the row's status in
+      docs/TESTING.md; the card's quote no longer matches its file, so the tutorial's test fails; and since the
+      repository runs that test on every proposed change (its CI), that change cannot pass until the card changes
+      kind or goes. A fixed comment breaks its card's quote the same way. The one link the test cannot make for anyone
+      is the second: a result nobody writes into docs/TESTING.md never reaches the board, which is the run-once card's
+      whole story.</p>
     <p>And the rules for writing the answer down are the ones this tutorial has stamped on every claim: say whether a
       number was <a data-g="claim-measured">measured</a> (by whom, on what card), <a data-g="claim-code">read in the
-      code</a> (where), or <a data-g="claim-inferred">inferred</a> (and what would test it). The drift card holds one of
-      each kind left open: its cause, the card's clocks, is inferred, and nobody has measured them.</p>
+      code</a> (where), or <a data-g="claim-inferred">inferred</a> (and what would test it). The drift card shows two of the
+      stamps at once: its times were measured; their cause, the graphics card's clock speed, is only inferred, since
+      nobody has measured the clocks.</p>
     <aside class="refs"><span class="tag">Read more</span><ul>
       <li data-ref="kulla2017">The albedo tables docs/TESTING.md names for rough glass's lost light ("Kulla-Conty's
         albedo tables, with transmission"): where that "designed, not built" card would start.</li>

@@ -49,11 +49,16 @@ export const figures = {
     board: {
         aspect: 1.45,
         world: { x: [0, 1.45], y: [0, 1] },
-        state: { kind: 'all' },
+        state: { kind: 'all', pick: null },
         controls: [
             { type: 'seg', key: 'kind', label: 'show', options: [['all', 'all'], ...KINDS.map(([k, , short]) => [k, short])] },
         ],
-        steps: { all: { kind: 'all' }, never: { kind: 'never' }, unexplained: { kind: 'unexplained' }, designed: { kind: 'designed' }, limit: { kind: 'limit' }, found: { kind: 'found' } },
+        // a step may open one card's box as the pointer would (`pick`), so a reader without a pointer sees one whole
+        steps: {
+            all: { kind: 'all', pick: null }, never: { kind: 'never', pick: 'error-bar' }, once: { kind: 'once', pick: 'nee-split' },
+            unexplained: { kind: 'unexplained', pick: 'rough-glass' }, designed: { kind: 'designed', pick: null }, limit: { kind: 'limit', pick: null },
+            found: { kind: 'found', pick: 'sun-cone' },
+        },
         draw(pen, s) {
             const { W, H } = pen.view, { ctx } = pen, L = layout(s.kind, W, H), n = counts()
             if (L.cols) for (const c of L.cols) if (c.first) pen.labelPx(c.head.x, 4, `${shortName[c.k]} (${n[c.k]})`, { role: ROLE[c.k], size: 11, base: 'top' })
@@ -71,15 +76,14 @@ export const figures = {
                 }
             }
             // the card under the pointer: its source, its words, its chapter
-            const hp = pen.hover()
-            if (hp) {
-                const c = L.cards.find(q => hp.x >= q.x && hp.x <= q.x + q.w && hp.y >= q.y && hp.y <= q.y + q.h)
-                if (c) pen.tip(hp.x, hp.y, [c.it.title, ...wrap(wordsOf(c.it), 60), `${c.it.src}${c.it.status ? `, row ${c.it.id}: ${c.it.status}` : ''}`, chOf(c.it)])
-            }
+            const hp = pen.hover(), tipOf = (c, x, y) => pen.tip(x, y, [c.it.title, ...wrap(wordsOf(c.it), 60), `${c.it.src}${c.it.status ? `, row ${c.it.id}: ${c.it.status}` : ''}`, chOf(c.it)])
+            const c = hp ? L.cards.find(q => hp.x >= q.x && hp.x <= q.x + q.w && hp.y >= q.y && hp.y <= q.y + q.h) : null
+            if (c) tipOf(c, hp.x, hp.y)
+            else if (s.pick) { const p = L.cards.find(q => q.it.id === s.pick); if (p) tipOf(p, p.x + p.w * 0.6, p.y + p.h * 0.7) }   // a step's card, opened
         },
         readout(s) {
             const n = counts(), all = ITEMS.length
-            return s.kind === 'all' ? `${all} open items: ${KINDS.map(([k, name]) => `${n[k]} ${name}`).join(', ')} · point at a card for its source, its words and its chapter`
+            return s.kind === 'all' ? `${all} open items: ${KINDS.map(([k, , short]) => `${n[k]} ${short}`).join('; ')} · point at a card for its source, its words and its chapter`
                 : `${n[s.kind]} ${kindName[s.kind]} · point at a card for its document's own words, which the tutorial's test checks against today's file; ch. is the chapter that teaches it`
         },
     },

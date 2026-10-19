@@ -672,7 +672,7 @@ chapter 29, [first](reports/2026-10-19-round9/checking-1.md) and [second](report
 chapter 30, [first](reports/2026-10-19-round9/precision-1.md) and [second](reports/2026-10-19-round9/precision-2.md);
 chapter 31, [first](reports/2026-10-19-round9/optics-1.md) and [second](reports/2026-10-19-round9/optics-2.md);
 chapter 32, [first](reports/2026-10-19-round9/yours-1.md) and [second](reports/2026-10-19-round9/yours-2.md);
-chapter 33, [first](reports/2026-10-19-round9/open-1.md).
+chapter 33, [first](reports/2026-10-19-round9/open-1.md) and [second](reports/2026-10-19-round9/open-2.md).
 
 ### Chapter 25, Measure first
 
@@ -1056,6 +1056,28 @@ detail when checked against docs/TESTING.md (the reference program follows the s
 | Code-like names on the never-run cards. | **Fixed**: each card's title is its question in plain words; the row's id is in the hover. |
 | Glossary words unmarked; "control" never used. | **Fixed**: marked where used; the list matches the page. |
 | How to open a file at the quoted words. | **Fixed**: search the file, on GitHub or in a copy. |
+
+**Second read.** The quiz came out whole, the closing chain included. The reader's worst stumble was a word: "card"
+meant a graphics card in one sentence and a card on the board in the next. And it caught the closing chain overstated:
+the test notices a changed file, not a run, so a result nobody writes into docs/TESTING.md never reaches the board, which
+is exactly the run-once card's story. One more thing it could not see, a card's whole words, which only pointing shows,
+showed a kit bug when given a step that opens one: `pen.tip` said it kept its box inside the canvas and only checked
+the right edge, so a wide box beside a point near the left ran off it.
+
+| Finding | |
+|---|---|
+| "Card" for graphics cards and board cards. | **Fixed**: "graphics card" every time it is one, here and in the board's notes. |
+| The furnace example led with what is explained; "a narrower picture … a quarter". | **Fixed**: 0.9440 first; the picture's width and what the quarter is of, said. |
+| ±20% against the 38% the numbers give. | **Fixed**: both, and how one becomes the other. |
+| Steradian, surface tolerance, light sampling, Pascal and Ampere unexplained where the examples rest on them. | **Fixed**: a clause each where used. |
+| "The others:" lists incomplete (the source pick missing). | **Fixed**: "among the others", and the designed list made whole. |
+| No screenshot of run once or of a card's whole words. | **Fixed**: run once has its own step; three steps open a card's box as the pointer would. |
+| The closing chain claiming more than the test can do. | **Fixed**: run, written into TESTING.md, the test fails, the card changes; the second link is a person's. |
+| Where unexplained numbers and wrong comments fall between bug and limit. | **Fixed**: said for both. |
+| "One of each kind left open"; the caption's "found wrong". | **Fixed**: the drift card's two stamps; "found saying what the code does not". |
+| The "all" readout hard to parse. | **Fixed**: the short names, separated by semicolons. |
+| `pen.tip` off the left edge. | **Fixed** in the kit: clamped on both sides. |
+
 
 ## Next round
 

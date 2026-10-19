@@ -58,7 +58,7 @@ export const ITEMS = [
     { id: 'ampere-compile', kind: 'unexplained', src: 'docs/PERFORMANCE.md', quote: 'The ~4 s and the 21-23 s have not been reconciled.', ch: 'compiles', title: 'the Ampere\'s compile, 4 s or 21',
         note: 'A compile profile read about 4 s; the benchmark\'s uncached compile of the Noise library, 21.2 and 22.7 s on the same card (7.9-8.1 s on a 1080 Ti).' },
     { id: 'drift', kind: 'unexplained', src: 'docs/PERFORMANCE_REVIEW.md', quote: 'is good to about ±20%', ch: 'measure', title: 'the card\'s ±20% drift',
-        note: 'The same kernels read 184.7, 184.8, 216.6 and 255.5 ms on the Pascal; the card\'s clocks are the inferred cause, not measured.' },
+        note: 'The same kernels read 184.7, 184.8, 216.6 and 255.5 ms on the Pascal; the graphics card\'s clock speed is the inferred cause, not measured.' },
     { id: 'reauthored', kind: 'unexplained', src: 'docs/PERFORMANCE.md', quote: '"in m, re-authored" -10.2%', ch: 'measure', title: 'one row always 10% fast',
         note: 'A scene re-authored in metres ran 10% faster than its neighbours on the same kernel text (23% on the Ampere): "Unexplained."' },
     { id: 'lt-fixed', kind: 'unexplained', src: 'roadmap/PLAN.md', quote: 'costs a fixed ~60 ms per sample', ch: 'caustics', title: 'light tracing\'s fixed 60 ms',

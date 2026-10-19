@@ -135,7 +135,9 @@ export function makePen(ctx, view, theme, handles = []) {
             if (!lines.length) return
             ctx.save(); ctx.font = font('mono', size); ctx.textBaseline = 'top'
             const w = Math.max(...lines.map(l => ctx.measureText(l).width)) + 12, h = lines.length * (size + 4) + 8
-            const bx = x + 14 + w > view.W ? x - 14 - w : x + 14, by = Math.max(2, Math.min(view.H - h - 2, y - h / 2))
+            // right of the point if it fits, else left of it, and either way inside the canvas (a wide box left of a
+            // point near the left edge ran off it: chapter 33's board)
+            const bx = Math.max(2, Math.min(view.W - w - 2, x + 14 + w > view.W ? x - 14 - w : x + 14)), by = Math.max(2, Math.min(view.H - h - 2, y - h / 2))
             ctx.fillStyle = col('paper'); ctx.globalAlpha = 0.92; ctx.fillRect(bx, by, w, h); ctx.globalAlpha = 1
             ctx.strokeStyle = col('soft'); ctx.lineWidth = 1; ctx.strokeRect(bx + 0.5, by + 0.5, w - 1, h - 1)
             ctx.fillStyle = col('ink'); lines.forEach((l, i) => ctx.fillText(l, bx + 6, by + 5 + i * (size + 4)))
