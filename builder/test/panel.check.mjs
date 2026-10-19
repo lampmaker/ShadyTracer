@@ -618,6 +618,30 @@ ok('...and the radius row says so by itself (the panel redrawn), the number kept
     rr = await p.evaluate(() => [...document.querySelectorAll('.tp-lblv')].map(r => r.querySelector('.tp-lblv_l')?.textContent.trim()))
     ok('...an array of count copies, pitch apart; its copies said to be from parameters, nothing to type there',
         JSON.stringify(strip) === '[-0.5,0,0.5]' && rr.includes('bound') && !rr.includes('places'), JSON.stringify({ strip, rr }))
+    /* A LAMP (0.68.0): a light's flux and colour from its group's parameters -- the colour whole, in one line -- and its
+       rows held: the value's, and the choice it holds (brightness by, colour by) */
+    await p.evaluate(() => {
+        CHECK.M.addGroup(CHECK.doc, 'root', { id: 'lampg', label: 'lamp', params: { flux: 500, tint: { r: 1, g: 0.5, b: 0.25 } } })
+        CHECK.M.addLight(CHECK.doc, 'lampg', { id: 'lled', shape: 'rectangle', label: 'led' })
+    })
+    rr = await rowsOf('lled')
+    ok('a light in a group with parameters: its bindings', rr.includes('bindings') && rr.includes('brightness by'), JSON.stringify(rr))
+    const p0 = await p.evaluate(() => CHECK.T.pushed.length)
+    await bindings('light.flux = flux\nlight.colour = tint', 'apply')
+    await p.waitForTimeout(50)
+    const lamp = await p.evaluate(() => { const n = CHECK.M.find(CHECK.doc, 'lled').node; return { light: n.light, bind: n.bind, pushed: CHECK.T.pushed.slice() } })
+    ok('...its flux and its colour from the lamp\'s: written, the light set by its flux, pushed live as the light',
+        lamp.light.flux === 500 && lamp.light.colour?.g === 0.5 && lamp.bind?.['light.colour.b'] === 'tint.b' && lamp.pushed.slice(p0).includes('lled.light'), JSON.stringify(lamp))
+    const lheld = await p.evaluate(() => {
+        const row = l => [...document.querySelectorAll('.tp-lblv')].find(r => r.querySelector('.tp-lblv_l')?.textContent.trim().replace(/^\W+/, '').startsWith(l))
+        const at = l => { const r = row(l); return r && { off: !!r.querySelector(':disabled') || !!r.closest('.tp-v-disabled'), tip: r.querySelector('.tp-lblv_l')?.title ?? '' } }
+        return { by: at('brightness by'), flux: at('flux (lm)'), colourBy: at('colour by'), colour: at('colour'), dist: at('distribution'), emitN: at('emits into n'),
+                 text: document.querySelector('.builder-bind-said')?.textContent ?? '', bindText: [...document.querySelectorAll('textarea')].map(t => t.value).find(v => v.includes('light.')) }
+    })
+    ok('...the flux row and its colour held, their bindings on the label; brightness by and colour by held with them; the rest free',
+        lheld.flux?.off && /light.flux = flux/.test(lheld.flux.tip) && lheld.colour?.off && /light.colour.r = tint.r/.test(lheld.colour.tip)
+        && lheld.by?.off && lheld.colourBy?.off && lheld.dist && !lheld.dist.off && lheld.emitN && !lheld.emitN.off, JSON.stringify(lheld))
+    ok('...and the editor shows the colour as the three lines it is', /light.colour.r = tint.r\nlight.colour.g = tint.g\nlight.colour.b = tint.b/.test(lheld.bindText ?? ''), JSON.stringify(lheld.bindText))
 }
 
 /* THE ASPHERIC LENS'S COEFFICIENTS (2026-10-04): numbers with no range, typed from a datasheet. Tweakpane showed such a
