@@ -55,13 +55,17 @@ the documents. Nothing the renderer runs changed: the WGSL edits are inside comm
 the tutorial found says they were corrected in 0.67.3. Chapters 12, 13, 14, 16, 26, 28 and 31, which each told of one,
 now say what the comment said until 0.67.3 and that it was corrected; their four excerpts of `tracebasics.js` were
 re-read against their pages and stamped. Chapters 9, 17, 20, 21 and 30, named on a card, did not tell of it and are
-unchanged. The tutorial's test now holds chapter 31's words to the row's 58.95°.
+unchanged. The tutorial's test now holds chapter 31's words to the row's 58.95°. The two rewritten sections, chapter
+33's and chapter 14's, were each read by a new blank reader (`tutorial/review/REVIEWS.md`, round 10): chapter 33 now
+tells the twist for a reader new to it, and chapter 3's "up to 15% shorter steps" for the exact divisor is up to 13%
+(the divisor up to 15% larger: 1 / 1.1547, computed).
 
 **Left open, for you to decide:** the one card that is code, not a comment. The twist and bend modifiers
 (`builder/modifiers.js`) divide distances by `sqrt(1.0 + rate * rate * extent * extent)`, √(1 + c²), but a move can be
 stretched by (c + √(c² + 4)) / 2, up to 15% more, so a 0.9 step can be about 3% longer than the distance (chapter 3,
 measured by the tutorial's test in node: a plate tilted 45° at the edge of a twist's extent keeps a slope of 1.14). The
-exact divisor would make a twist's steps up to 15% shorter, so more of them. The code is unchanged and the card stays.
+exact divisor, up to 15% larger, would make a twist's steps up to 13% shorter, so more of them. The code is unchanged
+and the card stays.
 
 **What to look at:**
 - **The first start may compile slowly, once.** The comments in `tracebasics.js`'s shader code are part of the kernels'

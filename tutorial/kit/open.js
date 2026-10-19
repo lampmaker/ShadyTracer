@@ -102,7 +102,7 @@ export const ITEMS = [
        twelve comments and document lines found with it were corrected in 0.67.3 (CHANGELOG.md); this one is code, the
        divisor itself, and whether to change it is the owner's call. */
     { id: 'twist-bound', kind: 'found', src: 'builder/modifiers.js', quote: "'warp(1.0 / sqrt(1.0 + rate * rate * extent * extent));'", ch: 'shapes', title: 'the twist\'s step bound',
-        note: 'A move can stretch by (c + √(c² + 4)) / 2, up to 15% more than √(1 + c²): a plate at 45° keeps a slope of 1.14.' },
+        note: 'A twist divides the distance it steps by √(1 + c²), but a slanted move can stretch up to 15% more than that, so a step can run about 3% past a surface.' },
 ]
 
 /** The items of one kind, or all of them ('all'), in the board's order */

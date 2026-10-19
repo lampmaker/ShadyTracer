@@ -83,14 +83,21 @@
       wrong comment is neither a bug nor a limit, but it can hide either from the next person who trusts it. These
       chapters found thirteen. Twelve were comments and document lines, and version 0.67.3 corrected them, so their cards
       have gone. The first: the comment on aiming at the sun said it was "a cone of about 0.03 steradian" (a steradian is
-      a share of the whole sky, which is 4π of them); that was an old sun drawn 21 times too wide, so covering 21 × 21 =
-      441 times the sky the real one does, 0.000067 steradian (chapter 14). Among the others: a comment's arithmetic that
-      its own constants did not give; a speed-up claimed "on every scene" from a run in which one pair was within its
-      noise; line numbers the code had moved past; the plan calling the camera's depth of field "not built" while further
-      down it said the lens was built in 0.43.0. Where a chapter told of one, it now says what the comment said and that
-      it was corrected. The one card left is code, not a comment: the twist's step bound (chapter 3) divides by less than
-      the most a twist can stretch a move, so a step can be about 3% longer than the distance. The exact divisor would
-      make a twist's steps up to 15% shorter, so more of them: whether to change it is the code's owner's call.</p>
+      a share of the whole sky, which is 4π of them); that was an old sun, its disc once made 21 times as wide as the real
+      one, so covering 21 × 21 = 441 times the sky the real one does, 0.000067 steradian (chapter 14). Among the others: a
+      comment's arithmetic that its own constants did not give; a speed-up claimed "on every scene" from a run in which
+      one pair was within its noise; line numbers the code had moved past; the plan calling the camera's depth of field
+      "not built" while further down it said the lens was built in 0.43.0. Where a chapter told of one, it now says what
+      the comment said and that it was corrected. The one card left is code, not a comment. To find a surface the renderer
+      walks along a ray in steps, each as long as the distance to the nearest surface, which is safe because nothing is
+      nearer (chapter 2). A twist (chapter 3) turns a shape a little more at every height, and that bends space: the
+      distance is measured to the untwisted shape, and a short move in the twisted picture can be a longer one through it,
+      so the twist divides the distance by how much a move can be stretched. The code divides by √(1 + c²), where c is the
+      twist's turn per unit of height times how far the shape reaches from its axis; but a move at a slant can be
+      stretched up to 15% more than that. Every step is also cut to 0.9 of what it may be, which takes up most of the gap:
+      in the case the tutorial's test tried, a thin plate at a slant, a step can still run about 3% past the surface (0.9
+      × 1.14 is about 1.03). Dividing by the largest stretch instead would make a twist's steps up to 13% shorter, so it
+      would take more of them: whether that is worth it is the code's owner's call.</p>
   </div>
   <figure class="fig" data-fig="board">
     <figcaption>Every open item from ShadyTracer's documents, and what this tutorial found that is still open, as cards
@@ -132,8 +139,9 @@
     <ul>
       <li>Pick a card of the first kind and read its row in docs/TESTING.md: what would a pass look like, and what a
         failure?</li>
-      <li>Take the card of the last kind, find its quoted words in its file (on GitHub, or in a copy of the
-        repository: search the file for them), and decide what the divisor should be, and what it would cost.</li>
+      <li>Take the card of the last kind, read chapter 3's section on the twist, and find the card's quoted words in
+        its file (on GitHub, or in a copy of the repository: search the file for them). Would you make every twisted
+        shape up to 13% slower to step through, to close a gap of about 3%?</li>
       <li>Which of the chapters you have read has the most cards? What does that say about it?</li>
     </ul>
     <h3>Words from this chapter</h3>

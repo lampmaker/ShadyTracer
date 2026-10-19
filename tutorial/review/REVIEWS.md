@@ -1079,6 +1079,37 @@ the right edge, so a wide box beside a point near the left ran off it.
 | `pen.tip` off the left edge. | **Fixed** in the kit: clamped on both sides. |
 
 
+## Round 10, 2026-10-19 (0.67.3: chapters 33 and 14, after the comments were corrected)
+
+Reports: [open](reports/2026-10-19-round10/open.md), [nee](reports/2026-10-19-round10/nee.md).
+
+**Why this round.** Version 0.67.3 corrected the twelve comments and document lines chapter 33's board listed as found
+by this tutorial, and rewrote the sections that told of them: chapter 33's step on what the tutorial found, and chapter
+14's note beside the light-sampling excerpt (the other chapters' changes were a clause each: "until version 0.67.3 the
+comment said"). Each rewritten section was read by a new reader. Both understood what was corrected and why (chapter
+33's quiz answer 4, chapter 14's closing question). Findings on the rest of either page are answered below, not
+changed: they are on sections this change did not touch, and they are the next round's for these chapters.
+
+### Chapter 33, Open problems
+
+| Finding | |
+|---|---|
+| The twist card: step, step bound and "the distance" never said; c, rate and extent undefined; 3% against 15% never reconciled; "Try it" asks to decide the divisor. | **Fixed**: the step tells the march in a sentence (a step as long as the distance to the nearest surface), what a twist does to it, c in words, the 15% the divisor falls short by, the 0.9 that takes up most of it, the 3% left in the case the test tried, and the cost of closing it. That cost was "up to 15% shorter steps" in chapter 3, here and in the changelog: the divisor is up to 15% larger, so the steps are up to 13% shorter (computed: 1 / 1.1547). Corrected in all three. The card's note says it in the same words; "Try it" asks the trade-off. |
+| "A sun twenty times the real one" against "an old sun drawn 21 times too wide": the same thing? | **Fixed** where this change wrote it: the old sun is "its disc once made 21 times as wide". The run-once paragraph's "twenty times" is the documents' "20× sun" (docs/TESTING.md, roadmap/PLAN.md), which do not say whether it was brighter or wider, so the page says no more. |
+| The furnace paragraph; the unexplained list's words (compile, kernel, Menger, lavapipe); "the user" before it is said who; "a pass reads 1"; rays assumed. | **Answered, not changed here**: sections this change did not touch, read by round 9's two readers too; the next round's. |
+| The board: titles cut in the overview, the hover box over the first rows, the button names against the headings. | **Answered, not changed here**: the figure is as round 9 left it. |
+| The drift card's cause as fact; "built on the metres engine" in a not-built card; the metres row's 2.3% on the Ampere left out of the text. | **Answered, not changed here**: card notes this change did not touch; the next round's. |
+| The lux check in chapter 5 against a card showing "ch. 1". | **Answered**: the half-hidden card in that screenshot is the coating's ("does a coating do what it says?", which names chapter 11 in kit/open.js); the lux card, ch. 5, is the one under the box. |
+
+### Chapter 14, Aim at the light
+
+| Finding | |
+|---|---|
+| The note: where 6.28 comes from; "about twice as often" stated, not shown; "drew the sun" read as a picture. | **Fixed**: "the 6.28 steradians of a hemisphere (half the sky's 4π)"; the cosine-weighted chance 0.03 / π, from the margin note in section 2, and π half of 6.28, so twice; "made the sun's disc 21 times as wide". |
+| Dividing by π needs outside knowledge. | **Answered**: the margin note in section 2 states it; showing it takes an integral over the hemisphere, past the school maths the page asks for. |
+| Section 3's numbers against the screenshots beside it (± 0.001 against ± 0.009; "about 0.21"); "a fifth" in section 4 against "a sixth" in section 8; "0.28" read as a lamp size. | **Answered, not changed here**: sections this change did not touch; the next round's, first. |
+| NEE used before it is defined; "last bounce" and "last round" told twice; BSDF and pbrt; the cone's size; a colour meaning three things. | **Answered, not changed here**: as above. |
+
 ## Next round
 
 The pages stay drafts. Every written chapter has now had two readers (chapters 5 to 11 in rounds 5 and 6); the
