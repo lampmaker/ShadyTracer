@@ -1034,6 +1034,73 @@ for (const [name, { mod }] of modules) {
         && rmain.includes('3,945 of the Menger cubes\' last') && rmain.includes('The benchmark\'s materials row ran 8, 24 and 8 iterations'))
 }
 
+{
+    // CHAPTER 23: threads on one pixel, the number formats, the batches
+    const K = await import('../kit/gpu.js'), A = await import('../ch/accumulate.js'), F = await import('../kit/flatland.js'), PH = await import('../../lib/pathtracer/core/photons.js')
+    let exact = true, lastWins = true
+    for (let seed = 1; seed <= 40; seed++) {
+        const n = 2 + (seed % 15), vals = A.valuesOf(n, seed)
+        for (const ls of [true, false]) for (const mode of ['atomic', 'cas']) { const r = K.raceRun(vals, mode, { lockstep: ls, rand: F.rng(seed) }); if (r.final !== r.expected) exact = false }
+        if (K.raceRun(vals, 'plain', { lockstep: true }).final !== vals[n - 1]) lastWins = false
+        if (K.raceRun(vals, 'cas', { lockstep: true }).failed !== n * (n - 1) / 2) exact = false
+    }
+    ok('ch.23: an atomic add and a compare-and-swap loop count every thread, in lock-step or interleaved; in lock-step n threads fail n(n-1)/2 swaps; a plain load and store in lock-step keeps the last thread\'s', exact && lastWins)
+    const rr = st => A.raceOf(A.figures.race.steps[st])
+    ok('ch.23: the page\'s race: 2 of 26 in lock-step, 10 interleaved, 26 by atomic add, 15 failed swaps for 6 threads, 120 and 17 rounds for 16', rr('plain').final === 2 && rr('plain').expected === 26 && rr('mixed').final === 10
+        && rr('atomic').final === 26 && rr('cas').failed === 15 && rr('cas').final === 26 && rr('crowd').failed === 120 && rr('crowd').rounds === 17)
+    ok('ch.23: the old fixed point kept 25,000 as 10,000 and a millionth as 0, 0.3 as 0.29998779; an f32 keeps 25,000 and 1.6e9 exactly', K.fixedKeeps(25000) === 1e4 && K.fixedKeeps(1e-6) === 0
+        && K.fixedKeeps(0.3).toFixed(8) === '0.29998779' && K.f32Keeps(25000) === 25000 && K.f32Keeps(1.6e9) === 1.6e9)
+    const wfs = readFileSync(join(REPO, 'lib/pathtracer/core/wavefront.js'), 'utf8')
+    ok('ch.23: the format\'s numbers are the code\'s: 65536 a unit, the clamp at 1e4, a wall 25 000, the sun 1.6e9, 65535 a pixel a sample', wfs.includes('= 65536 per unit') && wfs.includes('clamped at 1e4') && wfs.includes('a sunlit white wall is 25 000')
+        && wfs.includes('the sun\'s disc 1.6e9') && wfs.includes('held at most 65535 per pixel per sample'))
+    // the batches: every plan's parts add up, every batch fits
+    let plans = true
+    const R = F.rng(5)
+    for (let i = 0; i < 300; i++) {
+        const budget = 1 + Math.floor(R() * 3e6), streams = [Math.floor(R() * 9e6), Math.floor(R() * 4e6)], map = R() < 0.5
+        const p = PH.planBatches(budget, streams, 1, map ? { first: [1] } : {})
+        for (let k = 0; k < p.batches; k++) if (streams.reduce((a, _, s) => a + p.part(s, k), 0) > budget) plans = false
+        streams.forEach((n, s) => { let t = 0; for (let k = 0; k < p.batches; k++) t += p.part(s, k); if (t !== n) plans = false })
+    }
+    const pl = st => A.planOf(A.figures.batches.steps[st]).plan
+    ok('ch.23: planBatches\' batches each fit and add up to every stream; the page\'s 2,164,802 rays, 1 batch, 5 of 1,658,880 and 200,000, 2 with the photon map first', plans && A.BUDGET === 2164802
+        && pl('fits').batches === 1 && pl('over').batches === 5 && pl('over').part(0, 2) === 1658880 && pl('over').part(1, 4) === 200000 && pl('map').batches === 2 && pl('map').firstBatches === 1 && pl('map').part(0, 0) === 0)
+    const tj = readFileSync(join(REPO, 'lib/pathtracer/tests.js'), 'utf8'), rmn = readFileSync(join(REPO, 'lib/pathtracer/core/raytrace_main.js'), 'utf8')
+    ok('ch.23: the measured and counted numbers are where the page says', tj.includes('FIRST RUN (Pascal, 1188x969): 70 ms with light tracing, 9 ms without -- 7.8x') && tj.includes('read about 1.4x')
+        && rmn.includes('16.8 M\n       pixels of accumulation plus the same of frame buffer, 537 MB') && /pixels \* 16\)  \/\/ the picture/.test(rmn) && /createStorageBuffer\(pixels \* 8\)/.test(rmn))
+}
+
+{
+    // CHAPTER 24: a scene tree as text three ways, the engine's bake, inlined size and the compile model
+    const SG = await import('../kit/scenegen.js'), CG = await import('../ch/codegen.js'), BK = await import('../../builder/bake.js')
+    const CP = await import('../../lib/pathtracer/core/compileprogress.js'), WG = await import('../../lib/pathtracer/core/wgslgraph.js')
+    const base = { mode: 'codegen', k: 0.3, extra: false, pos: CG.START }, sc = o => CG.sceneOf({ ...base, ...o })
+    const moved = { pos: { ...CG.START, c: [1.4, -0.35] } }
+    ok('ch.24: code with uniforms keeps its text when a value moves (a shape, the blend), and changes it when a shape is added', SG.textOf(sc(moved), 'codegen') === SG.textOf(sc({}), 'codegen')
+        && SG.textOf(sc({ k: 0.6 }), 'codegen') === SG.textOf(sc({}), 'codegen') && SG.textOf(sc({ extra: true }), 'codegen') !== SG.textOf(sc({}), 'codegen'))
+    ok('ch.24: baked, a value moved is new text; as data, nothing is: a shape added is a record more', SG.textOf(sc(moved), 'baked') !== SG.textOf(sc({}), 'baked')
+        && SG.textOf(sc({ extra: true, k: 0.1 }), 'data') === SG.textOf(sc({}), 'data') && SG.records(sc({ extra: true })).length === SG.records(sc({})).length + 1)
+    // the engine's bake on the toy: every value a constant, the text codegen's with UB. read back
+    const cgs = SG.codegen(sc({})), bk = SG.bake(sc({}))
+    ok('ch.24: bake.js turns all 7 uniforms into constants, and un-baked the text is codegen\'s byte for byte', bk.baked.baked.names.length === 7 && !bk.baked.baked.kept.length
+        && bk.baked.wgsl.replace(/\bbk_/g, 'UB.') === cgs.wgsl && /const bk_pos_c: vec2<f32> = vec2<f32>\(1\.15, 0\.55\);/.test(bk.wgsl) && Object.keys(BK.baked(cgs, { live: n => n === 'k_g' }).uniforms).join() === 'k_g')
+    // the records say what the scene says; the distance is the scene's
+    const recs = SG.records(sc({}))
+    ok('ch.24: the records hold each shape\'s kind, join and numbers; the toy\'s distance is the block, the ball and the hole', recs[0].join() === '1,0,0,-0.35,1.2,0.65,0.3' && recs[2].join() === '0,1,-0.45,0.05,0.35,0,0.3'
+        && SG.sceneDist(sc({ k: 0 }), -0.45, 0.05) > 0 && SG.sceneDist(sc({ k: 0 }), 0.9, 0) < 0 && SG.sceneDist(sc({ k: 0 }), 1.15, 1.1) < 0)
+    // the page's compile counts, as its steps make them
+    const counts = Object.fromEntries(Object.entries(CG.figures.tree.steps).map(([k, st]) => { const s = JSON.parse(JSON.stringify({ ...CG.figures.tree.state, ...st })); CG.account(s); return [k, `${s.compiles} ${s.last}`] }))
+    ok('ch.24: the steps: 1 compile, then a move written, a ball compiled (2); baked, a move compiled; as data, a ball written', counts.codegen === '1 compiled' && counts.move === '1 written' && counts.add === '2 compiled' && counts.baked === '2 compiled' && counts.data === '1 written', JSON.stringify(counts))
+    // inlined size: every call site a copy; the model equals the linear rate at its reference size
+    const st = n => WG.inlineStats(SG.kernelText(40, n), 'main', ['SDF'])
+    ok('ch.24: 40 objects called once 6,794 characters inlined, four times 27,020 (4 copies); 400 objects 273,500; the model 0.03, 0.22 and 5.18 s, the linear rate\'s at 151,000', st(1).inlined === 6794 && st(4).inlined === 27020 && st(4).copies.SDF === 4
+        && WG.inlineStats(SG.kernelText(400, 4), 'main', ['SDF']).inlined === 273500 && (CP.kernelMs(6794) / 1000).toFixed(2) === '0.03' && (CP.kernelMs(27020) / 1000).toFixed(2) === '0.22'
+        && (CP.kernelMs(273500) / 1000).toFixed(2) === '5.18' && Math.abs(CP.kernelMs(CP.SIZE_REF) - CP.DEFAULT_RATE * CP.SIZE_REF) < 1e-9 && CP.GROWTH === 1.37)
+    const arch = readFileSync(join(REPO, 'roadmap/ARCHITECTURE.md'), 'utf8'), pf = readFileSync(join(REPO, 'docs/PERFORMANCE.md'), 'utf8'), sdj = readFileSync(join(REPO, 'builder/scenedata.js'), 'utf8')
+    ok('ch.24: the measured numbers are where the page says', arch.includes('| the optics bench | 297.4 -> 109.1 (-63%) | 189.7 -> 61.2 (-68%) |') && arch.includes('| 8456 -> 4643 |') && arch.includes('Baked is faster on seven of the eight')
+        && arch.includes('| 4.2, 3.9, 3.1 |') && arch.includes('| 8.9, 9.4 |') && arch.includes('| 1.36, 1.12, 0.83 |') && pf.includes('3.7-23 s uncached on the Ampere') && sdj.includes('header and 585 records'))
+}
+
 /* THE EXCERPT LOCATOR ON ITS OWN ----------------------------------------------------------------------------------- */
 {
     const text = [

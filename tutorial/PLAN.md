@@ -256,8 +256,20 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
     against the wavefront as lane-time, a shading's cost a model's number. -> raytrace_main.js (the iteration, the
     worst case, the accident, the shadow rounds, occlusion with NEE off), wavefront.js (prep, flip, the flush, the
     clamp). Measured: PERFORMANCE_REVIEW §10.1-10.2 (Pascal). *Read:* laine2013, webgpu-fundamentals.
-23. **Adding up light on a GPU**: no float atomics, one resolve a sample, batches.
-24. **From scene tree to shader**: codegen, uniforms and constants, baking, the scene as data.
+23. **Adding up light on a GPU** (draft): threads adding to one pixel (`kit/gpu.js` raceRun): a plain load and store
+    in lock-step keeps one thread's light (2 of 26), interleaved some (10), an atomic add all, a compare-and-swap all at
+    n(n − 1)/2 failed swaps in the model; the old u32 fixed point against an f32 on a line of light values (a sunlit
+    wall clamped from 25,000 to 10,000, under 1/65536 cut to 0); a sample in batches by `photons.js`'s own
+    `planBatches` (1, 5, and 2 with the photon map). -> wavefront.js (DEPOSIT, addF32, resolve, nonfinite),
+    raytrace_main.js (the reset's window, maxaverages), photons.js (planBatches). Measured: tests.js frame-cost's first
+    run (70 ms against 9, Pascal). *Read:* wgsl-spec, wiki-cas, finch2009.
+24. **From scene tree to shader** (draft): a flat scene of one group as text three ways (`kit/scenegen.js`): code
+    with uniforms (a drag a uniform write, a ball added a compile), baked by the engine's own `bake.js` (every change a
+    compile), as data (one text, a record a shape); a kernel's inlined size by `wgslgraph.js` and its compile time by
+    `compileprogress.js`'s fitted model, call sites multiplying the copies. -> the frozen fixture csg-v10 (a box minus a
+    sphere as codegen writes it), bake.js (baked), scenedata.js (why), compileprogress.js (what predicts it), codegen.js
+    (six copies, the carved walls, sdfResult). Measured: ARCHITECTURE.md's bake run and data/codegen ratios,
+    PERFORMANCE.md's structural edit. *Read:* iq-distfunctions, wgsl-spec.
 
 **VII. Speed** (every number stamped; the review's ±20% drift between runs stated)
 25. **Measure first**: per-kernel timestamps, drift, bench rows, the plan that was reverted.

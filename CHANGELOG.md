@@ -17,7 +17,7 @@ as PLAN.md does.
 
 ## 0.67.2 — 2026-10-18
 
-**A developer tutorial beside the program: its plan, its figure kit, eight styles and its first twenty-three chapters**
+**A developer tutorial beside the program: its plan, its figure kit, eight styles and its first twenty-five chapters**
 (you: "a tutorial for shadytracer, parallel to the program … that explains the inner workings of the code … interactive,
 2D visualisations … a solid toolkit for that so it looks the same everywhere … start with a plan and list of contents,
 then a few pages … make a few mockups of different styles"). Nothing in the application changed: the tutorial is
@@ -75,8 +75,13 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   ran into); chapter 22, *Wavefront path tracing* (a sunlit room's 1024 paths run as ShadyTracer runs a sample, by a
   flat-world wavefront that reads what the path tracer reads: each iteration's queues, the drained tail, the worst-case
   budget, a short one flushing and cutting; one iteration kernel by kernel; one big kernel against the wavefront as
-  lane-time in a model); chapter 2, *Shapes as distances*; chapter 14, *Aim at the light* (next event estimation); the contents
-  map; a glossary of 132 terms, each linked from the pages with a card on hover or tap.
+  lane-time in a model); chapter 23, *Adding up light on a GPU* (threads adding to one pixel by a plain load and store,
+  an atomic add and a compare-and-swap loop, in lock-step or interleaved; the old fixed-point frame buffer against an
+  f32 on a line of light values; a sample in batches by `photons.js`'s own `planBatches`); chapter 24, *From scene
+  tree to shader* (a flat scene of one group as code with uniforms, baked by the engine's own `bake.js`, and as data,
+  each edit counted as a uniform write or a compile; a kernel's inlined size by `wgslgraph.js` against
+  `compileprogress.js`'s fitted compile model); chapter 2, *Shapes as distances*; chapter 14, *Aim at the light* (next event estimation); the contents
+  map; a glossary of 135 terms, each linked from the pages with a card on hover or tap.
 - **The kit** (`tutorial/kit/`): one pen draws every figure in the style's colours and line; a figure is a spec with
   state, controls, drag handles and steps that the paragraphs beside it trigger as they scroll by. The figures trace a
   flat world (`kit/flatland.js`): signed distance shapes from the help's 2D mirrors of `sdf.js`, sphere tracing, a
@@ -241,6 +246,10 @@ What to look at:
   UB, pointing at boxes; the picture sizes flat and by rows. Is it enough to read chapters 22 to 24?
 - **Chapter 22, Wavefront path tracing**: the iterations slider from 24 down to 4; *Next kernel* through iteration 1
   and 2; the shading cost from 1 to 80. Do the queues' boxes make the ping-pong clear?
+- **Chapter 23, Adding up light on a GPU**: the race's three ways in lock-step and interleaved, *Run again*, 16
+  threads; the contribution dragged from a millionth to the sun; the batches at each size, the photon map on.
+- **Chapter 24, From scene tree to shader**: drag the ball and add one in each of the three ways, watching the compile
+  count; the objects and call sites of the second figure.
 - **Chapter 16's first figure**: 1 sample (boxes, nothing circled), then 8. Chapter 17's side view, *near*: the ray from
   the lens's top edge, in its own colour, and its mark on the picture; and its 3D picture's *the first 2* samples. Chapter 0's lamp figure at r = 1 and 2.
 - **The new styles.** Lab notebook's new lettering; Chalkboard (try it dark); the three drafting versions side by side

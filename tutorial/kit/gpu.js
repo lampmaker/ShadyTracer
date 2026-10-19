@@ -53,3 +53,39 @@ export function dispatchCounts(w, h, wg = 64) {
     const flat = Math.ceil(w * h / wg), rows = { x: Math.ceil(w / wg), y: h }
     return { flat, flatOK: flat <= MAX_GROUPS, rows, rowsOK: rows.x <= MAX_GROUPS && rows.y <= MAX_GROUPS, limitPixels: MAX_GROUPS * wg }
 }
+
+/** THREADS ADDING TO ONE PIXEL (chapter 23): each thread adds its `values[i]` to one number in memory, as
+ *    plain    load, then store what it loaded plus its value: two steps, so another thread can come between them
+ *    atomic   one indivisible add: an integer atomicAdd, which WGSL has (and has not for floats)
+ *    cas      load, then compare-and-swap: write loaded + value only if memory still holds what was loaded, else take
+ *             the value it does hold and try again -- ShadyTracer's addF32, a loop round atomicCompareExchangeWeak
+ *  scheduled `lockstep` (one group: every live thread does its next step each round, in lane order, as the hardware
+ *  takes conflicting writes to one address one after another) or at random (`rand`: one step of one thread a tick, as
+ *  threads of different groups interleave). Returns the steps ({ round, thread, op, ok, after }), the final value, the
+ *  sum it should be, and the compare-and-swaps that failed. */
+export function raceRun(values, mode, { lockstep = true, rand = Math.random } = {}) {
+    const prog = mode === 'plain' ? ['load', 'store'] : mode === 'atomic' ? ['add'] : ['load', 'cas']
+    const th = values.map((v, i) => ({ i, v, pc: 0, reg: 0 }))
+    let mem = 0, round = 0, failed = 0
+    const steps = []
+    const step = t => {
+        const op = prog[t.pc], e = { round, thread: t.i, op }
+        if (op === 'load') { t.reg = mem; t.pc++ }
+        else if (op === 'store') { mem = t.reg + t.v; t.pc++ }
+        else if (op === 'add') { mem += t.v; t.pc++ }
+        else if (mem === t.reg) { mem = t.reg + t.v; t.pc++; e.ok = true }
+        else { t.reg = mem; failed++; e.ok = false }
+        e.after = mem; steps.push(e)
+    }
+    for (let live = th; (live = th.filter(t => t.pc < prog.length)).length; round++) {
+        if (lockstep) for (const t of live) step(t)
+        else step(live[Math.min(live.length - 1, Math.floor(rand() * live.length))])
+    }
+    return { steps, final: mem, expected: values.reduce((a, b) => a + b, 0), failed, rounds: round }
+}
+
+/** THE OLD FRAME BUFFER'S NUMBERS (wavefront.js DEPOSIT): u32 fixed point at 65536 a unit, each contribution clamped
+ *  at 1e4 so a pixel's words could not wrap, anything under 1/65536 truncated to 0 -- against what an f32 keeps. */
+export const FIXED_SCALE = 65536, FIXED_CLAMP = 1e4
+export const fixedKeeps = v => Math.floor(Math.min(v, FIXED_CLAMP) * FIXED_SCALE) / FIXED_SCALE
+export const f32Keeps = v => Math.fround(v)

@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Adding up light on a GPU · ShadyTracer, inside out</title>
+<link rel="stylesheet" href="../kit/kit.css">
+<script type="module" src="accumulate.js"></script>
+</head>
+<body data-chapter="accumulate">
+<p class="kit-offline">This page runs from a web server, not from a file: in the repository run <code>python3 -m http.server 8000</code> and open http://localhost:8000/tutorial/.</p>
+<main class="sheet">
+
+<header class="sheet-head">
+  <div>
+    <p class="eyebrow">Part VI · The machine · Chapter 23</p>
+    <h1>Adding up light on a GPU</h1>
+    <p class="lede">A path that ends hands its light to its pixel; so does a shadow ray that reaches the sun, and a
+      photon's connection to the camera. In one sample many of them land on the same pixel, from threads running at
+      the same moment, and the sum must come out right. Then the sample is folded into the picture's average, and a
+      picture too big for the card's buffers is traced in pieces that must add up to one sample. This chapter is those
+      three, and the bugs each one had.</p>
+  </div>
+  <div class="titleblock" data-auto></div>
+</header>
+
+<section class="scene" id="race">
+  <div class="prose">
+    <h2><span class="n">1</span>Many hands on one pixel</h2>
+    <p data-step="race:plain">Six threads each add some light to one pixel, 26 in all. The plain way is two steps: load
+      the pixel's number, then store it plus your own. In one group in <a data-g="lockstep">lock-step</a> every thread
+      loads first, all reading 0, then each stores its own value over the others: the pixel ends at 2, the last
+      thread's, and 24 of the 26 are lost. Point at a box to follow one thread.</p>
+    <p data-step="race:mixed">Threads of different groups interleave at no set pace, and whether a load and its store
+      have another thread's store between them is luck: here the pixel ends at 10. ShadyTracer once folded each path
+      into the picture this way, a load, the arithmetic and a store, and lost updates; with one ray a pixel no two
+      threads ever met at a pixel, which hid it (section 6).</p>
+    <p data-step="race:atomic">An <a data-g="atomic">atomic</a> add is one step no other thread can come between: 26,
+      every time. WGSL has atomic adds for whole numbers, not for floating-point numbers, so ShadyTracer's frame buffer
+      once held whole numbers: fixed point, 65,536 to a unit of light (section 2).</p>
+    <p data-step="race:cas">For a float, a <a data-g="cas">compare-and-swap</a>: load the number, work out the new one, and write
+      it only if the pixel still holds what was loaded; if not, take what it does hold and try again. Every thread's
+      light is counted, at a price when they crowd one pixel. In this figure's model of one group, the swaps on one
+      address go one after another, so one succeeds a round and the others try again: 15 failed swaps for 6 threads.</p>
+    <p data-step="race:crowd">Sixteen threads on one pixel: 120 failed swaps, 17 rounds where an atomic add takes one.
+      In the model the failures grow as the square of the crowd, n(n − 1)/2. Paths spread over a picture rarely crowd a pixel; light
+      tracing's connections pile into the few pixels of a caustic (chapter 18), and section 5 has a measurement that
+      may be this.</p>
+  </div>
+  <figure class="fig" data-fig="race">
+    <figcaption>Each row a thread and the light it adds; each column a step in time (a round in lock-step, one thread's
+      step when interleaved); along the top, the pixel's value after it. L loads, S stores, + is an atomic add, C a
+      compare-and-swap, struck in <span data-say="blocked">red</span> where it failed. Point at a box. Choose the way of
+      adding, the schedule and the threads; run again for other values.</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="formats">
+  <div class="prose">
+    <h2><span class="n">2</span>Numbers that fit the light</h2>
+    <p data-step="formats:ordinary">The old frame buffer kept light as whole numbers, 65,536 to a unit, so it could use
+      the integer atomic add. A contribution of 0.3 comes out as 0.29998779, off by about one part in 25,000: fine while
+      the light was a number near 1.</p>
+    <p data-step="formats:wall">Then ShadyTracer moved to real units (chapter 5), and a sunlit white wall is about 25,000
+      cd/m². A pixel's 32-bit word could hold at most 65,535 a sample, and several contributions add up, so each was
+      clamped at 10,000 to keep the word from wrapping round to small numbers: the wall lost 60% of its light. An f32
+      (<a data-g="f32">a 32-bit float</a>) keeps 25,000 exactly.</p>
+    <p data-step="formats:sun">The sun's disc is about 1.6 × 10<sup>9</sup> cd/m²: clamped to 10,000, all but six parts in a
+      million gone. These limits came from the number format, not from anything physical.</p>
+    <p data-step="formats:dim">And at the other end, anything under 1/65,536 was cut to 0: a faint contribution of a
+      millionth vanished whole. An f32 keeps every value on this line to about seven significant digits. Drag the
+      contribution along the line. So the frame buffer holds the bits of f32s now, added by the compare-and-swap loop
+      of section 1.</p>
+  </div>
+  <figure class="fig" data-fig="formats">
+    <figcaption>A line of light values from 10<sup>−8</sup> to 10<sup>10</sup>, each mark a hundred times the last.
+      Above it, what the old fixed-point frame buffer did with a contribution (kept, hatched in
+      <span data-say="shadow">the shadow rays' colour</span>; lost, in <span data-say="blocked">red</span>), and what an
+      f32 does (all of it, <span data-say="cam">blue</span>). The values the code names are marked below. Drag the
+      contribution.</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="batches">
+  <div class="prose">
+    <h2><span class="n">3</span>Bigger than the buffer</h2>
+    <p data-step="batches:fits">A sample traces a camera ray for every pixel and every photon the light tracer asked for,
+      and the rays in flight must fit the ray buffers: 1 GiB, 496 bytes a ray (two ray buffers and a shade queue
+      item), 2,164,802 rays. At 1280 × 720, 921,600 camera rays and a million photons fit at once: one batch. The
+      batches' plan here is ShadyTracer's own function, run in this page.</p>
+    <p data-step="batches:over">At 3840 × 2160, 8,294,400 camera rays and a million photons are 5 batches. Each batch is a
+      fair slice of every stream (1,658,880 camera rays and 200,000 photons each), runs the whole wavefront chain of
+      chapter 22, and leaves its light in the frame buffer; the picture's average is updated once, after the last. Each
+      photon's light is divided by the sample's whole count, not the batch's, so the batches add up to one sample:
+      the picture's size changes how long a sample takes, and nothing else.</p>
+    <p data-step="batches:map">With the photon map on (chapter 19), every photon of a sample must have landed before the
+      first camera ray gathers, so the photons go in batches of their own, first: 2 batches where 1 would fit.</p>
+  </div>
+  <figure class="fig" data-fig="batches">
+    <figcaption>One sample's batches: each bar a batch, its camera rays <span data-say="cam">blue</span> and its photons
+      above them in the sun's colour, against what the ray buffers hold (dashed, <span data-say="blocked">red</span>).
+      Point at a batch. Choose the picture's size and the photons, and switch the photon map on.</figcaption>
+  </figure>
+</section>
+
+<section class="plain wide" id="engine">
+  <div class="prose">
+    <h2><span class="n">4</span>How ShadyTracer does it</h2>
+    <p>Why the frame buffer holds floats, and what adding to it costs:</p>
+    <pre data-src="lib/pathtracer/core/wavefront.js" data-sym="F32, ADDED BY COMPARE-AND-SWAP." data-to="deposits per sample, spread across a whole wavefront."
+         data-why="cd/m² is luminance, chapter 5's. An invocation is one thread. UB.accumScale was the fixed point's 65,536." data-hash="b8319c75"></pre>
+    <pre data-src="lib/pathtracer/core/wavefront.js" data-sym="fn addF32_${buf}(i: u32, v: f32) {" data-to="old = r.old_value;"
+         data-why="WGSL, written once for each buffer that needs it (${buf} is filled in), because a WGSL function cannot take a storage buffer as an argument. bitcast reads a u32's 32 bits as an f32, or back: the buffer is u32 words because WGSL's atomics work on those. atomicCompareExchangeWeak may also fail for no reason (weak), and the loop tries again either way." data-hash="af459f10"></pre>
+    <p>Once a sample, one thread a pixel folds the frame buffer into the picture: no two threads touch the same pixel,
+      so this read, change and write is safe:</p>
+    <pre data-src="lib/pathtracer/core/wavefront.js" data-sym="let n = atomicExchange(&amp;frame_u32[base + 3u], 0u);" data-to="let next = (prev * prevn + s) / cnt;"
+         data-why="atomicExchange reads a word and puts 0 in its place in one step, so the frame buffer is ready for the next sample with no clearing pass. n is the camera paths that landed here. lt is the light tracer's estimate, taken from its own buffer just above: one per sample, added, not averaged. UB.maxaverages caps the average's window (0, none); the error bar beside it is chapter 12's." data-hash="c742c8fc"></pre>
+    <p>After a camera move, the first sample replaces the picture rather than fading into it:</p>
+    <pre data-src="lib/pathtracer/core/raytrace_main.js" data-sym="/* A RESET STARTS THE WINDOW AT ZERO:" data-to="a smoother move for a trail of whatever was bright. */" data-hash="7bbf7aa4"></pre>
+    <p>And the batches' plan, which section 3's figure runs:</p>
+    <pre data-src="lib/pathtracer/core/photons.js" data-sym="function planBatches" data-hash="c2317d76"></pre>
+  </div>
+</section>
+
+<section class="plain wide" id="tricks">
+  <div class="prose">
+    <h2><span class="n">5</span>Tricks and trade-offs</h2>
+    <p>Each is stamped with how it is known; point at a stamp to see what it means.</p>
+    <div data-claim="measured">
+      <p><strong>What the float frame buffer may cost.</strong> The first run of Tests &gt; frame-cost on the user's
+        Pascal card, 1188 × 969: 70 ms a sample with light tracing, 9 without, 7.8 times, where an earlier benchmark had
+        read about 1.4 times (<code>lib/pathtracer/tests.js</code>, the frame-cost row's note).</p>
+    </div>
+    <div data-claim="inferred">
+      <p><strong>Why, not yet known.</strong> The suspect named in that note is section 1's crowd: the learned light
+        tracer sends most connections into the few pixels of a caustic. But each connection is also a whole shadow ray
+        to the camera; the row's other cases are there to tell the two apart. The deposit's own comment still says its
+        cost has not been measured at all, which the run above has overtaken
+        (<cite data-src="lib/pathtracer/core/wavefront.js" data-sym="THE COST IS THE ONE THING HERE THAT HAS NOT BEEN MEASURED" data-to="adapter in the container. It is a row in tests.js ('frame-cost')."></cite>).</p>
+    </div>
+    <div data-claim="code">
+      <p><strong>Refused at the door.</strong> A contribution that is not a number (NaN), infinite, or of negative
+        luminance is not added, and is counted. NaN is found by its exponent bits, since WGSL lets a compiler assume
+        floats are finite, so <code>x != x</code> may be folded to false (the deposit's comment).</p>
+    </div>
+    <div data-claim="code">
+      <p><strong>What a pixel costs.</strong> The picture 16 bytes, its error bar 8, this sample's frame 16 and the light
+        tracer's splats 16: 56 bytes a pixel, beside the rays. A 4096 × 4096 save holds 537 MB of picture and frame
+        until the page gives it back (<code>raytrace_main.js</code>, give the memory back).</p>
+    </div>
+  </div>
+</section>
+
+<section class="plain wide" id="before">
+  <div class="prose">
+    <h2><span class="n">6</span>What went wrong before</h2>
+    <ul>
+      <li><strong>A race hidden by one ray a pixel.</strong> Shade folded each finished path straight into the picture's
+        average, a load, the arithmetic and a store on four separate words, and two paths on one pixel lost an update
+        (<cite data-src="lib/pathtracer/core/wavefront.js" data-sym="THE PATH IS OVER: hand its radiance to the frame buffer, not to the picture." data-to="contribution on the same pixel every bounce."></cite>).
+        Now paths add to the frame buffer, and the picture is updated once a sample, one thread a pixel.</li>
+      <li><strong>Light carried into the next sample.</strong> Resolve returned early for a pixel no camera path
+        reached, before taking that pixel's shadow deposits, which then counted in the next sample (the resolve excerpt's
+        comment, just above its first line).</li>
+      <li><strong>A pixel poisoned for good.</strong> A NaN went straight into the sum, and stayed there in every sample
+        after (<cite data-src="lib/pathtracer/core/wavefront.js" data-sym="/* `nonfinite` counts contributions the frame and splat buffers refused" data-to="Now they are dropped at the door, and the count says whether that is happening at all. */"></cite>).</li>
+      <li><strong>"Unlimited", backwards.</strong> The average's window, 0 meaning unlimited, pinned the window to 0:
+        every sample replaced the picture
+        (<cite data-src="lib/pathtracer/core/raytrace_main.js" data-sym="/* `maxaverages` caps the EMA window." data-to="from the label. 0 now means what it says. */"></cite>).</li>
+      <li><strong>Bright spots after a move.</strong> A reset used to keep the old picture's share fading as 2/(n + 2),
+        invisible while light was near 1; in cd/m² a highlight of 10<sup>9</sup> stayed far above white for thousands of
+        samples (the reset excerpt above).</li>
+      <li><strong>No caustics in a large picture.</strong> Before the batches, the camera's rays took the buffer first
+        and the photons shared what was left: above about 2.3 million pixels they got none, and light tracing switched
+        itself off (<code>photons.js</code>'s header; chapter 18).</li>
+    </ul>
+  </div>
+</section>
+
+<section class="plain" id="try">
+  <div class="prose">
+    <h2><span class="n">7</span>Try it</h2>
+    <ul>
+      <li>In the first figure, with load and store interleaved, run it again a few times. Does the pixel ever come out
+        right? How often?</li>
+      <li>With compare-and-swap in lock-step, how many swaps fail for 2, 4, 8 and 16 threads?</li>
+      <li>In the second, find the faintest light the old format kept, and the brightest.</li>
+      <li>In the third, at 3840 × 2160, how many photons fit in the same 5 batches?</li>
+    </ul>
+    <aside class="refs"><span class="tag">Read more</span><ul>
+      <li data-ref="wgsl-spec">WGSL's atomic functions, and why there are none for floats.</li>
+      <li data-ref="wiki-cas">Compare-and-swap, and the loop built on it.</li>
+      <li data-ref="finch2009">The running mean and variance resolve keeps beside the picture (chapter 12).</li>
+    </ul></aside>
+    <h3>Words from this chapter</h3>
+    <ul class="words" data-words="atomic cas lockstep f32 thread buffer"></ul>
+  </div>
+</section>
+
+<nav class="tabs" data-auto></nav>
+</main>
+</body>
+</html>
