@@ -107,6 +107,7 @@ on the user's own GPU; there is no server.
 |---|---|---|
 | **Three views**: photographic; **lux on surfaces** (every visible surface's illuminance, whatever its material); **luminance in cd/m²**; both measuring views in log false colour with bands and a legend | built; `illuminance`, `cosine-law`, `disc-light` benches not pressed | `lib/pathtracer/viewtools.js`; README § *The illuminance view* |
 | **Measure tool**: pins that stay on the clicked surface and re-read as the picture converges; a rectangle's mean ± error, min, max, **U0**; each reading's colour as **CCT + Duv** or CIE xy, an area's **Δu′v′** spread; **CSV** | built; Node-tested | `lib/pathtracer/measure/tool.js` |
+| **Measure tool's ruler** (0.68.0): points picked on surfaces with their (x, y, z) in the scene's unit, each joined to the last, each stretch's length, its Δx Δy Δz as red, green and blue legs (the Points mode's, `lib/pathtracer/legs.js`), and a line's total, Shift-click a new line, shown to the surface tolerance's digits; in the CSV. With a pin or the ruler on, a click places, a drag on a pin or a point moves it over the surfaces, and a drag elsewhere turns the view | built 2026-10-19; Node-tested (`measure.test`) and headless-checked over a stand-in pick, camera and selection (`example.check`); **not seen on hardware** | `lib/pathtracer/measure/tool.js` |
 | Point sensors and work-plane grids that are not visible surfaces | planned | PLAN.md *Next* item 2 |
 | Glare (UGR), CRI, TM-30 | not there | |
 

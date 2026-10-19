@@ -1972,7 +1972,7 @@ function lightPatched(node, patch) {
         if (v === undefined || (k in LIGHT_DEFAULTS && JSON.stringify(v) === JSON.stringify(LIGHT_DEFAULTS[k]))) delete next[k]
     return { next, bad: lightProblems({ ...node, light: next }) }
 }
-/* ...FOR A BINDING (bind.js applyBindings, 0.68.0): an object's components over what the light has now (a colour's r alone,
+/* ...FOR A BINDING (bind.js applyBindings, 0.69.0): an object's components over what the light has now (a colour's r alone,
    an xy's x), its defaults filled in -- written when sound, refused with why when not: { changed, problems } */
 function lightBound(node, patch) {
     const L = lightOf(node), full = {}

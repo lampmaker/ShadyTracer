@@ -7,7 +7,7 @@
 // resolved said and its value kept; a parameter renamed, removed or made another kind with its bindings following or
 // refusing; what a lock-honouring caller sees (heldOf); the file -- validated, saved, read back, a version 17 file
 // upgraded; and the shader: a bound value is a value, so codegen's text is the text of the same values typed. A light's
-// own settings (0.68.0): bound with the way the light is given, two ways at once refused, a value its checks refuse kept
+// own settings (0.69.0): bound with the way the light is given, two ways at once refused, a value its checks refuse kept
 // and said; a colour parameter read by its components, and a whole colour or vector bound in one line.
 //======================================================================================================================
 import * as M from '../model.js'
@@ -215,7 +215,7 @@ const node = (d, id) => M.find(d, id).node
 }
 
 //----------------------------------------------------------------------------------------------
-// A LIGHT'S OWN SETTINGS (0.68.0): a lamp component's flux and colour -- the user, 2026-10-19: "a parameter such as colour
+// A LIGHT'S OWN SETTINGS (0.69.0): a lamp component's flux and colour -- the user, 2026-10-19: "a parameter such as colour
 // and flux in a group, used for a light source: I can't get it to work" -- they were not targets at all
 //----------------------------------------------------------------------------------------------
 {

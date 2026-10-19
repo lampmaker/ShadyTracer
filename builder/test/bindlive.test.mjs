@@ -9,7 +9,7 @@
 //   - as data: the bound values written into the records, no compile;
 //   - the parameter registry offers the group's parameter and not the values bound to it;
 //   - a compile resolves first: a node moved into a component takes its values at that compile.
-//   - a light's own settings (0.68.0): its flux and colour from a lamp's parameters, written as its face's uniforms at
+//   - a light's own settings (0.69.0): its flux and colour from a lamp's parameters, written as its face's uniforms at
 //     a compile and live -- the luminance derived from the bound flux and size, never from the values before them.
 // What it cannot show is the picture: the user's.
 //======================================================================================================================
@@ -90,7 +90,7 @@ const lens = () => {
     M.addObject(d, 'root', { id: 'loose', primitive: 'sphere' })
     return d
 }
-/* A LAMP (0.68.0): its flux, its tint and its width are the group's; a rectangle light inside reads all three */
+/* A LAMP (0.69.0): its flux, its tint and its width are the group's; a rectangle light inside reads all three */
 const lamp = () => {
     const d = P.blankScene('lamp')
     M.addGroup(d, 'root', { id: 'lamp', params: { flux: 100, tint: { r: 1, g: 0.5, b: 0.25 }, w: 0.5 } })

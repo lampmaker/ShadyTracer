@@ -292,7 +292,7 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
         /* COMPONENT PARAMETERS (model.js version 18): every bound value as its expression gives it now -- a node moved
            into a component, or pasted with its bindings, takes its values from the groups it is under at this compile. A
            name none of them has keeps the value it had (resolveBindings). BEFORE the light's derived luminance below,
-           which reads what they write: a light's flux or size from its component's parameters (0.68.0; a size since
+           which reads what they write: a light's flux or size from its component's parameters (0.69.0; a size since
            version 18) was resolved after it, and the shader compiled with the luminance of the values before. */
         M.resolveBindings(doc())
         syncSources(doc())

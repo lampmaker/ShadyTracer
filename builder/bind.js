@@ -13,10 +13,10 @@
 //   copies.count = n                an array's copies, made a row of `count` copies `pitch` apart along `copies.along`
 //   copies.pitch = spacing          (x, y or z: a letter, not an expression) -- every resolve makes the row again, so
 //   copies.along = y                places typed by hand are not kept while either is bound
-//   light.flux = flux               A LIGHT'S OWN SETTINGS (lights.js; 0.68.0), named as the registry names them
+//   light.flux = flux               A LIGHT'S OWN SETTINGS (lights.js; 0.69.0), named as the registry names them
 //   light.colour.r = tint.r         (params.js scene/<id>/light/<setting>): flux, luminance, colour.r .g .b, cct, duv,
 //                                   xy.x .y, n, halfAngle, emitN -- a ray file only its flux and emitN. They live in
-//                                   the node's `light`, not its params, and were not targets before 0.68.0: a lamp
+//                                   the node's `light`, not its params, and were not targets before 0.69.0: a lamp
 //                                   component could size its light but not say how bright or what colour it is (the
 //                                   user, 2026-10-19). A binding HOLDS THE WAY THE LIGHT IS GIVEN with its value
 //                                   (LIGHT_MODES): light.flux makes it a light set by its flux, light.luminance one set
@@ -26,10 +26,10 @@
 //                                   holds its "brightness by" and "colour by" while one is bound.
 // THE NAMES are the parameters of the groups ABOVE the node, the nearest first -- and, for a group's transform, blend
 // and copies, its own parameters too (an LED strip's `copies.count = count`). A vector parameter is read by its
-// component (`corner.x`), a colour by its (`tint.r`; 0.68.0: until then a colour parameter could not be read at all).
+// component (`corner.x`), a colour by its (`tint.r`; 0.69.0: until then a colour parameter could not be read at all).
 // Never a parameter's own: a parameter target reads only the groups above, so nothing is bound to itself, and no order
 // of evaluation is needed but the tree's and, within a node, its parameters before the rest (applyBindings).
-// A WHOLE VECTOR OR COLOUR binds in one line (0.68.0), `light.colour = tint`, `pos = at`: kept as a line a component.
+// A WHOLE VECTOR OR COLOUR binds in one line (0.69.0), `light.colour = tint`, `pos = at`: kept as a line a component.
 //
 // RESOLVED ON THE CPU AND WRITTEN AS VALUES. The document holds both the expression and the value it last gave, so
 // codegen, the bounds, the panel, the records -- everything that reads a value -- reads a number as it always did, and
@@ -149,7 +149,7 @@ export function parseBindings(text, targets, lookupFor) {
         const target = body.slice(0, eq).trim(), lead = body.slice(0, eq).search(/\S/) + 1
         const rhs = body.slice(eq + 1), start = eq + 1 + (rhs.length - rhs.trimStart().length) + 1
         const expr = rhs.trim()
-        /* A WHOLE VECTOR OR COLOUR IN ONE LINE (0.68.0): `light.colour = tint`, `size = corner`, `pos = at` -- a
+        /* A WHOLE VECTOR OR COLOUR IN ONE LINE (0.69.0): `light.colour = tint`, `size = corner`, `pos = at` -- a
            parameter's bare name, read component by component. Stored one line a component, so the text shows what it
            means once applied, and everything that reads a binding reads it as it always did. */
         const parts = targets.includes(target) ? [] : targets.filter(x => x.startsWith(target + '.') && [...AXES, ...RGB].includes(x.slice(target.length + 1)))

@@ -869,7 +869,7 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
         f.addBinding(V, 'transparent', { label: 'transparent (other light passes)' }).on('change', ev => set({ transparent: ev.value }, 'structure'))
         flagRow(H.tip(f.addBinding(V, 'emitN', { label: 'emits into n', min: 1, max: 3, step: 0.001, ...H.opts('emitN') }).on('change', ev => set({ emitN: ev.value })), 'emitN'), lp('emitN'))
     }
-    /* A LIGHT'S SETTINGS FROM PARAMETERS (bind.js, 0.68.0): a bound setting's row held as a bound parameter's is -- a
+    /* A LIGHT'S SETTINGS FROM PARAMETERS (bind.js, 0.69.0): a bound setting's row held as a bound parameter's is -- a
        change here would be undone by the next resolve -- and so is the choice its binding holds (bind.js LIGHT_MODES:
        light.flux holds "brightness by", light.cct "colour by"), the binding on the label. opts(...settings) is the row's
        options, tip(row, ...settings) its label; a setting is a light's key, 'colour' for all three of light.colour.* */

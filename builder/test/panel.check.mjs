@@ -618,7 +618,7 @@ ok('...and the radius row says so by itself (the panel redrawn), the number kept
     rr = await p.evaluate(() => [...document.querySelectorAll('.tp-lblv')].map(r => r.querySelector('.tp-lblv_l')?.textContent.trim()))
     ok('...an array of count copies, pitch apart; its copies said to be from parameters, nothing to type there',
         JSON.stringify(strip) === '[-0.5,0,0.5]' && rr.includes('bound') && !rr.includes('places'), JSON.stringify({ strip, rr }))
-    /* A LAMP (0.68.0): a light's flux and colour from its group's parameters -- the colour whole, in one line -- and its
+    /* A LAMP (0.69.0): a light's flux and colour from its group's parameters -- the colour whole, in one line -- and its
        rows held: the value's, and the choice it holds (brightness by, colour by) */
     await p.evaluate(() => {
         CHECK.M.addGroup(CHECK.doc, 'root', { id: 'lampg', label: 'lamp', params: { flux: 500, tint: { r: 1, g: 0.5, b: 0.25 } } })
