@@ -15,6 +15,46 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.68.0 — 2026-10-19
+
+**The measure tool's ruler: where a point on a surface is, and the distances between points.** You asked whether the
+measure tool's pick could give the position of the picked point, and make a distance meter from several points.
+
+**What was there (read in code):** a pin already picks the surface clicked (`RT.pick`, `core/pick.js`) and keeps the
+world point, so that it can be projected again as the camera moves. That point was written to the CSV's x, y, z, but
+never shown on the picture.
+
+**Now:**
+- **A third switch in the analysis drawer's Measure group, the ruler** (an arrow between two end marks), beside pin
+  and area. With it on, a click on a surface places a point named A, B, C… The label beside it gives its position,
+  (x, y, z) in the scene's unit.
+- **Each point joins the one before it in a line.** Each stretch of the line shows its length at its middle, and a
+  line of two stretches or more shows its total (Σ) under its last point. **Shift-click** starts a new line, and so
+  does switching the ruler off and on, or Escape.
+- **A click on a point removes it**, and its neighbours are joined. Clear removes the points with the pins and the
+  area.
+- **A click where nothing is hit** (the sky) places nothing and shows "nothing to measure here" for a moment.
+- **The digits are the surface tolerance's at that point** (`RT.tolerances`): the pick's march stops once it is within
+  the tolerance of the surface (`core/pick.js`), so a finer digit would come from the march, not the shape. A scene
+  100 mm in size with the automatic tolerance shows two decimals (0.01 mm). For a shape whose distance is a bound
+  rather than exact, the surface can be further than that.
+- **Like a pin, a point stays on the spot of the surface that was clicked**: it is projected again every frame, and a
+  line running behind the camera is cut where it passes it (`genrays.js` clipToView). Unlike a pin, it reads nothing
+  from the picture: its numbers are fixed once picked.
+- **Save as CSV** adds a `point` row for each point (x, y, z, unit) and a `distance` row for each stretch (`A-B`, with
+  the length in `value` and the step from A to B in x, y, z, so a height or a width can be read off). `M.readings()`
+  gives `points` and `distances`.
+
+**Checked:** `measure.test.mjs` (names, decimals, which points join, lengths, units mixed across scenes). The shell's
+headless check (`example.check.mjs`) drives the real tool over a stand-in pick and camera: three clicks and a
+Shift-click, a click on the sky, the lengths, the CSV, a point removed, the ruler off and on, Escape, Clear.
+**Not seen on hardware.**
+
+**What to look at:** open the analysis drawer (bottom right), switch on the ruler and click two points on a surface
+whose size you know: a box's edge, or a lens's thickness. Does the length match? Do the points and lines stay on the
+surface as you orbit? Does the label stay readable over a busy picture? Then click a third point and Shift-click a
+fourth, and check the Σ and the new line.
+
 ## 0.67.3 — 2026-10-19
 
 **The comments and document lines the tutorial found wrong, corrected.** Writing the tutorial found thirteen places where

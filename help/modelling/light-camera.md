@@ -91,3 +91,8 @@ The **analysis drawer** at the view's bottom right has three ways to see the pic
 
 In the last two, the cursor reads the value under it with its error bar, and the **measure** tool places pins and
 areas that read lux, uniformity and colour. This is useful for any interior: is the desk bright enough?
+
+The measure tool's **ruler** works in any of the three views. Click surfaces to place points: each says where it is,
+(x, y, z) in the scene's unit, and joins the one before it, with the length of each stretch and the total of the line.
+**Shift**-click starts a new line, and a click on a point removes it. The digits shown are the surface tolerance's at
+that point, the precision the pick finds the surface to. **Save as CSV** writes each point and each distance.
