@@ -73,10 +73,10 @@ export const CHAPTERS = [
 
     C('hard', 'caustics', 'Caustics', 'Light focused through glass onto a floor, and why the camera cannot find it.', 'draft',
         [`${K}materials_pbr.js`, `${K}tracebasics.js`, `${K}wavefront.js`, `${K}sdf.js`, `${K}photons.js`, 'tutorial/kit/flatland.js']),
-    C('hard', 'photons', 'Photon mapping', 'Sending light out from the lamps and remembering where it lands.', 'planned',
-        [`${K}sppm.js`]),
-    C('hard', 'haze', 'Dust in the air', 'Dust and fog in the air: light scattered on its way, and beams you can see.', 'planned',
-        [`${K}haze.js`, 'builder/hazebox.js']),
+    C('hard', 'photons', 'Photon mapping', 'Photons kept where they land, gathered by the eye through glass: a blur that fades, a hashed grid.', 'draft',
+        [`${K}sppm.js`, `${K}wavefront.js`, `${K}raytrace_main.js`, 'tutorial/kit/flatland.js']),
+    C('hard', 'haze', 'Dust in the air', 'Dust and fog in the air: light scattered on its way, and beams you can see.', 'draft',
+        [`${K}haze.js`, 'builder/hazebox.js', `${K}test/haze.gpu.mjs`, 'lib/pathtracer/tests.js', 'tutorial/kit/flatland.js']),
 
     C('machine', 'gpu', 'A GPU for beginners', 'How a graphics card runs thousands of copies of one program, and how to give it work.', 'planned',
         ['lib/tinywebgpu']),

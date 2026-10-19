@@ -820,6 +820,141 @@ for (const [name, { mod }] of modules) {
     ok('ch.18: the caustic\'s floor sees the eye but not the sun; through the pane it sees neither', !sees(f0[0], f0[1], f0[0] + up[0] * 30, f0[1] + up[1] * 30) && F.visible(C.worldOf(), f0[0], f0[1] + 4e-3, ...C.CAM.eye) && !sees(f0[0], f0[1], ...C.CAM.eye))
 }
 
+{
+    // CHAPTER 19: the flat world's photon map, its radius's schedule, the hashed grid
+    const F = await import('../kit/flatland.js'), P = await import('../ch/photons.js'), S = await import('../../lib/pathtracer/core/sppm.js')
+    // a gather: photons evenly spaced along a floor, power phi each, are an irradiance phi / spacing; a photon on a
+    // surface 30 degrees off is another surface's
+    const even = Array.from({ length: 2001 }, (_, i) => ({ x: -1 + i * 1e-3, y: 0, nx: 0, ny: 1, flux: 2e-3 }))
+    const tilted = { x: 0, y: 0, nx: Math.sin(Math.PI / 6), ny: Math.cos(Math.PI / 6), flux: 5 }
+    const gEven = F.gather({}, { photons: [...even, tilted], r: 0.1 }, 0, 0, 0, 1, 0.8)
+    ok('ch.19: a gather of photons spread evenly reads (rho / 2) E, and leaves out a surface 30 degrees off', Math.abs(gEven - 0.4 * 2) < 0.4 * 2 * 0.011, gEven)
+    // the flat world's schedule shrinks r as the engine's shrinks r^2
+    const sched = [2, 10, 300].every(k => [2 / 3, 0.25].every(a => Math.abs(F.radiusFlat(1, k, a) - S.sppmRadius(1, k, a) ** 2) < 1e-12))
+    ok('ch.19: radiusFlat(k) / r1 is sppmRadius(k)^2 / r1^2: the gather\'s length shrinks as the engine\'s area', sched && F.radiusFlat(0.25, 300).toFixed(3) === '0.041' && F.radiusFlat(0.25, 300, 0.25).toFixed(4) === '0.0038')
+    // the photons' estimate at the peak against the exact rays, over a window: the map gathers what is there
+    {
+        const world = P.worldOf(false), R = F.rng(99), K = 800, hs = [0.1, 0.25], acc = hs.map(() => [0, 0])
+        for (let k = 0; k < K; k++) {
+            const store = []; F.lightTrace(world, P.CAM, { n: 600, rand: R, store, connect: false })
+            hs.forEach((h, j) => { let t = 0; for (const p of store) if (p.ny > 0.99 && Math.abs(p.y) < 0.01 && Math.abs(p.x - P.X0) < h) t += p.flux; const v = 0.4 * t / (2 * h); acc[j][0] += v; acc[j][1] += v * v })
+        }
+        const res = hs.map((h, j) => { const m = acc[j][0] / K, se = Math.sqrt((acc[j][1] / K - m * m) / K); return [m, se, P.trueAt(P.X0, h)] })
+        ok('ch.19: the photons stored under the ball average to the exact rays\' light over the same window (0.838 within 0.1, 0.623 within 0.25)', res.every(([m, se, t]) => Math.abs(m - t) < 4 * se) && P.trueAt(P.X0, 0.1).toFixed(3) === '0.838' && P.trueAt(P.X0, 0.25).toFixed(3) === '0.623', JSON.stringify(res))
+    }
+    ok('ch.19: the true value at the peak is 0.938, the caustic\'s brightest', P.TRUE_X0.toFixed(3) === '0.938' && [-0.4, 0, 0.4, 0.6].every(x => P.trueAt(x, 0.004) < P.TRUE_X0))
+    // the shrink: a held radius settles on the window's average, a shrinking one goes on towards the truth
+    const run = P.shrinkRun(0.25, 2 / 3), f = run.fixed[P.SHRINK_K - 1], g = run.shrink[P.SHRINK_K - 1]
+    ok('ch.19: after 300 samples the held radius reads its window\'s 0.623 (within 3%), the shrinking one 0.905, nearer 0.938', Math.abs(f / P.trueAt(P.X0, 0.25) - 1) < 0.03 && g.toFixed(3) === '0.905' && Math.abs(g - P.TRUE_X0) < Math.abs(f - P.TRUE_X0), `${f} ${g}`)
+    ok('ch.19: alpha 0.25 overshoots to 1.002 at 300', P.shrinkRun(0.25, 0.25).shrink[P.SHRINK_K - 1].toFixed(3) === '1.002')
+    // the map in the whole flat renderer: the caustic seen through the pane, against the camera's own paths given a
+    // 3-degree sun (which they find often enough to measure) -- counted once, not twice and not never
+    {
+        const world = P.worldOf(); world.sun = P.sunOf(3)
+        const peak = [23, 24, 25, 26], mom = () => peak.map(() => [0, 0]), add = (m, v) => peak.forEach((i, j) => { m[j][0] += v[i]; m[j][1] += v[i] * v[i] })
+        const stat = (m, n) => { let a = 0, v = 0; for (const [s1, s2] of m) { const mu = s1 / n; a += mu; v += (s2 / n - mu * mu) / n } return [a / peak.length, Math.sqrt(v) / peak.length] }
+        let R = F.rng(21); const cam = mom(), N1 = 4000
+        for (let k = 0; k < N1; k++) { const v = new Float64Array(48); for (const i of peak) { const [ox, oy, dx, dy] = F.cameraRay(P.CAM, i, R()); v[i] = F.tracePath(world, ox, oy, dx, dy, { nee: true, maxBounce: 10, rand: R }) } add(cam, v) }
+        R = F.rng(22); const map = mom(), N2 = 200
+        for (let k = 0; k < N2; k++) add(map, P.sample(world, true, 0.02, R))
+        const [a, sa] = stat(cam, N1), [b, sb] = stat(map, N2)
+        ok('ch.19: through the pane, the map and light tracing read the caustic the camera\'s own paths find by chance', Math.abs(a - b) < 4 * Math.hypot(sa, sb) && a > 0.3, `${a}±${sa} map ${b}±${sb}`)
+    }
+    // the page's numbers, as its figure makes them
+    const rdMap = st => P.figures.map.readout(Object.assign(P.render({ on: P.figures.map.steps[st].on, r: P.figures.map.steps[st].r, max: 300 }), P.figures.map.steps[st]))
+    ok('ch.19: through the pane, 0.324 ± 0.060 without the map and 0.366 ± 0.003 with it, after 300 samples', rdMap('missing').includes('0.324 ± 0.060') && rdMap('with').includes('0.366 ± 0.003'), rdMap('missing'))
+    let finds = 0
+    for (let k = 0; k < 300; k++) { const v = P.sample(P.worldOf(), false, 0.06, F.rng(1000003 + k * 7919)); for (const i of P.panePixels) if (v[i] > 3) finds++ }
+    ok('ch.19: without the map the camera found the sun through the ball 9 times in those 300 samples', finds === 9, finds)
+    const pix = (st, i) => P.render({ on: P.figures.map.steps[st].on, r: P.figures.map.steps[st].r, max: 300 }).pix[i - 1].Y.toFixed(2)
+    ok('ch.19: the page\'s pixels: 24 reads 1.45 and 25 0.03 without the map; 25 reads 0.72 with it, 0.49 with r = 0.4', pix('missing', 24) === '1.45' && pix('missing', 25) === '0.03' && pix('with', 25) === '0.72' && pix('wide', 25) === '0.49')
+    // the grid against brute force, everywhere; a collision; the budget right over every start
+    const ph = P.gridPhotons(), brute = (x, r) => 0.4 * ph.reduce((t, p) => t + (Math.abs(p.x - x) < r ? p.f : 0), 0) / (2 * r)
+    let gridOK = true
+    for (const r of [0.05, 0.1, 0.15, 0.3, 0.4]) for (let x = -2; x <= 2.4; x += 0.037) if (Math.abs(P.gridGather(x, r).est - brute(x, r)) > 1e-12) gridOK = false
+    ok('ch.19: a gather through the grid\'s two cells counts exactly what a walk over every photon counts', gridOK && ph.length === 27)
+    ok('ch.19: the figure\'s hash and sub-lists are sppm.js\'s: hashCell, sppmSubsOf, 32 sub-lists', [-11, -3, 0, 1, 5].every(c => P.hash1(c) === S.hashCell(c, 0, 0, 4)) && P.SUBS === S.SPPM_SUBS && P.subsOf(12) === S.sppmSubsOf(12, 6))
+    const w = P.gridGather(0.31, 0.15), col = P.gridGather(-0.5, 0.15)
+    ok('ch.19: at 0.31 a gather walks 20 records and counts 10; at -0.5 it walks 11, 10 of them other cells\'', w.walked === 20 && w.counted === 10 && col.walked === 11 && col.other === 10 && col.counted === 1 && P.hash1(1) === P.hash1(-3))
+    let mean = 0; for (let st = 0; st < P.SUBS; st++) mean += P.gridGather(0.31, 0.15, { budget: true, start: st }).est
+    mean /= P.SUBS
+    const b0 = P.gridGather(0.31, 0.15, { budget: true, start: 0 })
+    ok('ch.19: with the budget a start reads 0.738 (24 and 16 sub-lists), and all 32 starts average to the whole walk\'s 0.615', Math.abs(mean - w.est) < 1e-12 && b0.est.toFixed(3) === '0.738' && w.est.toFixed(3) === '0.615' && b0.split.map(t => t.m).join() === '24,16', mean)
+    // the engine's numbers the page states
+    ok('ch.19: the engine as the page says: 32 sub-lists, a 512-record budget (64 a cell), alpha 2/3, 44-byte records, 2 million by default (88 MB), a probe every 16 traces, normals within 25.8 degrees', S.SPPM_SUBS === 32 && S.SPPM_VISIT === 512 && S.sppmShare(512) === 64 && S.SPPM_ALPHA === 2 / 3
+        && S.SPPM_REC * 4 === 44 && S.SPPM_CAPACITY_DEFAULT * 1e6 * 44 === 88e6 && S.SPPM_PROBE === 16 && (Math.acos(S.SPPM_NORMAL_DOT) * 180 / Math.PI).toFixed(1) === '25.8' && S.SPPM_HEADS === 1 << 20)
+    const perf = readFileSync(join(REPO, 'docs/PERFORMANCE.md'), 'utf8'), log = readFileSync(join(REPO, 'CHANGELOG.md'), 'utf8')
+    ok('ch.19: the measured numbers are where the page says: 196.0 / 173.3 ms, 22.7 and 16.2; 0.355 / 0.274, 8,315 records', perf.includes('| 1 baked, as it is (map on) | 196.0 |') && perf.includes('| 2 photon map off | 173.3') && perf.includes('22.7 ms a sample at 720p, of which the sppm kernel is 16.2 ms')
+        && log.includes('0.61.2 read **0.355** of') && log.includes('**0.274** at 1920 x 1080') && log.includes('8,315 records') && log.includes('| new (two or three seeds) | 0.965, 1.000 | 0.884, 0.891, 0.903 |'))
+}
+
+{
+    // CHAPTER 20: the flat world's dust against haze.js and closed forms
+    const F = await import('../kit/flatland.js'), Z = await import('../ch/haze.js'), HZ = await import('../../lib/pathtracer/core/haze.js')
+    // the flat world's phase function: a density round the circle, mean cosine g, drawn as it says
+    const phaseOK = [0, 0.7, -0.5, 0.95].every(g => {
+        let I = 0, M = 0; const N = 20000
+        for (let i = 0; i < N; i++) { const th = -Math.PI + (i + 0.5) / N * 2 * Math.PI, p = F.phase2(Math.cos(th), g); I += p; M += p * Math.cos(th) }
+        I *= 2 * Math.PI / N; M *= 2 * Math.PI / N
+        const R = F.rng(3), K = 40000; let mc = 0, m2 = 0
+        for (let i = 0; i < K; i++) { const [x] = F.phaseSample2(1, 0, g, R()); mc += x; m2 += x * x }
+        const mean = mc / K, se = Math.sqrt((m2 / K - mean * mean) / K)
+        return Math.abs(I - 1) < 1e-9 && Math.abs(M - g) < 1e-6 && Math.abs(mean - g) < 4 * se + 1e-9
+    })
+    ok('ch.20: the flat world\'s phase function adds to 1 round the circle, its mean cosine is g, and its draws follow it', phaseOK)
+    // the flat world's collision is haze.js's, for the same box and number
+    const box = { c: [0.3, -0.2], h: [2, 1], mfp: 1.3 }, u3 = HZ.hazeUniforms({ centre: [0.3, -0.2, 0], half: [2, 1, 1], mfp: 1.3, albedo: [1, 1, 1], g: 0 }, 1, 0)
+    let same = true; const Rc = F.rng(9)
+    for (let i = 0; i < 2000; i++) {
+        const x = -4 + 8 * Rc(), y = -2 + 4 * Rc(), a = 2 * Math.PI * Rc(), u = Rc(), len = 1 + 6 * Rc()
+        const t2 = F.hazeCollide2(box, x, y, Math.cos(a), Math.sin(a), len, u), t3 = HZ.hazeCollideJS(u3, [x, y, 0], [Math.cos(a), Math.sin(a), 0], len, 1e6, u)
+        if ((t2 < 0) !== (t3 < 0) || (t2 >= 0 && Math.abs(t2 - t3) > 1e-9)) same = false
+    }
+    ok('ch.20: hazeCollide2 draws the collision haze.js\'s hazeCollideJS draws, ray for ray', same)
+    ok('ch.20: the transmittance across the box is e^(-length / mfp)', Math.abs(F.hazeTr2(box, -5, 0, 1, 0, 20) - Math.exp(-4 / 1.3)) < 1e-12 && F.hazeTr2(box, -5, 3, 1, 0, 20) === 1)
+    // single scattering from the sun, by light sampling from the air: a camera ray across a box under a sun straight
+    // overhead reads albedo p(0) E T_sun (1 - e^(-4 / mfp)), E the sun's illuminance across its rays
+    {
+        const half = 0.27 * Math.PI / 180, sun = { dir: Math.PI / 2, half, L: 1 / (2 * Math.sin(half)) }
+        const world = { sky: 0, sun, shapes: [], haze: { c: [0, 0], h: [2, 1], mfp: 1.5, albedo: 0.8, g: 0.6 } }
+        const R = F.rng(13), N = 60000; let a = 0, a2 = 0
+        for (let i = 0; i < N; i++) { const v = F.tracePath(world, -5, 0.2, 1, 0, { rand: R, nee: true, maxBounce: 0 }); a += v; a2 += v * v }
+        const mean = a / N, se = Math.sqrt((a2 / N - mean * mean) / N)
+        const want = 0.8 * F.phase2(0, 0.6) * sun.L * 2 * half * Math.exp(-0.8 / 1.5) * (1 - Math.exp(-4 / 1.5))
+        ok('ch.20: sunlit dust seen across reads its single-scattering integral (light sampling from the air)', Math.abs(mean - want) < 4 * se, `${mean} ± ${se} want ${want}`)
+    }
+    // the room: light sampling from the air and the phase function's bounces alone agree, given a sun they can find (5 degrees)
+    {
+        const w = Z.roomOf({ half: 5 }), mean = (mode, N, seed) => {
+            const R = F.rng(seed); let a = 0, a2 = 0
+            for (let k = 0; k < N; k++) { const v = Z.roomSample(w, mode, R); let m = 0; for (const i of Z.beamPixels) m += v[i]; m /= Z.beamPixels.length; a += m; a2 += m * m }
+            const mu = a / N; return [mu, Math.sqrt((a2 / N - mu * mu) / N)]
+        }
+        const [aa, sa] = mean('aim', 500, 11), [pp, sp] = mean('phase', 2000, 12)
+        ok('ch.20: across the beam, aiming at the sun from the air and the bounces alone read the same, with a sun they can find', Math.abs(aa - pp) < 4 * Math.hypot(sa, sp), `${aa}±${sa} ${pp}±${sp}`)
+    }
+    // the dust's furnace: exactly 1, no noise; the controls under it; the eye on the sky reads 1 too
+    const fr = o => Z.furnaceRead(Z.renderFurnace({ ...o, max: 200 }).pix)
+    const pass = fr({}), black = fr({ disc: 0 }), halfD = fr({ dust: 0.5 }), sky = fr({ disc: 0, aim: 'sky' })
+    ok('ch.20: albedo-1 dust round a white disc in a sky of 1 reads 1 with no noise; a black disc 0.558, dust of 0.5 0.447; the eye on the sky 1 again', pass.mean === 1 && pass.spread === 0
+        && black.mean.toFixed(3) === '0.558' && halfD.mean.toFixed(3) === '0.447' && sky.mean === 1 && sky.spread === 0, `${pass.mean} ${black.mean} ${halfD.mean} ${sky.mean}`)
+    // the pages' numbers
+    const h4 = Z.histogram(4, 101), h07 = Z.histogram(0.7, 101)
+    ok('ch.20: of 4000 crossings 1453 pass at mfp 4 (1472 expected), 9 at 0.7 (13)', h4.passed === 1453 && Math.round(4000 * Math.exp(-1)) === 1472 && h07.passed === 9 && Math.round(4000 * Math.exp(-4 / 0.7)) === 13)
+    ok('ch.20: Henyey-Greenstein adds to 1 over the sphere; 3000 draws\' mean cosine near g', [0, 0.7, -0.5].every(g => Math.abs(Z.sphereIntegral(g) - 1) < 1e-4 && Math.abs(Z.phaseDraws(g, 1).mean - g) < 0.03))
+    const rest = [...Array(48).keys()].filter(i => !Z.beamPixels.includes(i) && !Z.patchPixels.includes(i))
+    const room = st => { const s = Z.renderRoom({ ...Z.figures.beam.steps[st], max: 300 }); return { b: Z.regionOf(s.pix, Z.beamPixels), p: Z.regionOf(s.pix, Z.patchPixels), r: Z.regionOf(s.pix, rest), pix: s.pix } }
+    const rc = room('clear'), rp = room('phase'), ra = room('aim'), rb = room('back'), rt = room('thick')
+    ok('ch.20: the room\'s numbers: no dust, the patch 0.124 and across the beam 0.002; bounces alone 0.0033 ± 0.0002 and pixel 9 0.23; aimed 0.0109 ± 0.0007, the rest 0.003, the patch 0.035; g -0.5 0.0048; mfp 1 0.0009 and 0.0025',
+        rc.p.mean.toFixed(3) === '0.124' && rc.b.mean.toFixed(3) === '0.002' && rp.b.mean.toFixed(4) === '0.0033' && rp.b.se.toFixed(4) === '0.0002' && rp.pix[8].Y.toFixed(2) === '0.23'
+        && ra.b.mean.toFixed(4) === '0.0109' && ra.b.se.toFixed(4) === '0.0007' && ra.r.mean.toFixed(3) === '0.003' && ra.p.mean.toFixed(3) === '0.035' && rb.b.mean.toFixed(4) === '0.0048'
+        && rt.b.mean.toFixed(4) === '0.0009' && rt.p.mean.toFixed(4) === '0.0025' && Z.patchPixels.length === 2, `${rc.p.mean} ${rp.b.mean} ${ra.b.mean} ${rb.b.mean} ${rt.b.mean}`)
+    // the engine's numbers the page states
+    const tst = readFileSync(join(REPO, 'docs/TESTING.md'), 'utf8'), med = readFileSync(join(REPO, 'roadmap/MEDIA.md'), 'utf8')
+    ok('ch.20: the measured and worked numbers are where the page says', tst.includes('the hidden box +0.0002 %, the dust with NEE off +0.002 %') && tst.includes('+0.024 % at g 0.6, +0.015 % at 0, −0.010 % at −0.5')
+        && tst.includes('the controls 0.152 and 0.4315') && tst.includes('the haze\'s code alone 1.2 s as no box, the dust 1.5–1.6 s, NEE off 0.7 s') && med.includes('that is about 7e-5') && HZ.HAZE_G_MAX === 0.95)
+}
+
 /* THE EXCERPT LOCATOR ON ITS OWN ----------------------------------------------------------------------------------- */
 {
     const text = [

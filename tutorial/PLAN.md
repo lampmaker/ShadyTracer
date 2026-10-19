@@ -219,9 +219,26 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
     split and `lightTrace`, tested against the camera's own pictures. -> materials_pbr.js (THE SPLIT, the
     connection), tracebasics.js, wavefront.js (prog_lt_build). *Read:* wiki-caustic, pbr3-pathspace, pbr3-bdpt,
     veach1997.
-19. **Photon mapping**: a hashed grid built with atomics, a shrinking radius, 1/n² in glass, the gather budget.
-    *Read* (named in the code, link to be checked): Knaus & Zwicker 2011, progressive photon mapping.
-20. **Dust in the air**: transmittance, free flight, Henyey–Greenstein, light sampling from the air.
+19. **Photon mapping** (draft): chapter 18's ball with a pane before it, the caustic through the pane missing (9 chance
+    finds in 300 samples) and then gathered from the photons stored on the floor; the radius's blur (wide) against its
+    noise (narrow); one point's estimate over 300 samples with the radius held (settling on the light averaged over
+    2r, 0.623 against the true 0.938 from 400,000 exact rays) and shrinking by Knaus and Zwicker's schedule (r in the
+    flat world, r² in 3D), with the convergence argued in a fold-out; the hashed grid (cells 2r, a gather's two cells,
+    a collision, the budget's sub-lists right on average over every start). Kit: flatland.js gains `gather`,
+    `radiusFlat`, lightTrace's `store` and tracePath's `map`. -> sppm.js (what it is, sppmRadius, the grid, sppmStore,
+    the gather's walk, neither full nor cut), raytrace_main.js (sppmGeomFor), wavefront.js (1/n² in a medium).
+    *Read:* wiki-photon, pbr3-sppm, knaus2011 (cited by title), wiki-hash.
+20. **Dust in the air** (draft): free flight drawn by `haze.js`'s own `hazeCollideJS` in a box, its distances against
+    the exponential, and one ray's march stopped where its drawn distance falls and moved back (the user's "move back
+    YY"); Henyey–Greenstein by `hgEvalJS` / `hgSampleJS`, its shape and its draws, the flat world's circle version
+    beside it; a dark room with a window and a sunbeam in dust, the beam found by the phase function's bounces alone
+    (a third of its light after 300 samples, its error bar blind to it) and by aiming at the sun from the air; the
+    dust's furnace, its two controls, and the eye turned to the sky reading 1 with no noise, as the first press of the
+    bench's haze row did. Kit: flatland.js gains a haze box (`hazeSpan2`, `hazeTr2`, `hazeCollide2`, `phase2`,
+    `phaseSample2`, light sampling from the air, shadow rays dimmed), tested against closed forms. -> haze.js (the
+    sketch, hazeDraw, hazeArrived/hazeAt, hgSample, mediumNee's weight, hazeShadow, where it is off), tests.js (the
+    camera that looked at sky), haze.gpu.mjs (the heavy tail). *Read:* wiki-crepuscular, wiki-beer, pbr3-phase,
+    pbr3-volsample, henyey1941 (cited by title).
 
 **VI. The machine**
 21. **A GPU for beginners**: lock-step workers, WGSL, buffers, pipelines, dispatch, the limits.

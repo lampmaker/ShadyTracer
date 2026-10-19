@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dust in the air · ShadyTracer, inside out</title>
+<link rel="stylesheet" href="../kit/kit.css">
+<script type="module" src="haze.js"></script>
+</head>
+<body data-chapter="haze">
+<p class="kit-offline">This page runs from a web server, not from a file: in the repository run <code>python3 -m http.server 8000</code> and open http://localhost:8000/tutorial/.</p>
+<main class="sheet">
+
+<header class="sheet-head">
+  <div>
+    <p class="eyebrow">Part V · Light the camera can't find · Chapter 20</p>
+    <h1>Dust in the air</h1>
+    <p class="lede">So far light has travelled in straight lines from one surface to the next, and the air between has
+      done nothing. Dust changes that: a sunbeam in a dusty room is visible because specks in the air turn a little of
+      its light towards the eye. ShadyTracer has one box of dust, a <em>haze box</em>, inside which the air scatters.
+      This chapter is how a ray meets a particle, which way the light goes then, how a beam becomes visible, and how to
+      check that dust neither makes nor loses light.</p>
+  </div>
+  <div class="titleblock" data-auto></div>
+</header>
+
+<section class="scene" id="free">
+  <div class="prose">
+    <h2><span class="n">1</span>Meeting a particle</h2>
+    <p data-step="free:thin">A box of dust, 4 long. Its <a data-g="mean-free-path">mean free path</a> is 4: on average a
+      ray goes 4 before it meets a particle. The sheet of rays in the sun's colour comes in from the left; the dots are
+      where rays met one, and the rays with arrows passed through. The chance of getting a distance <var>t</var> into the
+      dust untouched falls as e<sup>−<var>t</var>/mfp</sup>, the <a data-g="transmittance">transmittance</a>, so the
+      chance of crossing all 4 is e<sup>−1</sup>, 37%. The chart is 4000 crossings: the distances at which they met a
+      particle (bars) against that curve's prediction (line), and below it, 1453 passed where e<sup>−1</sup> says 1472.</p>
+    <p data-step="free:thin">The distance is drawn directly, by <a data-g="free-flight">free flight</a>: with
+      <var>u</var> a random number from 0 to 1, <var>t</var> = −mfp × ln(1 − <var>u</var>) is spread exactly as that
+      curve says. Then the weight: a ray that meets a particle goes on carrying the dust's
+      <a data-g="albedo">albedo</a>, the share the particle scatters (the rest it absorbs); one that does not carries all
+      of its light, and is not divided by anything, because the chance of not meeting one is the transmittance itself,
+      the light that gets through. The figure draws its distances with ShadyTracer's own function for it.</p>
+    <p data-step="free:thick">Mean free path 0.7: e<sup>−4/0.7</sup> is a third of a percent, and 9 of the 4000
+      crossings pass (13 expected). Thick dust is a wall.</p>
+    <p data-step="free:march">Now one ray in ShadyTracer's way of moving. The march steps by the distance to the
+      nearest surface (the circles: chapter 2), steps that know nothing of dust. The user who asked for dust described
+      what to do in one line: "If a ray has moved XX, random chance it met a particle; if so move back some random YY
+      distance and scatter." That is free flight. ShadyTracer draws the leg's distance to its particle as the leg
+      starts and stores it in the ray; the march steps on, and on the first step that passes it, the ray is moved back
+      along the line to that distance (the dot) and handed on as a point in the air. A surface met first ends the leg as
+      it always did.</p>
+  </div>
+  <figure class="fig" data-fig="free">
+    <figcaption>A box of dust (dashed outline), rays coming in from the left in the sun's colour, and a dot in the
+      <span data-say="accent">accent colour</span> where each met a particle. Chart: where 4000 straight crossings met
+      a particle, against the exponential. With <strong>One ray's march</strong>: a stone in the dust, the march's
+      steps as circles, the drawn distance as a dot, and the step that passed it in <span data-say="blocked">red</span>.
+      Set the mean free path; draw again.</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="phase">
+  <div class="prose">
+    <h2><span class="n">2</span>Which way it goes</h2>
+    <p data-step="phase:even">At a particle the light goes on in a new direction, drawn from the dust's
+      <a data-g="phase-function">phase function</a>: how likely each direction is, against the one it came from. The
+      shape round the point is that likelihood as a distance. With an asymmetry <var>g</var> of 0, every direction is
+      as likely as any other, and the shape is a circle. The small blue dots are 240 directions drawn from it, on a
+      circle round the point; the chart counts 3000 by their angle from straight on. Most are near 90°, not because
+      the dust prefers it but because a sphere has more directions there than near its poles (the same reason as
+      chapter 8's cosine).</p>
+    <p data-step="phase:forward">Dust and fog scatter mostly forwards: <var>g</var> = 0.7, the haze box's own default.
+      ShadyTracer uses the Henyey–Greenstein phase function (1941, written for dust between the stars), one number
+      <var>g</var> setting its shape, which is also the average cosine of the angle it turns light through: the drawn
+      directions' average cosine is in the readout. It is drawn exactly, from the inverse of its distribution (the
+      fold-out), so a drawn direction carries weight 1.</p>
+    <p data-step="phase:back">A negative <var>g</var> sends light back towards where it came from. ShadyTracer holds
+      <var>g</var> between −0.95 and 0.95: at 1 the shape is a single direction, and nothing could aim light at it (a
+      delta, chapter 8). Switch on <strong>The flat world's too</strong> for the dashed shape the flat world's dust
+      uses: Henyey and Greenstein's idea on a circle instead of a sphere, the same average cosine, a gentler shape.</p>
+    <details class="maths">
+      <summary><span class="tag">The maths</span>Henyey–Greenstein, and drawing from it</summary>
+      <div class="body">
+        <p>Per <a data-g="solid-angle">steradian</a>, for the angle θ between the direction travelled and the direction
+          scattered into:</p>
+        <p class="eq"><var>p</var>(θ) = <span class="frac"><span>1 − <var>g</var>²</span><span>4π (1 + <var>g</var>² − 2<var>g</var> cos θ)<sup>3/2</sup></span></span></p>
+        <p>It adds up to 1 over the sphere, whatever <var>g</var> (the readout checks). Its cosine is drawn from one
+          random number <var>u</var>: with <var>s</var> = (1 − <var>g</var>²) / (1 − <var>g</var> + 2<var>g</var><var>u</var>),</p>
+        <p class="eq">cos θ = (1 + <var>g</var>² − <var>s</var>²) / (2<var>g</var>)</p>
+        <p>and the angle round the old direction from a second, evenly. The flat world's version, per radian of a
+          circle, is (1 − <var>g</var>²) / (2π (1 + <var>g</var>² − 2<var>g</var> cos θ)), drawn by
+          tan(θ/2) = (1 − <var>g</var>)/(1 + <var>g</var>) × tan(π(<var>u</var> − ½)).</p>
+      </div>
+    </details>
+  </div>
+  <figure class="fig" data-fig="phase">
+    <figcaption>Left: light arriving from the left at a particle, and the phase function's shape round it in the
+      <span data-say="accent">accent colour</span> (scaled to its largest), with drawn directions as small
+      <span data-say="cam">blue</span> dots outside it; the flat world's dashed in the <span data-say="glass">glass
+      colour</span> when switched on. Right: the angles of 3000 drawn directions (bars) against the phase function's
+      prediction (line); point at it to read a bar. Set <var>g</var>; draw again.</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="beam">
+  <div class="prose">
+    <h2><span class="n">3</span>A beam you can see</h2>
+    <p data-step="beam:clear">A dark room: a pale floor, walls and ceiling of albedo 0.2, a window in the right wall
+      and the sun 35° up outside it. No dust. The sun lights a patch of floor (the dashed lines are the beam's edges),
+      and in the picture the patch's two pixels read 0.124. The air across the beam is invisible: those pixels read
+      0.002, the patch's light bounced off the dark walls.</p>
+    <p data-step="beam:phase">Dust fills the room: mean free path 6 in a room 10 wide, albedo 0.9, <var>g</var> 0.7.
+      A path from the eye now meets particles (the dots), and at each one it draws its next direction from the phase
+      function. The sun counts only if a drawn direction happens to leave through the window within the sun's half a
+      degree: chapter 18's problem again. After 300 samples the pixels across the beam read 0.0033 ± 0.0002, a third
+      of what they will read below, and one pixel high on the ceiling reads 0.23 ± 0.23: a single find. The error bar
+      cannot show the light no sample has found yet.</p>
+    <p data-step="beam:aim">So aim. At every point in the dust the path also sends a shadow ray towards the sun (in
+      <span data-say="shadow">the shadow rays' colour</span>), as a surface does (chapter 14), with the phase function
+      where a surface has its <var>f</var> cos θ, and dimmed by the transmittance of the dust it crosses on the way. The
+      beam appears: across it the pixels read 0.0109 ± 0.0007, three times the 0.003 elsewhere. The patch reads 0.035,
+      dimmer than without dust: the sunlight lost some on its way in and more on its way to the eye. ShadyTracer does
+      both at every point in the dust, the aimed ray and the drawn direction, and weighs them by MIS (chapter 15).</p>
+    <p data-step="beam:back">With <var>g</var> = −0.5 the dust sends light back the way it came, out of the window, and
+      little towards the eye: the beam reads 0.0048.</p>
+    <p data-step="beam:thick">With a mean free path of 1, the dust stops the light within a few units of the window
+      and dims what the eye sees of it: the beam reads 0.0009, the patch 0.0025. A beam shows best in dust thin enough
+      to let it through and looked at towards the light, which is why this room is dark and the eye looks towards the
+      window.</p>
+  </div>
+  <figure class="fig" data-fig="beam">
+    <figcaption>The room in section, the dust's box dashed, the window in the right wall and the sun's rays outside
+      it, the beam's edges dashed in the sun's colour. Faint lines are a few of the first sample's paths: the eye's
+      <span data-say="cam">blue</span>, its points in the dust as dots, shadow rays
+      <span data-say="shadow">green</span> or <span data-say="blocked">red</span> where blocked. Below: the eye's
+      picture, brightened 20 times, the pixels across the beam and the lit floor bracketed; point at a pixel for its
+      value. Choose how the dust is found; set its mean free path and <var>g</var>.</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="furnace">
+  <div class="prose">
+    <h2><span class="n">4</span>Checking it adds up</h2>
+    <p data-step="furnace:pass">Chapter 8's white furnace, with dust: a white disc in a box of white dust (albedo 1,
+      mean free path 1.5), all of it in a sky of brightness 1 in every direction, and nothing else. Nothing absorbs and
+      nothing glows but the sky, so whatever the dust does, every pixel must read 1. It does, and with no noise at all:
+      every path carries exactly 1 out to the sky, however many particles it meets. (In the flat world the sky is
+      found only by leaving; ShadyTracer also aims at it from the air, so its pictures are noisy and its test reads
+      their mean.)</p>
+    <p data-step="furnace:black">A test that cannot fail tests nothing, so the test has two controls that must fail.
+      A black disc absorbs what reaches it: the picture reads 0.558.</p>
+    <p data-step="furnace:half">Dust of albedo 0.5 absorbs half at every particle: 0.447. Both well under 1, so the
+      furnace's 1 meant something.</p>
+    <p data-step="furnace:sky">Now turn the eye to the sky, the black disc still there. The picture reads 1.0000 with no
+      noise, exactly as the passing furnace did. This is what ShadyTracer's first run of its own dust test did on the
+      user's card: its camera, aimed at the view's own target instead of one it named, looked at nothing but sky, and
+      every row read 1000.000244 with noise 0, the controls with them. The controls are how it was caught.</p>
+  </div>
+  <figure class="fig" data-fig="furnace">
+    <figcaption>A disc (its colour shows which albedo it has) in a box of dust, in a sky of brightness 1 everywhere.
+      Faint lines are a few of the first sample's paths, their points in the dust as dots. Below: the eye's picture,
+      white at 1; point at a pixel. Set the dust's and the disc's albedo and <var>g</var>; aim the eye at the disc or the
+      sky.</figcaption>
+  </figure>
+</section>
+
+<section class="plain wide" id="engine">
+  <div class="prose">
+    <h2><span class="n">5</span>How ShadyTracer does it</h2>
+    <p>The user's sketch, and what it became:</p>
+    <pre data-src="lib/pathtracer/core/haze.js" data-sym="// HOW IT FITS THIS ENGINE: THE USER'S OWN SKETCH." data-to="(mediumVertex): the phase function where a surface has its BSDF."
+         data-why="sigma_t is 1 / mfp. A leg is the stretch of a path between two events. ltot is the distance the ray has travelled; tmax a field that shadow rays use for their length and path rays had free. The march kernel and the surface kernel are chapter 22's: the march moves rays, the surface kernel works out what they hit, shade decides what happens next." data-hash="99326f70"></pre>
+    <p>The distance, drawn as the leg starts, and why it moved there:</p>
+    <pre data-src="lib/pathtracer/core/haze.js" data-sym="fn hazeDraw"
+         data-why="WGSL (chapter 21). PRNG() is the random-number generator (chapter 12), seeded with a constant of its own (0x48415A45 spells HAZE) so the draws elsewhere stay as they were. A probe and a seek ray are rays sent to find light sources, carrying nothing. r.n is the index of the medium the ray is in: only air, n = 1, scatters. measureMode 1 is the illuminance view, where the camera is a pointer at a surface and its first leg must not stop in the air." data-hash="fb26d1f3"></pre>
+    <p>...and where the march has passed it:</p>
+    <pre data-src="lib/pathtracer/core/haze.js" data-sym="fn hazeArrived" data-to="return c;" data-hash="dc694526"></pre>
+    <p>The phase function's draw:</p>
+    <pre data-src="lib/pathtracer/core/haze.js" data-sym="fn hgSample" data-hash="b830804f"></pre>
+    <p>Light sampling from the air ends as a surface's does, the phase function in the place of <var>f</var> cos θ
+      (<cite data-src="lib/pathtracer/core/haze.js" data-sym="/* LIGHT SAMPLING FROM A POINT IN THE AIR: processMaterial_advanced's three-way pick"></cite>):</p>
+    <pre data-src="lib/pathtracer/core/haze.js" data-sym="let f = hgEval(dot(r.dir, L), g);" data-to="let contrib = r.beta * f * le * (w / dS);"
+         data-why="pS is the chance of having drawn this direction towards a light, dS what it is divided by; misWeight is the power heuristic (chapter 15) against the phase function's own chance of the same direction, f. fast is Draft (chapter 28), which skips MIS. le is the light's radiance." data-hash="d5999038"></pre>
+    <p>And every shadow ray is dimmed by the dust it crosses:</p>
+    <pre data-src="lib/pathtracer/core/haze.js" data-sym="fn hazeShadow"
+         data-why="TAG_FNEE marks a shadow ray to a light's face, TAG_CONN a photon's connection to the camera (chapter 18), TAG_EMIT one to a glowing object; envRadius is the scene's radius, 400 m unless set, which a ray to the sky is measured to. offsetTol is the hair a shadow ray stops short of what it aims at." data-hash="40f0a7bc"></pre>
+    <p>Where the dust is off, and why:</p>
+    <pre data-src="lib/pathtracer/core/haze.js" data-sym="// WHERE IT IS OFF." data-to="a chain of its own and does not see the haze yet: its run bar says so."
+         data-why="Sketch, Draft and the Optics view are the Quality presets (chapter 28). The illuminance view shows lux on surfaces instead of a picture." data-hash="635535c8"></pre>
+  </div>
+</section>
+
+<section class="plain wide" id="tricks">
+  <div class="prose">
+    <h2><span class="n">6</span>Tricks and trade-offs</h2>
+    <p>Each is stamped with how it is known; point at a stamp to see what it means.</p>
+    <div data-claim="measured">
+      <p><strong>It adds up.</strong> The bench's furnace (Tests &gt; haze: a white sphere in a box of albedo-1 dust 3.2 m
+        wide, mean free path 1.5 m) on the user's Pascal card, 819 × 1031, 32 samples, version 0.62.2: against no box
+        (999.768) the box hidden read +0.0002%, the dust with light sampling off +0.002%, with it on +0.024%, +0.015% and
+        −0.010% at <var>g</var> 0.6, 0 and −0.5; the controls 0.152 (a black sphere) and 0.4315 (dust of albedo 0.5)
+        (<code>docs/TESTING.md</code>, the haze row).</p>
+    </div>
+    <div data-claim="measured">
+      <p><strong>What it costs.</strong> In the same run, as wall-clock time for the row: the haze's code with no dust
+        1.2 s, as without a box; with the dust 1.5 to 1.6 s; with the dust and light sampling off 0.7 s
+        (<code>docs/TESTING.md</code>). Each particle met is a bounce, so the bench allows 40.</p>
+    </div>
+    <div data-claim="code">
+      <p><strong>Only air.</strong> A ray in glass or water inside the box never meets a particle (its medium's index is
+        not 1): the user asked for dust that "does not add scattering in transparent materials" (haze.js's header). In
+        Sketch and the Optics view the dust is off; in Draft a path ends at its first point in the dust, so only light
+        scattered once is seen (<code>mediumVertex</code>).</p>
+    </div>
+    <div data-claim="code">
+      <p><strong>A scene without a box pays nothing.</strong> The haze's code goes into the kernels only for a scene that
+        has one, so without it they are the text they were (<code>raytrace_main.js</code>; the build test holds them
+        byte for byte).</p>
+    </div>
+    <div data-claim="inferred">
+      <p><strong>Real dust is faint.</strong> A beam 1 cm across in dust of mean free path 10 m and <var>g</var> 0.7,
+        seen side on, is about 7 × 10<sup>−5</sup> as bright as the white floor it lights: σ<sub>s</sub>
+        <var>p</var>(90°) <var>w</var> against 1/π, worked out on paper, not measured (<code>roadmap/MEDIA.md</code>,
+        the scale). Beams show at room scale, looking into the light, against a dark surround.</p>
+    </div>
+  </div>
+</section>
+
+<section class="plain wide" id="before">
+  <div class="prose">
+    <h2><span class="n">7</span>What went wrong before</h2>
+    <ul>
+      <li><strong>A particle inside a sphere.</strong> At first the collision was decided after the march, from where
+        the leg ended, worked back to where it began. A leg that escaped ended at the scene's radius, 400 m away, where
+        a 32-bit number's steps are 30 µm (chapter 4), so the start came out a few steps off, and a particle just past a
+        start on a surface landed inside the solid the leg had left. The furnace lost 4 × 10<sup>−4</sup> of its light
+        on the user's card; drawing the distance as the leg starts fixed it (the excerpt above; 0.62.2).</li>
+      <li><strong>A test that looked at the sky.</strong> Section 4's last step, as it happened
+        (<cite data-src="lib/pathtracer/tests.js" data-sym="/* EVERY TEST CAMERA NAMES ITS TARGET (0.62.1)" data-to="puts the view's target back once a test's camera names one (run's finally). */"></cite>).
+        Every test camera now names what it looks at.</li>
+      <li><strong>A heavy tail.</strong> With light sampling off, the phase function's draw alone finds the sun a few
+        times a pixel, and a test of the two halves of MIS read 0.91 ± 0.03 one time and 0.98 ± 0.04 another
+        (<cite data-src="lib/pathtracer/core/test/haze.gpu.mjs" data-sym="/* SUNLIT DUST against a black sky, seen side on" data-to="error bar of 1, 2026-10-16.) */"></cite>):
+        section 3's second step, in 3D. The test now uses a larger sun and more samples.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="plain" id="try">
+  <div class="prose">
+    <h2><span class="n">8</span>Try it</h2>
+    <ul>
+      <li>In the first figure, find the mean free path at which half the crossings pass. Is it 4 / ln 2?</li>
+      <li>In the second, slide <var>g</var> from −0.95 to 0.95 and watch where the drawn directions bunch.</li>
+      <li>In the third, with the sun aimed at, slide <var>g</var> from 0.95 down to −0.9. Where is the beam brightest, and
+        why does the floor's patch change too?</li>
+      <li>In the fourth, set the dust's albedo to 0.9 with the disc white. How far below 1 does it read?</li>
+      <li>In ShadyTracer, open the example <em>Beam in dusty air</em>, or add a <strong>Haze box (dust in the air)</strong>
+        to a scene in the builder's tree, and move its mean free path while the picture refines.</li>
+    </ul>
+    <aside class="refs"><span class="tag">Read more</span><ul>
+      <li data-ref="wiki-crepuscular">Sunbeams in dusty or hazy air, photographed.</li>
+      <li data-ref="wiki-beer">The transmittance's law, from chemistry's side.</li>
+      <li data-ref="pbr3-phase">Phase functions, Henyey–Greenstein among them, with code.</li>
+      <li data-ref="pbr3-volsample">Drawing a distance in a medium and the weight it carries, the free flight of
+        section 1.</li>
+      <li data-ref="henyey1941">The phase function's origin, in astronomy.</li>
+    </ul></aside>
+    <h3>Words from this chapter</h3>
+    <ul class="words" data-words="mean-free-path transmittance free-flight phase-function albedo furnace solid-angle"></ul>
+  </div>
+</section>
+
+<nav class="tabs" data-auto></nav>
+</main>
+</body>
+</html>

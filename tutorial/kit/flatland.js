@@ -164,8 +164,18 @@ export const lampsOf = world => world.shapes.map((s, i) => s.emit > 0 && s.kind 
  * `info`, if given, is filled with how the path went: { bounces, end: 'sky'|'lamp'|'cap'|'roulette', upTo }, upTo[b]
  * the light it had gathered by the end of bounce b -- what a cap of b bounces would have returned.
  */
-export function tracePath(world, ox, oy, dx, dy, { nee = false, maxBounce = 4, rand, eps = 1e-3, record = null, lampPick, rr = null, info = null, split = false } = {}) {
+export function tracePath(world, ox, oy, dx, dy, { nee = false, maxBounce = 4, rand, eps = 1e-3, record = null, lampPick, rr = null, info = null, split = false, map = null, hazeNee = nee } = {}) {
     let L = 0, beta = 1, x = ox, y = oy, delta = false
+    /* WHETHER THE LAST VERTEX AIMED AT THE LIGHTS: a lamp or the sun met next is then the shadow ray's, not counted again.
+       None at the eye or after a mirror or glass; a surface's is `nee`, a point in the dust's `hazeNee` (chapter "haze":
+       light sampling from the air on or off on its own). */
+    let aimed = false
+    const hz = world.haze
+    /* THE PHOTON MAP (map: { photons, r }, chapter "photons"), ShadyTracer's class (sppm.js, WHICH PATHS IT OWNS): a path
+       that has met only mirrors and glass since the eye (fromEye, at least one: sawDelta) GATHERS at the first surface
+       that scatters, the photons stored there within r; from then on it is `armed`, and the sun or a lamp it reaches
+       through mirrors and glass alone is the map's, not counted again. */
+    let fromEye = true, sawDelta = false, armed = false
     /* THE SPLIT OF PATH SPACE (split: true), ShadyTracer's with light tracing on (materials_pbr.js, THE SPLIT): a path
        whose FIRST hit scatters (cand) and which after it met only mirrors and glass (delta) is light tracing's when it
        reaches the sun or a lamp, so the camera's side does not count it. Light tracing counts exactly those: sun ->
@@ -176,12 +186,27 @@ export function tracePath(world, ox, oy, dx, dy, { nee = false, maxBounce = 4, r
     const done = end => { if (info) { info.end = end; while (info.upTo.length <= maxBounce) info.upTo.push(L) } return L }
     for (let b = 0; b <= maxBounce; b++) {
         march(world, x, y, dx, dy, { eps }, HIT)
+        /* DUST (world.haze, chapter "haze"): the leg's collision drawn by free flight on its stretch inside the box,
+           before whatever it hits (haze.js hazeDraw), in air only -- a leg starting inside glass never collides. */
+        const tc = hz && !inGlass(world, x, y) ? hazeCollide2(hz, x, y, dx, dy, HIT.hit ? HIT.t : 60, rand()) : -1
+        if (tc >= 0) {
+            const cx = x + dx * tc, cy = y + dy * tc
+            if (record) record.push({ kind: b === 0 ? 'eye' : 'bounce', a: [x, y], b: [cx, cy], beta, dust: true })
+            beta *= hz.albedo                                                 // the free flight's weight on a collision
+            delta = false; cand = b === 0; armed = false; fromEye = false     // a point that scatters, as a surface is
+            aimed = hazeNee
+            if (hazeNee) L += beta * dustNee(world, cx, cy, dx, dy, rand, record, lamps, lampPick)
+            ;[dx, dy] = phaseSample2(dx, dy, hz.g ?? 0, rand())              // its weight 1: drawn exactly
+            x = cx; y = cy
+            if (info) { info.bounces = b + 1; info.upTo.push(L) }
+            continue
+        }
         if (record) record.push({ kind: b === 0 ? 'eye' : 'bounce', a: [x, y], b: [HIT.x, HIT.y], beta })
-        const lightTracers = split && cand && delta
+        const lightTracers = (split && cand && delta) || (map && armed && delta)
         if (!HIT.hit) {
             L += beta * (world.sky || 0)
             // the sun, met by a bounce: counted unless NEE counted it at that bounce, or light tracing owns the path
-            if (world.sun && inSun(world.sun, dx, dy) && (b === 0 || !nee || delta) && !lightTracers) {
+            if (world.sun && inSun(world.sun, dx, dy) && !aimed && !lightTracers) {
                 L += beta * world.sun.L; if (record) record[record.length - 1].lamp = true
             }
             return done('sky')
@@ -189,13 +214,13 @@ export function tracePath(world, ox, oy, dx, dy, { nee = false, maxBounce = 4, r
         const sh = world.shapes[HIT.i]
         // lamps glow and reflect nothing; with NEE a lamp met by a bounce was counted by the shadow ray -- unless the
         // bounce was a mirror's, where no shadow ray could aim (a delta: chapter 8), so the hit is the only way
-        if (sh.emit > 0) { if ((b === 0 || !nee || delta) && !lightTracers) { L += beta * sh.emit; if (record) record[record.length - 1].lamp = true } return done('lamp') }
+        if (sh.emit > 0) { if (!aimed && !lightTracers) { L += beta * sh.emit; if (record) record[record.length - 1].lamp = true } return done('lamp') }
         let [nx, ny] = normalAt(world, HIT.x, HIT.y, HIT.i)
         /* GLASS: reflect with the chance Fresnel's law gives (always, past the critical angle), refract otherwise, and
            carry all the light either way (the chance divides out: chapter 10). A delta, as a mirror is. */
         if (sh.glass) {
             const g = glassStep(sh.glass, dx, dy, nx, ny, HIT.x, HIT.y, rand(), eps)
-            dx = g.dx; dy = g.dy; x = g.x; y = g.y; delta = true
+            dx = g.dx; dy = g.dy; x = g.x; y = g.y; delta = true; sawDelta = true; aimed = false
             if (info) { info.bounces = b + 1; info.upTo.push(L) }
             continue
         }
@@ -208,13 +233,16 @@ export function tracePath(world, ox, oy, dx, dy, { nee = false, maxBounce = 4, r
         if (sh.mirror) {
             const dn = dx * nx + dy * ny
             dx -= 2 * dn * nx; dy -= 2 * dn * ny
-            beta *= rho; delta = true
+            beta *= rho; delta = true; sawDelta = true; aimed = false
             if (info) { info.bounces = b + 1; info.upTo.push(L) }
             x = px; y = py
             continue
         }
-        delta = false
+        delta = false; aimed = nee
         cand = b === 0                                                        // its first hit scatters: a candidate
+        armed = false
+        if (map && fromEye && sawDelta) { L += beta * gather(world, map, HIT.x, HIT.y, nx, ny, rho); armed = true }
+        fromEye = false
         /* NEE TO THE SUN: a direction in its cone, evenly by angle (pdf 1 / (2 half) per radian), and a shadow ray out
            of the scene; anything in the way, glass included, blocks it (chapter 18's whole problem) */
         if (nee && world.sun) {
@@ -222,8 +250,8 @@ export function tracePath(world, ox, oy, dx, dy, { nee = false, maxBounce = 4, r
             if (c > 0) {
                 march(world, px, py, lx, ly, { eps, far: 60 }, SHADOW)
                 if (record) record.push({ kind: SHADOW.hit ? 'blocked' : 'shadow', a: [px, py], b: SHADOW.hit ? [SHADOW.x, SHADOW.y] : [px + lx * 3, py + ly * 3] })
-                // beta * f * L * cos / pdf = beta (rho / 2) L cos (2 half)
-                if (!SHADOW.hit) L += beta * rho * sn.L * c * sn.half
+                // beta * f * L * cos / pdf = beta (rho / 2) L cos (2 half), dimmed by the dust it crosses (hazeShadow)
+                if (!SHADOW.hit) L += beta * rho * sn.L * c * sn.half * (hz ? hazeTr2(hz, px, py, lx, ly, 60) : 1)
             }
         }
         if (nee && lamps.length) {
@@ -237,7 +265,7 @@ export function tracePath(world, ox, oy, dx, dy, { nee = false, maxBounce = 4, r
                 const ok = SHADOW.hit && SHADOW.i === li          // the first thing the shadow ray meets is that lamp
                 if (record) record.push({ kind: ok ? 'shadow' : 'blocked', a: [px, py], b: ok ? [lamp.x, lamp.y] : [SHADOW.x, SHADOW.y] })
                 // beta * f * Le * cos_x / pdf, pdf per radian = r / (len cos_y), divided again by the lamp's pick
-                if (ok) L += beta * (rho / 2) * world.shapes[li].emit * cx * cy * lamp.len / r * lamps.length
+                if (ok) L += beta * (rho / 2) * world.shapes[li].emit * cx * cy * lamp.len / r * lamps.length * (hz ? hazeTr2(hz, px, py, lx, ly, r) : 1)
             }
         }
         // the bounce: cosine-weighted, so f cos / pdf = (rho / 2) cos / (cos / 2) = rho
@@ -273,6 +301,80 @@ export function glassStep(n, dx, dy, nx, ny, hx, hy, u, eps = 1e-3) {
     if (!t) { const d2 = 2 * (dx * fx + dy * fy); return { dx: dx - d2 * fx, dy: dy - d2 * fy, x: hx + fx * 4 * eps, y: hy + fy * 4 * eps, reflected: true, R } }
     const l = Math.hypot(t[0], t[1])
     return { dx: t[0] / l, dy: t[1] / l, x: hx - fx * 4 * eps, y: hy - fy * 4 * eps, reflected: false, R }
+}
+
+/** THE PHOTON MAP'S ESTIMATE at a scattering point (x, y), normal n, albedo rho: the stored photons within r on the same
+ *  surface (normals within about 25 degrees: sppm.js SPPM_NORMAL_DOT), each times f = rho / 2, over the length they
+ *  were gathered from, 2r -- the flat world's disc of area pi r^2 (sppm.js: sum f Phi / (pi r^2)) */
+export function gather(world, map, x, y, nx, ny, rho) {
+    let sum = 0
+    for (const p of map.photons) if ((p.x - x) ** 2 + (p.y - y) ** 2 < map.r * map.r && p.nx * nx + p.ny * ny >= 0.9) sum += p.flux
+    return (rho / 2) * sum / (2 * map.r)
+}
+/** THE RADIUS'S SCHEDULE in the flat world: r_k = r_1 prod_{i<k} (i + alpha) / (i + 1). Knaus and Zwicker shrink the
+ *  gather's AREA by that factor each sample; on a surface in 3D the area is pi r^2, so r^2 shrinks (sppm.js
+ *  sppmRadius), and on the flat world's line it is 2r, so r itself does. */
+export function radiusFlat(r1, k, alpha = 2 / 3) { let s = 1; for (let i = 1; i < Math.max(1, k | 0); i++) s *= (i + alpha) / (i + 1); return r1 * s }
+
+/* DUST (chapter "haze"): world.haze = { c, h, mfp, albedo, g }, an upright box of it, sigma_t = 1 / mfp. haze.js's
+   arithmetic in a plane: a leg's stretch inside the box (hazeSpanJS: two slabs where it has three), what survives
+   crossing it (hazeTrJS), its collision by free flight (hazeCollideJS), and the flat world's own phase function. */
+/** the stretch [t0, t1] of (x, y) + (dx, dy) t, t in [0, len], inside the box; t1 <= t0 when none */
+export function hazeSpan2(hz, x, y, dx, dy, len) {
+    let t0 = 0, t1 = len
+    for (const [o, d, h] of [[x - hz.c[0], dx, hz.h[0]], [y - hz.c[1], dy, hz.h[1]]]) {
+        if (Math.abs(d) < 1e-12) { if (Math.abs(o) > h) return [1, 0]; continue }
+        const a = (-h - o) / d, b = (h - o) / d
+        t0 = Math.max(t0, Math.min(a, b)); t1 = Math.min(t1, Math.max(a, b))
+    }
+    return [t0, t1]
+}
+/** what survives of light crossing that segment: exp(-sigma_t times the length inside) */
+export function hazeTr2(hz, x, y, dx, dy, len) { const [a, b] = hazeSpan2(hz, x, y, dx, dy, len); return b > a ? Math.exp(-(b - a) / hz.mfp) : 1 }
+/** the collision on that segment, u uniform: t = t0 - ln(1 - u) mfp if it falls before t1, else -1 (none) */
+export function hazeCollide2(hz, x, y, dx, dy, len, u) {
+    const [a, b] = hazeSpan2(hz, x, y, dx, dy, len)
+    if (!(b > a)) return -1
+    const t = a - Math.log(1 - u) * hz.mfp
+    return t < b ? t : -1
+}
+const inGlass = (world, x, y) => world.shapes.some(s => s.glass && shapeDist(s, x, y) < 0)
+/** THE FLAT WORLD'S PHASE FUNCTION: Henyey-Greenstein's circle version, the wrapped Cauchy distribution, per radian of
+ *  the angle between the direction travelled and the one scattered into,
+ *      p(theta) = (1 - g^2) / (2 pi (1 + g^2 - 2 g cos theta)),
+ *  which integrates to 1 round the circle and has mean cosine g, as HG's has over the sphere (haze.js hgEvalJS). */
+export const phase2 = (cosT, g) => (1 - g * g) / (2 * Math.PI * (1 + g * g - 2 * g * cosT))
+/** ...a direction drawn from it about (dx, dy), exactly: tan(theta / 2) = (1 - g) / (1 + g) tan(pi (u - 1/2)) */
+export function phaseSample2(dx, dy, g, u) {
+    const th = 2 * Math.atan((1 - g) / (1 + g) * Math.tan(Math.PI * (u - 0.5))), c = Math.cos(th), s = Math.sin(th)
+    return [dx * c - dy * s, dx * s + dy * c]
+}
+/* LIGHT SAMPLING FROM A POINT IN THE DUST (haze.js mediumNee): the sun, a direction in its cone evenly by angle, or a
+   point of a lamp, as a surface aims; the phase function where a surface has f cos, no normal (there is no surface, and
+   nothing to start a hair off); the shadow ray dimmed by the dust it crosses. The sun's and a lamp's halves both, each
+   as tracePath's own. */
+function dustNee(world, x, y, dx, dy, rand, record, lamps, lampPick) {
+    const hz = world.haze, g = hz.g ?? 0
+    let L = 0
+    if (world.sun) {
+        const sn = world.sun, a = sn.dir + (2 * rand() - 1) * sn.half, lx = Math.cos(a), ly = Math.sin(a)
+        march(world, x, y, lx, ly, { far: 60 }, SHADOW)
+        if (record) record.push({ kind: SHADOW.hit ? 'blocked' : 'shadow', a: [x, y], b: SHADOW.hit ? [SHADOW.x, SHADOW.y] : [x + lx * 3, y + ly * 3] })
+        // p L / pdf = p L (2 half), per radian
+        if (!SHADOW.hit) L += phase2(dx * lx + dy * ly, g) * sn.L * 2 * sn.half * hazeTr2(hz, x, y, lx, ly, 60)
+    }
+    if (lamps.length) {
+        const pick = lampPick ? lampPick(rand()) : Math.min(lamps.length - 1, Math.floor(rand() * lamps.length))
+        const li = lamps[pick], lamp = sampleLamp(world.shapes[li], rand())
+        const vx = lamp.x - x, vy = lamp.y - y, r = Math.hypot(vx, vy), lx = vx / r, ly = vy / r, cy = Math.abs(lamp.nx * lx + lamp.ny * ly)
+        if (cy > 1e-6) {
+            march(world, x, y, lx, ly, { far: r + 1 }, SHADOW)
+            const ok = SHADOW.hit && SHADOW.i === li
+            if (record) record.push({ kind: ok ? 'shadow' : 'blocked', a: [x, y], b: ok ? [lamp.x, lamp.y] : [SHADOW.x, SHADOW.y] })
+            if (ok) L += phase2(dx * lx + dy * ly, g) * world.shapes[li].emit * cy * lamp.len / r * lamps.length * hazeTr2(hz, x, y, lx, ly, r)
+        }
+    }
+    return L
 }
 
 /** WHERE A POINT LANDS ON THE FILM: the pixel the eye sees (x, y) in, its direction's cosine with the camera's forward
@@ -313,9 +415,10 @@ export function learnRebuild(learn) {
  * off the camera's axis and du a pixel's width on the film (pixelOf): the film is flat, so a pixel covers less angle
  * towards its edge, and the cos^2 turns the angle the surface fills into film. The same quantity the camera's own
  * rays estimate, so the two pictures add.
- * Returns the pixels' sums for this batch, { img, sent, connected }; `record` receives a few photons' pieces.
+ * Returns the pixels' sums for this batch, { img, sent, connected }; `record` receives a few photons' pieces, `store` (an
+ * array) every photon that passed glass or a mirror where it lands, for the photon map (chapter "photons").
  */
-export function lightTrace(world, cam, { n = 256, rand, maxBounce = 8, eps = 1e-3, all = false, learn = null, record = null, recordEvery = 16 } = {}) {
+export function lightTrace(world, cam, { n = 256, rand, maxBounce = 8, eps = 1e-3, all = false, learn = null, record = null, recordEvery = 16, store = null, connect = true } = {}) {
     const sun = world.sun, img = new Float64Array(cam.pixels)
     const cx = Math.cos(sun.dir), cy = Math.sin(sun.dir), perpX = -cy, perpY = cx
     const ox = sun.aim[0] + cx * sun.back, oy = sun.aim[1] + cy * sun.back
@@ -345,8 +448,9 @@ export function lightTrace(world, cam, { n = 256, rand, maxBounce = 8, eps = 1e-
             if (nx * dx + ny * dy > 0) { nx = -nx; ny = -ny }
             const rho = sh.albedo ?? 0.7
             if (sh.mirror) { const dn = dx * nx + dy * ny; dx -= 2 * dn * nx; dy -= 2 * dn * ny; flux *= rho; x = HIT.x + nx * 4 * eps; y = HIT.y + ny * 4 * eps; passed = true; continue }
-            // a scattering surface: connect to the eye, then end
-            if (passed || all) {
+            // a scattering surface: stored for the photon map (store: chapter "photons"), connected to the eye, then end
+            if (store && passed) store.push({ x: HIT.x, y: HIT.y, nx, ny, flux })
+            if (connect && (passed || all)) {
                 const px = HIT.x + nx * 4 * eps, py = HIT.y + ny * 4 * eps, f = pixelOf(cam, px, py)
                 if (f) {
                     const vx = cam.eye[0] - px, vy = cam.eye[1] - py, cosx = (vx * nx + vy * ny) / f.d

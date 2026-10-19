@@ -17,7 +17,7 @@ as PLAN.md does.
 
 ## 0.67.2 — 2026-10-18
 
-**A developer tutorial beside the program: its plan, its figure kit, eight styles and its first nineteen chapters**
+**A developer tutorial beside the program: its plan, its figure kit, eight styles and its first twenty-one chapters**
 (you: "a tutorial for shadytracer, parallel to the program … that explains the inner workings of the code … interactive,
 2D visualisations … a solid toolkit for that so it looks the same everywhere … start with a plan and list of contents,
 then a few pages … make a few mockups of different styles"). Nothing in the application changed: the tutorial is
@@ -59,9 +59,18 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   by light tracing, by both with ShadyTracer's split of path space and by both without it, the caustic counted nearly
   twice; who counts each kind of path, a caustic seen through glass nobody's until the photon map; the learned
   emission map, 11.7% of photons connecting evenly and 61% learned; the flat world gains glass, a sun and a light
-  tracer, held to the camera's own pictures); chapter 2, *Shapes as distances*; chapter 14, *Aim at the
-  light* (next event estimation); the contents map; a glossary of 117 terms, each linked from the pages with a card on
-  hover or tap.
+  tracer, held to the camera's own pictures); chapter 19, *Photon mapping* (the same ball behind a pane of glass, its
+  caustic through the pane found by the camera only by chance and gathered from photons stored on the floor; a
+  radius's blur against its noise; one point's estimate over 300 samples with the radius held, settling on the light
+  averaged over its window, and shrinking by Knaus and Zwicker's schedule towards the exact value from 400,000 rays;
+  the hashed grid with `sppm.js`'s own hash and sub-list rule, a collision, and the budget right on average over every
+  start); chapter 20, *Dust in the air* (free flight drawn by `haze.js`'s own `hazeCollideJS`, and one ray's march
+  stopped where its particle falls and moved back, the user's own sketch; Henyey–Greenstein by `hgEvalJS` and
+  `hgSampleJS`; a sunbeam through a window into a dusty room, found by the phase function's bounces alone and by aiming
+  at the sun from the air; the dust's furnace with its two controls, and the eye turned to the sky reading 1 with no
+  noise, as the first press of the bench's haze row did; the flat world gains a haze box, held to the single-scattering
+  integral); chapter 2, *Shapes as distances*; chapter 14, *Aim at the light* (next event estimation); the contents
+  map; a glossary of 126 terms, each linked from the pages with a card on hover or tap.
 - **The kit** (`tutorial/kit/`): one pen draws every figure in the style's colours and line; a figure is a spec with
   state, controls, drag handles and steps that the paragraphs beside it trigger as they scroll by. The figures trace a
   flat world (`kit/flatland.js`): signed distance shapes from the help's 2D mirrors of `sdf.js`, sphere tracing, a
@@ -214,6 +223,14 @@ What to look at:
   index 1.33, 1.5 and 2.42.
 - **Chapter 11, Rainbows**: the prism's fan with the Abbe number slid from 90 to 15; draw 10,000 wavelengths; tilt
   the coating to 45°.
+- **Chapter 18, Caustics**: the first figure in all four modes, the sun widened to 8°; the learning figure sending ten
+  samples. Is it clear which side counts which light?
+- **Chapter 19, Photon mapping**: the map on and off through the pane, then the radius from 0.01 to 0.4 while pointing
+  at pixel 25; the shrinking radius with α at 0.25 and 0.95; the grid's gather point dragged, and the budget's starts
+  pressed through. Does the blur-against-noise trade come across?
+- **Chapter 20, Dust in the air**: the free-flight sheet with the mean free path slid; *One ray's march*; the phase
+  function at g 0.95 and −0.95; the room's three ways, then g from 0.95 to −0.9 with the sun aimed at; the furnace's
+  four steps. Does the beam read as a beam in your style?
 - **Chapter 16's first figure**: 1 sample (boxes, nothing circled), then 8. Chapter 17's side view, *near*: the ray from
   the lens's top edge, in its own colour, and its mark on the picture; and its 3D picture's *the first 2* samples. Chapter 0's lamp figure at r = 1 and 2.
 - **The new styles.** Lab notebook's new lettering; Chalkboard (try it dark); the three drafting versions side by side

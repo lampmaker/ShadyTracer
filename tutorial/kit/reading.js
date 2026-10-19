@@ -63,6 +63,14 @@ export const READING = [
     R('wiki-caustic', 'Wikipedia', 'Caustic (optics)', 'encyclopedia article', 'https://en.wikipedia.org/wiki/Caustic_(optics)'),
     R('pbr3-pathspace', PBR, 'Physically Based Rendering (3rd ed.), 16.1: The path-space measurement equation', 'free online book', 'https://pbr-book.org/3ed-2018/Light_Transport_III_Bidirectional_Methods/The_Path-Space_Measurement_Equation'),
     R('pbr3-bdpt', PBR, 'Physically Based Rendering (3rd ed.), 16.3: Bidirectional path tracing', 'free online book', 'https://pbr-book.org/3ed-2018/Light_Transport_III_Bidirectional_Methods/Bidirectional_Path_Tracing'),
+    R('wiki-photon', 'Wikipedia', 'Photon mapping', 'encyclopedia article', 'https://en.wikipedia.org/wiki/Photon_mapping'),
+    R('pbr3-sppm', PBR, 'Physically Based Rendering (3rd ed.), 16.2: Stochastic progressive photon mapping', 'free online book', 'https://pbr-book.org/3ed-2018/Light_Transport_III_Bidirectional_Methods/Stochastic_Progressive_Photon_Mapping'),
+    R('knaus2011', 'Claude Knaus, Matthias Zwicker', 'Progressive photon mapping: a probabilistic approach', 'paper, ACM Transactions on Graphics, 2011', null, { credited: 'lib/pathtracer/core/sppm.js' }),
+    R('wiki-hash', 'Wikipedia', 'Hash table', 'encyclopedia article', 'https://en.wikipedia.org/wiki/Hash_table'),
+    R('wiki-crepuscular', 'Wikipedia', 'Crepuscular rays', 'encyclopedia article', 'https://en.wikipedia.org/wiki/Crepuscular_rays'),
+    R('pbr3-phase', PBR, 'Physically Based Rendering (3rd ed.), 11.2: Phase functions', 'free online book', 'https://pbr-book.org/3ed-2018/Volume_Scattering/Phase_Functions'),
+    R('pbr3-volsample', PBR, 'Physically Based Rendering (3rd ed.), 15.2: Sampling volume scattering', 'free online book', 'https://pbr-book.org/3ed-2018/Light_Transport_II_Volume_Rendering/Sampling_Volume_Scattering'),
+    R('henyey1941', 'Louis G. Henyey, Jesse L. Greenstein', 'Diffuse radiation in the galaxy', 'paper, Astrophysical Journal, 1941', null, { credited: 'lib/pathtracer/core/haze.js' }),
     R('veach1997', 'Eric Veach', 'Robust Monte Carlo methods for light transport simulation', 'PhD thesis, Stanford University, 1997', 'https://graphics.stanford.edu/papers/veach_thesis/'),
 
     // averages with error bars
