@@ -221,7 +221,12 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   the engine's rule a short budget costs mostly samples, as the flush's comment says, and light only when very short
   (over 20 runs: the mean held at 12 and 10 iterations, fell 4% at 8 and 30% at 4); round seven had called that comment
   wrong, and the page and REVIEWS.md now say what the model shows.
-- **Chapters 25 to 29** (round nine, two readers each but 28's second and 29's two, still to come): chapter 28's first reader found its governor
+- **Chapters 25 to 29** (round nine, two readers each): chapter 28's second reader did the page's arithmetic and
+  found two sentences wrong: the slicing floor's batch count is rounded up, so 921,600 pixels make 57 batches of about
+  16,168 rays, a little under the 16,384 the engine's comment says no batch goes under (reported, not changed); and
+  every batch runs all the iterations, 24 at the defaults and 38 at High quality. Chapter 29's readers asked for the
+  error bar's arithmetic, now a fold-out, and found its seRatio of 1.08 outside the "3%" given for its noise: measured,
+  seRatio spreads by 3%, and that set is an unlucky draw, which the page now says. Chapter 28's first reader found its governor
   figure at odds with the code: the live view's 30 ms slice holds a light scene to the samples that fit it, which the
   figure left out; it now has the slice as a choice and a step of its own, held to the real loop. Chapter 27's second
   reader found the page saying every kernel once declared the scene's uniforms: it was four (the 0.10.0 entry and

@@ -119,7 +119,7 @@ export const figures = {
                 // the frame's submissions: a tick at each cut
                 if (P.submissions > 1) for (let j = 1; j < P.submissions; j++) { const yy = Y(P.submitMs * j); ctx.save(); ctx.strokeStyle = pen.col('paper'); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x + fw * 0.1, yy); ctx.lineTo(x + fw * 0.9, yy); ctx.stroke(); ctx.restore() }
             }
-            pen.labelPx(r.x, r.y + r.h + 8, P.sliced ? `batches of at least ${F.SLICE_MIN_RAYS.toLocaleString('en-US')} rays: no more than ${Math.ceil(w * h / F.SLICE_MIN_RAYS)} at this size` : 'fits in a frame: not cut', { role: 'soft', size: 11, base: 'top' })
+            pen.labelPx(r.x, r.y + r.h + 8, P.sliced ? `the batch floor, ${F.SLICE_MIN_RAYS.toLocaleString('en-US')} rays: ${Math.ceil(w * h / F.SLICE_MIN_RAYS)} batches at most at this size, about ${Math.round(w * h / Math.ceil(w * h / F.SLICE_MIN_RAYS)).toLocaleString('en-US')} rays each` : 'fits in a frame: not cut', { role: 'soft', size: 11, base: 'top' })
             pen.labelPx(r.x, r.y + r.h + 24, P.submissions > 1 ? `each frame cut into ${P.submissions} submissions (white lines): ${P.splitEvery} of its 24 iterations each, the last ${P.lastIters},` : 'each frame one submission (under 250 ms: not cut)', { role: 'soft', size: 11, base: 'top' })
             if (P.submissions > 1) pen.labelPx(r.x, r.y + r.h + 40, `about ${P.submitMs.toFixed(0)} ms each if iterations cost alike: none near the 2 s after which Windows resets the card`, { role: 'soft', size: 11, base: 'top' })
             pen.labelPx(r.x - 4, Y(top), `${top.toFixed(0)} ms`, { role: 'soft', size: 10, base: 'bottom' })

@@ -33,15 +33,16 @@
       the frames a second the loop is managing, and when that is above 23 it asks 3% more samples next frame, below 18,
       3% fewer; in between it leaves the number alone. The number is a fraction and the frame traces its whole part.
       Here each frame costs 5 ms plus 20 ms a sample (a model's numbers): the governor settles at 2 samples, 22 frames a
-      second, and stays. (The first four steps show the governor alone; the live view adds one more rule, the last
-      step's.)</p>
+      second, and stays: 22 is inside the band, so nothing changes. (The first four steps show the governor alone; the
+      live view adds one more rule, the last step's.)</p>
     <p data-step="governor:light">A light scene, 5 ms a sample: it climbs, 3% a frame, to 8 samples a frame in about
       35 frames, and stays. The steps are a share of the count, so they are as gentle at 2 as at 40.</p>
     <p data-step="governor:before">The rule before, as its comment tells it: steps of 0.1 sample, whatever the count,
       and a band of only one frame a second either side of 20. At 2 samples the frame is 45 ms, 22 a second, over the
       band, so it climbs; at 3, 65 ms, 15 a second, under it, so it falls: it hunts between the two for ever, and the
       frame rate with it. "Gentle where it does not matter and violent where it does", the comment says of the fixed
-      step.</p>
+      step: at 2 samples a frame one sample more is half as much work again, at 40 a fortieth; a share of the count is
+      as gentle at both.</p>
     <p data-step="governor:zero">And its floor guard, <code>count &gt; 1</code>, let floating point through. The guard
       is asked before the step, and steps of 0.1 do not land on whole numbers in a computer's arithmetic: a number is
       kept as a binary fraction, and a tenth has none that ends (only halves, quarters, eighths and the like do), so
@@ -50,19 +51,22 @@
       then traced no sample, showing the picture unchanged "while the HUD cheerfully reports 60 fps", in the comment's
       words (the HUD: the readout over the picture). On a heavy scene
       (60 ms a sample) the old rule here does just that, every other frame. Today's clamps the count at 1.</p>
-    <p data-step="governor:cap">The live view's one rule more, from section 3 (since 0.58.0): it gives each frame a
-      <em>slice</em> of about 30 ms, and a sample that fits in it is traced no more times a frame than fit, whatever the
-      governor asks. At 5 ms a sample that is 6 (30 / 5), a frame of 35 ms, 28.6 a second. The governor, above its
-      band, keeps asking 3% more, so the loop is told what the frame really traced and holds the count to one more than
-      that: 7, asking 7.21 the next frame, cut back again. Without the hold the count of a light scene climbed to 64
-      and was handed to the next scene opened, a heavy one (section 7). At 20 ms a sample the slice allows 1, 40
-      frames a second.</p>
+    <p data-step="governor:cap">The live view's one rule more, from section 3 (since 0.58.0): it gives the samples of
+      each frame a <em>slice</em> of about 30 ms, and a sample that fits in it is traced no more times a frame than fit,
+      whatever the governor asks. At 5 ms a sample that is 6 (30 / 5); with the frame's own 5 ms the frame takes 35 ms,
+      28.6 a second (the slice limits the samples' time, not the rest of the frame). The governor, above its band,
+      keeps asking 3% more, so the loop is told what the frame really traced and holds the count to one more than
+      that, 7: it asks 7.21 the next frame and is cut back again. The code says why the count is held near what is
+      traced: without it, the count of a light scene climbed to 64 and was handed whole to the next scene opened, a
+      heavy one (section 7). Why one more and not exactly what was traced, it does not say. At 20 ms a sample the
+      slice allows 1, 40 frames a second.</p>
   </div>
   <figure class="fig" data-fig="governor">
     <figcaption>The governor frame by frame: above, the samples each frame traces (<span data-say="cam">blue</span>; a
       <span data-say="blocked">red</span> dot where a frame traced none) and the count it is the whole part of (grey);
       below, the frames a second, the band where the rule changes nothing shaded. Frames cost 5 ms plus the samples'
-      (a model). Today's rule is <code>lib/render-loop.js</code>'s, mirrored and held to it by the test, the slice's
+      (a model: the first frame starts at a browser's 60 a second, and a frame of no sample, 5 ms, reads 200, where a
+      real browser would show 60 at most). Today's rule is <code>lib/render-loop.js</code>'s, mirrored and held to it by the test, the slice's
       <code>raytrace_main.js</code>'s; the old rule is rebuilt from its comment. Choose the rule, the cost of a sample
       and whether the slice is on.</figcaption>
   </figure>
@@ -106,21 +110,25 @@
       about 30 ms of them a frame (the setting <code>sliceMs</code>); the sample is added to the picture when its last
       batch is done. A second's sample: 34 batches, 34 frames of about 30 ms. The picture changes once a sample, as
       before; the page answers every frame.</p>
-    <p data-step="slices:floor">But a batch has a floor: no fewer than 16,384 rays. The card runs thousands of rays
-      side by side, a lane each (chapter 21), so a batch of a few thousand leaves most of its lanes with nothing to do;
-      that 16,384 is the point where that matters is the code's own inference, its comment says. At 1280 × 720,
-      921,600 pixels / 16,384 = 56.25, so 57 batches at most, and a 10-second sample is 57 frames of 10,000 / 57 = 175
-      ms, not 30: slicing cannot hold 30 ms on a very heavy scene. Nothing of this has been seen
+    <p data-step="slices:floor">But a batch has a floor: about 16,384 rays. The card runs thousands of rays side by
+      side, each on a <a data-g="lane">lane</a> of its own (chapter 21), so a batch of a few thousand leaves most of
+      its lanes with nothing to do; that 16,384 is where that starts to matter is the code's own inference, its
+      comment says. The code caps the number of batches at the rays over 16,384, rounded up: at 1280 × 720, 921,600 /
+      16,384 = 56.25, so 57 batches, of about 16,168 rays each (rounding up puts them a little under the floor; the comment
+      says "nor batches under", the arithmetic allows that much). A 10-second sample is then 57 frames of
+      10,000 / 57 = 175 ms, not 30: slicing cannot hold 30 ms on a very heavy scene. Nothing of this has been seen
       on a card or measured: the version that brought it says so.</p>
     <p data-step="slices:split">A second rule, older and learned by an accident: Windows resets the graphics card when
       one piece of work sent to it, one <a data-g="submission">submission</a>, runs about 2 seconds. A frame was then
       one submission, every sample in it whole; the Noise library had been timed at over a second a sample, and it hung
       (2026-09-29; how long the frame that hung ran was not recorded). So a frame over 250 ms (chosen so a fast scene
-      pays nothing; not measured) is cut into submissions of about 150 ms each. The cut falls between <em>iterations</em>, chapter 22's
-      rounds of every kernel, at most 24 a sample; the engine assumes they cost alike, though the first few carry
-      nearly all the rays. At 640 × 360 the floor allows only 15 batches: a 10-second sample makes frames of 667 ms,
-      24 iterations of about 28 ms each, so a submission takes 24 × 150 / 667 = 5.4, rounded down to 5 iterations
-      (about 139 ms): 5 submissions, the last 4 iterations.</p>
+      pays nothing; not measured) is cut into submissions of about 150 ms each. The cut falls between
+      <em>iterations</em>: chapter 22's rounds, each one running every <a data-g="kernel">kernel</a> (one of the
+      card's programs) once over the rays still going. Every batch runs all of them, 24 at the default settings (38
+      at High quality), and the engine reckons a batch's time spread over at most 24 of them, as if they cost alike,
+      though the first few carry nearly all the rays. At 640 × 360 the floor allows only 15 batches: a 10-second
+      sample makes frames of one batch, 667 ms, so an iteration is about 667 / 24 = 28 ms, and 150 ms holds 150 / 28 =
+      5.4 of them, rounded down to 5 (about 139 ms): 5 submissions a frame, the last of 4 iterations.</p>
   </div>
   <figure class="fig" data-fig="slices">
     <figcaption>One sample of the time you set, at the picture size you choose, as the live view traces it: frames as
@@ -136,14 +144,17 @@
     <h2><span class="n">4</span>Keeping the card busy</h2>
     <p data-step="flight:one">Offscreen, rendering a picture to save, each sample used to be recorded (the main
       processor writing the card's list of work), sent, and waited for before the next was recorded. The card idled while
-      the next was recorded, and the processor while the card ran: a sample cost both times added. The benchmark's
+      the next was recorded, and the processor while the card ran: a sample cost both times added, like a washer and a
+      dryer used by turns, the second load not washed until the first is dry. A sample sent and not yet finished is
+      <em>in flight</em>. The benchmark's
       first runs put a sample's time by the clock on the wall 50 to 57 ms above its time on the card, of which 6 to 12
       ms was the recording (the user's Pascal card, 2026-10-02). What the other 38 to 51 ms is was not measured; the
       engine's comment guesses the browser preparing one long submission before the card may start. The figure models
       only the recording and the card, so it shows less than was saved.</p>
     <p data-step="flight:two">With two in flight, the next sample is recorded while the card runs this one, and no more
       than two are ever waiting. A sample then costs about the larger of the two times. Measured on the user's Pascal
-      card: 13 to 25% off a sample (the Noise library 257.6 to 225.0 ms, materials 57.5 to 42.9), more than the
+      card: 13 to 25% off a sample (two of the scenes that come with ShadyTracer: the Noise library 257.6 to 225.0 ms,
+      materials 57.5 to 42.9), more than the
       recording alone, so the overlap hid some of that unmeasured rest too (inferred). Recording 3 still waits for the
       card to finish sample 1: that is the "no more than two" rule. Saving a picture, the
       timeline's frames and the library's pictures ask for two; the benchmark's own samples stay one at a time, so a
@@ -173,7 +184,7 @@
          data-why="R._pxMs is the last timed sample's milliseconds per pixel, so sampleMs a sample's at this size (null until one is timed). want is section 3's batches asked: a 1 s sample over a 30 ms slice, 34. The Math.min beside it caps that by SLICE_MAX (256) and by the floor, planned.total / SLICE_MIN_RAYS: 921,600 / 16,384 up to 57 at 1280 x 720. planned.batches is what the ray buffer needs anyway (chapter 23); pending a sample already part traced, which keeps its K; planBatches lays the K batches out. perCall is the batches this frame traces. The last line is section 1's last step: a light scene held to the samples that fit a slice." data-hash="c2d7819e"></pre>
     <p>And a frame in submissions:</p>
     <pre data-src="lib/pathtracer/core/raytrace_main.js" data-sym="const batchMs = sampleMs != null ? sampleMs / batches : null;" data-to=": Math.max(1, Math.floor(Math.min(iterations, SPLIT_ITERS) * SUBMIT_MS / (R.frameMs / batches)));"
-         data-why="splitEvery is how many iterations go in one submission: the frame is sent, and a new one begun, each time that many are recorded. A sliced batch is cut by its share of the sample's time (24 x 150 / 667 = 5.4, so 5); a whole frame by R.frameMs, how long the card was busy with the last frame (chapter 25), and with no timing yet every iteration goes alone. Infinity is never cut. R.submitEvery is the benchmark's own override, 0 in the page." data-hash="3ff01e00"></pre>
+         data-why="SUBMIT_MS is 150, SPLIT_OVER_MS 250, SPLIT_ITERS 24. splitEvery is how many iterations go in one submission: the frame is sent, and a new one begun, each time that many are recorded. A sliced batch is cut by its share of the sample's time (24 x 150 / 667 = 5.4, so 5); a whole frame by R.frameMs, how long the card was busy with the last frame (chapter 25), and with no timing yet (untimed: a new scene, or a frame of another shape) every iteration goes alone. Infinity is never cut. The ternaries (a ? b : c, 'if a then b else c') read in turn: the override, a sliced batch, an untimed frame, a timed one. R.submitEvery is the benchmark's own override, 0 in the page." data-hash="3ff01e00"></pre>
     <p>And the samples in flight:</p>
     <pre data-src="lib/pathtracer/samples.js" data-sym="export async function runSamples"
          data-why="trace() records and sends a sample, and its promise resolves once it is sent; done() returns one that resolves when the card has finished everything sent so far. pending holds those; settle waits for the oldest. With depth 1 each sample is waited for before the next is recorded; with 2 the loop records the next while one is still pending." data-hash="09567797"></pre>

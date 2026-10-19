@@ -1332,6 +1332,13 @@ for (const [name, { mod }] of modules) {
     const s1 = FE.slicing({ sampleMs: 1000, px: 1280 * 720 }), s10 = FE.slicing({ sampleMs: 10000, px: 1280 * 720 }), s640 = FE.slicing({ sampleMs: 10000, px: 640 * 360 }), s20 = FE.slicing({ sampleMs: 20, px: 1280 * 720 })
     ok('ch.28: 20 ms whole; a second in 34 batches; 10 s at 720p 57 batches of 175 ms; at 640 x 360 15 of 667 ms, 5 submissions of 5 iterations', !s20.sliced && s20.K === 1 && s1.K === 34 && s1.perCall === 1 && s10.K === 57 && Math.round(s10.frameMs) === 175 && s10.submissions === 1
         && s640.K === 15 && Math.round(s640.frameMs) === 667 && s640.splitEvery === 5 && s640.submissions === 5 && Math.round(s640.submitMs) === 139 && s640.lastIters === 4)
+    // the floor's arithmetic: the count rounded up, so batches a little under it; the iterations every batch runs
+    const sch = readFileSync(join(REPO, 'lib/pathtracer/core/uniforms.schema.js'), 'utf8')
+    ok('ch.28: 57 batches of about 16,168 rays at 1280 x 720 (the count rounded up); 24 iterations at the defaults, 38 at High quality',
+        Math.round(921600 / 57) === 16168 && readFileSync(join(REPO, 'lib/pathtracer/core/raytrace_main.js'), 'utf8').includes('Math.ceil(planned.total / Math.max(1, R.sliceMinRays ?? SLICE_MIN_RAYS))')
+        && readFileSync(join(REPO, 'lib/pathtracer/core/raytrace_main.js'), 'utf8').includes('const worstCase = Math.max(2, ((uniforms.maxbounce | 0) + 1) + chunks)')
+        && /maxiter: \{ type: 'u32', def: 400/.test(sch) && /maxbounce: \{ type: 'u32', def: 10,/.test(sch) && (10 + 1) + Math.ceil(400 / 32) === 24 && (24 + 1) + Math.ceil(400 / 32) === 38
+        && readFileSync(join(REPO, 'lib/pathtracer/quality.js'), 'utf8').includes("{ id: 'high', label: 'High quality', values: { ...STANDARD, maxbounce: 24"))
     // two in flight: runSamples' own order, and the figure's times
     const { runSamples } = await import('../../lib/pathtracer/samples.js')
     // the loop's own record: each trace as it is made, each sample as the loop has waited for it (onProgress)
@@ -1367,6 +1374,9 @@ for (const [name, { mod }] of modules) {
     ok('ch.29: the whole path within 3 error bars of the true value; the cap about 19 under at 0.94, the clamp about 17 under at 1.20', Math.abs(wh.off) < 3 && Math.round(-cp.off) === 19 && cp.Y.toFixed(2) === '0.94' && Math.round(-cl.off) === 17 && cl.Y.toFixed(2) === '1.20',
         `${wh.off.toFixed(1)} ${cp.off.toFixed(1)} ${cp.Y.toFixed(3)} ${cl.off.toFixed(1)} ${cl.Y.toFixed(3)}`)
     ok('ch.29: the window is worth 21 samples after 4096, its error bar many times the true mean\'s', Math.abs(1 / wn.S - 21) < 1e-6 && wn.se > 10 * wh.se)
+    ok('ch.29: the corner drawing counts a lamp leg as its reading does: the cap keeps leg 1 and cuts leg 2, the clamp marks 7 and 4.9 and not 3.43',
+        CF.legCounted('cap', 1, 7) === 'counted' && CF.legCounted('cap', 2, 4.9) === 'cut' && CF.legCounted('clamp', 1, 7) === 'clamped' && CF.legCounted('clamp', 2, 4.9) === 'clamped'
+        && CF.legCounted('clamp', 3, 3.43) === 'counted' && CF.legCounted('whole', 5, 1) === 'counted' && CF.legCounted('window', 2, 7) === 'counted')
     ok('ch.29: the clamp cuts the lamp found by the first bounce (7) and the second (4.9), not the third (3.43)', 0.7 * 10 > CH.CLAMP && 0.49 * 10 > CH.CLAMP && 0.343 * 10 < CH.CLAMP
         && CH.CORNER.shapes.filter(sh => sh.kind === 'box').every(sh => sh.albedo === 0.7) && CH.CORNER.shapes.find(sh => sh.emit).emit === 10)
     // THE FURNACE
@@ -1381,6 +1391,11 @@ for (const [name, { mod }] of modules) {
         const film = CH.furnaceFilm(CH.FURNACE_ROWS[0], 'working', { spp: 1500, seed: 9 }), mid = film.slice(10, 46).reduce((a, v) => a + v, 0) / 36
         ok('ch.29: the disc fills 42 of the 56 pixels; matte with NEE on reads 1 on the disc over many samples (within 0.5%)', hit === 42 && Math.abs(mid - 1) < 0.005, `${hit} ${mid.toFixed(5)}`)
     }
+    {
+        const r = Array.from({ length: 60 }, (_, k) => CH.furnaceReading(CH.furnaceFilm(CH.FURNACE_ROWS[0], 'working', { seed: k + 1 })).ratio)
+        const m = r.reduce((a, b) => a + b) / r.length, sd = Math.sqrt(r.reduce((a, b) => a + (b - m) ** 2, 0) / (r.length - 1))
+        ok('ch.29: the white NEE-on row spreads by about 0.4% from run to run, its mean 1 (the page\'s "five times" for 2%)', sd > 0.003 && sd < 0.0055 && Math.abs(m - 1) < 3 * sd / Math.sqrt(r.length), `${m.toFixed(5)} ${sd.toFixed(5)}`)
+    }
     const rm29 = readFileSync(join(REPO, 'lib/pathtracer/core/raytrace_main.js'), 'utf8')
     ok('ch.29: the ratio, noise and seRatio are the bench\'s formulas', rm29.includes('noise: dn && mean ? (dsum / dn) / mean : 0') && rm29.includes('seRatio: e2 > 0 ? Math.sqrt(d2 / e2) : null'))
     // THE ERROR BARS: the page's numbers
@@ -1390,6 +1405,11 @@ for (const [name, { mod }] of modules) {
         e1.real.toFixed(3) === '0.175' && e1.reported.toFixed(3) === '0.176' && Math.abs(e2.real - 0.065) < 0.002 && Math.abs(e2.reported - 0.065) < 0.003 && e2.seRatio.toFixed(2) === '1.08'
         && e3.worth.toFixed(1) === '21.0' && e3.real.toFixed(3) === '0.216' && e3.reported.toFixed(3) === '0.218' && e4.reported.toFixed(3) === '0.308' && e4.seRatio.toFixed(2) === '0.69',
         [e1.real, e1.reported, e2.real, e2.reported, e2.seRatio, e3.real, e3.reported, e4.reported, e4.seRatio].map(v => v.toFixed(3)).join(' '))
+    {
+        const r = Array.from({ length: 40 }, (_, k) => CH.errorBars({ samples: 256, pixels: 1000, seed: k + 1 }).seRatio)
+        const m = r.reduce((a, b) => a + b) / r.length, sd = Math.sqrt(r.reduce((a, b) => a + (b - m) ** 2, 0) / (r.length - 1))
+        ok('ch.29: seRatio spreads by about 3% from one set of a thousand pixels to the next, so the first set\'s 1.08 is about 2.6 of those high', sd > 0.02 && sd < 0.04 && Math.abs(m - 1) < 0.02 && (r[0] - 1) / 0.03 > 2.4 && (r[0] - 1) / 0.03 < 2.8, `${m.toFixed(3)} ${sd.toFixed(3)} ${r[0].toFixed(3)}`)
+    }
     ok('ch.29: a moving window\'s S settles at w / (2 - w) = 1/21 for w = 1/11', Math.abs((1 / 11) / (2 - 1 / 11) - 1 / 21) < 1e-15)
     // THE STORIES, where the page says they are
     const tj = readFileSync(join(REPO, 'lib/pathtracer/tests.js'), 'utf8'), td = readFileSync(join(REPO, 'docs/TESTING.md'), 'utf8'), wf29 = readFileSync(join(REPO, 'lib/pathtracer/core/wavefront.js'), 'utf8')

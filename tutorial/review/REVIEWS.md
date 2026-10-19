@@ -661,13 +661,14 @@ record now say what the model shows.
 | 24 | Long lines cut; b, c, h, e; kind and join codes; UB; "1 copies"; 6,794 below 6,795; "runs faster" on the card. | **Fixed**, each: the lines wrap. |
 | all | Sections 4 to 6 written for a developer. | **Not changed** beyond the glosses: those sections are where the page meets the code, and say so. |
 
-## Round 9, 2026-10-19 (chapters 25 to 28)
+## Round 9, 2026-10-19 (chapters 25 to 29)
 
 The chapters of Part VII, each read twice, by a fresh reader each time, on the same brief. Reports:
 chapter 25, [first](reports/2026-10-19-round9/measure-1.md) and [second](reports/2026-10-19-round9/measure-2.md);
 chapter 26, [first](reports/2026-10-19-round9/steps-1.md) and [second](reports/2026-10-19-round9/steps-2.md);
 chapter 27, [first](reports/2026-10-19-round9/compiles-1.md) and [second](reports/2026-10-19-round9/compiles-2.md);
-chapter 28, [first](reports/2026-10-19-round9/feel-1.md).
+chapter 28, [first](reports/2026-10-19-round9/feel-1.md) and [second](reports/2026-10-19-round9/feel-2.md);
+chapter 29, [first](reports/2026-10-19-round9/checking-1.md) and [second](reports/2026-10-19-round9/checking-2.md).
 
 ### Chapter 25, Measure first
 
@@ -814,6 +815,69 @@ so. The excerpts of `makeInteraction`, `effective` and `runSamples` were bare si
 | The signatures; `want` → 34 and the floor → 57 not pointed out; no submission code. | **Fixed.** The locator passes the parameters of exported and async functions (a test); the slicing note points at both; the split's lines excerpted. |
 | Figure 2's axis "12 s". | **Fixed.** Seen in the screenshot: the hand-lettered style's full stop all but vanishes, so 1.2 s read as 12 s. The ticks are set in the mono face. |
 | Rows of figure 2 (chapter 27) clipped at the left; the bar's key over its line. | Found looking at this round's screenshots, not by a reader. **Fixed**: a shorter mark, the key moved below the line. |
+
+**Second read.** The teach-back and quiz held, the cap's step included. The reader then did the arithmetic the page
+invites and found two sentences wrong. "No fewer than 16,384 rays": the code caps the batch count at the rays over
+16,384 *rounded up*, so 921,600 pixels make 57 batches of about 16,168 rays, a little under the floor (the engine's
+own comment says "nor batches under", which its arithmetic does not quite keep: reported, not changed). And "at
+most 24 iterations a sample": every batch runs them all, 24 at the default settings ((10 + 1) bounces and
+ceil(400 / 32) march chunks) and 38 at High quality; 24 is the most the split spreads a batch's time over.
+
+| Finding | |
+|---|---|
+| 57 batches of 16,168 rays against "no fewer than 16,384". | **Fixed**, as above; the figure's label gives the rays a batch. A test holds the rounding up to the code. |
+| "At most 24 a sample" against 24 a 667 ms frame. | **Fixed**, as above, with 667 / 24 = 28 ms and 150 / 28 = 5.4 written that way round. |
+| Kernel, iteration, lane undefined. | **Fixed**: the kernel and lane cards linked, the iteration said where it is used. |
+| The cap step: a 30 ms slice and a 35 ms frame; why one more. | **Fixed**: the slice is the samples' time, not the frame's; why near what is traced, in the code's words; why one more, the code does not say. |
+| Figure 1's 60 at the start and its 200 fps spikes against the browser's 60. | **Fixed** in the caption: the model's first frame and a 5 ms frame; a browser shows 60 at most. |
+| The constants and the nested ternaries of the split's excerpt. | **Fixed** in its note. |
+| "In flight", recording against the card; what the Noise library and materials are. | **Fixed**: a washer and a dryer; two of the scenes that come with ShadyTracer. |
+| "Gentle where it does not matter…" never unpacked; why today's rule settles. | **Fixed**: one sample more is half again at 2, a fortieth at 40; 22 is inside the band. |
+| Dates, card names and "not measured" in every paragraph. | **Not changed**: each says how a number is known, which is the rule these pages keep (CLAUDE.md); the stamps in section 6 carry the rest. |
+
+### Chapter 29, Noise, bias and checking
+
+**First read.** The teach-back held: noise fades and the error bar sees it, bias stays and the error bar cannot; a
+check needs a control; the error bar can itself be checked. The reader's gaps were the arithmetic behind section 3
+(how V and S make the error bar, why 1/S counts samples, where w/(2 − w) comes from, why squared differences of
+neighbours must equal the sum of their squared error bars), and a figure that contradicted its own text: the corner
+drawing showed the same orange path, one that finds the lamp after two bounces, as counted whether or not the cap was on.
+
+| Finding | |
+|---|---|
+| Section 3's arithmetic. | **Fixed**: a fold-out, each of the four worked. |
+| The corner drawing the same for every reading. | **Fixed**: a lamp leg drawn as the reading counts it, counted, cut (dashed) or clamped, with a key; a test holds the rule. The eye labelled. |
+| Where 7 and 4.9 come from; NEE, MIS, albedo, kernel undefined. | **Fixed**: 0.7 × 10 and 0.7² × 10; the cards linked and each said in a phrase. |
+| "Dashed" for the error bars and for the true value. | **Fixed**: the true value is solid. |
+| "4 of 4 rows" beside five; no tolerance; why 0.85. | **Fixed**: "the rows above the control"; within 2% (this picture's own noise); 0.25 + 0.75 × 0.8. |
+| 1000.000244 against the figure's 1.0000. | **Fixed**: a sky of 1000, a ratio of 1.000000244. |
+| "Each row must read 1", then the grey 0.85. | **Fixed**: a row of a white material must read 1. |
+| The consistent kind inside the window's paragraph. | **Fixed**: a paragraph of its own. |
+| Two error bars and 95 in 100 used in Try it, never said. | **Fixed** in section 1. |
+| The check-shaders excerpt out of place. | **Fixed**: introduced as another check that could pass without checking. |
+| measure.js's V line; the seRatio excerpt's a, f, w, sen. | **Fixed** in their notes. |
+| Rough glass told three times. | **Fixed**: once, in section 6; section 5 points there. |
+| 1.0068 passes while metal's +0.02% is called a bias. | **Answered** in the text: this picture's ratio spreads by 0.4% from run to run (computed over 200 runs), so 2% is five of those; ShadyTracer's pictures have a million pixels; a bias is told from noise only against the noise. |
+
+**Second read.** The teach-back and the quiz came out whole. The reader then asked what the first had not: why the
+error bar divides by 1 − S, and why a scaled number's variance scales by the square; and checked one claim against
+the figure: seRatio's 1.08 "within its own noise (about 3%)" is not within 3%. It is not: over 100 sets of a
+thousand pixels seRatio spreads by 3% (computed), and the figure's set is an unlucky one, 2.6 of those high.
+
+| Finding | |
+|---|---|
+| Why 1 − S; for a plain mean, s/√n. | **Fixed** in the fold-out: the scatter about the samples' own average comes out a little small; 1/n gives chapter 12's √(V / (n − 1)). |
+| Variance times w², and of a difference, stated not shown. | **Fixed**: a paragraph of the two rules. |
+| seRatio 1.08 against "about 3%". | **Fixed**: its spread measured, 3%; this set 2.6 of those high; *Other pixels* draws another. A test holds both. |
+| The corner drawing's paths impossible to follow. | **Fixed**: one path that finds the lamp followed whole, dark. |
+| The flat world, the log scale. | **Fixed**: a clause each. |
+| The control's noise 0.1455 against the readout's account. | **Fixed**: the black-and-white edges are detail, which the noise counts; the readout says so. |
+| The haze story's units. | **Fixed**: the camera aimed at a point given in the wrong unit, so at empty sky. |
+| "The furnace 1 for every material". | **Fixed**: every white material, rough glass a little under. |
+| ρE/π, Fresnel, critical angle, facets, roulette, the light's sample and chance. | **Fixed**: a clause each, with its chapter. |
+| "A third of before" for 2.7. | **Fixed**. |
+| 1000.000244 not 1000. | **Fixed**: 32-bit rounding, stamped inferred. |
+| The check-shaders excerpt still opaque. | **Not changed**: it is introduced as a check that could pass without checking; its words are chapter 21's and 27's. |
 
 ## Next round
 

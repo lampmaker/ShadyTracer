@@ -37,7 +37,15 @@ export function standing(seed, which, k = N) {
 /* the corner drawn small at the figure's left: its coordinates mapped into the figure's world */
 const K = 0.1, T = ([x, y]) => [0.05 + (x + 1) * K, 0.1 + (y + 0.6) * K]
 const rect = (c, h) => [T([c[0] - h[0], c[1] - h[1]]), T([c[0] + h[0], c[1] - h[1]]), T([c[0] + h[0], c[1] + h[1]]), T([c[0] - h[0], c[1] + h[1]])]
-function corner(pen, seed) {
+/* how the chosen reading counts a leg that ends on the lamp: its value (what the path's throughput brings, x the
+   lamp's 10) and its place in the path (leg 0 is the eye's, leg 1 leaves the floor) */
+export function legCounted(which, leg, value) {
+    if (which === 'cap') return leg <= C.CAP ? 'counted' : 'cut'
+    if (which === 'clamp') return value > C.CLAMP ? 'clamped' : 'counted'
+    return 'counted'
+}
+const LEG_ROLE = { counted: 'light', cut: 'blocked', clamped: 'accent' }
+function corner(pen, seed, which) {
     for (const sh of C.CORNER.shapes) {
         if (sh.kind === 'box') {
             // only what is inside the drawing's room: x from -1 to 7
@@ -48,17 +56,32 @@ function corner(pen, seed) {
     pen.label(T([0.6, 3.75]), 'lamp', { role: 'light', size: 11, align: 'center' })
     // a few of this seed's paths: what the pixel's samples are
     const R = rng(seed * 7919 + 13), dir = Math.atan2(C.LOOK[1] - C.EYE[1], C.LOOK[0] - C.EYE[0])
+    const seen = new Set(), paths = []
     for (let p = 0; p < 7; p++) {
         const rec = []
         tracePath(C.CORNER, C.EYE[0], C.EYE[1], Math.cos(dir), Math.sin(dir), { rand: R, maxBounce: C.MAX_BOUNCE, record: rec })
+        paths.push(rec)
+    }
+    // one path that finds the lamp, followed whole in ink, so the eye -> floor -> ... -> lamp can be traced
+    const whole = paths.find(rec => rec.some(q => q.lamp))
+    for (const rec of paths) {
+        let leg = -1
         for (const q of rec) {
+            if (q.kind === 'eye' || q.kind === 'bounce') leg++
             const clip = ([x, y]) => [Math.min(7, Math.max(-1, x)), Math.min(4.6, Math.max(-0.6, y))]
-            pen.line(T(clip(q.a)), T(clip(q.b)), { role: q.lamp ? 'light' : 'faint', w: q.lamp ? 1.6 : 0.8, dash: [] })
+            const how = q.lamp ? legCounted(which, leg, q.beta * C.CORNER.shapes[3].emit) : null
+            if (how) seen.add(how)
+            pen.line(T(clip(q.a)), T(clip(q.b)), { role: how ? LEG_ROLE[how] : rec === whole ? 'ink' : 'faint', w: how ? 1.6 : rec === whole ? 1.3 : 0.8, dash: how === 'cut' ? [4, 3] : [] })
         }
     }
     pen.eye(T(C.EYE), dir, { size: 12 })
+    pen.label([T(C.EYE)[0], T(C.EYE)[1] + 0.05], 'eye', { role: 'ink', size: 11, align: 'center' })
     pen.dot(T(C.LOOK), { role: 'accent', r: 3 })
     pen.label(T([2.2, -1.25]), 'the pixel\'s point of floor', { role: 'accent', size: 11, align: 'center' })
+    // what the colours of the lamp's legs mean for this reading
+    const key = { counted: 'finds the lamp, counted', cut: 'found after the cap: not counted', clamped: `brings over ${C.CLAMP}: clamped` }
+    const say = ['one path followed whole (dark)', ...[...seen].map(k => key[k])].join(' · ')
+    if (say) pen.labelPx(pen.X(T([-1, 0])[0]), pen.Y(T([0, 4.95])[1]), say, { role: 'soft', size: 10 })
 }
 
 /* THE FURNACE'S ROWS, their films cached by page */
@@ -90,7 +113,7 @@ export const figures = {
         ],
         steps: { whole: { which: 'whole', seed: 1 }, cut: { which: 'cap', seed: 1 }, clamp: { which: 'clamp', seed: 1 }, window: { which: 'window', seed: 1 } },
         draw(pen, s) {
-            corner(pen, s.seed)
+            corner(pen, s.seed, s.which)
             const r = runOf(s.seed), { W, H } = pen.view, box = { x: W * 0.53, y: H * 0.1, w: W * 0.43, h: H * 0.7 }
             const lg = Math.log2, pick = (k, i) => i < 16 || i === N - 1 || Math.floor(lg(i + 1) * 12) !== Math.floor(lg(i + 2) * 12)
             const series = []
@@ -103,8 +126,9 @@ export const figures = {
                 }
                 series.push({ name: v.label, pts, role: on ? v.role : 'faint', w: on ? 1.8 : 0.8, errorBars: false, tip: on })
             }
-            series.push({ name: 'true value', pts: [[0, C.TRUTH], [lg(N), C.TRUTH]], role: 'ink', w: 1, dash: [6, 3] })
-            pen.labelPx(box.x - 34, box.y - 20, 'the pixel\'s reading, ± two error bars (dashed)', { role: 'soft', size: 12 })
+            // the true value solid, so that dashed means only the error bars
+            series.push({ name: 'true value', pts: [[0, C.TRUTH], [lg(N), C.TRUTH]], role: 'ink', w: 1.2, dash: [] })
+            pen.labelPx(box.x - 34, box.y - 20, 'the reading ± 2 error bars (dashed); true value (solid)', { role: 'soft', size: 12 })
             plot(pen, box, {
                 x: [0, lg(N)], y: [0, 3.2], xticks: [], yticks: [0, 1, C.TRUTH, 2, 3],
                 fmt: v => Math.abs(v - C.TRUTH) < 1e-9 ? C.TRUTH.toFixed(3) : v.toFixed(0),
@@ -115,7 +139,7 @@ export const figures = {
         },
         readout(s) {
             const q = standing(s.seed, s.which), v = READING[s.which]
-            return `${v.label}, after ${N} samples: ${q.Y.toFixed(3)} ± ${q.se.toFixed(3)} · the true value ${C.TRUTH.toFixed(3)} · ${Math.abs(q.off).toFixed(1)} error bars ${q.off < 0 ? 'under' : 'over'} it · the error bar worth ${Math.round(1 / q.S)} samples`
+            return `${v.label}, after ${N} samples: ${q.Y.toFixed(3)} ± ${q.se.toFixed(3)} · the true value ${C.TRUTH.toFixed(3)} · ${Math.abs(q.off).toFixed(1)} error bars ${q.off < 0 ? 'under' : 'over'} it · the average worth ${Math.round(1 / q.S)} samples (1/S, section 3)`
         },
     },
 
@@ -147,7 +171,7 @@ export const figures = {
         },
         readout(s) {
             const rows = furnaceRows(s.page), ctl = rows.find(q => q.row.id === 'control')
-            return `${rows.filter(q => q.row.id !== 'control' && verdict(q)).length} of ${rows.length - 1} rows read what they must · the control ${ctl.ratio.toFixed(4)}: ${verdict(ctl) ? 'well below 1, so the disc was there' : 'it reads 1 too, so no row measured anything'} · noise ${rows.every(q => q.noise === 0) ? '0 on every row' : 'above 0 where NEE is on or the disc is grey'}`
+            return `${rows.filter(q => q.row.id !== 'control' && verdict(q)).length} of the ${rows.length - 1} rows above the control read what they must · the control ${ctl.ratio.toFixed(4)}: ${verdict(ctl) ? 'well below 1, so the disc was there' : 'it reads 1 too, so no row measured anything'} · noise ${rows.every(q => q.noise === 0) ? '0 on every row' : 'above 0 where NEE is on, the disc grey, or an edge black against the sky'}`
         },
     },
 
