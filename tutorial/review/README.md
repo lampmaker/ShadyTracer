@@ -298,6 +298,13 @@ real student.
 4. Why does a 32-bit float make a poor total for millions of rays, and what do the optics kernels use instead?
 5. What does "weights, not survival" mean for an optics ray, and why does it let the totals add up exactly?
 
+**yours** (A ray tracer in one page)
+1. How does the program find the first surface along a ray, and why does a ray skimming a surface take many steps?
+2. How is a pixel's value made, and why does it get less noisy with more samples?
+3. What does aiming at the lamp add at each bounce, and why does a path that then hits the lamp add nothing?
+4. Why must the shadow rays aim at the lamp's whole outline, and why does the last surface not aim?
+5. What does the mirror extension change, and why does a mirror not aim at the lamp?
+
 **index** (the contents)
 1. What will you learn in this tutorial, and do you need to know anything before starting?
 2. What do the three stamps mean?

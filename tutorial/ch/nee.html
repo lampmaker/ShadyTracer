@@ -90,7 +90,7 @@
       <a data-g="nee">next event estimation</a>, NEE: at each bounce, it estimates the light the <em>next</em> bounce
       could have found, directly.</p>
     <p>Compare the two estimates in the readout. Same answer, within the error bars. But the error bar when aiming is
-      many times smaller than when bouncing: here it is below the last digit shown, ± 0.000. Why so quiet? Because
+      many times smaller than when bouncing: here ± 0.001 against ± 0.009. Why so quiet? Because
       every aimed try brings back nearly the same amount: the light of one point of the lamp, counted for the whole
       lamp (the fold-out below says how). Bouncing gives nothing, nothing, nothing, then far too much; aiming gives
       about the right amount every time. Tries that agree settle fast.</p>
@@ -133,6 +133,15 @@
         <p>The 3D room in section 5 aims at its lamp a different way: a random direction into the cone the ball fills,
           divided by the chance of that direction. A different choice, divided by its own chance: the rule does not
           change.</p>
+        <p><strong>Which points of the lamp.</strong> The lamp in these figures is not a line but a thin capsule,
+          everything within 0.02 of a line, glowing all round its outline, and that outline is what a bounce can hit. So
+          the point is picked on it: on the long side facing the floor point or on the two round ends, and ℓ is the
+          length of that much outline. The long side facing away sends this point nothing, so leaving it out changes
+          nothing on average; a point of a round end that faces away counts 0, and those tries are the aiming's small
+          spread. The flat world once picked points on the middle line, a lamp of no thickness, while the bounces found
+          the capsule: in the room of section 4, given twelve bounces, bouncing read 0.1326 ± 0.0014 and aiming
+          0.1213 ± 0.0004, nine percent apart (computed). Aim at exactly the light the bounces can find; chapter 30 is
+          the same lesson in the engine.</p>
       </div>
     </details>
     <aside class="refs"><span class="tag">Read more</span><ul>
@@ -158,7 +167,7 @@
       bars), but the one with NEE gets there much sooner. The readout gives the average error bar of each.</p>
     <p data-step="room:small">Shrink the lamp. Without NEE, the picture gets worse and worse: a lamp nothing can find by
       chance is a lamp the picture never sees. A point light, with no size at all, could never be hit; only NEE could
-      light anything with it. With NEE, the size hardly matters: at the smallest size its error bar is about a sixth of
+      light anything with it. With NEE, the size hardly matters: at the smallest size its error bar is about a fifth of
       the other's.</p>
     <p data-step="room:big">Make the lamp large. Now random bounces find it often, and the two pictures are much closer:
       NEE's error bar is about half the other's. NEE helps most where light is small and bright, and least where light
@@ -171,6 +180,11 @@
       reflected ray that hits the lamp must count too; the flat world has no mirrors yet, so it never meets this.
       ShadyTracer does something better than ignoring: it keeps both and weighs each by how good it was at finding
       that light. That is <a data-ch="mis">multiple importance sampling</a>, the next chapter.</p>
+    <p><strong>Not at the last bounce.</strong> A path allowed four bounces does not aim at the lamp from the surface
+      where it stops. The bounce from there is never traced, so a path without NEE could never find what that shadow ray
+      would; aiming there would count light one bounce further, and the two pictures would head for different answers.
+      Before the flat world followed this rule, the room allowed one bounce read 0.0870 aiming against 0.0556 without
+      (44,800 paths each, computed). pbrt stops the same way.</p>
     <aside class="refs"><span class="tag">Read more</span><ul>
       <li data-ref="veach1997">The thesis that gave path tracing its careful maths, and multiple importance sampling:
         the better way not to count a light twice. Long, thorough, and where the next chapter comes from.</li>
@@ -188,8 +202,8 @@
     <h2><span class="n">5</span>And in 3D</h2>
     <p data-step="room3:both">The same comparison as a real picture: a small room lit by a glowing ball near the ceiling,
       path traced on your computer's processor while you watch, without NEE on the left and with it on the right. Both
-      pictures get the same number of samples per pixel. Only the right one aims a shadow ray at the lamp at every
-      bounce.</p>
+      pictures get the same number of samples per pixel. Only the right one aims a shadow ray at the lamp, at every
+      bounce but the last.</p>
     <p>In 3D the lamp is aimed at differently from the flat world. Instead of a random point on it, the shadow ray goes
       in a random direction inside the cone of directions the ball fills, seen from the point. How big that cone is,
       as a patch of the sky around the point, is its <a data-g="solid-angle">solid angle</a>; the shadow ray divides

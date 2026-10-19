@@ -661,7 +661,7 @@ record now say what the model shows.
 | 24 | Long lines cut; b, c, h, e; kind and join codes; UB; "1 copies"; 6,794 below 6,795; "runs faster" on the card. | **Fixed**, each: the lines wrap. |
 | all | Sections 4 to 6 written for a developer. | **Not changed** beyond the glosses: those sections are where the page meets the code, and say so. |
 
-## Round 9, 2026-10-19 (chapters 25 to 30)
+## Round 9, 2026-10-19 (chapters 25 to 31)
 
 The chapters of Part VII, each read twice, by a fresh reader each time, on the same brief. Reports:
 chapter 25, [first](reports/2026-10-19-round9/measure-1.md) and [second](reports/2026-10-19-round9/measure-2.md);
@@ -669,7 +669,8 @@ chapter 26, [first](reports/2026-10-19-round9/steps-1.md) and [second](reports/2
 chapter 27, [first](reports/2026-10-19-round9/compiles-1.md) and [second](reports/2026-10-19-round9/compiles-2.md);
 chapter 28, [first](reports/2026-10-19-round9/feel-1.md) and [second](reports/2026-10-19-round9/feel-2.md);
 chapter 29, [first](reports/2026-10-19-round9/checking-1.md) and [second](reports/2026-10-19-round9/checking-2.md);
-chapter 30, [first](reports/2026-10-19-round9/precision-1.md) and [second](reports/2026-10-19-round9/precision-2.md).
+chapter 30, [first](reports/2026-10-19-round9/precision-1.md) and [second](reports/2026-10-19-round9/precision-2.md);
+chapter 31, [first](reports/2026-10-19-round9/optics-1.md) and [second](reports/2026-10-19-round9/optics-2.md).
 
 ### Chapter 25, Measure first
 
@@ -927,6 +928,57 @@ speed" while this page uses it for light; and the predicted 0.998 sat beside a m
 | metres() as the scene's; the unit plant dividing. | **Fixed**: what metres(x) does, and why from the engine it multiplies twice; the plant's division remarked. |
 | The lint's messages full of jargon. | **Not changed**: they are the lint's own words; the caption says they are written for the engine's developers. |
 | Try it's third question a trick. | **Fixed**: it asks what each complaint names. |
+
+### Chapter 31, The optics bench
+
+**First read.** The teach-back held the chapter whole: bins, the high peak and the narrow beam, the map's noise and
+the smoothing's bias, the float's growing steps and the integer pair. The reader caught one thing wrong and one
+thing the page could not back. "γ and C in 5° steps" is wrong for C: 24 bins to a turn are 15° each (read in
+`farfield.js`). And the Gaussian map's middle, 831 against the true 955, was called the blur's bias, while the reader
+saw the neighbouring dots dip and 13% is more than the map's own 10% noise. So I ran it 120 times: the middle cell
+averages 913 lux, 4.4% under 955 (computed, 120 runs of 5,000 rays, standard deviation 51); 831 is that bias and
+this run's noise together, and the page now says so, with a test holding the 913.
+
+| Finding | |
+|---|---|
+| C in 5° steps against 24 to a turn. | **Fixed**: γ in 5° steps, C in 15°. |
+| 831 called the bias. | **Fixed**: 913 over 120 runs, 4.4% low; 831 the bias and its noise; tested. |
+| A ray's weight used before it is said. | **Fixed**: the tally's first paragraph says what a weight is. |
+| Solid angle, lumen, candela, lux undefined. | **Fixed**: one clause each where first used. |
+| The bins near the axis small: why. | **Fixed**: lines of longitude meeting at a pole; the cap, then rings 5° wide. |
+| "Inherits" never says which way. | **Fixed**: a peak too high puts the half level too high, so the beam reads narrow. |
+| 318, 955, cos⁸, the beam angle's derivation. | **Fixed**: a maths fold-out; 0.5<sup>1/5</sup> with its root said. |
+| Words, wraps, the pair's carry. | **Fixed**: an odometer's two wheels. |
+| "Exact" against the readout's 12.8 short. | **Fixed**: exact in units, each weight rounded once, 0.2 units short each. |
+| The red curve above 1. | **Fixed**: 0.7 added as 1 between 8 and 16 million. |
+| knn's 18% "everywhere" against a smooth fringe. | **Fixed**: 18% of each cell's own light. |
+| The legend's C0-C180 plane; rings without values; no 90°. | **Fixed**: "the grid cut through its axis"; rings in cd; ±90° labelled. |
+| The detmap excerpt cut mid-sentence; estimate.js opaque. | **Fixed**: detmap ends at the knn bullet's end; estimate.js dropped. |
+| Glass, readback, Zemax, 4247 K for insiders. | **Fixed**: polarisation, readback and colour temperature glossed; Zemax called a lens maker's format. |
+| Why roulette would spoil the totals. | **Not changed**: chapter 13 says what roulette does; here it is named only as what the optics trace does not do. |
+| The dot and cross products in farBin. | **Not changed**: the note names them; the chapter is in Part VIII, after chapter 3's vectors. |
+
+**Second read.** The quiz came out whole, 913 against 955 included. What was missing was how to read the polar
+diagram (where the light is, that distance is intensity), and the 0.7 curve's story told too coarsely: the reader
+saw its clearest rise above 1 near 2²² rays, which the page did not explain. Computing the curve binade by binade
+(`f32Sum`): while the total is 1 to 4 million the step is ⅛ then ¼ and 0.7 is added as 0.75, 4% high at the peak;
+4 to 8 million, as 0.5; 8 to 16 million, as 1; past 16 million, as nothing, the total stuck at 2²⁴. The page said
+only the middle two, and pointed "the rise above 1" at the smaller bump.
+
+| Finding | |
+|---|---|
+| The polar diagram unreadable without outside knowledge; the legend's "cut through its axis". | **Fixed**: the light at the bottom point, distance as intensity, cos a circle; labelled on the figure; "the bins in one plane through the axis". |
+| The 0.7 curve's bumps; total against rays. | **Fixed**: all four binades, by the total; a test holds the rise, the fall and the stop. |
+| Russian roulette not said, so "add up exactly" does not follow. | **Fixed**: two sentences, and "run by run". |
+| Compare-and-swap and the retry storm. | **Fixed**: what the loop does and why floats need it (WGSL's atomics are integers only). |
+| 0.2 × 67 million is not 12.8. | **Fixed**: a unit is 2⁻²⁰, said with the sum. |
+| What one ray carries; a ring's solid angle. | **Fixed**: 1000/N lm; 2π (cos γ₁ − cos γ₂), a 24th each (`farfield.js`). |
+| "Follows the true one" against a spiky top. | **Fixed**: spiky only near the axis. |
+| The clamp at 4000; `&optData[slot]`, `u`. | **Fixed** in the note: one ray's units under 2³², so one wrap at most. |
+| "1.5 cells wide" against sigma and 3 sigma. | **Fixed**: sigma 1.5 cells, cut at three times that. |
+| knn's sharp edges on a spot with none. | **Fixed**: an edge would stay sharp; this spot has none. |
+| 0.5^1/n ambiguous. | **Fixed**: bracketed. |
+| §5 and §6 for insiders; the 58.98 note. | **Not changed**: the tutorial's readers will build renderers, and these are the measurements and mistakes they would meet. |
 
 ## Next round
 

@@ -136,13 +136,25 @@ export function cosineDir(nx, ny, u) {
     return [nx * c - ny * s, ny * c + nx * s]
 }
 
-/* THE LAMP for next event estimation: a shape of kind 'segment' with `emit` > 0 (its radiance, both sides). A point
-   on its middle line drawn uniformly -- density 1 / length per unit length -- and turned into a density per radian
-   as seen from x by r / (length cos(theta_y)). */
-function sampleLamp(sh, u) {
-    const ax = sh.a[0], ay = sh.a[1], bx = sh.b[0], by = sh.b[1]
-    const len = Math.hypot(bx - ax, by - ay)
-    return { x: ax + (bx - ax) * u, y: ay + (by - ay) * u, nx: -(by - ay) / len, ny: (bx - ax) / len, len }
+/* THE LAMP for next event estimation: a shape of kind 'segment' with `emit` > 0, a capsule glowing from its whole
+   outline (`emit` its radiance at every point of it). Seen from (x, y), only the outline's points facing it can send
+   it light, so the point is drawn evenly from the long side on (x, y)'s side and the two round ends -- density 1 / len
+   per unit length, len that much outline -- with the outline's own normal there, and turned into a density per radian
+   by r / (len cos(theta_y)). The far long side is left out: it sends (x, y) nothing, so the average is still the whole
+   lamp's, and no try is spent on it. A point of an end facing away (cos(theta_y) below 0) counts 0.
+   It once drew a point of the middle line, the lamp as a flat segment of no thickness, while a bounce finds the
+   capsule: in chapter 14's room (r 0.015 on 0.6) the bounces read 0.1326 +- 0.0014 against the aimed rays' 0.1213 +-
+   0.0004 (twelve bounces, 44,800 paths each). A renderer must aim at the light its bounces can find; the engine's
+   version of the leftover, the surface tolerance fattening every lamp a little, is chapter 30's. */
+function sampleLamp(sh, u, x, y) {
+    const ax = sh.a[0], ay = sh.a[1], bx = sh.b[0], by = sh.b[1], r = sh.r || 0
+    const seg = Math.hypot(bx - ax, by - ay), tx = (bx - ax) / seg, ty = (by - ay) / seg
+    const side = (x - ax) * -ty + (y - ay) * tx >= 0 ? 1 : -1, mx = -ty * side, my = tx * side   // the facing side's normal
+    const len = seg + 2 * Math.PI * r, s = u * len
+    if (s < seg) return { x: ax + tx * s + mx * r, y: ay + ty * s + my * r, nx: mx, ny: my, len }
+    // a round end: the two halves make one circle; a direction pointing back along the lamp is a's, forward b's
+    const phi = (s - seg) / r, cx = Math.cos(phi), cy = Math.sin(phi), [ex, ey] = cx * tx + cy * ty < 0 ? [ax, ay] : [bx, by]
+    return { x: ex + cx * r, y: ey + cy * r, nx: cx, ny: cy, len }
 }
 
 const HIT = {}
@@ -164,7 +176,7 @@ export const lampsOf = world => world.shapes.map((s, i) => s.emit > 0 && s.kind 
  * `info`, if given, is filled with how the path went: { bounces, end: 'sky'|'lamp'|'cap'|'roulette', upTo }, upTo[b]
  * the light it had gathered by the end of bounce b -- what a cap of b bounces would have returned.
  */
-export function tracePath(world, ox, oy, dx, dy, { nee = false, maxBounce = 4, rand, eps = 1e-3, record = null, lampPick, rr = null, info = null, split = false, map = null, hazeNee = nee } = {}) {
+export function tracePath(world, ox, oy, dx, dy, { nee = false, maxBounce = 4, rand, eps = 1e-3, record = null, rr = null, info = null, split = false, map = null, hazeNee = nee } = {}) {
     let L = 0, beta = 1, x = ox, y = oy, delta = false
     /* WHETHER THE LAST VERTEX AIMED AT THE LIGHTS: a lamp or the sun met next is then the shadow ray's, not counted again.
        None at the eye or after a mirror or glass; a surface's is `nee`, a point in the dust's `hazeNee` (chapter "haze":
@@ -195,7 +207,7 @@ export function tracePath(world, ox, oy, dx, dy, { nee = false, maxBounce = 4, r
             beta *= hz.albedo                                                 // the free flight's weight on a collision
             delta = false; cand = b === 0; armed = false; fromEye = false     // a point that scatters, as a surface is
             aimed = hazeNee
-            if (hazeNee) L += beta * dustNee(world, cx, cy, dx, dy, rand, record, lamps, lampPick)
+            if (hazeNee && b < maxBounce) L += beta * dustNee(world, cx, cy, dx, dy, rand, record, lamps)
             ;[dx, dy] = phaseSample2(dx, dy, hz.g ?? 0, rand())              // its weight 1: drawn exactly
             x = cx; y = cy
             if (info) { info.bounces = b + 1; info.upTo.push(L) }
@@ -243,9 +255,13 @@ export function tracePath(world, ox, oy, dx, dy, { nee = false, maxBounce = 4, r
         armed = false
         if (map && fromEye && sawDelta) { L += beta * gather(world, map, HIT.x, HIT.y, nx, ny, rho); armed = true }
         fromEye = false
+        /* NO AIMING AT THE LAST SURFACE (b = maxBounce): the bounce from it is never traced, so a light it aimed at would
+           count one bounce more than a path without NEE can reach, and the two would head for different answers (in
+           chapter 14's room capped at one bounce, 0.0870 aiming against 0.0556 without, 44,800 paths each, before this
+           line). pbrt stops the same way, before the light sample at its last vertex. */
         /* NEE TO THE SUN: a direction in its cone, evenly by angle (pdf 1 / (2 half) per radian), and a shadow ray out
            of the scene; anything in the way, glass included, blocks it (chapter 18's whole problem) */
-        if (nee && world.sun) {
+        if (nee && b < maxBounce && world.sun) {
             const sn = world.sun, a = sn.dir + (2 * rand() - 1) * sn.half, lx = Math.cos(a), ly = Math.sin(a), c = nx * lx + ny * ly
             if (c > 0) {
                 march(world, px, py, lx, ly, { eps, far: 60 }, SHADOW)
@@ -254,12 +270,11 @@ export function tracePath(world, ox, oy, dx, dy, { nee = false, maxBounce = 4, r
                 if (!SHADOW.hit) L += beta * rho * sn.L * c * sn.half * (hz ? hazeTr2(hz, px, py, lx, ly, 60) : 1)
             }
         }
-        if (nee && lamps.length) {
-            const pick = lampPick ? lampPick(rand()) : Math.min(lamps.length - 1, Math.floor(rand() * lamps.length))
-            const li = lamps[pick], lamp = sampleLamp(world.shapes[li], rand())
+        if (nee && b < maxBounce && lamps.length) {
+            const li = lamps[Math.min(lamps.length - 1, Math.floor(rand() * lamps.length))], lamp = sampleLamp(world.shapes[li], rand(), px, py)
             const vx = lamp.x - px, vy = lamp.y - py, r = Math.hypot(vx, vy)
             const lx = vx / r, ly = vy / r
-            const cx = nx * lx + ny * ly, cy = Math.abs(lamp.nx * lx + lamp.ny * ly)
+            const cx = nx * lx + ny * ly, cy = -(lamp.nx * lx + lamp.ny * ly)      // the lamp's point must face this one
             if (cx > 0 && cy > 1e-6) {
                 march(world, px, py, lx, ly, { eps, far: r + 1 }, SHADOW)
                 const ok = SHADOW.hit && SHADOW.i === li          // the first thing the shadow ray meets is that lamp
@@ -353,7 +368,7 @@ export function phaseSample2(dx, dy, g, u) {
    point of a lamp, as a surface aims; the phase function where a surface has f cos, no normal (there is no surface, and
    nothing to start a hair off); the shadow ray dimmed by the dust it crosses. The sun's and a lamp's halves both, each
    as tracePath's own. */
-function dustNee(world, x, y, dx, dy, rand, record, lamps, lampPick) {
+function dustNee(world, x, y, dx, dy, rand, record, lamps) {
     const hz = world.haze, g = hz.g ?? 0
     let L = 0
     if (world.sun) {
@@ -364,9 +379,8 @@ function dustNee(world, x, y, dx, dy, rand, record, lamps, lampPick) {
         if (!SHADOW.hit) L += phase2(dx * lx + dy * ly, g) * sn.L * 2 * sn.half * hazeTr2(hz, x, y, lx, ly, 60)
     }
     if (lamps.length) {
-        const pick = lampPick ? lampPick(rand()) : Math.min(lamps.length - 1, Math.floor(rand() * lamps.length))
-        const li = lamps[pick], lamp = sampleLamp(world.shapes[li], rand())
-        const vx = lamp.x - x, vy = lamp.y - y, r = Math.hypot(vx, vy), lx = vx / r, ly = vy / r, cy = Math.abs(lamp.nx * lx + lamp.ny * ly)
+        const li = lamps[Math.min(lamps.length - 1, Math.floor(rand() * lamps.length))], lamp = sampleLamp(world.shapes[li], rand(), x, y)
+        const vx = lamp.x - x, vy = lamp.y - y, r = Math.hypot(vx, vy), lx = vx / r, ly = vy / r, cy = -(lamp.nx * lx + lamp.ny * ly)
         if (cy > 1e-6) {
             march(world, x, y, lx, ly, { far: r + 1 }, SHADOW)
             const ok = SHADOW.hit && SHADOW.i === li
@@ -474,9 +488,9 @@ export function directE(world, x, y, nx, ny, { nee, rand, eps = 1e-3 }) {
     if (nee) {
         // a point of a lamp: Le cos_x / pdf, the pdf per radian r / (len cos_y), divided again by the lamp's pick
         const lamps = lampsOf(world)
-        const li = lamps[Math.min(lamps.length - 1, Math.floor(rand() * lamps.length))], lamp = sampleLamp(world.shapes[li], rand())
+        const li = lamps[Math.min(lamps.length - 1, Math.floor(rand() * lamps.length))], lamp = sampleLamp(world.shapes[li], rand(), x, y)
         const vx = lamp.x - x, vy = lamp.y - y, r = Math.hypot(vx, vy), lx = vx / r, ly = vy / r
-        const cx = nx * lx + ny * ly, cy = Math.abs(lamp.nx * lx + lamp.ny * ly)
+        const cx = nx * lx + ny * ly, cy = -(lamp.nx * lx + lamp.ny * ly)
         if (!(cx > 0 && cy > 1e-6)) return 0
         march(world, x + nx * 4 * eps, y + ny * 4 * eps, lx, ly, { eps, far: r + 1 }, SHADOW)
         return SHADOW.hit && SHADOW.i === li ? world.shapes[li].emit * cx * cy * lamp.len / r * lamps.length : 0

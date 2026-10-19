@@ -34,6 +34,7 @@ export const READING = [
     R('keinert2014', 'Benjamin Keinert et al.', 'Enhanced sphere tracing', 'paper, 2014'),
 
     // ray tracing from nothing, and from everything
+    R('smallpt', 'Kevin Beason', 'smallpt: Global illumination in 99 lines of C++', 'program with notes', 'https://www.kevinbeason.com/smallpt/', { checked: '2026-10-19' }),
     R('rtiow', RT, 'Ray Tracing in One Weekend', 'free online book', 'https://raytracing.github.io/books/RayTracingInOneWeekend.html'),
     R('rtrest', RT, 'Ray Tracing: The Rest of Your Life', 'free online book', 'https://raytracing.github.io/books/RayTracingTheRestOfYourLife.html'),
     R('pbr', PBR, 'Physically Based Rendering: From Theory to Implementation (4th ed.)', 'free online book', 'https://pbr-book.org/4ed/contents'),

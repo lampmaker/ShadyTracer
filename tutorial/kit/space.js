@@ -129,8 +129,9 @@ const lampsOf = world => world.shapes.map((s, i) => s.emit > 0 && s.kind === 'sp
 const H1 = {}, H2 = {}
 /**
  * ONE PATH's radiance, [r, g, b]: flatland's tracePath in 3D. Diffuse surfaces (f = rho / pi), glowing spheres as
- * lamps, a sky of `world.sky` ([r, g, b]) for what escapes. With `nee`, a shadow ray at every bounce into the cone of a
- * random lamp, and a bounce that then hits a lamp adds nothing (the shadow ray counted it; ShadyTracer weighs both, MIS).
+ * lamps, a sky of `world.sky` ([r, g, b]) for what escapes. With `nee`, a shadow ray at every bounce but the last into
+ * the cone of a random lamp, and a bounce that then hits a lamp adds nothing (the shadow ray counted it; ShadyTracer
+ * weighs both, MIS).
  */
 export function trace3(world, o, d, { nee = false, maxBounce = 4, rand, eps = 1e-3, far = 40 } = {}) {
     const L = [0, 0, 0], beta = [1, 1, 1], lamps = lampsOf(world)
@@ -143,7 +144,8 @@ export function trace3(world, o, d, { nee = false, maxBounce = 4, rand, eps = 1e
         let n = normal3(world, H1.p, H1.i)
         if (dot(n, d) > 0) n = scl(n, -1)
         const p = add(H1.p, scl(n, 4 * eps)), rho = sh.rgb ?? [0.7, 0.7, 0.7]
-        if (nee && lamps.length) {
+        // no aiming from the last surface: the bounce from it is never traced (flatland.js tracePath says why)
+        if (nee && b < maxBounce && lamps.length) {
             const li = lamps[Math.min(lamps.length - 1, Math.floor(rand() * lamps.length))], s = sampleCone(p, world.shapes[li], rand(), rand())
             if (s) {
                 const c = dot(n, s.dir)

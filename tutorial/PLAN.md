@@ -328,12 +328,18 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
     diagram, the peak read high by the largest of many noisy bins and the beam angle with it, and pooling round the
     axis; the same source over a floor mapped by detmap.js detectorMap, plain, Gaussian and the photon map's nearest
     hits, against E = I0 cos^(n+3) / h^2; a ray total in a 32-bit float stalling at 2^24 against the kernels' integer
-    pair (OPT_FX copied). -> kernels.js optAdd, farfield.js farBin, detmap.js's smoothing, estimate.js. Measured:
+    pair (OPT_FX copied). -> kernels.js optAdd, farfield.js farBin, detmap.js's smoothing. Measured:
     optics-refraction (Pascal), the readbacks, the colour mix. Never run and said so: optics-farfield. *Read:*
     pbr-radiometry, wiki-photometry.
 
 **IX. Build your own**
-32. **A ray tracer in one page**: the flat world explained line by line, then extended.
+32. **A ray tracer in one page** (draft): `tutorial/kit/onepage.js`, the figures' path tracer in 87 lines with no
+    imports, held by the test to flatland.js's picture on the same random numbers: one ray marched where the reader
+    aims it (8 steps at the box's side, 69 skimming its top), the room's picture from 1 to 64 samples, aiming at the
+    lamp, and the mirror extension; each part beside the engine's file. What went wrong: the kit's own lamp, aimed at
+    as a line while the bounces hit a capsule, and aimed at from the last surface. -> onepage.js's six parts,
+    uniforms.schema.js stepscale, raytrace_main.js MARCH_STEPS. Computed, all of it. *Read:* smallpt, rtiow,
+    iq-raymarching.
 33. **Open problems**: what is not built yet, and the measured or inferred case for each.
 
 ## Where 3D is planned

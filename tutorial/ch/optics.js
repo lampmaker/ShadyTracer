@@ -48,7 +48,11 @@ export const figures = {
             for (const f of [0.25, 0.5, 0.75, 1]) { ctx.beginPath(); ctx.arc(cx, cy, Rpx * f, Math.PI, 2 * Math.PI); ctx.stroke() }
             for (let a = -90; a <= 90; a += 30) { const [x, y] = P(a, top); ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(x, y); ctx.stroke() }
             ctx.restore()
-            for (const a of [-60, -30, 0, 30, 60]) { const [x, y] = P(a, top * 1.04); pen.labelPx(x, y, `${a}°`, { role: 'soft', size: 10, align: 'center', base: 'bottom' }) }
+            for (const a of [-90, -60, -30, 0, 30, 60, 90]) { const [x, y] = P(a, top * 1.04); pen.labelPx(x, y, `${a}°`, { role: 'soft', size: 10, align: Math.abs(a) === 90 ? (a < 0 ? 'right' : 'left') : 'center', base: 'bottom' }) }
+            // the rings' values, so a point's distance from the centre reads as its intensity
+            for (const f of [0.5, 1]) pen.labelPx(cx + 3, cy - Rpx * f - 2, `${Math.round(top * f)} cd`, { role: 'soft', size: 9, base: 'bottom' })
+            // where the light is: every curve starts there, and its distance from it is the intensity
+            pen.labelPx(cx + 8, cy + 2, 'the light, shining up', { role: 'soft', size: 10, base: 'top' })
             // the closed form, and the grid's plane C0-C180
             const line = (pts, role, w, dash) => { ctx.save(); ctx.strokeStyle = pen.col(role); ctx.lineWidth = w; ctx.setLineDash(dash); ctx.beginPath(); pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke(); ctx.restore() }
             const exact = []; for (let a = -90; a <= 90; a += 1) exact.push(P(a, I0 * Math.cos(a * Math.PI / 180) ** s.n))
@@ -60,7 +64,7 @@ export const figures = {
             const kx = W * 0.64
             pen.labelPx(kx, H * 0.12, `I max ${b.st.max.I.toFixed(0)} cd (the true peak ${I0.toFixed(0)})`, { role: 'cam', size: 12, base: 'top' })
             pen.labelPx(kx, H * 0.12 + 20, `beam angle ${w?.width != null ? w.width.toFixed(1) + '°' : 'none'} (true ${O.beamAngle(s.n).toFixed(2)}°)`, { role: 'accent', size: 12, base: 'top' })
-            pen.labelPx(kx, H * 0.12 + 44, 'blue: the grid\'s C0-C180 plane', { role: 'soft', size: 11, base: 'top' })
+            pen.labelPx(kx, H * 0.12 + 44, 'blue: the bins in one plane through the axis', { role: 'soft', size: 11, base: 'top' })
             pen.labelPx(kx, H * 0.12 + 60, 'dashed: the true curve', { role: 'soft', size: 11, base: 'top' })
             pen.labelPx(kx, H * 0.12 + 76, 'red dots: half the grid\'s I max', { role: 'soft', size: 11, base: 'top' })
         },

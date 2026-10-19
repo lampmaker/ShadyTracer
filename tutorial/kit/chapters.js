@@ -103,8 +103,8 @@ export const CHAPTERS = [
     C('right', 'optics', 'The optics bench', 'Measuring light like a lab bench: beams, maps of light on a wall, ray files.', 'draft',
         [`${P}optics/`, 'tutorial/kit/optics.js']),
 
-    C('build', 'yours', 'A ray tracer in one page', 'The flat world of these figures explained line by line, then extended by you.', 'planned',
-        []),
+    C('build', 'yours', 'A ray tracer in one page', 'The flat world of these figures explained line by line, then extended by you.', 'draft',
+        ['tutorial/kit/onepage.js', 'tutorial/kit/flatland.js']),
     C('build', 'open', 'Open problems', 'What is not built yet, and the case for each.', 'planned',
         ['docs/PERFORMANCE.md', 'roadmap/PLAN.md']),
 ]

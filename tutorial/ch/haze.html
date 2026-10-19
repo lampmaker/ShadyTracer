@@ -123,31 +123,31 @@
     <h2><span class="n">3</span>A beam you can see</h2>
     <p data-step="beam:clear">A dark room: a pale floor, walls and ceiling of albedo 0.2, a window in the right wall
       and the sun 35° up outside it. No dust. The sun lights a patch of floor (the dashed lines are the beam's edges),
-      and in the picture the patch's two pixels, 27 and 28, read 0.124. The air across the beam is invisible: those
+      and in the picture the patch's two pixels, 27 and 28, read 0.120. The air across the beam is invisible: those
       pixels, 16 to 26, read 0.002, the patch's light bounced off the dark walls.</p>
     <p data-step="beam:phase">Dust fills the room: mean free path 6 in a room 10 wide, albedo 0.9, <var>g</var> 0.7.
       A path from the eye now meets particles (the dots), and at each one it draws its next direction from the phase
       function. The sun counts only if a drawn direction happens to leave through the window within the sun's half a
       degree: chapter 18's problem again. A sample is one path through every pixel, the strip their average, and ± the
-      error bar (chapter 12). After 300 samples the pixels across the beam read 0.0033 ± 0.0002, a third of what they
-      will read below, and pixel 9, on the ceiling, reads 0.23 ± 0.23: a single find (a look at fewer samples may not
-      have it yet). The bounces are not wrong, only slow: given samples enough they read what aiming reads, but the
+      error bar (chapter 12). After 300 samples the pixels across the beam read 0.0038 ± 0.0003, two fifths of what
+      they will read below, and pixel 46, on the floor near the eye, reads 0.19 ± 0.19: a single find (a look at fewer
+      samples may not have it yet). The bounces are not wrong, only slow: given samples enough they read what aiming reads, but the
       error bar cannot show the light no sample has found yet. (The surfaces aim their shadow rays at the sun in both
       modes, chapter 14; only the points in the dust differ.)</p>
     <p data-step="beam:aim">So aim. At every point in the dust the path also sends a shadow ray towards the sun (in
       <span data-say="shadow">the shadow rays' colour</span>), as a surface does (chapter 14), with the phase function
       where a surface has its <var>f</var> cos θ (its material's share of light turned towards the eye: chapter 8), and
       dimmed by the transmittance of the dust it crosses on the way. The beam appears: across it the pixels read
-      0.0109 ± 0.0007, three times the 0.0033 the bounces alone had found, where the pixels outside the beam read about
-      0.003. The patch reads 0.035, dimmer than without dust (the sunlight lost some on its way in and more on its way
-      to the eye), but brighter than the 0.023 of the bounces only: the eye's line to the floor runs through lit dust,
+      0.0096 ± 0.0006, two and a half times the 0.0038 the bounces alone had found, where the pixels outside the beam
+      read about 0.003. The patch reads 0.035, dimmer than without dust (the sunlight lost some on its way in and more on
+      its way to the eye), but brighter than the 0.025 of the bounces only: the eye's line to the floor runs through lit dust,
       and that glow is found by aiming too. ShadyTracer does both at every point in the dust, the aimed ray and the
       drawn direction. Adding the two would count the sun twice, so it weighs them by MIS (chapter 15: each way's find
       gets a weight, the two weights adding to 1, more to whichever way finds that light more easily).</p>
     <p data-step="beam:back">With <var>g</var> = −0.5 the dust sends light back the way it came, out of the window, and
-      little towards the eye: the beam reads 0.0048.</p>
+      little towards the eye: the beam reads 0.0047.</p>
     <p data-step="beam:thick">With a mean free path of 1, the dust stops the light within a few units of the window
-      and dims what the eye sees of it: the beam reads 0.0009, the patch 0.0025. A beam shows best in dust thin enough
+      and dims what the eye sees of it: the beam reads 0.0013, the patch 0.0014. A beam shows best in dust thin enough
       to let it through and looked at towards the light, which is why this room is dark and the eye looks towards the
       window.</p>
   </div>

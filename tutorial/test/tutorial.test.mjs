@@ -285,6 +285,43 @@ for (const [name, { mod }] of modules) {
     }
 }
 {
+    /* THE LAMP NEE AIMS AT IS THE ONE A BOUNCE CAN HIT. The room above has a lamp 0.001 thick and 12,000 paths a pixel,
+       and passed while the figures' lamps (0.015 and 0.02 thick) read 9% apart: NEE drew points of the middle line, the
+       bounces found the capsule, and NEE also aimed from the last surface, one bounce further than a bounce can reach.
+       These hold the two rules with lamps as thick as the figures', and enough paths to see a few percent. */
+    const L = 1.3, r = 0.05, lamp = { kind: 'segment', a: [-1.5, 2], b: [0.5, 2.6], r, emit: L }, world = { shapes: [lamp] }
+    // the capsule's edges as seen from the origin, facing up: each end's direction turned out by asin(r / distance)
+    const pa = Math.atan2(-1.5, 2) - Math.asin(r / Math.hypot(-1.5, 2)), pb = Math.atan2(0.5, 2.6) + Math.asin(r / Math.hypot(0.5, 2.6)), exact = L * (Math.sin(pb) - Math.sin(pa))
+    const run = (nee, n, seed) => { const R = rng(seed); let s = 0, s2_ = 0; for (let i = 0; i < n; i++) { const e = directE(world, 0, 0, 0, 1, { nee, rand: R }); s += e; s2_ += e * e } const m = s / n; return { m, se: Math.sqrt((s2_ / n - m * m) / (n - 1)) } }
+    const on = run(true, 200000, 31), off = run(false, 200000, 32)
+    ok('flat world: a thick lamp by NEE is the capsule\'s light, L (sin phi2 - sin phi1) to its round ends\' tangents', Math.abs(on.m - exact) < 4 * on.se + 2e-4, `${on.m} ± ${on.se} vs ${exact}`)
+    ok('...and by bouncing, on average', Math.abs(off.m - exact) < 4 * off.se + 2e-4, `${off.m} ± ${off.se} vs ${exact}`)
+    // chapter 14's aim figure: its exact value is the capsule's
+    const N14 = await import('../ch/nee.js'), S14 = { ...N14.figures.aim.state }, R14 = rng(9), w14 = {
+        shapes: [{ kind: 'box', c: [3, -0.4], h: [5, 0.4], albedo: 0.7 }, { kind: 'segment', a: [S14.lampX - S14.size / 2, 3.4], b: [S14.lampX + S14.size / 2, 3.4], r: 0.02, emit: 0.8 / S14.size }],
+    }
+    let a14 = 0, b14 = 0; const n14 = 200000
+    for (let i = 0; i < n14; i++) { const e = directE(w14, 2.6, 1e-3, 0, 1, { nee: true, rand: R14 }); a14 += e; b14 += e * e }
+    const m14 = a14 / n14, se14 = Math.sqrt((b14 / n14 - m14 * m14) / n14)
+    ok('ch.14: the aim figure\'s exact value is what aiming at its capsule reads', Math.abs(m14 - N14.exactE(S14)) < 4 * se14 + 3e-4, `${m14} ± ${se14} vs ${N14.exactE(S14)}`)
+    // a room with the figures' lamp, capped at one bounce and at six: the same answer with NEE and without
+    const Y = await import('../ch/yours.js'), room = { shapes: Y.roomOf(false) }
+    for (const cap of [1, 6]) {
+        const est = (nee, seed) => { const R = rng(seed); let s = 0, s2 = 0, n = 0; for (let k = 0; k < 300; k++) for (let i = 0; i < 56; i++) { const [ox, oy, dx, dy] = cameraRay(Y.CAM, i, R()); const v = tracePath(room, ox, oy, dx, dy, { nee, maxBounce: cap, rand: R }); s += v; s2 += v * v; n++ } const m = s / n; return { m, se: Math.sqrt((s2 / n - m * m) / n) } }
+        const e1 = est(true, 40 + cap), e0 = est(false, 50 + cap)
+        ok(`flat world: a room with a lamp 0.015 thick, capped at ${cap} bounce${cap > 1 ? 's' : ''}, reads the same with NEE and without`, Math.abs(e1.m - e0.m) < 4 * Math.hypot(e1.se, e0.se), `${e1.m} ± ${e1.se} vs ${e0.m} ± ${e0.se}`)
+    }
+    // chapter 14's room: the page's "about a fifth" for the smallest lamp and "about half" for the largest, at 256 samples
+    const fr = N14.figures.room, ratio = k => { const s = structuredClone({ ...fr.state, ...fr.steps[k] }); fr.work.reset(s); while (s.spp < 256) fr.work.add(s, 0); return N14.relError(s.on) / N14.relError(s.off) }
+    const rs = ratio('small'), rb = ratio('big')
+    ok('ch.14: NEE\'s error bar about a fifth of the other\'s with the smallest lamp, about half with the largest', rs > 0.17 && rs < 0.24 && rb > 0.44 && rb < 0.58, `${rs} ${rb}`)
+    // ...and the 3D room's "about a fifth" with its largest lamp, at 24 samples
+    const f3 = N14.figures.room3, s3 = structuredClone({ ...f3.state, ...f3.steps.big }); f3.work.reset(s3)
+    while (s3.spp < 24) f3.work.add(s3, 0)
+    const r3 = N14.relError(s3.on.m) / N14.relError(s3.off.m)
+    ok('ch.14: in 3D, NEE\'s error bar about a fifth of the other\'s with the largest lamp', r3 > 0.15 && r3 < 0.25, r3)
+}
+{
     // sphere tracing against the analytic hit of a ray and a circle
     const o = {}, world = { shapes: [{ kind: 'circle', c: [3, 0.5], r: 1 }] }
     march(world, 0, 0, 1, 0, { eps: 1e-4 }, o)
@@ -675,7 +712,7 @@ for (const [name, { mod }] of modules) {
     ok('ch.8: the matte point at 35 degrees: E 0.3151, its radiance 0.1103 every way', m.E.toFixed(4) === '0.3151' && m.L.toFixed(4) === '0.1103')
     // the room: the mirror shows the lamp at 0.95, which only a bounce can find with NEE on
     const r0 = D.render('mirror', { wall: 'matte', max: 96 }), r1 = D.render('mirror', { wall: 'mirror', max: 96 }), top = Math.max(...r1.pix.map(p => p.Y))
-    ok('ch.8: the matte room averages 0.1320; with a mirror, a pixel sees the lamp at 0.950', D.figures.mirror.readout(r0).includes('average 0.1320') && Math.abs(top - 0.95) < 1e-12, top)
+    ok('ch.8: the matte room averages 0.1316; with a mirror, a pixel sees the lamp at 0.950', D.figures.mirror.readout(r0).includes('average 0.1316') && Math.abs(top - 0.95) < 1e-12, top)
     // the furnace: exact at albedo 1, matte or mirror, on every path; the page's other numbers
     const w = D.render('furnace', { rho: 1, surface: 'matte', cap: 40, max: 48 }), wm = D.render('furnace', { rho: 1, surface: 'mirror', cap: 40, max: 48 })
     ok('ch.8: the white furnace: every pixel exactly 1, with no noise, matte and mirror', [w, wm].every(r => r.pix.every(p => p.Y === 1 && p.V === 0)))
@@ -868,7 +905,7 @@ for (const [name, { mod }] of modules) {
     }
     // the page's numbers, as its figure makes them
     const rdMap = st => P.figures.map.readout(Object.assign(P.render({ on: P.figures.map.steps[st].on, r: P.figures.map.steps[st].r, max: 300 }), P.figures.map.steps[st]))
-    ok('ch.19: through the pane, 0.324 ± 0.060 without the map and 0.366 ± 0.003 with it, after 300 samples', rdMap('missing').includes('0.324 ± 0.060') && rdMap('with').includes('0.366 ± 0.003'), rdMap('missing'))
+    ok('ch.19: through the pane, 0.323 ± 0.060 without the map and 0.366 ± 0.003 with it, after 300 samples', rdMap('missing').includes('0.323 ± 0.060') && rdMap('with').includes('0.366 ± 0.003'), rdMap('missing'))
     let finds = 0
     for (let k = 0; k < 300; k++) { const v = P.sample(P.worldOf(), false, 0.06, F.rng(1000003 + k * 7919)); for (const i of P.panePixels) if (v[i] > 3) finds++ }
     ok('ch.19: without the map the camera found the sun through the ball 9 times in those 300 samples', finds === 9, finds)
@@ -924,7 +961,7 @@ for (const [name, { mod }] of modules) {
         const half = 0.27 * Math.PI / 180, sun = { dir: Math.PI / 2, half, L: 1 / (2 * Math.sin(half)) }
         const world = { sky: 0, sun, shapes: [], haze: { c: [0, 0], h: [2, 1], mfp: 1.5, albedo: 0.8, g: 0.6 } }
         const R = F.rng(13), N = 60000; let a = 0, a2 = 0
-        for (let i = 0; i < N; i++) { const v = F.tracePath(world, -5, 0.2, 1, 0, { rand: R, nee: true, maxBounce: 0 }); a += v; a2 += v * v }
+        for (let i = 0; i < N; i++) { const v = F.tracePath(world, -5, 0.2, 1, 0, { rand: R, nee: true, maxBounce: 1 }); a += v; a2 += v * v }
         const mean = a / N, se = Math.sqrt((a2 / N - mean * mean) / N)
         const want = 0.8 * F.phase2(0, 0.6) * sun.L * 2 * half * Math.exp(-0.8 / 1.5) * (1 - Math.exp(-4 / 1.5))
         ok('ch.20: sunlit dust seen across reads its single-scattering integral (light sampling from the air)', Math.abs(mean - want) < 4 * se, `${mean} ± ${se} want ${want}`)
@@ -951,10 +988,11 @@ for (const [name, { mod }] of modules) {
     const rest = [...Array(48).keys()].filter(i => !Z.beamPixels.includes(i) && !Z.patchPixels.includes(i))
     const room = st => { const s = Z.renderRoom({ ...Z.figures.beam.steps[st], max: 300 }); return { b: Z.regionOf(s.pix, Z.beamPixels), p: Z.regionOf(s.pix, Z.patchPixels), r: Z.regionOf(s.pix, rest), pix: s.pix } }
     const rc = room('clear'), rp = room('phase'), ra = room('aim'), rb = room('back'), rt = room('thick')
-    ok('ch.20: the room\'s numbers: no dust, the patch 0.124 and across the beam 0.002; bounces alone 0.0033 ± 0.0002 and pixel 9 0.23; aimed 0.0109 ± 0.0007, the rest 0.003, the patch 0.035; g -0.5 0.0048; mfp 1 0.0009 and 0.0025',
-        rc.p.mean.toFixed(3) === '0.124' && rc.b.mean.toFixed(3) === '0.002' && rp.b.mean.toFixed(4) === '0.0033' && rp.b.se.toFixed(4) === '0.0002' && rp.pix[8].Y.toFixed(2) === '0.23'
-        && ra.b.mean.toFixed(4) === '0.0109' && ra.b.se.toFixed(4) === '0.0007' && ra.r.mean.toFixed(3) === '0.003' && ra.p.mean.toFixed(3) === '0.035' && rb.b.mean.toFixed(4) === '0.0048'
-        && rt.b.mean.toFixed(4) === '0.0009' && rt.p.mean.toFixed(4) === '0.0025' && Z.patchPixels.length === 2, `${rc.p.mean} ${rp.b.mean} ${ra.b.mean} ${rb.b.mean} ${rt.b.mean}`)
+    ok('ch.20: the room\'s numbers: no dust, the patch 0.120 and across the beam 0.002; bounces alone 0.0038 ± 0.0003, the patch 0.025 and pixel 46 0.19 ± 0.19; aimed 0.0096 ± 0.0006, the rest 0.003, the patch 0.035; g -0.5 0.0047; mfp 1 0.0013 and 0.0014',
+        rc.p.mean.toFixed(3) === '0.120' && rc.b.mean.toFixed(3) === '0.002' && rp.b.mean.toFixed(4) === '0.0038' && rp.b.se.toFixed(4) === '0.0003' && rp.p.mean.toFixed(3) === '0.025'
+        && rp.pix[45].Y.toFixed(2) === '0.19' && Z.regionOf(rp.pix, [45]).se.toFixed(2) === '0.19' && Math.max(...rp.pix.map(q => q.Y)) === rp.pix[45].Y
+        && ra.b.mean.toFixed(4) === '0.0096' && ra.b.se.toFixed(4) === '0.0006' && ra.r.mean.toFixed(3) === '0.003' && ra.p.mean.toFixed(3) === '0.035' && rb.b.mean.toFixed(4) === '0.0047'
+        && rt.b.mean.toFixed(4) === '0.0013' && rt.p.mean.toFixed(4) === '0.0014' && Z.patchPixels.length === 2, `${rc.p.mean} ${rp.b.mean} ${ra.b.mean} ${rb.b.mean} ${rt.b.mean}`)
     // the engine's numbers the page states
     const tst = readFileSync(join(REPO, 'docs/TESTING.md'), 'utf8'), med = readFileSync(join(REPO, 'roadmap/MEDIA.md'), 'utf8')
     ok('ch.20: the measured and worked numbers are where the page says', tst.includes('the hidden box +0.0002 %, the dust with NEE off +0.002 %') && tst.includes('+0.024 % at g 0.6, +0.015 % at 0, −0.010 % at −0.5')
@@ -1478,6 +1516,13 @@ for (const [name, { mod }] of modules) {
     ok('ch.31: the float sum jumping through runs equals one add at a time', [[1, 1e5], [0.7, 3e6], [0.3, 2e6], [1, 2 ** 24 + 20]].every(([w, n]) => OK.f32Sum(w, n) === OK.f32SumSlow(w, n)))
     ok('ch.31: weight 1 stalls at 2^24 (half after 2^25); 0.7 is 5.78% low after 2^23; the integer pair 2.7e-7 off', OK.f32Sum(1, 2 ** 25) === 2 ** 24 && ((OK.f32Sum(0.7, 2 ** 23) / (0.7 * 2 ** 23) - 1) * 100).toFixed(2) === '-5.78'
         && Math.abs(OK.intSum(0.7, 2 ** 23).read / (0.7 * 2 ** 23) - 1 + 2.7e-7) < 2e-8)
+    {
+        // the 0.7 curve's story: added as 0.75 while the total is 1 to 4 million (4% high at its peak), as 0.5 from 4 to 8
+        // million, and nothing past 16 million, where the total stops at 2^24
+        const r = k => { const n = Math.round(2 ** k); return OK.f32Sum(0.7, n) / (0.7 * n) }
+        ok('ch.31: weight 0.7 rises 4% above 1 by a total of 4 million, falls under it by 8, and stops at 2^24', Math.round((r(22) - 1) * 100) === 4 && r(22) > r(21) && r(21) > 1
+            && r(23.5) < r(23) && r(23) < 1 && OK.f32Sum(0.7, 2 ** 25) === 2 ** 24 && (0.7 * 2 ** 22) / 1e6 > 2.9 && (0.7 * 2 ** 23) / 1e6 < 5.9, [21, 22, 23, 23.5].map(r).map(v => v.toFixed(4)).join(' '))
+    }
     const t = OK.twoOrders()
     ok('ch.31: one set of weights in two orders: two floats, one integer', t.forward !== t.backward && t.intForward === t.intBackward)
     ok('ch.31: a cos^n source\'s I0 and beam angles: 318 cd and 120 for n 1, 58.95 for n 5', OK.I0(1).toFixed(0) === '318' && OK.beamAngle(1).toFixed(2) === '120.00' && OK.beamAngle(5).toFixed(2) === '58.95' && Math.abs(OK.floorE(5, 0) - 6000 / (2 * Math.PI)) < 1e-9)
@@ -1498,6 +1543,13 @@ for (const [name, { mod }] of modules) {
         Math.round(m1.hitsPerLitCell) === 29 && Math.round(m1.relNoise * 100) === 19 && Math.round(m2.hitsPerLitCell) === 4 && Math.round(m2.relNoise * 100) === 51
         && Math.round(m3.relNoise * 100) === 10 && Math.round(m3.bandwidthM * 100) === 8 && Math.round(mid(m3)) === 831 && Math.round(m4.relNoise * 100) === 18)
     {
+        // the Gaussian's middle reads low on average, not only in this run: 120 runs, its mean 913, 4.4% under 955
+        let s = 0
+        for (let seed = 1; seed <= 120; seed++) s += mid(OK.floorMap(5, 5000, { smooth: 'gauss', seed }))
+        const mean = s / 120
+        ok('ch.31: the Gaussian map\'s middle over 120 runs of 5,000 rays: 913 lux, 4.4% under the true 955', Math.round(mean) === 913 && ((mean / OK.floorE(5, 0) - 1) * 100).toFixed(1) === '-4.4' && Math.round(OK.floorE(5, 0)) === 955, mean.toFixed(1))
+    }
+    {
         // over many rays the plain map's middle row holds the closed form within its noise
         const m = OK.floorMap(5, 400000, { seed: 4 }), row = Math.floor(m.ny / 2)
         let worst = 0
@@ -1509,6 +1561,40 @@ for (const [name, { mod }] of modules) {
         && td31.includes('slab 0.9991 / 0.9999 / 1.0007') && td31.includes('`vs polar.` 0.9991 / 0.9966 / 0.9721') && /\| `optics-farfield` \|[^\n]*cos⁵ 58\.98°[^\n]*open — first press/.test(td31)
         && td31.includes('4247 K, du\'v\' 0.013 -- from a 3 x 3 sensor holding ~17 blue photon hits, where one sigma is 250 K') && td31.includes('3999.9 K')
         && readFileSync(join(REPO, 'lib/pathtracer/optics/zemax.js'), 'utf8').includes('was read 7 at a time: garbage') && kj.includes('immune to the retry'))
+}
+
+/* CHAPTER 32: A RAY TRACER IN ONE PAGE --------------------------------------------------------------------------- */
+{
+    const P1 = await import('../kit/onepage.js'), Y = await import('../ch/yours.js'), F = await import('../kit/flatland.js')
+    // the one page is the figures' path tracer: on the same random numbers, flatland's picture, matte and mirror, with
+    // NEE and without (the page's "the two make the same picture")
+    let worst = 0
+    for (const mirror of [false, true]) for (const nee of [false, true]) {
+        const shapes = Y.roomOf(mirror), a = P1.render(shapes, Y.CAM, 6, F.rng(5), { nee, bounces: 4 }), r = F.rng(5)
+        for (let i = 0; i < Y.CAM.pixels; i++) {
+            let s = 0
+            for (let k = 0; k < 6; k++) { const [x, y, dx, dy] = F.cameraRay(Y.CAM, i, r()); s += F.tracePath({ shapes }, x, y, dx, dy, { nee, maxBounce: 4, rand: r }) }
+            worst = Math.max(worst, Math.abs(a[i] - s / 6))
+        }
+    }
+    ok('ch.32: onepage.js renders flatland.js\'s picture on the same random numbers, matte and mirror, with NEE and without', worst < 1e-12, worst)
+    // no imports: the file is the whole program
+    const src = readFileSync(join(REPO, 'tutorial/kit/onepage.js'), 'utf8'), code = src.replace(/\/\*[\s\S]*?\*\//g, '').split('\n').map(l => l.replace(/\/\/.*$/, '').trim()).filter(Boolean)
+    ok('ch.32: onepage.js imports nothing, and is 87 lines of code', !/^\s*import\b/m.test(src) && code.length === 87, code.length)
+    // the march figure's steps and the film's readouts, as the page tells them
+    const M = Y.figures.march, mr = st => M.readout({ ...M.state, ...M.steps[st] })
+    ok('ch.32: the march: the box\'s side in 8 steps, skimming its top 69, the lamp 9', mr('hit') === 'the ray hits the box in 8 steps of the march' && mr('graze') === 'the ray hits the box in 69 steps of the march'
+        && mr('lamp') === 'the ray hits the lamp in 9 steps of the march', [mr('hit'), mr('graze'), mr('lamp')].join(' / '))
+    const Fm = Y.figures.film, fr = st => Fm.readout({ ...Fm.state, ...Fm.steps[st] })
+    ok('ch.32: the film: 1 sample 0.1118 and 1.537; 64 0.1184 and 0.216; 16 aimed 0.1190 and 0.261; the mirror 0.1602',
+        fr('one').includes('average 0.1118') && fr('one').includes('average, 1.537') && fr('many').includes('average 0.1184') && fr('many').includes('average, 0.216')
+        && fr('nee').includes('average 0.1190') && fr('nee').includes('average, 0.261') && fr('mirror').includes('average 0.1602'), [fr('one'), fr('many'), fr('nee'), fr('mirror')].join(' / '))
+    // the camera's numbers and the march's settings the page states
+    ok('ch.32: 56 pixels over 64 degrees; the lamp 0.015 thick; the march\'s 0.9, 0.001, 50 and 200', Y.CAM.pixels === 56 && Math.round(Y.CAM.fov * 180 / Math.PI) === 64 && Y.roomOf(false).find(s => s.emit).r === 0.015
+        && src.includes('t += Math.abs(d) * 0.9') && src.includes('eps = 1e-3, far = 50') && src.includes('n < 200') && readFileSync(join(REPO, 'lib/pathtracer/core/raytrace_main.js'), 'utf8').includes('const MARCH_STEPS = 32'))
+    // the mistake section's numbers are flatland.js's notes, which the lamp block above measures again
+    const fl = readFileSync(join(REPO, 'tutorial/kit/flatland.js'), 'utf8')
+    ok('ch.32: the mistakes\' numbers are flatland.js\'s own notes', fl.includes('0.1326 +- 0.0014 against the aimed rays\' 0.1213 +-') && fl.includes('0.0870 aiming against 0.0556 without'))
 }
 
 /* THE EXCERPT LOCATOR ON ITS OWN ----------------------------------------------------------------------------------- */

@@ -32,10 +32,15 @@ function aimWorld(s) {
     return { shapes }
 }
 const X0 = [2.6, 0]                    // the point on the floor
-/** the exact light at X0 from an unblocked lamp: L (sin phi2 - sin phi1), phi from the normal (flatland's law) */
+/** the exact light at X0 from an unblocked lamp: L (sin phi2 - sin phi1), phi from the normal (flatland's law), phi1 and
+ *  phi2 the edges of what the point sees of it. The lamp is a capsule (radius 0.02 round its line), so those edges are
+ *  the tangents to its round ends, each end's direction turned out by asin(r / its distance). Its line alone, without
+ *  that turn, was this function until the flat world's NEE aimed at the capsule the bounces find (flatland.js
+ *  sampleLamp): about 3% low at the default lamp. */
 export function exactE(s) {
-    const L = 0.8 / s.size, a = [s.lampX - s.size / 2 - X0[0], 3.4 - X0[1]], b = [s.lampX + s.size / 2 - X0[0], 3.4 - X0[1]]
-    return L * Math.abs(b[0] / Math.hypot(...b) - a[0] / Math.hypot(...a))
+    const L = 0.8 / s.size, r = 0.02, a = [s.lampX - s.size / 2 - X0[0], 3.4 - X0[1]], b = [s.lampX + s.size / 2 - X0[0], 3.4 - X0[1]]
+    const pa = Math.atan2(a[0], a[1]) - Math.asin(r / Math.hypot(...a)), pb = Math.atan2(b[0], b[1]) + Math.asin(r / Math.hypot(...b))
+    return L * (Math.sin(pb) - Math.sin(pa))
 }
 function estimate(world, nee, n, seed) {
     const R = rng(seed)

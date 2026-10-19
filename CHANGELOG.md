@@ -17,7 +17,7 @@ as PLAN.md does.
 
 ## 0.67.2 — 2026-10-18
 
-**A developer tutorial beside the program: its plan, its figure kit, eight styles and its first thirty-two chapters**
+**A developer tutorial beside the program: its plan, its figure kit, eight styles and its first thirty-three chapters**
 (you: "a tutorial for shadytracer, parallel to the program … that explains the inner workings of the code … interactive,
 2D visualisations … a solid toolkit for that so it looks the same everywhere … start with a plan and list of contents,
 then a few pages … make a few mockups of different styles"). Nothing in the application changed: the tutorial is
@@ -109,7 +109,10 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   intensity on a polar diagram, its peak read high by the largest of many noisy bins and the beam angle with it, and
   pooling round the axis; the same source over a floor mapped by `detmap.js` plain, Gaussian and by the photon map's
   nearest hits; a ray total in a 32-bit float stalling at 2^24 against the optics kernels' integer pair);
-  chapter 2, *Shapes as distances*; chapter 14, *Aim at the light* (next event estimation); the contents
+  chapter 32, *A ray tracer in one page* (`tutorial/kit/onepage.js`, the figures' path tracer in 87 lines and no
+  imports, read part by part: one ray marched where you aim it, the room's picture from 1 to 64 samples, aiming at the
+  lamp, and a mirror in four lines; each part beside the engine's file it grew into; the test holds it to `flatland.js`'s
+  picture on the same random numbers); chapter 2, *Shapes as distances*; chapter 14, *Aim at the light* (next event estimation); the contents
   map; a glossary of 150 terms, each linked from the pages with a card on hover or tap.
 - **The kit** (`tutorial/kit/`): one pen draws every figure in the style's colours and line; a figure is a spec with
   state, controls, drag handles and steps that the paragraphs beside it trigger as they scroll by. The figures trace a
@@ -230,7 +233,11 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   the engine's rule a short budget costs mostly samples, as the flush's comment says, and light only when very short
   (over 20 runs: the mean held at 12 and 10 iterations, fell 4% at 8 and 30% at 4); round seven had called that comment
   wrong, and the page and REVIEWS.md now say what the model shows.
-- **Chapters 25 to 30** (round nine, two readers each; 31's still to come): chapter 30's first reader asked why two
+- **Chapters 25 to 31** (round nine, two readers each): chapter 31's first reader caught C's bins called 5° (they are
+  15°, 24 to a turn) and the Gaussian map's middle, 831 lux, called the blur's bias: over 120 runs it averages 913, 4.4%
+  under the true 955, and 831 is that and the run's noise; its second found the 0.7 curve's clearest rise above 1 left
+  unexplained (0.7 is added as 0.75 while the total is 1 to 4 million) and the polar diagram unreadable without knowing
+  where the light sits. Chapter 30's first reader asked why two
   slabs 0.5 mm apart read exactly one slab, and the answer corrected the page: not the ten tolerances a ray leaving a
   surface is moved on, but the twenty across at which the medium beyond a face is asked (`tracebasics.js`
   mediumBeyond); past the gap it finds glass, so the face between reads glass to glass. Its second reader found "the
@@ -251,6 +258,18 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   second reader found the sentence the argument rests on misleading ("a box's distance in place of what it holds"):
   the page now says what the code does, a skipped object leaving the union and the nearest skipped box capping the
   answer, and why that is safe under a smallest-of and not a largest-of.
+- **The figures' own path tracer aimed at the wrong lamp, and one bounce too far** (found writing chapter 32, fixed in
+  `tutorial/kit/flatland.js` and `kit/space.js`): the flat world's lamps are capsules, which the bounces hit, but its
+  shadow rays went to points of the middle line, a lamp of no thickness; and the last surface of a path aimed at the
+  lamp too, counting light one bounce further than a path without aiming reaches. In chapter 14's room bouncing read
+  0.1326 ± 0.0014 and aiming 0.1213 ± 0.0004 (twelve bounces); allowed one, 0.0556 against 0.0870. The test's own room
+  had a lamp 0.001 thick and too few paths to see it. Aiming now picks points of the outline facing the point (the far
+  side sends it nothing) and the last surface does not aim, as pbrt stops; new tests hold a thick lamp to its closed
+  form and a room to the same answer both ways at one bounce and at six, and the old kit fails them. What moved:
+  chapter 8's room averages 0.1316 (was 0.1320); chapter 14's exact value is the capsule's, aiming's error bar ± 0.001,
+  "about a fifth" for the smallest lamp (it said a sixth), and its fold-out and the NEE card say which points and not the
+  last bounce; chapter 19's pane 0.323 without the map; chapter 20's room, one seeded run, retold from this run (its
+  lucky pixel is 46 now).
 - **Two things chapter 26 reports, not changed:** `wavefront.js` says the cache filled once was "6 to 22% faster" than the
   lazy fill "on every scene"; the run it cites found one scene, in one mode, 2% apart, within its noise
   (`roadmap/ARCHITECTURE.md`). And in the chapter's model a relief in its shell costs about its box test when far, so
@@ -328,8 +347,12 @@ What to look at:
   a row for its job; the maths fold-out's table against the *Learning the machine* readout; the bar with the build at 0.5, 1.3 and 3 times its prediction, pointing at
   the curves; *Learning the machine* from 0.15 to 6.
 - **Chapter 31, The optics bench**: the beam at 20,000 rays with *Other rays* pressed a few times (is the peak ever
-  low?), then 2 million, then pooled; the map from 1,000 to 100,000 rays, each smoothing; the tally's weights past
-  2^24.
+  low?), then 2 million, then pooled; is "the light, shining up" at the diagram's foot clear? The map from 1,000 to
+  100,000 rays, each smoothing; the tally's weight 0.7 from 2^20 to 2^26.
+- **Chapter 32, A ray tracer in one page**: drag the aim along the box's top and up to the lamp; the picture from 1 to 64
+  samples, then aiming at 16, then the mirror. Is the code beside each part enough to write your own?
+- **The flat world's lamp, after the fix**: chapter 14's aim figure (aiming ± 0.001 against bouncing's ± 0.009) and its
+  room at the smallest lamp; chapter 8's room; chapter 20's room in its three ways.
 - **Chapter 30, Numbers have grain**: the lamp from 1 µm to 3 mm and 0 to 75°, the red rays the tolerance adds; the
   gap across the point where ten tolerances pass 0.5 mm; the three terms with the point dragged out past the scene,
   and the old floor's step; each planted line in the lint.
