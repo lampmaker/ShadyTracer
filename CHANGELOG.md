@@ -15,6 +15,66 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.67.3 — 2026-10-19
+
+**The comments and document lines the tutorial found wrong, corrected.** Writing the tutorial found thirteen places where
+a comment or a document says what the code, or its own numbers, does not; chapter 33's board listed each as a card, with
+its words. Twelve were words only. Each was checked against the code before it was rewritten (read in code, unless said).
+The comments in the code each say in a line what they said before, or point to one that does; the history is here for
+the documents. Nothing the renderer runs changed: the WGSL edits are inside comments.
+- **`tracebasics.js`, light sampling's WHY:** the sun is 0.000067 sr (0.53° across, `photometry.js` sunCone), so a
+  cosine-weighted bounce finds it about once in 47,000 with the sun overhead (its solid angle over π). It said "about
+  0.03 steradian" and "once in two hundred": the old sun, drawn 21 times too wide, and the odds of a direction picked
+  evenly.
+- **`tracebasics.js`, the old random numbers:** counted over all 2³² states (the tutorial's test does), a window of
+  0.0001 got 0.95× to 1.83× of its share and one of 0.001 0.96× to 1.04×, on a grid of 1/10,485 for seven-eighths of
+  the states. It said 0.08× to 3.2×, 0.96× to 1.29× and about 1/2600.
+- **`tracebasics.js` LUM_CODE:** the log code's step is 80 stops over 2²⁴ codes, 4.8e-6 of a stop. It said 2e-5.
+- **`tracebasics.js`, Russian roulette:** since 0.10.0 every trace runs the worst-case iteration budget, which never
+  shrinks (`raytrace_main.js`, THE ITERATION BUDGET IS THE WORST CASE), so roulette saves only the work inside an
+  iteration. It said roulette should earn its keep "in a scene deep enough for the budget to shrink".
+- **`wavefront.js` and `uniforms.schema.js`, the step cache's lazy fill:** in the run they cite (0.33.1,
+  `roadmap/ARCHITECTURE.md`), filled once was 6 to 22% faster in eleven of the twelve pairs (six scenes, two looks), and
+  2% apart, within the run's noise, in the twelfth. They said "on every scene".
+- **`raytrace_main.js`, A SAMPLE OVER SEVERAL FRAMES:** the count of batches is rounded up (`Math.ceil`), so a batch can
+  fall a little under SLICE_MIN_RAYS: 921,600 camera rays make 57 batches of about 16,168. It said "nor batches under
+  SLICE_MIN_RAYS".
+- **`raytrace_main.js`, what one buffer may hold:** a shade queue item is 272 bytes since 0.61.0 (493 k rays in a
+  128 MiB binding), 288 only from 0.44.0 to 0.61.0, as the same file says above it. It said 288 "since 0.44.0".
+- **`docs/TESTING.md`, `optics-farfield`:** cos⁵'s beam angle is 2 acos(0.5^(1/5)) = 58.95°, what `tests.js` expects. It
+  said 58.98°.
+- **`docs/TESTING.md`, `haze`:** the status starts with its answer, "**answered** by the third press", and the first two
+  presses follow it. It began "open — the first press", though the same cell recorded the answer.
+- **`roadmap/PLAN.md`:** frosted glass's "no evaluable BTDF" is cited by its words in `materials_pbr.js`, not as
+  `materials_pbr.js:306` (it is at 368 today); the medium probe is `tracebasics.js` mediumBeyond, not
+  `materials_pbr.js:626`; and item 4 says the camera has had a thin lens, with depth of field, since 0.43.0
+  (`lens.js`, `genrays.js`), as the plan says further down, and that f-number, shutter, ISO and sensor are not built.
+  It said depth of field was "not built".
+
+**The tutorial** (`tutorial/`): the twelve cards are off chapter 33's board, which holds 42 now, and its step on what
+the tutorial found says they were corrected in 0.67.3. Chapters 12, 13, 14, 16, 26, 28 and 31, which each told of one,
+now say what the comment said until 0.67.3 and that it was corrected; their four excerpts of `tracebasics.js` were
+re-read against their pages and stamped. Chapters 9, 17, 20, 21 and 30, named on a card, did not tell of it and are
+unchanged. The tutorial's test now holds chapter 31's words to the row's 58.95°. The two rewritten sections, chapter
+33's and chapter 14's, were each read by a new blank reader (`tutorial/review/REVIEWS.md`, round 10): chapter 33 now
+tells the twist for a reader new to it, and chapter 3's "up to 15% shorter steps" for the exact divisor is up to 13%
+(the divisor up to 15% larger: 1 / 1.1547, computed).
+
+**Left open, for you to decide:** the one card that is code, not a comment. The twist and bend modifiers
+(`builder/modifiers.js`) divide distances by `sqrt(1.0 + rate * rate * extent * extent)`, √(1 + c²), but a move can be
+stretched by (c + √(c² + 4)) / 2, up to 15% more, so a 0.9 step can be about 3% longer than the distance (chapter 3,
+measured by the tutorial's test in node: a plate tilted 45° at the edge of a twist's extent keeps a slope of 1.14). The
+exact divisor, up to 15% larger, would make a twist's steps up to 13% shorter, so more of them. The code is unchanged
+and the card stays.
+
+**What to look at:**
+- **The first start may compile slowly, once.** The comments in `tracebasics.js`'s shader code are part of the kernels'
+  text, so the kernels that hold them are new to the browser's shader cache (inferred: it keeps a kernel by its text,
+  as `docs/PERFORMANCE.md` says of shade). The picture should be the same as 0.67.2's; nothing it runs changed.
+- **In the tutorial** (`/tutorial/`), chapter 33: the board's *found here* column holds one card, the twist's, and its
+  step names the twelve corrected. Chapter 14's note beside the light-sampling excerpt is headed *A stale number,
+  corrected*, and the excerpt ends on the comment's own line about what it said.
+
 ## 0.67.2 — 2026-10-18
 
 **A developer tutorial beside the program: its plan, its figure kit, eight styles and all thirty-four chapters**

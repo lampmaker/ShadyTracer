@@ -319,9 +319,10 @@
         (<cite data-src="builder/boxes.js" data-sym="not by its objects: measured from the objects alone, the box of a relief was its undisplaced shape, up to"></cite>).</li>
       <li><strong>The lazy fill.</strong> The cache's first version filled a cell the first time a ray passed through
         it, during the march; 0.33.0 added the fill of every cell before the trace, and the fill from the copy without
-        boxes. Filled once before the trace was faster on every scene, by 6 to 22% (one scene, in one of
-        the two modes, by 2%, within the run's noise), and the lazy fill no faster than no cache on four of six; it was
-        taken out in 0.41.0
+        boxes. Filled once before the trace was faster, by 6 to 22%, on every scene in both of the cache's ways of
+        looking but one: one scene, in one of the two, by 2%, within the run's noise. (Until version 0.67.3 the comment
+        said "on every scene"; this chapter found the run it cites saying otherwise, and the comment now says what the
+        run does.) The lazy fill was no faster than no cache on four of six; it was taken out in 0.41.0
         (<cite data-src="lib/pathtracer/core/wavefront.js" data-sym="THE LAZY FILL WENT IN 0.41.0" data-to="faster than the cache off on four of six (roadmap/ARCHITECTURE.md)."></cite>).</li>
     </ul>
   </div>

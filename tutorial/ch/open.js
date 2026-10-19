@@ -57,7 +57,7 @@ export const figures = {
         steps: {
             all: { kind: 'all', pick: null }, never: { kind: 'never', pick: 'error-bar' }, once: { kind: 'once', pick: 'nee-split' },
             unexplained: { kind: 'unexplained', pick: 'rough-glass' }, designed: { kind: 'designed', pick: null }, limit: { kind: 'limit', pick: null },
-            found: { kind: 'found', pick: 'sun-cone' },
+            found: { kind: 'found', pick: 'twist-bound' },
         },
         draw(pen, s) {
             const { W, H } = pen.view, { ctx } = pen, L = layout(s.kind, W, H), n = counts()

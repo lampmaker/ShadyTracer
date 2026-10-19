@@ -164,7 +164,7 @@
          data-why="beta is the throughput, three numbers (red, green, blue). lobesSample picks one of the surface's parts (a matte part, a shiny one: its lobes, chapter 9) and a direction from it, using PRNG(), four fresh random numbers in [0, 1) (chapter 12); smp.w is the weight of the direction drawn. For a plain matte surface that weight is its colour, as in this chapter's figures, because the matte draw picks directions in proportion to cos θ. The comment's F G2/G1 is chapter 9's; marching a ray is following it to the next surface (chapter 2)." data-hash="f9c19e32"></pre>
     <p>Then the cap and the roulette, at the end of every bounce:</p>
     <pre data-src="lib/pathtracer/core/tracebasics.js" data-sym="// the hard bounce cap" data-to="res.r.beta /= p;" data-max="55"
-         data-why="res.r.bounces counts the surfaces the path has hit; UB. is a setting handed to the GPU, so UB.maxbounce is Max Bounces. max3rgb is the largest of the three channels: p follows the brightest colour the path still carries. PRNG().x is one random number in [0, 1). uRRStart is 3, RR_MIN_P 0.1 and RR_MAX_P 0.95. UB.rr is the setting, off by default. The comment's 'energy conservation' is this chapter's 'on average nothing is lost'. In the long comment: RR is Russian roulette; the wavefront is the rounds of section 5; the adaptive iteration budget, the number of rounds as it used to adapt; trimmedLuma, the picture's average brightness with its brightest and darkest pixels left out; a dispatch, one kernel's launch; rays flushed, rays still going when the last round ended them." data-hash="46c8b109"></pre>
+         data-why="res.r.bounces counts the surfaces the path has hit; UB. is a setting handed to the GPU, so UB.maxbounce is Max Bounces. max3rgb is the largest of the three channels: p follows the brightest colour the path still carries. PRNG().x is one random number in [0, 1). uRRStart is 3, RR_MIN_P 0.1 and RR_MAX_P 0.95. UB.rr is the setting, off by default. The comment's 'energy conservation' is this chapter's 'on average nothing is lost'. In the long comment: RR is Russian roulette; the wavefront is the rounds of section 5; the adaptive iteration budget, the number of rounds as it used to adapt, and the worst case, the rounds every trace has run since 0.10.0 (section 5); trimmedLuma, the picture's average brightness with its brightest and darkest pixels left out; a dispatch, one kernel's launch; rays flushed, rays still going when the last round ended them." data-hash="0b125f93"></pre>
   </div>
 </section>
 
@@ -187,16 +187,17 @@
     <div data-claim="measured">
       <p><strong>And still off.</strong> The same bench measured roulette at +0.9% time per sample, inside the noise.
         Without roulette, 1416 rays were still going when the last round ended them; with it, 360. Fewer rays, the same
-        rounds, no time saved. The comment's verdict: it should earn its keep in a scene
-        deep enough for the rounds to shrink, "and that is the case to find before changing the default".</p>
+        rounds, no time saved. The comment's verdict, until version 0.67.3: it should earn its keep in a scene deep
+        enough for the rounds to shrink, "and that is the case to find before changing the default".</p>
     </div>
     <div data-claim="code">
-      <p><strong>The rounds no longer shrink.</strong> That verdict speaks of rounds that can shrink. Since version 0.10.0 every sample gets the most a path could need, Max Bounces + 1 plus its
+      <p><strong>The rounds no longer shrink.</strong> That verdict spoke of rounds that can shrink. Since version 0.10.0 every sample gets the most a path could need, Max Bounces + 1 plus its
         marching (<cite data-src="lib/pathtracer/core/raytrace_main.js" data-sym="const worstCase = Math.max(2" data-to="+ chunks)"></cite>),
         so roulette can save only the work inside each round, never a round: a round over fewer paths does less work. On
         the user's card an added, nearly empty round cost 0.13 to 0.42 ms of the graphics card's time (the comment on
         the round budget in <code>raytrace_main.js</code>). Whether roulette's saving inside the rounds is ever worth it is
-        not measured.</p>
+        not measured. This chapter found the verdict out of date; since 0.67.3 the comment says what this one does, the
+        excerpt's last lines.</p>
     </div>
     <div data-claim="code">
       <p><strong>A weight of zero ends the path.</strong> A direction that carries nothing (a reflection that would go

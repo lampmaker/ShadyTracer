@@ -182,8 +182,8 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
 
 **IV. Path tracing**
 12. **Dice and averages** (draft): π from darts with measure.js's error bar, 240 estimates a column against 1/√N,
-    resolve's V and S, the old generator's windows against PCG4D's counted exactly (the comment's numbers do not
-    follow from its formula: 0.95×–1.83× at 0.0001, not 0.08×–3.2×), seeds, the sun found 50,000 times in 37 M samples.
+    resolve's V and S, the old generator's windows against PCG4D's counted exactly (the comment's numbers did not
+    follow from its formula: 0.95×–1.83× at 0.0001, not 0.08×–3.2×; corrected in 0.67.3), seeds, the sun found 50,000 times in 37 M samples.
     *Read:* pbr-montecarlo, finch2009, jarzynski2020 (the hash ShadyTracer's random numbers come from, credited in
     tracebasics.js), oneill-pcg.
 13. **Following a path** (draft): one path's throughput β bounce by bounce, the rendering equation in a fold-out; the
@@ -202,7 +202,7 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
 16. **Every glowing thing is a light** (draft): discovery by the paths that hit a glow (a 16 × 16 grid in the flat
     world, the bar behind a wall found by bounces), unbiased from the first sample; Crofton's random lines, crossings
     against perimeters and their cosine spread; the brightness code, linear against log (the comment's "2e-5 of a stop"
-    is 4.8e-6 by its own constants); emitConePdf, emitLineDensity; 2.3× a sample and 1.4× sooner (PLAN.md) →
+    was 4.8e-6 by its own constants; corrected in 0.67.3); emitConePdf, emitLineDensity; 2.3× a sample and 1.4× sooner (PLAN.md) →
     materials_pbr.js emitDeposit, tracebasics.js LUM_CODE. *Read:* wiki-crofton, pbr-lights, pbr-spheres.
 17. **The camera's lens** (draft): the thin lens from the side, its blur by lens.js lensImage against 2R |1/F − 1/D|;
     a 3D picture through the lens (space.js cameraRayLens on lensDisc and lensRay), three balls, the focus and
@@ -340,11 +340,12 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
     as a line while the bounces hit a capsule, and aimed at from the last surface. -> onepage.js's six parts,
     uniforms.schema.js stepscale, raytrace_main.js MARCH_STEPS. Computed, all of it. *Read:* smallpt, rtiow,
     iq-raymarching.
-33. **Open problems** (draft): a board of every open item, 54 today, each quoting its document and held to it by the
+33. **Open problems** (draft): a board of every open item, 42 today, each quoting its document and held to it by the
     test (`tutorial/kit/open.js`): the bench rows built and never pressed, read from docs/TESTING.md's status column
     (and every row it calls open on the board); numbers measured and not explained (rough glass's 0.944, the Ampere's
     compile, the ±20% drift); designs not built (a tolerance per pixel, thin air gaps, rough glass's compensation);
-    limits stated; and the comments these chapters found wrong. How a card closes: a bench row pressed on a card, the
+    limits stated; and what these chapters found wrong (twelve comments and document lines, corrected in 0.67.3, and
+    the twist's step bound, which is code). How a card closes: a bench row pressed on a card, the
     answer stamped. *Read:* kulla2017, turquin2019.
 
 ## Where 3D is planned

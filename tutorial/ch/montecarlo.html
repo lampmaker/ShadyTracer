@@ -198,15 +198,16 @@
     <h2><span class="n">5</span>How ShadyTracer does it</h2>
     <p>The generator, and the story of the one before it:</p>
     <pre data-src="lib/pathtracer/core/tracebasics.js" data-sym="PRNG -- four uniform numbers in [0,1)" data-to="return VEC4(NOISE_H >> vec4<u32>(8u)) * (1.0 / 16777216.0);" data-max="45"
-         data-why="NOISE_H is the generator's state, four 32-bit numbers. pcg4d scrambles all four together (multiplications mix bits upward, the shift by 16 brings high bits down); PRNG keeps each lane's top 24 bits, divided by 2^24: four numbers in [0, 1) a call." data-hash="a7e83f28"></pre>
+         data-why="NOISE_H is the generator's state, four 32-bit numbers. pcg4d scrambles all four together (multiplications mix bits upward, the shift by 16 brings high bits down); PRNG keeps each lane's top 24 bits, divided by 2^24: four numbers in [0, 1) a call." data-hash="55e5ab5e"></pre>
     <div data-claim="measured">
-      <p><strong>The comment's numbers and this page's differ.</strong> The comment says the old output's share of a
-        0.0001 window "ranged from 0.08x to 3.2x", at 0.001 "from 0.96x to 1.29x", and calls the grid "about 1/2600", the
-        multiples of 256 without the wrap of section 4. Counting every one of the 2³² states
-        through the formula it gives (this tutorial's test does, in node, and once checked it against 63 million random
-        states) gives 0.95× to 1.83×, 0.96× to 1.04×, and a grid of 1/10,485, as in the figure. The old code is not in the repository's
-        history, which starts at version 0.46.0, so whether it did more than the formula says cannot be checked. Either
-        way the comment's point stands: a bias in small windows that no number of samples removes.</p>
+      <p><strong>The comment's numbers, corrected.</strong> Until version 0.67.3 the comment said the old output's share
+        of a 0.0001 window "ranged from 0.08x to 3.2x", at 0.001 "from 0.96x to 1.29x", and called the grid "about
+        1/2600", the multiples of 256 without the wrap of section 4. Counting every one of the 2³² states through the
+        formula it gives (this tutorial's test does, in node, and once checked it against 63 million random states)
+        gives 0.95× to 1.83×, 0.96× to 1.04×, and a grid of 1/10,485, as in the figure; this chapter found the
+        difference, and the comment now gives these numbers and says what it used to. The old code is not in the
+        repository's history, which starts at version 0.46.0, so whether it did more than the formula says cannot be
+        checked. Either way the comment's point stands: a bias in small windows that no number of samples removes.</p>
     </div>
     <p>Each pass of a sample hands the kernels a fresh random seed, and each ray mixes it with its pixel and its bounce
       (<cite data-src="lib/pathtracer/core/wavefront.js" data-sym="SEED_u32(rayindex); // use pixel index and bounce count to seed RNG" data-nth="1"></cite>),
