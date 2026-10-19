@@ -27,6 +27,7 @@ Disney BSDF is, it belongs in the application, or in `pathtracer/` (see the exce
 | `camera.js` | orbit / fly camera |
 | `utils.js` | misc helpers (canvas sizing, GUI state bag). **Off limits to automated edits** (its banner; CLAUDE.md) |
 | `render-cost.js` | the render cost instrument and frame pacing — samples/s, ms/sample, cpu ms/frame, queue latency |
+| `filename.js` | a saved file's name with the time it was saved, `render-2026-10-19_14-03-22.png`, unique within the page |
 
 ## Why this folder is worth being strict about
 

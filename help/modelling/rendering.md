@@ -93,14 +93,16 @@ goes straight back to the editable build.
 
 **File › Save picture…** renders offscreen at its own size, up to 16 384 pixels on a side, with its own
 number of samples. You can stop it early. The render is kept as light, so you can choose its exposure, tone curve
-and grading on a preview afterwards, and save it as often as you like.
+and grading on a preview afterwards, and save it as often as you like. Each save is a file of its own: the name you
+give, with the date and time it was saved after it (`render-2026-10-19_14-03-22.png`).
 
 ## Animation and video
 
 Mark a value **animated** (◆ beside it in Properties), and it stays live in the baked scene, so the
 [Timeline](cmd:view.tools.timeline) can move it without leaving the bake. In the Timeline, **+ track** keys any live
 setting over time: the camera, the sun, a light's flux, an object's position. **RECORD** renders every frame offscreen
-at the export size, as an MP4 or a ZIP of PNG frames (an animated GIF as well). Try [Animation](example:animation.json).
+at the export size, as an MP4 or a ZIP of PNG frames (an animated GIF as well), named with the date and time the
+recording started after the name you give (`raytracer-2026-10-19_14-03-22.mp4`). Try [Animation](example:animation.json).
 
 Each scene has its own timeline, saved in its file: its tracks and keys, the frame rate and length, and the video's
 size, renders per frame, range and name. Opening another scene shows that scene's timeline. The format, the bitrate and

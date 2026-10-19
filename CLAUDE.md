@@ -111,6 +111,7 @@ node lib/pathtracer/test/camera.check.mjs          # the camera popover: positio
 node optics/test/chartset.test.mjs # the charts that exist: the six kinds' first always, more of a kind with their own settings, kept and read back, no DOM
 node optics/test/page.check.mjs # the Analysis pane and chart panels, headless, on made-up data: each chart's own strip, the map's button held and Shift-drag, a second map with its own quantity, a chart made and taken away; the rays in the view's analysis drawer; the ray count's multiplier; Live, each round on its own and with Σ its rounds adding up, a reset starting them over, the rays between them, switched off mid-round, through a scene build (optional: playwright)
 node test/diagnose.check.mjs    # stale cached files found and reloaded fresh, headless (optional: playwright)
+node test/filename.test.mjs     # a saved picture's or video's name: the time it was saved, local, sortable, no `:`; twice in a second told apart
 node test/version.test.mjs      # VERSION and CHANGELOG.md agree; the revision read from .git, or the REVISION file a Pages deploy writes, every failure null; a file's `app` stamp never read into a document
 node test/start.test.mjs        # the page's start when its scene will not compile: the empty scene instead, why, and the safe start (?safe, or a start that never finished), no GPU
 node library/test/panel.check.mjs # the Library panel: search, filters, tags, put in, keep, rename, remove, duplicate, edit, export, import, drag out (optional: playwright)
