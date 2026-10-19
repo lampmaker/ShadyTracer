@@ -17,10 +17,11 @@ as PLAN.md does.
 
 ## 0.68.0 — 2026-10-19
 
-**The measure tool's ruler: where a point on a surface is, and the distances between points; and a drag turns the
-view with a pin or the ruler on.** You asked whether the measure tool's pick could give the position of the picked
-point and make a distance meter from several points; then for each distance's steps in x, y and z as red, green and
-blue lines, and for the view to turn between two picks ("or just allow a drag in picker mode").
+**The measure tool's ruler: where a point on a surface is, and the distances between points; a drag turns the view
+with a pin or the ruler on, and moves a point or a pin it starts on.** You asked whether the measure tool's pick
+could give the position of the picked point and make a distance meter from several points; then for each distance's
+steps in x, y and z as red, green and blue lines, for the view to turn between two picks ("or just allow a drag in
+picker mode"), and for points already placed to be moved.
 
 **What was there (read in code):** a pin already picks the surface clicked (`RT.pick`, `core/pick.js`) and keeps the
 world point, so that it can be projected again as the camera moves. That point was written to the CSV's x, y, z, but
@@ -42,13 +43,19 @@ surface the view did not show could not be reached without switching the tool of
   a green of their own read as the y leg.
 - **A click on a point removes it**, and its neighbours are joined. Clear removes the points with the pins and the
   area.
+- **A drag on a point moves it**, over the surfaces: it is picked again as the mouse goes (one pick at a time, then
+  the newest place the mouse has reached) and stays where the last pick put it. Its name, its line and its place in
+  the line are kept, so its stretches, legs and total follow. Over nothing (the sky), it waits where it last found a
+  surface. **A pin moves the same way** and reads again where it lands; over the sky it stays on the screen, as a pin
+  placed there does. The cursor is a hand over a point or a pin a press would take, and a ring marks the one being
+  dragged.
 - **A click where nothing is hit** (the sky) places nothing and shows "nothing to measure here" for a moment.
-- **A drag turns the view, with Pin or the ruler on**; a click (moving 3 px or less) still places. The press is kept
-  from the camera until it has moved more than 3 px, then handed to it as the press it was, so a click's wobble does
-  not turn the camera and restart a picture the pins are reading. The builder's selection now leaves alone a press
+- **A drag elsewhere turns the view, with Pin or the ruler on**; a click (moving 3 px or less) still places. The press
+  is kept from the camera until it has moved more than 3 px, then handed to it as the press it was, so a click's wobble
+  does not turn the camera and restart a picture the pins are reading. The builder's selection now leaves alone a press
   that another tool has marked (`builder/overlay.js`, `defaultPrevented`), so the handed press selects nothing. The
   middle button (pan) and the wheel were never the tool's, before or now (read in code). **Area** keeps its drag: the
-  drag is the rectangle.
+  drag is the rectangle. The builder's hover over its handles leaves the cursor alone too, while Pin or the ruler is on.
 - **The digits are the surface tolerance's at that point** (`RT.tolerances`): the pick's march stops once it is within
   the tolerance of the surface (`core/pick.js`), so a finer digit would come from the march, not the shape. A scene
   100 mm in size with the automatic tolerance shows two decimals (0.01 mm). For a shape whose distance is a bound
@@ -65,15 +72,17 @@ The shell's headless check (`example.check.mjs`) drives the real tool over a sta
 and a Shift-click, a click on the sky, the lengths, the CSV, a point removed, the ruler off and on, Escape, Clear; and
 with stand-ins for the camera's and the selection's listeners, a click heard by neither, a drag handed to the camera
 where it began and marked, a 2 px wobble still a click, Pin the same, Area keeping its drag, and with nothing on a
-press heard by both. Over the real builder, `transform.check.mjs` (the selection) and `points.check.mjs` (the
-shared legs) still pass. **Not seen on hardware.**
+press heard by both; a point dragged to a new place (its name, line and stretch following, the camera not told) and
+onto the sky (waiting at its last surface), a pin dragged and dragged onto the sky, the cursor a hand over a point.
+Over the real builder, `transform.check.mjs` (the selection, its hover) and `points.check.mjs` (the shared legs) still
+pass. **Not seen on hardware.**
 
 **What to look at:** open the analysis drawer (bottom right), switch on the ruler and click two points on a surface
 whose size you know: a box's edge, or a lens's thickness. Does the length match, and do the coloured Δx, Δy, Δz
 legs? Do the points and lines stay on the surface as you orbit? Do the labels stay readable over a busy picture? Then
 drag to turn the view (the ruler still on) and click a point on a surface the first view did not show: the view
-should turn, and the click should select no object. Then Shift-click a fourth point, and check the Σ and the new
-line.
+should turn, and the click should select no object. Then drag a point along the surface: do its lines and numbers
+follow, and does it stay on the surface? Then Shift-click a fourth point, and check the Σ and the new line.
 
 ## 0.67.3 — 2026-10-19
 

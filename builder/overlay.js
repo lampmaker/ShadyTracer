@@ -440,7 +440,8 @@ export function installSelectionOverlay({ stage, canvas, RT, BUILDER, onPick = (
     const onCanvas = e => e.target === canvas
 
     stage.addEventListener('mousemove', e => {
-        if (drag || e.buttons !== 0) return
+        // defaultPrevented: the measure tool's, with a pin or the ruler on -- the cursor is its own (measure/tool.js)
+        if (drag || e.buttons !== 0 || e.defaultPrevented) return
         const h = onCanvas(e) ? hitTest(e.offsetX, e.offsetY) : null
         if (mode === 'points') {
             if (h?.name !== hover?.name) { hover = h; points.setHover(h); stage.style.cursor = points.cursor(h) }

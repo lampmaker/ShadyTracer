@@ -95,6 +95,6 @@ areas that read lux, uniformity and colour. This is useful for any interior: is 
 The measure tool's **ruler** works in any of the three views. Click surfaces to place points: each says where it is,
 (x, y, z) in the scene's unit, and joins the one before it, with the length of each stretch and the total of the line.
 Each stretch also shows its steps along the axes as dashed legs, **Δx** red, **Δy** green and **Δz** blue.
-**Shift**-click starts a new line, and a click on a point removes it. **Drag** to turn the view between points, as
-with pins: only a click places. The digits shown are the surface tolerance's at that point, the precision the pick
+**Shift**-click starts a new line, and a click on a point removes it. **Drag a point** to move it over the surfaces,
+and **drag anywhere else** to turn the view between points; pins work the same way. The digits shown are the surface tolerance's at that point, the precision the pick
 finds the surface to. **Save as CSV** writes each point and each distance.
