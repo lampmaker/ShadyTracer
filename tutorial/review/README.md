@@ -284,6 +284,20 @@ real student.
 4. How can a pixel's error bar be checked using only the picture?
 5. What is a moving window's average worth, and what mistake would the error-bar test's window row catch?
 
+**precision** (Numbers have grain)
+1. Why does a surface tolerance make a small lamp too bright, and a thin gap disappear?
+2. What three lengths decide the tolerance at a point, and which wins far from the origin?
+3. How is a scene's automatic tolerance chosen, and why is it capped at 1 mm?
+4. Where do the engine and the scene meet, and why does that boundary multiply and never divide?
+5. What would go wrong if an engine function asked the scene directly, and how is that caught?
+
+**optics** (The optics bench)
+1. How is a light's intensity in each direction measured from traced rays, and why does the peak read too high?
+2. What is the beam angle, and how does a noisy peak change it?
+3. How is a map of illuminance made from hits on a surface, and what does smoothing trade?
+4. Why does a 32-bit float make a poor total for millions of rays, and what do the optics kernels use instead?
+5. What does "weights, not survival" mean for an optics ray, and why does it let the totals add up exactly?
+
 **index** (the contents)
 1. What will you learn in this tutorial, and do you need to know anything before starting?
 2. What do the three stamps mean?

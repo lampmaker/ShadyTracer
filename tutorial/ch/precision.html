@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Numbers have grain · ShadyTracer, inside out</title>
+<link rel="stylesheet" href="../kit/kit.css">
+<script type="module" src="precision.js"></script>
+</head>
+<body data-chapter="precision">
+<p class="kit-offline">This page runs from a web server, not from a file: in the repository run <code>python3 -m http.server 8000</code> and open http://localhost:8000/tutorial/.</p>
+<main class="sheet">
+
+<header class="sheet-head">
+  <div>
+    <p class="eyebrow">Part VIII · Getting it right · Chapter 30</p>
+    <h1>Numbers have grain</h1>
+    <p class="lede">The graphics card's numbers are 32-bit floats, <a data-g="f32">f32</a>: each can be only one of a
+      fixed set of values, spaced further apart the bigger the number (chapter 4 showed what that does to a normal).
+      The renderer lives with it through one length, the surface <a data-g="tolerance">tolerance</a>: how near a ray
+      must come to a surface to have hit it. This chapter is that length's other side: what it costs a scene's small
+      things, why it is never finer than the grain, how each scene gets its own, and how the engine keeps every length
+      in one unit, metres, with a check that says so for every kernel and every scene.</p>
+  </div>
+  <div class="titleblock" data-auto></div>
+</header>
+
+<section class="scene" id="fatten">
+  <div class="prose">
+    <h2><span class="n">1</span>A tolerance fattens every shape</h2>
+    <p data-step="fatten:lamp">A ray marching towards a surface (chapter 2) stops once it is within the tolerance:
+      it has hit. So every shape is traced as if it were that much bigger all round. For a large shape that changes
+      nothing anyone sees. For a glowing disc 1 cm in radius, 2 cm across, at its scene's automatic tolerance of
+      0.91 mm, it does. In the flat world here, rays from the camera that pass within the tolerance of the face count
+      as hits too (red), and the face, seen 37° off the disc's own axis (the dotted line square to it: the floor in the
+      bench's test sees the lamp at that angle), is traced 1.11 times as wide. In 3D, face on,
+      the disc is traced as one of radius 1.091 cm: 1.091² = 1.19 times its area. Seen 37° off its axis its outline is
+      an ellipse, narrower by cos 37°, and the same margin all round adds more to a narrower shape: 1.22 times (Steiner's
+      formula: an outline grown by a margin gains the margin times its perimeter, plus a circle of the margin;
+      computed). A glowing surface sends light in proportion to its area, so the disc put 1.22 times too much light on
+      the floor.</p>
+    <p>ShadyTracer's <a data-g="benchmark">bench</a> found exactly that. One of its tests compares the same lamp two
+      ways: as a <em>light</em>, whose rays start on the disc itself and so are not fattened, and as a glowing object
+      that rays must find, which is. The ratio of the two, the light's brightness divided by the glowing object's,
+      read 0.80 to 0.84, where 1/1.22 = 0.82 was predicted (measured on the user's Ampere card, 2026-09-29: the user
+      is ShadyTracer's developer, who runs its tests, and Ampere their newer NVIDIA card; <code>docs/TESTING.md</code>).</p>
+    <p data-step="fatten:fine">At 10 µm, the fattening is 1.002, a ratio of 0.998 predicted; the pair read 0.994,
+      about where the test's other pairs read, 0.995 (the user's Ampere card, 2026-10-02). Nothing about the lamp
+      changed: only the length that decides when a ray has arrived.</p>
+    <p data-step="fatten:gap">Another of the tolerance's jobs makes thin gaps vanish. Where a ray meets glass, the
+      renderer must know what lies beyond the face, since how much a ray bends depends on how much each material slows
+      light, its index (chapter 10). It asks for the material twenty tolerances past the face (the table of every use,
+      section 4, its row "two steps off"). Two slabs of glass 0.5 mm apart, at a
+      tolerance of 0.1 mm (a metre-sized scene's automatic one): at the first slab's back face the question lands 2 mm
+      across, inside the second slab, and the answer is glass. Glass against glass is no face at all, so the light
+      goes straight on: the two slabs are traced as one, with two faces instead of four. The pair then lets through
+      0.923 of the light, one slab's share, where two let through 0.857 (each face reflects some, Fresnel's law,
+      chapter 10, by <code>optics/fresnel.js</code>). The bench's row for it was expected to fail at its scene's
+      automatic tolerance and did, reading 0.9228 (the user's Pascal card, 2026-09-27).</p>
+    <p data-step="fatten:gapfine">At 10 µm the question lands 0.2 mm across, in the gap's air: two slabs, and the
+      bench's row at 10 µm passed. A shape or gap thinner than twenty tolerances is not traced as it is: the scene's
+      tolerance has to be chosen for its smallest part. Making the probe independent of the tolerance is an open item
+      of the plan (<code>roadmap/PLAN.md</code>, "Thin air gaps").</p>
+  </div>
+  <figure class="fig" data-fig="fatten">
+    <figcaption><strong>A small lamp</strong>: a lamp's face, 2 cm across, its edge-on cut in the flat world, its axis
+      dotted, and parallel rays from
+      the camera: <span data-say="cam">blue</span> where they meet the face, <span data-say="accent">red</span> where
+      they count as a hit only because they come within the tolerance (dashed); grey, missing. <strong>A thin gap</strong>: two slabs
+      of glass, a gap of 0.5 mm, the drawing 6 mm across, and the medium beyond the first slab's back face asked for
+      twenty tolerances across. Choose the
+      tolerance and, for the lamp, how far off its axis it is seen.</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="terms">
+  <div class="prose">
+    <h2><span class="n">2</span>Never finer than the grain</h2>
+    <p data-step="terms:optic">The tolerance at a point is the largest of three lengths:</p>
+    <ul>
+      <li><strong>the scene's setting</strong>: one it sets itself, or else an automatic one, a ten-thousandth of the
+        scene's size, kept between 10 nm and 1 mm;</li>
+      <li><strong>a nanometre</strong>, so that the tolerance is never zero, even for a setting typed smaller (the
+        automatic one never goes under its own 10 nm);</li>
+      <li><strong>the floor</strong> of chapter 4: 128 × 2<sup>−23</sup> × the point's distance from the origin, which
+        is 128 to 256 steps of an f32 number there, since below about a hundred a surface's normal is the numbers' own
+        pattern.</li>
+    </ul>
+    <p> The RGBW mixer, an LED optic whose size is estimated at
+      105 mm, gets 10.5 µm automatically (<code>lib/pathtracer/PRECISION.md</code>); 5 cm from the origin, where its
+      parts are, the setting is the largest.</p>
+    <p data-step="terms:far">Two metres from the origin, the floor has passed it: 30.5 µm. One f32 step is between
+      2<sup>−24</sup> and 2<sup>−23</sup> of the number (2<sup>−23</sup> is about 1.2 × 10<sup>−7</sup>; which, depends
+      on where the number sits between two powers of two), so 2<sup>−23</sup> × the distance is one to two steps,
+      the floor 128 to 256, and it grows in step with the distance, and passes any setting at a
+      distance the setting fixes: 10.5 µm / (128 × 2<sup>−23</sup>) = 69 cm here. For an automatic tolerance below its cap
+      that is always 1e-4 / (128 × 2<sup>−23</sup>) = 6.55 times the scene's size (computed): far outside the scene.
+      (One f32 step is a share of the number because a float keeps 24 binary digits, 2<sup>−23</sup> being the last
+      of them.)</p>
+    <p data-step="terms:room">A room 10 m across gets 1 mm: a ten-thousandth would be exactly that, and it is the cap.
+      The cap is there because a scene's size counts everything in it, a ground slab too ("Menger's is 424 m across",
+      the code says, which would make 4 cm); so the automatic tolerance only ever makes a scene finer than the 1 mm
+      every scene had before it, never coarser. Its floor passes 1 mm at 65.5 m. For a capped scene bigger than that, Menger's 424 m,
+      the floor takes over inside the scene, where the numbers are coarser than 1 mm anyway.</p>
+    <p data-step="terms:old">Before 0.36.0 the engine worked in the scene's own unit, and the floor was 1e-7 of that
+      unit: in a millimetre scene, 0.1 nm, "which is no floor at all", the code's comment says. A tolerance typed as
+      10 nm, used 10 m from the origin, was then about a hundred times finer than one step of the numbers there (2<sup>−23</sup>
+      × 10 m is 1.2 µm, one to two steps): a point moved by it does not move. In the figure the old floor is flat: it did not grow with the
+      distance, as the numbers' steps do. Today's floor keeps the tolerance where the numbers can follow.</p>
+  </div>
+  <figure class="fig" data-fig="terms">
+    <figcaption>The tolerance at a point against its distance from the origin, both on log scales (along the bottom,
+      each mark ten times the last; up the side, 1 nm, 1 µm and 1 mm are a thousand apart): 2<sup>−23</sup> × the
+      distance (dotted), the floor of 128 of those (<span data-say="blocked">red</span>), the nanometre (grey), the
+      setting (<span data-say="light">orange</span>), and the tolerance in use, the largest
+      (<span data-say="cam">blue</span>, thick), the chosen point marked. The engine's own <code>tolerances.js</code>
+      and <code>photometry.js</code> compute every line. Choose the scene's size, the point, the setting, and the floor's
+      rule; point at the chart for values.</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="lint">
+  <div class="prose">
+    <h2><span class="n">3</span>Metres inside, and a check that holds it</h2>
+    <p data-step="lint:clean">The GPU's programs, its <a data-g="kernel">kernels</a>, are two kinds of code put
+      together. The <em>engine</em> is ShadyTracer's own: marching rays, shading, sampling lights. The <em>scene</em> is
+      code the builder writes for each scene (chapter 24): its distance function <code>SDF</code>, its materials,
+      its lights, in the scene's own numbers. Since 0.36.0 the engine works in metres whatever
+      <a data-g="scene-unit">unit</a> a scene is written in, and the two meet only at a <em>boundary</em>:
+      <code>sceneAt</code> hands the scene a ray with its lengths turned into the scene's unit, and turns the lengths
+      of the answer back into metres. Two factors do it: scene units per metre on the way in (1000 for millimetres),
+      metres per scene unit on the way out (0.001), each multiplied by, never divided by. A multiplication rounds by at
+      most half a step, while the GPU's division may be off by 2.5 steps (its rules allow that); and in a metre scene
+      both factors are 1, so its numbers come through unchanged. These
+      lines of an engine kernel ask the scene only that way, and the <a data-g="lint">lint</a> that checks them says
+      nothing.</p>
+    <p data-step="lint:direct">An engine line that asked the scene directly would compile, run, and be right in every
+      metre scene, and wrong by a thousand in a millimetre one: "the bug this repository keeps having, true for the
+      only caller there was", the lint's own comment says. So <code>unitlint.js</code> reads every kernel built
+      against every scene, in the shader check's second pass (chapter 29), and names the line. This figure runs it, on
+      these few lines, against the real boundary.</p>
+    <p data-step="lint:eps">The scene's own tolerance, <code>marchEps</code>, is a length in the scene's unit: read by
+      the engine, a millimetre number taken for metres, a thousand times too large.</p>
+    <p data-step="lint:tol"><code>SCN_TOL</code> is a variable the boundary sets for the scene while it is asked
+      (a global: one every function can read): the engine's tolerance in the scene's unit. Read by the engine, it is
+      again a length in the wrong unit.</p>
+    <p data-step="lint:deep">A helper of the engine's that asks the scene's side is the same mistake one call away.
+      The lint follows the calls: here <code>farAway</code> calls <code>metres</code>, and is named for it.
+      <code>metres(x)</code> is the scene's helper for saying a length in metres in its own unit (it multiplies by
+      1000 in a millimetre scene); the engine's lengths are metres already, so from engine code it would multiply them
+      by 1000 again.</p>
+    <p data-step="lint:unit">And the unit itself, read anywhere but in the engine's few unit functions (this line
+      also divides by it, which the boundary never does). The rule
+      came from bugs of exactly this shape. One: light-traced photons each carry their share of the light to the
+      camera, divided by the square of their distance to it. While the engine worked in the scene's unit, in a
+      centimetre scene those distances were in centimetres, their squares 10,000 times what they are in metres, and
+      nothing divided that back: "the lit spot came out 10 000 times too dark, invisible, while a metre scene was
+      right" (<code>optics/index.js</code>; the arithmetic here inferred from its comment).</p>
+  </div>
+  <figure class="fig" data-fig="lint">
+    <figcaption>A few lines of an engine kernel, in WGSL, the shader language (chapter 21), with one line planted
+      (<span data-say="accent">red</span>), and what the engine's <code>unitlint.js</code> says of them, in its own words
+      for the engine's developers, run in this
+      page against the real boundary (<code>scene_api.js</code>) and the scene's unit functions
+      (<code>tracebasics.js</code>). The scene is a stand-in of the three functions a scene gives (<code>SDF</code>, <code>getMaterial2</code>,
+      <code>lightFace</code>), empty. Choose what to plant.</figcaption>
+  </figure>
+</section>
+
+<section class="plain wide" id="engine">
+  <div class="prose">
+    <h2><span class="n">4</span>How ShadyTracer does it</h2>
+    <p>The automatic tolerance:</p>
+    <pre data-src="lib/pathtracer/core/photometry.js" data-sym="/* THE AUTOMATIC SURFACE TOLERANCE, in metres" data-to="extent > 0 &amp;&amp; Number.isFinite(extent) ? Math.min(Math.max(EPS_SHARE * extent * unitScale(unit), 1e-8), EPS_FALLBACK) : EPS_FALLBACK"
+         data-why="extent is the scene's size in its own unit, unitScale(unit) its unit in metres (1 for m, 0.001 for mm). The share is clamped between 1e-8 m (10 nm) and EPS_FALLBACK, 1 mm; a scene that gives no size keeps 1 mm." data-hash="7eb677f6"></pre>
+    <p>Every use of the tolerance, in one table that a test counts against the code:</p>
+    <pre data-src="lib/pathtracer/core/tolerances.js" data-sym="export const TOLERANCES = [" data-to="why: 'Shadow rays start this far off the surface along its normal"
+         data-why="times is the multiple of the tolerance at the point; pattern the text the test (core/test/tolerances.test.mjs) looks for in each file, and sites how many times it must find it: a use added or moved without its row fails the test. A regular expression (/.../g) is a pattern of text; \b a word's edge." data-hash="de4b54c9"></pre>
+    <p>The boundary, where the engine asks the scene:</p>
+    <pre data-src="lib/pathtracer/core/scene_api.js" data-sym="/* THE SCENE AT r (an engine ray): its Hit" data-to="return h;"
+         data-why="This is WGSL inside a JavaScript text (the ${...} parts are filled in by JavaScript; capture is for the pick, which part of the scene was hit). h.s.w is the distance the scene answers. rayToScene turns the ray's lengths into the scene's unit; SCN_TOL hands the scene the engine's tolerance at the point, in its unit, for the length of the call; SDF is the scene's own distance function; engPerScene() is the unit in metres, and the answer's lengths are multiplied by it back into metres." data-hash="99bdff31"></pre>
+    <p>The two factors, multiplied by and never divided by:</p>
+    <pre data-src="lib/pathtracer/core/tracebasics.js" data-sym="/* metres per scene unit, and scene units per metre" data-to="fn scenePerEng() -> FLOAT { return UB.perMetre; }"
+         data-why="UB.sceneUnit and UB.perMetre are two uniforms the host writes in double precision; FLOAT is f32. A metre scene's are both 1." data-hash="3904db0e"></pre>
+    <p>And why a check, not a comment:</p>
+    <pre data-src="lib/pathtracer/core/unitlint.js" data-sym="// WHY A CHECK AND NOT A COMMENT." data-to="//   - read UB.sceneUnit or UB.perMetre, outside the engine's own unit functions (EPS_WGSL)."
+         data-why="The bench and the demo are scenes in metres, so a mistake of units passes in both; that is the 'only caller there was'. The scene's lengths (marchEps and the rest) are the scene-side functions the figure plants." data-hash="3f70e2b7"></pre>
+  </div>
+</section>
+
+<section class="plain wide" id="tricks">
+  <div class="prose">
+    <h2><span class="n">5</span>Tricks and trade-offs</h2>
+    <p>Each is stamped with how it is known; point at a stamp to see what it means.</p>
+    <div data-claim="measured">
+      <p><strong>The same picture in millimetres and in metres.</strong> The Noise library written in millimetres and
+        written again in metres, through the engine's kernels: all 2304 rays tried end at the same place (on a software
+        graphics card in node, lavapipe, 2026-10-07, <code>builder/test/units.gpu.mjs</code>). The unit changes no
+        precision, since an f32's steps are a share of the number; it is there so that every number has one meaning.</p>
+    </div>
+    <div data-claim="code">
+      <p><strong>Off a surface by a multiple.</strong> A bounce leaves a surface ten tolerances along its way; a shadow
+        ray (chapter 14) starts twenty tolerances off along the surface's normal, twice the bounce's, since the normal it
+        starts from is itself an estimate, and the same twenty are how far across the medium beyond is asked (section
+        1); the optics trace's lights (chapter 31) start their rays two tolerances off their exact flat faces
+        (<code>tolerances.js</code>).</p>
+    </div>
+    <div data-claim="code">
+      <p><strong>One tolerance a scene.</strong> Since 0.66.0 the setting is the scene's, saved with it, in its unit.
+        Until then it was one setting in the render panel for every scene, so a value typed for one was the one every
+        scene shown after it was traced with (<code>lib/pathtracer/PRECISION.md</code>).</p>
+    </div>
+    <div data-claim="inferred">
+      <p><strong>A pattern on a small sphere.</strong> Zoomed in on a 0.4 mm sphere in the RGBW mixer, the user saw a
+        fixed, texture-like pattern. Its likely cause: the automatic tolerance, 10.5 µm, is 5% of the sphere's radius,
+        and the march stops anywhere in that shell. (The size is estimated by padding every part by its largest number,
+        and for the mixer's lens that is its curvature's radius, 30 mm, so the scene reads 105 mm.)
+        Not yet seen gone (<code>CHANGELOG.md</code> 0.36.0). A tolerance chosen pixel by pixel, from how big a pixel is
+        at that distance, has been designed and not built (<code>roadmap/PLAN.md</code>). What would test the cause: the
+        same view at a typed 1 µm.</p>
+    </div>
+    <aside class="refs"><span class="tag">Read more</span><ul>
+      <li data-ref="wgsl-spec">The shader language's rules for floating point, among them the accuracy of division.</li>
+      <li data-ref="iq-raymarching">Marching a distance field, and how near is near enough to stop.</li>
+    </ul></aside>
+  </div>
+</section>
+
+<section class="plain wide" id="before">
+  <div class="prose">
+    <h2><span class="n">6</span>What went wrong before</h2>
+    <ul>
+      <li><strong>A floor that was no floor.</strong> 1e-7 of a scene unit, 0.1 nm in a millimetre scene (section 2)
+        (<cite data-src="lib/pathtracer/core/tracebasics.js" data-sym="test/floor.test.mjs use. It was 1e-7 of a SCENE unit: 0.1 nm in a mm scene, which is no floor at all. */"></cite>).</li>
+      <li><strong>A centimetre scene 10,000 times too dark.</strong> Section 3's photons
+        (<cite data-src="lib/pathtracer/optics/index.js" data-sym="nothing, and in a centimetre scene the lit spot came out 10 000 times too dark, invisible,"></cite>).</li>
+      <li><strong>A lamp 22% too bright.</strong> Section 1's disc of radius 1 cm, at its scene's automatic tolerance
+        (<code>docs/TESTING.md</code>, finding 7).</li>
+      <li><strong>A light starting inside the glass.</strong> The RGBW mixer's light rays started twenty tolerances off
+        their face, 0.211 mm, where its lightguide is 0.200 mm in front of the light's dies: they began inside the
+        guide. They start two tolerances off now (<code>roadmap/PLAN.md</code>).</li>
+      <li><strong>A setting that could not go below 10 µm.</strong> The render panel's slider had a step of 10 µm, and
+        rounded a typed 1 µm to its step: 0, which meant automatic (<code>CHANGELOG.md</code> 0.36.0).</li>
+    </ul>
+  </div>
+</section>
+
+<section class="plain" id="try">
+  <div class="prose">
+    <h2><span class="n">7</span>Try it</h2>
+    <ul>
+      <li>In the first figure, find the tolerance at which the lamp seen face on is 10% too large in 3D.</li>
+      <li>In the second, slide the point to 1 mm from the origin, with the setting typed at 10 nm. Which term wins, and
+        what would win at the origin itself?</li>
+      <li>In the third, plant each line in turn and read the lint's words: which complaints name a function the engine
+        called, and which a value it read?</li>
+    </ul>
+    <h3>Words from this chapter</h3>
+    <ul class="words" data-words="f32 tolerance march lint scene-unit"></ul>
+  </div>
+</section>
+
+<nav class="tabs" data-auto></nav>
+</main>
+</body>
+</html>

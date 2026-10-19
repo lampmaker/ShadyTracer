@@ -1421,6 +1421,96 @@ for (const [name, { mod }] of modules) {
         && readFileSync(join(REPO, 'roadmap/SURFACES.md'), 'utf8').includes('A small positive bias, +0.02-0.09%, on metal'))
 }
 
+/* CHAPTER 30: NUMBERS HAVE GRAIN --------------------------------------------------------------------------------- */
+{
+    const GR = await import('../kit/grain.js'), GP = await import('../ch/precision.js'), TL = await import('../../lib/pathtracer/core/tolerances.js')
+    // THE FATTENED DISC: Steiner's formula against brute force (the area within eps of the tilted disc's outline, on a grid)
+    const brute = (r, eps, tilt) => {
+        const b = r * Math.cos(tilt * Math.PI / 180), N = 360, M = 1200, h = (r + eps) * 2 / N, rim = []
+        for (let k = 0; k < M; k++) { const t = 2 * Math.PI * k / M; rim.push([r * Math.cos(t), b * Math.sin(t)]) }
+        let n = 0
+        for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
+            const x = -r - eps + (i + 0.5) * h, y = -r - eps + (j + 0.5) * h
+            if ((x / r) ** 2 + (y / b) ** 2 <= 1) { n++; continue }
+            let d = Infinity; for (const [u, v] of rim) d = Math.min(d, (x - u) ** 2 + (y - v) ** 2)
+            if (d <= eps * eps) n++
+        }
+        return n * h * h / (Math.PI * r * b)
+    }
+    const b37 = brute(10, 0.91, 37), s37 = GR.discFatten(10, 0.91, 37)
+    ok('ch.30: the fattened disc by Steiner\'s formula matches brute force within 1% (37 degrees, 0.91 mm on 1 cm)', Math.abs(b37 / s37 - 1) < 0.01, `${b37.toFixed(4)} ${s37.toFixed(4)}`)
+    ok('ch.30: the 1 cm lamp at 0.91 mm: 1.19 face on, 1.22 at 37 degrees, the pair 0.822; 1.002 and 0.998 at 10 um; the flat world 1.11',
+        GR.discFatten(0.01, 0.00091, 0).toFixed(2) === '1.19' && GR.discFatten(0.01, 0.00091, 37).toFixed(2) === '1.22' && (1 / GR.discFatten(0.01, 0.00091, 37)).toFixed(3) === '0.822'
+        && GR.discFatten(0.01, 1e-5, 37).toFixed(3) === '1.002' && GR.flatFatten(0.01, 0.00091, 37).toFixed(2) === '1.11')
+    const two = TL.TOLERANCES.find(t => t.name === 'two steps off')
+    ok('ch.30: the gap: at 0.1 mm lost, one slab\'s 0.923; at 10 um seen, two slabs\' 0.857; the probe of the medium beyond is the table\'s twenty tolerances, mediumBeyond\'s offsetTol x 2',
+        !GR.gapSeen(GR.GAP, 1e-4) && GR.gapT(GR.GAP, 1e-4).toFixed(3) === '0.923' && GR.gapSeen(GR.GAP, 1e-5) && GR.gapT(GR.GAP, 1e-5).toFixed(3) === '0.857'
+        && two.times === GR.PROBE && two.why.includes('the medium beyond is asked this far across') && TL.TOLERANCES.find(t => t.name === 'leaving a surface').times === GR.LEAVE
+        && readFileSync(join(REPO, 'lib/pathtracer/core/tracebasics.js'), 'utf8').includes('return materialAt(SDFd(r, d * offsetTol(r.pos) * 2.0), true);')
+        && readFileSync(join(REPO, 'roadmap/PLAN.md'), 'utf8').includes('The index beyond a surface is probed 2 x the surface offset away (20 x'))
+    // THE THREE TERMS
+    const t1 = GR.terms({ extent: 0.105, dist: 0.05 }), t2 = GR.terms({ extent: 0.105, dist: 2 }), t3 = GR.terms({ extent: 10, dist: 5 })
+    ok('ch.30: the mixer 10.5 um, the setting winning at 5 cm, the floor at 2 m (30.5 um), passing it at 69 cm; a room 1 mm, passing at 65.5 m; 6.55 sizes',
+        Math.abs(t1.setting - 10.5e-6) < 1e-12 && t1.wins === 'the automatic tolerance' && t2.wins === 'the floor' && (t2.floor * 1e6).toFixed(1) === '30.5' && t1.beyond.toFixed(2) === '0.69'
+        && t3.setting === 1e-3 && t3.beyond.toFixed(1) === '65.5' && (1e-4 / (128 * 2 ** -23)).toFixed(2) === '6.55')
+    ok('ch.30: the old floor 0.1 nm in a mm scene; 10 nm at 10 m about a hundred times under 2^-23 x 10 m (1.2 um)', GR.oldFloor(1e-3) === 1e-10 && Math.round(2 ** -23 * 10 / 1e-8) === 119 && (2 ** -23 * 10 * 1e6).toFixed(1) === '1.2')
+    // THE LINT: clean as written, and each planted line named by what it reaches
+    const want = { none: null, sdf: /\(SDF\)/, eps: /\(marchEps\)/, tol: /\(SCN_TOL\)/, unit: /UB\.sceneUnit/, deep: /farAway calls the scene's side directly \(metres\)/ }
+    ok('ch.30: the real unitlint.js passes the kernel as written and names each planted line', Object.entries(want).every(([k, re]) => { const f = GR.lint(k); return re ? f.length === 1 && re.test(f[0]) : f.length === 0 }),
+        Object.keys(want).map(k => `${k}: ${GR.lint(k).join(' | ')}`).join(' // '))
+    // THE STORIES, where the page says they are
+    const td30 = readFileSync(join(REPO, 'docs/TESTING.md'), 'utf8'), cl30 = readFileSync(join(REPO, 'CHANGELOG.md'), 'utf8')
+    ok('ch.30: the numbers and stories are where the page says', td30.includes('0.838, 0.819, 0.803, 0.799') && td30.includes('1.19x its area face on, 1.22x at the') && td30.includes('at the automatic tolerance 0.822, as predicted')
+        && td30.includes('The 1 cm pairs at eps 10 um: 0.994') && td30.includes('The 0.5 mm gap at auto eps read 0.9228, one slab\'s value')
+        && readFileSync(join(REPO, 'lib/pathtracer/PRECISION.md'), 'utf8').includes('0 of 2304 rays differ') && readFileSync(join(REPO, 'lib/pathtracer/PRECISION.md'), 'utf8').includes('its automatic tolerance is 10.5 µm')
+        && readFileSync(join(REPO, 'lib/pathtracer/core/photometry.js'), 'utf8').includes("Menger's is 424 m across") && readFileSync(join(REPO, 'lib/pathtracer/core/tracebasics.js'), 'utf8').includes('WGSL\'s division is not exact (2.5 ulp)')
+        && readFileSync(join(REPO, 'roadmap/PLAN.md'), 'utf8').includes('0.211 mm in RGBW_mixer, whose lightguide is 0.200 mm in front of its dies') && cl30.includes('**The tolerance row could not go below 10 µm.** Its step was 1e-5 m')
+        && cl30.includes('5% of the sphere\'s radius') && readFileSync(join(REPO, 'lib/pathtracer/core/unitlint.js'), 'utf8').includes('the bug this repository keeps'))
+    ok('ch.30: the figures\' readouts run', Object.values(GP.figures).every(f => Object.values(f.steps).every(st => typeof f.readout({ ...f.state, ...st }) === 'string')))
+}
+
+/* CHAPTER 31: THE OPTICS BENCH --------------------------------------------------------------------------------- */
+{
+    const OK = await import('../kit/optics.js'), OF = await import('../ch/optics.js')
+    // the copied constant is the kernels'; the sums one add at a time, and the closed forms
+    const kj = readFileSync(join(REPO, 'lib/pathtracer/optics/kernels.js'), 'utf8')
+    ok('ch.31: OPT_FX and the rounding are kernels.js optAdd\'s', kj.includes('export const OPT_FX = 1 << 20') && kj.includes('let v = u32(clamp(w, 0.0, 4000.0) * OPT_FX + 0.5);') && OK.OPT_FX === 1 << 20 && OK.fixedUnits(0.7) === 734003)
+    ok('ch.31: the float sum jumping through runs equals one add at a time', [[1, 1e5], [0.7, 3e6], [0.3, 2e6], [1, 2 ** 24 + 20]].every(([w, n]) => OK.f32Sum(w, n) === OK.f32SumSlow(w, n)))
+    ok('ch.31: weight 1 stalls at 2^24 (half after 2^25); 0.7 is 5.78% low after 2^23; the integer pair 2.7e-7 off', OK.f32Sum(1, 2 ** 25) === 2 ** 24 && ((OK.f32Sum(0.7, 2 ** 23) / (0.7 * 2 ** 23) - 1) * 100).toFixed(2) === '-5.78'
+        && Math.abs(OK.intSum(0.7, 2 ** 23).read / (0.7 * 2 ** 23) - 1 + 2.7e-7) < 2e-8)
+    const t = OK.twoOrders()
+    ok('ch.31: one set of weights in two orders: two floats, one integer', t.forward !== t.backward && t.intForward === t.intBackward)
+    ok('ch.31: a cos^n source\'s I0 and beam angles: 318 cd and 120 for n 1, 58.95 for n 5', OK.I0(1).toFixed(0) === '318' && OK.beamAngle(1).toFixed(2) === '120.00' && OK.beamAngle(5).toFixed(2) === '58.95' && Math.abs(OK.floorE(5, 0) - 6000 / (2 * Math.PI)) < 1e-9)
+    // the far field's figures: the numbers the page gives
+    const bs = st => { const b = OF.beamOf({ ...OF.figures.beam.state, ...st }); return { up: b.st.max.I / OK.I0(st.n) - 1, beam: b.st.planes[0].beam.width } }
+    const S = OF.figures.beam.steps, L = bs(S.lambert), Fw = bs(S.few), M = bs(S.many), Pp = bs(S.pooled)
+    ok('ch.31: the page\'s beams: Lambertian 14% high and 111 deg; cos^5 at 20,000 34% and 44; at 2 million 2% and 57.8; pooled at 200,000 1% and 58.9',
+        Math.round(L.up * 100) === 14 && Math.round(L.beam) === 111 && Math.round(Fw.up * 100) === 34 && Math.round(Fw.beam) === 44 && Math.round(M.up * 100) === 2 && M.beam.toFixed(1) === '57.8'
+        && Math.round(Pp.up * 100) === 1 && Pp.beam.toFixed(1) === '58.9', JSON.stringify([L, Fw, M, Pp]))
+    {
+        // the far field over many rays holds the closed form, the pooled curve at every angle within 3%
+        const far = OK.farOf(5, 2e6, { seed: 9 }), R = OK.intensity(far, { symmetry: 'rotational' }), c = OK.planeCurve(R, 0).points.filter(q => q.a >= 0 && q.a <= 60)
+        ok('ch.31: two million cos^5 rays, pooled: the intensity within 3% of I0 cos^5 out to 60 degrees', c.every(q => Math.abs(q.I / (OK.I0(5) * Math.cos(q.a * Math.PI / 180) ** 5) - 1) < 0.03), c.map(q => (q.I / (OK.I0(5) * Math.cos(q.a * Math.PI / 180) ** 5)).toFixed(3)).join(' '))
+    }
+    const mp = st => OF.mapOf({ ...OF.figures.map.state, ...st }), MS = OF.figures.map.steps, mid = m => m.E[Math.floor(m.ny / 2) * m.nx + Math.floor(m.nx / 2)]
+    const m1 = mp(MS.plain), m2 = mp(MS.few), m3 = mp(MS.gauss), m4 = mp(MS.knn)
+    ok('ch.31: the page\'s maps: 29 hits a cell and 19% at 50,000; 4 and 51% at 5,000; Gaussian 10%, 8 cm, its middle 831; nearest 32, 18%',
+        Math.round(m1.hitsPerLitCell) === 29 && Math.round(m1.relNoise * 100) === 19 && Math.round(m2.hitsPerLitCell) === 4 && Math.round(m2.relNoise * 100) === 51
+        && Math.round(m3.relNoise * 100) === 10 && Math.round(m3.bandwidthM * 100) === 8 && Math.round(mid(m3)) === 831 && Math.round(m4.relNoise * 100) === 18)
+    {
+        // over many rays the plain map's middle row holds the closed form within its noise
+        const m = OK.floorMap(5, 400000, { seed: 4 }), row = Math.floor(m.ny / 2)
+        let worst = 0
+        for (let i = 4; i < m.nx - 4; i++) { const x = m.range.a[0] + (i + 0.5) * m.cell, e = OK.floorE(5, Math.abs(x)); if (e > 100) worst = Math.max(worst, Math.abs(m.E[row * m.nx + i] / e - 1)) }
+        ok('ch.31: 400,000 rays: the map\'s middle row within 15% of the closed form wherever it is over 100 lux (its cells about 7% noise there)', worst < 0.15, worst.toFixed(3))
+    }
+    const rd = readFileSync(join(REPO, 'lib/pathtracer/optics/README.md'), 'utf8'), td31 = readFileSync(join(REPO, 'docs/TESTING.md'), 'utf8')
+    ok('ch.31: the stories and numbers are where the page says', rd.includes('The largest of many noisy') && rd.includes('took 1.4 s with the picture running and 0.2 s with it stopped')
+        && td31.includes('slab 0.9991 / 0.9999 / 1.0007') && td31.includes('`vs polar.` 0.9991 / 0.9966 / 0.9721') && /\| `optics-farfield` \|[^\n]*cos⁵ 58\.98°[^\n]*open — first press/.test(td31)
+        && td31.includes('4247 K, du\'v\' 0.013 -- from a 3 x 3 sensor holding ~17 blue photon hits, where one sigma is 250 K') && td31.includes('3999.9 K')
+        && readFileSync(join(REPO, 'lib/pathtracer/optics/zemax.js'), 'utf8').includes('was read 7 at a time: garbage') && kj.includes('immune to the retry'))
+}
+
 /* THE EXCERPT LOCATOR ON ITS OWN ----------------------------------------------------------------------------------- */
 {
     const text = [

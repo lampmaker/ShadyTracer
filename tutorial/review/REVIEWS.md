@@ -661,14 +661,15 @@ record now say what the model shows.
 | 24 | Long lines cut; b, c, h, e; kind and join codes; UB; "1 copies"; 6,794 below 6,795; "runs faster" on the card. | **Fixed**, each: the lines wrap. |
 | all | Sections 4 to 6 written for a developer. | **Not changed** beyond the glosses: those sections are where the page meets the code, and say so. |
 
-## Round 9, 2026-10-19 (chapters 25 to 29)
+## Round 9, 2026-10-19 (chapters 25 to 30)
 
 The chapters of Part VII, each read twice, by a fresh reader each time, on the same brief. Reports:
 chapter 25, [first](reports/2026-10-19-round9/measure-1.md) and [second](reports/2026-10-19-round9/measure-2.md);
 chapter 26, [first](reports/2026-10-19-round9/steps-1.md) and [second](reports/2026-10-19-round9/steps-2.md);
 chapter 27, [first](reports/2026-10-19-round9/compiles-1.md) and [second](reports/2026-10-19-round9/compiles-2.md);
 chapter 28, [first](reports/2026-10-19-round9/feel-1.md) and [second](reports/2026-10-19-round9/feel-2.md);
-chapter 29, [first](reports/2026-10-19-round9/checking-1.md) and [second](reports/2026-10-19-round9/checking-2.md).
+chapter 29, [first](reports/2026-10-19-round9/checking-1.md) and [second](reports/2026-10-19-round9/checking-2.md);
+chapter 30, [first](reports/2026-10-19-round9/precision-1.md) and [second](reports/2026-10-19-round9/precision-2.md).
 
 ### Chapter 25, Measure first
 
@@ -878,6 +879,54 @@ thousand pixels seRatio spreads by 3% (computed), and the figure's set is an unl
 | "A third of before" for 2.7. | **Fixed**. |
 | 1000.000244 not 1000. | **Fixed**: 32-bit rounding, stamped inferred. |
 | The check-shaders excerpt still opaque. | **Not changed**: it is introduced as a check that could pass without checking; its words are chapter 21's and 27's. |
+
+### Chapter 30, Numbers have grain
+
+**First read.** The teach-back held all five ideas. The reader then caught two things the page had wrong. The lamp
+was "2 cm across" in the text and "the 1 cm disc" in the readout and section 6: it is a disc of radius 1 cm, as the
+bench names it. And reading why the gap reads *exactly* one slab sent me back to the code: the page said a ray
+leaving the first slab is moved on ten tolerances past the gap. The decisive length is another: where a ray meets
+glass, the medium beyond the face is asked for twenty tolerances across (`tracebasics.js` mediumBeyond; the plan's
+"Thin air gaps — open"). Past the gap the answer is the second slab's glass, so the face between reads glass to
+glass, no face at all, and the two slabs are traced as one: two faces, one slab's 0.923. The figure now draws that
+probe, and a test holds its length to the code.
+
+| Finding | |
+|---|---|
+| 1 cm against 2 cm. | **Fixed**: radius 1 cm, 2 cm across, everywhere. |
+| Steiner face on gives 1.19, not 1.22. | **Fixed**: 1.19 face on, and why 37° raises it (a narrower outline, the same margin). |
+| Why more traced area means more light; which of the bench's pair is fattened. | **Fixed**: light in proportion to area; the light's rays start on the disc, the glowing object's are found by rays. |
+| Why exactly one slab. | **Fixed**, and the mechanism corrected (above). |
+| The readout's "pair reading" against the measured values. | **Fixed**: "predicted to read". |
+| "A fixed share" against "one to two steps". | **Fixed**: a step is between 2⁻²⁴ and 2⁻²³ of the number. |
+| 0.001 not exact in f32. | **Fixed**: a multiplication rounds by half a step at most; a metre scene's factors are 1. |
+| 10 nm in autoEps against the 1 nm minimum. | **Fixed**: two minimums, said. |
+| The centimetre bug unrebuildable. | **Fixed**: distances squared in cm², 10,000 times those in m²; the arithmetic stamped inferred. |
+| Figure 2's caption ("each mark ten times") against its y labels; the nanometre's colour; Try it at the origin off the axis. | **Fixed**, all three. |
+| The lint's text clipped; "a scene global read" with no paragraph; which three functions. | **Fixed**: wrapped shorter; a paragraph and step; SDF, getMaterial2, lightFace. |
+| h.s.w; grey rays; "drawn ten times larger". | **Fixed** in the notes and caption. |
+| Cards for kernel, engine, host, uniform, bench row. | **Partly**: the bench linked to its card; kernel and uniform have cards linked in earlier chapters; the page is Part VIII, read after them. |
+
+**Second read.** The quiz came out whole, the gap's probe understood at a glance. What the reader needed was order:
+section 3 used "the engine" and "the scene" without saying what they are, and "multiplies, never divides" before
+saying there are two factors. And three sentences were wrong or seemed so: "always far outside the scene" is false
+for a capped scene (its floor passes 1 mm at 65.5 m, inside Menger's 424 m); the bench's card said "a fixed test of
+speed" while this page uses it for light; and the predicted 0.998 sat beside a measured 0.994 unremarked.
+
+| Finding | |
+|---|---|
+| Engine, scene, kernel undefined; the two factors after "never divides". | **Fixed**: section 3 opens with both kinds of code and the two factors. |
+| "Always far outside the scene" for capped scenes. | **Fixed**: below the cap; a capped scene's floor can take over inside it, where the numbers are coarser than 1 mm. |
+| The bench card says speed. | **Fixed**: a fixed test of speed or of the picture. |
+| 0.998 against 0.994. | **Fixed**: the test's other pairs read 0.995. |
+| 37° from where; "the light over"; photons. | **Fixed**: the axis drawn, the floor's angle said, a ratio said; photons dropped. |
+| The three lengths in one block; the broken nanometre sentence; 128 against 128 to 256; why 23. | **Fixed**: a list; one formula, 128 to 256 steps; a float's 24 binary digits. |
+| The table's row for the probe not shown. | **Fixed**: the excerpt runs to the row's why ("the medium beyond is asked this far across"); "across" said as "past the face". |
+| Section 5 calling twenty tolerances the shadow ray's; rays on the disc against two tolerances off. | **Fixed**: the row's uses together; the two-tolerance start is the optics trace's lights. |
+| Figure 2's lines unlabelled; the flat old floor not pointed out. | **Fixed**: each line named on the plot; the paragraph says the old floor is flat. |
+| metres() as the scene's; the unit plant dividing. | **Fixed**: what metres(x) does, and why from the engine it multiplies twice; the plant's division remarked. |
+| The lint's messages full of jargon. | **Not changed**: they are the lint's own words; the caption says they are written for the engine's developers. |
+| Try it's third question a trick. | **Fixed**: it asks what each complaint names. |
 
 ## Next round
 

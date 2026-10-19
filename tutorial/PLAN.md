@@ -316,8 +316,21 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
     seRatio), measure.js, check-shaders.mjs (pass two's reason). Measured: the furnace's runs (Pascal), the sun's rim,
     rough glass, roulette's non-bias. Never run and said so: `error-bar`. *Read:* pbr-mcbasics, wiki-bias,
     wiki-consistent.
-30. **Numbers have grain**: f32 spacing, one tolerance, offsets, metres inside, the unit lint.
-31. **The optics bench**: far field, illuminance maps, ray files.
+30. **Numbers have grain** (draft): a tolerance fattens every shape, a 2 cm lamp in the flat world and by Steiner's
+    formula in 3D (the bench's finding 7: 1.22 predicted, 0.80-0.84 measured), and two slabs whose 0.5 mm gap a ray
+    leaving the first steps over (fresnel.js: one slab's 0.923 for two's 0.857); the tolerance's three terms against
+    the distance from the origin for a scene's size, by tolerances.js and photometry.js, and the floor before 0.36.0;
+    a few lines of an engine kernel with one planted, through the real unitlint.js against the real boundary. Chapter
+    4 keeps the f32 normal noise and why 128. -> photometry.js autoEps, tolerances.js TOLERANCES, scene_api.js
+    sceneAt, tracebasics.js's two factors, unitlint.js. Measured: finding 7 (Ampere), the gap (Pascal), mm against m
+    (lavapipe). Inferred and said: the RGBW mixer's pattern. *Read:* wgsl-spec, iq-raymarching.
+31. **The optics bench** (draft): a cos^n source's rays binned by farfield.js's own farBin into intensity on a polar
+    diagram, the peak read high by the largest of many noisy bins and the beam angle with it, and pooling round the
+    axis; the same source over a floor mapped by detmap.js detectorMap, plain, Gaussian and the photon map's nearest
+    hits, against E = I0 cos^(n+3) / h^2; a ray total in a 32-bit float stalling at 2^24 against the kernels' integer
+    pair (OPT_FX copied). -> kernels.js optAdd, farfield.js farBin, detmap.js's smoothing, estimate.js. Measured:
+    optics-refraction (Pascal), the readbacks, the colour mix. Never run and said so: optics-farfield. *Read:*
+    pbr-radiometry, wiki-photometry.
 
 **IX. Build your own**
 32. **A ray tracer in one page**: the flat world explained line by line, then extended.

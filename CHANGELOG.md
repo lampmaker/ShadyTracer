@@ -17,7 +17,7 @@ as PLAN.md does.
 
 ## 0.67.2 — 2026-10-18
 
-**A developer tutorial beside the program: its plan, its figure kit, eight styles and its first thirty chapters**
+**A developer tutorial beside the program: its plan, its figure kit, eight styles and its first thirty-two chapters**
 (you: "a tutorial for shadytracer, parallel to the program … that explains the inner workings of the code … interactive,
 2D visualisations … a solid toolkit for that so it looks the same everywhere … start with a plan and list of contents,
 then a few pages … make a few mockups of different styles"). Nothing in the application changed: the tutorial is
@@ -100,8 +100,17 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   window, each with the error bar `measure.js` keeps, against a true value computed over a million paths: precise and
   wrong side by side; the white furnace with one disc, its rows and a control, on a working page and broken the two
   ways ShadyTracer's was, every row and the control reading 1; a thousand pixels' error bars against their real spread,
-  and the bench's seRatio catching an EMA window taken for its count); chapter 2, *Shapes as distances*; chapter 14, *Aim at the light* (next event estimation); the contents
-  map; a glossary of 148 terms, each linked from the pages with a card on hover or tap.
+  and the bench's seRatio catching an EMA window taken for its count); chapter 30, *Numbers have grain* (a
+  tolerance fattening every shape: a 2 cm lamp traced too large, in the flat world and by Steiner's formula in 3D, the
+  bench's 1.22 and its pair's 0.82; two slabs whose 0.5 mm gap a ray leaving the first steps over; the tolerance's three
+  terms against the distance from the origin by the engine's own tolerances.js and photometry.js, and the floor before
+  0.36.0; a few lines of an engine kernel with one planted, through the real unitlint.js against the real boundary);
+  chapter 31, *The optics bench* (a cos^n source's rays binned by direction with `farfield.js`'s own farBin into
+  intensity on a polar diagram, its peak read high by the largest of many noisy bins and the beam angle with it, and
+  pooling round the axis; the same source over a floor mapped by `detmap.js` plain, Gaussian and by the photon map's
+  nearest hits; a ray total in a 32-bit float stalling at 2^24 against the optics kernels' integer pair);
+  chapter 2, *Shapes as distances*; chapter 14, *Aim at the light* (next event estimation); the contents
+  map; a glossary of 150 terms, each linked from the pages with a card on hover or tap.
 - **The kit** (`tutorial/kit/`): one pen draws every figure in the style's colours and line; a figure is a spec with
   state, controls, drag handles and steps that the paragraphs beside it trigger as they scroll by. The figures trace a
   flat world (`kit/flatland.js`): signed distance shapes from the help's 2D mirrors of `sdf.js`, sphere tracing, a
@@ -221,7 +230,11 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   the engine's rule a short budget costs mostly samples, as the flush's comment says, and light only when very short
   (over 20 runs: the mean held at 12 and 10 iterations, fell 4% at 8 and 30% at 4); round seven had called that comment
   wrong, and the page and REVIEWS.md now say what the model shows.
-- **Chapters 25 to 29** (round nine, two readers each): chapter 28's second reader did the page's arithmetic and
+- **Chapters 25 to 30** (round nine, two readers each; 31's still to come): chapter 30's first reader asked why two
+  slabs 0.5 mm apart read exactly one slab, and the answer corrected the page: not the ten tolerances a ray leaving a
+  surface is moved on, but the twenty across at which the medium beyond a face is asked (`tracebasics.js`
+  mediumBeyond); past the gap it finds glass, so the face between reads glass to glass. Its second reader found "the
+  floor passes the setting far outside the scene" false for a capped scene, which the page now says. chapter 28's second reader did the page's arithmetic and
   found two sentences wrong: the slicing floor's batch count is rounded up, so 921,600 pixels make 57 batches of about
   16,168 rays, a little under the 16,384 the engine's comment says no batch goes under (reported, not changed); and
   every batch runs all the iterations, 24 at the defaults and 38 at High quality. Chapter 29's readers asked for the
@@ -314,6 +327,12 @@ What to look at:
   the cache off, and the four kernels declaring the scene's uniforms at *Open B* (seven compile, not three), pointing at
   a row for its job; the maths fold-out's table against the *Learning the machine* readout; the bar with the build at 0.5, 1.3 and 3 times its prediction, pointing at
   the curves; *Learning the machine* from 0.15 to 6.
+- **Chapter 31, The optics bench**: the beam at 20,000 rays with *Other rays* pressed a few times (is the peak ever
+  low?), then 2 million, then pooled; the map from 1,000 to 100,000 rays, each smoothing; the tally's weights past
+  2^24.
+- **Chapter 30, Numbers have grain**: the lamp from 1 µm to 3 mm and 0 to 75°, the red rays the tolerance adds; the
+  gap across the point where ten tolerances pass 0.5 mm; the three terms with the point dragged out past the scene,
+  and the old floor's step; each planted line in the lint.
 - **Chapter 29, Noise, bias and checking**: the four readings, then *Other paths* a few times on each: does the
   whole path's band hold the true value, and the cut one never? The furnace on each page (do the strips read as a
   picture of a disc?); the error bars from 2 to 512 samples, true mean and window, and the window's wrong error bar.
