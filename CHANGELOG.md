@@ -17,7 +17,7 @@ as PLAN.md does.
 
 ## 0.67.2 — 2026-10-18
 
-**A developer tutorial beside the program: its plan, its figure kit, eight styles and its first twenty-six chapters**
+**A developer tutorial beside the program: its plan, its figure kit, eight styles and its first twenty-seven chapters**
 (you: "a tutorial for shadytracer, parallel to the program … that explains the inner workings of the code … interactive,
 2D visualisations … a solid toolkit for that so it looks the same everywhere … start with a plan and list of contents,
 then a few pages … make a few mockups of different styles"). Nothing in the application changed: the tutorial is
@@ -83,8 +83,12 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   `compileprogress.js`'s fitted compile model); chapter 25, *Measure first* (the plan that was reverted, told by the
   benchmark's first full run; one sample's compute passes as timestamps, the times a model and the reading the engine's
   own `kerneltime.js`, rounded as a browser rounds them; the same code's drift, and two builds compared in separate
-  runs or interleaved under a model of it); chapter 2, *Shapes as distances*; chapter 14, *Aim at the light* (next event estimation); the contents
-  map; a glossary of 139 terms, each linked from the pages with a card on hover or tap.
+  runs or interleaved under a model of it); chapter 26, *Fewer and cheaper steps* (a shelf of six objects, two with
+  reliefs, and 48 camera rays with every step's cost counted: every object at every step, culling boxes on every object
+  and on the dear ones only, the reliefs in their shell; why only at the root, a lens and a blend with one disc culled
+  inside the join; one relief divided everywhere or shelled, with the modifier's slope bound or the measured one; the
+  step cache's balls, its own cell and the cells ahead, and the fill that read the copy with boxes); chapter 2, *Shapes as distances*; chapter 14, *Aim at the light* (next event estimation); the contents
+  map; a glossary of 142 terms, each linked from the pages with a card on hover or tap.
 - **The kit** (`tutorial/kit/`): one pen draws every figure in the style's colours and line; a figure is a spec with
   state, controls, drag handles and steps that the paragraphs beside it trigger as they scroll by. The figures trace a
   flat world (`kit/flatland.js`): signed distance shapes from the help's 2D mirrors of `sdf.js`, sphere tracing, a
@@ -204,6 +208,15 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   the engine's rule a short budget costs mostly samples, as the flush's comment says, and light only when very short
   (over 20 runs: the mean held at 12 and 10 iterations, fell 4% at 8 and 30% at 4); round seven had called that comment
   wrong, and the page and REVIEWS.md now say what the model shows.
+- **Chapters 25 and 26, read twice each** (round nine): chapter 25's readers found two steps showing nothing new, four
+  measures of spread called by one name, and the rounding's key idea missing; each is fixed, the last with a view of
+  its own. Chapter 26's figures are tested against true distances, not the scene's own bounds: a box's distance can be
+  more than a relief's divided field or a lens's formula, both underestimates, and never more than the truth.
+- **Two things chapter 26 reports, not changed:** `wavefront.js` says the cache filled once was "6 to 22% faster" than the
+  lazy fill "on every scene"; the run it cites found one scene, in one mode, 2% apart, within its noise
+  (`roadmap/ARCHITECTURE.md`). And in the chapter's model a relief in its shell costs about its box test when far, so
+  its box would no longer pay; every culling run on the card used the frozen Noise library, whose reliefs have no
+  shell, so whether that holds is not measured.
 - **Where to read more** (you: "add a box with recommended external references, eg where you learned the info. Inigo
   quilez definitely needs to be named. Probably more than once"): reading boxes beside the sections they belong to,
   every chapter at least one, from one list (`tutorial/kit/reading.js`) whose every link was opened and checked. Inigo
@@ -265,8 +278,12 @@ What to look at:
 - **Chapter 24, From scene tree to shader**: drag the ball and add one in each of the three ways, watching the compile
   count; the objects and call sites of the second figure.
 - **Chapter 25, Measure first**: the three views of the first figure; the second's passes, by kernel and by iteration,
-  then rounded to 100 µs (do the outlined zero-length passes read clearly?); the third's true difference from 0 to 30%
-  in separate runs and interleaved, *Compare again*.
+  then rounded to 100 µs (do the outlined zero-length passes read clearly?), and *One pass, rounded*, dragging the pass
+  across a tick; the third's four readings, then the true difference from 0 to 30% in separate runs and interleaved,
+  *Compare again*.
+- **Chapter 26, Fewer and cheaper steps**: the first figure's three box settings with and without the shell, pointing at
+  a ray; the second's lens and blend with B culled inside the join, P dragged; the shell's roughness slid from 0.04 to
+  0.3; the step cache's three settings, pointing at a jump to see its ball. Is the cost model's bar enough to follow?
 - **Chapter 16's first figure**: 1 sample (boxes, nothing circled), then 8. Chapter 17's side view, *near*: the ray from
   the lens's top edge, in its own colour, and its mark on the picture; and its 3D picture's *the first 2* samples. Chapter 0's lamp figure at r = 1 and 2.
 - **The new styles.** Lab notebook's new lettering; Chalkboard (try it dark); the three drafting versions side by side

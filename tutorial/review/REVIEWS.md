@@ -661,6 +661,51 @@ record now say what the model shows.
 | 24 | Long lines cut; b, c, h, e; kind and join codes; UB; "1 copies"; 6,794 below 6,795; "runs faster" on the card. | **Fixed**, each: the lines wrap. |
 | all | Sections 4 to 6 written for a developer. | **Not changed** beyond the glosses: those sections are where the page meets the code, and say so. |
 
+## Round 9, 2026-10-19 (chapters 25 and 26, two reads each)
+
+The first two chapters of Part VII, each read twice, by a fresh reader each time, on the same brief. Reports:
+chapter 25, [first](reports/2026-10-19-round9/measure-1.md) and [second](reports/2026-10-19-round9/measure-2.md);
+chapter 26, [first](reports/2026-10-19-round9/steps-1.md) and [second](reports/2026-10-19-round9/steps-2.md).
+
+### Chapter 25, Measure first
+
+**First read.** The teach-back held the chapter's argument. Two figure steps showed nothing new: *Every scene* came out
+as *One scene* in the screenshot, and *readings* was the same state as *separate*. The words a beginner lacks were
+"sample" (used for a whole section before its card), the kernels' names, and compute pass. The reader also asked why
+rounding averages out, and how the reliefs' rows add up to the scene's time.
+
+| Finding | |
+|---|---|
+| "Sample" used before it is said. | **Fixed.** Said in section 1's first paragraph, with its card. |
+| Kernel names, compute pass, dispatch never explained. | **Fixed.** A sentence each, before the figure. |
+| Why one rounded pass is wrong and many are right. | **Fixed.** A fourth view, *One pass, rounded*: a pass dragged across a tick, its two rounded stamps, and 10,000 random placements averaging its length (`oneRounded`, held by the test). |
+| *Every scene* screenshot showed one scene; *readings* the same as *separate*. | **Fixed.** The first was not reproduced: nothing in that figure changed, and the next extraction showed every scene (inferred: the extractor's timing). *readings* is a view of its own: the four readings, their range and spread. |
+| The reliefs' rows add up to 565 ms, not 736.5. | **Fixed.** The run's own note: alone the six add 484 ms, together 655; it records the difference and does not explain it. Held by the test, and the rows' names by the frozen scene's amount and size. |
+| "Chrome documents 100 µs" against the run's 32.768 µs. | **Fixed.** Chrome 154 in run 5 read 32.768; the notes do not explain the difference. |
+| The gap 0.4 against the rounded 0.20; "a tenth of a millisecond each over 24 passes"; prep_occlude 0.2. | **Fixed**, each: the rounded gap said; the 24 passes together; what it read and what it took. |
+| ±20%, 9.3%, 16%, 38%: four measures; "points". | **Fixed.** Range and spread defined; a point is one percent. |
+| Pascal and GTX 1080 Ti. | **Fixed.** Said once, where the card is first named. |
+| Figure 3's axis; the 0 line; the readout's 5 points against the text's 2. | **Fixed.** Labelled; the readout gives both. |
+| "Free" in the code against "nothing visible". | **Fixed.** The stamp now says the header's "not free" and why it does not show. |
+| Opaque words in the excerpts (query set, descriptor, mappable, overflow, schema default, uncached compile, the hash's constants). | **Fixed** in each excerpt's note. |
+
+**Second read.** Clearer: the tick view was "the best figure on the page", and the quiz was answered from it. What was
+left was a set of precise objections, each right.
+
+| Finding | |
+|---|---|
+| "Range" meant highest over lowest in section 3 and highest less lowest over the mean in section 5. | **Fixed.** One meaning, highest over lowest (section 5: 9.7%, the notes' 9.3% of the mean named as theirs). |
+| The 16% not reproducible from "the usual distance from the mean". | **Fixed.** The sample standard deviation, said step by step (`driftSpread`). |
+| The model's 1.5% within a run against section 5's 9.3% within a run. | **Fixed.** Rows next to each other (0.38%, 1.3%) against rows far apart; how A, B, A, B becomes one number. |
+| The 32, 128 and 400 steps never reconciled; budget, worst case, "cut short". | **Fixed.** Said once in the budget story: 400 steps in all, 32 an iteration, 11 legs, the worst case 24, 128 making it 15. |
+| *stamps* the same screenshot as *passes*. | **Fixed.** It marks one march pass's two stamps in nanoseconds. |
+| Red for genrays and resolve and for "read as 0"; surface's purple not in the caption; occlusion and the prep kernels both grey in some styles. | **Fixed.** Genrays and resolve in ink, the small kernels teal; the caption names every colour. |
+| The rounded step's prep_march 0 and prep_occlude 0.2 not shown. | **Fixed.** In the readout, beside what they took. |
+| 4.33 against 4. | **Fixed.** Said: an average of random draws wobbles round the truth. |
+| Section 2's kernel list too long for a beginner (the first reader wanted it). | **Shortened**, not removed: one sentence, the work kernels named by what they do, the four small ones together. |
+| Section 6's stories too dense. | **Partly.** The budget story rewritten with its numbers; the others keep their length and citations, as every chapter's section 6 does. |
+| Why a fine clock is dangerous; WebGPU itself. | **Fixed**, briefly: a page timing other code; the browser's way of handing the card work. |
+
 ## Next round
 
 The pages stay drafts. Every written chapter has now had two readers (chapters 5 to 11 in rounds 5 and 6); the

@@ -89,8 +89,8 @@ export const CHAPTERS = [
 
     C('speed', 'measure', 'Measure first', 'Timing the graphics card, and a plan built on guesses that was undone.', 'draft',
         [`${K}kerneltime.js`, `${P}tests.js`, 'bench/', 'docs/PERFORMANCE.md', 'docs/PERFORMANCE_REVIEW.md', 'tutorial/kit/timing.js']),
-    C('speed', 'steps', 'Fewer and cheaper steps', 'Making each ray take fewer and cheaper steps; what was tried and taken out again.', 'planned',
-        ['builder/boxes.js', 'builder/stepbox.js', `${K}wavefront.js`]),
+    C('speed', 'steps', 'Fewer and cheaper steps', 'Making each ray take fewer and cheaper steps; what was tried and taken out again.', 'draft',
+        ['builder/boxes.js', 'builder/stepbox.js', `${K}wavefront.js`, `${K}scene_api.js`, 'builder/modifiers.js', 'builder/plainshape.js', 'tutorial/kit/steps.js']),
     C('speed', 'compiles', 'Faster compiles', 'Getting a scene\'s programs ready sooner.', 'planned',
         [`${K}compileprogress.js`]),
     C('speed', 'feel', 'Feeling fast', 'Keeping the program quick to answer while it renders.', 'planned',

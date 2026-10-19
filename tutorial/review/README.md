@@ -256,6 +256,13 @@ real student.
 4. What does a browser's rounding of timestamps do to one pass, and to the sum of many?
 5. Why can two runs of the same code read different times, and how do you compare two versions anyway?
 
+**steps** (Fewer and cheaper steps)
+1. Why does every step of a ray cost something for every object in the scene, and what makes a step dear?
+2. How does a box let an object be skipped, and why is the answer still safe to step by?
+3. Why does ShadyTracer put boxes only around some objects, and only at the top of the scene?
+4. What is a relief's shell, and why did it save less than was expected?
+5. How can a ray move without asking the scene at all, and what went wrong with the first way the cache was filled?
+
 **index** (the contents)
 1. What will you learn in this tutorial, and do you need to know anything before starting?
 2. What do the three stamps mean?

@@ -279,8 +279,16 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
     builds compared in separate runs or interleaved under a model of it. -> CLAUDE.md (the rule), kerneltime.js (its
     header, tally), bench/index.js (what is fixed), tests.js (the kernels' fingerprint). Measured: PERFORMANCE.md's runs
     1, 2 and 5, PERFORMANCE_REVIEW.md's drift table. *Read:* webgpu-timing, chrome-webgpu-dev.
-26. **Fewer and cheaper steps**: culling boxes, boxes on dear nodes only, relief shells, the step cache, what was
-    measured and removed. *Read:* iq-bounding (Quilez on bounding volumes for SDFs), keinert2014.
+26. **Fewer and cheaper steps** (draft): a shelf of six objects in the flat world, two with reliefs, and 48 camera
+    rays with every step's cost counted under a model's costs (`kit/steps.js`: a plain shape 1, a box test 1, a layer
+    of noise 4): every object at every step, culling boxes on every object, on the dear ones only, and the reliefs in
+    their shell; why only at the root (a lens and a blend, one disc culled inside the join: a surface where there is
+    none, a bridge gone); one relief divided everywhere or in its shell, with the modifier's 17.2 or the measured 11.2;
+    the step cache's balls, its own cell and the cells ahead, filled from the copy with boxes (the orange shell).
+    -> scene_api.js (cullDist, cullMargin), codegen.js (the root's comment, `culled`, the CULL line), modifiers.js
+    (reliefCode), wavefront.js (scStep, the march's cache step). Measured: PERFORMANCE.md's runs 3 to 5 (culling, the
+    shell), ARCHITECTURE.md's boxcost and stepcache runs. Inferred and said so: with the shell, a relief's box may no
+    longer pay. *Read:* iq-bounding, hart1996, keinert2014.
 27. **Faster compiles**: off-thread, `noUnroll`, one copy of the scene per kernel, the pipeline cache.
 28. **Feeling fast**: the governor, fast-while-moving, presets, slicing, the watchdog, uploading only what moved.
 

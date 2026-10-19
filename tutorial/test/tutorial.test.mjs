@@ -1139,6 +1139,110 @@ for (const [name, { mod }] of modules) {
     ok('ch.25: the readings spread 16%; separate runs read a 10% gain the wrong way 17 times in 40 and within 5 points 8 times; interleaved never wrong, 37 within 2', TI.driftSpread().toFixed(2) === '0.16'
         && sep.filter(v => v >= 0).length === 17 && sep.filter(v => Math.abs(v + 0.1) <= 0.05).length === 8 && int.filter(v => v >= 0).length === 0 && int.filter(v => Math.abs(v + 0.1) <= 0.02).length === 37)
     ok('ch.25: the Noise library 7.7 times the demo, its reliefs removed beside Surface materials', (736.5 / 95.6).toFixed(1) === '7.7' && Math.abs(81.1 - 80.0) < 2)
+    // the reliefs alone and together: 484 summed against 655, as the run's notes say, and the rows' names their amount / size
+    const alone = ME.RELIEFS.slice(3).reduce((a, [, v]) => a + v - 81.1, 0), flat = pf.replace(/\s+/g, ' ')
+    const noise = JSON.parse(readFileSync(join(REPO, 'bench/scenes/noise.json'), 'utf8')), rel = noise.root.children.filter(c => c.params?.amount != null).map(c => `${c.params.amount} mm / ${c.params.size} mm`)
+    ok('ch.25: the six reliefs alone add 484 ms summed, together 655; each row named by its relief\'s amount / size in the frozen scene', Math.round(alone) === 484 && Math.round(736.5 - 81.1) === 655
+        && flat.includes('the six alone add 484 ms summed, and together they add 655 ms') && rel.length === 6 && ME.RELIEFS.slice(3).every(([n], i) => n.startsWith(`only relief ${rel[i]}`)), rel.join(', '))
+    // rounding: a pass reads the ticks between its two rounded stamps, its own length on average
+    const o1 = ME.oneRounded(137, 4, 100), o2 = ME.oneRounded(98, 4, 100), mean = [[4, 100], [40, 100], [4, 32.768], [150, 100]].map(([l, tk]) => ME.oneRounded(0, l, tk).mean / l)
+    ok('ch.25: a 4 us pass at 137 us reads 0, across the tick at 100 reads 100; over 10,000 at random starts each reads its own length within 10%', o1.read === 0 && o2.read === 100 && mean.every(m => Math.abs(m - 1) < 0.1), mean.map(m => m.toFixed(3)).join(' '))
+    ok('ch.25: rounded, the gaps read 0.20 ms against 0.39', r1.r.gapMs.toFixed(2) === '0.20')
+    ok('ch.25: the readings\' range 38% and spread 16%; run 2\'s 9.3% a range over the mean; maxiter 128 makes the worst case 15', ((255.5 / 184.7 - 1) * 100).toFixed(0) === '38'
+        && ((784.2 - 714.9) / ((737.3 + 784.2 + 714.9) / 3) * 100).toFixed(1) === '9.3' && 11 + Math.ceil(128 / 32) === 15)
+}
+
+/* CHAPTER 26: FEWER AND CHEAPER STEPS --------------------------------------------------------------------------- */
+{
+    const ST = await import('../ch/steps.js'), K = await import('../kit/steps.js'), NZ = await import('../../lib/pathtracer/core/noise.js')
+    const api = readFileSync(join(REPO, 'lib/pathtracer/core/scene_api.js'), 'utf8'), cg = readFileSync(join(REPO, 'builder/codegen.js'), 'utf8')
+    const wf = readFileSync(join(REPO, 'lib/pathtracer/core/wavefront.js'), 'utf8'), tb = readFileSync(join(REPO, 'lib/pathtracer/core/tracebasics.js'), 'utf8')
+    const { MODIFIERS } = await import('../../builder/modifiers.js'), relief = MODIFIERS.relief.code
+    // THE MIRRORS, held to the engine's text: what kit/steps.js does is what these lines say
+    ok('ch.26: cullDist is the exact box distance and -1 unknown; the margin ten surface tolerances; skipped while farther, CULL standing in where nearer', api.includes('if (lo.w == 0.0) { return -1.0; }')
+        && api.includes('return length(max(d, VEC3(0.0))) + min(max(d.x, max(d.y, d.z)), 0.0);') && api.includes('fn cullMargin() -> FLOAT { return offsetEps(); }') && tb.includes('fn offsetEps() -> FLOAT { return 10.0 * marchEps(); }')
+        && cg.includes("if (bd_${n.id} > cullMargin()) { CULL = min(CULL, bd_${n.id}); } else {") && cg.includes("if (culling) e.raw('    if (CULL < abs(C.s.w)) { C.s.w = CULL; }')"))
+    ok('ch.26: the relief\'s shell and division as the modifier writes them; 17.2 and 1.875 its numbers, 1.386 x amount its reach', relief.includes('let slope = 1.0 + amount / size * nzFbmLip(4u, 2.0, 0.5, NZ_GRAD_LIP_MEASURED) / peak;')
+        && relief.includes('let reach = NZ_GRAD_VALUE_BOUND * abs(amount) * XF_S;') && relief.includes('if (abs(H.s.w) > 2.0 * reach + READ_REACH + (slope + 1.0) * marchEps()) {')
+        && relief.includes('C = fold(C, VEC4(0.0, 0.0, 0.0, H.s.w - sign(H.s.w) * reach), H.m);') && relief.includes('let n = fbm3(p / size, 1u, 4u, 2.0, 0.5);')
+        && K.LIP.modifier.toFixed(1) === '17.2' && K.LIP.measured === 11.2 && K.PEAK === 1.875 && NZ.NZ_GRAD_VALUE_BOUND.toFixed(3) === '1.386')
+    ok('ch.26: scStep as the engine writes it: a ball\'s exit, a cell at least, the own cell or three; the march\'s 32 steps and never its last', wf.includes('best = max(best, -b + sqrt(b * b - c2));')
+        && wf.includes('return select(-1.0, best, best >= cs);') && wf.includes('const SC_LOOKS: u32 = ${mode >= 2 ? 3 : 1}u;') && wf.includes('if (i + 1u < MAX_STEPS) {')
+        && wf.includes('ray = moveBy(ray, ray.dir * (sc * UB.stepscale));') && wf.includes('const MAX_STEPS: u32 = 32u;') && K.MARCH_STEPS === 32 && wf.includes('${scene.pickWgsl ?? scene.wgsl}'))
+    let SB = null; try { SB = await import('../../builder/stepbox.js') } catch { }
+    const lists = [[{ lo: [-1, 0], hi: [2, 1] }, { lo: [3, -2], hi: [4, 0.5] }], [{ lo: [0, 0], hi: [1, 5] }]]
+    ok('ch.26: unionBox in the plane is stepbox.js\'s with z flat', !SB || lists.every(L => { const a = K.unionBox(L), b = SB.unionBox(L.map(x => ({ lo: [...x.lo, 0], hi: [...x.hi, 0] }))); return a.lo.every((v, k) => Math.abs(v - b.lo[k]) < 1e-12) && a.hi.every((v, k) => Math.abs(v - b.hi[k]) < 1e-12) }), SB ? 'held to stepbox.js' : 'stepbox.js not importable here')
+    // cullDist against brute force: the distance to a box's outline sampled finely, and inside the negative depth
+    const bx = { lo: [-1, -0.5], hi: [2, 1] }, outline = []
+    for (let k = 0; k <= 3000; k++) { const t = k / 3000; outline.push([-1 + 3 * t, -0.5], [-1 + 3 * t, 1], [-1, -0.5 + 1.5 * t], [2, -0.5 + 1.5 * t]) }
+    let worst = 0
+    for (let k = 0; k < 400; k++) { const x = -3 + 7 * ((k * 0.6180339) % 1), y = -2 + 4.5 * ((k * 0.3819660 + 0.1) % 1), inside = x > -1 && x < 2 && y > -0.5 && y < 1
+        const bf = Math.min(...outline.map(q => Math.hypot(q[0] - x, q[1] - y))) * (inside ? -1 : 1); worst = Math.max(worst, Math.abs(K.cullDist(x, y, bx) - bf)) }
+    ok('ch.26: cullDist is the distance to the box outside and minus it inside, against brute force', worst < 2e-3 && K.cullDist(0, 0, null) === -1, worst.toExponential(2))
+    // the shelf: what the figure and the page count
+    const n = (cull, shell) => ST.shelf(cull, shell), c = v => Math.round(v)
+    const off = n('off', false), all = n('all', false), dear = n('dear', false), soff = n('off', true), sdear = n('dear', true), sall = n('all', true)
+    const boxSteps = F => F.rays.reduce((a, r) => a + r.steps.filter(q => q.kind === 'box').length, 0)
+    ok('ch.26: the shelf: 1,021 steps and 38,798 with no boxes and no shell, the noise 84%; every box 946 and 12,545 (387 a box\'s bound); dear only 907 and 12,208', off.steps === 1021 && c(off.cost) === 38798
+        && Math.round(100 * off.T.octave * K.COST.octave / off.cost) === 84 && all.steps === 946 && c(all.cost) === 12545 && c(all.T.box) === 4730 && boxSteps(all) === 387 && dear.steps === 907 && c(dear.cost) === 12208,
+        `${off.steps} ${off.cost} | ${all.steps} ${all.cost} ${boxSteps(all)} | ${dear.steps} ${dear.cost}`)
+    ok('ch.26: shelled, 10,702 with no boxes and 11,471 (7% more) with the dear ones', c(soff.cost) === 10702 && c(sdear.cost) === 11471 && Math.round(100 * (sdear.cost / soff.cost - 1)) === 7, `${soff.cost} ${sdear.cost}`)
+    const sameEnds = (A, B) => A.rays.every((r, i) => r.hit === B.rays[i].hit && Math.hypot(r.x - B.rays[i].x, r.y - B.rays[i].y) < 2e-3)
+    ok('ch.26: every ray ends where it would without boxes, in every mode, shelled or not', [all, dear].every(F => sameEnds(F, off)) && [sall, sdear].every(F => sameEnds(F, soff)))
+    // culling never answers more than the TRUE distance to the nearest surface (the plain shapes' exact, the reliefs' to
+    // their outline), and a box's distance stands in only above the margin
+    const rings = new Map(ST.NODES.filter(q => q.kind === 'relief').map(q => [q.id, K.reliefOutline(q, 720)]))
+    const trueDist = (x, y) => Math.min(...ST.NODES.map(q => q.kind === 'relief' ? Math.min(...rings.get(q.id).map(p => Math.hypot(p[0] - x, p[1] - y)))
+        : Math.abs(K.sceneAt({ nodes: [q] }, x, y, { cull: 'off', eps: 1e-3 }).d)))
+    let culledOk = true, worstCull = 0
+    for (let k = 0; k < 1500; k++) { const x = -8 + 15 * ((k * 0.7548777) % 1), y = 0.02 + 5 * ((k * 0.5698403 + 0.3) % 1), tr = trueDist(x, y)
+        for (const cull of ['all', 'dear']) for (const shell of [true, false]) { const a = K.sceneAt(ST.SHELF, x, y, { cull, eps: 1e-3, shell })
+            worstCull = Math.max(worstCull, Math.abs(a.d) - tr); if (Math.abs(a.d) > tr + 0.02 || (a.culled >= 0 && !(a.d > 10e-3))) culledOk = false } }
+    ok('ch.26: at 1,500 points, every way, the culled answer is never more than the true distance (to 0.02, the reliefs\' outlines sampled), and a box\'s distance stands in only above the margin', culledOk, worstCull.toFixed(4))
+    // the joins
+    const wrong = (op, how) => { const J = ST.JOINS[op]; return J.rays.filter(([o, d]) => { const m = K.marchJoined(J, o[0], o[1], d[0], d[1], how), t = K.marchJoined(J, o[0], o[1], d[0], d[1], how, { field: 'truth' }); return m.hit !== t.hit || Math.hypot(m.x - t.x, m.y - t.y) > 0.02 }) }
+    const lensShort = ST.JOINS.intersect.rays.map(([o, d]) => K.marchJoined(ST.JOINS.intersect, o[0], o[1], d[0], d[1], 'root', { field: 'truth' }).x - K.marchJoined(ST.JOINS.intersect, o[0], o[1], d[0], d[1], 'inside').x)
+    const blendMiss = ST.JOINS.blend.rays.filter(([o, d]) => !K.marchJoined(ST.JOINS.blend, o[0], o[1], d[0], d[1], 'inside').hit).length
+    let rootOk = true
+    for (const op of ['intersect', 'blend']) {
+        const J = ST.JOINS[op], edge = [], h = 0.01, f = (x, y) => K.joined(J, x, y, 'root').truth
+        for (let x = -2.6; x < 2.6; x += h) for (let y = -1.4; y < 1.4; y += h) { const a = f(x, y); if (a * f(x + h, y) <= 0 || a * f(x, y + h) <= 0) edge.push([x + h / 2, y + h / 2]) }
+        for (let k = 0; k < 600; k++) { const x = -3.3 + 6.6 * ((k * 0.7548777) % 1), y = -1.8 + 3.8 * ((k * 0.5698403) % 1), v = K.joined(J, x, y, 'root')
+            if (v.truth <= 0) continue
+            const tr = Math.min(...edge.map(p => Math.hypot(p[0] - x, p[1] - y)))
+            if (v.culled > tr + 0.015 || (v.skipped && !(v.culled > 10e-3))) rootOk = false }
+    }
+    ok('ch.26: culled whole at the root no ray goes wrong and the box\'s distance never exceeds the true distance to the join; B culled inside the lens, all six stop 1.2 short; inside the blend three go wrong, two straight through', wrong('intersect', 'root').length === 0 && wrong('blend', 'root').length === 0 && rootOk
+        && wrong('intersect', 'inside').length === 6 && lensShort.every(d => Math.abs(d - 1.2) < 0.02) && wrong('blend', 'inside').length === 3 && blendMiss === 2, lensShort.map(d => d.toFixed(3)).join(' '))
+    // the shell: the figure's numbers, and its distances below the true ones
+    const sh = (shell, lip) => ST.shellFan({ shell, ratio: 0.17, lip })
+    const a1 = sh('none', 'modifier'), a2 = sh('shell', 'modifier'), a3 = sh('none', 'measured'), a4 = sh('shell', 'measured')
+    ok('ch.26: one relief: 318 steps all paying, cost 5,406; in a shell 243, 211 paying, 3,619 (a third less); the 11.2 bound 252 and 202', a1.steps === 318 && a1.T.octave / K.OCTAVES === 318 && c(a1.cost) === 5406
+        && a2.steps === 243 && a2.T.octave / K.OCTAVES === 211 && c(a2.cost) === 3619 && Math.round(100 * (1 - a2.cost / a1.cost)) === 33 && a3.steps === 252 && a4.steps === 202 && sameEnds(a2, a1),
+        `${a1.steps} ${a1.cost} | ${a2.steps} ${a2.T.octave / 4} ${a2.cost} | ${a3.steps} ${a4.steps}`)
+    const R0 = ST.reliefOf(0.17), ring = K.reliefOutline(R0, 1440), { slope, reach } = K.reliefBounds(R0)
+    let lower = true, divided = true
+    for (let k = 0; k < 600; k++) { const a = 2 * Math.PI * ((k * 0.618034) % 1), rr = 1 + (2.6 * ((k * 0.381966) % 1) - 1.3) * 0.4, x = rr * Math.cos(a), y = rr * Math.sin(a)
+        const truth = Math.min(...ring.map(q => Math.hypot(q[0] - x, q[1] - y))) * Math.sign(K.reliefRaw(R0, x, y)), d0 = Math.hypot(x, y) - 1
+        if (Math.abs(d0) > 2 * reach && Math.abs(d0 - Math.sign(d0) * reach) > Math.abs(truth) + 2e-3) lower = false
+        if (Math.abs(K.reliefRaw(R0, x, y) / slope) > Math.abs(truth) + 2e-3) divided = false }
+    ok('ch.26: outside the shell the plain distance less the reach, and everywhere the divided field, never more than the distance to the relief\'s surface (600 points against its outline)', lower && divided)
+    // the step cache
+    const cs = s => ST.cacheRun(s), base = ST.shelf('dear', true)
+    const o1 = cs({ looks: 'own', cells: 1024, fill: 'pick' }), o2 = cs({ looks: 'ahead', cells: 1024, fill: 'pick' }), o3 = cs({ looks: 'own', cells: 1024, fill: 'render' })
+    ok('ch.26: the cache over 1,024 cells: own cell 794 steps (116 from the cache), cost 10,220, a tenth less; cells ahead 755; filled from the copy with boxes 879; every ray ends as without it', o1.steps === 794 && o1.T.cached === 116 && c(o1.cost) === 10220
+        && Math.round(10 * (1 - o1.cost / base.cost)) === 1 && o2.steps === 755 && o3.steps === 879 && [o1, o2, o3].every(F => sameEnds(F, base)), `${o1.steps} ${o1.T.cached} ${o1.cost} ${o2.steps} ${o3.steps}`)
+    const C1 = ST.cacheOf(1024, 'pick'), C2 = ST.cacheOf(1024, 'render')
+    let balls = true, capped = 0
+    for (let k = 0; k < C1.R.length; k++) { const i = k % C1.nx, j = Math.floor(k / C1.nx), x = C1.lo[0] + (i + 0.5) * C1.cs, y = C1.lo[1] + (j + 0.5) * C1.cs
+        const t = Math.abs(K.sceneAt(ST.SHELF, x, y, { cull: 'off', eps: 1e-3, shell: true }).d); if (Math.abs(C1.R[k] - Math.max(t, 1e-6)) > 1e-12 || (y > 0 && C2.R[k] > trueDist(x, y) + 0.02)) balls = false; if (C2.R[k] < C1.R[k] - 1e-9) capped++ }
+    ok('ch.26: every cell the scene\'s own distance from its centre; filled from the copy with boxes, never more than the true distance, and smaller around the boxes', balls && capped > 0, `${capped} of ${C1.R.length} cells capped`)
+    // the measured numbers, where the page says
+    const pf = readFileSync(join(REPO, 'docs/PERFORMANCE.md'), 'utf8'), ar = readFileSync(join(REPO, 'roadmap/ARCHITECTURE.md'), 'utf8')
+    ok('ch.26: the measured numbers are where the page says', pf.includes('| Noise library | 216.6 | 839.8 | 3.9x') && pf.includes('**The relief in a shell: 156.0 ms/sample, -22.9%**') && pf.includes('202.3')
+        && pf.includes('So the shell took 48 ms off the march (-38%) and 21 off the occlusion rays (-33%)') && pf.includes('Noise library 250.4 against 988.9 with boxes off, 3.95x')
+        && ar.includes('| the optics bench | 217.6 (131.0 / 60.4) |') && ar.includes('the optics bench -27%, the optics bench as data -19%,') && ar.includes('+81.4 (+11%)')
+        && ar.includes('the showcase -14.8% (-13.4%), Surface materials -4.4%') && cg.replace(/\s+/g, ' ').includes("the Noise library's six reliefs, 89% of its time") && NZ.NZ_RELIEF_LIP_MEASURED === 11.2)
 }
 
 /* THE EXCERPT LOCATOR ON ITS OWN ----------------------------------------------------------------------------------- */
