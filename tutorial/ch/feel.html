@@ -114,8 +114,9 @@
       side, each on a <a data-g="lane">lane</a> of its own (chapter 21), so a batch of a few thousand leaves most of
       its lanes with nothing to do; that 16,384 is where that starts to matter is the code's own inference, its
       comment says. The code caps the number of batches at the rays over 16,384, rounded up: at 1280 × 720, 921,600 /
-      16,384 = 56.25, so 57 batches, of about 16,168 rays each (rounding up puts them a little under the floor; the comment
-      says "nor batches under", the arithmetic allows that much). A 10-second sample is then 57 frames of
+      16,384 = 56.25, so 57 batches, of about 16,168 rays each (rounding up puts them a little under the floor; until
+      version 0.67.3 the comment said "nor batches under", which this chapter found the arithmetic does not keep, and
+      it now gives this example). A 10-second sample is then 57 frames of
       10,000 / 57 = 175 ms, not 30: slicing cannot hold 30 ms on a very heavy scene. Nothing of this has been seen
       on a card or measured: the version that brought it says so.</p>
     <p data-step="slices:split">A second rule, older and learned by an accident: Windows resets the graphics card when

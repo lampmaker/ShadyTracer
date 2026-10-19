@@ -1558,7 +1558,7 @@ for (const [name, { mod }] of modules) {
     }
     const rd = readFileSync(join(REPO, 'lib/pathtracer/optics/README.md'), 'utf8'), td31 = readFileSync(join(REPO, 'docs/TESTING.md'), 'utf8')
     ok('ch.31: the stories and numbers are where the page says', rd.includes('The largest of many noisy') && rd.includes('took 1.4 s with the picture running and 0.2 s with it stopped')
-        && td31.includes('slab 0.9991 / 0.9999 / 1.0007') && td31.includes('`vs polar.` 0.9991 / 0.9966 / 0.9721') && /\| `optics-farfield` \|[^\n]*cos⁵ 58\.98°[^\n]*open — first press/.test(td31)
+        && td31.includes('slab 0.9991 / 0.9999 / 1.0007') && td31.includes('`vs polar.` 0.9991 / 0.9966 / 0.9721') && /\| `optics-farfield` \|[^\n]*cos⁵ 58\.95°[^\n]*open — first press/.test(td31)
         && td31.includes('4247 K, du\'v\' 0.013 -- from a 3 x 3 sensor holding ~17 blue photon hits, where one sigma is 250 K') && td31.includes('3999.9 K')
         && readFileSync(join(REPO, 'lib/pathtracer/optics/zemax.js'), 'utf8').includes('was read 7 at a time: garbage') && kj.includes('immune to the retry'))
 }

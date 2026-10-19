@@ -246,17 +246,18 @@
     <h2><span class="n">7</span>How ShadyTracer does it</h2>
     <p>The reasoning is written at the top of the light-sampling code, in the renderer's own words (its
       <em>variance</em> is how much the tries scatter):</p>
-    <pre data-src="lib/pathtracer/core/tracebasics.js" data-sym="WHY. Left to itself" data-to="the variance was not."
-         data-why="The estimate was right without NEE. The problem was how much it scattered." data-hash="aa6db3b2"></pre>
-    <aside class="note"><span class="tag">A stale number</span>The comment's sun, "about 0.03 steradian", is an old
-      one. ShadyTracer once drew the sun 21 times wider than the real one (its photometry file says so), and a disc 21
-      times wider covers 21 × 21 = 441 times as much sky: about 0.03 steradian. The real sun's 0.000067 is that much
-      smaller. The comment's "once in two hundred tries" is loose too: 0.03 out of the 6.28 in a hemisphere is the
-      chance for a direction picked evenly, but a cosine-weighted bounce, which favours directions near straight up,
-      finds a sun overhead about twice as often, 0.03 / π, once in a hundred. For the real sun the same sum gives once
-      in 47,000, which makes the case for NEE that much stronger. Comments go stale like this when the code around
-      them changes; this tutorial checks its quotes against the code (<a data-ch="checking">Noise, bias and
-      checking</a>), and when a quote and the facts disagree, it says so.</aside>
+    <pre data-src="lib/pathtracer/core/tracebasics.js" data-sym="WHY. Left to itself" data-to="not cosine-weighted.)"
+         data-why="The estimate was right without NEE. The problem was how much it scattered. A cosine-weighted bounce's chance of hitting a small cone straight overhead is the cone's solid angle over pi; as the sun sets, its share of the bounces shrinks with the cosine." data-hash="d480bf2c"></pre>
+    <aside class="note"><span class="tag">A stale number, corrected</span>Until version 0.67.3 the comment's sun was
+      "about 0.03 steradian", found "roughly once in two hundred tries": an old sun. ShadyTracer once drew the sun 21
+      times wider than the real one (its photometry file says so), and a disc 21 times wider covers 21 × 21 = 441 times
+      as much sky: about 0.03 steradian. The real sun's 0.000067 is that much smaller. The two hundred was loose too:
+      0.03 out of the 6.28 in a hemisphere is the chance for a direction picked evenly, but a cosine-weighted bounce,
+      which favours directions near straight up, finds a sun overhead about twice as often, 0.03 / π, once in a
+      hundred. For the real sun the same sum gives once in 47,000, which makes the case for NEE that much stronger, and
+      is what the comment says now. Comments go stale like this when the code around them changes; this tutorial
+      checks its quotes against the code (<a data-ch="checking">Noise, bias and checking</a>), and when a quote and the
+      facts disagree, it says so. This one was found writing this chapter, and the comment was corrected.</aside>
     <p>ShadyTracer has three kinds of light to aim at: the faces of the light objects you place in the builder, glowing
       surfaces it has discovered in the scene (<a data-ch="emitters">Every glowing thing is a light</a>), and the sky
       with its sun. One random number chooses which, and each choice is then divided by its probability, as in the

@@ -10,7 +10,7 @@
 //   unexplained  measured on a real card, and the documents do not say why
 //   designed     a fix or a feature the plan describes and nobody has built
 //   limit        something the renderer gets wrong, or leaves to chance, and its documents say so
-//   found        a comment or a document this tutorial found saying what the code or its own numbers do not
+//   found        a comment, a document or a line of code this tutorial found at odds with the code or its own numbers
 //======================================================================================================================
 
 /* [kind, its name, its short name for the board's columns] */
@@ -98,31 +98,9 @@ export const ITEMS = [
     { id: 'polarisation', kind: 'limit', src: 'roadmap/PLAN.md', quote: 'unpolarised Fresnel per interface is -0.3% on a slab\'s transmission at 45', ch: 'glass', title: 'no polarisation',
         note: 'Each face averages light\'s two polarisations: 0.3% off at 45 degrees, 3% at 70, as measured.' },
 
-    /* FOUND BY THIS TUTORIAL: each a comment's own words, still there today, and the chapter that checks them */
-    { id: 'sun-cone', kind: 'found', src: 'lib/pathtracer/core/tracebasics.js', quote: 'The sun is a cone of about 0.03', ch: 'nee', title: 'the sun "about 0.03 steradian"',
-        note: 'The real sun is 0.000067 steradian; a cosine-weighted bounce finds it about once in 47,000, not two hundred.' },
-    { id: 'old-rng', kind: 'found', src: 'lib/pathtracer/core/tracebasics.js', quote: '0.08x to 3.2x what it should be', ch: 'montecarlo', title: 'the old random numbers\' windows',
-        note: 'Every one of the 2³² states counted gives 0.95× to 1.83× for windows of 0.0001.' },
-    { id: 'lum-step', kind: 'found', src: 'lib/pathtracer/core/tracebasics.js', quote: 'across 24 bits is 2e-5 of a stop', ch: 'emitters', title: 'the brightness code\'s step',
-        note: 'Its own constants, 80 stops over 2²⁴ codes, give 4.8e-6 of a stop.' },
-    { id: 'rr-verdict', kind: 'found', src: 'lib/pathtracer/core/tracebasics.js', quote: 'It should earn its keep in a scene deep enough for the budget to', ch: 'paths', title: 'roulette\'s verdict',
-        note: 'Since 0.10.0 the budget is the worst case and never shrinks, so roulette can save only the work inside a round.' },
-    { id: 'stepcache-fill', kind: 'found', src: 'lib/pathtracer/core/wavefront.js', quote: 'filled once was 6 to 22% faster than that on every scene', ch: 'steps', title: 'the step cache\'s "6 to 22%"',
-        note: 'The run it cites found one scene, in one mode, 2% apart, within its noise.' },
-    { id: 'slice-floor', kind: 'found', src: 'lib/pathtracer/core/raytrace_main.js', quote: 'nor batches under SLICE_MIN_RAYS rays', ch: 'feel', title: 'no batch under 16,384 rays',
-        note: 'The count is rounded up: 921,600 pixels make 57 batches of about 16,168 rays.' },
-    { id: 'hit-bytes', kind: 'found', src: 'lib/pathtracer/core/raytrace_main.js', quote: 'hitStructSize, 288', ch: 'gpu', title: 'a ray\'s 288 bytes',
-        note: 'The same file says 272 bytes now, 288 only from 0.44.0 to 0.61.0.' },
-    { id: 'beam-angle', kind: 'found', src: T, quote: 'cos⁵ 58.98°', ch: 'optics', title: 'cos⁵\'s beam angle 58.98°',
-        note: '2 acos(0.5^(1/5)) is 58.95°, as the test itself expects.' },
-    { id: 'haze-open', kind: 'found', src: T, quote: 'open — the first press (2026-10-16, 0.62.0) measured sky', ch: 'haze', title: 'the haze row still "open"',
-        note: 'The same cell ends "Answered by the third" press (0.62.2, Pascal): the dust conserves the light to 0.024%.' },
-    { id: 'frosted-line', kind: 'found', src: 'roadmap/PLAN.md', quote: '(`materials_pbr.js:306`, "no evaluable BTDF")', ch: 'microfacets', title: 'a line number that moved',
-        note: 'The comment it cites is at materials_pbr.js:368 today.' },
-    { id: 'probe-line', kind: 'found', src: 'roadmap/PLAN.md', quote: 'eps; `materials_pbr.js:626`)', ch: 'precision', title: 'the probe\'s line number',
-        note: 'The probe is tracebasics.js\'s mediumBeyond now.' },
-    { id: 'camera-plan', kind: 'found', src: 'roadmap/PLAN.md', quote: '**A realistic camera — not built** (no f-number, shutter, ISO, sensor or depth of field anywhere in', ch: 'lens', title: 'depth of field "not built"',
-        note: 'The camera has had a lens since 0.43.0 (genrays.js), and the same plan says so further down.' },
+    /* FOUND BY THIS TUTORIAL: each a comment's own words, still there today, and the chapter that checks them. The
+       twelve comments and document lines found with it were corrected in 0.67.3 (CHANGELOG.md); this one is code, the
+       divisor itself, and whether to change it is the owner's call. */
     { id: 'twist-bound', kind: 'found', src: 'builder/modifiers.js', quote: "'warp(1.0 / sqrt(1.0 + rate * rate * extent * extent));'", ch: 'shapes', title: 'the twist\'s step bound',
         note: 'A move can stretch by (c + √(c² + 4)) / 2, up to 15% more than √(1 + c²): a plate at 45° keeps a slope of 1.14.' },
 ]
