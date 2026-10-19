@@ -63,24 +63,25 @@ export function camera(cam, i, u) {
    whole outline, which is what a bounce can hit, so the point is drawn on that outline: the long side facing this
    point, or the two round ends. The far side sends nothing here and is left out; a point of an end facing away
    counts 0. (Points of the middle line instead read 0.1213 where the bounces read 0.1326: kit/flatland.js sampleLamp.) */
+export function lampPoint(L, x, y, u) {
+    const seg = Math.hypot(L.b[0] - L.a[0], L.b[1] - L.a[1]), tx = (L.b[0] - L.a[0]) / seg, ty = (L.b[1] - L.a[1]) / seg
+    const side = (x - L.a[0]) * -ty + (y - L.a[1]) * tx >= 0 ? 1 : -1      // which long side faces (x, y)
+    const len = seg + 2 * Math.PI * L.r, d = u * len                      // that side, then the two round ends
+    if (d < seg) { const mx = -ty * side, my = tx * side; return { x: L.a[0] + tx * d + mx * L.r, y: L.a[1] + ty * d + my * L.r, mx, my, len } }
+    const phi = (d - seg) / L.r, mx = Math.cos(phi), my = Math.sin(phi)   // a round end: a's half faces back along the lamp
+    const e = mx * tx + my * ty < 0 ? L.a : L.b
+    return { x: e[0] + mx * L.r, y: e[1] + my * L.r, mx, my, len }
+}
 export function lampLight(shapes, x, y, nx, ny, albedo, rand) {
     const lamps = shapes.filter(s => s.emit), L = lamps[Math.min(lamps.length - 1, Math.floor(rand() * lamps.length))]
     if (!L) return 0
-    const seg = Math.hypot(L.b[0] - L.a[0], L.b[1] - L.a[1]), tx = (L.b[0] - L.a[0]) / seg, ty = (L.b[1] - L.a[1]) / seg
-    const side = (x - L.a[0]) * -ty + (y - L.a[1]) * tx >= 0 ? 1 : -1      // which long side faces this point
-    const len = seg + 2 * Math.PI * L.r, u = rand() * len
-    let px, py, mx, my                                                     // the point drawn, and the outline's normal there
-    if (u < seg) { mx = -ty * side; my = tx * side; px = L.a[0] + tx * u + mx * L.r; py = L.a[1] + ty * u + my * L.r }
-    else {                                                                 // a round end: its circle, a's half facing back
-        const phi = (u - seg) / L.r, e = Math.cos(phi) * tx + Math.sin(phi) * ty < 0 ? L.a : L.b
-        mx = Math.cos(phi); my = Math.sin(phi); px = e[0] + mx * L.r; py = e[1] + my * L.r
-    }
-    const vx = px - x, vy = py - y, r = Math.hypot(vx, vy), ux = vx / r, uy = vy / r
-    const cx = nx * ux + ny * uy, cy = -(mx * ux + my * uy)
+    const q = lampPoint(L, x, y, rand())                                 // the point drawn, and the outline's normal there
+    const vx = q.x - x, vy = q.y - y, r = Math.hypot(vx, vy), ux = vx / r, uy = vy / r
+    const cx = nx * ux + ny * uy, cy = -(q.mx * ux + q.my * uy)
     if (cx <= 0 || cy < 1e-6) return 0                                     // behind the surface, or a point facing away
     const hit = march(shapes, x, y, ux, uy, { far: r + 1 })
     if (!hit || shapes[hit.i] !== L) return 0                              // something else in the way: in shadow
-    return (albedo / 2) * L.emit * cx * cy * len / r * lamps.length
+    return (albedo / 2) * L.emit * cx * cy * q.len / r * lamps.length
 }
 
 /* 6. A PATH (chapters 8, 13, 14): from the eye, bounce off matte surfaces in cosine-weighted directions (so each bounce

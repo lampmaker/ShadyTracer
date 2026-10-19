@@ -17,7 +17,7 @@ as PLAN.md does.
 
 ## 0.67.2 — 2026-10-18
 
-**A developer tutorial beside the program: its plan, its figure kit, eight styles and its first thirty-three chapters**
+**A developer tutorial beside the program: its plan, its figure kit, eight styles and all thirty-four chapters**
 (you: "a tutorial for shadytracer, parallel to the program … that explains the inner workings of the code … interactive,
 2D visualisations … a solid toolkit for that so it looks the same everywhere … start with a plan and list of contents,
 then a few pages … make a few mockups of different styles"). Nothing in the application changed: the tutorial is
@@ -109,10 +109,14 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   intensity on a polar diagram, its peak read high by the largest of many noisy bins and the beam angle with it, and
   pooling round the axis; the same source over a floor mapped by `detmap.js` plain, Gaussian and by the photon map's
   nearest hits; a ray total in a 32-bit float stalling at 2^24 against the optics kernels' integer pair);
-  chapter 32, *A ray tracer in one page* (`tutorial/kit/onepage.js`, the figures' path tracer in 87 lines and no
+  chapter 32, *A ray tracer in one page* (`tutorial/kit/onepage.js`, the figures' path tracer in 88 lines and no
   imports, read part by part: one ray marched where you aim it, the room's picture from 1 to 64 samples, aiming at the
   lamp, and a mirror in four lines; each part beside the engine's file it grew into; the test holds it to `flatland.js`'s
-  picture on the same random numbers); chapter 2, *Shapes as distances*; chapter 14, *Aim at the light* (next event estimation); the contents
+  picture on the same random numbers); chapter 33, *Open problems* (a board of 54 open items, each quoting its
+  document and held to it by the test: 20 bench rows built and never run on a card, read from `docs/TESTING.md`'s own
+  status column, with every row it calls open on the board; 9 numbers measured and not explained; 7 designs not built;
+  4 limits stated; 13 comments and plan lines these chapters found saying what the code does not); chapter 2,
+  *Shapes as distances*; chapter 14, *Aim at the light* (next event estimation); the contents
   map; a glossary of 150 terms, each linked from the pages with a card on hover or tap.
 - **The kit** (`tutorial/kit/`): one pen draws every figure in the style's colours and line; a figure is a spec with
   state, controls, drag handles and steps that the paragraphs beside it trigger as they scroll by. The figures trace a
@@ -351,6 +355,8 @@ What to look at:
   100,000 rays, each smoothing; the tally's weight 0.7 from 2^20 to 2^26.
 - **Chapter 32, A ray tracer in one page**: drag the aim along the box's top and up to the lamp; the picture from 1 to 64
   samples, then aiming at 16, then the mirror. Is the code beside each part enough to write your own?
+- **Chapter 33, Open problems**: the board in each view, pointing at cards. Is it the list you would want to work
+  from, and is anything open missing from it?
 - **The flat world's lamp, after the fix**: chapter 14's aim figure (aiming ± 0.001 against bouncing's ± 0.009) and its
   room at the smallest lamp; chapter 8's room; chapter 20's room in its three ways.
 - **Chapter 30, Numbers have grain**: the lamp from 1 µm to 3 mm and 0 to 75°, the red rays the tolerance adds; the

@@ -105,8 +105,8 @@ export const CHAPTERS = [
 
     C('build', 'yours', 'A ray tracer in one page', 'The flat world of these figures explained line by line, then extended by you.', 'draft',
         ['tutorial/kit/onepage.js', 'tutorial/kit/flatland.js']),
-    C('build', 'open', 'Open problems', 'What is not built yet, and the case for each.', 'planned',
-        ['docs/PERFORMANCE.md', 'roadmap/PLAN.md']),
+    C('build', 'open', 'Open problems', 'What is not built yet, and the case for each.', 'draft',
+        ['docs/PERFORMANCE.md', 'roadmap/PLAN.md', 'docs/TESTING.md', 'tutorial/kit/open.js']),
 ]
 CHAPTERS.forEach((c, i) => { c.number = i })   // "How to read this" is 0
 

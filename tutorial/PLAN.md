@@ -333,14 +333,19 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
     pbr-radiometry, wiki-photometry.
 
 **IX. Build your own**
-32. **A ray tracer in one page** (draft): `tutorial/kit/onepage.js`, the figures' path tracer in 87 lines with no
+32. **A ray tracer in one page** (draft): `tutorial/kit/onepage.js`, the figures' path tracer in 88 lines with no
     imports, held by the test to flatland.js's picture on the same random numbers: one ray marched where the reader
     aims it (8 steps at the box's side, 69 skimming its top), the room's picture from 1 to 64 samples, aiming at the
     lamp, and the mirror extension; each part beside the engine's file. What went wrong: the kit's own lamp, aimed at
     as a line while the bounces hit a capsule, and aimed at from the last surface. -> onepage.js's six parts,
     uniforms.schema.js stepscale, raytrace_main.js MARCH_STEPS. Computed, all of it. *Read:* smallpt, rtiow,
     iq-raymarching.
-33. **Open problems**: what is not built yet, and the measured or inferred case for each.
+33. **Open problems** (draft): a board of every open item, 54 today, each quoting its document and held to it by the
+    test (`tutorial/kit/open.js`): the bench rows built and never pressed, read from docs/TESTING.md's status column
+    (and every row it calls open on the board); numbers measured and not explained (rough glass's 0.944, the Ampere's
+    compile, the ±20% drift); designs not built (a tolerance per pixel, thin air gaps, rough glass's compensation);
+    limits stated; and the comments these chapters found wrong. How a card closes: a bench row pressed on a card, the
+    answer stamped. *Read:* kulla2017, turquin2019.
 
 ## Where 3D is planned
 

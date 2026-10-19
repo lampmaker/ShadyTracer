@@ -661,7 +661,7 @@ record now say what the model shows.
 | 24 | Long lines cut; b, c, h, e; kind and join codes; UB; "1 copies"; 6,794 below 6,795; "runs faster" on the card. | **Fixed**, each: the lines wrap. |
 | all | Sections 4 to 6 written for a developer. | **Not changed** beyond the glosses: those sections are where the page meets the code, and say so. |
 
-## Round 9, 2026-10-19 (chapters 25 to 31)
+## Round 9, 2026-10-19 (chapters 25 to 33)
 
 The chapters of Part VII, each read twice, by a fresh reader each time, on the same brief. Reports:
 chapter 25, [first](reports/2026-10-19-round9/measure-1.md) and [second](reports/2026-10-19-round9/measure-2.md);
@@ -670,7 +670,9 @@ chapter 27, [first](reports/2026-10-19-round9/compiles-1.md) and [second](report
 chapter 28, [first](reports/2026-10-19-round9/feel-1.md) and [second](reports/2026-10-19-round9/feel-2.md);
 chapter 29, [first](reports/2026-10-19-round9/checking-1.md) and [second](reports/2026-10-19-round9/checking-2.md);
 chapter 30, [first](reports/2026-10-19-round9/precision-1.md) and [second](reports/2026-10-19-round9/precision-2.md);
-chapter 31, [first](reports/2026-10-19-round9/optics-1.md) and [second](reports/2026-10-19-round9/optics-2.md).
+chapter 31, [first](reports/2026-10-19-round9/optics-1.md) and [second](reports/2026-10-19-round9/optics-2.md);
+chapter 32, [first](reports/2026-10-19-round9/yours-1.md) and [second](reports/2026-10-19-round9/yours-2.md);
+chapter 33, [first](reports/2026-10-19-round9/open-1.md).
 
 ### Chapter 25, Measure first
 
@@ -979,6 +981,81 @@ only the middle two, and pointed "the rise above 1" at the smaller bump.
 | knn's sharp edges on a spot with none. | **Fixed**: an edge would stay sharp; this spot has none. |
 | 0.5^1/n ambiguous. | **Fixed**: bracketed. |
 | §5 and §6 for insiders; the 58.98 note. | **Not changed**: the tutorial's readers will build renderers, and these are the measurements and mistakes they would meet. |
+
+### Chapter 32, A ray tracer in one page
+
+**Before any reader.** Writing the page found the tutorial's own path tracer wrong: in this chapter's room aiming read
+brighter than bouncing (0.1210 ± 0.0005 against 0.1163 ± 0.0010, four bounces), and in chapter 14's, at twelve, darker.
+`flatland.js` aimed at the middle line of lamps the bounces hit as capsules, and aimed from a path's last surface;
+both fixed, the numbers that moved corrected in chapters 8, 14, 19 and 20, and the page's section 5 tells it (the
+0.67.2 entry has the details).
+
+**First read.** The teach-back held the whole program, the mistakes of section 5 included. Where the reader got lost
+was arithmetic the code leans on and the page never said: the dot product behind every cosine, why the lamp's pick is
+divided by its chance and the bounce seems not to be, and albedo/2. And one sentence was wrong: "within four bounces"
+beside a loop of five rounds, which is the eye's leg and one after each of four bounces.
+
+| Finding | |
+|---|---|
+| The dot product never explained. | **Fixed**: a paragraph before the code, and each place it is used named. |
+| Dividing by the chance; `* lamps.length`; albedo/2; the bounce not divided. | **Fixed**: a fold-out on all three, the bounce's cos θ / 2 cancelling to the albedo. |
+| Four bounces against five rounds. | **Fixed**: five legs, the eye's and one after each bounce; the code note says so. |
+| Why the hit would count twice. | **Fixed**: the shadow ray from that bounce already counted the same light. |
+| NEE never named in the text; ray tracer against path tracer. | **Fixed**: NEE named where aiming starts; the lede says what a path tracer adds to a ray tracer. |
+| The strip: which end is which; one row; the mirror's looking darker. | **Fixed**: the ends tied to the dashed lines, each strip scaled to its own brightest pixel; that pixel marked and its ray drawn, up to the lamp off the mirror. |
+| The circles touching the nearest shape; the grazing steps invisible; the lamp's ends. | **Fixed** in the text: each circle touches the nearest wall or the box, the crowded dots are the steps, the lamp drawn as a line. |
+| The normal lying back along the ray. | **Fixed**: its label beside the tip. |
+| lampLight's lines 67, 70, 75, 79, 83; segment's t; the bounce's rotation. | **Fixed** in the code notes. |
+| "A quarter of the paths" but not of the work. | **Fixed**: up to four shadow rays each, said. |
+| ± and 44,800 in section 5. | **Fixed**: the error bar named, eight of them apart. |
+| Section 4's jargon. | **Partly**: the table names the chapter for each row's words; the words stay, as pointers. |
+
+**Second read.** The quiz came out whole. What the reader asked for was pictures: of one whole path with its shadow
+rays and the surface that does not aim, and of the lamp's outline being picked from; and the last-surface rule as a
+count of legs, not words. Following the reader's own question, why section 6's first draft "read darker with aiming"
+when the second mistake made aiming brighter, I measured the old kit in this chapter's room: at four bounces aiming
+read *brighter*, 0.1210 ± 0.0005 against 0.1163 ± 0.0010, the extra bounce outweighing the thin lamp, so the page
+had said the wrong direction. It now gives both numbers and why the two mistakes pull opposite ways.
+
+| Finding | |
+|---|---|
+| No picture of a whole path, of shadow rays, of the last surface. | **Fixed**: a step drawing one path of pixel 15, legs numbered, shadow rays and a blocked one, "the last surface: no aim". |
+| `lampLight`'s point-picking a wall of text; no sketch of the outline. | **Fixed**: `lampPoint` split out of `lampLight` and excerpted as numbered steps; a figure of the capsule drawn large, 28 points picked, the far side never. |
+| Which bounce is "the last"; why more light is wrong. | **Fixed**: a table of the five legs, each shadow ray standing for the next leg, the sixth never traced. |
+| Fold-outs 2 and 3 need calculus. | **Fixed**: a sum of 1000 cosines for the 2; 87 draws against 8 for the sines' bunching. |
+| The strips on their own scales; what each part of the strip sees. | **Fixed**: one scale, white at 0.4; under the strip, the ceiling, the wall or mirror and the box. |
+| The red ray of the brightest pixel ending at a wall. | **Fixed**: replaced by the whole path. |
+| The mirror's noise rising to 0.39. | **Fixed**: the lamp in the mirror found only by hitting it. |
+| "Darker with aiming" against the second mistake. | **Fixed**, and the direction corrected (above). |
+| The dot product after its first use; "these six" for seven rows; the cosine law; chapter 8's rule unnamed. | **Fixed**, each. |
+| The graze's crowded steps invisible. | **Fixed**: the steps drawn over the ray. |
+| `s.emit` as both flag and brightness; `Float64Array`. | **Fixed** in the notes. |
+| Sections 4 and 5 full of names. | **Not changed**: pointers to chapters, as the table says. |
+
+
+### Chapter 33, Open problems
+
+**Before any reader.** The board holds 54 items, every one quoting its file and held to it by the test; writing the
+test found one more: docs/TESTING.md's haze row still begins "open" though the same cell records it answered by its
+third press, now a card of its own.
+
+**First read.** The teach-back held the board and how it stays true. The reader was lost where the page leaned on
+what it never said: why checks go unrun (one clause and a file name), and what the examples meant (a list of five
+items in words from other chapters, none explained). And the text and the cards disagreed in small ways the reader
+caught: rough glass "0.9440 in every run since" beside a card with a 0.9872 first; "most of the board" for 20 of 54;
+"run once" a column the text never named; and the explanation I gave for the furnace's 0.9587 was wrong in its
+detail when checked against docs/TESTING.md (the reference program follows the same surface model, not "one bounce").
+
+| Finding | |
+|---|---|
+| Why checks go unrun: container, repository, CLAUDE.md. | **Fixed**: who writes the code, where, and why that place cannot run the page, in two sentences. |
+| Each kind a list of names. | **Fixed**: one card of each kind told whole (the error bar row, the furnace's rough glass, the tolerance per pixel, a limit against a bug, the sun's 0.03 steradian), the rest listed after. |
+| Text against cards: 0.9440, "most", run once, ±20%. | **Fixed**: 0.9872 then 0.9440; "the largest group"; the run-once row told, its 76% with what the plan says of it; the drift's own numbers and the document's words. |
+| A bug never defined beside a limit. | **Fixed**: both, with one example each. |
+| What happens when a quote stops matching. | **Fixed**: the test fails, and CI runs it on every change. |
+| Code-like names on the never-run cards. | **Fixed**: each card's title is its question in plain words; the row's id is in the hover. |
+| Glossary words unmarked; "control" never used. | **Fixed**: marked where used; the list matches the page. |
+| How to open a file at the quoted words. | **Fixed**: search the file, on GitHub or in a copy. |
 
 ## Next round
 

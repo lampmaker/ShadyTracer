@@ -305,6 +305,13 @@ real student.
 4. Why must the shadow rays aim at the lamp's whole outline, and why does the last surface not aim?
 5. What does the mirror extension change, and why does a mirror not aim at the lamp?
 
+**open** (Open problems)
+1. Why are so many of ShadyTracer's checks built but never run, and what does it take to run one?
+2. Give one number that was measured and not explained, and say why it matters.
+3. What is the difference between a limit and a bug, as this chapter uses the words?
+4. What did writing this tutorial find in the code's comments, and what was done about it?
+5. How does the board stay true when a check is run or a comment is fixed?
+
 **index** (the contents)
 1. What will you learn in this tutorial, and do you need to know anything before starting?
 2. What do the three stamps mean?

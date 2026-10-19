@@ -1580,7 +1580,7 @@ for (const [name, { mod }] of modules) {
     ok('ch.32: onepage.js renders flatland.js\'s picture on the same random numbers, matte and mirror, with NEE and without', worst < 1e-12, worst)
     // no imports: the file is the whole program
     const src = readFileSync(join(REPO, 'tutorial/kit/onepage.js'), 'utf8'), code = src.replace(/\/\*[\s\S]*?\*\//g, '').split('\n').map(l => l.replace(/\/\/.*$/, '').trim()).filter(Boolean)
-    ok('ch.32: onepage.js imports nothing, and is 87 lines of code', !/^\s*import\b/m.test(src) && code.length === 87, code.length)
+    ok('ch.32: onepage.js imports nothing, and is 88 lines of code', !/^\s*import\b/m.test(src) && code.length === 88, code.length)
     // the march figure's steps and the film's readouts, as the page tells them
     const M = Y.figures.march, mr = st => M.readout({ ...M.state, ...M.steps[st] })
     ok('ch.32: the march: the box\'s side in 8 steps, skimming its top 69, the lamp 9', mr('hit') === 'the ray hits the box in 8 steps of the march' && mr('graze') === 'the ray hits the box in 69 steps of the march'
@@ -1592,9 +1592,54 @@ for (const [name, { mod }] of modules) {
     // the camera's numbers and the march's settings the page states
     ok('ch.32: 56 pixels over 64 degrees; the lamp 0.015 thick; the march\'s 0.9, 0.001, 50 and 200', Y.CAM.pixels === 56 && Math.round(Y.CAM.fov * 180 / Math.PI) === 64 && Y.roomOf(false).find(s => s.emit).r === 0.015
         && src.includes('t += Math.abs(d) * 0.9') && src.includes('eps = 1e-3, far = 50') && src.includes('n < 200') && readFileSync(join(REPO, 'lib/pathtracer/core/raytrace_main.js'), 'utf8').includes('const MARCH_STEPS = 32'))
+    // the outline figure: 17 of 28 points face the point below, 5 beyond the end; the room lamp's ends 6% of what it picks from
+    const Ol = Y.figures.outline, ol = st => Y.outlineOf({ ...Ol.state, ...Ol.steps[st] }.P).filter(q => q.faces).length, rl = Y.roomOf(false).find(s => s.emit)
+    const ends = 2 * Math.PI * rl.r / (Math.hypot(rl.b[0] - rl.a[0], rl.b[1] - rl.a[1]) + 2 * Math.PI * rl.r), bigEnds = 2 * Math.PI * Y.BIG_LAMP.r / (Math.hypot(Y.BIG_LAMP.b[0] - Y.BIG_LAMP.a[0], Y.BIG_LAMP.b[1] - Y.BIG_LAMP.a[1]) + 2 * Math.PI * Y.BIG_LAMP.r)
+    ok('ch.32: the outline: 17 of 28 face the point below, 5 beyond the end; the ends 6% of the room lamp\'s outline, 47% of the large one\'s', Y.OUTLINE_K === 28 && ol('below') === 17 && ol('end') === 5 && Math.round(ends * 100) === 6 && Math.round(bigEnds * 100) === 47, `${ol('below')} ${ol('end')} ${ends} ${bigEnds}`)
+    // every point lampPoint gives is on the capsule's outline, and the far side is never picked
+    let off = 0, far = 0
+    for (let k = 0; k < 400; k++) { const q = P1.lampPoint(Y.BIG_LAMP, 0.7, -1.7, (k + 0.5) / 400); off = Math.max(off, Math.abs(P1.segment(q.x, q.y, Y.BIG_LAMP))); if (q.y > 1e-9 && q.x > Y.BIG_LAMP.a[0] && q.x < Y.BIG_LAMP.b[0]) far++ }
+    ok('ch.32: lampPoint\'s points lie on the capsule\'s outline, none on the far side', off < 1e-12 && far === 0, `${off} ${far}`)
+    // the film: what each stretch of the strip sees, and the path drawn reaching the cap with three shadow rays and one blocked
+    ok('ch.32: the strip sees the ceiling, the right wall (or the mirror) and the box', JSON.stringify(Y.seenSpans(Y.roomOf(false)).map(q => q.name)) === '["ceiling","right wall","box"]' && Y.seenSpans(Y.roomOf(true))[1].name === 'mirror' && Y.WHITE === 0.4)
+    {
+        const R = F.rng(Fm.steps.path.pathSeed * 104729 + Y.PATH_PX * 31 + 7), rec = [], info = {}, [x, y, dx, dy] = P1.camera(Y.CAM, Y.PATH_PX, R())
+        F.tracePath({ shapes: Y.roomOf(false) }, x, y, dx, dy, { nee: true, maxBounce: 4, rand: R, record: rec, info })
+        ok('ch.32: the path drawn: five legs to the cap, three shadow rays reaching the lamp and one blocked', info.end === 'cap' && rec.filter(r => r.kind === 'eye' || r.kind === 'bounce').length === 5
+            && rec.filter(r => r.kind === 'shadow').length === 3 && rec.filter(r => r.kind === 'blocked').length === 1 && Y.PATH_PX === 14)
+    }
+    // the room at four bounces, fixed: aiming 0.1151 +- 0.0005, without 0.1163 +- 0.0010 (the page's section 6)
+    {
+        const run = nee => { const R = F.rng(77), sh = { shapes: Y.roomOf(false) }; let a = 0, b = 0, n = 0; for (let k = 0; k < 800; k++) for (let i = 0; i < 56; i++) { const [x, y, dx, dy] = F.cameraRay(Y.CAM, i, R()); const v = F.tracePath(sh, x, y, dx, dy, { nee, maxBounce: 4, rand: R }); a += v; b += v * v; n++ } const m = a / n; return [m, Math.sqrt((b / n - m * m) / n)] }
+        const [m1, s1] = run(true), [m0, s0] = run(false)
+        ok('ch.32: the room fixed, four bounces: aiming 0.1151 ± 0.0005, without 0.1163 ± 0.0010', m1.toFixed(4) === '0.1151' && s1.toFixed(4) === '0.0005' && m0.toFixed(4) === '0.1163' && s0.toFixed(4) === '0.0010', `${m1} ${s1} ${m0} ${s0}`)
+    }
     // the mistake section's numbers are flatland.js's notes, which the lamp block above measures again
     const fl = readFileSync(join(REPO, 'tutorial/kit/flatland.js'), 'utf8')
     ok('ch.32: the mistakes\' numbers are flatland.js\'s own notes', fl.includes('0.1326 +- 0.0014 against the aimed rays\' 0.1213 +-') && fl.includes('0.0870 aiming against 0.0556 without'))
+}
+
+/* CHAPTER 33: OPEN PROBLEMS ---------------------------------------------------------------------------------------- */
+{
+    const O = await import('../kit/open.js'), OF = await import('../ch/open.js')
+    const td = readFileSync(join(REPO, 'docs/TESTING.md'), 'utf8'), rows = new Map()
+    for (const l of td.split('\n')) { const m = /^\| `([\w-]+)` \|/.exec(l); if (m) { const c = l.split('|'); rows.set(m[1], c[c.length - 2].trim()) } }
+    // every item's words are in its file today; a bench row's status starts as the board says
+    const bad = O.ITEMS.filter(it => !readFileSync(join(REPO, it.src), 'utf8').includes(it.quote) || (it.status && !(rows.get(it.id) ?? '').startsWith(it.status)))
+    ok('ch.33: every open item\'s words are in its file today, every bench row\'s status as the board has it', bad.length === 0, bad.map(it => it.id).join(' '))
+    // no open row left off the board: a row whose status starts "open" in TESTING.md is an item, unless the same cell
+    // says it was answered (haze's does: the board has that as a finding)
+    const openRows = [...rows].filter(([, st]) => /^open\b/.test(st) && !/\*\*answered/i.test(st)).map(([id]) => id), onBoard = new Set(O.ITEMS.map(it => it.id))
+    ok('ch.33: every row TESTING.md calls open is on the board', openRows.every(id => onBoard.has(id)), openRows.filter(id => !onBoard.has(id)).join(' '))
+    // every item names a written or planned chapter, every kind is known
+    const { chapter: chOf } = await import('../kit/chapters.js')
+    ok('ch.33: every item names a chapter and a known kind', O.ITEMS.every(it => chOf(it.ch) && O.KINDS.some(([k]) => k === it.kind)), O.ITEMS.filter(it => !chOf(it.ch)).map(it => it.id).join(' '))
+    // the board lays every item out, inside the figure, in every view
+    const W = 640, H = W / OF.figures.board.aspect
+    for (const [k] of [['all'], ...O.KINDS]) {
+        const L = OF.layout(k, W, H), want = O.itemsOf(k).length
+        ok(`ch.33: the board's ${k} view places its ${want} cards inside the figure`, L.cards.length === want && L.cards.every(c => c.x >= 0 && c.y >= 0 && c.x + c.w <= W + 0.5 && c.y + c.h <= H + 0.5 && c.h > 8), `${L.cards.length} ${want}`)
+    }
 }
 
 /* THE EXCERPT LOCATOR ON ITS OWN ----------------------------------------------------------------------------------- */
