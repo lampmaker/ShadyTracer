@@ -75,9 +75,12 @@ to the eye only against itself.
    the compile too. Then + box with size 10: a 20 mm cube (size is half the side), seen whole from 40 mm.
 2. The same with *Keep the numbers*: as before, the box around the camera.
 3. Ctrl+Z after a conversion: the scene back in cm, the camera with it, no jump in the picture; Ctrl+Y on again.
-4. The LED scene: its unit is right and its numbers 100 times too small, which no unit change fixes. Select the group
-   "LED", type scale 100 (the row now takes it), double-click its row to frame it, then check the light's flux (lm is
-   absolute).
+4. The LED scene: its unit is right and its numbers 100 times too small. Typing a scale of 100 will not do it: the
+   scale row widens to hold the value it has, and still holds a typed one to 10. Four unit changes will, each leaving
+   the picture as it is: mm → cm *Keep the numbers*, cm → mm *Convert the dimensions*, and both again. The LED is then
+   3.5 mm wide, its dome 1.75, its light 1.5, the camera 10.5 mm off (computed in node through the model on the file
+   sent; the Base keeps its own scale of 0.01, so its size reads 175). Then the light's flux, 0.001 lm: lumens are
+   absolute.
 
 **The tutorial**: chapter 3's excerpt of the twist (`modifiers.js`) now shows `perLength`. Its note says what
 `lengths` and `perLength` are for; it was re-read against the page and stamped. Chapter 30's plan (`tutorial/PLAN.md`)
