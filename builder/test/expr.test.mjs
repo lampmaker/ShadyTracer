@@ -36,8 +36,8 @@ for (const [t, want] of [
 //----------------------------------------------------------------------------------------------
 for (const [t, msg, at] of [
     ['', /empty/, 1], ['1 +', /ends too soon/, 4], ['(1 + 2', /not closed/, 7], ['1 + 2)', /closes nothing/, 6],
-    ['rise ^ 2', /'\^' is not part/, 6], ['2rise', /'rise' does not belong/, 2], ['corner.w', /\.x, \.y or \.z/, 8],
-    ['corner.', /\.x, \.y or \.z/, 8], ['* 2', /'\*' cannot start/, 1], ['sin(1)', /'\(' does not belong/, 4],
+    ['rise ^ 2', /'\^' is not part/, 6], ['2rise', /'rise' does not belong/, 2], ['corner.w', /\.x, \.y, \.z \(a vector\) or \.r, \.g, \.b/, 8],
+    ['corner.', /\.x, \.y, \.z \(a vector\) or \.r, \.g, \.b/, 8], ['* 2', /'\*' cannot start/, 1], ['sin(1)', /'\(' does not belong/, 4],
     ['1 2', /'2' does not belong/, 3], [')', /closes nothing/, 1],
 ]) {
     const r = parseExpr(t)

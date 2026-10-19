@@ -162,7 +162,8 @@ export function sceneParams(doc, hooks = {}) {
     //      and the photons when they run
     function light(node, where) {
         const L = M.lightOf(node)
-        const add = (key, e, patch) => out.push({ path: `scene/${node.id}/light/${key}`, label: `${where} › ${e.label ?? key}`,
+        // a setting bound to its component's parameters (bind.js light.<setting>, 0.69.0) is theirs, as any bound value is
+        const add = (key, e, patch) => bound(node, `light.${key}`) ? undefined : out.push({ path: `scene/${node.id}/light/${key}`, label: `${where} › ${e.label ?? key}`,
             group: `scene · ${where}`, reveal: reveal(node.id), ...e,
             set: (x, o = {}) => H.light(doc, node, patch(x), o) })
         const byFlux = L.flux != null

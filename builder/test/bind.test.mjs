@@ -6,11 +6,14 @@
 // down, a group's own parameters for its placement and copies but never for its parameters; a binding that cannot be
 // resolved said and its value kept; a parameter renamed, removed or made another kind with its bindings following or
 // refusing; what a lock-honouring caller sees (heldOf); the file -- validated, saved, read back, a version 17 file
-// upgraded; and the shader: a bound value is a value, so codegen's text is the text of the same values typed.
+// upgraded; and the shader: a bound value is a value, so codegen's text is the text of the same values typed. A light's
+// own settings (0.69.0): bound with the way the light is given, two ways at once refused, a value its checks refuse kept
+// and said; a colour parameter read by its components, and a whole colour or vector bound in one line.
 //======================================================================================================================
 import * as M from '../model.js'
 import { generate } from '../codegen.js'
-import { targetsOf, parseBindings, lookupIn, liveKeyOf, evaluate } from '../bind.js'
+import { targetsOf, parseBindings, lookupIn, liveKeyOf, evaluate, LIGHT_TARGETS } from '../bind.js'
+import { liveUniformsOf } from '../animate.js'
 import { transformReadout } from '../readout.js'
 
 let pass = 0, fail = 0
@@ -209,6 +212,88 @@ const node = (d, id) => M.find(d, id).node
     ok('a component through the library: its bindings with it, reading the inserted copy\'s parameters',
         body?.bind?.radius === 'diameter / 2' && body.params.radius === 3 && r.problems.length === 0 && M.validate(e).length === 0
         && node(d, 'body').params.radius === 1, JSON.stringify({ bind: body?.bind, r }))
+}
+
+//----------------------------------------------------------------------------------------------
+// A LIGHT'S OWN SETTINGS (0.69.0): a lamp component's flux and colour -- the user, 2026-10-19: "a parameter such as colour
+// and flux in a group, used for a light source: I can't get it to work" -- they were not targets at all
+//----------------------------------------------------------------------------------------------
+{
+    const lampDoc = () => {
+        const d = M.createDoc()
+        M.addGroup(d, 'root', { id: 'lamp', params: { flux: 800, tint: { r: 1, g: 0.5, b: 0.25 }, kelvin: 3000, w: 0.2, at: { x: 1, y: 2, z: 3 } } })
+        M.addLight(d, 'lamp', { id: 'led', shape: 'rectangle' })
+        M.addLight(d, 'lamp', { id: 'rays', shape: 'rayfile' })
+        M.addObject(d, 'lamp', { id: 'shade', primitive: 'box' })
+        return d
+    }
+    const d = lampDoc(), L = id => M.lightOf(node(d, id))
+    const t = M.bindTargets(d, 'led')
+    ok('a face light binds its size, then its own settings, then its placement', JSON.stringify(t.slice(0, 2 + LIGHT_TARGETS.length))
+        === JSON.stringify(['width', 'height', ...LIGHT_TARGETS]) && t.includes('pos.z') && !t.includes('blend'), t.join())
+    eq('...a ray file only its flux and the index it emits into', M.bindTargets(d, 'rays').filter(x => x.startsWith('light.')), ['light.flux', 'light.emitN'])
+    ok('...an object none', !M.bindTargets(d, 'shade').some(x => x.startsWith('light.')))
+    eq('the keys a light setting is pushed live under: the light\'s, all three of its face\'s uniforms', ['light.flux', 'light.colour.g', 'light.xy.x'].map(liveKeyOf), ['light', 'light', 'light'])
+    // what a line reads, and what it is refused for
+    const err = text => M.readBindings(d, 'led', text).errors.map(e => [e.line, e.col, e.message])
+    ok('the slip `flux = ...` named for what it is', /'flux' is a light setting: write light.flux/.test(err('flux = flux')[0]?.[2]), JSON.stringify(err('flux = flux')))
+    eq('a colour parameter read by its components', err('light.colour.r = tint.r\nlight.colour.g = tint.g * 0.5'), [])
+    ok('...not whole, nor by a vector\'s', /'tint' is a colour: say which component, tint.r/.test(err('light.colour.r = tint')[0]?.[2])
+        && /its components are .r, .g, .b/.test(err('light.colour.r = tint.x')[0]?.[2]), JSON.stringify([err('light.colour.r = tint'), err('light.colour.r = tint.x')]))
+    ok('...and a vector\'s not by a colour\'s', /'at' has no .r/.test(err('width = at.r')[0]?.[2]), JSON.stringify(err('width = at.r')))
+    eq('two ways at once refused at the line that makes them two', [err('light.flux = flux\nlight.luminance = 3'), err('light.cct = kelvin\n\nlight.xy.x = 0.3')].map(e => e.map(x => [x[0], x[1]])),
+        [[[2, 1]], [[3, 1]]])
+    ok('...said so', /'light.luminance' and 'light.flux' give its brightness two ways/.test(err('light.flux = flux\nlight.luminance = 3')[0]?.[2]))
+    eq('...cct and duv are one way, n and the cone none', [err('light.cct = kelvin\nlight.duv = 0.001'), err('light.flux = flux\nlight.n = 2\nlight.halfAngle = 40\nlight.emitN = 1.4')], [[], []])
+    // a whole colour or vector in one line, kept one line a component
+    const whole = M.readBindings(d, 'led', 'light.colour = tint\npos = at')
+    eq('a whole colour, and a whole vector, each one line: three components each', whole.bind, { 'light.colour.r': 'tint.r', 'light.colour.g': 'tint.g',
+        'light.colour.b': 'tint.b', 'pos.x': 'at.x', 'pos.y': 'at.y', 'pos.z': 'at.z' })
+    ok('...a name, not an expression, and of the kind it is', /takes a parameter's name/.test(err('light.colour = tint * 2')[0]?.[2])
+        && /takes a parameter's name/.test(err('light.colour = tint.r')[0]?.[2]) && /'at' has no .r/.test(err('light.colour = at')[0]?.[2]),
+        JSON.stringify([err('light.colour = tint * 2'), err('light.colour = at')]))
+    ok('...and a component bound twice by it refused', err('light.colour.r = 1\nlight.colour = tint').some(e => e[0] === 2 && /bound twice/.test(e[2])))
+    // the values written, with the way the light is given
+    let r = M.setBindings(d, 'led', 'light.flux = flux\nlight.colour = tint\nwidth = w')
+    eq('the flux and the colour written, the light now set by its flux and coloured by RGB, its width beside them',
+        [L('led').flux, L('led').colour, L('led').colourBy, node(d, 'led').params.width], [800, { r: 1, g: 0.5, b: 0.25 }, 'rgb', 0.2])
+    eq('...pushed once, as the light', r.changed.map(c => `${c.id}.${c.key}`).sort(), ['led.light', 'led.width'])
+    eq('...and saved as what was applied', M.bindingsOf(d, 'led'), 'light.flux = flux\nlight.colour.r = tint.r\nlight.colour.g = tint.g\nlight.colour.b = tint.b\nwidth = w')
+    node(d, 'lamp').params.flux = 400; node(d, 'lamp').params.tint.g = 1
+    r = M.resolveBindings(d)
+    eq('the lamp\'s flux and tint changed: the light follows, said as the light', [L('led').flux, L('led').colour.g, r.changed.map(c => `${c.id}.${c.key}`)], [400, 1, ['led.light']])
+    eq('what moves with the lamp\'s flux, by its live key (model.js boundFrom)', M.boundFrom(d, 'lamp', 'flux'), [{ id: 'led', key: 'light' }])
+    ok('...and the uniforms an animated lamp flux keeps: the face\'s three (animate.js)', ['emissive_led', 'emissiveLuminance_led', 'beam_led']
+        .every(u => liveUniformsOf(d, 'lamp', 'flux').includes(u)), liveUniformsOf(d, 'lamp', 'flux').join())
+    eq('its width bound holds its size, as any bound parameter (heldOf)', M.heldOf(node(d, 'led')).bound, { position: false, params: true })
+    M.setBindings(d, 'led', 'light.flux = flux\nlight.colour = tint')
+    eq('...its flux and colour hold neither its place nor its size: its stretch handles stay', M.heldOf(node(d, 'led')).bound, { position: false, params: false })
+    M.setBindings(d, 'led', 'light.luminance = flux / 2\nlight.cct = kelvin\nlight.duv = 0.002')
+    eq('a luminance bound: set by its luminance (its flux gone); a CCT and Duv: coloured by them',
+        [L('led').flux, L('led').luminance, L('led').colourBy, L('led').cct, L('led').duv], [null, 200, 'cct', 3000, 0.002])
+    // a value the light's own checks refuse is said, and the value kept -- the others still written
+    node(d, 'lamp').params.kelvin = 99999; node(d, 'lamp').params.flux = 1000
+    r = M.resolveBindings(d)
+    ok('a CCT out of range: said, kept; the luminance beside it written', L('led').cct === 3000 && L('led').luminance === 500
+        && r.problems.length === 1 && /'led' light.cct, light.duv: cct must be/.test(r.problems[0]), JSON.stringify(r))
+    node(d, 'lamp').params.kelvin = 3000
+    M.setLight(d, 'led', { distribution: 'collimated', flux: 5 })
+    r = M.resolveBindings(d)
+    ok('a luminance onto a collimated light: refused by its checks, said, the flux kept', L('led').flux === 5 && /a collimated light has no luminance/.test(r.problems.join()), JSON.stringify(r))
+    // the file: kept, read back; two ways at once refused on the way in
+    M.setLight(d, 'led', { distribution: 'cosine' })
+    M.setBindings(d, 'led', 'light.flux = flux\nlight.colour = tint')
+    M.setBindings(d, 'rays', 'light.flux = flux * 2\nlight.emitN = 1.41')
+    eq('a ray file: its flux and index written', [L('rays').flux, L('rays').emitN], [2000, 1.41])
+    const back = M.parse(M.serialize(d))
+    ok('saved and read back with its bindings, sound', JSON.stringify(node(back, 'led').bind) === JSON.stringify(node(d, 'led').bind) && M.validate(back).length === 0, M.validate(back).join())
+    const j = JSON.parse(M.serialize(d))
+    const find = (n, id) => n.id === id ? n : (n.children || []).map(c => find(c, id)).find(Boolean)
+    find(j.root, 'led').bind = { 'light.flux': 'flux', 'light.luminance': '3' }
+    throws('a file binding one light\'s brightness two ways is refused, said why', () => M.parse(JSON.stringify(j)), /give its brightness two ways/)
+    find(j.root, 'led').bind = { 'light.cct': 'kelvin' }
+    find(j.root, 'shade').bind = { 'light.flux': 'flux' }
+    throws('...and an object binding a light setting', () => M.parse(JSON.stringify(j)), /'shade': bind light.flux is not one of its values/)
 }
 
 console.log(`bindings: ${pass} passed, ${fail} failed`)

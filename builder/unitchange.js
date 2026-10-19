@@ -116,7 +116,10 @@ const alike = (a, b) => {
     }
     return a === b
 }
-const boundValues = n => structuredClone({ transform: n.transform, params: n.params, blend: n.blend, joinBlend: n.joinBlend, copies: n.copies })
+/* ...every value a binding can write: a light's own settings too since 0.69.0 (a flux in lm read from a length would not
+   follow a change that keeps the real size, nor should it -- said, as any other) */
+const boundValues = n => structuredClone({ transform: n.transform, params: n.params, blend: n.blend, joinBlend: n.joinBlend, copies: n.copies,
+                                           light: n.light })
 
 /**
  * WHAT A TIMELINE KEY ON `prop` (a registry path, builder/params.js) IS MULTIPLIED BY, for a change made `how` with the

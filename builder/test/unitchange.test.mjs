@@ -1,7 +1,7 @@
 //======================================================================================================================
 // node builder/test/unitchange.test.mjs
 //
-// A UNIT CHANGE THREE WAYS (unitchange.js, 0.68.0): keep the numbers, keep the real size by a scale, keep it by the
+// A UNIT CHANGE THREE WAYS (unitchange.js, 0.70.0): keep the numbers, keep the real size by a scale, keep it by the
 // numbers. Measured IN METRES, through the builder's own readings of a document -- every node's place (bounds.js
 // selectionGeometry), the estimate of what it covers (estimateBox), every light's face and flux (sources.js
 // sourceTable), the camera, the radius, the tolerance -- for every example, to another unit and back: both real-size
@@ -238,6 +238,18 @@ for (const f of scenes) {
     const d4 = structuredClone(d3); d4.unit = 'cm'
     const r4 = changeUnit(d3, 'cm', 'scale')
     ok('by a scale nothing below the top moves: the binding is silent', !r4.skipped.length, JSON.stringify(r4.skipped))
+    // a light's own setting bound (0.69.0): a flux in lm from a parameter that is no length follows nothing, and is
+    // silent; one read from a length would change the lumens with the unit -- said
+    const d5 = M.createDoc(); d5.unit = 'cm'
+    const lamp = M.addGroup(d5, 'root', { label: 'lamp', params: { lm: 800, w: 2 } })
+    M.setLength(d5, lamp.id, 'w', true)
+    const L1 = M.addLight(d5, lamp.id, { shape: 'rectangle' }), L2 = M.addLight(d5, lamp.id, { shape: 'rectangle' })
+    M.setBindings(d5, L1.id, 'light.flux = lm\nwidth = w')
+    M.setBindings(d5, L2.id, 'light.flux = w * 100')
+    const r5 = changeUnit(d5, 'mm', 'dimensions')
+    ok('a light\'s flux bound to a number: 800 lm still, its width bound to a length 20 mm, silent', L1.light.flux === 800 && L1.params.width === 20
+        && !r5.skipped.some(s => s.id === L1.id), JSON.stringify([L1, r5.skipped]))
+    ok('...one bound to a length: what its binding says (2000 lm), and said', L2.light.flux === 2000 && r5.skipped.some(s => s.id === L2.id), JSON.stringify([L2.light, r5.skipped]))
 }
 
 // ---- A RAY FILE KEEPS ITS WORLD SCALE (its rays are real-sized by its own unit), and its box follows ---------------

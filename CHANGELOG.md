@@ -15,7 +15,7 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
-## 0.68.0 — 2026-10-19
+## 0.70.0 — 2026-10-19
 
 **A change of the scene's unit asks how: keep the real size, by a scale or by the numbers, or keep the numbers.** The
 user (2026-10-19): a new scene switched from cm to mm drew a box typed 10 "much too big", and 0.1 had to be typed to get
@@ -86,6 +86,118 @@ to the eye only against itself.
 `lengths` and `perLength` are for; it was re-read against the page and stamped. Chapter 30's plan (`tutorial/PLAN.md`)
 now covers what a number means when the scene's unit changes, and `builder/unitchange.js` is among its files. Chapter
 26's excerpt of `modifiers.js` did not change. Nothing else needed to.
+## 0.69.0 — 2026-10-19
+
+**A light's flux and colour from its component's parameters.** The user asked whether a group's parameters, a colour and
+a flux, could drive a light inside it: they could not. *From parameters* bound only what sits in a node's own parameters
+(a light's width, height or radius), its placement, a blend and copies. A light's settings live in its `light`, not its
+parameters, so none of them was a target (read in code: `bind.js` targetsOf read `node.params` alone). And a colour
+parameter could not be read in an expression at all: the expression language took only `.x .y .z`, and the lookup
+refused a colour outright.
+- **A light binds its own settings**, named as the parameter registry names them: `light.flux`, `light.luminance`,
+  `light.colour.r .g .b`, `light.cct`, `light.duv`, `light.xy.x .y`, `light.n`, `light.halfAngle`, `light.emitN` (a ray
+  file: `light.flux` and `light.emitN`). `flux = ...` is answered with "write light.flux".
+- **A binding holds the way the light is given with its value**: `light.flux` makes the light set by its flux,
+  `light.luminance` by its luminance, `light.colour.*` coloured by RGB, `light.cct`/`light.duv` by CCT, `light.xy.*` by
+  xy. A CCT bound into a light coloured by RGB would be a number nothing reads. So two ways at once are refused (at the
+  line, and in a file), and the panel holds *brightness by* and *colour by* while one is bound, as it holds any bound
+  row, the binding on its label. A value the light's checks refuse (a CCT out of range, a luminance on a collimated
+  light) is said and the light keeps its last.
+- **A colour parameter is read by its components**: `tint.r`, `tint.g`, `tint.b`.
+- **A whole vector or colour binds in one line**: `light.colour = tint`, `pos = at`, `size = corner`, a parameter's
+  name of the same kind, kept as one line a component.
+- The parameter registry (and so the timeline) leaves out a bound light setting, as it leaves out any bound value; the
+  Optics page's colour mix refuses a light whose brightness is bound (its flux would be undone by the next resolve).
+- **A fix on the way:** a compile derived a flux-given light's luminance BEFORE it resolved the bindings, so a light's
+  bound size (bindable before this version) or flux compiled with the luminance of the values before them, until the next live
+  push. The bindings are resolved first now (`demo.js` build and bakeScene). `bindlive.test.mjs` fails with the old
+  order.
+
+**What is still not bindable** (help, *Component parameters*): a material's fields, because a material is shared by
+every object wearing it, so a per-component colour is a material per component; a haze box or an export box (no *from
+parameters* box, though the model would take their size and placement); a light's distribution, both faces and
+transparent.
+
+**What to look at:** a group with parameters `flux` (a number) and `tint` (a colour), a rectangle light inside it, and in
+the light's *from parameters*: `light.flux = flux` and `light.colour = tint`, Apply. The light's *brightness by*, *flux*,
+*colour by* and *colour* rows are greyed, their binding on each label. Drag the group's `flux` and `tint`: the light's
+glow and what it lights should follow live, with no compile, in the picture and in an Optics trace.
+
+**Tests:** `bind.test.mjs` (the light's targets, the slip, colour components, a whole value in one line, the modes
+written and held, two ways refused in a line and a file, a refused value kept, what moves with a lamp's flux and what an
+animated one keeps); `bindlive.test.mjs` (a lamp through the real builder, codegen and as data: compiled with the
+resolved luminance, live with no compile, the registry); `panel.check.mjs` (the rows held, headless); `expr.test.mjs`
+(the component message). **The tutorial:** no chapter is tied to the files changed (`affected.mjs`), and none describes
+component parameters; the photometry chapter's flux-to-luminance line (`syncSources`) still holds. Nothing changed there.
+
+## 0.68.0 — 2026-10-19
+
+**The measure tool's ruler: where a point on a surface is, and the distances between points; a drag turns the view
+with a pin or the ruler on, and moves a point or a pin it starts on.** You asked whether the measure tool's pick
+could give the position of the picked point and make a distance meter from several points; then for each distance's
+steps in x, y and z as red, green and blue lines, for the view to turn between two picks ("or just allow a drag in
+picker mode"), and for points already placed to be moved.
+
+**What was there (read in code):** a pin already picks the surface clicked (`RT.pick`, `core/pick.js`) and keeps the
+world point, so that it can be projected again as the camera moves. That point was written to the CSV's x, y, z, but
+never shown on the picture. With Pin on, every left press on the picture was the tool's: a drag did nothing, so a
+surface the view did not show could not be reached without switching the tool off to turn the view.
+
+**Now:**
+- **A third switch in the analysis drawer's Measure group, the ruler** (an arrow between two end marks), beside pin
+  and area. With it on, a click on a surface places a point named A, B, C… The label beside it gives its position,
+  (x, y, z) in the scene's unit.
+- **Each point joins the one before it in a line.** Each stretch of the line shows its length at its middle, and a
+  line of two stretches or more shows its total (Σ) under its last point. **Shift-click** starts a new line, and so
+  does switching the ruler off and on, or Escape.
+- **Each stretch's steps along the axes**: the Points mode's legs, from its first point to its second, x then y then
+  z, dashed in the axis colours (x red, y green, z blue), each labelled with its signed step, Δx, Δy, Δz. A step that
+  rounds to 0 at the stretch's digits is not drawn. They are the same code as the Points mode's, not a copy (you saw
+  the likeness): the stepping, the colours, the dashes and the width are in `lib/pathtracer/legs.js`, which
+  `builder/pointsmode.js` now draws its legs with too. The ruler's points and lines are the Points mode's light grey;
+  a green of their own read as the y leg.
+- **A click on a point removes it**, and its neighbours are joined. Clear removes the points with the pins and the
+  area.
+- **A drag on a point moves it**, over the surfaces: it is picked again as the mouse goes (one pick at a time, then
+  the newest place the mouse has reached) and stays where the last pick put it. Its name, its line and its place in
+  the line are kept, so its stretches, legs and total follow. Over nothing (the sky), it waits where it last found a
+  surface. **A pin moves the same way** and reads again where it lands; over the sky it stays on the screen, as a pin
+  placed there does. The cursor is a hand over a point or a pin a press would take, and a ring marks the one being
+  dragged.
+- **A click where nothing is hit** (the sky) places nothing and shows "nothing to measure here" for a moment.
+- **A drag elsewhere turns the view, with Pin or the ruler on**; a click (moving 3 px or less) still places. The press
+  is kept from the camera until it has moved more than 3 px, then handed to it as the press it was, so a click's wobble
+  does not turn the camera and restart a picture the pins are reading. The builder's selection now leaves alone a press
+  that another tool has marked (`builder/overlay.js`, `defaultPrevented`), so the handed press selects nothing. The
+  middle button (pan) and the wheel were never the tool's, before or now (read in code). **Area** keeps its drag: the
+  drag is the rectangle. The builder's hover over its handles leaves the cursor alone too, while Pin or the ruler is on.
+- **The digits are the surface tolerance's at that point** (`RT.tolerances`): the pick's march stops once it is within
+  the tolerance of the surface (`core/pick.js`), so a finer digit would come from the march, not the shape. A scene
+  100 mm in size with the automatic tolerance shows two decimals (0.01 mm). For a shape whose distance is a bound
+  rather than exact, the surface can be further than that.
+- **Like a pin, a point stays on the spot of the surface that was clicked**: it is projected again every frame, and a
+  line running behind the camera is cut where it passes it (`genrays.js` clipToView). Unlike a pin, it reads nothing
+  from the picture: its numbers are fixed once picked.
+- **Save as CSV** adds a `point` row for each point (x, y, z, unit) and a `distance` row for each stretch (`A-B`, with
+  the length in `value` and the step from A to B in x, y, z, so a height or a width can be read off). `M.readings()`
+  gives `points` and `distances`.
+
+**Checked:** `measure.test.mjs` (names, decimals, which points join, lengths, units mixed across scenes, the legs).
+The shell's headless check (`example.check.mjs`) drives the real tool over a stand-in pick and camera: three clicks
+and a Shift-click, a click on the sky, the lengths, the CSV, a point removed, the ruler off and on, Escape, Clear; and
+with stand-ins for the camera's and the selection's listeners, a click heard by neither, a drag handed to the camera
+where it began and marked, a 2 px wobble still a click, Pin the same, Area keeping its drag, and with nothing on a
+press heard by both; a point dragged to a new place (its name, line and stretch following, the camera not told) and
+onto the sky (waiting at its last surface), a pin dragged and dragged onto the sky, the cursor a hand over a point.
+Over the real builder, `transform.check.mjs` (the selection, its hover) and `points.check.mjs` (the shared legs) still
+pass. **Not seen on hardware.**
+
+**What to look at:** open the analysis drawer (bottom right), switch on the ruler and click two points on a surface
+whose size you know: a box's edge, or a lens's thickness. Does the length match, and do the coloured Δx, Δy, Δz
+legs? Do the points and lines stay on the surface as you orbit? Do the labels stay readable over a busy picture? Then
+drag to turn the view (the ruler still on) and click a point on a surface the first view did not show: the view
+should turn, and the click should select no object. Then drag a point along the surface: do its lines and numbers
+follow, and does it stay on the surface? Then Shift-click a fourth point, and check the Σ and the new line.
 
 ## 0.67.3 — 2026-10-19
 

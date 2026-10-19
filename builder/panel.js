@@ -492,7 +492,7 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
                    a centimetre or a millimetre. Changing it ASKS how (unitdialog.js, unitchange.js; the user,
                    2026-10-19): keep the real size by scaling the objects, keep it by converting their
                    dimensions -- the camera, the radius and the tolerance converted with them -- or keep the
-                   numbers, the scene shrinking or growing by the factor, as every change did until 0.68.0.
+                   numbers, the scene shrinking or growing by the factor, as every change did until 0.70.0.
                    That last one was the only one, and on a new scene it hid itself: cm to mm left the
                    picture as it was, the camera 4 mm off in a world 25 mm wide, and a box typed 10 swallowed
                    the camera. Structural, because it reaches the renderer with the scene object (codegen's
@@ -822,6 +822,7 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
     function lightFolder(folder, node) {
         const doc = BUILDER.doc
         const L = M.lightOf(node)
+        const H = lightHeld(node)
         const set = (patch, how = 'quiet') => {
             if (how === 'structure') {
                 try { M.setLight(doc, node.id, patch) } catch (e) { console.warn('[builder]', e.message); return }
@@ -858,43 +859,55 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
                 input.click()
             })
             const V = { own: L.flux != null, flux: L.flux ?? parsed?.total ?? 0, emitN: L.emitN }
-            f.addBinding(V, 'own', { label: 'set the flux' }).on('change', ev => set({ flux: ev.value ? (V.flux || 1) : null }, 'reshow'))
+            H.tip(f.addBinding(V, 'own', { label: 'set the flux', ...H.opts('flux') }).on('change', ev => set({ flux: ev.value ? (V.flux || 1) : null }, 'reshow')), 'flux')
             const lp = k => `scene/${node.id}/light/${k}`
-            if (V.own) flagRow(f.addBinding(V, 'flux', { label: 'flux (lm)', min: 0 }).on('change', ev => set({ flux: Math.max(0, +ev.value || 0) })), lp('flux'))
-            flagRow(f.addBinding(V, 'emitN', { label: 'emits into n', min: 1, max: 3, step: 0.001 }).on('change', ev => set({ emitN: ev.value })), lp('emitN'))
+            if (V.own) flagRow(H.tip(f.addBinding(V, 'flux', { label: 'flux (lm)', min: 0, ...H.opts('flux') }).on('change', ev => set({ flux: Math.max(0, +ev.value || 0) })), 'flux'), lp('flux'))
+            flagRow(H.tip(f.addBinding(V, 'emitN', { label: 'emits into n', min: 1, max: 3, step: 0.001, ...H.opts('emitN') }).on('change', ev => set({ emitN: ev.value })), 'emitN'), lp('emitN'))
             return
         }
         const V = { colour: { ...L.colour }, by: L.flux != null ? 'flux' : 'luminance', luminance: L.luminance, flux: L.flux ?? 0,
                     distribution: L.distribution, n: L.n, halfAngle: L.halfAngle, twoSided: L.twoSided, transparent: L.transparent, emitN: L.emitN }
         const flux = () => sourceTable(doc).sources.find(x => x.id === node.id)?.flux ?? 0
-        colourBindings(f, node, L, set)
-        f.addBinding(V, 'by', { label: 'brightness by', options: { 'luminance (cd/m\u00b2)': 'luminance', 'flux (lm)': 'flux' } })
-            .on('change', ev => set({ flux: ev.value === 'flux' ? (flux() || 100) : null }, 'reshow'))
+        colourBindings(f, node, L, set, H)
+        H.tip(f.addBinding(V, 'by', { label: 'brightness by', options: { 'luminance (cd/m\u00b2)': 'luminance', 'flux (lm)': 'flux' }, ...H.opts('flux', 'luminance') })
+            .on('change', ev => set({ flux: ev.value === 'flux' ? (flux() || 100) : null }, 'reshow')), 'flux', 'luminance')
         const lp = k => `scene/${node.id}/light/${k}`
-        if (V.by === 'flux') flagRow(f.addBinding(V, 'flux', { label: 'flux (lm)', min: 0 }).on('change', ev => set({ flux: Math.max(0, +ev.value || 0) })), lp('flux'))
-        else flagRow(f.addBinding(V, 'luminance', { label: 'luminance (cd/m\u00b2)', min: 0 }).on('change', ev => set({ luminance: Math.max(0, +ev.value || 0) })), lp('luminance'))
+        if (V.by === 'flux') flagRow(H.tip(f.addBinding(V, 'flux', { label: 'flux (lm)', min: 0, ...H.opts('flux') }).on('change', ev => set({ flux: Math.max(0, +ev.value || 0) })), 'flux'), lp('flux'))
+        else flagRow(H.tip(f.addBinding(V, 'luminance', { label: 'luminance (cd/m\u00b2)', min: 0, ...H.opts('luminance') }).on('change', ev => set({ luminance: Math.max(0, +ev.value || 0) })), 'luminance'), lp('luminance'))
         const info = { text: V.by === 'flux' ? `luminance ${(+L.luminance || 0).toPrecision(4)} cd/m\u00b2 (from the flux)`
                                              : `flux ${flux().toPrecision(4)} lm (from the luminance)` }
         f.addBinding(info, 'text', { readonly: true, label: '' })
         f.addBinding(V, 'distribution', { label: 'distribution', options: { 'cos^n (1 = Lambertian)': 'cosine',
             'uniform cone': 'uniform', 'collimated': 'collimated' } })
             .on('change', ev => set({ distribution: ev.value, ...(ev.value === 'collimated' && V.by !== 'flux' ? { flux: flux() || 100 } : {}) }, 'reshow'))
-        if (V.distribution === 'cosine') flagRow(f.addBinding(V, 'n', { label: 'n (cos^n)', min: 0, max: 200, step: 0.1 }).on('change', ev => set({ n: ev.value })), lp('n'))
-        if (V.distribution !== 'collimated') flagRow(f.addBinding(V, 'halfAngle', { label: 'cone half angle (deg)', min: 0.5, max: 90, step: 0.5 })
-            .on('change', ev => set({ halfAngle: ev.value })), lp('halfAngle'))
+        if (V.distribution === 'cosine') flagRow(H.tip(f.addBinding(V, 'n', { label: 'n (cos^n)', min: 0, max: 200, step: 0.1, ...H.opts('n') }).on('change', ev => set({ n: ev.value })), 'n'), lp('n'))
+        if (V.distribution !== 'collimated') flagRow(H.tip(f.addBinding(V, 'halfAngle', { label: 'cone half angle (deg)', min: 0.5, max: 90, step: 0.5, ...H.opts('halfAngle') })
+            .on('change', ev => set({ halfAngle: ev.value })), 'halfAngle'), lp('halfAngle'))
         f.addBinding(V, 'twoSided', { label: 'both faces' }).on('change', ev => set({ twoSided: ev.value }, 'structure'))
         f.addBinding(V, 'transparent', { label: 'transparent (other light passes)' }).on('change', ev => set({ transparent: ev.value }, 'structure'))
-        flagRow(f.addBinding(V, 'emitN', { label: 'emits into n', min: 1, max: 3, step: 0.001 }).on('change', ev => set({ emitN: ev.value })), lp('emitN'))
+        flagRow(H.tip(f.addBinding(V, 'emitN', { label: 'emits into n', min: 1, max: 3, step: 0.001, ...H.opts('emitN') }).on('change', ev => set({ emitN: ev.value })), 'emitN'), lp('emitN'))
+    }
+    /* A LIGHT'S SETTINGS FROM PARAMETERS (bind.js, 0.69.0): a bound setting's row held as a bound parameter's is -- a
+       change here would be undone by the next resolve -- and so is the choice its binding holds (bind.js LIGHT_MODES:
+       light.flux holds "brightness by", light.cct "colour by"), the binding on the label. opts(...settings) is the row's
+       options, tip(row, ...settings) its label; a setting is a light's key, 'colour' for all three of light.colour.* */
+    function lightHeld(node) {
+        const lb = Object.entries(node.bind || {}).filter(([t]) => t.startsWith('light.'))
+        const by = keys => lb.filter(([t]) => keys.some(k => t === `light.${k}` || t.startsWith(`light.${k}.`))).map(([t, e]) => `${t} = ${e}`)
+        return {
+            opts: (...keys) => lockedOpts(by(keys).length > 0),
+            tip: (b, ...keys) => { const w = by(keys); return w.length ? rowTip(b, `from parameters: ${w.join(', ')}`) : b },
+        }
     }
 
     /* A LIGHT'S COLOUR, three ways (lights.js colourBy): an RGB hue, a CCT and Duv, or CIE xy -- the
        last two as a datasheet gives an LED, and exact however far outside the display's gamut. Below
        them, what it comes to in the other terms. Switching the way keeps the colour: the new fields
        start at the current colour's own values. */
-    function colourBindings(f, node, L, set) {
+    function colourBindings(f, node, L, set, H = lightHeld(node)) {
         const ch = M.lightChromaticity(L)
         const C = { by: L.colourBy, colour: { ...L.colour }, cct: L.cct, duv: L.duv, x: L.xy.x, y: L.xy.y }
-        f.addBinding(C, 'by', { label: 'colour by', options: { 'RGB': 'rgb', 'CCT + Duv': 'cct', 'CIE xy': 'xy' } })
+        H.tip(f.addBinding(C, 'by', { label: 'colour by', options: { 'RGB': 'rgb', 'CCT + Duv': 'cct', 'CIE xy': 'xy' }, ...H.opts('colour', 'cct', 'duv', 'xy') }), 'colour', 'cct', 'duv', 'xy')
             .on('change', ev => {
                 const patch = { colourBy: ev.value }
                 if (ev.value === 'cct' && ch.inRange) Object.assign(patch, { cct: Math.round(ch.cct), duv: +Math.max(-0.05, Math.min(0.05, ch.duv)).toFixed(4) })
@@ -914,15 +927,15 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
             try { infoB?.refresh() } catch { }
         }
         const lp = k => `scene/${node.id}/light/${k}`
-        if (C.by === 'rgb') flagRow(f.addBinding(C, 'colour', { label: 'colour', color: { type: 'float' } }).on('change', () => put({ colour: { ...C.colour } })), lp('colour'))
+        if (C.by === 'rgb') flagRow(H.tip(f.addBinding(C, 'colour', { label: 'colour', color: { type: 'float' }, ...H.opts('colour') }).on('change', () => put({ colour: { ...C.colour } })), 'colour'), lp('colour'))
         if (C.by === 'cct') {
-            flagRow(f.addBinding(C, 'cct', { label: 'CCT (K)', min: 1000, max: 15000, step: 10 }).on('change', ev => put({ cct: ev.value })), lp('cct'))
-            flagRow(f.addBinding(C, 'duv', { label: 'Duv', min: -0.05, max: 0.05, step: 0.0005 }).on('change', ev => put({ duv: ev.value })), lp('duv'))
+            flagRow(H.tip(f.addBinding(C, 'cct', { label: 'CCT (K)', min: 1000, max: 15000, step: 10, ...H.opts('cct') }).on('change', ev => put({ cct: ev.value })), 'cct'), lp('cct'))
+            flagRow(H.tip(f.addBinding(C, 'duv', { label: 'Duv', min: -0.05, max: 0.05, step: 0.0005, ...H.opts('duv') }).on('change', ev => put({ duv: ev.value })), 'duv'), lp('duv'))
         }
         if (C.by === 'xy') {
             const xy = () => ({ x: C.x, y: C.y })
-            f.addBinding(C, 'x', { label: 'x', min: 0.001, max: 0.8, step: 0.0001 }).on('change', () => { if (C.x + C.y < 1) put({ xy: xy() }) })
-            f.addBinding(C, 'y', { label: 'y', min: 0.001, max: 0.9, step: 0.0001 }).on('change', () => { if (C.x + C.y < 1) put({ xy: xy() }) })
+            H.tip(f.addBinding(C, 'x', { label: 'x', min: 0.001, max: 0.8, step: 0.0001, ...H.opts('xy') }).on('change', () => { if (C.x + C.y < 1) put({ xy: xy() }) }), 'xy')
+            H.tip(f.addBinding(C, 'y', { label: 'y', min: 0.001, max: 0.9, step: 0.0001, ...H.opts('xy') }).on('change', () => { if (C.x + C.y < 1) put({ xy: xy() }) }), 'xy')
         }
         infoB = f.addBinding(info, 'text', { readonly: true, label: '' })
     }
@@ -1470,7 +1483,9 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
         const draft = { text: M.bindingsOf(doc, node.id) }
         const bf = folder.addFolder({ title: n ? `from parameters · ${n}` : 'from parameters', expanded: n > 0 })
         const head = bf.element.querySelector('.tp-fldv_b')
-        if (head) head.title = 'its values as expressions of the parameters of the groups above it, one a line -- radius = diameter / 2,  pos.z = height + gap,  size.x = w,  copies.count = n'
+        if (head) head.title = node.type === 'light'
+            ? 'its values as expressions of the parameters of the groups above it, one a line -- light.flux = flux,  light.colour = tint (a colour parameter whole, or light.colour.r = tint.r),  light.cct = kelvin,  width = w,  pos.z = height'
+            : 'its values as expressions of the parameters of the groups above it, one a line -- radius = diameter / 2,  pos.z = height + gap,  size.x = w,  size = corner (a vector whole),  copies.count = n'
         const names = scope.map(s => `${s.names.join(', ')}  (${s.own ? 'its own: for its placement and copies' : s.label})`).join('\n') || 'no group above has parameters'
         bf.addBinding({ names }, 'names', { readonly: true, label: 'names', multiline: true, rows: Math.max(1, Math.min(4, scope.length)) })
         const b = bf.addBinding(draft, 'text', { label: 'bindings', multiline: true, lineNumbers: true,

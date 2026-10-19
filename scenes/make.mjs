@@ -247,7 +247,7 @@ function parametric() {
     floor(doc, lib(doc, 'white'))
     const al = lib(doc, 'anodised aluminium')
     const hs = group(doc, 'root', 'heatsink', { params: { fins: 9, pitch: 5, finHeight: 25, base: 4, depth: 40 } })
-    // its lengths said (0.68.0): "(mm)" beside them, and a unit's change that keeps the real size converts them, and so
+    // its lengths said (0.70.0): "(mm)" beside them, and a unit's change that keeps the real size converts them, and so
     // everything bound to them (builder/unitchange.js); the count is no length
     for (const k of ['pitch', 'finHeight', 'base', 'depth']) M.setLength(doc, hs.id, k, true)
     const plate = shape(doc, hs.id, 'box', { label: 'base plate', params: { size: V(23, 20, 2), rounding: 0.5 }, at: [0, 0, 2], material: al })

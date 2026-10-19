@@ -9,12 +9,16 @@
 //   - as data: the bound values written into the records, no compile;
 //   - the parameter registry offers the group's parameter and not the values bound to it;
 //   - a compile resolves first: a node moved into a component takes its values at that compile.
+//   - a light's own settings (0.69.0): its flux and colour from a lamp's parameters, written as its face's uniforms at
+//     a compile and live -- the luminance derived from the bound flux and size, never from the values before them.
 // What it cannot show is the picture: the user's.
 //======================================================================================================================
 import * as M from '../model.js'
 import * as P from '../project.js'
 import { sceneParams } from '../params.js'
 import { sceneTextOf, SCENE_DATA_KEYS } from '../../lib/pathtracer/core/uniforms.schema.js'
+import { UNITS } from '../../lib/pathtracer/core/photometry.js'
+import { lightRGBObject } from '../lights.js'
 
 let pass = 0, fail = 0
 const ok = (name, cond, extra = '') => { if (cond) { pass++; return } fail++; console.log(`FAIL  ${name}${extra ? '\n      ' + extra : ''}`) }
@@ -86,6 +90,19 @@ const lens = () => {
     M.addObject(d, 'root', { id: 'loose', primitive: 'sphere' })
     return d
 }
+/* A LAMP (0.69.0): its flux, its tint and its width are the group's; a rectangle light inside reads all three */
+const lamp = () => {
+    const d = P.blankScene('lamp')
+    M.addGroup(d, 'root', { id: 'lamp', params: { flux: 100, tint: { r: 1, g: 0.5, b: 0.25 }, w: 0.5 } })
+    M.addLight(d, 'lamp', { id: 'led', shape: 'rectangle' })
+    M.setBindings(d, 'led', 'light.flux = flux\nlight.colour = tint\nwidth = w')
+    return d
+}
+/* the luminance a Lambertian rectangle of width w and height 1 emitting `flux` has (sources.js syncSources: pi A L) */
+const lambertL = (d, flux, w) => flux / (Math.PI * w * 1 * (UNITS[d.unit] ?? 1) ** 2)
+const near = (a, b) => Math.abs(a - b) <= 1e-6 * Math.max(1, Math.abs(b))
+const sameRGB = (a, b) => !!a && ['r', 'g', 'b'].every(k => near(a[k], b[k]))
+
 const log = console.log, warn = console.warn
 console.log = () => { }; console.warn = () => { }
 const got = {}
@@ -124,6 +141,37 @@ try {
         await B.apply()
         got.moved = [M.find(B.doc, 'loose').node.params.radius, RT.scene.uniforms.radius_loose?.def]
     }
+    // ---- a light's own settings, codegen and as data
+    for (const data of [0, 1]) {
+        const RT = standIn(); RT.set({ sceneData: data })
+        const B = installBuilder({}, { RT, gpu, project: P.createProject([lamp()]) })
+        const G = () => M.find(B.doc, 'lamp').node.params
+        /* changed in the document, then compiled: the compile resolves the flux and the width before it derives the
+           luminance from them (demo.js build) -- after, it compiled the luminance of 100 lm over 0.5 */
+        G().flux = 300; G().w = 0.25
+        await B.apply()
+        const U = RT.scene.uniforms
+        const g = { compiled: [near(U.emissiveLuminance_led?.def, lambertL(B.doc, 300, 0.25)), sameRGB(U.emissive_led?.def, lightRGBObject({ colour: G().tint }))] }
+        let asked = 0
+        B.onRestructure = () => asked++
+        const n0 = RT.compiles
+        // live: the lamp's flux, then its tint, then its width -- each the face's uniforms, no compile
+        G().flux = 600
+        const tookF = B.live('lamp', 'flux')
+        const lF = RT.get().emissiveLuminance_led
+        G().tint.g = 1
+        const tookT = B.live('lamp', 'tint')
+        const cT = RT.get().emissive_led
+        G().w = 1
+        const tookW = B.live('lamp', 'w')
+        g.live = [tookF, near(lF, lambertL(B.doc, 600, 0.25)), tookT, sameRGB(cT, lightRGBObject({ colour: { r: 1, g: 1, b: 0.25 } })),
+                  tookW, near(RT.get().emissiveLuminance_led, lambertL(B.doc, 600, 1)), RT.compiles - n0, asked]
+        // the registry: the lamp's parameters, not the light's settings bound to them (its others still there)
+        const paths = sceneParams(B.doc).map(e => e.path)
+        g.registry = ['scene/lamp/flux', 'scene/lamp/tint', 'scene/led/light/flux', 'scene/led/light/colour', 'scene/led/width',
+                      'scene/led/light/emitN'].map(x => paths.includes(x))
+        got[`light${data}`] = g
+    }
     // ---- as data
     {
         const RT = standIn()
@@ -156,6 +204,15 @@ ok('the registry: the component\'s parameter, not the values bound to it (the re
 ok('a node moved into a component and bound: its value from the component at the next compile', JSON.stringify(got.moved) === JSON.stringify([0.25, 0.25]), JSON.stringify(got.moved))
 ok('as data: the bound radius written into the records, no compile, the same scene', JSON.stringify(got.data) === JSON.stringify([true, 0, true, true, true]), JSON.stringify(got.data))
 ok('as data: an array\'s count from its parameter is data too -- no compile asked', JSON.stringify(got.dataCount) === JSON.stringify([true, 0, 0]), JSON.stringify(got.dataCount))
+for (const data of [0, 1]) {
+    const g = got[`light${data}`], how = data ? 'as data' : 'codegen'
+    ok(`${how}: a light's flux and colour from its lamp's parameters, compiled with the luminance of the flux and width resolved first`,
+        JSON.stringify(g.compiled) === JSON.stringify([true, true]), JSON.stringify(g.compiled))
+    ok(`${how}: the lamp's flux, tint and width moved live: the face's luminance and colour follow, no compile, none asked`,
+        JSON.stringify(g.live) === JSON.stringify([true, true, true, true, true, true, 0, 0]), JSON.stringify(g.live))
+    ok(`${how}: the registry offers the lamp's parameters, not the light settings bound to them; its others it does`,
+        JSON.stringify(g.registry) === JSON.stringify([true, true, false, false, false, true]), JSON.stringify(g.registry))
+}
 
 console.log(`bindings through the builder: ${pass} passed, ${fail} failed`)
 process.exit(fail ? 1 : 0)

@@ -56,7 +56,9 @@ export function parseExpr(text) {
             if (peek()?.t !== '.') return { name: t.v, at: t.at + 1 }
             i++
             const c = toks[i]
-            if (c?.t !== 'name' || !['x', 'y', 'z'].includes(c.v)) fail('a component is .x, .y or .z')
+            /* a colour's too (bind.js: a light's colour from a component's `colour` parameter, 0.69.0) -- whether the
+               name has that component is its lookup's to say */
+            if (c?.t !== 'name' || !['x', 'y', 'z', 'r', 'g', 'b'].includes(c.v)) fail('a component is .x, .y, .z (a vector) or .r, .g, .b (a colour)')
             i++
             return { name: t.v, comp: c.v, at: t.at + 1 }
         }
