@@ -50,11 +50,12 @@ import { worldPerPixels, nearestOnLine, PLANES, ringAngle, angleStep, stretchFac
 import { paintGizmo, hitGizmo } from './gizmodraw.js'
 import * as E from './pointedit.js'
 import { iconPill, iconButton, lit as litIcon } from '../lib/pathtracer/icons.js'
+import { AXIS_INK, LEG_DASH, LEG_WIDTH, axisLegs } from '../lib/pathtracer/legs.js'
 import { signed, deg } from './readout.js'
 
 const COLOR = { curve: '#ffcc33', bad: '#ff6b6b', poly: 'rgba(235,235,235,0.6)', dot: '#e6e6e6', sel: '#ffcc33', hot: '#ffffff',
                 fillet: '#ff9f43', grid: 'rgba(200,215,230,0.12)', gridAxis: 'rgba(200,215,230,0.32)', text: '#ffffff', note: '#b9c3cc' }
-const AXIS_COLOR = { x: '#ff5555', r: '#ff5555', y: '#55dd55', z: '#5599ff' }
+const AXIS_COLOR = AXIS_INK            // the legs' and the gizmo's (lib/pathtracer/legs.js, shared with the measure tool's ruler)
 // a path point's section: its outline, and its handles -- the section's own x and y lighter than the object's axes, whose
 // arrows they can sit beside, and its twist in a colour no axis has
 const SECTION = { outline: 'rgba(255,217,102,0.85)', x: '#ffa08a', y: '#a6e3a6', twist: '#c792ea' }
@@ -259,17 +260,12 @@ export function createPointsMode({ stage, canvas, RT, BUILDER, boxes = null, but
             if (!finite(r.points[i]) || !finite(q) || prevOf(i) === i) return
             const ro = E.readout(t, r.points, i)
             if (!ro.delta) return
-            let L = sub(ro.coords, ro.delta)
-            ro.delta.forEach((d, j) => {
-                if (!d) return
-                const next = L.map((v, n) => n === j ? v + d : v)
-                line([worldOf(L), worldOf(next)], AXIS_COLOR[ro.names[j]], width, [3, 3])
-                L = next
-            })
+            for (const l of axisLegs(sub(ro.coords, ro.delta), ro.delta))
+                line([worldOf(l.from), worldOf(l.to)], AXIS_COLOR[ro.names[l.axis]], width, LEG_DASH)
             legsDrawn.push({ i, width })
         }
         if (allLegs) r.points.forEach((_, i) => { if (i !== sel && prevOf(i) >= 0) legs(i, 1) })
-        if (sel != null && prevOf(sel) >= 0) legs(sel, 2)
+        if (sel != null && prevOf(sel) >= 0) legs(sel, LEG_WIDTH)
 
         /* THE SELECTED POINT: the Transform gizmo at it (gizmodraw.js; the user: "use the same controls as for the
            transform, so include the plane control elements") -- an arrow per coordinate along the object's own axes (a

@@ -450,7 +450,9 @@ export function installSelectionOverlay({ stage, canvas, RT, BUILDER, onPick = (
     })
 
     stage.addEventListener('mousedown', e => {
-        if (e.button !== 0 || !onCanvas(e) || !enabled) return
+        /* defaultPrevented: a press another tool has taken and hands on to the camera -- the measure tool's, a drag
+           begun with a pin or the ruler on (lib/pathtracer/measure/tool.js): it orbits, and selects nothing */
+        if (e.button !== 0 || !onCanvas(e) || !enabled || e.defaultPrevented) return
         const handle = selected != null ? hitTest(e.offsetX, e.offsetY) : null
         // in Points a click on nothing lets the point go: picking would select the object's group and end the editing
         if (!handle) { watchClick(e, mode === 'points' ? () => points.select(null) : null); return }
