@@ -772,6 +772,49 @@ kernel 200,000 characters, where the model has 160,000 in that scene, which is w
 | "Eight builds" against seven and a reload; the readout's nine tenths of the prediction against the build. | **Fixed**, both. |
 | Too many numbers for one scene; section 6 repeats. | **Not changed**: each number is the one its sentence needs, and section 6 is every chapter's record of what went wrong. |
 
+**Second read.** The teach-back held again, and the quiz was answered from the page. The reader's gaps were what the
+first read had not reached: what each of the sixteen kernels does, chapter 24's model, which the bar rests on, and the
+words of section 5. Checking one paragraph against the code found it wrong: before 0.10.0 only four of the kernels
+that hold no scene declared its uniforms (the 0.10.0 entry, `genrays.js`), not all sixteen, and the figure's switch
+had modelled every kernel. The reader's own complaint pointed at it: the "before" step had the cache off too, so it
+looked the same as the step before and could not show what its paragraph said.
+
+| Finding | |
+|---|---|
+| The sixteen rows unexplained; which is the photon map. | **Fixed.** A table of every kernel's job, grouped, `sppm` named the photon map; pointing at a row says its job. |
+| Chapter 24's model not recapped; why 151,000; the 1.37. | **Fixed.** A note in section 3: the formula, the size where its last factor is 1, twice the size 2.6 times the time. |
+| The rate's blend never worked through. | **Fixed.** A fold-out: the table from 15.2 to 30.28, the reload thrown out by the quarter rule (0.51 s is over the 300 ms floor), the doubling cap. The test holds every number. |
+| The "before" step looks like "no cache"; the caption's "turn off". | **Fixed**, and the claim under it: the step is the cache on with the four kernels declaring the scene's uniforms, scene B compiling seven, not three; the four are those 0.10.0 changed. The repeated sentence is gone; the caption names the choices. |
+| "12 of 13" against the figure's "of 16". | **Fixed.** The old bar is drawn over 0.9.2's 13 kernels, when it counted them: 85% after a second, 12 of 13 at nine tenths. |
+| "Nine sequential awaits" against 13 kernels. | **Fixed.** Nine is the comment's count, with no date; figure 1's version built 13. |
+| The sixth build within 2% against the readout's seventh. | **Fixed.** The readout gives build 6 (−2%) and build 7. |
+| "The user" two ways; the GTX 1080 Ti and Pascal; versions. | **Fixed.** Once, in section 1: ShadyTracer's developer, the 1080 Ti a Pascal card, the middle number counting up. |
+| Hiding a node: builder, node, apply; which number is which. | **Fixed.** The builder has a glossary card; the part shown again and hidden again, each with its two times. |
+| Section 5's device, row, trace, frame, dispatch, data, node. | **Fixed.** Each said in its item, or the item reworded. |
+| Section 1's last paragraph and section 3's learn paragraph overloaded. | **Fixed.** Split, three and three. |
+| The bar's words in no screenshot. | **Fixed.** The readout gives them at 7 s and at nine tenths. |
+| Excerpts 2 to 5's names (`setResources`, `forCompute`, `finalCode`, `!(…)`, `exp`). | **Fixed.** Each in its note. |
+
+### Chapter 28, Feeling fast
+
+**First read.** The teach-back held sections 1 to 4. The reader found the chapter's first figure at odds with the
+code it quoted: the governor settles at 2 samples a frame at 20 ms, but the live view's slice of 30 ms holds a light
+scene to the samples that fit it, one at 20 ms and six at 5. The figure had shown the governor alone without saying
+so. The excerpts of `makeInteraction`, `effective` and `runSamples` were bare signatures: the locator stopped
+`export function` excerpts at the braces of their parameters, a fix round seven had made for `function` alone.
+
+| Finding | |
+|---|---|
+| Figure 1 against the slice's cap. | **Fixed.** The slice is a choice and a step of its own (6 a frame at 5 ms, the count held at one more); the first steps say they show the governor alone. The test drives the real `render-loop.js` told what each frame traced (`opts.done`) and holds the figure to it, and holds the cap to `raytrace_main.js`'s line. |
+| "Iteration" undefined; 150 ms against the figure's 133. | **Fixed.** Chapter 22's rounds, at most 24; the cut every 5 (24 × 150 / 667 = 5.4), about 139 ms each if iterations cost alike, the last 4; the white lines drawn there. |
+| "Over a second" hung at "about 2 s". | **Fixed.** A frame was one submission; how long the frame that hung ran was not recorded. |
+| The 50–57 ms gap: what is the other 40? | **Fixed.** Not measured; the engine's comment guesses the browser preparing one long submission; the figure models only the recording, so the saving it shows is less than was measured. |
+| Why a small batch leaves the card idle; why 0.1 is not exact; why a move resets. | **Fixed**, each in a clause: lanes (chapter 21), a tenth has no binary fraction that ends, a sample of the old view smearing into the new. The guard asked before the step. |
+| Section 6 shorthand: the hold, the queue, "the library". | **Fixed.** Rewritten plainly; WEAVESIM named; the builder and the benchmark said. |
+| The signatures; `want` → 34 and the floor → 57 not pointed out; no submission code. | **Fixed.** The locator passes the parameters of exported and async functions (a test); the slicing note points at both; the split's lines excerpted. |
+| Figure 2's axis "12 s". | **Fixed.** Seen in the screenshot: the hand-lettered style's full stop all but vanishes, so 1.2 s read as 12 s. The ticks are set in the mono face. |
+| Rows of figure 2 (chapter 27) clipped at the left; the bar's key over its line. | Found looking at this round's screenshots, not by a reader. **Fixed**: a shorter mark, the key moved below the line. |
+
 ## Next round
 
 The pages stay drafts. Every written chapter has now had two readers (chapters 5 to 11 in rounds 5 and 6); the

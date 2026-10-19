@@ -45,7 +45,7 @@
       third sample of 10 it is (4 × 2 + 10) ÷ 3 = 6.</p>
     <p>Two more things resolve does. The average can be given a <em>window</em>, a largest <var>n</var>: past it every
       new sample gets the same weight, 1 ÷ (window + 1), and each older sample's share shrinks by the same factor every
-      sample, so old samples fade away gradually, an <em>exponential moving average</em> (EMA); with no window set it is
+      sample, so old samples fade away gradually, an <a data-g="moving-average">exponential moving average</a> (EMA); with no window set it is
       the plain average of every sample. And after the camera moves, the count starts again at 0, so the first new
       sample replaces the picture instead of being averaged into the old view (section 4's reset excerpt). A pixel
       whose path did not end in this sample (cut short, chapter 22) has n = 0, and resolve leaves its average as it

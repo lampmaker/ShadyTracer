@@ -277,6 +277,13 @@ real student.
 4. Why is a heavy frame sent to the graphics card in several submissions?
 5. How does having two samples in flight make an offscreen render faster?
 
+**checking** (Noise, bias and checking)
+1. What is the difference between noise and bias, and why can an error bar not show bias?
+2. Name two ways a renderer can be biased on purpose, and what each does to a picture.
+3. Why does the furnace test need a control row, and what do its rows read when the page is broken?
+4. How can a pixel's error bar be checked using only the picture?
+5. What is a moving window's average worth, and what mistake would the error-bar test's window row catch?
+
 **index** (the contents)
 1. What will you learn in this tutorial, and do you need to know anything before starting?
 2. What do the three stamps mean?

@@ -1271,15 +1271,20 @@ for (const [name, { mod }] of modules) {
     const sizesOf = st => Object.entries({ ...CK.FREE, ...CK.sceneKernels(st.size) }).map(([name, size]) => ({ name, size }))
     ok('ch.27: the session: open 16 compiled; a value nothing; a shape 3 compiled, 13 cached; scene B 3; back and undo all cached; each build predictCompile\'s', P.map(p => `${p.compiled.length}/${p.cached.length}`).join(' ') === '16/0 0/0 3/13 3/13 0/16 0/16'
         && P.filter(p => p.compiled.length).every(p => p.ms === CP.predictCompile(sizesOf(p).map(k => ({ ...k, cached: !p.compiled.includes(k.name) }))).expectMs), P.map(p => `${p.compiled.length}/${p.cached.length}`).join(' '))
-    ok('ch.27: without the cache every text change compiles all sixteen; without the scene-free kernels a shape or a scene does, a revisit still cached', off.map(p => p.compiled.length).join(' ') === '16 0 16 16 16 16' && nofree.map(p => p.compiled.length).join(' ') === '16 0 16 16 0 0')
+    ok('ch.27: without the cache every text change compiles all sixteen; with the four declaring the scene\'s uniforms a shape or a scene compiles seven, a revisit still cached', off.map(p => p.compiled.length).join(' ') === '16 0 16 16 16 16' && nofree.map(p => p.compiled.length).join(' ') === '16 0 7 7 0 0')
+    // the four are the ones 0.10.0 changed, and today's base-uniform kernels include them; every kernel has a job written
+    const g7 = readFileSync(join(REPO, 'lib/pathtracer/core/genrays.js'), 'utf8'), cl = readFileSync(join(REPO, 'CHANGELOG.md'), 'utf8')
+    ok('ch.27: the four kernels are those genrays.js and the 0.10.0 entry name; every kernel of the table has a job', g7.includes('Ray generation has no interest in geometry, and nor\n   have resolve, genphotons and emit_collect') && cl.includes('Ray generation, resolve, the light tracer\'s photons and\n  the emitter list\'s collect pass declared the scene\'s own uniforms')
+        && CK.ONCE_SCENE.join() === 'genrays,resolve,genphotons,emit_collect' && table.every(n => typeof CK.JOBS[n] === 'string' && CK.JOBS[n].length > 8))
     // the bar
     const C13 = CC.barCurves(10, 1.3), atT = (C, t) => CK.countBar(t * 1000, C.ready)
-    ok('ch.27: a build predicted 10 s taking 13: the old bar 88% after a second; the clock\'s 9%, 90% at the prediction, never 100% before the end', Math.round(100 * atT(C13, 1)) === 88 && Math.round(100 * CP.compileFraction(1000, 10000)) === 9
+    ok('ch.27: a build predicted 10 s taking 13, its 13 kernels: the old bar 85% after a second (11 of 13), 12 of 13 at nine tenths; the clock\'s 9%, 90% at the prediction, never 100% before the end', Math.round(100 * atT(C13, 1)) === 85 && atT(C13, 11.7) === 12 / 13 && Math.round(100 * CP.compileFraction(1000, 10000)) === 9
         && CP.compileFraction(10000, 10000).toFixed(2) === '0.90' && [11, 15, 25, 100].every(t => CP.compileFraction(t * 1000, 10000) < 0.99) && CP.compileLabel(7000, 10000) === 'about 3 s left' && CP.compileLabel(12000, 10000) === 'taking longer than usual')
     const lr = CK.learning(CC.LEARN_STEPS, { slow: 2 }), fast = CK.learning(CC.LEARN_STEPS, { slow: 0.2 }), slow6 = CK.learning(CC.LEARN_STEPS, { slow: 6 })
     const err = q => q.predicted / q.took - 1
-    ok('ch.27: learning a machine twice as slow: −50%, −25%, −12.5%, −6.3%, the reload ignored, then within 2%; one five times faster never learns; one six times slower doubles at most', ['-0.500', '-0.250', '-0.125', '-0.063'].every((v, i) => err(lr[i]).toFixed(3) === v)
-        && lr[4].cacheHit && lr[4].learned === lr[4].rate && Math.abs(err(lr[6])) < 0.02 && fast.every(q => q.learned === CP.DEFAULT_RATE) && Math.abs(slow6[0].learned / CP.DEFAULT_RATE - 2) < 1e-9, lr.map(q => err(q).toFixed(3)).join(' '))
+    ok('ch.27: learning a machine twice as slow: −50%, −25%, −12.5%, −6.3%, the reload ignored, then −3.1, −1.6, −0.8% (the fold-out\'s rates 22.8, 26.6, 28.5, 29.45, 29.93, 30.16, 30.28); one five times faster never learns; one six times slower doubles at most', ['-0.500', '-0.250', '-0.125', '-0.063'].every((v, i) => err(lr[i]).toFixed(3) === v)
+        && lr[4].cacheHit && lr[4].learned === lr[4].rate && Math.abs(err(lr[6])) < 0.02 && [5, 6, 7].map(i => (100 * err(lr[i])).toFixed(1)).join() === '-3.1,-1.6,-0.8'
+        && lr.map(q => (q.learned * 1000).toFixed(2)).join() === '22.80,26.60,28.50,29.45,29.45,29.93,30.16,30.28' && lr[4].took > CP.LEARN_MIN_MS && fast.every(q => q.learned === CP.DEFAULT_RATE) && Math.abs(slow6[0].learned / CP.DEFAULT_RATE - 2) < 1e-9, lr.map(q => err(q).toFixed(3)).join(' '))
     const readme = readFileSync(join(REPO, 'lib/pathtracer/README.md'), 'utf8'), twg = readFileSync(join(REPO, 'lib/tinywebgpu/src/tinywebgpu.js'), 'utf8'), ar = readFileSync(join(REPO, 'roadmap/ARCHITECTURE.md'), 'utf8')
     ok('ch.27: the stories and numbers are where the page says', readme.includes('raising the Menger iteration count froze the tab with no error') && twg.includes('seconds to a minute in which the page cannot')
         && rm.includes('This was nine sequential awaits, and every one of them awaited nothing') && ar.includes('| lens assembly x 32, as data | 52 205 -> 1 802 |') && readFileSync(join(REPO, 'docs/PERFORMANCE.md'), 'utf8').includes('That took the Noise library from over a minute to ~20 s.'))
@@ -1291,19 +1296,26 @@ for (const [name, { mod }] of modules) {
     // THE GOVERNOR MIRROR HELD TO THE REAL LOOP: lib/render-loop.js run in a child process (it reads the browser's
     // requestAnimationFrame and performance.now, stubbed there, not here), each frame's interval the last frame's cost
     const { execFileSync } = await import('node:child_process')
-    const realSpp = (sampleMs, frames = 160) => JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', `
+    // With a slice, the renderer traces what raytrace_main.js's last slicing line allows (the line held below) and
+    // tells the loop through opts.done, as the page's renderer does.
+    const realSpp = (sampleMs, frames = 160, slice = 0) => JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', `
         let clock = 0, due = []
         Object.defineProperty(globalThis, 'performance', { value: { now: () => clock }, configurable: true, writable: true })
         globalThis.requestAnimationFrame = f => { due.push(f) }
         const { makeRenderLoop } = await import(${JSON.stringify(join(REPO, 'lib/render-loop.js'))})
         const spp = [], cost = { paced: () => false, frame() { }, record: f => f(), submitted() { }, reset() { } }
-        const L = makeRenderLoop(n => { spp.push(n) }, cost, { start: 3 })
+        const traced = n => ${slice} > 0 ? (${sampleMs} > ${slice} ? 1 / Math.ceil(${sampleMs} / ${slice}) : Math.max(1, Math.min(n, Math.floor(${slice} / ${sampleMs})))) : n
+        const L = makeRenderLoop(n => { spp.push(n) }, cost, { start: 3, ...(${slice} > 0 ? { done: () => traced(spp[spp.length - 1]) } : {}) })
         L.start()
         let last = 1000 / 60
-        for (let k = 0; k < ${frames}; k++) { clock += last; const d = due; due = []; for (const f of d) f(); await new Promise(r => setTimeout(r, 0)); last = 5 + spp[spp.length - 1] * ${sampleMs} }
+        for (let k = 0; k < ${frames}; k++) { clock += last; const d = due; due = []; for (const f of d) f(); await new Promise(r => setTimeout(r, 0)); last = 5 + traced(spp[spp.length - 1]) * ${sampleMs} }
         console.log(JSON.stringify(spp))`], { encoding: 'utf8' }))
-    const same = ms => { const real = realSpp(ms), mine = FE.governor({ sampleMs: ms, rule: 'now', frames: 160 }).map(f => f.spp); return real.length === 160 && real.every((v, i) => v === mine[i]) }
-    ok('ch.28: the figure\'s governor traces, frame by frame, what the real render-loop.js does, at 5, 20 and 60 ms a sample', [5, 20, 60].every(same))
+    const same = (ms, slice = 0) => { const real = realSpp(ms, 160, slice), mine = FE.governor({ sampleMs: ms, rule: 'now', frames: 160, sliceMs: slice }).map(f => f.spp); return real.length === 160 && real.every((v, i) => v === mine[i]) }
+    ok('ch.28: the figure\'s governor traces, frame by frame, what the real render-loop.js does, at 5, 20 and 60 ms a sample', [5, 20, 60].every(ms => same(ms)))
+    ok('ch.28: ...and asks what it asks with the slice on, told what each frame traced (opts.done), at 5, 20 and 60 ms', [5, 20, 60].every(ms => same(ms, 30)))
+    ok('ch.28: the slice\'s cap on a light scene is raytrace_main.js\'s line', readFileSync(join(REPO, 'lib/pathtracer/core/raytrace_main.js'), 'utf8').includes('if (sliceMs > 0) count = sliced || sampleMs == null ? 1 : Math.max(1, Math.min(count, Math.floor(sliceMs / Math.max(1e-3, sampleMs))));'))
+    const c5 = FE.governor({ sampleMs: 5, sliceMs: 30 }).slice(-20), c20 = FE.governor({ sampleMs: 20, sliceMs: 30 }).slice(-20)
+    ok('ch.28: with the slice, 5 ms traces 6 a frame at 28.6 fps, the count asking 7.21; 20 ms traces 1 at 40', c5.every(f => f.traced === 6 && f.fps.toFixed(1) === '28.6' && f.count.toFixed(2) === '7.21') && c20.every(f => f.traced === 1 && f.fps === 40))
     const g20 = FE.governor({ sampleMs: 20 }), g5 = FE.governor({ sampleMs: 5 }), b20 = FE.governor({ sampleMs: 20, rule: 'before' }), b60 = FE.governor({ sampleMs: 60, rule: 'before' })
     ok('ch.28: today, 2 samples at 22 fps settled; a light scene 8 within 35 frames; before, hunting 2 and 3, and 0 and 1 on a heavy scene', g20.slice(-20).every(f => f.spp === 2) && g5.slice(35).every(f => f.spp === 8)
         && new Set(b20.slice(-20).map(f => f.spp)).size === 2 && b60.slice(-20).some(f => f.spp === 0) && g20.every(f => f.spp >= 1))
@@ -1319,7 +1331,7 @@ for (const [name, { mod }] of modules) {
     ok('ch.28: the copied constants are raytrace_main.js\'s', !RM || (RM.SUBMIT_MS === FE.SUBMIT_MS && RM.SPLIT_OVER_MS === FE.SPLIT_OVER_MS && RM.SPLIT_ITERS === FE.SPLIT_ITERS && RM.SLICE_MAX === FE.SLICE_MAX && RM.SLICE_MIN_RAYS === FE.SLICE_MIN_RAYS && RM.SLICE_UNTIMED === FE.SLICE_UNTIMED), RM ? 'held' : 'raytrace_main.js not importable here')
     const s1 = FE.slicing({ sampleMs: 1000, px: 1280 * 720 }), s10 = FE.slicing({ sampleMs: 10000, px: 1280 * 720 }), s640 = FE.slicing({ sampleMs: 10000, px: 640 * 360 }), s20 = FE.slicing({ sampleMs: 20, px: 1280 * 720 })
     ok('ch.28: 20 ms whole; a second in 34 batches; 10 s at 720p 57 batches of 175 ms; at 640 x 360 15 of 667 ms, 5 submissions of 5 iterations', !s20.sliced && s20.K === 1 && s1.K === 34 && s1.perCall === 1 && s10.K === 57 && Math.round(s10.frameMs) === 175 && s10.submissions === 1
-        && s640.K === 15 && Math.round(s640.frameMs) === 667 && s640.splitEvery === 5 && s640.submissions === 5)
+        && s640.K === 15 && Math.round(s640.frameMs) === 667 && s640.splitEvery === 5 && s640.submissions === 5 && Math.round(s640.submitMs) === 139 && s640.lastIters === 4)
     // two in flight: runSamples' own order, and the figure's times
     const { runSamples } = await import('../../lib/pathtracer/samples.js')
     // the loop's own record: each trace as it is made, each sample as the loop has waited for it (onProgress)
@@ -1330,6 +1342,63 @@ for (const [name, { mod }] of modules) {
     const rv = readFileSync(join(REPO, 'docs/PERFORMANCE_REVIEW.md'), 'utf8'), rl = readFileSync(join(REPO, 'lib/render-loop.js'), 'utf8')
     ok('ch.28: the measured numbers are where the page says', rl.includes('took 1.4-6.8 s, and 0.2 s with it paused') && readFileSync(join(REPO, 'lib/pathtracer/samples.js'), 'utf8').includes('13-25% off a sample')
         && rv.includes('257.6') && rv.includes('225.0') && rv.includes('57.5') && rv.includes('42.9') && readFileSync(join(REPO, 'lib/render-cost.js'), 'utf8').includes('seventeen seconds of backlog'))
+}
+
+/* CHAPTER 29: NOISE, BIAS AND CHECKING ---------------------------------------------------------------------------- */
+{
+    const CH = await import('../kit/checking.js'), CF = await import('../ch/checking.js'), FL = await import('../kit/flatland.js')
+    // THE TRUE VALUE: a fresh run of 200,000 paths, other random numbers, against the constant (both standard errors)
+    const dir = Math.atan2(CH.LOOK[1] - CH.EYE[1], CH.LOOK[0] - CH.EYE[0]), dx = Math.cos(dir), dy = Math.sin(dir)
+    {
+        const R = FL.rng(777001), n = 200000, info = {}
+        let s1 = 0, s2 = 0, lost = 0, all = 0
+        for (let i = 0; i < n; i++) {
+            const L = FL.tracePath(CH.CORNER, CH.EYE[0], CH.EYE[1], dx, dy, { rand: R, maxBounce: i < 50000 ? 60 : CH.MAX_BOUNCE, info })
+            s1 += L; s2 += L * L
+            if (i < 50000) { lost += L - info.upTo[CH.MAX_BOUNCE]; all += L }
+        }
+        const m = s1 / n, se = Math.sqrt((s2 / n - m * m) / n), z = Math.abs(m - CH.TRUTH) / Math.hypot(se, CH.TRUTH_SE)
+        ok('ch.29: the pixel\'s true value holds against a fresh 200,000 paths (within 3 standard errors)', z < 3, `${m.toFixed(4)} ± ${se.toFixed(4)} against ${CH.TRUTH}, z ${z.toFixed(2)}`)
+        ok('ch.29: the light past the 16 bounces the figure follows is under 0.01% (paired, the same paths followed to 60)', lost / all < 1e-4, `${(100 * lost / all).toFixed(5)}%`)
+    }
+    // THE FOUR READINGS of the figure's first run: where the page says they stand
+    const at = w => CF.standing(1, w)
+    const wh = at('whole'), cp = at('cap'), cl = at('clamp'), wn = at('window')
+    ok('ch.29: the whole path within 3 error bars of the true value; the cap about 19 under at 0.94, the clamp about 17 under at 1.20', Math.abs(wh.off) < 3 && Math.round(-cp.off) === 19 && cp.Y.toFixed(2) === '0.94' && Math.round(-cl.off) === 17 && cl.Y.toFixed(2) === '1.20',
+        `${wh.off.toFixed(1)} ${cp.off.toFixed(1)} ${cp.Y.toFixed(3)} ${cl.off.toFixed(1)} ${cl.Y.toFixed(3)}`)
+    ok('ch.29: the window is worth 21 samples after 4096, its error bar many times the true mean\'s', Math.abs(1 / wn.S - 21) < 1e-6 && wn.se > 10 * wh.se)
+    ok('ch.29: the clamp cuts the lamp found by the first bounce (7) and the second (4.9), not the third (3.43)', 0.7 * 10 > CH.CLAMP && 0.49 * 10 > CH.CLAMP && 0.343 * 10 < CH.CLAMP
+        && CH.CORNER.shapes.filter(sh => sh.kind === 'box').every(sh => sh.albedo === 0.7) && CH.CORNER.shapes.find(sh => sh.emit).emit === 10)
+    // THE FURNACE
+    const rows = page => CF.furnaceRows(page), byId = (page, id) => rows(page).find(q => q.row.id === id)
+    ok('ch.29: working, the white rows read 1 within 2%, the grey 0.85, the control 0.25: every verdict as it must be', rows('working').every(CF.verdict) && byId('working', 'grey').ratio.toFixed(2) === '0.85' && byId('working', 'control').ratio.toFixed(2) === '0.25')
+    ok('ch.29: working, NEE off and the mirror read exactly 1 with noise 0; NEE on has noise', byId('working', 'matte-off').ratio === 1 && byId('working', 'matte-off').noise === 0 && byId('working', 'mirror').ratio === 1 && byId('working', 'mirror').noise === 0 && byId('working', 'matte').noise > 0)
+    ok('ch.29: broken either way, every row reads 1 with noise 0, the control passing and the grey failing', ['empty', 'sky'].every(pg => rows(pg).every(q => q.ratio === 1 && q.noise === 0) && CF.verdict(byId(pg, 'control')) === false && !CF.verdict(byId(pg, 'grey'))))
+    {
+        // the disc fills three quarters of the film (pixel centres), and the NEE-on estimator is right on average
+        let hit = 0
+        for (let i = 0; i < CH.FPIX; i++) { const x = ((i + 0.5) / CH.FPIX) * 2 - 1, k = x * Math.tan(Math.atan(Math.tan(Math.asin(1 / 3)) / 0.75)), l = Math.hypot(k, 1), ddx = k / l, ddy = 1 / l, b2 = -3 * ddy, D = b2 * b2 - 8; if (D > 0) hit++ }
+        const film = CH.furnaceFilm(CH.FURNACE_ROWS[0], 'working', { spp: 1500, seed: 9 }), mid = film.slice(10, 46).reduce((a, v) => a + v, 0) / 36
+        ok('ch.29: the disc fills 42 of the 56 pixels; matte with NEE on reads 1 on the disc over many samples (within 0.5%)', hit === 42 && Math.abs(mid - 1) < 0.005, `${hit} ${mid.toFixed(5)}`)
+    }
+    const rm29 = readFileSync(join(REPO, 'lib/pathtracer/core/raytrace_main.js'), 'utf8')
+    ok('ch.29: the ratio, noise and seRatio are the bench\'s formulas', rm29.includes('noise: dn && mean ? (dsum / dn) / mean : 0') && rm29.includes('seRatio: e2 > 0 ? Math.sqrt(d2 / e2) : null'))
+    // THE ERROR BARS: the page's numbers
+    const eb = st => CF.barsOf(st), st = CF.figures.errorbar.steps
+    const e1 = eb(st.mean), e2 = eb(st.more), e3 = eb(st.window), e4 = eb(st.wrong)
+    ok('ch.29: 32 samples: 0.175 real, 0.176 reported; 256: about 0.065 both, seRatio 1.08; the window worth 21, 0.216 and 0.218; counted as 11, 0.308 and seRatio 0.69',
+        e1.real.toFixed(3) === '0.175' && e1.reported.toFixed(3) === '0.176' && Math.abs(e2.real - 0.065) < 0.002 && Math.abs(e2.reported - 0.065) < 0.003 && e2.seRatio.toFixed(2) === '1.08'
+        && e3.worth.toFixed(1) === '21.0' && e3.real.toFixed(3) === '0.216' && e3.reported.toFixed(3) === '0.218' && e4.reported.toFixed(3) === '0.308' && e4.seRatio.toFixed(2) === '0.69',
+        [e1.real, e1.reported, e2.real, e2.reported, e2.seRatio, e3.real, e3.reported, e4.reported, e4.seRatio].map(v => v.toFixed(3)).join(' '))
+    ok('ch.29: a moving window\'s S settles at w / (2 - w) = 1/21 for w = 1/11', Math.abs((1 / 11) / (2 - 1 / 11) - 1 / 21) < 1e-15)
+    // THE STORIES, where the page says they are
+    const tj = readFileSync(join(REPO, 'lib/pathtracer/tests.js'), 'utf8'), td = readFileSync(join(REPO, 'docs/TESTING.md'), 'utf8'), wf29 = readFileSync(join(REPO, 'lib/pathtracer/core/wavefront.js'), 'utf8')
+    ok('ch.29: the stories and numbers are where the page says', tj.includes('read 1000.000244 with zero noise on every row, rough glass included') && tj.includes('every row 1000.000244, noise 0, the CONTROL with')
+        && tj.includes("{ label: 'CONTROL: black sphere -- must read well below 1', set: { tBase: 0 } }") && wf29.includes('the window\'s real sample count, which "N" is not')
+        && wf29.includes('if (UB.fireflyClamp > 0.0 && !direct)') && /\| `error-bar` \|[^\n]*open — first press/.test(td) && td.includes('142–352, **median right** (1.01–1.04)') && td.includes('about 10⁵ too much')
+        && td.includes('**0.9231**') && td.includes('rough glass **0.9587**') && td.includes('All four arms inside 0.15%') && td.includes('Pascal, 1188×969, 32 samples, `envUniform` 1000 cd/m², maxbounce 40')
+        && readFileSync(join(REPO, 'lib/pathtracer/core/check-shaders.mjs'), 'utf8').includes('It said "24 modules parse" on the')
+        && readFileSync(join(REPO, 'roadmap/SURFACES.md'), 'utf8').includes('A small positive bias, +0.02-0.09%, on metal'))
 }
 
 /* THE EXCERPT LOCATOR ON ITS OWN ----------------------------------------------------------------------------------- */
@@ -1351,6 +1420,8 @@ for (const [name, { mod }] of modules) {
     ok('excerpt: ...and found by nth', n2.first === 10 && n2.last === 12, `${n2.first}-${n2.last}`)
     const dp = ['function plan(n, { first = null } = {}) {', '  return n', '}', 'fn after(a: f32) -> f32 { return a; }'].join('\n'), d = locate(dp, { sym: 'function plan' })
     ok('excerpt: a function whose parameters hold braces reaches its body\'s end, not the parameters\'', d.first === 1 && d.last === 3, `${d.first}-${d.last}`)
+    const ep = ['export async function plan({ first = null } = {}) {', '  return first', '}', 'const after = 1'].join('\n'), de = locate(ep, { sym: 'export async function plan' })
+    ok('excerpt: ...exported and async too', de.first === 1 && de.last === 3, `${de.first}-${de.last}`)
     e = null; try { locate(text, { sym: 'function foo', to: 'nowhere' }) } catch (x) { e = x }
     ok('excerpt: a `to` never reached is refused', /not within/.test(e?.message ?? ''))
     ok('excerpt: the hash ignores indenting', hash(['  a', '    b']) === hash(['a', '  b']) && hash(['a']) !== hash(['b']))

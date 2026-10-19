@@ -81,7 +81,10 @@ export const READING = [
     R('wiki-cas', 'Wikipedia', 'Compare-and-swap', 'encyclopedia article', 'https://en.wikipedia.org/wiki/Compare-and-swap'),
     R('veach1997', 'Eric Veach', 'Robust Monte Carlo methods for light transport simulation', 'PhD thesis, Stanford University, 1997', 'https://graphics.stanford.edu/papers/veach_thesis/'),
 
-    // averages with error bars
+    // averages with error bars, and the two ways an estimate can be wrong
+    R('pbr-mcbasics', PBR, 'Physically Based Rendering (4th ed.), 2.1: Monte Carlo basics (2.1.4: error in Monte Carlo estimators)', 'free online book', 'https://pbr-book.org/4ed/Monte_Carlo_Integration/Monte_Carlo_Basics', { checked: '2026-10-19' }),
+    R('wiki-bias', 'Wikipedia', 'Bias of an estimator', 'encyclopedia article', 'https://en.wikipedia.org/wiki/Bias_of_an_estimator', { checked: '2026-10-19' }),
+    R('wiki-consistent', 'Wikipedia', 'Consistent estimator', 'encyclopedia article', 'https://en.wikipedia.org/wiki/Consistent_estimator', { checked: '2026-10-19' }),
     R('finch2009', 'Tony Finch', 'Incremental calculation of weighted mean and variance', 'note, University of Cambridge Computing Service, 2009', null, { credited: 'lib/pathtracer/core/wavefront.js' }),
 
     // geometry the renderer leans on

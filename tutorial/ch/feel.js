@@ -21,39 +21,41 @@ export const figures = {
     governor: {
         aspect: 1.8,
         world: { x: [0, 1.8], y: [0, 1] },
-        state: { rule: 'now', ms: 20 },
+        state: { rule: 'now', ms: 20, slice: 0 },
         controls: [
             { type: 'seg', key: 'rule', options: [['now', 'Today: ±3%, 18 to 23 fps'], ['before', 'Before: ±0.1, 19 to 21 fps']] },
             { type: 'slider', key: 'ms', label: 'a sample takes', min: 2, max: 80, step: 1, fmt: v => `${v} ms` },
+            { type: 'seg', key: 'slice', label: 'the slice (section 3)', options: [[0, 'off: the governor alone'], [30, '30 ms, the default']], when: s => s.rule === 'now' },
         ],
-        steps: { now: { rule: 'now', ms: 20 }, light: { rule: 'now', ms: 5 }, before: { rule: 'before', ms: 20 }, zero: { rule: 'before', ms: 60 } },
+        steps: { now: { rule: 'now', ms: 20, slice: 0 }, light: { rule: 'now', ms: 5, slice: 0 }, before: { rule: 'before', ms: 20, slice: 0 }, zero: { rule: 'before', ms: 60, slice: 0 }, cap: { rule: 'now', ms: 5, slice: 30 } },
         draw(pen, s) {
-            const { W, H } = pen.view, { ctx } = pen, g = F.governor({ sampleMs: s.ms, rule: s.rule, frames: 160 })
+            const { W, H } = pen.view, { ctx } = pen, g = F.governor({ sampleMs: s.ms, rule: s.rule, frames: 160, sliceMs: s.rule === 'now' ? s.slice : 0 })
             const top = Math.max(4, ...g.map(f => f.spp)) + 1, r1 = { x: W * 0.09, y: H * 0.1, w: W * 0.88, h: H * 0.36 }, r2 = { x: W * 0.09, y: H * 0.56, w: W * 0.88, h: H * 0.32 }
             const X = k => r1.x + r1.w * k / (g.length - 1)
             for (const r of [r1, r2]) { ctx.save(); ctx.strokeStyle = pen.col('ink'); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(r.x, r.y); ctx.lineTo(r.x, r.y + r.h); ctx.lineTo(r.x + r.w, r.y + r.h); ctx.stroke(); ctx.restore() }
             // samples a frame: the count and what the frame traced
             const Y1 = v => r1.y + r1.h * (1 - v / top)
             ctx.save(); ctx.strokeStyle = pen.col('soft'); ctx.lineWidth = 1; ctx.beginPath(); g.forEach((f, k) => k ? ctx.lineTo(X(k), Y1(f.count)) : ctx.moveTo(X(k), Y1(f.count))); ctx.stroke()
-            ctx.strokeStyle = pen.col('cam'); ctx.lineWidth = 2; ctx.beginPath(); g.forEach((f, k) => k ? ctx.lineTo(X(k), Y1(f.spp)) : ctx.moveTo(X(k), Y1(f.spp))); ctx.stroke(); ctx.restore()
+            ctx.strokeStyle = pen.col('cam'); ctx.lineWidth = 2; ctx.beginPath(); g.forEach((f, k) => k ? ctx.lineTo(X(k), Y1(f.traced)) : ctx.moveTo(X(k), Y1(f.traced))); ctx.stroke(); ctx.restore()
             // a frame that traced no sample at all: a red dot on the floor
             ctx.save(); ctx.fillStyle = pen.col('blocked')
-            g.forEach((f, k) => { if (f.spp === 0) { ctx.beginPath(); ctx.arc(X(k), Y1(0), 3, 0, 7); ctx.fill() } })
+            g.forEach((f, k) => { if (f.traced === 0) { ctx.beginPath(); ctx.arc(X(k), Y1(0), 3, 0, 7); ctx.fill() } })
             ctx.restore()
-            pen.labelPx(r1.x, r1.y - 4, 'samples a frame: traced (blue), the count it is the whole part of (grey)', { role: 'soft', size: 11, base: 'bottom' })
+            pen.labelPx(r1.x, r1.y - 4, 'samples a frame: traced (blue), the governor\'s count (grey; the frame asks its whole part)', { role: 'soft', size: 11, base: 'bottom' })
             pen.labelPx(r1.x - 6, Y1(top - 1), String(top - 1), { role: 'soft', size: 10, align: 'right', base: 'middle' })
             pen.labelPx(r1.x - 6, Y1(0), '0', { role: 'soft', size: 10, align: 'right', base: 'middle' })
             // frames a second, and the band the rule leaves alone
             const fmax = 70, Y2 = v => r2.y + r2.h * (1 - Math.min(v, fmax) / fmax), lo = s.rule === 'now' ? 18 : 19, hi = s.rule === 'now' ? 23 : 21
             ctx.save(); ctx.fillStyle = pen.col('shadow'); ctx.globalAlpha = 0.18; ctx.fillRect(r2.x, Y2(hi), r2.w, Y2(lo) - Y2(hi)); ctx.restore()
             ctx.save(); ctx.strokeStyle = pen.col('light'); ctx.lineWidth = 2; ctx.beginPath(); g.forEach((f, k) => k ? ctx.lineTo(X(k), Y2(f.fps)) : ctx.moveTo(X(k), Y2(f.fps))); ctx.stroke(); ctx.restore()
-            pen.labelPx(r2.x, r2.y - 4, `frames a second (the band: ${lo} to ${hi}, left alone)`, { role: 'soft', size: 11, base: 'bottom' })
+            pen.labelPx(r2.x, r2.y - 4, `frames a second (the band: ${lo} to ${hi}, left alone${g.some(f => f.fps > fmax) ? '; spikes cut at 70' : ''})`, { role: 'soft', size: 11, base: 'bottom' })
             for (const v of [0, 20, 60]) pen.labelPx(r2.x - 6, Y2(v), String(v), { role: 'soft', size: 10, align: 'right', base: 'middle' })
             pen.labelPx(r2.x + r2.w, r2.y + r2.h + 6, `${g.length} frames`, { role: 'soft', size: 10, align: 'right', base: 'top' })
         },
         readout(s) {
-            const g = F.governor({ sampleMs: s.ms, rule: s.rule, frames: 160 }), last = g.slice(-20), set = new Set(last.map(f => f.spp)), zero = g.filter(f => f.spp === 0).length
-            return `a frame 5 ms plus ${s.ms} ms a sample · the last 20 frames trace ${[...set].sort((a, b) => a - b).join(' or ')} samples${set.size > 1 ? ', hunting' : ', settled'} at ${last.map(f => f.fps.toFixed(1)).filter((v, i, a) => a.indexOf(v) === i).join(' / ')} fps${zero ? ` · ${zero} frames traced no sample at all` : ''}`
+            const slice = s.rule === 'now' ? s.slice : 0, g = F.governor({ sampleMs: s.ms, rule: s.rule, frames: 160, sliceMs: slice }), last = g.slice(-20)
+            const set = new Set(last.map(f => +f.traced.toFixed(2))), zero = g.filter(f => f.traced === 0).length
+            return `a frame 5 ms plus ${s.ms} ms a sample${slice ? ', the slice 30 ms' : ''} · the last 20 frames trace ${[...set].sort((a, b) => a - b).join(' or ')} samples${set.size > 1 ? ', hunting' : ', settled'} at ${last.map(f => f.fps.toFixed(1)).filter((v, i, a) => a.indexOf(v) === i).join(' / ')} fps${slice ? ` · the governor's count held at ${last[last.length - 1].count.toFixed(2)}` : ''}${zero ? ` · ${zero} frames traced no sample at all` : ''}`
         },
     },
 
@@ -85,7 +87,8 @@ export const figures = {
             pen.labelPx(X(300), H * 0.2 - 4, 'button down', { role: 'accent', size: 10, base: 'bottom' })
             pen.labelPx(X(700), H * 0.2 - 4, 'still, button held', { role: 'accent', size: 10, base: 'bottom' })
             pen.labelPx(X(1700), H * 0.2 - 4, 'let go', { role: 'accent', size: 10, base: 'bottom' })
-            for (let t = 0; t <= end; t += 400) pen.labelPx(X(t), H * 0.9, `${(t / 1000).toFixed(1)} s`, { role: 'soft', size: 10, align: 'center', base: 'top' })
+            // the numbers in the mono face: a hand-lettered style's full stop all but vanishes ("12 s" read for 1.2 s)
+            for (let t = 0; t <= end; t += 400) pen.labelPx(X(t), H * 0.9, `${(t / 1000).toFixed(1)} s`, { role: 'soft', size: 10, align: 'center', base: 'top', kind: 'mono' })
         },
         readout(s) {
             const d = F.dragTimeline({ held: s.held === 'held', moveFast: s.moveFast, moveMode: s.moveMode }), ch = []
@@ -114,11 +117,11 @@ export const figures = {
                 const x = r.x + k * fw
                 ctx.save(); ctx.fillStyle = pen.col(P.frameMs > 2000 ? 'blocked' : 'cam'); ctx.globalAlpha = 0.7; ctx.fillRect(x + fw * 0.1, Y(P.frameMs), fw * 0.8, Y(0) - Y(P.frameMs)); ctx.restore()
                 // the frame's submissions: a tick at each cut
-                if (P.submissions > 1) for (let j = 1; j < P.submissions; j++) { const yy = Y(P.frameMs * j / P.submissions); ctx.save(); ctx.strokeStyle = pen.col('paper'); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x + fw * 0.1, yy); ctx.lineTo(x + fw * 0.9, yy); ctx.stroke(); ctx.restore() }
+                if (P.submissions > 1) for (let j = 1; j < P.submissions; j++) { const yy = Y(P.submitMs * j); ctx.save(); ctx.strokeStyle = pen.col('paper'); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x + fw * 0.1, yy); ctx.lineTo(x + fw * 0.9, yy); ctx.stroke(); ctx.restore() }
             }
             pen.labelPx(r.x, r.y + r.h + 8, P.sliced ? `batches of at least ${F.SLICE_MIN_RAYS.toLocaleString('en-US')} rays: no more than ${Math.ceil(w * h / F.SLICE_MIN_RAYS)} at this size` : 'fits in a frame: not cut', { role: 'soft', size: 11, base: 'top' })
-            pen.labelPx(r.x, r.y + r.h + 24, P.submissions > 1 ? `each frame cut into ${P.submissions} submissions of ${P.splitEvery} iterations, about ${(P.frameMs / P.submissions).toFixed(0)} ms each (white lines),` : 'each frame one submission (under 250 ms: not cut)', { role: 'soft', size: 11, base: 'top' })
-            if (P.submissions > 1) pen.labelPx(r.x, r.y + r.h + 40, 'none near the 2 s after which Windows resets the card', { role: 'soft', size: 11, base: 'top' })
+            pen.labelPx(r.x, r.y + r.h + 24, P.submissions > 1 ? `each frame cut into ${P.submissions} submissions (white lines): ${P.splitEvery} of its 24 iterations each, the last ${P.lastIters},` : 'each frame one submission (under 250 ms: not cut)', { role: 'soft', size: 11, base: 'top' })
+            if (P.submissions > 1) pen.labelPx(r.x, r.y + r.h + 40, `about ${P.submitMs.toFixed(0)} ms each if iterations cost alike: none near the 2 s after which Windows resets the card`, { role: 'soft', size: 11, base: 'top' })
             pen.labelPx(r.x - 4, Y(top), `${top.toFixed(0)} ms`, { role: 'soft', size: 10, base: 'bottom' })
         },
         readout(s) {

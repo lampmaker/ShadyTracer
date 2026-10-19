@@ -15,7 +15,7 @@
   <div>
     <p class="eyebrow">Part VI · The machine · Chapter 24</p>
     <h1>From scene tree to shader</h1>
-    <p class="lede">The builder keeps a scene as a tree: groups, shapes, their sizes and joins. The <a data-g="kernel">kernels</a> need the
+    <p class="lede">The <a data-g="builder">builder</a> keeps a scene as a tree: groups, shapes, their sizes and joins. The <a data-g="kernel">kernels</a> need the
       scene's distance as <a data-g="wgsl">WGSL</a> code (chapter 2's SDF, every shape and join of chapter 3). Turning
       one into the other is code generation, and how it is done decides what an edit costs: a value written, or the
       whole program <a data-g="compile">compiled</a> again, seconds each. This chapter is ShadyTracer's three answers, code with uniforms, baked constants, and the

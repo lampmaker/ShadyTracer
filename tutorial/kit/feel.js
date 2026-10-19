@@ -28,15 +28,22 @@ export const governBefore = (count, fps, { minfps = 20, maxSamples = 64 } = {}) 
     fps > minfps + 1 ? Math.min(maxSamples, count + 0.1) : fps < minfps - 1 && count > 1 ? count - 0.1 : count
 
 /** `frames` frames of a loop whose frame takes `overheadMs` plus `sampleMs` a sample, the loop's rate the last frame's:
- *  [{ count, spp, ms, fps }] */
-export function governor({ sampleMs = 20, overheadMs = 5, frames = 240, rule = 'now', start = 3, minfps = 20, maxSamples = 64 } = {}) {
+ *  [{ count, spp, traced, ms, fps }]. With `sliceMs` (the live view's slice, 30 by default; 0 the governor alone) the
+ *  engine traces no more samples than fit the slice, or a part of one when one does not (raytrace_main.js R.trace:
+ *  the slice's batches, section 3's rule without its floor), and the loop then holds its count within one of what
+ *  was traced (render-loop.js opts.done). */
+export function governor({ sampleMs = 20, overheadMs = 5, frames = 240, rule = 'now', start = 3, minfps = 20, maxSamples = 64, sliceMs = 0 } = {}) {
     const step = rule === 'now' ? governNow : governBefore, out = []
     let count = start, lastMs = 1000 / 60                 // the first frame's interval: a browser's 60 a second
     for (let k = 0; k < frames; k++) {
         const fps = 1000 / lastMs
         count = step(count, fps, { minfps, maxSamples })
-        const spp = Math.floor(count), ms = overheadMs + spp * sampleMs
-        out.push({ count, spp, ms, fps })
+        const spp = Math.floor(count)
+        let traced = spp
+        if (sliceMs > 0) traced = sampleMs > sliceMs ? 1 / Math.ceil(sampleMs / sliceMs) : Math.max(1, Math.min(spp, Math.floor(sliceMs / sampleMs)))
+        const ms = overheadMs + traced * sampleMs
+        out.push({ count, spp, traced, ms, fps })
+        if (sliceMs > 0) count = Math.min(count, Math.max(1, Math.ceil(traced)) + 1)
         lastMs = ms
     }
     return out
@@ -70,7 +77,7 @@ export function dragTimeline({ from = 300, to = 1700, pauseAt = 700, pauseTo = 1
 export const SUBMIT_MS = 150, SPLIT_OVER_MS = 250, SPLIT_ITERS = 24, SLICE_MAX = 256, SLICE_MIN_RAYS = 1 << 14, SLICE_UNTIMED = 8
 /** A timed sample of `sampleMs` over a picture of `px` pixels (`planned` batches already, the rays it fits), the
  *  live loop's slice of `sliceMs`: { K (batches), perCall (batches a frame), frameMs, frames, splitEvery (iterations a
- *  submission), submissions (a frame's) }. Untimed (sampleMs null): SLICE_UNTIMED batches, one a frame, each iteration
+ *  submission), submissions (a frame's), submitMs (one's time, iterations costing alike), lastIters (the last's) }. Untimed (sampleMs null): SLICE_UNTIMED batches, one a frame, each iteration
  *  its own submission. */
 export function slicing({ sampleMs, px, sliceMs = 30, planned = 1, iterations = 24 }) {
     const want = sampleMs == null ? SLICE_UNTIMED : Math.ceil(sampleMs / sliceMs)
@@ -82,7 +89,10 @@ export function slicing({ sampleMs, px, sliceMs = 30, planned = 1, iterations = 
         : Math.max(1, Math.floor(Math.min(iterations, SPLIT_ITERS) * SUBMIT_MS / batchMs))
     const frameMs = batchMs == null ? null : sliced ? perCall * batchMs : sampleMs
     const subsPerBatch = splitEvery === Infinity ? 1 : Math.ceil(iterations / splitEvery)
-    return { K, sliced, perCall, batchMs, frameMs, frames: sliced ? Math.ceil(K / perCall) : 1, splitEvery, submissions: (sliced ? perCall : K) * subsPerBatch }
+    // a submission's time as the engine reckons it, its iterations costing alike (they do not: the first carry most rays)
+    const submitMs = batchMs == null ? null : splitEvery === Infinity ? frameMs : splitEvery * batchMs / iterations
+    return { K, sliced, perCall, batchMs, frameMs, frames: sliced ? Math.ceil(K / perCall) : 1, splitEvery, submissions: (sliced ? perCall : K) * subsPerBatch,
+        submitMs, lastIters: splitEvery === Infinity ? iterations : iterations - (subsPerBatch - 1) * splitEvery }
 }
 
 /** SAMPLES OFFSCREEN on a clock: runSamples' rule (lib/pathtracer/samples.js; the test holds this to it), recording a

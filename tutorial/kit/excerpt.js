@@ -145,7 +145,7 @@ export function locate(text, { sym, nth, within, to, max = 40, doc } = {}) {
         endLine = startLine                     // `const f = (x) => x * 2` -- one line, and this repo writes no semicolons
     } else {
         let i = pos, depth = 0, open = false
-        if (/^(fn|function)\s/.test(sym.trim())) {     // past the parameters first: `{ first = null } = {}` is not the body
+        if (/^(export\s+)?(async\s+)?(fn|function)\s/.test(sym.trim())) {     // past the parameters first: `{ first = null } = {}` is not the body
             while (i < text.length && !(state[i] === 0 && text[i] === '(')) i++
             for (let p = 0; i < text.length; i++) {
                 if (state[i] !== 0) continue

@@ -44,6 +44,18 @@ export function layout(b, how) {
 export const FREE = { genrays: 12000, shade: 113000, flip: 900, prep_march: 900, prep_shade: 900, prep_occlude: 900, shadow_flip: 900,
     resolve: 8000, genphotons: 40000, lt_build: 6000, emit_collect: 10000, emit_publish: 1500, sppm: 30000 }
 export const HOLDS = ['march', 'surface', 'occlude']
+/* THE FOUR THAT ONCE DECLARED THE SCENE'S UNIFORMS, though none reads one: before 0.10.0 their text changed with the
+   scene's uniform list (CHANGELOG 0.10.0, genrays.js THE BASE UNIFORMS ONLY). The other scene-free kernels never did. */
+export const ONCE_SCENE = ['genrays', 'resolve', 'genphotons', 'emit_collect']
+/* WHAT EACH KERNEL DOES, for the figure's rows and the chapter's table (wavefront.js, raytrace_main.js's table) */
+export const JOBS = {
+    genrays: 'the camera\'s rays, one a pixel', march: 'steps each ray to the surface it hits', surface: 'what was hit: its normal, its material, the medium beyond',
+    shade: 'the bounce and the light at each hit', flip: 'swaps the ray queues for the next iteration', prep_march: 'sizes the next march from the queue',
+    prep_shade: 'sizes the next shade', occlude: 'marches the shadow rays: blocked or not', prep_occlude: 'sizes the next occlusion',
+    shadow_flip: 'swaps the shadow-ray queues', resolve: 'adds the sample into the picture', genphotons: 'the light tracer\'s photons, from the lights',
+    lt_build: 'the light tracer\'s map of where to aim', emit_collect: 'finds the glowing surfaces', emit_publish: 'lists them for aiming at',
+    sppm: 'the photon map: stores and gathers',
+}
 /** a scene's own kernels' sizes at a scene size `s` (its SDF, in characters, inlined once) */
 export const sceneKernels = s => ({ march: 20000 + s, surface: 40000 + 2 * s, occlude: 18000 + s })
 
@@ -61,7 +73,7 @@ export const SESSION = [
  * The session played out: per step, which kernels compiled and which came from the cache, and the build's time
  * predicted the engine's way (compileprogress.js predictCompile: the largest uncached kernel's kernelMs). `cache`:
  * tinywebgpu's pipeline cache (its key the whole text); `free`: the kernels that hold no scene declare only the base
- * uniforms, so their text is the same for every scene (genrays.js) -- off, every kernel's text carries the scene's
+ * uniforms, so their text is the same for every scene (genrays.js) -- off, the four of ONCE_SCENE carry the scene's
  * uniform list, as before 0.10.0. A value moved changes no text: nothing compiles either way.
  */
 export function playSession(steps = SESSION, { cache = true, free = true, rate = DEFAULT_RATE } = {}) {
@@ -70,7 +82,7 @@ export function playSession(steps = SESSION, { cache = true, free = true, rate =
         if (st.value) { out.push({ ...st, compiled: [], cached: [], ms: 0 }); continue }
         const sizes = { ...FREE, ...sceneKernels(st.size) }, text = `${st.scene}#${st.rev}`
         const kernels = Object.entries(sizes).map(([name, size]) => {
-            const key = HOLDS.includes(name) || !free ? `${name}|${text}` : name
+            const key = HOLDS.includes(name) || (!free && ONCE_SCENE.includes(name)) ? `${name}|${text}` : name
             const cached = cache && seen.has(key)
             seen.add(key)
             return { name, size, cached }
@@ -85,8 +97,9 @@ export function playSession(steps = SESSION, { cache = true, free = true, rate =
    kernels ready over all of them, so it jumps as the small ones finish and sits there. The bar by the clock is
    compileprogress.js compileFraction, drawn by the chapter. */
 export const countBar = (t, readyAt) => readyAt.filter(r => r <= t).length / readyAt.length
-/** a build's ready times, ms, scaled to end at `totalMs`: the measured shape of a parallel build (§10.3: the small
- *  kernels ready at 177 to 402 ms, queued behind the rest; march, then occlude, then shade, which ends the build) */
+/** a build's ready times, ms, scaled to end at `totalMs`: the measured shape of a parallel build of 0.9.2's 13 kernels,
+ *  when the bar counted them (§10.3: the ten small ones ready at 177 to 402 ms, queued behind the rest; march, then
+ *  occlude, then shade, which ends the build) */
 export function readyTimes(totalMs, n = 16) {
     const small = Array.from({ length: n - 3 }, (_, k) => 177 + (402 - 177) * k / Math.max(1, n - 4))
     return [...small.map(v => Math.min(v, totalMs)), 0.07 * totalMs, 0.15 * totalMs, totalMs]

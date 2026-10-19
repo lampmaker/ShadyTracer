@@ -20,7 +20,7 @@ const sec = v => `${v.toFixed(1)} s`
 
 /** the bar's build: predicted `expectS`, really taking `factor` times that; returns the two bars' curves over time */
 export function barCurves(expectS, factor, n = 120) {
-    const total = expectS * factor * 1000, ready = K.readyTimes(total), end = Math.max(total, expectS * 1000) * 1.25, pts = { count: [], clock: [] }
+    const total = expectS * factor * 1000, ready = K.readyTimes(total, 13), end = Math.max(total, expectS * 1000) * 1.25, pts = { count: [], clock: [] }
     for (let k = 0; k <= n; k++) {
         const t = end * k / n
         pts.count.push([t / 1000, K.countBar(t, ready)])
@@ -77,11 +77,11 @@ export const figures = {
         state: { at: 0, cache: 'on', free: 'on' },
         controls: [
             { type: 'button', label: 'Next step', act: s => { s.at = (s.at + 1) % K.SESSION.length } },
-            { type: 'seg', key: 'free', label: 'kernels that hold no scene', options: [['on', 'declare the base uniforms only'], ['off', 'declare the scene\'s too (before 0.10.0)']] },
+            { type: 'seg', key: 'free', label: 'four kernels that hold no scene', options: [['on', 'declare the base uniforms only'], ['off', 'declare the scene\'s too (before 0.10.0)']] },
             { type: 'seg', key: 'cache', label: 'pipeline cache', options: [['on', 'on'], ['off', 'off']] },
         ],
         steps: { open: { at: 0, cache: 'on', free: 'on' }, add: { at: 2, cache: 'on', free: 'on' }, back: { at: 4, cache: 'on', free: 'on' },
-            nocache: { at: 5, cache: 'off', free: 'on' }, before: { at: 5, cache: 'off', free: 'off' } },
+            nocache: { at: 5, cache: 'off', free: 'on' }, before: { at: 3, cache: 'on', free: 'off' } },
         draw(pen, s) {
             const { W, H } = pen.view, { ctx } = pen, play = K.playSession(K.SESSION, { cache: s.cache === 'on', free: s.free === 'on' }), names = Object.keys({ ...K.FREE, ...K.sceneKernels(0) })
             const x0 = W * 0.27, cw = (W * 0.98 - x0) / K.SESSION.length, top = H * 0.17, rh = (H * 0.66) / names.length
@@ -98,7 +98,10 @@ export const figures = {
                 })
                 if (!later) pen.labelPx(x + cw / 2, top + names.length * rh + 6, p.value ? 'nothing' : `${(p.ms / 1000).toFixed(1)} s`, { role: on ? 'ink' : 'soft', size: 11, align: 'center', base: 'top', kind: 'mono' })
             })
-            names.forEach((n, i) => pen.labelPx(x0 - 6, top + (i + 0.5) * rh, n + (K.HOLDS.includes(n) ? ' (holds the scene)' : ''), { role: K.HOLDS.includes(n) ? 'blocked' : 'ink', size: 9, align: 'right', base: 'middle', kind: 'mono' }))
+            names.forEach((n, i) => pen.labelPx(x0 - 6, top + (i + 0.5) * rh, n + (K.HOLDS.includes(n) ? ' (holds the scene)' : s.free === 'off' && K.ONCE_SCENE.includes(n) ? ' (scene list)' : ''), { role: K.HOLDS.includes(n) ? 'blocked' : 'ink', size: 9, align: 'right', base: 'middle', kind: 'mono' }))
+            // a row's job, on pointing at it
+            const hp = pen.hover({ x: 0, y: top, w: x0, h: names.length * rh })
+            if (hp) { const n = names[Math.min(names.length - 1, Math.max(0, Math.floor((hp.y - top) / rh)))]; pen.tip(hp.x, hp.y, [n, K.JOBS[n]]) }
             pen.labelPx(x0 - 6, top + names.length * rh + 8, 'the build, predicted', { role: 'soft', size: 10, align: 'right', base: 'top' })
         },
         readout(s) {
@@ -124,10 +127,11 @@ export const figures = {
                 const expectS = 10, C = barCurves(expectS, s.factor), X = t => r.x + r.w * t / C.end, Y = f => r.y + r.h * (1 - f)
                 ctx.save(); ctx.strokeStyle = pen.col('ink'); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(r.x, r.y); ctx.lineTo(r.x, r.y + r.h); ctx.lineTo(r.x + r.w, r.y + r.h); ctx.stroke()
                 ctx.setLineDash([4, 3]); ctx.strokeStyle = pen.col('soft'); ctx.beginPath(); ctx.moveTo(X(expectS), r.y); ctx.lineTo(X(expectS), r.y + r.h); ctx.moveTo(X(C.total), r.y); ctx.lineTo(X(C.total), r.y + r.h); ctx.stroke(); ctx.restore()
-                for (const [key, role, label] of [['count', 'blocked', 'kernels ready of 16 (the old bar)'], ['clock', 'cam', 'by the clock (compileFraction)']]) {
+                for (const [key, role, label] of [['count', 'blocked', 'kernels ready of 13 (the old bar, 0.9.2\'s kernels)'], ['clock', 'cam', 'by the clock (compileFraction)']]) {
                     ctx.save(); ctx.strokeStyle = pen.col(role); ctx.lineWidth = 2.2; ctx.beginPath()
                     C[key].forEach(([t, f], k) => k ? ctx.lineTo(X(t), Y(f)) : ctx.moveTo(X(t), Y(f))); ctx.stroke(); ctx.restore()
-                    pen.labelPx(r.x + r.w * 0.45, key === 'count' ? r.y + r.h * 0.62 : r.y + r.h * 0.62 + 16, label, { role, size: 11, base: 'top' })
+                    // the key below the clock's line, where nothing is drawn
+                    pen.labelPx(r.x + r.w * 0.5, key === 'count' ? r.y + r.h * 0.74 : r.y + r.h * 0.74 + 16, label, { role, size: 11, base: 'top' })
                 }
                 pen.labelPx(X(expectS), r.y + r.h + 4, 'predicted', { role: 'soft', size: 10, align: 'center', base: 'top' })
                 pen.labelPx(X(C.total), r.y + r.h + 16, 'really done', { role: 'ink', size: 10, align: 'center', base: 'top' })
@@ -152,10 +156,11 @@ export const figures = {
         readout(s) {
             if (s.view === 'bar') {
                 const C = barCurves(10, s.factor), at = t => Math.round(100 * K.countBar(t * 1000, C.ready))
-                return `predicted 10 s, really ${C.total.toFixed(1)} s · the old bar ${at(1)}% after a second and ${at(C.total * 0.9)}% at nine tenths of the build · the clock's ${Math.round(100 * compileFraction(1000, 10000))}% after a second, ${Math.round(100 * compileFraction(C.total * 900, 10000))}% at nine tenths of the build, ${Math.round(100 * compileFraction(Math.max(0, C.total - 0.001) * 1000, 10000))}% just before the end`
+                return `predicted 10 s, really ${C.total.toFixed(1)} s · the old bar ${at(1)}% after a second and ${at(C.total * 0.9)}% at nine tenths of the build · the clock's ${Math.round(100 * compileFraction(1000, 10000))}% after a second, ${Math.round(100 * compileFraction(C.total * 900, 10000))}% at nine tenths of the build, ${Math.round(100 * compileFraction(Math.max(0, C.total - 0.001) * 1000, 10000))}% just before the end · its words at 7 s "${compileLabel(7000, 10000)}", at nine tenths "${compileLabel(C.total * 900, 10000)}"`
             }
             const rows = K.learning(LEARN_STEPS, { slow: s.slow }), last = rows[rows.length - 1]
-            return `a machine whose compiles take ${s.slow.toFixed(2)} × what ${(DEFAULT_RATE * 1000).toFixed(1)} ms per 1000 characters predicts · the kept rate after each build: ${rows.map(q => (q.learned * 1000).toFixed(1)).join(', ')} · build 7 predicted ${(last.predicted / 1000).toFixed(1)} s against ${(last.took / 1000).toFixed(1)} s`
+            const six = rows.filter(q => !q.cacheHit)[5]
+            return `a machine whose compiles take ${s.slow.toFixed(2)} × what ${(DEFAULT_RATE * 1000).toFixed(1)} ms per 1000 characters predicts, ${(DEFAULT_RATE * s.slow * 1000).toFixed(1)} ms · the kept rate after each build and the reload: ${rows.map(q => (q.learned * 1000).toFixed(2)).join(', ')} · build 6 predicted ${(six.predicted / 1000).toFixed(1)} s against ${(six.took / 1000).toFixed(1)} s (${Math.round(100 * (six.predicted / six.took - 1))}%), build 7 ${(last.predicted / 1000).toFixed(1)} s`
         },
     },
 }

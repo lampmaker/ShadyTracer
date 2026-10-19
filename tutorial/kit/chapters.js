@@ -96,8 +96,8 @@ export const CHAPTERS = [
     C('speed', 'feel', 'Feeling fast', 'Keeping the program quick to answer while it renders.', 'draft',
         [`${P}quality.js`, `${P}interaction.js`, `${P}samples.js`, 'lib/render-loop.js', 'lib/render-cost.js', `${P}runwatch.js`, 'tutorial/kit/feel.js']),
 
-    C('right', 'checking', 'Noise, bias and checking', 'How to tell a renderer is right: answers known in advance, and tests.', 'planned',
-        ['docs/TESTING.md', `${K}measure.js`]),
+    C('right', 'checking', 'Noise, bias and checking', 'How to tell a renderer is right: answers known in advance, and tests.', 'draft',
+        ['docs/TESTING.md', `${K}measure.js`, `${P}tests.js`, `${K}check-shaders.mjs`, 'tutorial/kit/checking.js']),
     C('right', 'precision', 'Numbers have grain', 'Why a computer\'s numbers have grain, and how the renderer lives with it.', 'planned',
         [`${K}tolerances.js`, `${P}PRECISION.md`, `${K}units.js`, `${K}unitlint.js`]),
     C('right', 'optics', 'The optics bench', 'Measuring light like a lab bench: beams, maps of light on a wall, ray files.', 'planned',

@@ -307,7 +307,15 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
     slicing. *Read:* webgpu-fundamentals.
 
 **VIII. Getting it right**
-29. **Noise, bias and checking**: unbiased and consistent, closed forms, the furnace, JS mirrors.
+29. **Noise, bias and checking** (draft): one pixel of a lamp-lit corner in the flat world, its paths read four ways
+    (the whole path, a bounce cap, a firefly clamp, a moving window), each running mean and error bar by `measure.js`
+    against a true value computed over a million paths; the white furnace with one disc, its rows and a control, on a
+    working page and broken the two ways ShadyTracer's was (old cached files; a camera target in the wrong unit),
+    read by the bench's own ratio and noise; a thousand pixels' error bars against their real spread and seRatio,
+    right and with an EMA window taken for its count. -> tests.js (the furnace, its control), raytrace_main.js (noise,
+    seRatio), measure.js, check-shaders.mjs (pass two's reason). Measured: the furnace's runs (Pascal), the sun's rim,
+    rough glass, roulette's non-bias. Never run and said so: `error-bar`. *Read:* pbr-mcbasics, wiki-bias,
+    wiki-consistent.
 30. **Numbers have grain**: f32 spacing, one tolerance, offsets, metres inside, the unit lint.
 31. **The optics bench**: far field, illuminance maps, ray files.
 

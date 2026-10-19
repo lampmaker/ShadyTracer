@@ -17,7 +17,7 @@ as PLAN.md does.
 
 ## 0.67.2 — 2026-10-18
 
-**A developer tutorial beside the program: its plan, its figure kit, eight styles and its first twenty-nine chapters**
+**A developer tutorial beside the program: its plan, its figure kit, eight styles and its first thirty chapters**
 (you: "a tutorial for shadytracer, parallel to the program … that explains the inner workings of the code … interactive,
 2D visualisations … a solid toolkit for that so it looks the same everywhere … start with a plan and list of contents,
 then a few pages … make a few mockups of different styles"). Nothing in the application changed: the tutorial is
@@ -89,13 +89,19 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   inside the join; one relief divided everywhere or shelled, with the modifier's slope bound or the measured one; the
   step cache's balls, its own cell and the cells ahead, and the fill that read the copy with boxes); chapter 27, *Faster
   compiles* (one scene's kernels compiled blocking the page, off its thread one at a time and all at once, from the
-  user's measured times for six scenes; a builder session with the scene-free kernels and the pipeline cache on or off,
-  each build predicted by `compileprogress.js`; the bar counting kernels against the bar by the clock, and a machine
+  user's measured times for six scenes; a builder session with the pipeline cache on or off, and the four kernels that
+  declared the scene's uniforms before 0.10.0 doing so or not, each build predicted by `compileprogress.js`, every
+  kernel's job in a table; the bar counting kernels against the bar by the clock, and a machine
   learning its own rate); chapter 28, *Feeling fast* (the governor frame by frame, today's rule held to the real
   `render-loop.js` and the one its comment says it replaced, hunting and tracing frames of no sample; a drag through
-  the real `interaction.js` and `quality.js`, held or only poked; a heavy sample in slices and a heavy frame in
-  submissions; six offscreen samples one in flight or two, in `runSamples`' own order); chapter 2, *Shapes as distances*; chapter 14, *Aim at the light* (next event estimation); the contents
-  map; a glossary of 145 terms, each linked from the pages with a card on hover or tap.
+  the real `interaction.js` and `quality.js`, held or only poked; the slice's cap on a light scene, held to the real loop told what each
+  frame traced; a heavy sample in slices and a heavy frame in submissions; six offscreen samples one in flight or two, in `runSamples`' own order); chapter 29, *Noise, bias and
+  checking* (one pixel of a lamp-lit corner read four ways, the whole path, a bounce cap, a firefly clamp and a moving
+  window, each with the error bar `measure.js` keeps, against a true value computed over a million paths: precise and
+  wrong side by side; the white furnace with one disc, its rows and a control, on a working page and broken the two
+  ways ShadyTracer's was, every row and the control reading 1; a thousand pixels' error bars against their real spread,
+  and the bench's seRatio catching an EMA window taken for its count); chapter 2, *Shapes as distances*; chapter 14, *Aim at the light* (next event estimation); the contents
+  map; a glossary of 148 terms, each linked from the pages with a card on hover or tap.
 - **The kit** (`tutorial/kit/`): one pen draws every figure in the style's colours and line; a figure is a spec with
   state, controls, drag handles and steps that the paragraphs beside it trigger as they scroll by. The figures trace a
   flat world (`kit/flatland.js`): signed distance shapes from the help's 2D mirrors of `sdf.js`, sphere tracing, a
@@ -215,7 +221,12 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   the engine's rule a short budget costs mostly samples, as the flush's comment says, and light only when very short
   (over 20 runs: the mean held at 12 and 10 iterations, fell 4% at 8 and 30% at 4); round seven had called that comment
   wrong, and the page and REVIEWS.md now say what the model shows.
-- **Chapters 25 to 28** (round nine, two readers each but 28's second): chapter 25's readers found two steps showing nothing new, four
+- **Chapters 25 to 29** (round nine, two readers each but 28's second and 29's two, still to come): chapter 28's first reader found its governor
+  figure at odds with the code: the live view's 30 ms slice holds a light scene to the samples that fit it, which the
+  figure left out; it now has the slice as a choice and a step of its own, held to the real loop. Chapter 27's second
+  reader found the page saying every kernel once declared the scene's uniforms: it was four (the 0.10.0 entry and
+  `genrays.js` say so), and the figure now models those four. The excerpt locator cut `export function` and
+  `export async function` excerpts at their parameters' braces; it now passes the parameters for those too. Chapter 25's readers found two steps showing nothing new, four
   measures of spread called by one name, and the rounding's key idea missing; each is fixed, the last with a view of
   its own. Chapter 26's figures are tested against true distances, not the scene's own bounds: a box's distance can be
   more than a relief's divided field or a lens's formula, both underestimates, and never more than the truth. Its
@@ -295,10 +306,14 @@ What to look at:
   a ray; the second's lens and blend with B culled inside the join, P dragged; the shell's roughness slid from 0.04 to
   0.3; the step cache's three settings, pointing at a jump to see its ball. Is the cost model's bar enough to follow?
 - **Chapter 27, Faster compiles**: the first figure's three ways for each scene; *Next step* through the session, then
-  the cache and the scene-free kernels off; the bar with the build at 0.5, 1.3 and 3 times its prediction, pointing at
+  the cache off, and the four kernels declaring the scene's uniforms at *Open B* (seven compile, not three), pointing at
+  a row for its job; the maths fold-out's table against the *Learning the machine* readout; the bar with the build at 0.5, 1.3 and 3 times its prediction, pointing at
   the curves; *Learning the machine* from 0.15 to 6.
-- **Chapter 28, Feeling fast**: the governor at 5, 20 and 60 ms a sample, both rules; the drag held and only poked, as
-  Draft and Sketch; the heavy sample from 20 ms to 20 s at each size; one and two in flight with the recording slid
+- **Chapter 29, Noise, bias and checking**: the four readings, then *Other paths* a few times on each: does the
+  whole path's band hold the true value, and the cut one never? The furnace on each page (do the strips read as a
+  picture of a disc?); the error bars from 2 to 512 samples, true mean and window, and the window's wrong error bar.
+- **Chapter 28, Feeling fast**: the governor at 5, 20 and 60 ms a sample, both rules, and today's with the slice on; the drag held and only poked, as
+  Draft and Sketch; the heavy sample from 20 ms to 20 s at each size (at 640 × 360 and 10 s, the white lines every 5 of the 24 iterations); one and two in flight with the recording slid
   past the card's time. Does the drag's timeline match how the view feels to you when you pan?
 - **Chapter 16's first figure**: 1 sample (boxes, nothing circled), then 8. Chapter 17's side view, *near*: the ray from
   the lens's top edge, in its own colour, and its mark on the picture; and its 3D picture's *the first 2* samples. Chapter 0's lamp figure at r = 1 and 2.
