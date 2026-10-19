@@ -1263,8 +1263,9 @@
             scene: { timeline: () => BUILDER.timeline(), keep: t => BUILDER.keepTimeline(t) }, local: localStore });
         BUILDER.onTimeline = t => window.TIMELINE.showScene(t);
 
-        /* THE MEASURE TOOL: pinned readings and a rectangle's average over the picture, and the
-           false colour's legend (lib/pathtracer/measure). Reads nothing until something is placed. */
+        /* THE MEASURE TOOL: pinned readings and a rectangle's average over the picture, points on surfaces and the
+           distances between them (its ruler), and the false colour's legend (lib/pathtracer/measure). Reads nothing
+           until something is placed. */
         window.MEASURE = installMeasureTool({ stage, canvas: ctx.canvas, RT, toolbar: VIEW });     // its buttons: the analysis drawer's Measure
 
         /*=========================================================================================
