@@ -241,8 +241,21 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
     pbr3-volsample, henyey1941 (cited by title).
 
 **VI. The machine**
-21. **A GPU for beginners**: lock-step workers, WGSL, buffers, pipelines, dispatch, the limits.
-22. **Wavefront path tracing**: kernels and queues, ping-pong, indirect dispatch, the flush, shadow rounds.
+21. **A GPU for beginners** (draft): 128 rays of a flat scene as lanes in lock-step, each group as long as its slowest
+    ray (45% busy in groups of 32, 39% shuffled, 70% in groups of 8); a uniform struct laid out by WGSL's rules in two
+    orders (64 and 80 bytes) and ShadyTracer's own UB from `uniforms.schema.js` (108 fields, 752 bytes); the
+    workgroups a pass over a picture asks for, flat or one row per y, against 65,535 (the resolve kernel's 2048 × 2048).
+    Kit: `kit/gpu.js` mirrors tinywebgpu's packing (the test holds it to makeSchema on a stand-in device). -> tinywebgpu
+    (makeCompute, the packing rule), wavefront.js (resolve's 2D), raytrace_main.js (no submission long enough to be
+    killed, the ray budget in bytes, nothing to trace with), check-shaders.mjs (the barrier, the empty module), scene_api.js
+    (eight storage buffers). *Read:* webgpu-fundamentals, wgsl-spec, gpu-gems-branching.
+22. **Wavefront path tracing** (draft): a sunlit room's 1024 paths run as ShadyTracer runs a sample (`kit/wavefront.js`):
+    each iteration's rays marched, hits shaded and shadow rays traced, the drained tail, the worst-case budget of 24,
+    and a short budget flushing and cutting paths (the mean 0.0153, 0.0145 at 8, 0.0106 at 4); one iteration kernel by
+    kernel (ping-pong buffers, the shade queue, the shadow queue's sides, indirect dispatch sizes); one big kernel
+    against the wavefront as lane-time, a shading's cost a model's number. -> raytrace_main.js (the iteration, the
+    worst case, the accident, the shadow rounds, occlusion with NEE off), wavefront.js (prep, flip, the flush, the
+    clamp). Measured: PERFORMANCE_REVIEW §10.1-10.2 (Pascal). *Read:* laine2013, webgpu-fundamentals.
 23. **Adding up light on a GPU**: no float atomics, one resolve a sample, batches.
 24. **From scene tree to shader**: codegen, uniforms and constants, baking, the scene as data.
 

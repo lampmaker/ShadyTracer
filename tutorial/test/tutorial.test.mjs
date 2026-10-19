@@ -955,6 +955,85 @@ for (const [name, { mod }] of modules) {
         && tst.includes('the controls 0.152 and 0.4315') && tst.includes('the haze\'s code alone 1.2 s as no box, the dust 1.5–1.6 s, NEE off 0.7 s') && med.includes('that is about 7e-5') && HZ.HAZE_G_MAX === 0.95)
 }
 
+{
+    // CHAPTER 21: the machine's arithmetic, mirrored, held to tinywebgpu's own
+    const K = await import('../kit/gpu.js'), Gc = await import('../ch/gpu.js')
+    const { WEBGPU } = await import('../../lib/tinywebgpu/src/tinywebgpu.js')
+    globalThis.GPUBufferUsage ??= { UNIFORM: 64, STORAGE: 128, COPY_SRC: 4, COPY_DST: 8, INDIRECT: 256, MAP_READ: 1 }
+    globalThis.GPUTextureUsage ??= { COPY_SRC: 1, COPY_DST: 2, TEXTURE_BINDING: 4, STORAGE_BINDING: 8, RENDER_ATTACHMENT: 16 }
+    const S = WEBGPU(); let last = null
+    S.device = { createBuffer: ({ size }) => ({ size }), queue: { writeBuffer: (b, o, ab) => { last = new Uint32Array(ab.slice(0)) } } }
+    /** where tinywebgpu puts each field: written one at a time, the first word that changes */
+    const real = entries => {
+        const r = S.makeSchema(Object.fromEntries(entries)), at = {}
+        r.uniformWrite({}); let prev = last
+        entries.forEach(([name, type], k) => {
+            const n = K.typeInfo(type).comps
+            r.uniformWrite({ [name]: Array(n).fill(k + 1) })
+            at[name] = last.findIndex((w, i) => w !== prev[i]); prev = last
+        })
+        return { bytes: r.uniformBuffer.size, at }
+    }
+    const agree = entries => { const m = K.layoutStruct(entries), t = real(entries); return m.bytes === t.bytes && m.fields.every(f => t.at[f.name] === f.offset) }
+    ok('ch.21: kit/gpu.js lays out a struct as tinywebgpu does: the small one in both orders, every type, and ShadyTracer\'s UB', agree(Gc.SMALL) && agree(Gc.SMALL_BAD) && agree(Gc.ENGINE_UB)
+        && agree([['a', 'f32'], ['m3', 'mat3x3<f32>'], ['b', 'u32'], ['v2', 'vec2<i32>'], ['m2', 'mat2x2<f32>'], ['c', 'f32'], ['m4', 'mat4x4<f32>'], ['v3', 'vec3<u32>'], ['d', 'i32']]))
+    const L1 = K.layoutStruct(Gc.SMALL), L2 = K.layoutStruct(Gc.SMALL_BAD), L3 = K.layoutStruct(Gc.ENGINE_UB)
+    ok('ch.21: the page\'s structs: 64 bytes (8 padding), 80 (24), and UB 108 fields in 752 bytes (36)', L1.bytes === 64 && 4 * L1.padWords === 8 && L2.bytes === 80 && 4 * L2.padWords === 24
+        && L3.fields.length === 108 && L3.bytes === 752 && 4 * L3.padWords === 36, `${L3.fields.length} ${L3.bytes} ${4 * L3.padWords}`)
+    // lock-step: a group is as long as its slowest lane
+    const ls = K.lockstep([1, 5, 2, 2, 3, 3], 2)
+    ok('ch.21: lockstep: groups as long as their slowest lane', ls.time === 2 * (5 + 2 + 3) && ls.work === 16 && Math.abs(ls.use - 0.8) < 1e-12)
+    const pct = (w, o) => Math.round(100 * Gc.lanesRun(w, o).use)
+    ok('ch.21: the page\'s lanes: 45% busy in groups of 32, 39% shuffled, 70% in groups of 8', pct(32, 'neighbours') === 45 && pct(32, 'shuffled') === 39 && pct(8, 'neighbours') === 70, `${pct(32, 'neighbours')} ${pct(32, 'shuffled')} ${pct(8, 'neighbours')}`)
+    const d = (w, h) => K.dispatchCounts(w, h)
+    ok('ch.21: a flat dispatch runs out of x at 4,194,240 pixels: 1920 x 1080 is 32,400 groups, 2048 x 2048 65,536; a 4K row 60 groups and 2160 rows', d(1920, 1080).flat === 32400 && d(1920, 1080).flatOK
+        && d(2048, 2048).flat === 65536 && !d(2048, 2048).flatOK && d(2048, 2048).limitPixels === 4194240 && d(3840, 2160).rows.x === 60 && d(3840, 2160).rows.y === 2160 && d(4096, 4096).rowsOK)
+    // the engine's numbers the page states
+    const rm = readFileSync(join(REPO, 'lib/pathtracer/core/raytrace_main.js'), 'utf8'), perf = readFileSync(join(REPO, 'docs/PERFORMANCE.md'), 'utf8')
+    const TB = await import('../../lib/pathtracer/core/tracebasics.js')
+    ok('ch.21: 64 threads a group, 150 and 250 ms, a 1 GiB ray budget of 496 bytes a ray, the compile times where the page says', /wvf_wg: 64,/.test(rm) && rm.includes('export const SUBMIT_MS = 150, SPLIT_OVER_MS = 250')
+        && rm.includes('rayBudgetBytes: 1024 * 1024 * 1024,') && 2 * TB.RAY_BYTES + TB.SHADE_ITEM_BYTES === 496 && (2 ** 30 / 496 / 1e6).toFixed(2) === '2.16'
+        && perf.includes('ready at (ms): shade 18546, occlude 3365, march 1765, genrays 507') && perf.includes('read 21.2 and\n22.7 s for the Noise library on Ampere') && perf.includes('7.9-8.1 s on the 1080 Ti'))
+}
+
+{
+    // CHAPTER 22: the flat world's wavefront against its path tracer, and the page's numbers
+    const F = await import('../kit/flatland.js'), WK = await import('../kit/wavefront.js'), WF = await import('../ch/wavefront.js')
+    const full = WF.run()
+    // the counts add up, iteration by iteration
+    let adds = true
+    full.iters.forEach((l, i) => {
+        if (l.marched !== l.hits + l.escaped + l.outOfSteps + l.onward + l.flushed) adds = false
+        if (i > 0 && l.marched !== full.iters[i - 1].onward + full.iters[i - 1].newLegs) adds = false
+        if (i > 0 && i < full.iters.length - 1 && l.shadowsTraced !== full.iters[i - 1].shadowsQueued) adds = false
+    })
+    ok('ch.22: every ray marched is shaded, out of steps, still marching or flushed; the next iteration marches the survivors and the new legs; occlusion traces what shade queued the iteration before', adds)
+    // the wavefront's picture is the path tracer's, on average
+    {
+        const w = WK.wavefrontRun(WF.world, WF.CAM, { spp: 64, seed: 21 }), R = F.rng(23), N = 64 * 64
+        let a = 0, a2 = 0
+        for (let k = 0; k < 64; k++) for (let p = 0; p < 64; p++) { const [ox, oy, dx, dy] = F.cameraRay(WF.CAM, p, R()); const v = F.tracePath(WF.world, ox, oy, dx, dy, { nee: true, maxBounce: 10, rand: R }); a += v; a2 += v * v }
+        const m = a / N, se = Math.sqrt((a2 / N - m * m) / N), mw = WF.meanOf(w.img)
+        ok('ch.22: run as a wavefront at the worst-case budget, the room reads what the flat world\'s path tracer reads, nothing flushed or cut', Math.abs(mw - m) < 4 * Math.SQRT2 * se && w.flushed === 0 && !(w.iters[w.iters.length - 1].cut > 0), `${mw} ${m} ± ${se}`)
+    }
+    // the lanes: one lane a group waits for nobody
+    const one = WK.laneTimes(full, 1, 20)
+    ok('ch.22: with one lane a group neither way waits', one.mega.busy === one.mega.time && one.wave.busy === one.wave.time)
+    // the page's numbers
+    const i1 = full.iters[0], cut = b => WF.run(b).iters[WF.run(b).iters.length - 1].cut
+    ok('ch.22: the page\'s sample: worst case 24; iteration 1 marches 1024, 812 reach something, 212 go on; 523 shadow rays traced in iteration 2; rays in 19 iterations; 56 in iteration 15',
+        full.worst === 24 && full.budget === 24 && i1.marched === 1024 && i1.hits + i1.escaped === 812 && i1.onward === 212 && full.iters[1].shadowsTraced === 523
+        && full.iters.filter(l => l.marched > 0).length === 19 && full.iters[14].marched === 56 && full.paths.length === 1024)
+    ok('ch.22: the mean 0.0153 at the worst case; at 8 iterations 88 flushed, 775 cut, 0.0145; at 4, 0.0106', WF.meanOf(full.img).toFixed(4) === '0.0153' && WF.run(8).flushed === 88 && cut(8) === 775
+        && WF.meanOf(WF.run(8).img).toFixed(4) === '0.0145' && WF.meanOf(WF.run(4).img).toFixed(4) === '0.0106')
+    const lt = c => { const t = WK.laneTimes(full, 32, c); return [Math.round(100 * t.mega.busy / t.mega.time), Math.round(100 * t.wave.busy / t.wave.time), (t.mega.time / t.wave.time).toFixed(2)].join(' ') }
+    ok('ch.22: the lanes: 46% against 74% at a shading of 20 (1.60 times), 33/61 at 1, 64/86 at 80', lt(20) === '46 74 1.60' && lt(1).startsWith('33 61') && lt(80).startsWith('64 86'), `${lt(20)} | ${lt(1)} | ${lt(80)}`)
+    const rv = readFileSync(join(REPO, 'docs/PERFORMANCE_REVIEW.md'), 'utf8'), rmain = readFileSync(join(REPO, 'lib/pathtracer/core/raytrace_main.js'), 'utf8')
+    ok('ch.22: the measured numbers are where the page says', rv.includes('| Noise library | 243.1 | 184.7 | 102.8 | 27.2 | 45.5 |') && rv.includes('`wall − gpu ≈ 1.5 ms + 2.35 ms × iterations` (R² 0.995)')
+        && rv.includes('| Noise library | 24 | 21 | 81.1 | 179.9 | **45%** |') && rv.includes('march still took 1.4-1.5 ms') && rmain.includes('cost 0.13 ms (materials) to 0.42 ms (Menger) of GPU')
+        && rmain.includes('3,945 of the Menger cubes\' last') && rmain.includes('The benchmark\'s materials row ran 8, 24 and 8 iterations'))
+}
+
 /* THE EXCERPT LOCATOR ON ITS OWN ----------------------------------------------------------------------------------- */
 {
     const text = [

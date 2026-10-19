@@ -15,7 +15,7 @@ const nice = (lo, hi, n = 4) => {
 /**
  * @param pen     the figure's pen
  * @param rect    { x, y, w, h } pixels
- * @param o       { x: [lo, hi], y: [lo, hi], xlabel, ylabel, series: [{ pts: [[x, y, err]], role, kind, w, dash, name }], fmt,
+ * @param o       { x: [lo, hi], y: [lo, hi], xlabel, ylabel, series: [{ pts: [[x, y, err]], role, kind, w, dash, name, barWidth }], fmt,
  *                  hover, hoverX, hoverY }: the pointer over the chart reads the nearest points (below); a series'
  *                  `errorBars: false` carries its points' errors for that readout without drawing them
  */
@@ -49,7 +49,7 @@ export function plot(pen, rect, o) {
         const c = pen.col(s.role ?? 'ink')
         ctx.strokeStyle = c; ctx.fillStyle = c; ctx.lineWidth = (s.w ?? 1.4) * pen.theme.width / 1.5
         if (s.kind === 'bars') {
-            const bw = Math.max(1, rect.w / Math.max(1, s.pts.length) * 0.8)
+            const bw = Math.max(1, rect.w / Math.max(1, s.pts.length) * (s.barWidth ?? 0.8))    // barWidth: the share of its slot a bar fills
             for (const [x, y] of s.pts) { ctx.globalAlpha = 0.75; ctx.fillRect(X(x) - bw / 2, Y(y), bw, Y(Math.max(y0, 0)) - Y(y)) }
             ctx.globalAlpha = 1
         } else if (s.kind === 'dots') {

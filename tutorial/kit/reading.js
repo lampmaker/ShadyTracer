@@ -71,6 +71,10 @@ export const READING = [
     R('pbr3-phase', PBR, 'Physically Based Rendering (3rd ed.), 11.2: Phase functions', 'free online book', 'https://pbr-book.org/3ed-2018/Volume_Scattering/Phase_Functions'),
     R('pbr3-volsample', PBR, 'Physically Based Rendering (3rd ed.), 15.2: Sampling volume scattering', 'free online book', 'https://pbr-book.org/3ed-2018/Light_Transport_II_Volume_Rendering/Sampling_Volume_Scattering'),
     R('henyey1941', 'Louis G. Henyey, Jesse L. Greenstein', 'Diffuse radiation in the galaxy', 'paper, Astrophysical Journal, 1941', null, { credited: 'lib/pathtracer/core/haze.js' }),
+    R('webgpu-fundamentals', 'Gregg Tavares and others', 'WebGPU Fundamentals', 'free online tutorial', 'https://webgpufundamentals.org/'),
+    R('wgsl-spec', 'W3C GPU for the Web working group', 'WebGPU Shading Language', 'specification', 'https://www.w3.org/TR/WGSL/'),
+    R('gpu-gems-branching', 'Mark Harris, Ian Buck', 'GPU Gems 2, chapter 34: GPU flow-control idioms', 'free online book chapter, 2005', 'https://developer.nvidia.com/gpugems/gpugems2/part-iv-general-purpose-computation-gpus-primer/chapter-34-gpu-flow-control-idioms'),
+    R('laine2013', 'Samuli Laine, Tero Karras, Timo Aila', 'Megakernels considered harmful: wavefront path tracing on GPUs', 'paper, High-Performance Graphics, 2013', 'https://research.nvidia.com/publication/2013-07_megakernels-considered-harmful-wavefront-path-tracing-gpus'),
     R('veach1997', 'Eric Veach', 'Robust Monte Carlo methods for light transport simulation', 'PhD thesis, Stanford University, 1997', 'https://graphics.stanford.edu/papers/veach_thesis/'),
 
     // averages with error bars
