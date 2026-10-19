@@ -62,8 +62,10 @@
       Two kinds matter here. A storage buffer is a large array the threads read and write: the rays, the picture. A
       <a data-g="uniform">uniform</a> buffer holds the values every thread reads alike, the camera and the settings, read
       by a path the card keeps for exactly that; one may be at most 64 KiB (65,536 bytes). Its values are a struct, a
-      list of named fields, each a type: <code>f32</code> a decimal number, <code>u32</code> a whole one,
-      <code>vec2</code>, <code>vec3</code> and <code>vec4</code> two, three and four f32s. WGSL lays them out by a rule:
+      list of named fields, each a type: <code>f32</code> a decimal number, <code>u32</code> a whole one
+      from 0 up, <code>i32</code> a whole one that may be negative, <code>vec2</code>, <code>vec3</code> and
+      <code>vec4</code> two, three and four of one of those (<code>vec3&lt;f32&gt;</code> three f32s,
+      <code>vec3&lt;u32&gt;</code> three u32s), and a matrix a small table of f32s. WGSL lays them out by a rule:
       each field starts at an offset (its first byte, counted from the struct's start) that is a multiple of its
       alignment, and the gap left before it is padding, never used.</p>
     <table class="data">
@@ -81,8 +83,8 @@
       leaves 12 bytes empty before <code>pos</code>, which must start at 16; <code>uv</code> after <code>col</code>
       leaves 4, since it must start at a multiple of 8; and its 8 bytes leave the last row half empty. Nothing is wrong, only wasted, and the kernel and the
       code that fills the buffer must agree on every offset. ShadyTracer does not write its uniforms' offsets by hand:
-      tinywebgpu, its small WebGPU library, works them out from the field types (the second excerpt), and the test holds
-      this figure's arithmetic to it. (A ray's size it does write by hand, 112 bytes, and a test holds that to the WGSL
+      tinywebgpu, its small WebGPU library, works them out from the field types (the second excerpt), and the tutorial's
+      own test holds this figure's arithmetic to it. (A ray's size it does write by hand, 112 bytes, and a test holds that to the WGSL
       compiler's own.)</p>
     <p data-step="packing:engine">ShadyTracer's own uniform block, UB, before a scene adds its fields: 108 fields in
       752 bytes, 36 of them padding. Its rows are drawn in eight columns to fit: read down the first column, then the
@@ -102,8 +104,10 @@
     <h2><span class="n">3</span>Giving it work</h2>
     <p data-step="dispatch:flat">The program on the main processor asks the card to run a kernel by a
       <a data-g="dispatch">dispatch</a>: how many <a data-g="workgroup">workgroups</a> to run, each of a size fixed in
-      the kernel (64 threads in ShadyTracer's ray kernels), counted along up to three dimensions. Each thread works out
-      its item from its group's place and its own. The simplest way over a picture is one long count: pixel 0, 1, 2 …
+      the kernel (64 threads in ShadyTracer's ray kernels, 64 along x and 1 along y), counted along up to three
+      dimensions. The graphics card runs a workgroup of 64 as two of its lock-step groups of 32 on NVIDIA's cards: the
+      workgroup is the program's choice, the lock-step group the card's. Each thread works out its item from its
+      group's place and its own: the thread at place 5 of workgroup 3 handles item 3 × 64 + 5 = 197. The simplest way over a picture is one long count: pixel 0, 1, 2 …
       along the rows, 64 to a group. At 1920 × 1080 that is 32,400 groups.</p>
     <p data-step="dispatch:over">Every dimension of a dispatch may count at most 65,535 groups. 2048 × 2048 pixels is
       65,536 groups of 64: one over. That is not a slow frame; it is a validation error, and nothing is drawn. The
@@ -111,14 +115,14 @@
       65,535 × 64 = 4,194,240 pixels and no further: not at 2048 × 2048, one workgroup over, nor at a 4K picture
       (3840 × 2160, 8.3 million pixels), nor at a render sized to a 4K monitor.</p>
     <p data-step="dispatch:rows">One row per y instead: along x, the groups across one row (60 for a 4K row); along y,
-      the rows (2160). Both far under the limit, at any picture a card can hold; the bars are drawn too short to see
+      the rows (2160). A thread's pixel is then x = its group's x × 64 + its place, y = its group's y. Both far under the limit, at any picture a card can hold; the bars are drawn too short to see
       beside it, so each carries its number.</p>
     <p>Dispatches are recorded and sent to the card together, a <em>submission</em>. If one
       runs too long, about 2 seconds on Windows, the system decides the card has hung and resets it, and the page loses
       its device (its handle on the card, which every buffer and kernel belongs to) and everything on it. ShadyTracer
-      once sent a whole sample as one submission, and the Noise library hung (2026-09-29). Its sample had been timed at
-      over a second; <code>docs/PERFORMANCE.md</code> says the march's loop, rolled up again that week (chapter 24), may
-      have made it slower, inferred and not measured. A heavy frame is now cut into submissions of about 150 ms (the
+      once sent a whole sample as one submission, and the Noise library, an example scene of shapes with noisy surfaces,
+      hung (2026-09-29). Its sample had been timed at over a second, under the limit; that week a change to the march
+      may have made it slower, which is ShadyTracer's own guess, not a measurement. A heavy frame is now cut into submissions of about 150 ms (the
       fourth excerpt).</p>
   </div>
   <figure class="fig" data-fig="dispatch">
@@ -133,11 +137,13 @@
     <h2><span class="n">4</span>How ShadyTracer does it</h2>
     <p>A kernel in tinywebgpu is given as two pieces of <a data-g="wgsl">WGSL</a>: <code>body</code>, the helpers and
       structs, and <code>main</code>, the entry point's statements. The library writes the entry point around them, with
-      the thread's three numbers: <code>gid</code> its place among all threads, <code>lid</code> within its workgroup,
-      <code>wid</code> its workgroup's:</p>
+      the thread's three places, each a <code>vec3&lt;u32&gt;</code> (an x, a y and a z): <code>gid</code> its place
+      among all threads, <code>lid</code> within its workgroup, <code>wid</code> its workgroup's:</p>
     <pre data-src="lib/tinywebgpu/src/tinywebgpu.js" data-sym="makeCompute: (body, main, uniforms, resources, { wg = [8, 8, 1], ...opts } = {}) => (" data-to="`.trim(), uniforms, resources, _isCompute: true, wg"
          data-why="tinywebgpu is a git submodule, ShadyTracer's own small WebGPU library. uniforms and resources name what the kernel reads; the library declares them and binds them (tells the card which buffer each name means). wg is the workgroup's size, [8, 8, 1] unless given: 64 threads. ${BI} and ${V3U} are the library's short names for the text @builtin( and the type vec3<u32>. A pipeline (makePipeline) is a compiled kernel, ready to dispatch (section 5)." data-hash="db67139f"></pre>
-    <p>Its packing rule, section 2's table as code, which the figure mirrors (the sizes in 4-byte units):</p>
+    <p>Its packing rule, section 2's table as code, which the figure mirrors (the sizes in 4-byte units). The regular
+      expressions test the type's name: <code>vec3&lt;f32&gt;</code> matches the vec3 case and gets [3, 4, 3, 0],
+      3 units of size (12 bytes), aligned to 4 units (16 bytes), 3 numbers; a matrix is its columns, each a vector:</p>
     <pre data-src="lib/tinywebgpu/src/tinywebgpu.js" data-sym="// [size, align, components, packRows] in 4-byte units, derived from the type string rather than" data-to=": err(12, MSG &amp;&amp; `Unknown uniform type size for: ${t}`);" data-hash="743ae5a2"></pre>
     <p>The dispatch that ran out of x:</p>
     <pre data-src="lib/pathtracer/core/wavefront.js" data-sym="/* DISPATCHED 2D, and it has to be."
@@ -154,13 +160,16 @@
     <h2><span class="n">5</span>Tricks and trade-offs</h2>
     <p>Each is stamped with how it is known; point at a stamp to see what it means.</p>
     <div data-claim="measured">
-      <p><strong><a data-g="compile">Compiling</a> is slow.</strong> The card's compiler turns each kernel's text into
-        its own instructions, in the browser (<a data-g="webgpu">WebGPU</a> hands it the text), and ShadyTracer's are
-        large. Built after an edit on the user's machine, the kernels were ready at:
+      <p><strong><a data-g="compile">Compiling</a> is slow.</strong> The browser (through <a data-g="webgpu">WebGPU</a>)
+        hands each kernel's text to the graphics driver, whose compiler, running on the main processor, turns it into
+        the card's own instructions; ShadyTracer's kernels are large. The user has two machines: a newer one with an
+        NVIDIA Ampere card, and an older GTX 1080 Ti (a Pascal card). Built after an edit on the Ampere machine, the
+        kernels were ready at:
         shade 18,546 ms, occlusion 3,365, march 1,765, the camera rays 507 (<code>docs/PERFORMANCE.md</code>, 2026-09-29).
         The benchmark's compile of every kernel at once read 21.2 and 22.7 s on the user's Ampere card and 7.9 to 8.1 s
-        on their GTX 1080 Ti, for the same scene (the same document, which leaves the newer card's slower numbers
-        unexplained: they were not reconciled with a profile of about 4 s on it). Chapter 27 is how that was
+        on the GTX 1080 Ti, for the same scene (the same document). Why the newer machine read slower is not known:
+        the same document has the same kernels compiling in about 4 s there when timed one by one, and leaves the two
+        numbers unexplained. Chapter 27 is how that was
         shortened.</p>
     </div>
     <div data-claim="code">
@@ -172,16 +181,20 @@
     </div>
     <div data-claim="code">
       <p><strong>Rays counted as memory.</strong> How many rays a sample may hold in flight is set as the memory they
-        take, 1 GiB, not as a count: a ray is 112 bytes in each of two <a data-g="ping-pong">ping-pong</a> buffers (one
+        take, 1 GiB (2³⁰ bytes, about 1.07 billion), not as a count: a ray is 112 bytes in each of two <a data-g="ping-pong">ping-pong</a> buffers (one
         read while the other is written, chapter 22), plus a 272-byte item in the shade queue, 496 bytes, so about 2.16
-        million rays, enough for a 1080p picture at one ray a pixel. A sample with more rays and photons than that is
-        traced in batches, chapter 23
+        million rays, enough for a 1080p picture (1920 × 1080, 2.07 million pixels) at one ray a pixel. Even so the shade
+        queue alone is about 590 MB, over the 256 MB a device need allow one buffer, so the program still asks the card
+        for its largest buffers when it starts. A sample with more rays and photons than that is traced in batches,
+        chapter 23
         (<cite data-src="lib/pathtracer/core/raytrace_main.js" data-sym="/* The ceiling on rays in flight, expressed as the memory they may occupy rather than" data-to="planBatches, 0.38.1), so the cap costs time, never coverage or light."></cite>).</p>
     </div>
     <div data-claim="code">
-      <p><strong>Compiled off the page's thread.</strong> Making a pipeline (a compiled kernel ready to dispatch) can
-        hold the page for seconds to a minute; tinywebgpu asks for it asynchronously, and the renderer refuses to trace
-        until every kernel of a build is ready (the fourth story below).</p>
+      <p><strong>Compiled while the page goes on.</strong> Making a pipeline (a compiled kernel ready to dispatch) the
+        plain way holds the browser's main thread, the one that also draws the page (not one of the GPU's threads),
+        until the compile ends; tinywebgpu asks for it asynchronously, so the page goes on while it compiles, and the
+        renderer refuses to trace until every kernel of a build is ready (the fourth story below). How long a compile
+        takes is the measured stamp above.</p>
     </div>
   </div>
 </section>
@@ -196,7 +209,8 @@
         before one let some threads leave first. The checker ShadyTracer runs without a GPU passed it, and the browser's
         compiler refused it on the user's machine
         (<cite data-src="lib/pathtracer/core/check-shaders.mjs" data-sym="/* ---- a barrier only in uniform control flow." data-to="Every kernel it passes today compiles in Tint. */"></cite>).</li>
-      <li><strong>"24 modules parse."</strong> The check said so on the day a kernel shipped with an empty string for
+      <li><strong>"24 modules parse."</strong> ShadyTracer's checker, a script run before every change that reads each
+        JavaScript file (a module) without running it, said so on the day a kernel shipped with an empty string for
         its code, which failed to compile for everyone, and nothing noticed: it ran only with one setting on, and its
         compile failed long after the call that caused it
         (<cite data-src="lib/pathtracer/core/check-shaders.mjs" data-sym="WHY THIS EXISTS. Pass one only proves the JavaScript parses." data-to="prog_shade growing a ninth storage binding past the default limit of eight."></cite>).
@@ -210,7 +224,8 @@
         still compiling: "No resources bound", the frame's commands rejected
         (<cite data-src="lib/pathtracer/core/raytrace_main.js" data-sym="/* WHETHER THERE IS ANYTHING TO TRACE WITH." data-to="false before the first and after one that failed. */"></cite>).</li>
       <li><strong>Four million rays at every size.</strong> Before the 1 GiB, ShadyTracer allocated 4 million rays in
-        three ray buffers and the hit buffer, about 1.7 GB whether the picture was 4K or 256 pixels. It worked only
+        three ray buffers and the hit buffer, about 1.7 GB with the ray's and hit's sizes of the time (both have grown
+        since), whether the picture was 4K or 256 pixels. It worked only
         because the program asks the card for its largest buffers when it starts; on a device that gives the
         specification's defaults (256 MB a buffer), every one of those allocations failed
         (<cite data-src="lib/pathtracer/core/raytrace_main.js" data-sym="What it replaces: a flat 4 M rays allocated unconditionally at every resolution," data-to="defaults (256 MB / 128 MB) every one of those allocations fails outright. */"></cite>).</li>

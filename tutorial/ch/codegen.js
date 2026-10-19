@@ -74,20 +74,26 @@ export const figures = {
             for (const sh of scene.shapes) pen.handle(sh.id, sh.c, { role: sh.join === 'subtract' ? 'blocked' : 'cam', label: { b: 'the block', c: 'a ball', h: 'a hole', e: 'another ball' }[sh.id] })
             // the text this mode compiles, the lines new at the last compile marked
             const w = s.seen[s.mode], text = w.text.split('\n'), before = new Set(w.prev.split('\n')), tx = pen.X(2.75), ty = pen.Y(4.3)
-            const fit = l => { const n = Math.floor((W - tx - 6) / 6.1); return l.length > n ? l.slice(0, n - 1) + '…' : l }
+            // a line too long for the panel wraps after a comma, its rest indented, so nothing is cut off
+            const room = Math.floor((W - tx - 6) / 6.1)
+            const wrap = l => { const out = []; let rest = l; while (rest.length > room) { const cut = rest.lastIndexOf(', ', room - 1); if (cut <= 8) break; out.push(rest.slice(0, cut + 1)); rest = '            ' + rest.slice(cut + 2) } out.push(rest); return out }
             pen.labelPx(tx, ty, s.mode === 'data' ? 'the text it compiles (every such scene):' : 'the text it compiles:', { role: 'soft', size: 11 })
-            text.forEach((l, i) => {
+            let row = 0
+            text.forEach(l => {
                 const fresh = w.prev !== w.text && !before.has(l)
-                if (fresh) { ctx.save(); ctx.fillStyle = pen.col('accent'); ctx.globalAlpha = 0.14; ctx.fillRect(tx - 3, ty + 16 + i * 14, W - tx - 4, 14); ctx.restore() }
-                pen.labelPx(tx, ty + 17 + i * 14, fit(l), { role: fresh ? 'accent' : 'ink', size: 10, kind: 'mono' })
+                for (const part of wrap(l)) {
+                    if (fresh) { ctx.save(); ctx.fillStyle = pen.col('accent'); ctx.globalAlpha = 0.14; ctx.fillRect(tx - 3, ty + 16 + row * 14, W - tx - 4, 14); ctx.restore() }
+                    pen.labelPx(tx, ty + 17 + row * 14, part, { role: fresh ? 'accent' : 'ink', size: 10, kind: 'mono' })
+                    row++
+                }
             })
-            let y = ty + 24 + text.length * 14
+            let y = ty + 24 + row * 14
             if (s.mode === 'data') {
-                pen.labelPx(tx, y, 'its records (kind, join, x, y, a, b, k):', { role: 'soft', size: 11 }); y += 16
-                for (const r of records(scene)) { pen.labelPx(tx, y, r.map(v => Number.isInteger(v) ? String(v) : v.toFixed(2)).join('  '), { role: 'cam', size: 10, kind: 'mono' }); y += 14 }
+                pen.labelPx(tx, y, 'its records: kind (0 circle, 1 box), join (0 union, 1 cut), x, y, a, b, k', { role: 'soft', size: 11 }); y += 16
+                for (const r of records(scene)) { pen.labelPx(tx, y, r.map((v, i) => i < 2 ? String(v) : v.toFixed(2).padStart(5)).join('  '), { role: 'cam', size: 10, kind: 'mono' }); y += 14 }
             } else if (s.mode === 'codegen') {
                 const u = codegen(scene).uniforms
-                pen.labelPx(tx, y, `its ${Object.keys(u).length} uniforms, written when they change:`, { role: 'soft', size: 11 }); y += 16
+                pen.labelPx(tx, y, `its ${Object.keys(u).length} uniforms (UB, the uniform buffer), written when they change:`, { role: 'soft', size: 11 }); y += 16
                 Object.entries(u).forEach(([n, v], i) => pen.labelPx(tx + (i % 2) * 150, y + Math.floor(i / 2) * 14, `${n} ${Array.isArray(v.def) ? v.def.map(x => x.toFixed(2)).join(', ') : v.def.toFixed(2)}`, { role: 'cam', size: 10, kind: 'mono' }))
             }
             // what the last change asked for
@@ -138,7 +144,7 @@ export const figures = {
         },
         readout(s) {
             const st = inlineStats(kernelText(s.n, s.sites), 'main', ['SDF'])
-            return `the kernel's text ${st.text.toLocaleString('en-US')} characters, inlined ${st.inlined.toLocaleString('en-US')} (${st.copies.SDF} copies of SDF) · predicted compile ${(kernelMs(st.inlined) / 1000).toFixed(2)} s (linear in the size: ${(DEFAULT_RATE * st.inlined / 1000).toFixed(2)} s)`
+            return `the kernel's text ${st.text.toLocaleString('en-US')} characters, inlined ${st.inlined.toLocaleString('en-US')} (${st.copies.SDF} cop${st.copies.SDF === 1 ? 'y' : 'ies'} of SDF) · predicted compile ${(kernelMs(st.inlined) / 1000).toFixed(2)} s (linear in the size: ${(DEFAULT_RATE * st.inlined / 1000).toFixed(2)} s)`
         },
     },
 }

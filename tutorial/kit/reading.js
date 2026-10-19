@@ -74,6 +74,8 @@ export const READING = [
     R('webgpu-fundamentals', 'Gregg Tavares and others', 'WebGPU Fundamentals', 'free online tutorial', 'https://webgpufundamentals.org/'),
     R('wgsl-spec', 'W3C GPU for the Web working group', 'WebGPU Shading Language', 'specification', 'https://www.w3.org/TR/WGSL/'),
     R('gpu-gems-branching', 'Mark Harris, Ian Buck', 'GPU Gems 2, chapter 34: GPU flow-control idioms', 'free online book chapter, 2005', 'https://developer.nvidia.com/gpugems/gpugems2/part-iv-general-purpose-computation-gpus-primer/chapter-34-gpu-flow-control-idioms'),
+    R('webgpu-timing', 'Gregg Tavares and others', 'WebGPU Timing Performance', 'online tutorial lesson', 'https://webgpufundamentals.org/webgpu/lessons/webgpu-timing.html', { checked: '2026-10-19' }),
+    R('chrome-webgpu-dev', 'Chrome for Developers', 'WebGPU developer features', 'documentation', 'https://developer.chrome.com/docs/web-platform/webgpu/developer-features', { checked: '2026-10-19' }),
     R('laine2013', 'Samuli Laine, Tero Karras, Timo Aila', 'Megakernels considered harmful: wavefront path tracing on GPUs', 'paper, High-Performance Graphics, 2013', 'https://research.nvidia.com/publication/2013-07_megakernels-considered-harmful-wavefront-path-tracing-gpus'),
     R('wiki-cas', 'Wikipedia', 'Compare-and-swap', 'encyclopedia article', 'https://en.wikipedia.org/wiki/Compare-and-swap'),
     R('veach1997', 'Eric Veach', 'Robust Monte Carlo methods for light transport simulation', 'PhD thesis, Stanford University, 1997', 'https://graphics.stanford.edu/papers/veach_thesis/'),

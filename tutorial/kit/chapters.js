@@ -87,8 +87,8 @@ export const CHAPTERS = [
     C('machine', 'codegen', 'From scene tree to shader', 'Turning a scene into a program for the graphics card, and making that program fast.', 'draft',
         ['builder/codegen.js', 'builder/bake.js', 'builder/scenedata.js', `${K}compileprogress.js`, `${K}wgslgraph.js`, 'builder/test/fixtures/csg-v10', 'tutorial/kit/scenegen.js']),
 
-    C('speed', 'measure', 'Measure first', 'Timing the graphics card, and a plan built on guesses that was undone.', 'planned',
-        [`${K}kerneltime.js`, `${P}tests.js`, 'bench/', 'docs/PERFORMANCE.md']),
+    C('speed', 'measure', 'Measure first', 'Timing the graphics card, and a plan built on guesses that was undone.', 'draft',
+        [`${K}kerneltime.js`, `${P}tests.js`, 'bench/', 'docs/PERFORMANCE.md', 'docs/PERFORMANCE_REVIEW.md', 'tutorial/kit/timing.js']),
     C('speed', 'steps', 'Fewer and cheaper steps', 'Making each ray take fewer and cheaper steps; what was tried and taken out again.', 'planned',
         ['builder/boxes.js', 'builder/stepbox.js', `${K}wavefront.js`]),
     C('speed', 'compiles', 'Faster compiles', 'Getting a scene\'s programs ready sooner.', 'planned',

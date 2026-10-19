@@ -16,9 +16,10 @@
     <p class="eyebrow">Part VI · The machine · Chapter 23</p>
     <h1>Adding up light on a GPU</h1>
     <p class="lede">A path that ends hands its light to its pixel; so does a shadow ray that reaches the sun, and a
-      photon's connection to the camera. In one sample many of them land on the same pixel, from threads running at
-      the same moment, and the sum must come out right. Then the sample is folded into the picture's average, and a
-      picture too big for the card's buffers is traced in pieces that must add up to one sample. This chapter is those
+      photon's connection to the camera. In one sample many of them land on the same pixel, from
+      <a data-g="thread">threads</a> running at the same moment, and the sum must come out right. Then the sample is folded into the picture's average, and a
+      picture too big for the graphics card's <a data-g="buffer">buffers</a> is traced in pieces that must add up to one
+      sample. This chapter is those
       three, and the bugs each one had.</p>
   </div>
   <div class="titleblock" data-auto></div>
@@ -27,22 +28,35 @@
 <section class="scene" id="race">
   <div class="prose">
     <h2><span class="n">1</span>Many hands on one pixel</h2>
-    <p>First, what is being added. A <em>sample</em> is one try at the whole picture: a camera path through every
-      pixel, each a random guess at that pixel's light (chapter 12). One sample is noisy, so the picture is the average
-      of every sample so far, and it settles as they come. Two buffers hold this. The <em>frame buffer</em> collects
-      this sample's light, pixel by pixel, from whatever lands there: paths that end, shadow rays that reach the sun,
-      the light tracer's photons joined to the eye (chapters 14 and 18). The <em>picture</em> (the accumulation buffer)
+    <p>First, what is being added. A <em>path</em> is a ray's whole journey from the eye, bounce after bounce
+      (chapter 13); a <em>shadow ray</em> is a ray from a point a path reached towards a light, which adds the light's
+      share if nothing blocks it (chapter 14); a <em>photon</em> is a ray sent from the sun, joined to the eye where it
+      lands, which is how the bright patches glass focuses are found (chapter 18). Each is one thread of a
+      <a data-g="kernel">kernel</a>, a program the graphics card runs once for every item (chapter 21). A
+      <em>sample</em> is one try at the whole picture: one camera path through every pixel, a random guess at that
+      pixel's light (chapter 12). One sample is noisy, so the picture is the average of the samples so far, and it
+      settles as they come. Two buffers hold this. The <em>frame buffer</em> collects this sample's light, pixel by
+      pixel, from whatever lands there: the paths that end, the shadow rays that reach the sun, the photons joined to
+      the eye, and how many paths ended there, n (normally one). The <em>picture</em> (the accumulation buffer)
       holds the average. Once a sample, after every ray of it has ended, a kernel called <em>resolve</em> folds each
       pixel's frame into its average and clears the frame for the next sample (section 4). Folding in is one line of
       arithmetic: an average of <var>n</var> samples, <var>m</var>, and one more, <var>s</var>, make
-      (<var>m</var> × <var>n</var> + <var>s</var>) ÷ (<var>n</var> + 1); the average of 2 and 4 with a third sample
-      of 9 is (3 × 2 + 9) ÷ 3 = 5.</p>
+      (<var>m</var> × <var>n</var> + <var>s</var>) ÷ (<var>n</var> + 1); the average of 3 and 5 is 4, and with a
+      third sample of 10 it is (4 × 2 + 10) ÷ 3 = 6.</p>
+    <p>Two more things resolve does. The average can be given a <em>window</em>, a largest <var>n</var>: past it every
+      new sample gets the same weight, 1 ÷ (window + 1), and each older sample's share shrinks by the same factor every
+      sample, so old samples fade away gradually, an <em>exponential moving average</em> (EMA); with no window set it is
+      the plain average of every sample. And after the camera moves, the count starts again at 0, so the first new
+      sample replaces the picture instead of being averaged into the old view (section 4's reset excerpt). A pixel
+      whose path did not end in this sample (cut short, chapter 22) has n = 0, and resolve leaves its average as it
+      was.</p>
     <p data-step="race:plain">Six threads each add some light to one pixel, 26 in all. The plain way is two steps: load
       the pixel's number, then store it plus your own. In one group in <a data-g="lockstep">lock-step</a> every thread
       loads first, all reading 0, then all store at once, each its own 0 plus its value: one store is kept (which one,
-      the card decides; the figure keeps the last thread's), so the pixel ends at 2, and 24 of the 26 are lost. Point at a box to follow one thread.</p>
+      the graphics card decides; the figure keeps the last thread's), so the pixel ends at 2, and 24 of the 26 are lost. Point at a box to follow one thread.</p>
     <p data-step="race:mixed">Threads of different groups interleave at no set pace, and whether a load and its store
-      have another thread's store between them is luck: here the pixel ends at 10. ShadyTracer once folded each path
+      have another thread's store between them is luck: here the pixel ends at 10, after falling back more than once to a
+      value a thread loaded long before (follow the top row). ShadyTracer once folded each path
       into the picture this way, a load, the arithmetic and a store, and lost updates; with one ray a pixel no two
       threads ever met at a pixel, which hid it (section 6).</p>
     <p data-step="race:atomic">An <a data-g="atomic">atomic</a> add is one step no other thread can come between: 26,
@@ -62,7 +76,7 @@
   </div>
   <figure class="fig" data-fig="race">
     <figcaption>Each row a thread and the light it adds; each column a step in time (a round in lock-step, one thread's
-      step when interleaved); along the top, the pixel's value after it. L loads, S stores, + is an atomic add, C a
+      step when interleaved); along the top, the pixel's value after it. L loads, S stores (with the value it writes), + is an atomic add, C a
       compare-and-swap, marked ✗ in <span data-say="blocked">red</span> where it failed. The readout counts steps
       (boxes) and, in lock-step, rounds (columns). Point at a box. Choose the way of
       adding, the schedule and the threads; run again for other values.</figcaption>
@@ -74,13 +88,14 @@
     <h2><span class="n">2</span>Numbers that fit the light</h2>
     <p data-step="formats:ordinary">The old frame buffer kept light as whole numbers, 65,536 to a unit, so it could use
       the integer atomic add: a light of 0.3 was stored as round(0.3 × 65,536) = 19,661, which reads back as
-      0.29998779, off by 0.00001, about one part in 25,000 (4 × 10⁻⁵): fine while the light was a number near 1.</p>
+      0.29998779: off by 0.000012, which is one part in 25,000 of the 0.3 (4 × 10⁻⁵ of it). Fine while the light was a
+      number near 1.</p>
     <p data-step="formats:wall">Then ShadyTracer moved to real units (chapter 5), and a sunlit white wall is about 25,000
       cd/m² (candela per square metre, the unit of how bright a surface looks). A pixel's word holds at most
       4,294,967,295, which at 65,536 to a unit is 65,535 units and a bit, for everything a pixel gets in a sample. Past
       its largest a whole number wraps round, starting again from 0, so to keep several contributions from wrapping
       each was clamped at 10,000: the wall lost 60% of its light. An f32
-      (<a data-g="f32">a 32-bit float</a>) keeps 25,000 exactly.</p>
+      (<a data-g="f32">a 32-bit float</a>) holds 25,000 itself exactly, and values near it to about 0.002.</p>
     <p data-step="formats:sun">The sun's disc is about 1.6 × 10<sup>9</sup> cd/m²: clamped to 10,000, all but six parts in a
       million gone. These limits came from the number format, not from anything physical.</p>
     <p data-step="formats:dim">And at the other end, anything under 1/65,536 was cut to 0: a faint contribution of a
@@ -136,7 +151,7 @@
          data-why="A pixel is four words: red, green, blue (base + 0, 1, 2, f32 bits) and the count of camera paths that landed (base + 3). VEC3 is a vec3&lt;f32&gt;. atomicExchange reads a word and puts 0 in its place in one step, so the frame buffer is ready for the next sample with no clearing pass; it is atomic only because the buffer is declared for atomics, since no other thread touches this pixel now. lt is the light tracer's splats (its deposits): one estimate a sample already, so added as it is, not divided by n. UB.maxaverages is not the setting itself: the host writes the running count of samples there, already capped by the setting when that is above 0 (section 6). The last line is the running average: prevn samples averaged to prev, one more, s, makes (prev × prevn + s) / (prevn + 1). prev is read back clamped to ±1e20 before that arithmetic; the comment above it says why a channel may be negative." data-hash="b7aa080c"></pre>
     <p>After a camera move, the first sample replaces the picture rather than fading into it:</p>
     <pre data-src="lib/pathtracer/core/raytrace_main.js" data-sym="/* A RESET STARTS THE WINDOW AT ZERO:" data-to="a smoother move for a trail of whatever was bright. */"
-         data-why="The EMA, exponential moving average, is the running average resolve keeps, its window the samples it averages over. A white point is the brightness shown as white. 2/(n + 2) was the old picture's share of the average n samples after a reset. A ray cap is how many rays a sample may hold (chapter 21); 0.38.1 is a version of ShadyTracer." data-hash="7bbf7aa4"></pre>
+         data-why="The EMA, exponential moving average, is the running average resolve keeps, its window the samples it averages over. A white point is the brightness shown as white. 2/(n + 2) was the old picture's share of the average n samples after a reset. A ray cap is how many rays a sample may hold (chapter 21); 0.38.1 is a version of ShadyTracer. UB.moveAverages is a developer setting, 0 unless set ('Keep on move'): how many samples of the old view to keep through a move." data-hash="7bbf7aa4"></pre>
     <p>And the batches' plan, which section 3's figure runs:</p>
     <pre data-src="lib/pathtracer/core/photons.js" data-sym="function planBatches"
          data-why="streams is each stream's count this sample: the camera rays, then each source's photons. { first = null } = {} is JavaScript for an optional fourth argument: first names the streams sent in batches of their own before the rest (the photon map's photons, section 3). fits(K) asks whether K batches each hold at most the budget, a batch taking up to ceil(n / K) of each stream; part(s, k) is stream s's share of batch k (splitPart, just above it)." data-hash="34849ff1"></pre>
@@ -166,13 +181,14 @@
       <p><strong>Refused at the door.</strong> A contribution that is not a number (NaN, what 0/0 gives), infinite, or of
         negative luminance (less than no light in all) is not added, and is counted. One negative channel alone is
         kept: an exact colour outside what the display can show has one (resolve's comment calls it outside the gamut).
-        NaN is the one value not equal to itself, but WGSL lets a compiler assume floats are finite, so
-        <code>x != x</code> may be folded to false; it is found by its exponent bits instead (the deposit's comment).</p>
+        NaN is the one value not equal to itself, but WGSL lets a compiler assume floats are finite, so the
+        test <code>x != x</code> may be thrown away as always false; NaN is found instead by its exponent bits (the bits
+        of an f32 that hold its power of two: all of them set means NaN or infinity; the deposit's comment).</p>
     </div>
     <div data-claim="code">
       <p><strong>What a pixel costs.</strong> The picture 16 bytes, its error bar 8, this sample's frame 16 and the light
         tracer's splats 16: 56 bytes a pixel, beside the rays. A 4096 × 4096 save, 16.8 million pixels, holds
-        16.8 million × 32 bytes = 537 MB of picture and frame until the page gives it back (<code>raytrace_main.js</code>, give the memory back).</p>
+        16.8 million × 32 bytes (the picture's 16 and the frame's 16) = 537 MB of picture and frame until the page gives it back (<code>raytrace_main.js</code>, give the memory back).</p>
     </div>
   </div>
 </section>

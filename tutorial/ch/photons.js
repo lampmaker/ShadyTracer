@@ -248,7 +248,7 @@ export const figures = {
             })
             for (const [k, t] of [[1, '1'], [10, '10'], [100, '100'], [300, '300']]) pen.labelPx(rect.x + rect.w * lg(k) / lg(SHRINK_K), rect.y + rect.h + 4, t, { role: 'soft', size: 10, align: 'center', base: 'top' })
             pen.labelPx(rect.x - 30, rect.y - 18, `the floor's brightness at the caustic's peak, averaged over the samples so far (true: ${TRUE_X0.toFixed(3)})`, { role: 'soft', size: 12 })
-            pen.labelPx(rect.x + rect.w, rect.y + rect.h + 18, 'samples (marks at 1, 10, 100 and 300: each step ten times as many)', { role: 'soft', size: 11, align: 'right', base: 'top' })
+            pen.labelPx(rect.x + rect.w, rect.y + rect.h + 18, 'samples, spaced by their logarithm: 1, 10, 100, then 300', { role: 'soft', size: 11, align: 'right', base: 'top' })
             const rs = ks.map(k => s.shrink ? radiusFlat(s.r1, k, s.alpha) : s.r1)
             plot(pen, rect2, { x: [0, lg(SHRINK_K)], y: [0, 0.5], xticks: [], yticks: [0, 0.25, 0.5], fmt: v => v.toFixed(2), hoverX: v => `sample ${Math.round(10 ** v)}`, hoverY: v => `r = ${v.toFixed(3)}`, series: [{ name: 'r', pts: ks.map((k, i) => [lg(k), rs[i]]), role: s.shrink ? 'cam' : 'blocked', w: 1.4 }] })
             pen.labelPx(rect2.x - 30, rect2.y - 16, 'the radius, sample by sample (the same samples, the same marks)', { role: 'soft', size: 12 })
@@ -279,7 +279,7 @@ export const figures = {
             for (const cc of g.cells) pen.shape([[cc * c, 0], [(cc + 1) * c, 0], [(cc + 1) * c, 0.5], [cc * c, 0.5]], { role: 'accent', fill: 'fill', w: 0.6 })
             pen.label([(Math.min(...g.cells) + 1) * c, -0.2], `cells ${g.cells.join(' and ')}`, { role: 'accent', size: 11, align: 'center' })
             for (const p of ph) {
-                const role = g.countedSet.has(p) ? 'cam' : g.otherSet.has(p) ? 'blocked' : 'light', walked = g.seen.has(p)
+                const walked = g.seen.has(p), role = g.countedSet.has(p) ? 'cam' : g.otherSet.has(p) ? 'blocked' : walked ? 'light' : 'soft'
                 pen.line([p.x, 0], [p.x, g.countedSet.has(p) ? 0.36 : 0.28], { role, w: walked ? 1.8 : 1, alpha: walked ? 0.95 : 0.35, exact: true })
             }
             pen.line([s.x - s.r, 0.42], [s.x + s.r, 0.42], { role: 'cam', w: 2.2, exact: true })
@@ -296,7 +296,7 @@ export const figures = {
             }
             pen.label([-2.15, -0.6], 'the hash table, four lists: a cell\'s photons go on list (cell × 73856093) mod 4', { role: 'soft', size: 11 })
             // the ticks' key, along the top right
-            const KEY = [['cam', 1.8, 0.95, 'counted (its own cell, within r)'], ['blocked', 1.8, 0.95, 'walked: another cell\'s'], ['light', 1.8, 0.95, 'walked: its own cell, farther than r'], ['light', 1, 0.35, 'not walked']]
+            const KEY = [['cam', 1.8, 0.95, 'counted (its own cell, within r)'], ['blocked', 1.8, 0.95, 'walked: another cell\'s'], ['light', 1.8, 0.95, 'walked: its own cell, farther than r'], ['soft', 1, 0.35, 'not walked']]
             KEY.forEach(([role, w, alpha, t], k) => { const y = 1.02 - k * 0.12; pen.line([1.05, y - 0.04], [1.05, y + 0.04], { role, w, alpha, exact: true }); pen.label([1.12, y], t, { role: 'soft', size: 10, base: 'middle' }) })
         },
         readout(s) {

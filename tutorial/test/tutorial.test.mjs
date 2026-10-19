@@ -807,6 +807,12 @@ for (const [name, { mod }] of modules) {
     // the open floor is the camera's in every mode but light tracing's own
     const open = C.render({ mode: 'twice', half: 0.27, max: 40 }).pix[40].Y, openB = C.render({ mode: 'both', half: 0.27, max: 40 }).pix[40].Y
     ok('ch.18: the open floor reads the same split or not', Math.abs(open - openB) < 1e-12, `${open} ${openB}`)
+    // the page's 400-sample numbers: the bracket and the open floor (pixels 41 to 48), each way
+    const at400 = mode => { const r = C.render({ mode, max: 400 }), g = idx => idx.reduce((a, i) => a + r.pix[i].Y, 0) / idx.length; return [g(C.causticPixels).toFixed(3), g(C.openPixels).toFixed(3)].join(' ') }
+    ok('ch.18: after 400 samples the bracket reads 0.455 camera, 0.282 photons, 0.313 split, 0.738 not; the open floor 0.388, 0.007, 0.395, 0.395', at400('camera') === '0.455 0.388' && at400('light') === '0.282 0.007'
+        && at400('both') === '0.313 0.395' && at400('twice') === '0.738 0.395')
+    const sunL = 1 / (2 * Math.sin(0.27 * Math.PI / 180))
+    ok('ch.18: a find is the sun\'s 106 times the floor\'s 0.8, 85, and 85 once in 220 is 0.39', Math.round(sunL) === 106 && Math.round(0.8 * sunL) === 85 && (0.8 * sunL / 220).toFixed(2) === '0.39')
     // the learned map: a distribution with its floor; counts halved; the page's numbers
     const L = F.newLearn(8); L.emitted.set([10, 10, 10, 10, 10, 10, 10, 10]); L.hits.set([0, 0, 9, 1, 0, 0, 0, 0]); F.learnRebuild(L)
     const sum = L.p.reduce((a, b) => a + b, 0)
@@ -1013,7 +1019,7 @@ for (const [name, { mod }] of modules) {
         const w = WK.wavefrontRun(WF.world, WF.CAM, { spp: 64, seed: 21 }), R = F.rng(23), N = 64 * 64
         let a = 0, a2 = 0
         for (let k = 0; k < 64; k++) for (let p = 0; p < 64; p++) { const [ox, oy, dx, dy] = F.cameraRay(WF.CAM, p, R()); const v = F.tracePath(WF.world, ox, oy, dx, dy, { nee: true, maxBounce: 10, rand: R }); a += v; a2 += v * v }
-        const m = a / N, se = Math.sqrt((a2 / N - m * m) / N), mw = WF.meanOf(w.img)
+        const m = a / N, se = Math.sqrt((a2 / N - m * m) / N), mw = WF.pictureMean(w)
         ok('ch.22: run as a wavefront at the worst-case budget, the room reads what the flat world\'s path tracer reads, nothing flushed or cut', Math.abs(mw - m) < 4 * Math.SQRT2 * se && w.flushed === 0 && !(w.iters[w.iters.length - 1].cut > 0), `${mw} ${m} ± ${se}`)
     }
     // the lanes: one lane a group waits for nobody
@@ -1024,8 +1030,12 @@ for (const [name, { mod }] of modules) {
     ok('ch.22: the page\'s sample: worst case 24; iteration 1 marches 1024, 812 reach something, 212 go on; 523 shadow rays traced in iteration 2; rays in 19 iterations; 56 in iteration 15',
         full.worst === 24 && full.budget === 24 && i1.marched === 1024 && i1.hits + i1.escaped === 812 && i1.onward === 212 && full.iters[1].shadowsTraced === 523
         && full.iters.filter(l => l.marched > 0).length === 19 && full.iters[14].marched === 56 && full.paths.length === 1024)
-    ok('ch.22: the mean 0.0153 at the worst case; at 8 iterations 88 flushed, 775 cut, 0.0145; at 4, 0.0106', WF.meanOf(full.img).toFixed(4) === '0.0153' && WF.run(8).flushed === 88 && cut(8) === 775
-        && WF.meanOf(WF.run(8).img).toFixed(4) === '0.0145' && WF.meanOf(WF.run(4).img).toFixed(4) === '0.0106')
+    ok('ch.22: the mean 0.0153 at the worst case; at 8 iterations 88 flushed, 775 cut, 249 paths counted, 2 pixels with none, 0.0152; at 4, 181 counted, 8 with none', WF.pictureMean(full).toFixed(4) === '0.0153' && WF.run(8).flushed === 88 && cut(8) === 775
+        && WF.run(8).paths.filter(p => p.ended).length === 249 && WF.leftOut(WF.run(8)) === 2 && WF.pictureMean(WF.run(8)).toFixed(4) === '0.0152' && WF.run(4).paths.filter(p => p.ended).length === 181 && WF.leftOut(WF.run(4)) === 8)
+    // a cut path hands nothing in and is not counted: resolve's n (wavefront.js prog_resolve); over 20 runs the mean holds near the worst case and falls when short
+    const mr = Object.fromEntries([0, 12, 10, 8, 6, 4].map(b => [b, WF.meanOverRuns(b, 20)])), rel = b => mr[b] / mr[0] - 1
+    ok('ch.22: over 20 runs, the mean held at 12 and 10 iterations (within 5%) and fell 4% at 8, 14% at 6, 30% at 4', Math.abs(rel(12)) < 0.05 && Math.abs(rel(10)) < 0.05
+        && Math.round(-100 * rel(8)) === 4 && Math.round(-100 * rel(6)) === 14 && Math.round(-100 * rel(4)) === 30, JSON.stringify(Object.fromEntries(Object.keys(mr).map(b => [b, rel(b).toFixed(3)]))))
     const lt = c => { const t = WK.laneTimes(full, 32, c); return [Math.round(100 * t.mega.busy / t.mega.time), Math.round(100 * t.wave.busy / t.wave.time), (t.mega.time / t.wave.time).toFixed(2)].join(' ') }
     ok('ch.22: the lanes: 46% against 74% at a shading of 20 (1.60 times), 33/61 at 1, 64/86 at 80', lt(20) === '46 74 1.60' && lt(1).startsWith('33 61') && lt(80).startsWith('64 86'), `${lt(20)} | ${lt(1)} | ${lt(80)}`)
     const rv = readFileSync(join(REPO, 'docs/PERFORMANCE_REVIEW.md'), 'utf8'), rmain = readFileSync(join(REPO, 'lib/pathtracer/core/raytrace_main.js'), 'utf8')
@@ -1102,6 +1112,33 @@ for (const [name, { mod }] of modules) {
     const arch = readFileSync(join(REPO, 'roadmap/ARCHITECTURE.md'), 'utf8'), pf = readFileSync(join(REPO, 'docs/PERFORMANCE.md'), 'utf8'), sdj = readFileSync(join(REPO, 'builder/scenedata.js'), 'utf8')
     ok('ch.24: the measured numbers are where the page says', arch.includes('| the optics bench | 297.4 -> 109.1 (-63%) | 189.7 -> 61.2 (-68%) |') && arch.includes('| 8456 -> 4643 |') && arch.includes('Baked is faster on seven of the eight')
         && arch.includes('| 4.2, 3.9, 3.1 |') && arch.includes('| 8.9, 9.4 |') && arch.includes('| 1.36, 1.12, 0.83 |') && pf.includes('3.7-23 s uncached on the Ampere') && sdj.includes('header and 585 records'))
+}
+
+/* CHAPTER 25: MEASURE FIRST -------------------------------------------------------------------------------------- */
+{
+    const ME = await import('../ch/measure.js'), TI = await import('../kit/timing.js'), KT = await import('../../lib/pathtracer/core/kerneltime.js')
+    const pf = readFileSync(join(REPO, 'docs/PERFORMANCE.md'), 'utf8'), rv = readFileSync(join(REPO, 'docs/PERFORMANCE_REVIEW.md'), 'utf8')
+    ok('ch.25: the benchmark\'s first full run, as the page copies it', pf.includes('| Noise library, as it is | 736.5 | |') && pf.includes('| **reliefs removed (plain shapes)** | **81.1** | **-89.0%** |')
+        && pf.includes('| Surface materials | 80.0 | |') && pf.includes('| showcase / demo / Menger cubes / materials | 93.1 / 95.6 / 177.2 / 61.8 |')
+        && ME.RELIEFS.slice(3).every(([n, v]) => pf.includes(`| ${n} | ${v.toFixed(1)} |`)) && pf.includes('render **about 6x faster** at the same resolution'))
+    ok('ch.25: the drift\'s readings and run 2\'s repeats are the documents\'', TI.DRIFT_READINGS.every(v => rv.includes(`| ${v.toFixed(1)} ms |`)) && pf.includes('737.3, 784.2 (after the settings rows) and 714.9')
+        && pf.includes('9.3% of their mean') && pf.includes('rounded to 32.768 us here') && rv.includes('good to about ±20%'))
+    // the model's sample, read by the engine's own tally: 194 passes, busy and gaps make the span, 24 iterations
+    const r0 = ME.reading(0), busy = Object.values(r0.r.ms).reduce((a, b) => a + b, 0)
+    ok('ch.25: 194 passes in 24 iterations; busy plus gaps is the span, gaps 0.39 of 87.8 ms; the march half, shade a fifth, occlusion a seventh, surface a ninth', r0.r.passes === 194 && r0.it.iterations.length === 24
+        && Math.abs(busy + r0.r.gapMs - r0.r.spanMs) < 1e-6 && r0.r.gapMs.toFixed(2) === '0.39' && r0.r.spanMs.toFixed(1) === '87.8'
+        && Math.abs(r0.r.ms.march / r0.r.spanMs - 0.5) < 0.02 && Math.abs(r0.r.ms.shade / r0.r.spanMs - 1 / 5) < 0.03 && Math.abs(r0.r.ms.occlude / r0.r.spanMs - 1 / 7) < 0.01 && Math.abs(r0.r.ms.surface / r0.r.spanMs - 1 / 9) < 0.01)
+    const r1 = ME.reading(100)
+    ok('ch.25: rounded to 100 us, 124 passes read 0; the march 44.6 against 44.3; prep_march 0 against 0.1, prep_occlude 0.2', r1.r.seq.filter(q => q[1] === 0).length === 124
+        && r1.r.ms.march.toFixed(1) === '44.6' && r0.r.ms.march.toFixed(1) === '44.3' && r1.r.ms.prep_march === 0 && r0.r.ms.prep_march.toFixed(1) === '0.1' && r1.r.ms.prep_occlude.toFixed(1) === '0.2')
+    // the timestamps as a card writes them: exact pairs give each pass its time back
+    const P = [{ name: 'a', ms: 1.5 }, { name: 'b', ms: 0.25 }], t = TI.timestamps(P, { gap: 0.5 }), tl = KT.tally(P.map(p => p.name), t)
+    ok('ch.25: timestamps in ns give each pass its ms back, and the gap between them', Math.abs(tl.ms.a - 1.5) < 1e-9 && Math.abs(tl.ms.b - 0.25) < 1e-9 && Math.abs(tl.gapMs - 0.5) < 1e-9)
+    // the drift: the four readings' spread 16%; 40 comparisons of a true 10%
+    const sep = TI.driftTrials(0.1, 'separate', { n: 40, seed: 1 }), int = TI.driftTrials(0.1, 'interleaved', { n: 40, seed: 1 })
+    ok('ch.25: the readings spread 16%; separate runs read a 10% gain the wrong way 17 times in 40 and within 5 points 8 times; interleaved never wrong, 37 within 2', TI.driftSpread().toFixed(2) === '0.16'
+        && sep.filter(v => v >= 0).length === 17 && sep.filter(v => Math.abs(v + 0.1) <= 0.05).length === 8 && int.filter(v => v >= 0).length === 0 && int.filter(v => Math.abs(v + 0.1) <= 0.02).length === 37)
+    ok('ch.25: the Noise library 7.7 times the demo, its reliefs removed beside Surface materials', (736.5 / 95.6).toFixed(1) === '7.7' && Math.abs(81.1 - 80.0) < 2)
 }
 
 /* THE EXCERPT LOCATOR ON ITS OWN ----------------------------------------------------------------------------------- */

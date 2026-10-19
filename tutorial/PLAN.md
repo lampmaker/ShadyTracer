@@ -272,7 +272,13 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
     PERFORMANCE.md's structural edit. *Read:* iq-distfunctions, wgsl-spec.
 
 **VII. Speed** (every number stamped; the review's ±20% drift between runs stated)
-25. **Measure first**: per-kernel timestamps, drift, bench rows, the plan that was reverted.
+25. **Measure first** (draft): the plan that was reverted, told by the benchmark's first full run (every scene, then
+    the Noise library's own rows: the reliefs, not the architecture); one sample's compute passes as timestamps, the
+    times a model (`kit/timing.js`) and the reading the engine's own `kerneltime.js` `tally` and `perIteration`, by
+    pass, kernel and iteration, rounded as a browser rounds them; drift, the four readings of one kernel text and two
+    builds compared in separate runs or interleaved under a model of it. -> CLAUDE.md (the rule), kerneltime.js (its
+    header, tally), bench/index.js (what is fixed), tests.js (the kernels' fingerprint). Measured: PERFORMANCE.md's runs
+    1, 2 and 5, PERFORMANCE_REVIEW.md's drift table. *Read:* webgpu-timing, chrome-webgpu-dev.
 26. **Fewer and cheaper steps**: culling boxes, boxes on dear nodes only, relief shells, the step cache, what was
     measured and removed. *Read:* iq-bounding (Quilez on bounding volumes for SDFs), keinert2014.
 27. **Faster compiles**: off-thread, `noUnroll`, one copy of the scene per kernel, the pipeline cache.

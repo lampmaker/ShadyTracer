@@ -49,7 +49,9 @@ export function plot(pen, rect, o) {
         const c = pen.col(s.role ?? 'ink')
         ctx.strokeStyle = c; ctx.fillStyle = c; ctx.lineWidth = (s.w ?? 1.4) * pen.theme.width / 1.5
         if (s.kind === 'bars') {
-            const bw = Math.max(1, rect.w / Math.max(1, s.pts.length) * (s.barWidth ?? 0.8))    // barWidth: the share of its slot a bar fills
+            // barWidth: the share of its slot a bar fills; slots: how many the width is shared by (its points, unless
+            // a series of one bar stands among others, each a series of its own colour)
+            const bw = Math.max(1, rect.w / Math.max(1, s.slots ?? s.pts.length) * (s.barWidth ?? 0.8))
             for (const [x, y] of s.pts) { ctx.globalAlpha = 0.75; ctx.fillRect(X(x) - bw / 2, Y(y), bw, Y(Math.max(y0, 0)) - Y(y)) }
             ctx.globalAlpha = 1
         } else if (s.kind === 'dots') {

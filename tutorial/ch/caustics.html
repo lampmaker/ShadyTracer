@@ -45,12 +45,14 @@
     <p data-step="caustic:shadow">What is left is the floor's bounce: its direction picked at random (chapter 8), it
       goes into the ball, and only if the glass happens to turn it onto the sun does it bring the sun's light back. In
       the flat world that happens about once in 220 bounces for a sun half a degree across. A find carries the sun's
-      own brightness, 85, where the open floor reads 0.39, because a path's weight is what it found divided by the
-      chance of finding it (chapter 8): a rare find counts for a lot, and most samples find nothing. Those are the
-      specks, and why the average jumps. In 3D the real sun is found far more rarely, 1 bounce in 66,111 with the sun
-      45° up (chapter 5).</p>
-    <p data-step="caustic:wide">Make the sun 8° across (its illuminance held the same, as ShadyTracer's setting is:
-      chapter 5). Now a bounce through the ball finds the sun far more often, and the bright spot appears under the
+      brightness, 106, times the 0.8 the floor sends back: 85, where the open floor reads 0.39. It counts that much
+      because a path's weight is what it found divided by the chance of finding it (chapter 8): a rare find counts for
+      a lot, and most samples find nothing. On average the sums agree: once in 220 bounces, 85 each, is 85 ÷ 220 ≈ 0.39,
+      what the open floor gets; the glass moves the sun's light about, it does not add to it. Those rare big finds are
+      the specks, and why the average jumps. In 3D the real sun is found far more rarely: 1 bounce in 66,111, for a sun
+      45° up (chapter 5's case).</p>
+    <p data-step="caustic:wide">Make the sun 8° across, the light it sends onto a surface facing it held the same
+      (its illuminance, as ShadyTracer's setting holds it: chapter 5), so each degree of it is dimmer. Now a bounce through the ball finds the sun far more often, and the bright spot appears under the
       ball, still grainy. A bigger sun is a softer caustic and an easier one to find; a real one, small and bright, is
       the hard case.</p>
     <p data-step="caustic:light"><strong>From the light instead.</strong> Turn it round: start at the sun. A
@@ -59,7 +61,8 @@
       with nothing to guess, and lands where the optics put it. Then the only question is whether the eye sees that
       point of the floor, and that is one straight line: a <em>connection</em> from the point to the eye, which adds
       the photon's light to the pixel the point lands in. This is <a data-g="light-tracing">light tracing</a>. The
-      strip shows it alone: the caustic, clean after a few samples, and nothing else, because a photon is connected
+      strip shows it alone: the caustic, clean after a few samples, and a faint glow over the open floor, the light the
+      ball's surface reflects there like a mirror, a caustic of its own. Nothing else, because a photon is connected
       only after it has passed glass or a mirror.</p>
     <p data-step="caustic:both">Both together: the camera's paths for everything they find well, the photons for the
       caustic. ShadyTracer divides the paths between the two (section 2): a path that reaches the sun through glass
@@ -68,9 +71,11 @@
       the bright spot with the ball's shadow on either side of it, which is why it reads less than the open floor even
       with the caustic in it: the spot itself is pixel 25, 0.83 after 400 samples.</p>
     <p data-step="caustic:twice">Without that division, both sides count the caustic: the camera's chance finds and
-      the photons. After 400 samples the bracket reads 0.738, against 0.313 with the split: about 2.4 times, with the
-      camera's specks on top. The open floor far from the ball, which only the camera counts, reads the same either way
-      (compare the readout's numbers with <strong>Both, split</strong>). A renderer that adds a second way of finding
+      the photons. After 400 samples the bracket reads 0.738, against 0.313 with the split: the photons' 0.282 on top
+      of the camera's own 0.455, about 2.4 times. (The camera's 0.455 is itself off the true value by the luck of its
+      specks at 400 samples.) The open floor far from the ball reads the same either way, 0.395 (compare the readout's
+      numbers with <strong>Both, split</strong>); the camera alone read it a little lower, 0.388, because the light the
+      ball reflects there it finds only by chance. A renderer that adds a second way of finding
       light must take the light it finds away from the first.</p>
     <details class="maths">
       <summary><span class="tag">The maths</span>What one connection adds to its pixel</summary>
@@ -78,14 +83,17 @@
         <p>A camera pixel is an average over the rays through it, spread evenly over its width on the film (chapter 1).
           A photon lands at a point x of the floor carrying light Φ (its share of the sun's). The camera would have
           seen x by a ray through some pixel, and what that pixel reads of x is the floor's radiance there,
-          <var>f</var> × the light arriving, where <var>f</var> = ρ/2 in the flat world (chapter 8). So a connection
-          adds</p>
+          <var>f</var> × the light arriving, where <var>f</var> = ρ/2 in the flat world (ρ the floor's albedo, the share
+          of light it sends back; the 2 spreads it over the half circle of directions it can go, chapter 8). So a
+          connection adds</p>
         <p class="eq">Φ × <var>f</var> × <span class="frac"><span>cos θ<sub>x</sub></span><span><var>d</var> cos²θ<sub>c</sub> Δ<var>u</var></span></span></p>
         <dl class="terms">
           <dt>cos θ<sub>x</sub> / <var>d</var></dt><dd>the angle a piece of floor fills, seen from the eye
             <var>d</var> away, tilted θ<sub>x</sub> from facing it: the flat world's 1/d (chapter 0)</dd>
-          <dt>1 / cos²θ<sub>c</sub></dt><dd>the film is flat, so towards its edge the same angle spreads over more
-            film: θ<sub>c</sub> is the direction's angle off the camera's axis</dd>
+          <dt>1 / cos²θ<sub>c</sub></dt><dd>the film is flat, at distance 1 along the camera's axis, so towards its edge
+            the same angle spreads over more film, twice over: a direction θ<sub>c</sub> off the axis meets the film
+            1/cos θ<sub>c</sub> away, which widens the angle's footprint by that, and meets it slanted, which widens it
+            by that again</dd>
           <dt>Δ<var>u</var></dt><dd>a pixel's width on the film; dividing by it turns "light landing on the film" into
             the pixel's average, as the camera's rays measure it</dd>
         </dl>
@@ -152,7 +160,7 @@
       that chance, chapter 8's rule, so the picture stays right while the photons move. (The step after one sample
       shows the map rebuilt from that sample's counts; the photons it drew were still sent evenly.)</p>
     <p data-step="learn:learned">After ten samples the photons crowd over the ball, and 919 of 1500 connect, 61%. A
-      fifth of them still go evenly (the floor of 20%, dashed), so a caustic the map has not found yet is still found,
+      fifth of them still go evenly (a minimum share of 20%, dashed), so a caustic the map has not found yet is still found,
       slowly, and the picture is never wrong while it learns: every cell keeps a chance above 0, so every photon a
       cell sends is divided by a chance it really had, and no light is left with no way to be found. And both counts are halved at every rebuild, so the map forgets:
       it follows a moving sun or an edited scene within a few samples.</p>
@@ -170,7 +178,7 @@
     <h2><span class="n">4</span>How ShadyTracer does it</h2>
     <p>Why light tracing, and the split, as the shading code states them:</p>
     <pre data-src="lib/pathtracer/core/materials_pbr.js" data-sym="LIGHT TRACING -- caustics, by walking from the sun instead of from the eye." data-to="THROUGH glass or in a mirror (x1 not directly visible): those need SPPM."
-         data-why="EVAL is the kind of event a connection can evaluate: a matte or rough lobe (chapter 9), as opposed to a DELTA (mirror, smooth glass). CLS_CAND and CLS_SPEC are two bits in the ray's tag: 'the first vertex scattered' and 'only deltas since'. ltCovers asks whether a photon could have come down that line at all: outside the square the photons start on, the camera keeps the sun, so the square's size changes the noise and never the total. SPPM is chapter 19's photon map." data-hash="ac563b82"></pre>
+         data-why="EVAL is the kind of event a connection can evaluate: a matte or rough lobe (chapter 9), as opposed to a DELTA (mirror, smooth glass). CLS_CAND and CLS_SPEC are two bits in the ray's tag: 'the first vertex scattered' and 'only deltas since'. ltCovers asks whether a photon could have come down that line at all: outside the square the photons start on, the camera keeps the sun, so the square's size changes the noise and never the total. SPPM is chapter 19's photon map. x1 is the first point the eye's path reaches; flux, a photon's share of the sun's light; beta, a path's weight so far; MIS, weighing two ways of finding the same light against each other (chapter 15)." data-hash="ac563b82"></pre>
     <p>A photon walks only through deltas, and ends at the first surface that scatters it:</p>
     <pre data-src="lib/pathtracer/core/tracebasics.js" data-sym="/* The walk continues only through delta events." data-to="else if (res.r.state == RAY_ACTIVE) { res.r.state = RAY_TERMINATED; }"
          data-why="TAG_PASSED is set once the photon has passed a delta: only such photons connect (the camera counts the rest). The lens's walk is chapter 17's story." data-hash="46483ae5"></pre>
@@ -202,8 +210,8 @@
         0.605 once the map had learned, 70 times more useful photons, and the busiest 1% of cells took 72% of them (the
         same test, Ampere). In the caustic's own pixels the noise read 0.963 with light tracing off, 0.380 with an even
         map and 0.160 with the learned one at a tenth of a photon a pixel. Noise falls as one over the square root of
-        the samples (chapter 12), so equal noise takes (0.963 ÷ 0.160)² ≈ 36 times fewer samples with the learned map,
-        which the entry calls about 40, and (0.963 ÷ 0.380)² ≈ 6 with the even one (a later run,
+        the samples (chapter 12), so equal noise takes (0.963 ÷ 0.160)² ≈ 36 times fewer samples with the learned map
+        (the entry rounds it to about 40), and (0.963 ÷ 0.380)² ≈ 6 with the even one (a later run,
         <code>PLAN.md</code>'s open items; that entry does not name the card).</p>
     </div>
     <div data-claim="measured">

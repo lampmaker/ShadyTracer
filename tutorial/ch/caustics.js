@@ -103,7 +103,7 @@ function strip(pen, vals, x0, y0, x1, h, k, label) {
         if (!idx.length) continue
         const l = at(idx[0]) - w / PIX / 2, r = at(idx[idx.length - 1]) + w / PIX / 2
         ctx.save(); ctx.strokeStyle = pen.col('soft'); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(l, bot + 16); ctx.lineTo(l, bot + 18); ctx.lineTo(r, bot + 18); ctx.lineTo(r, bot + 16); ctx.stroke(); ctx.restore()
-        pen.labelPx((l + r) / 2, bot + 21, what === 'sky' ? 'sky' : 'the ball: the floor seen through it, its shadowed part dark', { role: 'soft', size: 9, align: what === 'sky' ? 'center' : 'left', base: 'top' })
+        pen.labelPx((l + r) / 2, bot + 21, what === 'sky' ? 'sky' : 'the ball (the floor seen through it)', { role: 'soft', size: 9, align: what === 'sky' ? 'center' : 'left', base: 'top' })
     }
 }
 /** the sun: a few of its parallel rays coming in from the upper right, and its name */
@@ -174,7 +174,7 @@ export const figures = {
             // the floor every cell keeps, 20% shared evenly: dashed across the bars, so it shows when the learned cells tower
             const hf = 1.1 * (0.2 / K) / top, f0 = at(0), f1 = at(1)
             pen.line([f0[0] + cx * hf, f0[1] + cy * hf], [f1[0] + cx * hf, f1[1] + cy * hf], { role: 'ink', w: 1, dash: [4, 3], exact: true })
-            pen.label([at(1)[0] + cx * hf + 0.15, at(1)[1] + cy * hf], 'the floor: 20% shared evenly', { role: 'ink', size: 10 })
+            pen.label([at(1)[0] + cx * hf + 0.15, at(1)[1] + cy * hf], hf < 0.12 ? `the minimum share: 20% spread evenly, ${(100 * 0.2 / K).toFixed(1)}% a cell (too thin to see here)` : 'the minimum share: 20% spread evenly', { role: 'ink', size: 10 })
             pen.label([at(0.5)[0] + 0.4, at(0.5)[1] + 1.3], 'where photons start: each cell\'s chance', { role: 'light', size: 11 })
             // a few of the last sample's photons, from where they cross the drawn line
             const along = q => (q[0] - sun.aim[0]) * cx + (q[1] - sun.aim[1]) * cy

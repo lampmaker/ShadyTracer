@@ -17,7 +17,7 @@ as PLAN.md does.
 
 ## 0.67.2 — 2026-10-18
 
-**A developer tutorial beside the program: its plan, its figure kit, eight styles and its first twenty-five chapters**
+**A developer tutorial beside the program: its plan, its figure kit, eight styles and its first twenty-six chapters**
 (you: "a tutorial for shadytracer, parallel to the program … that explains the inner workings of the code … interactive,
 2D visualisations … a solid toolkit for that so it looks the same everywhere … start with a plan and list of contents,
 then a few pages … make a few mockups of different styles"). Nothing in the application changed: the tutorial is
@@ -80,8 +80,11 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   f32 on a line of light values; a sample in batches by `photons.js`'s own `planBatches`); chapter 24, *From scene
   tree to shader* (a flat scene of one group as code with uniforms, baked by the engine's own `bake.js`, and as data,
   each edit counted as a uniform write or a compile; a kernel's inlined size by `wgslgraph.js` against
-  `compileprogress.js`'s fitted compile model); chapter 2, *Shapes as distances*; chapter 14, *Aim at the light* (next event estimation); the contents
-  map; a glossary of 135 terms, each linked from the pages with a card on hover or tap.
+  `compileprogress.js`'s fitted compile model); chapter 25, *Measure first* (the plan that was reverted, told by the
+  benchmark's first full run; one sample's compute passes as timestamps, the times a model and the reading the engine's
+  own `kerneltime.js`, rounded as a browser rounds them; the same code's drift, and two builds compared in separate
+  runs or interleaved under a model of it); chapter 2, *Shapes as distances*; chapter 14, *Aim at the light* (next event estimation); the contents
+  map; a glossary of 139 terms, each linked from the pages with a card on hover or tap.
 - **The kit** (`tutorial/kit/`): one pen draws every figure in the style's colours and line; a figure is a spec with
   state, controls, drag handles and steps that the paragraphs beside it trigger as they scroll by. The figures trace a
   flat world (`kit/flatland.js`): signed distance shapes from the help's 2D mirrors of `sdf.js`, sphere tracing, a
@@ -192,11 +195,15 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   listed), now fixed, and steps of reasoning said as facts, each now shown. Round seven read chapters 18 to 24. Every
   reader met words the page took from earlier chapters (sample, NEE, the flat world, lane, resolve), so each page now
   says them in a few sentences of its own. Five statements were wrong and are fixed: chapter 18's caustic seen through
-  glass "missing from both" sides (the engine keeps it on the camera's side, found by chance); chapter 22's short
-  budget costing "only convergence" while its own figure darkened (the flush keeps the light a path has gathered, and
-  its later legs' light is lost: a bias); chapter 23 reading resolve's `n == 0` return and `UB.maxaverages` as they
+  glass "missing from both" sides (the engine keeps it on the camera's side, found by chance); chapter 23 reading resolve's `n == 0` return and `UB.maxaverages` as they
   are not; chapter 24's section numbers; chapter 21's padding as described against its figure. The excerpt locator cut
-  a function whose parameters hold braces at those braces; it now looks for the body after the parameter list.
+  a function whose parameters hold braces at those braces; it now looks for the body after the parameter list. Round
+  eight read them again: the recaps held, and following one reader's sum (49 rays stopped, 48 in the shade queue)
+  showed chapter 22's model did not follow the engine. A ray out of steps goes to shade, and a path cut on the last
+  pass hands nothing in and is left out of its pixel's average by resolve, where the model had counted it dark. With
+  the engine's rule a short budget costs mostly samples, as the flush's comment says, and light only when very short
+  (over 20 runs: the mean held at 12 and 10 iterations, fell 4% at 8 and 30% at 4); round seven had called that comment
+  wrong, and the page and REVIEWS.md now say what the model shows.
 - **Where to read more** (you: "add a box with recommended external references, eg where you learned the info. Inigo
   quilez definitely needs to be named. Probably more than once"): reading boxes beside the sections they belong to,
   every chapter at least one, from one list (`tutorial/kit/reading.js`) whose every link was opened and checked. Inigo
@@ -257,6 +264,9 @@ What to look at:
   threads; the contribution dragged from a millionth to the sun; the batches at each size, the photon map on.
 - **Chapter 24, From scene tree to shader**: drag the ball and add one in each of the three ways, watching the compile
   count; the objects and call sites of the second figure.
+- **Chapter 25, Measure first**: the three views of the first figure; the second's passes, by kernel and by iteration,
+  then rounded to 100 µs (do the outlined zero-length passes read clearly?); the third's true difference from 0 to 30%
+  in separate runs and interleaved, *Compare again*.
 - **Chapter 16's first figure**: 1 sample (boxes, nothing circled), then 8. Chapter 17's side view, *near*: the ray from
   the lens's top edge, in its own colour, and its mark on the picture; and its 3D picture's *the first 2* samples. Chapter 0's lamp figure at r = 1 and 2.
 - **The new styles.** Lab notebook's new lettering; Chalkboard (try it dark); the three drafting versions side by side

@@ -580,7 +580,7 @@ braces, so "the bake, whole" showed five lines.
 | 21 | The barrier's why; bind; device; BI and V3U; "five a round". | **Fixed**, each; the kernel card corrected (about eight a round). |
 | 21 | The rays-in-flight comment a wall of versions. | **Fixed.** A claim with a citation instead, and the old 4 M rays a story in §6. |
 | 22 | Iteration 15: 47 + 1 + 7 = 55, not 56. | **Fixed.** The readout counts the ray that ran out of steps. |
-| 22 | "Costs convergence" against a darker picture; what "cut" keeps. | **Wrong, fixed.** Both keep what they gathered and lose their later legs: a bias. The flush's comment is quoted and answered (an engine finding, reported, not edited). |
+| 22 | "Costs convergence" against a darker picture; what "cut" keeps. | **Fixed, then corrected in round 8.** This round called the flush's comment wrong; the figure's model did not yet follow the engine's resolve (below). |
 | 22 | "Nothing measurable" against the tail's 45%. | **Fixed.** The gaps between kernels against the nearly empty kernels themselves: latency, as §10.2 says. |
 | 22 | The worst case in one sentence; the drop at 12; 523 from 774; why occlusion lags. | **Fixed**, each: a path of three legs walked; the cap at iteration 11; the sun above the surface; the two sides of the shadow queue. |
 | 22 | Prep dispatches are direct; "a few workgroups" for 56. | **Fixed.** |
@@ -602,10 +602,64 @@ braces, so "the bake, whole" showed five lines.
 | 24 | Named scenes, 1080 Ti and Pascal, vec4s, 32 twice. | **Fixed**, each. |
 
 **Engine findings from this round**, reported to the user and not edited here:
-- the flush's comment (`wavefront.js`) and budgetOverride's (`raytrace_main.js`) say a short budget costs
-  convergence, not light; the light tracer's comment on the same cut (`materials_pbr.js`) says it costs light;
 - PERFORMANCE.md's Noise library sample "over a second" sits beside a hang under a limit of about 2 s, explained
   there only by an inference.
+- (This list first named the flush's comment as wrong. Round 8 withdrew that: see there.)
+
+## Round 8, 2026-10-19 (chapters 18 to 24, after round 7's changes)
+
+A fresh reader a chapter again, the same brief. Reports:
+[caustics](reports/2026-10-19-round8/caustics.md), [photons](reports/2026-10-19-round8/photons.md),
+[haze](reports/2026-10-19-round8/haze.md), [gpu](reports/2026-10-19-round8/gpu.md),
+[wavefront](reports/2026-10-19-round8/wavefront.md), [accumulate](reports/2026-10-19-round8/accumulate.md),
+[codegen](reports/2026-10-19-round8/codegen.md).
+
+**What the round showed.** Round 7's fixes held where a reader met them: each quiz was answered from the page, the
+recaps were used, and no reader asked again what a sample, NEE or the flat world is. What was left was smaller, a step
+not shown or a number that did not add up. Following one of those up found a real error, not in the words but in a
+model.
+
+**A model that did not follow the engine.** The wavefront reader asked why the shade queue at iteration 15 holds 48
+when 49 rays stop. In the engine a ray out of steps goes to shade (RAY_MAXITER), and the figure's model ended it in the
+march; fixed. Checking what shade then does with a path on the last pass turned up the larger one: a path hands its
+light in only when it ends (wavefront.js, THE PATH IS OVER), so a path cut on the last pass hands in nothing, is not
+counted, and resolve leaves its pixel's sample out when no path there ended (chapter 23's n). The model had counted
+those paths as darker. With the engine's rule, over 20 runs of the sample, the mean holds at 12 and 10 iterations and
+falls 4% at 8, 14% at 6 and 30% at 4: a short budget costs mostly samples, as the flush's comment says, and at very
+short budgets light, through the flushed paths' untraced legs. Round 7 had called that comment wrong; the page and the
+record now say what the model shows.
+
+| Chapter | Finding | |
+|---|---|---|
+| 22 | 48 in the shade queue against 47 + 1 + 1 stopped. | **Fixed** in the model: a ray out of steps goes to shade, as the engine's does. |
+| 22 | (Found following it.) Cut paths counted as darker. | **Wrong, fixed.** Resolve's rule in the model; the text, the readout (paths counted, pixels with none outlined) and the 20-run averages, held by the test. |
+| 22 | How the last pass's extra rounds are decided without counts; why not read the counts back. | **Fixed**, each: a fixed number from the settings; a read waits on everything before it. |
+| 22 | "Nothing is cut" at the worst case, though shade skips NEE on the last pass. | **Fixed.** A path needs at most 23 passes; the 24th traces the 23rd's shadow rays. |
+| 22 | The clamp said to be in the prep kernel shown; the shadow bars' zig-zag; "18 new legs" from 47 hits; "the user chose". | **Fixed**, each (the occlusion's prep kernel; floor and ceiling in turn; 29 at the bounce cap; ShadyTracer's user). |
+| 22 | Pass, iteration and round; 32 lanes and 32 steps; thread, buffer, kernel, workgroup, normal unmarked. | **Fixed.** One word said; the two 32s by chance; each marked. |
+| 18 | Light tracing's "nothing else" against 0.007 on the open floor; 0.388 against 0.395. | **Fixed.** The ball's reflection, a caustic of its own; the camera finds it by chance. Held by the test. |
+| 18 | 2.4 times unexplained; why a find is worth 85, and 85 once in 220. | **Fixed.** 0.282 on 0.455; 106 × 0.8; 85 ÷ 220 ≈ 0.39, the glass moving light, not adding it. |
+| 18 | "The floor of 20%" in a scene with a floor; the line invisible when learned. | **Fixed.** A minimum share; its label says when it is too thin to see. |
+| 18 | ρ, the second cos θ, illuminance held, 45° after 75°, "about 40". | **Fixed**, each. |
+| 19 | Section 4's WGSL names; the n² excerpt. | **Fixed.** An outline of storing and gathering first; each name glossed; radiance and n² said. |
+| 19 | The fold-out's noise algebra and unequal variances; why blur ∝ r². | **Fixed**, each shown. |
+| 19 | A worked hash; hashCell and sppmHash; 2 × 2 × 2. | **Fixed.** Cell −3 to list 1 in numbers. |
+| 19 | Screenshots at fewer samples than the text; the log axis; faint and walked orange alike; the exact map's 0.894. | **Fixed**, each. |
+| 20 | Why exponential; ln; "the us"; the exponent's brackets. | **Fixed.** The same share stopped per unit; ln undoes e. |
+| 20 | Bounces only: wrong or slow; surfaces in both modes; pixel 9. | **Fixed.** Slow; both modes aim from surfaces. |
+| 20 | Stone and slab; the furnace's black disc red; covered labels; the shadow ray in thick dust. | **Fixed.** Named; the disc in its albedo's grey; labels moved; "dimmed". |
+| 20 | "1e-30 … no particle" against the code's −1; hazeAt and r.beta; σ_s, w, heavy tail; the 3D controls against the flat ones. | **Fixed**, each: 0 not drawn, −1 none; different scenes, not meant to match. |
+| 21 | Workgroup against lock-step group in the text; [8, 8, 1] against rows of 64. | **Fixed.** A workgroup of 64 as two of 32; resolve's are 64 × 1 (read in code), the 8 × 8 only the library's default. |
+| 21 | Card models, "profile", the hang. | **Fixed.** The two machines named; the hang said plainly. |
+| 21 | 1.7 GB against today's sizes; 590 MB over 256 MB. | **Fixed.** The sizes of the time; why the program still asks for large buffers. |
+| 21 | "Compiled off the page's thread" stamped code but saying a time; the second "thread". | **Fixed.** The time removed (the measured stamp has it); the main thread said. |
+| 21 | An index example; vec3 of u32; typeInfo walked; i32, matrix, 1080p, GiB. | **Fixed**, each. |
+| 23 | Path, shadow ray, photon, kernel; "card"; the window and EMA; resolve's n. | **Fixed.** An opening paragraph each; "graphics card"; a paragraph on the window, the reset and n = 0. |
+| 23 | Figure 1's stores; the average's example; 25,000 exact or not; absolute and relative error; "1 rounds". | **Fixed**, each (S6 written in the box; 3, 5 and 10). |
+| 24 | Figure 2's fractions of a second against real builds' seconds. | **Fixed.** What a real kernel carries, and builds in parallel. |
+| 24 | SDF, march and step assumed; the matrix; XF_SUB, select's test, hs/hsa/hsb; the blend's three names; "the next record is in this one". | **Fixed**, each (the engine's records nest and skip: `scenedata.js`'s record layout). |
+| 24 | Long lines cut; b, c, h, e; kind and join codes; UB; "1 copies"; 6,794 below 6,795; "runs faster" on the card. | **Fixed**, each: the lines wrap. |
+| all | Sections 4 to 6 written for a developer. | **Not changed** beyond the glosses: those sections are where the page meets the code, and say so. |
 
 ## Next round
 

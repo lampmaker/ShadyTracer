@@ -249,6 +249,13 @@ real student.
 4. What is a kernel's inlined size, and why does calling SDF in more places make compiling slower?
 5. Why is data not always the better choice?
 
+**measure** (Measure first)
+1. Why was the plan to change ShadyTracer's architecture wrong, and what showed it?
+2. How does ShadyTracer find out how long each kernel takes on the card?
+3. What is the gap between passes, and how is it different from wall clock?
+4. What does a browser's rounding of timestamps do to one pass, and to the sum of many?
+5. Why can two runs of the same code read different times, and how do you compare two versions anyway?
+
 **index** (the contents)
 1. What will you learn in this tutorial, and do you need to know anything before starting?
 2. What do the three stamps mean?

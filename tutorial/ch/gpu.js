@@ -96,7 +96,7 @@ export const figures = {
         },
         readout(s) {
             const run = lanesRun(s.width, s.order)
-            return `${LANES} rays, ${run.work} march steps in all · in groups of ${s.width}: ${run.groups.length} groups, ${run.time} lane-steps occupied · the lanes busy ${(100 * run.use).toFixed(0)}% of the time`
+            return `${LANES} rays, ${run.work} march steps in all · in groups of ${s.width}: ${run.groups.length} groups, ${run.time} lane-steps held (the boxes) · the lanes busy ${(100 * run.use).toFixed(0)}% of the time`
         },
     },
 
@@ -174,7 +174,7 @@ export const figures = {
                 pen.labelPx(px + pw / 2, yEnd + 8, `x: 0 to ${gx - 1} across a row`, { role: 'cam', size: 12, align: 'center', base: 'top' })
                 pen.labelPx(px + 6, yEnd + 28, `y: 0 to ${(h - 1).toLocaleString('en-US')}, a row each`, { role: 'light', size: 12, base: 'top' })
             } else {
-                pen.labelPx(px + pw / 2, yEnd + 8, `x: 0 to ${(c.flat - 1).toLocaleString('en-US')}, on through every row`, { role: c.flatOK ? 'cam' : 'blocked', size: 12, align: 'center', base: 'top' })
+                pen.labelPx(px, yEnd + 8, `x: 0 to ${(c.flat - 1).toLocaleString('en-US')}, on through every row`, { role: c.flatOK ? 'cam' : 'blocked', size: 12, base: 'top' })
             }
             // the counts against the limit
             // the axis reaches the flat count where it is drawn, the limit with room above it where the rows are

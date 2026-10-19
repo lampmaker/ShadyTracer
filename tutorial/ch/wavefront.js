@@ -43,6 +43,16 @@ export function run(budget = 0, nee = true) {
     return RUNS.get(key)
 }
 export const meanOf = img => img.reduce((a, b) => a + b, 0) / img.length
+/** the picture's mean as resolve leaves it: over the pixels that counted a path this sample (a pixel none of whose
+ *  paths ended keeps what it had; here, nothing) */
+export const pictureMean = r => { let m = 0, k = 0; r.img.forEach((v, i) => { if (r.counted[i]) { m += v; k++ } }); return k ? m / k : 0 }
+export const leftOut = r => r.counted.filter(n => n === 0).length
+/** for the test: the picture's mean over `seeds` runs of this sample at a budget, each with its own random numbers */
+export function meanOverRuns(budget, seeds = 20) {
+    let a = 0
+    for (let seed = 1; seed <= seeds; seed++) a += pictureMean(wavefrontRun(world, CAM, { spp: SPP, budget, seed }))
+    return a / seeds
+}
 
 /* ONE ITERATION'S KERNELS, in ShadyTracer's order (raytrace_main.js R.trace) */
 export const KERNELS = [
@@ -81,7 +91,7 @@ export const figures = {
                 hoverX: v => `iteration ${Math.round(v)}`, hoverY: v => String(Math.round(v)),
                 series: [
                     { name: 'rays marched', kind: 'bars', role: 'cam', barWidth: 0.26, pts: r.iters.map((l, k) => [k + 1 - 0.27, l.marched]) },
-                    { name: 'hits shaded', kind: 'bars', role: 'light', barWidth: 0.26, pts: r.iters.map((l, k) => [k + 1, l.hits + l.escaped]) },
+                    { name: 'rays shaded', kind: 'bars', role: 'light', barWidth: 0.26, pts: r.iters.map((l, k) => [k + 1, l.shading]) },
                     { name: 'shadow rays traced', kind: 'bars', role: 'shadow', barWidth: 0.26, pts: r.iters.map((l, k) => [k + 1 + 0.27, l.shadowsTraced]) },
                     { name: 'still marching after it', kind: 'dots', role: 'ink', pts: r.iters.map((l, k) => [k + 1, l.onward]) },
                 ],
@@ -93,9 +103,11 @@ export const figures = {
             // the picture itself, one exposure for every budget (the worst case's brightest pixel at white)
             const full = run(0, true), k = 1 / Math.max(...full.img), sy = H * 0.8, sh = H * 0.05
             pen.image(rect.x, sy, rect.w, sh, CAM.pixels, 1, i => { const v = k * r.img[i]; return [v, v, v] })
+            // a pixel none of whose paths ended counts nothing this sample: outlined
+            r.counted.forEach((n, i) => { if (!n) { ctx.save(); ctx.strokeStyle = pen.col('blocked'); ctx.lineWidth = 1.5; ctx.strokeRect(rect.x + rect.w * i / CAM.pixels + 1, sy + 1, rect.w / CAM.pixels - 2, sh - 2); ctx.restore() } })
             pen.labelPx(rect.x, sy - 4, `the picture: its ${CAM.pixels} pixels, the eye's view from the left of the room, at one exposure for every setting`, { role: 'soft', size: 10, base: 'bottom' })
             // the key
-            ;[['rays marched', 'cam'], ['hits shaded', 'light'], ['shadow rays traced', 'shadow'], ['still marching (dots)', 'ink']].forEach(([t, role], k) => {
+            ;[['rays marched', 'cam'], ['rays shaded', 'light'], ['shadow rays traced', 'shadow'], ['still marching (dots)', 'ink']].forEach(([t, role], k) => {
                 const kx = rect.x + k * W * 0.2, ky = H * 0.94
                 ctx.save(); ctx.fillStyle = pen.col(role); ctx.globalAlpha = 0.75; ctx.fillRect(kx, ky - 5, 12, 10); ctx.restore()
                 pen.labelPx(kx + 17, ky, t, { role: 'soft', size: 11, base: 'middle' })
@@ -104,7 +116,8 @@ export const figures = {
         readout(s) {
             const r = run(s.budget, s.nee), full = run(0, s.nee), used = r.iters.filter(l => l.marched > 0).length
             const worst = r.budget === r.worst
-            return `${r.budget} iterations${worst ? ' (the worst case: (10 + 1) + ⌈400 / 32⌉)' : ''} · rays in ${used} of them · ${r.flushed} flushed and ${r.iters[r.iters.length - 1].cut ?? 0} cut on the last pass · the picture's mean ${meanOf(r.img).toFixed(4)}${worst ? '' : `, against ${meanOf(full.img).toFixed(4)} at the worst case`}`
+            const out = leftOut(r), ended = r.paths.filter(p => p.ended).length
+            return `${r.budget} iterations${worst ? ' (the worst case: (10 + 1) + ⌈400 / 32⌉)' : ''} · rays in ${used} of them · ${r.flushed} flushed and ${r.iters[r.iters.length - 1].cut ?? 0} cut on the last pass: ${ended} of ${r.paths.length} paths counted${out ? `, ${out} pixel${out === 1 ? '' : 's'} with none (outlined)` : ''} · the picture's mean ${pictureMean(r).toFixed(4)}${worst ? '' : `, against ${pictureMean(full).toFixed(4)} at the worst case`}`
         },
     },
 
@@ -136,12 +149,12 @@ export const figures = {
             const inA = k === 1 || k === 0 || k === 7, toQ = k === 1 || k === 2 || k === 3 || k === 4 || k === 7, toB = k === 1 || k === 4, sR = k === 5 || k === 6 || k === 7, sW = k === 4, args = k === 0 || k === 2 || k === 5
             const afterMarch = k >= 2, afterShade = k >= 5, flipped = k === 7
             box(...P.read, bw, bh, `rays ${readSide}: read`, flipped ? 'cleared: written next' : k < 2 ? `${l.marched} waiting` : `${l.marched} read`, 'cam', inA)
-            box(...P.shadeQ, bw, bh, 'shade queue', flipped ? 'cleared' : afterMarch || k === 1 ? `${l.hits + l.escaped} hits and escapes` : '0', 'light', toQ)
+            box(...P.shadeQ, bw, bh, 'shade queue', flipped ? 'cleared' : afterMarch || k === 1 ? `${l.shading} to shade` : '0', 'light', toQ)
             box(...P.write, bw, bh, `rays ${writeSide}: written`, k < 1 ? '0' : k < 4 ? `${l.onward} still marching` : `${l.onward} + ${l.newLegs} new legs`, 'cam', toB)
-            box(...P.sRead, bw, bh, `shadow ${readSide}: read`, flipped ? 'cleared: written next' : `${l.shadowsTraced} from the iteration before`, 'shadow', sR)
+            box(...P.sRead, bw, bh, `shadow ${readSide}: read`, flipped ? 'cleared: written next' : `${l.shadowsTraced} from before`, 'shadow', sR)
             box(...P.sWrite, bw, bh, `shadow ${writeSide}: written`, afterShade || k === 4 ? `${l.shadowsQueued} queued` : '0', 'shadow', sW)
             // the sizes the prep kernels have written so far this iteration, workgroups of 64: the one being written or read strong
-            const g = n => Math.ceil(n / 64), sizes = [['march', g(l.marched), 0], ['shade', g(l.hits + l.escaped), 2], ['occlude', g(l.shadowsTraced), 5]].filter(([, , at]) => k >= at)
+            const g = n => Math.ceil(n / 64), sizes = [['march', g(l.marched), 0], ['shade', g(l.shading), 2], ['occlude', g(l.shadowsTraced), 5]].filter(([, , at]) => k >= at)
             box(W * 0.35, P.args[1], W * 0.33, bh, 'dispatch sizes (groups of 64)', sizes.map(([nm, v]) => `${nm} ${v}`).join(' · ') || '(none yet)', 'accent', args || k === 1 || k === 3 || k === 4 || k === 6)
             // the kernel and what it does
             pen.labelPx(W * 0.04, H * 0.06, `iteration ${s.it} of ${r.budget}, kernel ${k + 1} of 8: ${KERNELS[k][0]}`, { role: 'accent', size: 14, base: 'middle' })
@@ -161,7 +174,7 @@ export const figures = {
         },
         readout(s) {
             const l = run().iters[s.it - 1]
-            return `iteration ${s.it}: ${l.marched} rays marched: ${l.hits} reached a surface, ${l.escaped} left the room, ${l.outOfSteps} ran out of steps, ${l.onward} still on their way · ${l.newLegs} new legs · ${l.shadowsTraced} shadow rays traced, ${l.shadowsQueued} queued`
+            return `iteration ${s.it}: ${l.marched} rays marched: ${l.hits} reached a surface, ${l.escaped} left the room, ${l.outOfSteps} ran out of steps (${l.shading} to shade), ${l.onward} still on their way · ${l.newLegs} new legs, ${l.capped} paths ended at the bounce cap · ${l.shadowsTraced} shadow rays traced, ${l.shadowsQueued} queued`
         },
     },
 

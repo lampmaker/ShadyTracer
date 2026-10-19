@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Measure first · ShadyTracer, inside out</title>
+<link rel="stylesheet" href="../kit/kit.css">
+<script type="module" src="measure.js"></script>
+</head>
+<body data-chapter="measure">
+<p class="kit-offline">This page runs from a web server, not from a file: in the repository run <code>python3 -m http.server 8000</code> and open http://localhost:8000/tutorial/.</p>
+<main class="sheet">
+
+<header class="sheet-head">
+  <div>
+    <p class="eyebrow">Part VII · Speed · Chapter 25</p>
+    <h1>Measure first</h1>
+    <p class="lede">Every chapter of this part is about making ShadyTracer faster, and this one is about what has to
+      come before that: knowing where the time goes, and knowing how sure a number is. It is the chapter of one rule,
+      written into the repository's instructions after a plan built on a guess had to be undone, and of the tools that
+      came out of it: timestamps on every kernel, a benchmark that changes one thing a row, and the habit of putting
+      the version and the card beside every number.</p>
+  </div>
+  <div class="titleblock" data-auto></div>
+</header>
+
+<section class="scene" id="plan">
+  <div class="prose">
+    <h2><span class="n">1</span>A guess written as a fact</h2>
+    <p data-step="plan:one">One scene, the Noise library (an example scene of rows of shapes, each covered in a
+      different noise relief: marble, granite, leather), rendered at well under two samples a second. A plan to speed
+      ShadyTracer up called this "this architecture's full-resolution cost", and set out to change the architecture.
+      Here is the scene's time in the benchmark's first full run, on the user's GTX 1080 Ti: 736.5 ms a sample at
+      1280 × 720.</p>
+    <p data-step="plan:scenes">The same card, the same size, the same code, the other bundled scenes: 61.8 to 177.2
+      ms, the demo 7.7 times faster. The user had said as much, "about 6x faster at the same resolution", before the
+      plan was written. A cost of the architecture would be paid by every scene. One scene paying it is a fact about
+      that scene.</p>
+    <p data-step="plan:reliefs">And the scene's own rows, each changing one thing, say which. Without its six reliefs
+      the Noise library renders in 81.1 ms, beside Surface materials, the same layout without them, at 80.0. Each relief
+      alone adds 72 to 91 ms. The time was the reliefs: the noise they evaluate at every step near a surface (chapter
+      26 is what was done about it). The plan was reverted, and the repository's instructions gained the rule this
+      tutorial stamps every number with:</p>
+    <pre data-src="CLAUDE.md" data-sym="**&quot;Do I know this is true, or do I think it is true?&quot;**" data-to="same resolution, and it was reverted (2026-09-29)."
+         data-why="CLAUDE.md is the file every person and program working on the repository reads first. The three words are this tutorial's stamps (chapter 0)." data-hash="28e1635e"></pre>
+  </div>
+  <figure class="fig" data-fig="plan">
+    <figcaption>Milliseconds a sample at 1280 × 720 in the benchmark's first full run (the user's GTX 1080 Ti,
+      2026-09-29, <code>docs/PERFORMANCE.md</code>): the Noise library in <span data-say="blocked">red</span>, the
+      other scenes in the sun's colour, the rows without reliefs <span data-say="cam">blue</span>. Choose one scene,
+      every scene, or the Noise library's own rows.</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="timer">
+  <div class="prose">
+    <h2><span class="n">2</span>Where the time goes</h2>
+    <p data-step="timer:passes">A sample's time on the card is spent in its <a data-g="kernel">kernels</a>, one
+      <em>compute pass</em> each time one runs: about 200 of them in this sample (chapter 22's room, eight kernels an
+      iteration, 24 iterations). To time them, ShadyTracer has the card write a <em>timestamp</em>, the card's own
+      clock in nanoseconds, as each pass starts and as it ends, and reads them all back after the sample. Each row here
+      is a kernel and each mark a pass at its timestamps. The times are a model's, made from the flat world's counts
+      (the caption says how); what reads them is the engine's own code, <code>kerneltime.js</code>, run in this page.
+      Point at a pass.</p>
+    <p data-step="timer:kernels">Added up by kernel (<code>tally</code>): the march takes half of this sample, shade
+      a fifth, occlusion a seventh, the surface kernel a ninth, and the small kernels between them (the three prep
+      kernels, the flip) a tenth of a millisecond each over 24 passes. The part of the sample's span no pass covers is the gaps between passes, here 0.4 ms of 88: what
+      launching one kernel after another costs. Wall clock, the time the program waits for the sample, is neither:
+      it adds everything outside the card (chapter 22 measured that part at 1.5 ms plus 2.35 ms an iteration).</p>
+    <p data-step="timer:iterations">By iteration (<code>perIteration</code>, every pass from a
+      <code>prep_march</code> to its <code>flip</code>): the first eleven carry the work, and the drained tail of
+      chapter 22 costs a little each. Timing by kernel and by iteration is how the benchmark found the budget that
+      shrank by accident (section 6): its rows ran 15 iterations where row 1 ran 24.</p>
+    <p data-step="timer:rounded">One catch. A browser may round the timestamps, to keep pages from timing things
+      they should not: Chrome documents 100 µs, and the user's run read multiples of 32.768 µs. Rounded to 100 µs, 124 of the 194
+      passes read 0 and a few read 0.1 ms, which no single pass took. Added up, the big kernels' totals still come
+      out near their true values (the march 44.6 ms against 44.3); the small ones' only on average, over more passes
+      than one sample has: <code>prep_march</code> reads 0 where it took 0.1 ms, <code>prep_occlude</code> 0.2. A
+      rounded timestamp is right on average over many passes and wrong for any one of them.</p>
+  </div>
+  <figure class="fig" data-fig="timer">
+    <figcaption>One sample of chapter 22's room as compute passes. The times are a model: each pass 4 µs to start, a
+      march group's slowest ray 4 µs a step, a hit 1 µs to look up and 2 µs to shade, a shadow ray 2.5 µs, 2 µs between
+      passes (<code>kit/timing.js</code>); the reading is <code>kerneltime.js</code>'s. Each kernel in its colour
+      (the march <span data-say="cam">blue</span>, shade in the sun's colour, occlusion
+      <span data-say="shadow">green</span>); a pass read as 0 is a <span data-say="blocked">red</span> outline.
+      Choose the view and the rounding.</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="drift">
+  <div class="prose">
+    <h2><span class="n">3</span>The same code, another number</h2>
+    <p data-step="drift:readings">The same kernels (their text the same to the byte), the same scene and settings, on
+      the user's Pascal card in one evening: 184.7, 184.8, 216.6 and 255.5 ms a sample of GPU time. Nothing in the code
+      differed. The card's own speed moves, with its heat and power state or other work on it (inferred: the readings
+      cannot say which), and the review that collected these says a comparison between runs "is good to about ±20%,
+      and sometimes not that".</p>
+    <p data-step="drift:separate">So time a change in a run of its own, and the old code in another: the drift
+      between the two runs lands in the difference. Here build B is truly 10% faster than A, and 40 comparisons are
+      made under a model of that drift (each run's speed its own, spread as those four readings are): in 17 of them B
+      reads no faster at all, and only 8 land within 5 points of the truth. A 10% change cannot be seen this way.</p>
+    <p data-step="drift:interleaved">Interleave instead: A, B, A, B in one run, so both share the card's mood of the
+      moment, and only the small noise between rows next to each other is left. All 40 comparisons read B faster, 37 of
+      them within 2 points of the truth. The benchmark repeats its first row in the middle and at the end for the same reason,
+      a drift check, and can run rows in any order: <code>BENCH.run(33, 35, 33, 35)</code>.</p>
+  </div>
+  <figure class="fig" data-fig="drift">
+    <figcaption>Above: the four readings of one kernel text, measured (<code>docs/PERFORMANCE_REVIEW.md</code>, the
+      card's speed drifts). Below: 40 comparisons of two builds under a model of that drift (<code>kit/timing.js</code>:
+      a run's speed spread by 16%, the four readings' own spread, rows in one run by 1.5%), each a dot at B's measured
+      change against A, <span data-say="blocked">red</span> where B read no faster; the truth dashed
+      <span data-say="cam">blue</span>. Set the true difference and how the two are timed; compare again for other
+      draws.</figcaption>
+  </figure>
+</section>
+
+<section class="plain wide" id="engine">
+  <div class="prose">
+    <h2><span class="n">4</span>How ShadyTracer does it</h2>
+    <p>The kernel timer, and what it is not:</p>
+    <pre data-src="lib/pathtracer/core/kerneltime.js" data-sym="// KERNEL TIME -- how long each kernel of a sample ran on the GPU, from timestamps written at its compute pass's" data-to="// Without the device feature 'timestamp-query' (the page asks for it, best effort) it is unavailable and says so."
+         data-why="A compute pass is the GPU's unit of work in WebGPU; ShadyTracer opens one per dispatch, so each kernel run has its own pair of timestamps. tinywebgpu is ShadyTracer's own WebGPU library (chapter 21). 'Not checked here' about the rounding is out of date: the user's run 5 measured 32.768 µs (section 5)." data-hash="bd3c2572"></pre>
+    <p>Reading the pairs back, which the second figure runs:</p>
+    <pre data-src="lib/pathtracer/core/kerneltime.js" data-sym="function tally"
+         data-why="t holds the timestamps as BigUint64, whole numbers of nanoseconds too large for an ordinary JavaScript number; Number(b - a) / 1e6 turns a pair's difference into milliseconds. busy adds every pass; the span runs from the first start to the last end; the gap is what is left." data-hash="b02cee89"></pre>
+    <p>What the benchmark holds still, and why each:</p>
+    <pre data-src="bench/index.js" data-sym="// WHAT IS FIXED, and why each is (every one of them moved a number before):" data-to="// and, once per distinct scene text, an UNCACHED COMPILE of the build's own kernels (RT.compileUncached)."
+         data-why="Offscreen: drawn into a picture of its own size, not the window. One sample per trace, each awaited: nothing overlaps the sample being timed. The governor, pacing and queue are the live page's (chapter 28)." data-hash="eb28c87e"></pre>
+    <p>And which code a number came from: every report's second line is the version, the git revision and the card,
+      and every row carries a fingerprint of its kernels' text:</p>
+    <pre data-src="lib/pathtracer/tests.js" data-sym="/* WHICH CODE WAS MEASURED: a short hash (FNV-1a) of the kernels the scene is compiled into, and shade, as" data-to="return h.toString(16).padStart(8, '0')"
+         data-why="FNV-1a is a simple hash: each character mixed into a 32-bit number by an xor and a multiply. Math.imul multiplies as 32-bit whole numbers; >>> 0 keeps the result unsigned. RT is the renderer; RT[k].wgsl a kernel's text as compiled." data-hash="f334ec84"></pre>
+  </div>
+</section>
+
+<section class="plain wide" id="tricks">
+  <div class="prose">
+    <h2><span class="n">5</span>Tricks and trade-offs</h2>
+    <p>Each is stamped with how it is known; point at a stamp to see what it means.</p>
+    <div data-claim="measured">
+      <p><strong>Timestamps cost nothing visible.</strong> The benchmark times kernels in samples of their own, after
+        the wall-clock ones, and reports those samples' wall clock too: within −7% to +6% of the untimed samples', both
+        ways, and every small kernel a multiple of 0.032768 ms (the user's Ampere card, run 5,
+        <code>docs/PERFORMANCE.md</code>).</p>
+    </div>
+    <div data-claim="measured">
+      <p><strong>One row again, to see the drift.</strong> In the benchmark's second run the first row, repeated after
+        the settings rows and after the unit rows, read 737.3, 784.2 and 714.9 ms: 9.3% of their mean. "Nothing here
+        under ~10% is resolved", the run's notes conclude, and the "slower when doing less" of the first run was drift
+        (the user's GTX 1080 Ti, <code>docs/PERFORMANCE.md</code>).</p>
+    </div>
+    <div data-claim="code">
+      <p><strong>A median, and the median of totals.</strong> A row's time is the median of its samples, not their
+        mean, so one sample stalled by something else on the card moves it little; and a row's GPU time is the median of
+        each sample's total, not the sum of each kernel's median, which no single sample need have taken
+        (<code>tests.js</code> kernelSummary; <code>kerneltime.test.mjs</code> holds it).</p>
+    </div>
+    <div data-claim="code">
+      <p><strong>Warm up, then time, then time the kernels.</strong> At least 3 samples and 2 seconds thrown away
+        (glowing objects being found, the first frame's timing, the photon map's first build); then at least 4 samples
+        and 5 seconds, at most 64; then the kernel-timed samples, at least 4 and a second (<code>bench/index.js</code>,
+        BENCH).</p>
+    </div>
+    <div data-claim="inferred">
+      <p><strong>Why the card drifts.</strong> Heat, power state, or other work on the card: inferred in the review,
+        not measured; the readings above show only that it does, by up to 38% in an evening.</p>
+    </div>
+  </div>
+</section>
+
+<section class="plain wide" id="before">
+  <div class="prose">
+    <h2><span class="n">6</span>What went wrong before</h2>
+    <ul>
+      <li><strong>The plan.</strong> Section 1, as it happened: it is the reason for the rule, and this tutorial's
+        stamps.</li>
+      <li><strong>The wrong scene.</strong> The benchmark was first built around Surface materials, the scene the user
+        had named as the slow one; then: "I mentioned the surface earlier as the hardest scene, but I meant noise"
+        (<cite data-src="docs/PERFORMANCE.md" data-sym="library is also the one that has the longest compilation time. I mentioned the surface earlier as the"></cite>).
+        A number is only as good as knowing which scene made it.</li>
+      <li><strong>A camera inside a lamp.</strong> The benchmark's cameras took <code>elevation</code> as degrees above
+        the horizon, where the camera code means degrees off vertical: the first runs looked down through the scene's
+        softbox, and measured that (<cite data-src="bench/index.js" data-sym="// THE CAMERAS: `elevation` is degrees OFF VERTICAL" data-to="// light blocking the view."></cite>).
+        The user saw it; no number showed it.</li>
+      <li><strong>A budget that shrank between rows.</strong> The per-kernel pass counts showed rows 6 on running 15
+        iterations where rows 1 to 5 ran 24: the adaptive budget, never reset between rows, had been pulled down by the
+        "maxiter 128" row and stayed there, so every later row was compared with a row 1 that did more work
+        (<cite data-src="docs/PERFORMANCE.md" data-sym="- **A flaw in the benchmark, found by the pass counts, now fixed.** Rows 1-5 ran 24 wavefront iterations a" data-to="page has the same trait (read in code); `budget-image` says it moves the picture +0.03%."></cite>;
+        chapter 22's last story).</li>
+      <li><strong>A frame timed with its wait.</strong> The time a frame took was measured from its recording to its
+        end, which with a frame queued behind another includes the wait: a 200 ms sample read about 400
+        (<cite data-src="lib/pathtracer/core/raytrace_main.js" data-sym="/* HOW LONG THE GPU WAS BUSY WITH THIS FRAME, to size the next one's submissions; never awaited." data-to="finishing, whichever is later (R._doneAt)."></cite>).</li>
+      <li><strong>A compile time read from the browser's cache.</strong> A profile of each kernel's compile first read
+        shade at 12 ms: it compiled the same text the page already had, and the browser handed back its cached result
+        (<cite data-src="docs/PERFORMANCE.md" data-sym="(Its first version read shade at 12 ms: it recompiled the live source and the browser returned its" data-to="cached compile. Every profile compile now wraps the SDF in `+ opaqueZero x random`.)"></cite>).</li>
+    </ul>
+  </div>
+</section>
+
+<section class="plain" id="try">
+  <div class="prose">
+    <h2><span class="n">7</span>Try it</h2>
+    <ul>
+      <li>In the second figure, round the timestamps to 100 µs and look at the iterations view. Which iterations read
+        0, and why is the total still close?</li>
+      <li>In the third, find the smallest true difference that separate runs show the right way round in nearly every
+        comparison. What would you need to see a 2% change?</li>
+      <li>In ShadyTracer, open the Tests menu and run the benchmark. Its report's second line names the version, the
+        revision and the card: that line goes with every number you paste anywhere.</li>
+    </ul>
+    <aside class="refs"><span class="tag">Read more</span><ul>
+      <li data-ref="webgpu-timing">Timing GPU work in WebGPU with timestamp queries, step by step.</li>
+      <li data-ref="chrome-webgpu-dev">Chrome's WebGPU developer features, among them the 100 µs rounding of
+        timestamps and how to turn it off while developing.</li>
+    </ul></aside>
+    <h3>Words from this chapter</h3>
+    <ul class="words" data-words="kernel timestamp drift benchmark gpu"></ul>
+  </div>
+</section>
+
+<nav class="tabs" data-auto></nav>
+</main>
+</body>
+</html>

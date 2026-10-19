@@ -221,7 +221,7 @@ export const figures = {
         draw(pen, s) {
             const { W, H } = pen.view
             dustBox(pen, null, -2, -1, 2, 1)
-            pen.label([-1.95, 1.18], `dust, mean free path ${s.mfp.toFixed(2)}`, { role: 'soft', size: 12 })
+            if (!s.one) pen.label([-1.95, 1.18], `dust, mean free path ${s.mfp.toFixed(2)}`, { role: 'soft', size: 12 })
             if (s.one) {
                 for (const sh of MARCH_WORLD.shapes) pen.flat(sh, { role: 'solid' })
                 const m = marchOne(s.mfp, rng(s.seed)()), dx = Math.cos(m.a), dy = Math.sin(m.a)
@@ -239,9 +239,9 @@ export const figures = {
                 if (m.c) {
                     pen.ray(from, end, { role: 'blocked', w: 2, exact: true })
                     pen.dot([m.c.x, m.c.y], { role: 'accent', r: 4 })
-                    pen.label([m.c.x, m.c.y + 0.32], 'the particle: the ray moved back to here', { role: 'accent', size: 11, align: 'center' })
+                    pen.label([m.c.x, m.c.y - 0.42], 'the particle: the ray moved back to here', { role: 'accent', size: 11, align: 'center' })
                 }
-                pen.labelPx(W * 0.03, H * 0.8, m.c ? `drawn as the leg starts: ${m.c.t.toFixed(2)} along it; the march stopped after ${m.k + 1} steps` : 'no particle on this leg: it ends where the march ends it', { role: 'soft', size: 12 })
+                pen.labelPx(W * 0.03, H * 0.8, `${m.c ? `drawn as the leg starts: ${m.c.t.toFixed(2)} along it; the march stopped after ${m.k + 1} steps` : 'no particle on this leg: it ends where the march ends it'} (mean free path ${s.mfp.toFixed(2)}; the circle a stone, the slab the floor)`, { role: 'soft', size: 12 })
                 return
             }
             const R = rng(s.seed), a = -6 * DEG
@@ -296,7 +296,7 @@ export const figures = {
             pen.ray([cx - 1.1, 0], [cx, 0], { role: 'light', w: 1.6 })
             pen.dot([cx, 0], { role: 'ink', r: 3 })
             for (const p of pd.pts) pen.dot([cx + (R0 + 0.12) * Math.cos(p.th), p.side * (R0 + 0.12) * Math.sin(p.th)], { role: 'cam', r: 1.4 })
-            pen.label([cx - 1.1, 0.16], 'light arriving', { role: 'light', size: 11 })
+            pen.label([cx - 1.1, -0.2], 'light arriving', { role: 'light', size: 11 })
             // the angle's histogram against its density
             const rect = { x: W * 0.56, y: H * 0.12, w: W * 0.4, h: H * 0.62 }, bw = Math.PI / PH_BINS
             const dens = Array.from({ length: 91 }, (_, i) => { const th = i / 90 * Math.PI; return [th / DEG, 2 * Math.PI * Math.sin(th) * hgEvalJS(Math.cos(th), s.g) * PH_N * bw] })
@@ -349,7 +349,7 @@ export const figures = {
                 const P = [WALL_X + 0.2 - 3 * Math.cos(SUN_EL), 2.2 - 3 * Math.sin(SUN_EL)]
                 pen.ray(P, [P[0] + 3.7 * Math.cos(SUN_EL), P[1] + 3.7 * Math.sin(SUN_EL)], { role: 'shadow', w: 1.6, exact: true })
                 pen.dot(P, { role: 'accent', r: 3.5 })
-                pen.label([P[0] - 0.15, P[1] + 0.05], 'from dust in the beam, a shadow ray reaches the sun', { role: 'shadow', size: 10, align: 'right' })
+                pen.label([WALL_X - 0.35, ROOF_Y - 0.3], 'a shadow ray from dust in the beam reaches the sun, dimmed by the dust it crosses', { role: 'shadow', size: 10, align: 'right' })
             }
             pen.eye(CAM.eye, CAM.dir, { size: 18 })
             strip(pen, s.pix, PIX, -5.2, -1.3, 7.2, 0.45, 20, 'the eye\'s picture, brightened 20 times: pixel 1 the top of its view, 48 the bottom',
@@ -382,9 +382,12 @@ export const figures = {
         draw(pen, s) {
             const world = furnaceWorld(s)
             dustBox(pen, world.haze, -1.6, -1.6, 1.6, 1.6)
-            pen.flat(world.shapes[0], { role: s.disc > 0.5 ? 'solid' : 'blocked' })
+            // the disc filled in its own albedo's grey, black for 0, white for 1, outlined in ink
+            { const d = world.shapes[0], v = Math.round(255 * Math.pow(Math.max(0, Math.min(1, s.disc)), 1 / 2.2)), { ctx } = pen
+              ctx.save(); ctx.fillStyle = `rgb(${v},${v},${v})`; ctx.beginPath(); ctx.arc(pen.X(d.c[0]), pen.Y(d.c[1]), pen.view.s * d.r, 0, 2 * Math.PI); ctx.fill(); ctx.restore()
+              pen.flat(d, { role: 'ink' }) }
             pen.label([-1.55, 1.85], `dust of albedo ${s.dust.toFixed(2)}, mean free path 1.5`, { role: 'soft', size: 12 })
-            pen.label([0, 0], `albedo ${s.disc.toFixed(2)}`, { role: 'ink', size: 11, align: 'center' })
+            pen.label([0, 0], `albedo ${s.disc.toFixed(2)}`, { role: 'ink', size: 11, align: 'center', bg: true })
             pen.label([3.3, 2.2], 'the sky: 1 everywhere', { role: 'soft', size: 12, align: 'right' })
             drawPaths(pen, s.shown)
             const cam = fcamOf(s.aim)

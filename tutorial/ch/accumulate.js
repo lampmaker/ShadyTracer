@@ -58,7 +58,7 @@ export const figures = {
             r.steps.forEach((e, k) => {
                 const c = colOf(e, k), [g, role] = OP[e.op], x = x0 + c * cw, y = y0 + e.thread * rh, bad = e.op === 'cas' && !e.ok
                 ctx.save(); ctx.fillStyle = pen.col(bad ? 'blocked' : role); ctx.globalAlpha = 0.28; ctx.fillRect(x + 1, y + 1, cw - 2, rh - 2); ctx.restore()
-                pen.labelPx(x + cw / 2, y + rh / 2, bad ? 'C✗' : e.op === 'cas' ? 'C✓' : g, { role: bad ? 'blocked' : 'ink', size: 11, align: 'center', base: 'middle' })
+                pen.labelPx(x + cw / 2, y + rh / 2, bad ? 'C✗' : e.op === 'cas' ? 'C✓' : e.op === 'store' ? `S${e.after}` : g, { role: bad ? 'blocked' : 'ink', size: 11, align: 'center', base: 'middle' })
                 after[c] = e.after
             })
             // the pixel after each column
@@ -74,7 +74,7 @@ export const figures = {
         },
         readout(s) {
             const r = raceOf(s)
-            return `${s.n} threads add ${r.expected} in all · the pixel ends at ${r.final}${r.final === r.expected ? ', every one counted' : `: ${r.expected - r.final} lost`} · ${r.steps.length} steps (boxes)${s.sched === 'lockstep' ? ` in ${r.rounds} rounds (columns)` : ', one a column'}${s.mode === 'cas' ? `, ${r.failed} of them a compare-and-swap that failed` : ''}`
+            return `${s.n} threads add ${r.expected} in all · the pixel ends at ${r.final}${r.final === r.expected ? ', every one counted' : `: ${r.expected - r.final} lost`} · ${r.steps.length} steps (boxes)${s.sched === 'lockstep' ? ` in ${r.rounds} round${r.rounds === 1 ? '' : 's'} (columns)` : ', one a column'}${s.mode === 'cas' ? `, ${r.failed} of them a compare-and-swap that failed` : ''}`
         },
     },
 
