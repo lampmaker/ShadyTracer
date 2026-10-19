@@ -15,7 +15,7 @@
   <div>
     <p class="eyebrow">Part VII · Speed · Chapter 26</p>
     <h1>Fewer and cheaper steps</h1>
-    <p class="lede">A ray's time on the card is its steps, and a step's time is the scene's answer at one point: the
+    <p class="lede">A ray's time on the graphics card is its steps, and a step's time is the scene's answer at one point: the
       distance to every object, of which the nearest is kept. This chapter is three ways ShadyTracer pays less for
       that. It skips the objects far from a ray, behind boxes. It makes a costly surface cheap away from itself, inside
       a shell. And it steps without asking the scene at all, from a grid of remembered distances. Each comes with what
@@ -27,44 +27,48 @@
 <section class="scene" id="cull">
   <div class="prose">
     <h2><span class="n">1</span>Every object at every step</h2>
-    <p data-step="cull:every">Sphere tracing, from chapter 2: a ray steps by the distance to the nearest surface
-      (times 0.9, the <a data-g="stepscale">step scale</a>), and stops when that distance is below its tolerance. To
-      know the nearest surface, the scene's function, which ShadyTracer writes from the scene tree (chapter 24), asks
-      every object for its distance and keeps the smallest. So every step pays for every object, near the ray or not.
-      Here is a shelf in the flat world: a floor, two plain discs, a rounded block, and two discs with a
-      <a data-g="relief">relief</a> (chapter 3), a rough fine one and a broad smooth one, like the Noise library's
-      marble and granite. 48 camera rays take 1,021 steps; each step asks all six objects, and each relief asks its
-      noise, four layers of it. In this page's costs (one plain shape's distance is 1, a layer of noise 4: a model's
-      numbers, the caption says why), the noise is 84% of the work. On the card, the Noise library's six reliefs were
-      89% of its time.</p>
+    <p data-step="cull:every">Sphere tracing, from chapter 2 (the <a data-g="march">march</a>): a ray steps by the
+      distance to the nearest surface (times 0.9, the <a data-g="stepscale">step scale</a>), and stops when that
+      distance is below its <a data-g="tolerance">tolerance</a>. To know the nearest surface, the scene's function,
+      which ShadyTracer writes from the scene tree (chapter 24), asks every object for its distance and keeps the
+      smallest. So every step pays for every object, near the ray or not. Here is a shelf in the flat world (this
+      tutorial's two-dimensional scenes): a floor, two plain discs, a rounded block, and two discs with a
+      <a data-g="relief">relief</a> (chapter 3), a rough fine one (granite, left) and a broad smooth one (marble,
+      right). Their bumps are too small to see at this scale; section 3 shows one up close. 48 camera rays take 1,021
+      steps; each step asks all six objects, and each relief asks its noise, four layers of it. In this page's costs
+      (one plain shape's distance is 1, a layer of noise 4: a model's numbers, the caption says why), the noise is 84%
+      of the work. In the Noise library, one of the scenes that come with ShadyTracer, its six reliefs were 89% of the
+      time a sample took on the user's card (chapter 25).</p>
     <p data-step="cull:boxes">A <a data-g="culling-box">culling box</a> around each object: before asking the object,
       ask how far the box is, which is cheap and exact. Nothing inside the box can be nearer than the box itself, so
       while the box is farther than a margin (ten surface tolerances), the object is skipped and the box's distance
       stands in for it: the scene answers with the nearest of the objects it asked, or the nearest skipped box if that
-      is nearer still. The cost falls from 38,798 to 12,545, about a third. Every ray ends where it did without
+      is nearer still. The floor, which has no end, has no box. The cost falls from 38,798 to 12,545, about a third. Every ray ends where it did without
       the boxes; on the card, every picture with them was the same as without. On the user's Ampere card the Noise
-      library ran 3.9 times faster with its boxes (216.6 against 839.8 ms a sample).</p>
-    <p data-step="cull:dear">Two things a box costs. Its test: 4,730 here, one for every object at every step. And
+      library ran 3.9 times faster with its boxes (216.6 against 839.8 milliseconds a sample).</p>
+    <p data-step="cull:dear">Two things a box costs. Its test: 4,730 here, one for every boxed object (five: the floor has none) at every step. And
       sometimes a step: where a box stands in, the ray may step only as far as the box, not as far as the object
       would have let it (387 of the 946 steps here). On the plain discs and the block, the box's test costs as much as
       the shape it guards, and its step is shorter; on a relief it is far cheaper than the noise, and its step longer
-      (a relief's own distance is divided by its slope bound everywhere). So since 0.34.0, only the dear objects get a
-      box: the reliefs, and every group. 907 steps, cost 12,208. On the user's Pascal card (the GTX 1080 Ti of chapter
-      25, as far as the documents show; these runs say only "Pascal"), boxes that never culled
-      cost a third more time on scenes of plain shapes; boxes on the dear ones only were 13 to 15% faster than every
+      (a relief's own distance is divided by its slope bound everywhere). So since 0.34.0, only the dear (costly) objects get a
+      box: the reliefs, and every group (a group is several shapes, or code, joined: never one plain shape). 907 steps,
+      cost 12,208. On the user's Pascal card (chapter 25's GTX 1080 Ti), boxes that never culled cost a third more time
+      on scenes of plain shapes (the showcase, the demo, Surface materials: scenes that come with ShadyTracer); boxes on the dear ones only were 13 to 15% faster than every
       box on the showcase, level on the demo, and 6% slower on the Noise library, where they still saved 72% against
       none. The user chose dear only.</p>
-    <p data-step="cull:shelled">One more turn. The reliefs today have a shell (section 3): far from its surface a
-      relief costs no more than a plain shape. Switch it on: without boxes the shelf costs 10,702, and with boxes on the
+    <p data-step="cull:shelled">One more turn. The reliefs today have a <a data-g="relief-shell">shell</a> (section 3,
+      drawn dashed here): far from its surface a relief costs no more than a plain shape. Switch it on: without boxes the shelf costs 10,702, and with boxes on the
       dear ones 11,471, 7% more. In this model, once the reliefs are shelled, their boxes no longer pay. Whether that is
       so on a card is not known: every culling measurement in the documents was made on the benchmark's frozen Noise
       library, whose reliefs have no shell. It is an inference, and the row that would test it (the shelled reliefs
       with their boxes and without) has not been run.</p>
   </div>
   <figure class="fig" data-fig="cull">
-    <figcaption>A shelf in the flat world and 48 camera rays sphere-traced through it, each step a dot:
-      <span data-say="cam">blue</span> where it asked the objects, in the sun's colour where it paid for a relief's
-      noise too, <span data-say="accent">red</span> where a skipped box's distance stood in. Boxes are drawn dashed.
+    <figcaption>A shelf in the flat world and 48 camera rays sphere-traced through it, each step a dot coloured by
+      what it paid, wherever it is: <span data-say="cam">blue</span> where it asked the objects, in the sun's colour
+      where it paid for a relief's noise too (without boxes or a shell, every step does),
+      <span data-say="accent">red</span> where a skipped box's distance stood in. Boxes are drawn dashed, a shell's
+      edge <span data-say="normal">purple</span>.
       Above, what the 48 rays cost. The costs are a model's (<code>kit/steps.js</code>): a plain shape's distance 1, a
       box test 1, a layer of noise 4, set so the reliefs dominate as they did in the Noise library. Choose the boxes
       and the shell; point at a ray to see its steps.</figcaption>
@@ -75,32 +79,41 @@
   <div class="prose">
     <h2><span class="n">2</span>Only at the root</h2>
     <p data-step="root:whole">The boxes guard only the scene's top-level objects and groups, where they are joined by
-      the plainest join there is: the nearest wins, a <a data-g="union">union</a>. There, a box's distance in place of
-      what it holds is never more than the true distance to anything in the box, so a step is never too long; and it is
-      always above the margin, so the march never takes a box for a surface. A group is boxed as a whole. Here two
-      discs, A and B, joined into a lens (an <a data-g="intersection">intersection</a>: where both are), boxed whole at
-      the root: the rays find the lens. Drag P: the dashed circle is what the lens's own formula answers there, and
-      wherever the box is skipped, the scene answers with the box's distance instead. That can be a little more than
-      the formula's answer, which for a lens is itself an underestimate, but never more than the true distance.</p>
+      the plainest join there is: the nearest wins, a <a data-g="union">union</a>. What the code does with a skipped
+      object: it leaves the union, and at the end the nearest skipped box's distance caps the answer (if it is nearer,
+      it is the answer). Why that is safe there: the answer is the smallest of the objects' distances; leaving one out
+      can only make the smallest larger, and the cap brings it back to no more than the box's distance, which is no
+      more than that object's own. So the answer is never more than the true distance, and a step is never too long;
+      and the cap is above the margin, so the march never takes a box for a surface. A group is boxed as a whole. Here
+      two discs, A and B, joined into a lens (an <a data-g="intersection">intersection</a>: where both are), boxed whole
+      at the root: the rays find the lens. Drag P: the dashed circle is what the lens's own formula answers there; where
+      the box is skipped, the scene answers with the box's distance instead. Above the lens's top tip, as P starts,
+      that is more than the formula's answer, 0.900 against 0.820, and still not more than the true distance, 0.901. The
+      formula, the larger of the two discs' distances, is only a safe estimate: there it measures to the farther disc's
+      circle, while the nearest point of the lens is its tip.</p>
     <p data-step="root:lens">Now box B on its own, inside the join, as ShadyTracer never does. Where B's box is far, B is
-      skipped, and the lens is left as A alone: A's whole round surface, where the lens has none. Every ray stops on
-      it, 1.2 short of the lens. A bound on B is not a bound on what B is joined into; the code's comment says it in
-      one line: "in a subtraction, an intersection or a blend, a lower bound on a child is not a lower bound on the
-      result".</p>
+      skipped and leaves the join, and the lens is left as A alone: A's whole round surface, where the lens has none.
+      The lens's formula is the larger of two distances; leaving one out makes it smaller, down to 0 on A's surface,
+      and no cap can raise it. Every ray stops on that surface, 1.2 short of the lens. A subtraction (one shape carved
+      out of another) is a larger-of-two too. The code's comment says it in one line: "in a subtraction, an
+      intersection or a blend, a lower bound on a child is not a lower bound on the result".</p>
     <p data-step="root:blend">A blend fails another way. Two discs a little apart, blended (chapter 3's smooth union):
       the blend builds a bridge between them, and the bridge lies outside B's own box. Skip B there, and the bridge is
-      gone: two rays pass straight through where it stands, and a third slips past its edge to stop on A. At P, just
+      gone: two rays pass straight through where it stands, and a third (the second from the left) slips past its edge
+      to stop on A, 0.04 lower. At P, just
       above the bridge, the scene now answers 0.150 where the bridge is 0.054 away: a ray from P aimed at the bridge's
       nearest point would step past its surface. This is also why a group's box is padded: a smooth union can reach beyond what it joins, by at most a
-      quarter of its blend each time it joins, and the padding adds that much.</p>
+      quarter of the blend's size (its k, chapter 3) each time it joins, and the padding adds that much.</p>
   </div>
   <figure class="fig" data-fig="root">
-    <figcaption>Two discs, A and B (dashed), joined: the join's own surface bold, its inside filled. A box, dashed in the
-      <span data-say="accent">accent</span> colour: the join's own, or B's alone. Rays from the outside,
+    <figcaption>Two discs, A and B (thin grey dashes), joined: the join's own surface bold, its inside filled, and faint
+      rings of equal distance by its formula. A box, in <span data-say="accent">red</span> dashes: the join's own, or
+      B's alone. Rays from the outside,
       <span data-say="blocked">red</span> where they stop somewhere else than the join's surface (a ring marks where they
       should have stopped); with B culled inside the join, what the march sees instead is drawn
-      <span data-say="blocked">red</span>. Drag P: the dashed circle is the join's own formula there, the red one
-      the scene's answer when it differs. Choose the join and where the box is.</figcaption>
+      <span data-say="blocked">red</span> (on a coarse grid of points, so its edge is jagged). Drag P: the
+      <span data-say="cam">blue</span> dashed circle is the join's own formula there, the
+      <span data-say="accent">red</span> solid one the scene's answer when it differs. Choose the join and where the box is.</figcaption>
   </figure>
 </section>
 
@@ -108,26 +121,33 @@
   <div class="prose">
     <h2><span class="n">3</span>A surface that costs less from afar</h2>
     <p data-step="shell:every">Chapter 3 built a relief: a disc whose distance has noise added, four layers of it, and
-      then divided by a <a data-g="lipschitz">slope bound</a> so the march does not step through a bump. As the
+      then divided by a slope bound (a <a data-g="lipschitz">Lipschitz bound</a>) so the march does not step through a
+      bump. As the
       benchmark's frozen scene has it, every step pays for the noise and every step is divided, however far the ray is
       from the bumps. Fourteen rays at one relief: 318 steps, every one of them paying.</p>
-    <p data-step="shell:divided">The division is the dearer half. The bound here is 1 + (0.17) × 17.2 ÷ 1.875, about 2.6
-      (amount over size, times the noise's steepest over its layers' total strength), so a ray far away moves 2.6 times
-      slower than it could, and takes that many more steps to arrive, each with its noise.</p>
+    <p data-step="shell:divided">The division is the dearer half. The bound here is 1 + 0.17 × 17.2 ÷ 1.875, about 2.6:
+      0.17 is the bumps' height over their width. 17.2 is how steep the four layers of noise can be together: 4.3 for
+      one layer (measured); each further layer half as tall and twice as fine, so just as steep; four of them at their
+      steepest in one place, 4 × 4.3. And 1.875 is the four layers' strengths added, 1 + ½ + ¼ + ⅛: the relief's height
+      is shared among the layers by strength, so the first layer's is the height ÷ 1.875, and the slope bound is that
+      over the width, times 17.2. So far from the bumps, where the disc's own distance would do, every step is 2.6 times shorter than
+      it could be: the circles here, one ray's steps, against the dashed one, the room its first step really had.</p>
     <p data-step="shell:band">The <a data-g="relief-shell">shell</a>: the noise moves the surface by at most 1.386 times
       its amount (a bound proved in <code>noise.js</code>), so beyond twice that from the plain circle, the circle's own
       distance less that reach is a safe distance, with no noise and no division. 243 steps, 211 of them paying, and a
-      cost a third lower. On the user's Ampere card the shell made the Noise library 22.9% faster (156.0 against 202.3
+      cost a third lower. On the user's Ampere card the shell made the Noise library 22.9% faster (156.0 against 202.3, the scene
+      without it timed again beside it in that run, whose first timing of it had read 216.6
       ms a sample); timed by kernel in the next run, the march 38% faster and the shadow rays 33%. The note written
       before that run expected most of the reliefs' cost to go. About a third of it went. The notes after it offered a
       reason, as a hypothesis: the boxes had already skipped the steps far from a relief, so the shell saved only the
       steps between a box's edge and the band, and the steps inside the band pay as before. The next run found the
       rest of the reliefs' time where that predicts, in the kernels that march, not in shading.</p>
-    <p data-step="shell:bound">And a smaller bound. 17.2 is the steepest one layer of noise can be, measured, times
-      four layers all at their steepest in the same place. A search of this four-layer noise itself found 8.9 at most
-      in 14.4 million points; with a quarter to spare, 11.2. Divided by that, the steps are longer: 202 here. The
-      benchmark has a row for it, and the relief keeps 17.2 until that row has been seen and timed by the user: a
-      measured bound is not a proved one, and a bound too small makes holes.</p>
+    <p data-step="shell:bound">And a smaller bound. 17.2 assumes four layers all at their steepest in the same place. A
+      search of this four-layer noise itself found 8.9 at most in 14.4 million points; with a quarter to spare, 11.2.
+      Divided by that, the steps are longer: 202 here. Both are measurements, not proofs: the proved bound is four
+      times larger and would take four times the steps. A bound too small would let a step pass through a bump, so a
+      test searches the noise for anything steeper and fails within a quarter of the bound (<code>noise.test.mjs</code>).
+      The relief keeps 17.2 until the benchmark's row for 11.2 has been seen and timed by the user.</p>
   </div>
   <figure class="fig" data-fig="shell">
     <figcaption>One relief (a flat slice of the noise), its plain circle dashed, and fourteen rays from the eye, each step
@@ -143,7 +163,8 @@
     <p data-step="cache:balls">A step needs the distance at the ray's point. The <a data-g="step-cache">step cache</a>
       remembers distances instead: a grid of cells over the scene's box, each holding the scene's distance at its
       centre. That distance is a ball with no surface in it, so a ray anywhere inside the ball can move to where it
-      leaves the ball, without asking the scene. The cells are filled by a pass of their own before the rays are traced,
+      leaves the ball, without asking the scene. The cells are filled by a pass of their own before the rays are traced (since 0.33.0; at first a cell was
+      filled the first time a ray passed through it, section 7),
       and filled again only when the scene changes (a camera move keeps them: a ball does not care where the camera
       is). Here the shelf, boxed and shelled as today, with about 1,024 cells (57 × 19 = 1,083: the grid is
       rounded up to whole cells, as the engine's is): the darker a cell, the nearer a surface to its centre. A few of
@@ -151,24 +172,30 @@
     <p data-step="cache:own">Each step, the ray first looks at its own cell's ball. If the ball would carry it at least
       a cell further, it goes, to where it leaves the ball, times the step scale; otherwise it asks the scene, as ever.
       Not to the ball's nearest edge, as sphere tracing would: anywhere inside a ball, its exit along the ray is a safe
-      step. And never on the last step of a march pass, which must end on the scene's own answer. 794 steps, 116 of
+      step, however far the ray is from the ball's centre (one is drawn). And never on the last of a march pass's 32
+      steps (chapter 22: the march <a data-g="kernel">kernel</a> gives each ray up to 32 steps a round), because the pass ends by handing on
+      what the scene's own answer at that last step found. 794 steps, 116 of
       them from the cache, and a tenth off the cost; every ray ends where it did without it. Point at a step to see its
       ball.</p>
     <p data-step="cache:ahead">The second mode looks at the two cells ahead along the ray as well, and takes the farthest
       exit of the three balls: 755 steps here. On the user's Pascal card the cache, filled once, made the optics bench
-      27% faster, and three other scenes 6 to 10%; the demo read 4% slower, within that run's noise. On the dichroics
-      scene, on the Ampere card, it changed nothing measurable. It is a developer setting, off by default.</p>
-    <p data-step="cache:orange">The first fill asked the copy of the scene the rays march, the one with the culling
-      boxes. Outside a relief's box, that copy answers with the box's distance, so the balls there stopped at the box,
-      not at the relief. The user saw it in the cells' view: "I see orange glow around objects but also around their
-      boundingboxes". Every ball was still safe, and most of those around the boxes smaller: 879 steps here, against 794. The fill now asks the copy made
-      for picking, which has no boxes.</p>
+      (a scene of lenses on pillars) 27% faster, the same scene written as data 19%, OpticsBench2 and the showcase 10%;
+      the material test (6% faster) and the demo (4% slower) moved by less than that run could tell apart. On the
+      dichroics scene, on the Ampere card, it changed nothing measurable. It is a developer setting, off by default.</p>
+    <p data-step="cache:orange">Until 0.33.0 the cells were filled from the copy of the scene the rays march, the one
+      with the culling boxes. Outside a relief's box, that copy answers with the box's distance, so the balls there
+      stopped at the box, not at the relief (marked here). The user saw it in the renderer's view of the cells, which
+      shows them in orange: "I see orange glow around objects but also around their boundingboxes". Every ball was
+      still safe, and most of those around the boxes smaller: 879 steps here, against 794. The fill now asks the copy
+      made for picking (finding what is under the mouse), which has no boxes.</p>
   </div>
   <figure class="fig" data-fig="cache">
     <figcaption>The shelf of section 1 with the boxes on the dear ones and the reliefs in their shell, under a grid of
       cells, each shaded by its ball's radius (its distance to the nearest surface: the darker, the nearer). The 48
       rays' steps: a <span data-say="cam">blue</span> dot where they asked the scene, a thick
-      <span data-say="shadow">green</span> line for each jump from the cache. Choose the cache's mode, how many cells, and which copy of the scene fills them; point at a
+      <span data-say="shadow">green</span> line for each jump from the cache. The grid (dotted) is the scene's box,
+      rounded up to whole cells. Cells whose ball the copy with boxes made smaller are marked in
+      <span data-say="accent">red</span>. Choose the cache's mode, how many cells, and which copy of the scene fills them; point at a
       step to see its ball.</figcaption>
   </figure>
 </section>
@@ -178,7 +205,7 @@
     <h2><span class="n">5</span>How ShadyTracer does it</h2>
     <p>The box's distance, and the margin:</p>
     <pre data-src="lib/pathtracer/core/scene_api.js" data-sym="/* BOUNDING-BOX CULLING (the builder's codegen wraps each top-level node of the render copy" data-to="fn cullMargin() -> FLOAT { return offsetEps(); }"
-         data-why="WGSL. q is the point in the object's own frame; lo and hi the box's corners, as four numbers each (w used only to say 0, not known). d is how far q is outside the box along each axis, negative inside; the last line is the exact distance to a box. offsetEps() is ten surface tolerances (chapter 30)." data-hash="c44a50fe"></pre>
+         data-why="WGSL. q is the point in the object's own frame; lo and hi the box's corners, as four numbers each (w used only to say 0, not known). d is how far q is outside the box along each axis, negative inside. The last line: outside, Pythagoras over the axes q is outside on (the inside ones set to 0 by max); inside, the nearest face's, the largest of the negative d. offsetEps() is ten surface tolerances (chapter 30)." data-hash="c44a50fe"></pre>
     <p>Why only at the root, as the code generator says it:</p>
     <pre data-src="builder/codegen.js" data-sym="Now each top-level node -- an object, or a whole group -- is first measured against its box, in its" data-to="is always above the margin, so it never passes the march's hit test and is never shaded. */"
          data-why="The render copy is the scene's function the rays march; a pick copy, which the boxes are measured with and the step cache filled from, has no culling. fold is the scene's 'keep the nearest'; |d| because inside glass the distance is negative (chapter 10)." data-hash="d4f8a93a"></pre>
@@ -186,15 +213,17 @@
       nearest skipped box stand in:</p>
     <pre data-src="builder/codegen.js" data-sym="const culled = (d, n) => {" data-to="line(d, '}')"
          data-why="JavaScript writing WGSL, a line at a time (line(depth, text)). Each box is two uniforms, values the page sets after measuring it (0 until then: not known). xfPoint takes the point into the object's frame; times the frame's scale the box's distance is back in the world's units. emitNode writes the object's own code." data-hash="b0f01dd2"></pre>
-    <p class="cite-line">The line: <cite data-src="builder/codegen.js" data-sym="if (culling) e.raw('    if (CULL &lt; abs(C.s.w)) { C.s.w = CULL; }')"></cite>.</p>
+    <p class="cite-line">The line, at the end of the scene's function: <code>if (CULL &lt; abs(C.s.w)) { C.s.w = CULL; }</code>
+      (<cite data-src="builder/codegen.js" data-sym="if (culling) e.raw('    if (CULL &lt; abs(C.s.w)) { C.s.w = CULL; }')"></cite>):
+      C.s.w is the scene's answer, the nearest distance found.</p>
     <p>A relief in its shell (the WGSL the relief group starts with, as text in JavaScript):</p>
     <pre data-src="builder/modifiers.js" data-in="const reliefCode = (lip, note = []) => [" data-sym="'var H = children(emptyHit(r), p);'," data-to="'}',"
          data-why="children(...) is the plain shape, its distance H.s.w. peak is 1 + 1/2 + 1/4 + 1/8; lip is 17.2 for the modifier, 11.2 for the benchmark's copy. XF_S is the group's scale. READ_REACH is 0 unless a smooth blend above reads the relief (then the band widens by as far as it reads). marchEps() is the surface tolerance. foldRelief divides by the slope." data-hash="733a2aff"></pre>
     <p>The step cache's step, and where the march takes it:</p>
     <pre data-src="lib/pathtracer/core/wavefront.js" data-sym="fn scStep(pos: VEC3, dir: VEC3) -> FLOAT {"
-         data-why="UB.scLo is the grid's low corner, its w the cell's size; UB.scDims its cells along x, y and z. A cell holds the f32 bits of its distance (bitcast). c2 is how far inside the ball the ray is, negated: below 0 inside. -b + sqrt(b² - c2) is where a line from inside a sphere leaves it, from the quadratic for |oc + t dir| = r." data-hash="5d3ecdf6"></pre>
+         data-why="SC_LOOKS is 1 (the own cell) or 3 (and the two ahead), fixed when the kernel is built. UB.scLo is the grid's low corner, its w the cell's size; UB.scDims its cells along x, y and z; k a cell's number, counted row by row. A cell holds the f32 bits of its distance (bitcast). oc runs from the ball's centre to the ray; c2 is its length squared less the radius squared, below 0 inside. b is oc's length along the ray (a dot product), and -b + sqrt(b² - c2) is where the ray, a unit direction, leaves the ball: the larger root of |oc + t dir|² = r². select gives best if it is at least a cell, else -1." data-hash="5d3ecdf6"></pre>
     <pre data-src="lib/pathtracer/core/wavefront.js" data-sym="${stepCache ? /*wgsl*/`/* THE STEP CACHE (stepCacheWGSL, filled before the trace): a ball that holds the ray far" data-to="}` : ''}"
-         data-why="Inside the march's loop (chapter 22), before the scene is asked. ${stepCache ? ... : ''}: the text is in the kernel only when the cache is on, so with it off the kernel is what it was before the cache existed. moveBy moves the ray; ray.steps counts towards its 400." data-hash="1d25ab4a"></pre>
+         data-why="Inside the march's loop (chapter 22), before the scene is asked. ${stepCache ? ... : ''}: the text is in the kernel only when the cache is on, so with it off the kernel is what it was before the cache existed. moveBy moves the ray; ray.steps counts towards the 400 steps a ray may take in all (chapter 22)." data-hash="1d25ab4a"></pre>
   </div>
 </section>
 
@@ -230,9 +259,9 @@
         generator: beyond two amplitudes, the distance less the amplitude.</p>
     </div>
     <div data-claim="measured">
-      <p><strong>The step cache: filled once, a gain on the optics benches only.</strong> Against the cache off: the
-        optics bench −27%, the optics bench as data −19%, OpticsBench2 −10%, the showcase −10%, the material test −6%,
-        the demo +4%, differences under about 7% within that run's noise (the user's Pascal card, Tests &gt; stepcache,
+      <p><strong>The step cache: filled once, a gain on the optics benches and the showcase.</strong> Against the cache
+        off: the optics bench −27%, the optics bench as data −19%, OpticsBench2 −10%, the showcase −10%, the material
+        test −6%, the demo +4%, differences under about 7% within what that run could tell apart (the user's Pascal card, Tests &gt; stepcache,
         0.33.1, <code>roadmap/ARCHITECTURE.md</code>); on the dichroics scene +1.4% (the user's Ampere card, 0.61.2,
         <code>docs/PERFORMANCE.md</code>). A fill costs 0.2 to 3.3 ms on the scenes written as code, 26.1 ms on the optics bench
         as data, paid again whenever anything but the camera changes.</p>
@@ -289,7 +318,8 @@
         small: harmless in a drawing of the boxes, a clipped object once they culled
         (<cite data-src="builder/boxes.js" data-sym="not by its objects: measured from the objects alone, the box of a relief was its undisplaced shape, up to"></cite>).</li>
       <li><strong>The lazy fill.</strong> The cache's first version filled a cell the first time a ray passed through
-        it, during the march. Filled once before the trace was faster on every scene, by 6 to 22% (one scene, in one of
+        it, during the march; 0.33.0 added the fill of every cell before the trace, and the fill from the copy without
+        boxes. Filled once before the trace was faster on every scene, by 6 to 22% (one scene, in one of
         the two modes, by 2%, within the run's noise), and the lazy fill no faster than no cache on four of six; it was
         taken out in 0.41.0
         (<cite data-src="lib/pathtracer/core/wavefront.js" data-sym="THE LAZY FILL WENT IN 0.41.0" data-to="faster than the cache off on four of six (roadmap/ARCHITECTURE.md)."></cite>).</li>

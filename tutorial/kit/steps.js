@@ -185,6 +185,19 @@ export function joined(J, x, y, how, eps = 1e-3) {
     if (!(bd > margin)) return { truth, culled: truth, skipped: false }
     return { truth, culled: Math.abs(dA) > bd ? bd : dA, skipped: true }
 }
+/** the true distance from (x, y) to the lens A ∩ B (an intersection's formula is only a lower bound): to its outline,
+ *  each disc's circle where it lies inside the other, sampled at `n` points a circle */
+export function lensTrueDist(J, x, y, n = 3600) {
+    // the two tips exactly, where the circles cross: a sampled circle would miss them by a sample's width
+    const dx = J.b.c[0] - J.a.c[0], dy = J.b.c[1] - J.a.c[1], d = hyp(dx, dy), a = (J.a.r ** 2 - J.b.r ** 2 + d * d) / (2 * d), h = Math.sqrt(Math.max(0, J.a.r ** 2 - a * a))
+    const mx = J.a.c[0] + a * dx / d, my = J.a.c[1] + a * dy / d
+    let best = Math.min(hyp(mx - h * dy / d - x, my + h * dx / d - y), hyp(mx + h * dy / d - x, my - h * dx / d - y))
+    for (const [P, Q] of [[J.a, J.b], [J.b, J.a]]) for (let k = 0; k < n; k++) {
+        const t = 2 * Math.PI * k / n, px = P.c[0] + P.r * Math.cos(t), py = P.c[1] + P.r * Math.sin(t)
+        if (hyp(px - Q.c[0], py - Q.c[1]) <= Q.r) best = Math.min(best, hyp(px - x, py - y))
+    }
+    return best
+}
 /** a ray marched through one of `joined`'s fields: where it stops */
 export function marchJoined(J, ox, oy, dx, dy, how, { eps = 1e-3, far = 12, max = 400, stepscale = 0.9, field = 'culled' } = {}) {
     let t = 0

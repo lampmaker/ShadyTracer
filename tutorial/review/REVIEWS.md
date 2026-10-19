@@ -661,11 +661,13 @@ record now say what the model shows.
 | 24 | Long lines cut; b, c, h, e; kind and join codes; UB; "1 copies"; 6,794 below 6,795; "runs faster" on the card. | **Fixed**, each: the lines wrap. |
 | all | Sections 4 to 6 written for a developer. | **Not changed** beyond the glosses: those sections are where the page meets the code, and say so. |
 
-## Round 9, 2026-10-19 (chapters 25 and 26, two reads each)
+## Round 9, 2026-10-19 (chapters 25 to 28)
 
-The first two chapters of Part VII, each read twice, by a fresh reader each time, on the same brief. Reports:
+The chapters of Part VII, each read twice, by a fresh reader each time, on the same brief. Reports:
 chapter 25, [first](reports/2026-10-19-round9/measure-1.md) and [second](reports/2026-10-19-round9/measure-2.md);
-chapter 26, [first](reports/2026-10-19-round9/steps-1.md) and [second](reports/2026-10-19-round9/steps-2.md).
+chapter 26, [first](reports/2026-10-19-round9/steps-1.md) and [second](reports/2026-10-19-round9/steps-2.md);
+chapter 27, [first](reports/2026-10-19-round9/compiles-1.md) and [second](reports/2026-10-19-round9/compiles-2.md);
+chapter 28, [first](reports/2026-10-19-round9/feel-1.md).
 
 ### Chapter 25, Measure first
 
@@ -705,6 +707,70 @@ left was a set of precise objections, each right.
 | Section 2's kernel list too long for a beginner (the first reader wanted it). | **Shortened**, not removed: one sentence, the work kernels named by what they do, the four small ones together. |
 | Section 6's stories too dense. | **Partly.** The budget story rewritten with its numbers; the others keep their length and citations, as every chapter's section 6 does. |
 | Why a fine clock is dangerous; WebGPU itself. | **Fixed**, briefly: a page timing other code; the browser's way of handing the card work. |
+
+### Chapter 26, Fewer and cheaper steps
+
+**First read.** The teach-back held all three ideas and the quiz was answered from the page. The reader caught two
+real contradictions: figure 2's P sat where the box's distance was less than the lens's formula, beside a sentence
+saying it could be more; and the step cache's "first fill" meant the lazy fill in one section and the fill from the
+copy with boxes in another. Both are fixed, and the first was a finding about the chapter's own claim: writing the
+test against the true distance (not the scene's own bounds) is what showed that a box's distance can be more than a
+lens's formula, or a relief's divided field, both underestimates, and never more than the truth.
+
+| Finding | |
+|---|---|
+| Figure 2: the scene answers 1.500 where the formula says 1.524, beside "can be a little more". | **Fixed.** P starts above the lens's tip, where the box answers 0.900, the formula 0.820 and the truth 0.901; the page says why the formula is short there. |
+| Two different "first" fills. | **Fixed.** The lazy fill came first, filling from the copy the rays march; 0.33.0 added the fill once, and the fill from the copy without boxes (`CHANGELOG.md`). |
+| "A gain on the optics benches only" against the showcase's −10%; "three other scenes 6 to 10%". | **Fixed**, both: each scene named with its number, and which were within the run's resolution. |
+| No view of a ray leaving an off-centre ball. | **Fixed.** The *own cell* step draws one jump with its ball, where the ray leaves it, and the 0.9 step. |
+| "Card" read as the glossary's card; scene names never introduced; "pass"; "a quarter of its blend"; "1.875"; groups dear without why. | **Fixed**, each: graphics card; the bundled scenes said once; a march pass's 32 steps; the blend's k; the layers' strengths added; a group is several shapes or code. |
+| 17.2 called measured, then "a measured bound is not a proved one" for 11.2 only. | **Fixed.** Both are measurements; the proved bound is four times larger. |
+| The reliefs look like circles; *shelled* the same as *dear*; the floor's box never mentioned. | **Fixed.** Said that the bumps are too small at that scale; the shell drawn dashed; the floor has no box. |
+| Orange glow against grey cells; no visible change around the boxes; the grid larger than its dotted box. | **Fixed.** The renderer's view is orange, this one ink; the cells the copy with boxes shrank marked; the grid drawn as rounded up. |
+| codegen's CULL line not shown; cullDist's last line; SC_LOOKS, k, select; "towards its 400". | **Fixed** in the notes; the line written out. |
+| "Noise" for the bumps and for a run's scatter. | **Fixed.** A run's resolution, not its noise. |
+| *divided*: the 2.6 not visible in the circles. | **Fixed.** A dashed circle shows the room the first step really had. |
+
+**Second read.** The quiz answers were right except one ambiguity left from the first round's fix, and the reader
+found the sentence the chapter's argument most depends on misleading: "a box's distance in place of what it holds",
+read as putting the box's distance into the join, would make the lens figure impossible. The code does something
+else, and the page now says it: a skipped object leaves the union, and the nearest skipped box's distance caps the
+answer at the end.
+
+| Finding | |
+|---|---|
+| Substitution against leaving the join; why min is safe and max is not. | **Fixed.** What the code does, and the two lines of why: leaving a term out of a smallest can only raise it, and the cap brings it back under the box's distance; leaving one out of a largest lowers it to 0 on the other's surface. A subtraction is a largest-of-two too. |
+| The intersection card says its distance is the larger of the two. | **Fixed.** The card says it is a formula, never more than the truth and less where the nearest point is a corner. The figure's readout gives the lens's true distance (computed to its outline, its tips exactly; held by the test). |
+| 17.2 = 4 × 4.3 needs each layer to be as steep; why ÷ 1.875; can today's relief leave holes? | **Fixed.** Half as tall and twice as fine; the height shared among the layers; both bounds measured, the proved one four times larger, and the test that searches for steeper. |
+| "One for every object at every step" against 4,730 = 5 × 946. | **Fixed.** Every boxed object; the floor has none. |
+| "Both had" the orange shell, for a fill 0.33.0 introduced and fixed. | **Fixed** (already, after the first read's screenshots were made): 0.33.0 added the fill once and the fill without boxes. |
+| 216.6 against 202.3 for the Noise library with boxes. | **Fixed.** The same run's first timing and its timing again beside the shell's row: the drift of chapter 25. |
+| "Solid" circle drawn dashed; P's circles leave the frame; the box's label over the tip; the third ray in the blend. | **Fixed**, each (the style's dashes for its colour removed; a taller figure; the label beside the box; the ray named). |
+| The shell's edge dashed like the boxes; the cache's jumps dashed like outlines; the shell figure's label over the eye. | **Fixed.** The edge purple and solid; the jumps solid; the label at the foot. |
+| "Dear", pass, kernel, uniform, pick and render copy without cards. | **Partly.** "Dear (costly)" said; kernel linked; pass explained in the sentence. Pick and render copy are said where used. |
+| Card timings repeated across sections. | **Not changed.** Each section gives the number its argument needs; section 6 gathers them stamped, as every chapter does. |
+
+### Chapter 27, Faster compiles
+
+**First read.** The teach-back held the chapter: compiles off the page's thread, all at once, only what changed, a bar
+by the clock. The reader's main gap was the premise: why a scene is text inside a program at all, which the page
+pointed to chapter 24 for and did not say. And a number was wrong: the session figure's caption gave the surface
+kernel 200,000 characters, where the model has 160,000 in that scene, which is why the reader's own sum (15.2 ms ×
+200 = 3.0 s) did not match the figure's 2.48.
+
+| Finding | |
+|---|---|
+| Why a scene is in a kernel's text; a move only a number. | **Fixed.** Said in the lede. |
+| The surface kernel appears from nowhere; 13 kernels, then 16. | **Fixed.** Introduced with 0.20.8; the counts said where they change. |
+| The caption's 200,000 against the figure's 2.48 s. | **Fixed.** 160,000 in scene A; under and over 151,000 the model's per-thousand differs (chapter 24). |
+| Shade 10.7 s in figure 1 and 11.4 s in the text. | **Fixed.** Two runs of two versions, said. |
+| Texts seen before "2.0 and 0.56 s" against the figure's 0.0. | **Fixed.** The builder's whole apply, not a compile. |
+| Figure 2's colour key; every column filled at the first step; both toggles in one step. | **Fixed.** The key per colour; steps not reached drawn faint; the cache off has its own step. |
+| "At most twice"; the browser's cache against ShadyTracer's. | **Fixed.** At most doubles; the browser keeps compiled kernels across a reload, the pipeline cache lives in the page's memory. |
+| Why kernels compile side by side; why all at once is half a second over shade. | **Fixed**, both stamped inferred: several cores; the small kernels sharing the processor. |
+| Driver, promise, pipeline used before their notes; "the user"; e. | **Fixed.** Each said at first use; e replaced by "to about a third". |
+| "Eight builds" against seven and a reload; the readout's nine tenths of the prediction against the build. | **Fixed**, both. |
+| Too many numbers for one scene; section 6 repeats. | **Not changed**: each number is the one its sentence needs, and section 6 is every chapter's record of what went wrong. |
 
 ## Next round
 

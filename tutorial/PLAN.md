@@ -289,8 +289,22 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
     (reliefCode), wavefront.js (scStep, the march's cache step). Measured: PERFORMANCE.md's runs 3 to 5 (culling, the
     shell), ARCHITECTURE.md's boxcost and stepcache runs. Inferred and said so: with the shell, a relief's box may no
     longer pay. *Read:* iq-bounding, hart1996, keinert2014.
-27. **Faster compiles**: off-thread, `noUnroll`, one copy of the scene per kernel, the pipeline cache.
-28. **Feeling fast**: the governor, fast-while-moving, presets, slicing, the watchdog, uploading only what moved.
+27. **Faster compiles** (draft): one scene's 13 kernels compiled blocking the page, off its thread one at a time, and
+    all at once, from the user's measured times for six scenes (`kit/compiles.js`, PERFORMANCE_REVIEW §10.3); a
+    session in the builder (a value, a shape added, another scene, back, an undo) with the scene-free kernels and the
+    pipeline cache on or off, each build predicted by `compileprogress.js` from a model's sizes; the bar counting
+    kernels against the bar by the clock, and a machine learning its own rate (`learnRate`), a reload ignored.
+    -> tinywebgpu.js (async, the cache's key), raytrace_main.js (built in parallel), genrays.js (the base uniforms),
+    compileprogress.js (compileFraction). Measured: §10.3 and §10.8, PERFORMANCE.md's minute to 20 s, the scenedata
+    run's 52.2 to 1.8 s. *Read:* webgpu-fundamentals, mdn-pipeline-async.
+28. **Feeling fast** (draft): the governor frame by frame, today's ±3% rule (`render-loop.js`, mirrored in
+    `kit/feel.js` and held to the real loop) against the one its comment says it replaced, hunting and tracing frames
+    of no sample; a drag frame by frame through the real `interaction.js` and `quality.js` effective(), held or only
+    poked; a heavy sample in slices and a heavy frame in submissions (R.trace's rules, their constants copied); six
+    samples offscreen one in flight or two (`samples.js` runSamples' order). -> render-loop.js (the governor),
+    interaction.js, quality.js effective, raytrace_main.js (the slicing), samples.js. Measured: the held loop (1.4-6.8
+    s against 0.2), the pipelining (13-25%), the hang. Not measured and said so: the governor, fast-while-moving,
+    slicing. *Read:* webgpu-fundamentals.
 
 **VIII. Getting it right**
 29. **Noise, bias and checking**: unbiased and consistent, closed forms, the furnace, JS mirrors.

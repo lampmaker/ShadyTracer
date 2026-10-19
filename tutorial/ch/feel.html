@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Feeling fast · ShadyTracer, inside out</title>
+<link rel="stylesheet" href="../kit/kit.css">
+<script type="module" src="feel.js"></script>
+</head>
+<body data-chapter="feel">
+<p class="kit-offline">This page runs from a web server, not from a file: in the repository run <code>python3 -m http.server 8000</code> and open http://localhost:8000/tutorial/.</p>
+<main class="sheet">
+
+<header class="sheet-head">
+  <div>
+    <p class="eyebrow">Part VII · Speed · Chapter 28</p>
+    <h1>Feeling fast</h1>
+    <p class="lede">A renderer can be fast and still feel slow: a camera that lags behind the mouse, a page that does
+      not answer while a heavy picture renders, a frame the graphics card's driver gives up on. This chapter is how
+      ShadyTracer's live view decides how much to draw each frame, what it draws while something moves, how it cuts a
+      heavy picture into pieces that fit a frame, and how an offscreen render keeps the card busy. Most of it is rules
+      in code; where a number was measured, it says so, and where nothing was, it says that.</p>
+  </div>
+  <div class="titleblock" data-auto></div>
+</header>
+
+<section class="scene" id="governor">
+  <div class="prose">
+    <h2><span class="n">1</span>How many samples a frame</h2>
+    <p data-step="governor:now">The live view is a loop: each time the browser is ready to show a new frame, the
+      renderer traces some <a data-g="sample">samples</a> and adds them to the picture. More samples a frame, a quieter
+      picture sooner; but a frame that takes too long makes the view sluggish. A <a data-g="governor">governor</a> decides: it measures
+      the frames a second the loop is managing, and when that is above 23 it asks 3% more samples next frame, below 18,
+      3% fewer; in between it leaves the number alone. The number is a fraction and the frame traces its whole part.
+      Here each frame costs 5 ms plus 20 ms a sample (a model's numbers): the governor settles at 2 samples, 22 frames a
+      second, and stays.</p>
+    <p data-step="governor:light">A light scene, 5 ms a sample: it climbs, 3% a frame, to 8 samples a frame in about
+      35 frames, and stays. The steps are a share of the count, so they are as gentle at 2 as at 40.</p>
+    <p data-step="governor:before">The rule before, as its comment tells it: steps of 0.1 sample, whatever the count,
+      and a band of only one frame a second either side of 20. At 2 samples the frame is 45 ms, 22 a second, over the
+      band, so it climbs; at 3, 65 ms, 15 a second, under it, so it falls: it hunts between the two for ever, and the
+      frame rate with it. "Gentle where it does not matter and violent where it does", the comment says of the fixed
+      step.</p>
+    <p data-step="governor:zero">And its floor guard, <code>count &gt; 1</code>, let floating point through. Steps of
+      0.1 do not land on whole numbers in a computer's arithmetic: from 3, nineteen steps down reach 1.0999999999999983,
+      still more than 1, so the guard allows one more, to 0.9999999999999983, whose whole part is 0 (computed). A frame
+      then traced no sample, showing the picture unchanged "while the HUD cheerfully reports 60 fps", in the comment's
+      words. On a heavy scene
+      (60 ms a sample) the old rule here does just that, every other frame. Today's clamps the count at 1.</p>
+  </div>
+  <figure class="fig" data-fig="governor">
+    <figcaption>The governor frame by frame: above, the samples each frame traces (<span data-say="cam">blue</span>; a
+      <span data-say="blocked">red</span> dot where a frame traced none) and the count it is the whole part of (grey);
+      below, the frames a second, the band where the rule changes nothing shaded. Frames cost 5 ms plus the samples'
+      (a model). Today's rule is <code>lib/render-loop.js</code>'s, mirrored and held to it by the test; the old one is
+      rebuilt from its comment. Choose the rule and the cost of a sample.</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="move">
+  <div class="prose">
+    <h2><span class="n">2</span>Lighter while moving</h2>
+    <p data-step="move:drag">While the camera, an object or a value is being moved, every frame resets the picture
+      (chapter 23): the view shows one or two samples at a time, all noise, and a full path-traced sample is slow. So
+      while something moves, a full picture is traced in a lighter mode, Draft (light straight from the sun, the sky
+      and the lamps, with shadows, no bounce light) or Sketch (a fixed light), and the full picture comes back once the
+      moving stops. "Moving" is told, never guessed: the camera and the builder's live values <em>poke</em> it each
+      time they change, and it stays on until 400 ms have passed with no poke. Here a drag from 0.3 s to 1.7 s that
+      stands still, button down, from 0.7 to 1.3: the view traces Draft from the first poke until 0.4 s after the
+      button comes up.</p>
+    <p data-step="move:free">A drag that only poked would go back to the full picture in the middle of that pause, at
+      1.1 s, and to Draft again when the mouse moves on: the full picture flashing under the pointer. So a drag in the
+      picture <em>holds</em> "moving" for as long as the button is down, and the 400 ms start when it is let go.</p>
+    <p data-step="move:off">Why told and not guessed from the picture's resets: a reset is also written by a scene
+      swap, a kernel build, a resize, and by the switch to the lighter mode itself, which would then keep itself on for
+      ever. With fast while moving off, the view traces the full picture throughout. What the lighter mode saves while
+      moving has not been measured.</p>
+  </div>
+  <figure class="fig" data-fig="move">
+    <figcaption>A drag frame by frame (16 ms each): the mouse (<span data-say="accent">red</span>: moving, faint: still
+      with the button down), whether ShadyTracer counts it as moving (<span data-say="cam">blue</span>), and the mode
+      each frame traces in. The real <code>interaction.js</code> on a clock run by hand, and the real
+      <code>quality.js</code> choosing the mode. Choose how the drag holds, and the setting.</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="slices">
+  <div class="prose">
+    <h2><span class="n">3</span>A heavy sample in pieces</h2>
+    <p data-step="slices:light">A sample is every pixel's path. A light scene's sample takes 20 ms: one frame holds it
+      whole, and the governor of section 1 gives the frame more.</p>
+    <p data-step="slices:heavy">A heavy scene's takes a second: as one frame, the view would answer the mouse once a
+      second. So since 0.58.0 the live view cuts a sample into <em>batches</em>, bands of the picture's pixels, and traces
+      about 30 ms of them a frame (the setting <code>sliceMs</code>); the sample is added to the picture when its last
+      batch is done. A second's sample: 34 batches, 34 frames of about 30 ms. The picture changes once a sample, as
+      before; the page answers every frame.</p>
+    <p data-step="slices:floor">But a batch has a floor: no fewer than 16,384 rays, since a batch that small leaves
+      most of the card idle (the code's comment says inferred). At 1280 × 720 that is 57 batches at most, so a 10-second
+      sample is frames of 175 ms, not 30: slicing cannot hold 30 ms on a very heavy scene. Nothing of this has been seen
+      on a card or measured: the version that brought it says so.</p>
+    <p data-step="slices:split">A second rule, older and measured by an accident: Windows resets the graphics card when
+      one piece of work sent to it, one <a data-g="submission">submission</a>, runs about 2 seconds, and the Noise library, over a second a
+      sample as one submission, hung (2026-09-29). So a frame over 250 ms is cut into submissions of about 150 ms each,
+      by iterations (chapter 22). At 640 × 360 the floor allows only 15 batches: a 10-second sample makes frames of 667
+      ms, each sent as 5 submissions of 5 iterations.</p>
+  </div>
+  <figure class="fig" data-fig="slices">
+    <figcaption>One sample of the time you set, at the picture size you choose, as the live view traces it: frames as
+      bars (the first 60 drawn), white lines where a frame is cut into submissions, the slice asked for dashed. The rules
+      are <code>raytrace_main.js</code>'s, their constants copied into <code>kit/feel.js</code>; a picture's rays are
+      assumed to fit the card's ray buffer at once (one batch planned). Computed, not measured.</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="flight">
+  <div class="prose">
+    <h2><span class="n">4</span>Keeping the card busy</h2>
+    <p data-step="flight:one">Offscreen, rendering a picture to save, each sample used to be recorded (the main
+      processor writing the card's list of work), sent, and waited for before the next was recorded. The card idled while
+      the next was recorded, and the processor while the card ran: a sample cost both times added. The benchmark's
+      first runs put a sample's wall clock 50 to 57 ms above its time on the card, of which 6 to 12 ms was the
+      recording.</p>
+    <p data-step="flight:two">With two in flight, the next sample is recorded while the card runs this one, and no more
+      than two are ever waiting. A sample then costs about the larger of the two times. Measured on the user's Pascal
+      card: 13 to 25% off a sample (the Noise library 257.6 to 225.0 ms, materials 57.5 to 42.9). Saving a picture, the
+      timeline's frames and the library's pictures ask for two; the benchmark's own samples stay one at a time, so a
+      sample is timed alone.</p>
+  </div>
+  <figure class="fig" data-fig="flight">
+    <figcaption>Six samples offscreen: the main thread recording each (<span data-say="accent">red</span>) and the card
+      running it (<span data-say="cam">blue</span>), one in flight or two. The order of recordings and waits is
+      <code>samples.js</code> runSamples' (the test holds the figure's to it); the times are yours. Choose.</figcaption>
+  </figure>
+</section>
+
+<section class="plain wide" id="engine">
+  <div class="prose">
+    <h2><span class="n">5</span>How ShadyTracer does it</h2>
+    <p>The loop and its governor:</p>
+    <pre data-src="lib/render-loop.js" data-sym="if (fps > minfps * 1.15) count = Math.min(maxSamples, count * 1.03)" data-to="const spp = Math.floor(count)"
+         data-why="fps is 1000 over the milliseconds since the loop last ran; minfps is 20, maxSamples 64. count stays a fraction; the frame traces its whole part." data-hash="dcc1a894"></pre>
+    <p>Moving, told and held:</p>
+    <pre data-src="lib/pathtracer/interaction.js" data-sym="export function makeInteraction"
+         data-why="poke() marks a move now; hold() keeps it on until its release, then idleMs more; check() runs when the quiet should be over and ends the move, or waits again. now and schedule are passed in so the test can run the clock by hand." data-hash="1fce59e9"></pre>
+    <p>The mode a frame traces in:</p>
+    <pre data-src="lib/pathtracer/quality.js" data-sym="export function effective"
+         data-why="MODE: 0 full, 1 Draft, 2 Sketch, 3 Optics. A measuring view (measureMode) always traces in full. nee is next event estimation (chapter 14), lt the light tracer (chapter 18)." data-hash="64a35735"></pre>
+    <p>A sample in pieces, and a frame in submissions:</p>
+    <pre data-src="lib/pathtracer/core/raytrace_main.js" data-sym="const sampleMs = R._pxMs != null ? R._pxMs * px : null;" data-to="if (sliceMs > 0) count = sliced || sampleMs == null ? 1 : Math.max(1, Math.min(count, Math.floor(sliceMs / Math.max(1e-3, sampleMs))));"
+         data-why="R._pxMs is the last timed sample's milliseconds per pixel; planned.batches what the ray buffer needs anyway; perCall the batches this frame traces. The last line holds a light scene to the samples that fit a slice, whatever the governor asked." data-hash="c2d7819e"></pre>
+    <p>And the samples in flight:</p>
+    <pre data-src="lib/pathtracer/samples.js" data-sym="export async function runSamples"
+         data-why="trace() records and sends a sample and resolves once sent; done() resolves when the card has finished everything sent so far. With depth 2 the loop traces on while one sample is still pending." data-hash="c17b4ef2"></pre>
+  </div>
+</section>
+
+<section class="plain wide" id="tricks">
+  <div class="prose">
+    <h2><span class="n">6</span>Tricks and trade-offs</h2>
+    <p>Each is stamped with how it is known; point at a stamp to see what it means.</p>
+    <div data-claim="measured">
+      <p><strong>Hold the loop, do not stop it.</strong> While the builder compiles a changed scene, the live loop is
+        held: still running, submitting nothing. A revisit of the Noise library took 1.4 to 6.8 seconds with the loop
+        running and 0.2 with it paused (the user's GTX 1080 Ti, 2026-10-03, <code>render-loop.js</code>). Not stopped,
+        because a stop inside another (a scene swap's, inside the builder's apply) saw the loop paused and never
+        started it again; holds are counted and nest.</p>
+    </div>
+    <div data-claim="code">
+      <p><strong>Never more than two frames queued.</strong> The browser asks for a frame 60 times a second whatever
+        the card manages; a loop that sent one each time would build a queue of frames, and that queue is the camera's
+        lag (the library this comes from once measured seventeen seconds of it). So the loop waits while one frame is
+        queued if a sample, and the frame, take over 50 ms, while two are queued otherwise
+        (<code>lib/render-cost.js</code>).</p>
+    </div>
+    <div data-claim="code">
+      <p><strong>A sample that never finishes.</strong> If what a sample was started for changes every frame (a size,
+        the scene), the pending sample is dropped; three drops in a row and the next sample runs whole, so the picture
+        changes at least that often (<code>raytrace_main.js</code>, NEVER FINISHING).</p>
+    </div>
+    <div data-claim="inferred">
+      <p><strong>Slicing's floor.</strong> That a batch under 16,384 rays leaves the card mostly idle is the code's own
+        inference, and what slicing costs a sample in total is not measured: each batch runs the whole chain of kernels
+        (chapter 22), so more batches may mean more fixed cost. What would test it: one heavy sample timed whole and in
+        57 batches.</p>
+    </div>
+    <div data-claim="code">
+      <p><strong>A run that ends on a lost card says so.</strong> A benchmark run lost the card at row 19 and sat on
+        "running" (the user's Pascal card, 2026-10-04); a watchdog now races each step against the card's loss and a
+        timer, keeps the rows done, and names the row it stopped in. The timers are choices, not measurements: a minute
+        for a sample, where the slowest seen was 1.35 s (<code>runwatch.js</code>, <code>tests.js</code>).</p>
+    </div>
+    <aside class="refs"><span class="tag">Read more</span><ul>
+      <li data-ref="webgpu-fundamentals">How a page sends work to the card and waits for it, from the start.</li>
+    </ul></aside>
+  </div>
+</section>
+
+<section class="plain wide" id="before">
+  <div class="prose">
+    <h2><span class="n">7</span>What went wrong before</h2>
+    <ul>
+      <li><strong>A frame of no samples.</strong> Section 1's floor guard
+        (<cite data-src="lib/render-loop.js" data-sym="/* The adaptive sample count. `count > 1` as the floor guard let floating point walk" data-to="cheerfully reports 60 fps. Clamped instead of guarded."></cite>).</li>
+      <li><strong>A governor that hunted.</strong> Section 1's fixed steps
+        (<cite data-src="lib/render-loop.js" data-sym="...and it oscillated, which is the other half of why the HUD was unreadable. Two" data-to="terms is wide enough to settle in. */"></cite>).</li>
+      <li><strong>The heavy scene handed a light one's count.</strong> The governor's count climbs on a fast scene and
+        was never reset, so a light scene's 64 samples a frame were once handed to the heavy scene opened next; a
+        sample that fits a slice now gets only as many as fit
+        (<cite data-src="lib/pathtracer/core/raytrace_main.js" data-sym="fits in sliceMs, no more samples than fit -- the governor's count (render-loop.js) climbs on a fast loop and"></cite>).</li>
+      <li><strong>A card that hung.</strong> Section 3: one submission of a whole heavy sample
+        (<cite data-src="lib/pathtracer/core/raytrace_main.js" data-sym="/* NO SUBMIT LONG ENOUGH TO BE KILLED. Windows resets the GPU when one submission runs about 2 s" data-to="rays of too heavy a scene."></cite>).</li>
+      <li><strong>A frame timed with its wait.</strong> The split is sized from how long the card was busy with the last
+        frame; timed from the frame's recording instead, a 200 ms sample queued behind another read about 400 and was cut
+        into submissions it did not need (chapter 25's story).</li>
+      <li><strong>A run that never ended.</strong> Section 6's watchdog
+        (<cite data-src="lib/pathtracer/runwatch.js" data-sym="The run then showed"></cite>).</li>
+    </ul>
+  </div>
+</section>
+
+</main>
+</body>
+</html>

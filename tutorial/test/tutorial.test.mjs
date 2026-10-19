@@ -1214,6 +1214,8 @@ for (const [name, { mod }] of modules) {
     }
     ok('ch.26: culled whole at the root no ray goes wrong and the box\'s distance never exceeds the true distance to the join; B culled inside the lens, all six stop 1.2 short; inside the blend three go wrong, two straight through', wrong('intersect', 'root').length === 0 && wrong('blend', 'root').length === 0 && rootOk
         && wrong('intersect', 'inside').length === 6 && lensShort.every(d => Math.abs(d - 1.2) < 0.02) && wrong('blend', 'inside').length === 3 && blendMiss === 2, lensShort.map(d => d.toFixed(3)).join(' '))
+    const Pw = K.joined(ST.JOINS.intersect, 0.05, 1.7, 'root'), Pt = K.lensTrueDist(ST.JOINS.intersect, 0.05, 1.7)
+    ok('ch.26: above the lens\'s tip, the formula 0.820, the box 0.900, the truth 0.901 (to the tip, 0.8 high)', Pw.truth.toFixed(3) === '0.820' && Pw.culled.toFixed(3) === '0.900' && Pt.toFixed(3) === '0.901' && Math.abs(Pt - Math.hypot(0.05, 0.9)) < 1e-12)
     // the shell: the figure's numbers, and its distances below the true ones
     const sh = (shell, lip) => ST.shellFan({ shell, ratio: 0.17, lip })
     const a1 = sh('none', 'modifier'), a2 = sh('shell', 'modifier'), a3 = sh('none', 'measured'), a4 = sh('shell', 'measured')
@@ -1243,6 +1245,91 @@ for (const [name, { mod }] of modules) {
         && pf.includes('So the shell took 48 ms off the march (-38%) and 21 off the occlusion rays (-33%)') && pf.includes('Noise library 250.4 against 988.9 with boxes off, 3.95x')
         && ar.includes('| the optics bench | 217.6 (131.0 / 60.4) |') && ar.includes('the optics bench -27%, the optics bench as data -19%,') && ar.includes('+81.4 (+11%)')
         && ar.includes('the showcase -14.8% (-13.4%), Surface materials -4.4%') && cg.replace(/\s+/g, ' ').includes("the Noise library's six reliefs, 89% of its time") && NZ.NZ_RELIEF_LIP_MEASURED === 11.2)
+}
+
+/* CHAPTER 27: FASTER COMPILES ------------------------------------------------------------------------------------ */
+{
+    const CK = await import('../kit/compiles.js'), CC = await import('../ch/compiles.js'), CP = await import('../../lib/pathtracer/core/compileprogress.js')
+    const rv = readFileSync(join(REPO, 'docs/PERFORMANCE_REVIEW.md'), 'utf8'), wf = readFileSync(join(REPO, 'lib/pathtracer/core/wavefront.js'), 'utf8'), rm = readFileSync(join(REPO, 'lib/pathtracer/core/raytrace_main.js'), 'utf8')
+    const row = b => `| ${b.scene} | ${b.all.toFixed(1)} | ${b.seq.toFixed(1)} | ${b.shade.toFixed(1)} | ${b.occlude.toFixed(2)} | ${b.march.toFixed(2)} | ${b.shadeK}K |`
+    ok('ch.27: the six measured builds are the review\'s §10.3 rows', CK.BUILDS.every(b => rv.includes(row(b))), CK.BUILDS.filter(b => !rv.includes(row(b))).map(b => b.scene).join(', '))
+    ok('ch.27: all at once 16 to 21% under one at a time; shade 76 to 82% of one at a time; the ten small kernels 0.28 to 0.39 s together', CK.BUILDS.every(b => { const g = Math.round(100 * (1 - b.all / b.seq)), sh = Math.round(100 * b.shade / b.seq), sm = CK.smallOf(b); return g >= 16 && g <= 21 && sh >= 76 && sh <= 82 && sm >= 0.28 && sm <= 0.39 })
+        && rv.includes('All at once beat one at a time by 16-20%') && rv.includes('It is 76-82% of the kernels\' time one at a time'))
+    const L1 = CK.layout(CK.BUILDS[0], 'blocking'), L3 = CK.layout(CK.BUILDS[0], 'once')
+    ok('ch.27: blocking, the page frozen for the 13.4 s; all at once, every kernel from 0 and the build ready at the measured 11.2', L1.frozen === 13.4 && L1.bars.at(-1).to.toFixed(1) === '13.4' && L3.frozen === 0 && L3.ready === 11.2 && L3.bars.every(b => b.from === 0))
+    ok('ch.27: 0.10.0\'s shade 11.4 to 5.9 s and the revisits 4.2 and 3.0 to 2.0 and 0.56 are the review\'s', rv.includes('| Noise library | 11.4 s | 5.9 s | −48% |') && rv.includes('| Noise library: show it again, hide it again (texts seen before) | 4.2 s, 3.0 s | 2.0 s, 0.56 s |'))
+    // the kernels: the model's sixteen are the engine's table today (the step cache off, the photon map on), and exactly
+    // the march, surface and occlusion kernels (and the step cache's fill) declare the scene's uniforms
+    const table = [...rm.slice(rm.indexOf('const wavefrontKernels = '), rm.indexOf('PER-KERNEL GPU TIME')).matchAll(/\['(\w+)', 'prog_/g)].map(m => m[1]).filter(n => n !== 'stepcache_fill')
+    const mine = Object.keys({ ...CK.FREE, ...CK.sceneKernels(0) })
+    const kernelText = name => { const i = wf.indexOf(`export let prog_${name} =`); return i < 0 ? '' : wf.slice(i, wf.indexOf('\nexport ', i + 10)) }
+    const sceneful = ['march', 'surface', 'occlude', 'stepcache_fill'].every(n => kernelText(n).includes('computeUniformTypes(scene.uniforms)'))
+    const free = ['shade', 'sppm', 'resolve', 'genphotons', 'emit_collect'].every(n => !kernelText(n).includes('computeUniformTypes(scene.uniforms)'))
+    ok('ch.27: the session\'s sixteen kernels are the engine\'s table; march, surface and occlusion hold the scene, shade and the others declare the base uniforms only', table.length === 16 && mine.length === 16 && table.every(n => mine.includes(n)) && sceneful && free
+        && (wf.match(/computeUniformTypes\(scene\.uniforms\)/g) || []).length === 4, `${table.join(' ')} | ${mine.join(' ')}`)
+    const P = CK.playSession(), off = CK.playSession(CK.SESSION, { cache: false }), nofree = CK.playSession(CK.SESSION, { free: false })
+    const sizesOf = st => Object.entries({ ...CK.FREE, ...CK.sceneKernels(st.size) }).map(([name, size]) => ({ name, size }))
+    ok('ch.27: the session: open 16 compiled; a value nothing; a shape 3 compiled, 13 cached; scene B 3; back and undo all cached; each build predictCompile\'s', P.map(p => `${p.compiled.length}/${p.cached.length}`).join(' ') === '16/0 0/0 3/13 3/13 0/16 0/16'
+        && P.filter(p => p.compiled.length).every(p => p.ms === CP.predictCompile(sizesOf(p).map(k => ({ ...k, cached: !p.compiled.includes(k.name) }))).expectMs), P.map(p => `${p.compiled.length}/${p.cached.length}`).join(' '))
+    ok('ch.27: without the cache every text change compiles all sixteen; without the scene-free kernels a shape or a scene does, a revisit still cached', off.map(p => p.compiled.length).join(' ') === '16 0 16 16 16 16' && nofree.map(p => p.compiled.length).join(' ') === '16 0 16 16 0 0')
+    // the bar
+    const C13 = CC.barCurves(10, 1.3), atT = (C, t) => CK.countBar(t * 1000, C.ready)
+    ok('ch.27: a build predicted 10 s taking 13: the old bar 88% after a second; the clock\'s 9%, 90% at the prediction, never 100% before the end', Math.round(100 * atT(C13, 1)) === 88 && Math.round(100 * CP.compileFraction(1000, 10000)) === 9
+        && CP.compileFraction(10000, 10000).toFixed(2) === '0.90' && [11, 15, 25, 100].every(t => CP.compileFraction(t * 1000, 10000) < 0.99) && CP.compileLabel(7000, 10000) === 'about 3 s left' && CP.compileLabel(12000, 10000) === 'taking longer than usual')
+    const lr = CK.learning(CC.LEARN_STEPS, { slow: 2 }), fast = CK.learning(CC.LEARN_STEPS, { slow: 0.2 }), slow6 = CK.learning(CC.LEARN_STEPS, { slow: 6 })
+    const err = q => q.predicted / q.took - 1
+    ok('ch.27: learning a machine twice as slow: −50%, −25%, −12.5%, −6.3%, the reload ignored, then within 2%; one five times faster never learns; one six times slower doubles at most', ['-0.500', '-0.250', '-0.125', '-0.063'].every((v, i) => err(lr[i]).toFixed(3) === v)
+        && lr[4].cacheHit && lr[4].learned === lr[4].rate && Math.abs(err(lr[6])) < 0.02 && fast.every(q => q.learned === CP.DEFAULT_RATE) && Math.abs(slow6[0].learned / CP.DEFAULT_RATE - 2) < 1e-9, lr.map(q => err(q).toFixed(3)).join(' '))
+    const readme = readFileSync(join(REPO, 'lib/pathtracer/README.md'), 'utf8'), twg = readFileSync(join(REPO, 'lib/tinywebgpu/src/tinywebgpu.js'), 'utf8'), ar = readFileSync(join(REPO, 'roadmap/ARCHITECTURE.md'), 'utf8')
+    ok('ch.27: the stories and numbers are where the page says', readme.includes('raising the Menger iteration count froze the tab with no error') && twg.includes('seconds to a minute in which the page cannot')
+        && rm.includes('This was nine sequential awaits, and every one of them awaited nothing') && ar.includes('| lens assembly x 32, as data | 52 205 -> 1 802 |') && readFileSync(join(REPO, 'docs/PERFORMANCE.md'), 'utf8').includes('That took the Noise library from over a minute to ~20 s.'))
+}
+
+/* CHAPTER 28: FEELING FAST -------------------------------------------------------------------------------------- */
+{
+    const FE = await import('../kit/feel.js'), FC = await import('../ch/feel.js')
+    // THE GOVERNOR MIRROR HELD TO THE REAL LOOP: lib/render-loop.js run in a child process (it reads the browser's
+    // requestAnimationFrame and performance.now, stubbed there, not here), each frame's interval the last frame's cost
+    const { execFileSync } = await import('node:child_process')
+    const realSpp = (sampleMs, frames = 160) => JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', `
+        let clock = 0, due = []
+        Object.defineProperty(globalThis, 'performance', { value: { now: () => clock }, configurable: true, writable: true })
+        globalThis.requestAnimationFrame = f => { due.push(f) }
+        const { makeRenderLoop } = await import(${JSON.stringify(join(REPO, 'lib/render-loop.js'))})
+        const spp = [], cost = { paced: () => false, frame() { }, record: f => f(), submitted() { }, reset() { } }
+        const L = makeRenderLoop(n => { spp.push(n) }, cost, { start: 3 })
+        L.start()
+        let last = 1000 / 60
+        for (let k = 0; k < ${frames}; k++) { clock += last; const d = due; due = []; for (const f of d) f(); await new Promise(r => setTimeout(r, 0)); last = 5 + spp[spp.length - 1] * ${sampleMs} }
+        console.log(JSON.stringify(spp))`], { encoding: 'utf8' }))
+    const same = ms => { const real = realSpp(ms), mine = FE.governor({ sampleMs: ms, rule: 'now', frames: 160 }).map(f => f.spp); return real.length === 160 && real.every((v, i) => v === mine[i]) }
+    ok('ch.28: the figure\'s governor traces, frame by frame, what the real render-loop.js does, at 5, 20 and 60 ms a sample', [5, 20, 60].every(same))
+    const g20 = FE.governor({ sampleMs: 20 }), g5 = FE.governor({ sampleMs: 5 }), b20 = FE.governor({ sampleMs: 20, rule: 'before' }), b60 = FE.governor({ sampleMs: 60, rule: 'before' })
+    ok('ch.28: today, 2 samples at 22 fps settled; a light scene 8 within 35 frames; before, hunting 2 and 3, and 0 and 1 on a heavy scene', g20.slice(-20).every(f => f.spp === 2) && g5.slice(35).every(f => f.spp === 8)
+        && new Set(b20.slice(-20).map(f => f.spp)).size === 2 && b60.slice(-20).some(f => f.spp === 0) && g20.every(f => f.spp >= 1))
+    let x = 3; for (let i = 0; i < 19; i++) x -= 0.1
+    ok('ch.28: nineteen steps of 0.1 down from 3 reach 1.0999999999999983, the next 0.9999999999999983', x === 1.0999999999999983 && x - 0.1 === 0.9999999999999983 && Math.floor(x - 0.1) === 0)
+    // the drag, through the real interaction.js and quality.js
+    const mode = held => { const d = FE.dragTimeline({ held }), ch = []; d.forEach((f, k) => { if (k && f.mode !== d[k - 1].mode) ch.push([f.t, f.mode]) }); return ch }
+    const h = mode(true), f = mode(false)
+    ok('ch.28: a held drag traces Draft from its first poke to 0.4 s after the button comes up; a poking one drops to full in its pause and back', h.length === 2 && h[0][1] === 1 && h[0][0] === 304 && h[1][1] === 0 && h[1][0] >= 2100 && h[1][0] <= 2120
+        && f.length === 4 && f[1][1] === 0 && f[1][0] >= 1088 && f[1][0] <= 1104 && f[2][1] === 1, JSON.stringify([h, f]))
+    // the slicing and the submissions, their constants held to the engine's exports
+    let RM = null; try { RM = await import('../../lib/pathtracer/core/raytrace_main.js') } catch { }
+    ok('ch.28: the copied constants are raytrace_main.js\'s', !RM || (RM.SUBMIT_MS === FE.SUBMIT_MS && RM.SPLIT_OVER_MS === FE.SPLIT_OVER_MS && RM.SPLIT_ITERS === FE.SPLIT_ITERS && RM.SLICE_MAX === FE.SLICE_MAX && RM.SLICE_MIN_RAYS === FE.SLICE_MIN_RAYS && RM.SLICE_UNTIMED === FE.SLICE_UNTIMED), RM ? 'held' : 'raytrace_main.js not importable here')
+    const s1 = FE.slicing({ sampleMs: 1000, px: 1280 * 720 }), s10 = FE.slicing({ sampleMs: 10000, px: 1280 * 720 }), s640 = FE.slicing({ sampleMs: 10000, px: 640 * 360 }), s20 = FE.slicing({ sampleMs: 20, px: 1280 * 720 })
+    ok('ch.28: 20 ms whole; a second in 34 batches; 10 s at 720p 57 batches of 175 ms; at 640 x 360 15 of 667 ms, 5 submissions of 5 iterations', !s20.sliced && s20.K === 1 && s1.K === 34 && s1.perCall === 1 && s10.K === 57 && Math.round(s10.frameMs) === 175 && s10.submissions === 1
+        && s640.K === 15 && Math.round(s640.frameMs) === 667 && s640.splitEvery === 5 && s640.submissions === 5)
+    // two in flight: runSamples' own order, and the figure's times
+    const { runSamples } = await import('../../lib/pathtracer/samples.js')
+    // the loop's own record: each trace as it is made, each sample as the loop has waited for it (onProgress)
+    const realOrder = async depth => { const ev = []; let n = 0; await runSamples(6, { inFlight: depth, trace: async () => { ev.push(`trace ${++n}`) }, done: async () => { }, onProgress: k => ev.push(`done ${k}`) }); return ev }
+    const r1 = await realOrder(1), r2 = await realOrder(2)
+    ok('ch.28: the figure\'s order of recordings and waits is runSamples\', one in flight and two', r1.join() === FE.inFlight(6, { cpuMs: 12, gpuMs: 40, depth: 1 }).order.join() && r2.join() === FE.inFlight(6, { cpuMs: 12, gpuMs: 40, depth: 2 }).order.join(), `${r2.join(' ')} | ${FE.inFlight(6, { cpuMs: 12, gpuMs: 40, depth: 2 }).order.join(' ')}`)
+    ok('ch.28: six samples of 12 + 40 ms: 312 one in flight, 252 two', FE.inFlight(6, { cpuMs: 12, gpuMs: 40, depth: 1 }).ms === 312 && FE.inFlight(6, { cpuMs: 12, gpuMs: 40, depth: 2 }).ms === 252)
+    const rv = readFileSync(join(REPO, 'docs/PERFORMANCE_REVIEW.md'), 'utf8'), rl = readFileSync(join(REPO, 'lib/render-loop.js'), 'utf8')
+    ok('ch.28: the measured numbers are where the page says', rl.includes('took 1.4-6.8 s, and 0.2 s with it paused') && readFileSync(join(REPO, 'lib/pathtracer/samples.js'), 'utf8').includes('13-25% off a sample')
+        && rv.includes('257.6') && rv.includes('225.0') && rv.includes('57.5') && rv.includes('42.9') && readFileSync(join(REPO, 'lib/render-cost.js'), 'utf8').includes('seventeen seconds of backlog'))
 }
 
 /* THE EXCERPT LOCATOR ON ITS OWN ----------------------------------------------------------------------------------- */

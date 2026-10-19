@@ -263,6 +263,20 @@ real student.
 4. What is a relief's shell, and why did it save less than was expected?
 5. How can a ray move without asking the scene at all, and what went wrong with the first way the cache was filled?
 
+**compiles** (Faster compiles)
+1. Why could a compile freeze the whole page, and what stops it now?
+2. Why does compiling all the kernels at once take about as long as the slowest, and not the sum?
+3. When a shape is added, which kernels compile again, and why do the others not?
+4. Why did the old progress bar stick near the end, and how does the new one decide where to be?
+5. How does the bar learn a machine's own speed, and which builds does it refuse to learn from?
+
+**feel** (Feeling fast)
+1. How does the live view decide how many samples to trace each frame, and why did the old rule hunt?
+2. What does the view draw while you drag the camera, and how does it know you are dragging?
+3. Why is a heavy sample cut into pieces across frames, and why can it not always fit 30 ms?
+4. Why is a heavy frame sent to the graphics card in several submissions?
+5. How does having two samples in flight make an offscreen render faster?
+
 **index** (the contents)
 1. What will you learn in this tutorial, and do you need to know anything before starting?
 2. What do the three stamps mean?

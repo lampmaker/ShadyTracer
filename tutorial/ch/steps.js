@@ -82,7 +82,11 @@ export const figures = {
             const F = shelf(s.cull, s.shell === 'shell'), ref = shelf('off', false).cost
             for (const n of NODES) drawNode(pen, n)
             if (s.cull !== 'off') for (const n of NODES) if (n.box && (s.cull === 'all' || K.isDear(n))) boxRect(pen, n.box)
-            for (const n of NODES) if (n.kind === 'relief') pen.label([n.c[0], n.c[1] + n.r + 0.35], n.id, { role: 'soft', size: 12, align: 'center' })
+            for (const n of NODES) if (n.kind === 'relief') {
+                pen.label([n.c[0], n.c[1] + n.r + 0.35], n.id, { role: 'soft', size: 12, align: 'center' })
+                if (s.shell === 'shell') { const { slope, reach } = K.reliefBounds(n), band = 2 * reach + (slope + 1) * 1e-3
+                    pen.circle(n.c, n.r + band, { role: 'normal', w: 1.1, exact: true }) }
+            }
             // which ray is pointed at: the one nearest the pointer's direction from the eye
             const hp = pen.hover(), hw = hp && [(hp.x - pen.view.ox) / pen.view.s, (pen.view.oy - hp.y) / pen.view.s]
             const pick = hw ? Math.round(((Math.atan2(hw[1] - EYE[1], hw[0] - EYE[0]) - DIR) / FOV + 0.5) * RAYS - 0.5) : -1
@@ -106,14 +110,14 @@ export const figures = {
     },
 
     root: {
-        aspect: 1.7,
-        world: { x: [-3.4, 3.4], y: [-1.9, 2.1] },
-        state: { op: 'intersect', how: 'root', P: [-1.9, 0.35] },
+        aspect: 1.45,
+        world: { x: [-3.4, 3.4], y: [-1.9, 2.75] },
+        state: { op: 'intersect', how: 'root', P: [0.05, 1.7] },
         controls: [
             { type: 'seg', key: 'op', options: [['intersect', 'A ∩ B: a lens'], ['blend', 'A and B blended']] },
             { type: 'seg', key: 'how', options: [['root', 'Culled whole, at the root'], ['inside', 'B culled inside the join']] },
         ],
-        steps: { whole: { op: 'intersect', how: 'root', P: [-1.9, 0.35] }, lens: { op: 'intersect', how: 'inside', P: [-1.9, 0.35] }, blend: { op: 'blend', how: 'inside', P: [0, 0.5] } },
+        steps: { whole: { op: 'intersect', how: 'root', P: [0.05, 1.7] }, lens: { op: 'intersect', how: 'inside', P: [-1.9, 0.35] }, blend: { op: 'blend', how: 'inside', P: [0, 0.5] } },
         drag: { P: (s, p) => { s.P = [Math.max(-3.3, Math.min(3.3, p[0])), Math.max(-1.8, Math.min(2, p[1]))] } },
         draw(pen, s) {
             const J = JOINS[s.op]
@@ -121,7 +125,8 @@ export const figures = {
             pen.circle(J.a.c, J.a.r, { role: 'soft', w: 0.7, dash: [3, 4], exact: true }); pen.circle(J.b.c, J.b.r, { role: 'soft', w: 0.7, dash: [3, 4], exact: true })
             pen.label([J.a.c[0] - J.a.r * 0.75, J.a.c[1] - J.a.r * 0.95], 'A', { role: 'soft', size: 14 }); pen.label([J.b.c[0] + J.b.r * 0.6, J.b.c[1] - J.b.r * 0.95], 'B', { role: 'soft', size: 14 })
             boxRect(pen, s.how === 'root' ? J.box : J.bBox)
-            pen.label(s.how === 'root' ? [J.box.lo[0], J.box.hi[1] + 0.14] : [J.bBox.lo[0], J.bBox.hi[1] + 0.14], s.how === 'root' ? 'the join\'s box' : 'B\'s own box', { role: 'accent', size: 12 })
+            const bx = s.how === 'root' ? J.box : J.bBox
+            pen.label([bx.hi[0] + 0.06, bx.lo[1] + 0.12], s.how === 'root' ? 'the join\'s box' : 'B\'s own box', { role: 'accent', size: 12 })
             // what the march would see with the culling done there: its surface, where it differs from the join's
             if (s.how === 'inside') pen.field((x, y) => K.joined(J, x, y, 'inside').culled, { step: 99, inside: 'blocked', lines: 'faint', zero: 'blocked', insideLines: false })
             for (const [o, d] of J.rays) {
@@ -133,15 +138,15 @@ export const figures = {
             }
             const v = K.joined(J, s.P[0], s.P[1], s.how)
             pen.circle(s.P, Math.abs(v.truth), { role: 'cam', w: 1, dash: [4, 3], exact: true })
-            if (Math.abs(v.culled - v.truth) > 1e-9) pen.circle(s.P, Math.abs(v.culled), { role: 'blocked', w: 1.2, exact: true })
+            if (Math.abs(v.culled - v.truth) > 1e-9) pen.circle(s.P, Math.abs(v.culled), { role: 'accent', w: 1.4, exact: true })
             pen.handle('P', s.P, { label: 'P' })
         },
         readout(s) {
             const J = JOINS[s.op], v = K.joined(J, s.P[0], s.P[1], s.how)
             const stops = J.rays.map(([o, d]) => [K.marchJoined(J, o[0], o[1], d[0], d[1], s.how), K.marchJoined(J, o[0], o[1], d[0], d[1], s.how, { field: 'truth' })])
             const wrong = stops.filter(([m, t]) => m.hit !== t.hit || Math.hypot(m.x - t.x, m.y - t.y) > 0.02).length
-            const what = s.op === 'intersect' ? 'lens' : 'blend'
-            return `at P: the ${what}'s own formula ${v.truth.toFixed(3)}; the scene answers ${v.culled.toFixed(3)}${v.skipped ? (s.how === 'root' ? ` (the box's distance stands in: the ${what} is inside its box, so nothing of it is nearer)` : ' (B skipped, its box\'s distance a cap)') : ' (nothing skipped here)'} · ${wrong} of ${J.rays.length} rays end somewhere else than they should`
+            const what = s.op === 'intersect' ? 'lens' : 'blend', real = s.op === 'intersect' && v.truth > 0 ? `, the true distance ${K.lensTrueDist(J, s.P[0], s.P[1]).toFixed(3)}` : ''
+            return `at P: the ${what}'s own formula ${v.truth.toFixed(3)}${real}; the scene answers ${v.culled.toFixed(3)}${v.skipped ? (s.how === 'root' ? ` (the box's distance stands in: the ${what} is inside its box, so nothing of it is nearer)` : ' (B skipped, its box\'s distance a cap)') : ' (nothing skipped here)'} · ${wrong} of ${J.rays.length} rays end somewhere else than they should`
         },
     },
 
@@ -169,9 +174,11 @@ export const figures = {
             for (const r of F.rays) for (const st of r.steps) pen.dot([st.x, st.y], { role: st.cost > 1 ? 'light' : 'cam', r: 2 })
             if (s.circles) {
                 // the middle ray's steps as circles: how far each was allowed to go
-                const r = F.rays[SHELL_RAYS >> 1]
+                const r = F.rays[SHELL_RAYS >> 1], first = r.steps[0], ring = outlineOf(R)
                 for (const st of r.steps) pen.circle([st.x, st.y], st.d, { role: 'step', w: 0.8, exact: true })
-                pen.labelPx(12, 26, `the middle ray's steps as circles, each as far as it may go: ${r.steps.length} of them`, { role: 'soft', size: 11, base: 'top' })
+                // the room the first step really had: its distance to the relief's surface
+                pen.circle([first.x, first.y], Math.min(...ring.map(q => Math.hypot(q[0] - first.x, q[1] - first.y))), { role: 'cam', w: 1, dash: [4, 3], exact: true })
+                pen.labelPx(12, pen.view.H - 24, `the middle ray's steps as circles, each as far as it may go: ${r.steps.length} of them`, { role: 'soft', size: 11, base: 'bottom' })
             }
             if (hp) {
                 const w = [(hp.x - pen.view.ox) / pen.view.s, (pen.view.oy - hp.y) / pen.view.s]
@@ -180,7 +187,7 @@ export const figures = {
                 if (best && best.d < 0.15) { pen.circle([best.st.x, best.st.y], best.st.d, { role: 'step', w: 0.8, exact: true }); pen.tip(hp.x, hp.y, [`a step of ${best.st.d.toFixed(3)}`, best.st.cost > 1 ? `the noise paid (${K.OCTAVES} octaves), the distance divided by ${slope.toFixed(2)}` : 'no noise: the plain distance less the reach']) }
             }
             pen.eye(SHELL_EYE, SHELL_DIR, { size: 16 })
-            pen.labelPx(12, 10, `slope bound ${slope.toFixed(2)} · the noise's reach ${reach.toFixed(3)} · the shell ${band.toFixed(3)} out from the plain circle`, { role: 'soft', size: 11, base: 'top' })
+            pen.labelPx(12, pen.view.H - 8, `slope bound ${slope.toFixed(2)} · the noise's reach ${reach.toFixed(3)} · the shell ${band.toFixed(3)} out from the plain circle`, { role: 'soft', size: 11, base: 'bottom' })
         },
         readout(s) {
             const F = shellFan(s), other = shellFan({ ...s, shell: s.shell === 'shell' ? 'none' : 'shell' })
@@ -192,13 +199,13 @@ export const figures = {
     cache: {
         aspect: 1.75,
         world: { x: [-8.3, 7.3], y: [-0.7, 8.2] },
-        state: { looks: 'off', cells: 1024, fill: 'pick', balls: false },
+        state: { looks: 'off', cells: 1024, fill: 'pick', balls: false, jump: false },
         controls: [
             { type: 'seg', key: 'looks', options: [['off', 'No cache'], ['own', 'Its own cell'], ['ahead', 'And two cells ahead']] },
             { type: 'seg', key: 'cells', label: 'cells', options: [[256, '256'], [1024, '1,024'], [4096, '4,096']] },
             { type: 'seg', key: 'fill', label: 'filled from', options: [['pick', 'the copy without boxes'], ['render', 'the copy with boxes (the bug)']] },
         ],
-        steps: { balls: { looks: 'own', cells: 1024, fill: 'pick', balls: true }, own: { looks: 'own', cells: 1024, fill: 'pick', balls: false }, ahead: { looks: 'ahead', cells: 1024, fill: 'pick' }, orange: { looks: 'own', cells: 1024, fill: 'render' } },
+        steps: { balls: { looks: 'own', cells: 1024, fill: 'pick', balls: true }, own: { looks: 'own', cells: 1024, fill: 'pick', balls: false, jump: true }, ahead: { looks: 'ahead', cells: 1024, fill: 'pick' }, orange: { looks: 'own', cells: 1024, fill: 'render' } },
         draw(pen, s) {
             const C = cacheOf(s.cells, s.fill), F = cacheRun(s)
             // the cells, each shaded in ink by its ball's radius: the darker, the nearer a surface (a ball of 1.5 or more: none)
@@ -209,7 +216,15 @@ export const figures = {
                 ctx.fillRect(pen.view.ox + (C.lo[0] + i * C.cs) * px, pen.view.oy - (C.lo[1] + (j + 1) * C.cs) * px, C.cs * px + 0.5, C.cs * px + 0.5)
             }
             ctx.restore()
-            boxRect(pen, CACHE_BOX, 'soft', [2, 3])
+            boxRect(pen, { lo: C.lo, hi: [C.lo[0] + C.nx * C.cs, C.lo[1] + C.ny * C.cs] }, 'soft', [2, 3])     // the grid: the box, rounded up to whole cells
+            if (s.fill === 'render') {
+                // the cells whose ball the copy with boxes made smaller than the copy without
+                const P = cacheOf(s.cells, 'pick')
+                ctx.save(); ctx.fillStyle = pen.col('accent'); ctx.globalAlpha = 0.35
+                for (let j = 0; j < C.ny; j++) for (let i = 0; i < C.nx; i++) if (C.R[i + C.nx * j] < P.R[i + C.nx * j] - 1e-9)
+                    ctx.fillRect(pen.view.ox + (C.lo[0] + i * C.cs) * px, pen.view.oy - (C.lo[1] + (j + 1) * C.cs) * px, C.cs * px + 0.5, C.cs * px + 0.5)
+                ctx.restore()
+            }
             for (const n of NODES) drawNode(pen, n)
             if (s.fill === 'render') for (const n of NODES) if (K.isDear(n)) boxRect(pen, n.box)
             if (s.balls) {
@@ -223,9 +238,22 @@ export const figures = {
             pen.rays(F.rays.map(r => [EYE, [r.x, r.y]]), { role: 'cam', w: 0.7, alpha: 0.28 })
             // a step from the cache drawn as the jump it makes, to the next step's point
             for (const r of F.rays) r.steps.forEach((st, k) => {
-                if (st.kind === 'cache') { const nx = r.steps[k + 1] ?? r; pen.line([st.x, st.y], [nx.x, nx.y], { role: 'shadow', w: 2.4, exact: true }) }
+                if (st.kind === 'cache') { const nx = r.steps[k + 1] ?? r; pen.line([st.x, st.y], [nx.x, nx.y], { role: 'shadow', w: 2.4, exact: true, dash: [] }) }
                 else pen.dot([st.x, st.y], { role: 'cam', r: 1.6 })
             })
+            if (s.jump && s.looks !== 'off') {
+                // one jump shown: of the cache steps that start well off their ball's centre, the one with the largest ball
+                const pick = F.rays.flatMap(r => r.steps.map((st, k) => ({ st, next: r.steps[k + 1] ?? r })))
+                    .filter(q => q.st.kind === 'cache' && Math.hypot(q.st.x - q.st.ball.c[0], q.st.y - q.st.ball.c[1]) > 0.4 * q.st.ball.r)
+                    .sort((a, b) => b.st.ball.r - a.st.ball.r)[0]
+                if (pick) {
+                    pen.circle(pick.st.ball.c, pick.st.ball.r, { role: 'accent', w: 1.4, exact: true }); pen.dot(pick.st.ball.c, { role: 'accent', r: 2.5 })
+                    const L = Math.hypot(pick.next.x - pick.st.x, pick.next.y - pick.st.y), ex = [pick.st.x + (pick.next.x - pick.st.x) / L * pick.st.d, pick.st.y + (pick.next.y - pick.st.y) / L * pick.st.d]
+                    pen.dot([pick.st.x, pick.st.y], { role: 'accent', r: 3.5, ring: true }); pen.dot(ex, { role: 'accent', r: 3.5 })
+                    const right = ex[0] > 0
+                    pen.label(ex, 'where it leaves the ball (the step: 0.9 of the way)', { role: 'accent', size: 12, dx: right ? -8 : 8, dy: -12, bg: true, align: right ? 'right' : 'left' })
+                }
+            }
             const hp = pen.hover()
             if (hp) {
                 const w = [(hp.x - pen.view.ox) / pen.view.s, (pen.view.oy - hp.y) / pen.view.s]
