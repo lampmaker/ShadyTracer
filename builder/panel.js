@@ -44,6 +44,8 @@ import { shapesOf, isCsg } from './codegen.js'
 import { recipeOf, parseRecipe, applyRecipe } from './recipe.js'
 import { RAYFILES, rayBox } from '../optics/rayfiles.js'
 import { UNITS } from '../lib/pathtracer/core/photometry.js'
+import { changeUnit } from './unitchange.js'
+import { openUnitDialog } from './unitdialog.js'
 import { exportGrid, gridProblem, EXPORT_DEFAULTS } from './exportbox.js'
 import { visibilityOf, HAZE_G_MAX } from './hazebox.js'
 import { makeAfter } from './params.js'
@@ -487,22 +489,38 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
                     sampleRow(folder, doc)
                 }
                 /* THE SCENE'S UNIT. Every number in the scene is in it -- radius 1 is a metre,
-                   a centimetre or a millimetre -- and changing it REINTERPRETS those numbers
-                   rather than converting them, so the scene shrinks or grows by the factor.
-                   Structural, because it reaches the renderer with the scene object (codegen's
-                   `unit`), which is where the march epsilon and the surface offsets are
-                   rescaled from. Light does not change: radiance has no length in it. */
+                   a centimetre or a millimetre. Changing it ASKS how (unitdialog.js, unitchange.js; the user,
+                   2026-10-19): keep the real size by scaling the objects, keep it by converting their
+                   dimensions -- the camera, the radius and the tolerance converted with them -- or keep the
+                   numbers, the scene shrinking or growing by the factor, as every change did until 0.68.0.
+                   That last one was the only one, and on a new scene it hid itself: cm to mm left the
+                   picture as it was, the camera 4 mm off in a world 25 mm wide, and a box typed 10 swallowed
+                   the camera. Structural, because it reaches the renderer with the scene object (codegen's
+                   `unit`), which is where the march epsilon and the surface offsets are rescaled from. Light
+                   does not change: radiance has no length in it. */
                 const U = { unit: BUILDER.doc.unit ?? 'm' }
-                rowTip(folder.addBinding(U, 'unit', { label: 'unit',
+                const ub = rowTip(folder.addBinding(U, 'unit', { label: 'unit',
                     options: Object.fromEntries(Object.keys(M.UNITS).map(u => [u, u])) }),
-                    'What 1 means in every length of this scene: a metre, a centimetre or a millimetre. Changing it does not '
-                    + 'convert: a sphere of radius 1 stays 1, so the whole scene grows or shrinks by the factor. Light needs no '
-                    + 'change -- a luminance has no length in it. A material\'s own lengths are real mm whatever this is. A compile.')
-                    .on('change', ev => {
-                        BUILDER.doc.unit = ev.value; edited(null); onStructure()
-                        // the radius row's label says the unit (and a default radius is 400 m said in it)
-                        setTimeout(() => { if (shownId === node.id) show(shownId) })
-                    })
+                    'What 1 means in every length of this scene: a metre, a centimetre or a millimetre. Changing it asks how: '
+                    + 'keep the real size -- scaling the objects, or converting their dimensions, the camera, the radius and the '
+                    + 'tolerance with them -- or keep the numbers, a sphere of radius 1 staying 1, so the whole scene grows or '
+                    + 'shrinks by the factor. Light needs no change -- a luminance has no length in it. A material\'s own lengths '
+                    + 'are real mm whatever this is. A compile.')
+                // the radius row's label says the unit (and a default radius is 400 m said in it): the panel again
+                const redraw = () => setTimeout(() => { if (shownId === node.id) show(shownId) })
+                ub.on('change', ev => {
+                    const doc = BUILDER.doc, to = ev.value
+                    if (to === (doc.unit ?? 'm')) return
+                    openUnitDialog(ub.element, { doc, to, onCancel: redraw, onChoose: how => {
+                        try {
+                            // the builder's own (demo.js): one undo step that carries the camera back across its undo
+                            if (BUILDER.setUnit) BUILDER.setUnit(to, how)
+                            else { changeUnit(doc, to, how); edited(null) }
+                        } catch (e) { return e.message || String(e) }
+                        onStructure()
+                        redraw()
+                    } })
+                })
                 /* THE SCENE'S RADIUS (model.js envRadius, version 15): where it stops and the sky begins -- in
                    the Environment folder until 0.9.0, as a renderer setting in metres; the user wanted it here,
                    with the unit it is in. Live: the renderer reads it off the scene object (RT.updateScene), so a
@@ -1385,7 +1403,12 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
         held(pb, L.position, 'lock position'); boundRow(pb, 'pos.')
         const rb = bind(tf, t, 'rot', { label: 'rotation °', ...lockedOpts(Hd.position, true) }, push, at + 'rotation')
         held(rb, L.position, 'lock position'); boundRow(rb, 'rot.')
-        const sb = tf.addBinding(t, 'scale', { label: 'scale', min: 0.01, max: 10, step: 0.01, ...lockedOpts(Hd.params) })
+        /* A SCALE OUTSIDE 0.01 TO 10 IS A REAL ONE: a library item or a paste from another unit, and a unit changed by
+           scaling the objects (unitchange.js), put 1000 on a metre part in a mm scene and 0.001 the other way. The slider
+           held to 0.01 to 10 by 0.01 showed 10, and the first touch wrote it -- or 0.001 rounded to 0. So its reach
+           widens to hold the value (fitRange, as a parameter's), and its step is a hundredth of the value's decade. */
+        const sStep = Math.min(0.01, 10 ** Math.floor(Math.log10(t.scale > 0 ? t.scale : 1)) / 100)
+        const sb = tf.addBinding(t, 'scale', { label: 'scale', ...fitRange({ min: 0.01, max: 10 }, t.scale), step: sStep, ...lockedOpts(Hd.params) })
         sb.on('change', () => {
             // a zero or negative scale divides the point by nothing or mirrors the field
             if (!(t.scale > 0)) t.scale = 0.01

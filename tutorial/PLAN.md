@@ -320,9 +320,11 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
     formula in 3D (the bench's finding 7: 1.22 predicted, 0.80-0.84 measured), and two slabs whose 0.5 mm gap a ray
     leaving the first steps over (fresnel.js: one slab's 0.923 for two's 0.857); the tolerance's three terms against
     the distance from the origin for a scene's size, by tolerances.js and photometry.js, and the floor before 0.36.0;
-    a few lines of an engine kernel with one planted, through the real unitlint.js against the real boundary. Chapter
-    4 keeps the f32 normal noise and why 128. -> photometry.js autoEps, tolerances.js TOLERANCES, scene_api.js
-    sceneAt, tracebasics.js's two factors, unitlint.js. Measured: finding 7 (Ampere), the gap (Pascal), mm against m
+    a few lines of an engine kernel with one planted, through the real unitlint.js against the real boundary; and what a
+    number means when the scene's unit changes (0.68.0): kept, the scene growing by the factor, or the real size kept by
+    a scale on the top-level objects (exact for any code, which runs in its own frame) or by the numbers (exact only for
+    what the document says is a length, or per one). Chapter 4 keeps the f32 normal noise and why 128. -> photometry.js
+    autoEps, tolerances.js TOLERANCES, scene_api.js sceneAt, tracebasics.js's two factors, unitlint.js, builder/unitchange.js. Measured: finding 7 (Ampere), the gap (Pascal), mm against m
     (lavapipe). Inferred and said: the RGBW mixer's pattern. *Read:* wgsl-spec, iq-raymarching.
 31. **The optics bench** (draft): a cos^n source's rays binned by farfield.js's own farBin into intensity on a polar
     diagram, the peak read high by the largest of many noisy bins and the beam angle with it, and pooling round the

@@ -11,7 +11,8 @@ the parameters header adds one. Each parameter can be:
 - **live** (the usual): a slider moves the picture with no compile;
 - **compile-time**: built into the program, for a number the code must know before it runs, such as a loop's count.
   The Menger sponge's depth in [Infinite detail](example:infinite-detail.json) is one;
-- **a length**: shown in the scene's unit, and scaled with it;
+- **a length**: shown in the scene's unit, and converted with it when the unit changes and the dimensions are
+  converted ([Numbers are in the scene's unit](vs-cad.md#numbers-are-in-the-scenes-unit));
 - given a **range**, which its slider keeps to.
 
 Every setting in the program, the renderer's included, also has a path, such as `scene/<id>/radius`. The

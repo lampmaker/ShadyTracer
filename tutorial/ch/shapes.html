@@ -286,7 +286,7 @@
     <p>and the twist, written as a group's own code, calls it with one over the divisor of section 4 (warp multiplies
       the distances by what it is given):</p>
     <pre data-src="builder/modifiers.js" data-sym="twist: {" data-to="].join('\n'),"
-         data-why="A modifier is a group whose code starts as this; the user can change it. p is the point being asked about; children(C, p) asks the group's shapes at the turned point." data-hash="78234102"></pre>
+         data-why="A modifier is a group whose code starts as this; the user can change it. p is the point being asked about; children(C, p) asks the group's shapes at the turned point. lengths and perLength say which of its numbers are lengths in the scene's unit and which are per one (the rate is radians per unit): what a change of the scene's unit converts when it keeps the real size." data-hash="0937064b"></pre>
     <p>The relief, with its shell and its division, is code of the same kind:</p>
     <pre data-src="builder/modifiers.js" data-sym="const reliefCode" data-to="].join('\n')" data-max="40"
          data-why="peak is the four layers' strengths added up, slope the bound the distance is divided by, reach how far the noise can move the surface. Beyond 2 × reach (and a margin), the plain distance less the reach: no noise. Its comment lines are the code the user sees in the group." data-hash="be46cddc"></pre>

@@ -21,8 +21,10 @@ it. The far field offers it.
 ## Lengths, and what they do to the numbers
 
 A scene's numbers are in its unit (m, cm or mm). The engine works in metres inside: lux is lumens per square
-**metre** whatever the scene's unit, and a map's distances are in metres. Changing a scene's unit makes it bigger or
-smaller, so a light of fixed lumens gives a different illuminance on a detector that has grown or shrunk.
+**metre** whatever the scene's unit, and a map's distances are in metres. Changing a scene's unit while keeping the
+real size (scaling the objects, or converting their dimensions) changes no reading. Keeping the numbers makes the
+scene bigger or smaller, so a light of fixed lumens gives a different illuminance on a detector that has grown or
+shrunk.
 
 ## Colour
 
