@@ -195,6 +195,60 @@ real student.
 6. What did NEE cost ShadyTracer in the measurement the page reports, and why is it kept anyway?
 7. In 3D, how is the direction of a shadow ray towards a glowing ball chosen?
 
+**caustics** (Caustics)
+1. Why can a shadow ray from the floor not find the sun through a glass ball?
+2. What is light tracing, and which light does ShadyTracer give it?
+3. What goes wrong if both the camera's paths and the photons count a caustic?
+4. Which kind of path is nobody's, and why?
+5. How does the renderer decide where to start photons, and why connections per photon sent rather than connections?
+6. What does the 20% floor protect against?
+
+**photons** (Photon mapping)
+1. What is stored in a photon map, and when does a camera path gather from it?
+2. What goes wrong with a large radius, and with a small one?
+3. Why does a fixed radius never reach the right answer however many samples, and how does a shrinking one?
+4. Why does a gather visit only two cells in the flat world (eight in 3D)?
+5. What is a collision in the hash table, and why does it not count a photon twice?
+6. How can walking only some of a cell's sub-lists still be right on average?
+
+**haze** (Dust in the air)
+1. What does the mean free path mean, and what share of light crosses a length L?
+2. How is the distance to a particle drawn, and what weight does the ray carry after it?
+3. What does the asymmetry g change?
+4. Why is the beam nearly missing with the bounces only, and what does aiming at the sun from the air add?
+5. Why does a furnace that reads 1 with no noise not prove on its own that the dust is right?
+6. Why was the collision moved to be drawn when the leg starts?
+
+**gpu** (A GPU for beginners)
+1. Why does a group of threads take as long as its slowest one?
+2. Why do neighbouring pixels waste less than shuffled ones?
+3. Why does a single number after a vec3 not need a new 16-byte row?
+4. What is a dispatch, and what limit did the resolve kernel hit?
+5. Why must a submission not run too long?
+6. What happened with the barrier the checker passed?
+
+**wavefront** (Wavefront path tracing)
+1. What happens in one iteration, kernel by kernel?
+2. Why does the number of rays fall from one iteration to the next, and what is the drained tail?
+3. Why 24 iterations at ShadyTracer's defaults?
+4. What is the flush, and what does a too-short budget cost?
+5. How does the card know how many workgroups the next kernel needs without the main processor reading a count?
+6. Why does a wavefront keep the lanes busier than one big kernel?
+
+**accumulate** (Adding up light on a GPU)
+1. Why do six threads adding with a load and a store end with the wrong total?
+2. How does a compare-and-swap loop add a float correctly, and what does it cost when many threads hit one pixel?
+3. What went wrong with storing light as whole numbers at 65,536 a unit?
+4. Why is the picture's average updated only once a sample, one thread a pixel?
+5. Why is a big picture traced in batches, and why do they add up to one sample?
+
+**codegen** (From scene tree to shader)
+1. What is the difference between a value that is a uniform and one that is baked?
+2. Which edits need a new compile with code and uniforms, and which with baked code?
+3. Why does the scene as data never need a new compile for a shape added?
+4. What is a kernel's inlined size, and why does calling SDF in more places make compiling slower?
+5. Why is data not always the better choice?
+
 **index** (the contents)
 1. What will you learn in this tutorial, and do you need to know anything before starting?
 2. What do the three stamps mean?
