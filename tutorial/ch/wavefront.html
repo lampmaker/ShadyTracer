@@ -27,59 +27,88 @@
 <section class="scene" id="log">
   <div class="prose">
     <h2><span class="n">1</span>A sample, iteration by iteration</h2>
+    <p>The words first. A path is a ray's whole journey from the eye: a <em>leg</em> from the eye to the first surface,
+      then a leg from each bounce to the next. To <em>march</em> a leg is to step along it, each step as long as the
+      distance to the nearest surface, until it reaches one (sphere tracing, chapter 2): a leg takes many steps, more
+      where it passes close to things. To <em>shade</em> a point a leg reached is to work out what light it finds there
+      and where the path goes next (chapter 13). <a data-g="nee">NEE</a>, next-event estimation, is the shadow ray each
+      shaded point aims at the sun (chapter 14). And chapter 21's <a data-g="lane">lanes</a>: the card runs threads in
+      lock-step groups of 32, each group as long as its slowest thread, the lanes whose thread has finished waiting
+      idle.</p>
     <p data-step="log:sample">The sunlit room of chapter 20, without its dust, its walls paler so paths go round it:
       64 pixels, 16 paths each, 1024 paths in one sample. Every path starts in the first iteration's queue. Each
-      <em>iteration</em> runs the same few kernels in turn: the march moves every waiting ray up to 32 steps; shade
+      <em>iteration</em> runs the same kernels in turn: the march moves every waiting ray up to 32 steps; shade
       handles the rays that reached a surface or left the room, queues a <a data-g="shadow-ray">shadow ray</a> towards
       the sun and puts each path's next leg in the next iteration's queue; occlusion traces the shadow rays queued the
-      iteration before. Point at the bars for each iteration's counts. In the first, all 1024 rays marched, 812 reached
-      something, and 212 were still on their way after 32 steps.</p>
+      iteration before. Point at the bars for each iteration's counts. In the first, all 1024 rays marched: 774 reached
+      a surface, 38 left the room, and 212 were still on their way after 32 steps. Only 523 shadow rays were queued
+      from the 774 hits, because a hit queues one only where the sun is above its surface: none from the ceiling, which
+      faces away. The first iteration traces no shadow rays, since none was queued before it. The strip under the bars
+      is the picture itself.</p>
     <p data-step="log:tail">Paths end at different times: at the sky, at the bounce cap (10 here, ShadyTracer's
-      default), or out of steps. So the queues drain. Iterations 12 to 19 carry fewer and fewer rays, and 20 to 24 none
-      at all, but each is still dispatched: the card is told to run zero workgroups, which costs little but not
-      nothing. How many iterations to run is decided before the sample starts, because the program on the main
-      processor does not wait to read the counts back: ShadyTracer runs the worst case, one iteration a bounce plus one
-      for every 32 steps a path may take, (10 + 1) + 400 / 32 rounded up = 24.</p>
-    <p data-step="log:short">With 8 iterations, paths still going at the last are cut. A ray still marching on the last
-      pass is <em>flushed</em>: it ends there and hands in the light it has gathered, 88 of them here. A path shaded on
-      the last pass has its next leg written for a march that never comes: 775 cut. The picture's mean falls from
-      0.0153 to 0.0145.</p>
+      default), or out of steps: a path may take 400 march steps in all, <code>maxiter</code>. So the queues drain.
+      A path that never needed a second pass for a leg reaches its eleventh surface in iteration 11 and ends there at
+      the cap, so iteration 12 drops from 822 rays to 475: those left had a leg that took more than one pass. Iterations
+      12 to 19 carry fewer and fewer, and 20 to 24 none at all, but each is still dispatched: the card is told to run
+      zero workgroups, which costs little but not nothing. How many iterations to run is decided before the sample
+      starts, because the program on the main processor does not wait to read the counts back.</p>
+    <p>So ShadyTracer runs the worst case. Each pass of 32 steps either ends a leg (the ray reached something) or
+      uses all 32 steps without ending it. Take a path of three legs of 40, 10 and 30 steps: the first takes a full
+      pass and 8 steps of the next, the second and third one pass each, 4 passes in all, 3 that end a leg and 1 full.
+      A path has at most 11 legs (10 bounces and the first), and its full passes are at most its steps over 32,
+      400 / 32, rounded up: (10 + 1) + 13 = 24, and no path can need more.</p>
+    <p data-step="log:short">With 8 iterations, paths still going at the last are cut short, in two ways. A ray still
+      marching on the last pass is <em>flushed</em>: it ends there and hands in the light it has gathered, 88 of them
+      here. A path shaded on the last pass has its next leg written for a march that never comes, and casts no shadow
+      ray, since nothing would trace it (the shade kernel skips NEE on the last pass): 775 cut. Both keep what they had
+      gathered and lose what their later legs would have found. The picture's mean falls from 0.0153 to 0.0145.</p>
     <p data-step="log:tiny">With 4 it reads 0.0106: nearly a third of the light gone, as a low bounce cap loses it
-      (chapter 13). ShadyTracer's budget is always the worst case, and at the worst case no path runs out of
-      iterations: a path's legs each end part-way through a pass of 32 steps, so it needs at most one pass a leg plus
-      its steps over 32, and one that would need more steps than <code>maxiter</code> ends anyway. Drag the slider to
-      see where the picture stops changing.</p>
+      (chapter 13): a bias, darker however many samples are averaged, not only noisier. The flush's own comment (in
+      section 4) says a short budget "costs convergence ... instead of quietly stealing light": the light already
+      gathered is no longer stolen, but the light of the legs never traced is still missing, as the light tracer's
+      comment on the same cut says (<cite data-src="lib/pathtracer/core/materials_pbr.js" data-sym="/* NOT ON THE LAST PASS, and unlike NEE this one costs light:" data-to="and a reason not to squeeze budgetOverride with light tracing on. */"></cite>).
+      ShadyTracer's budget is always the worst case, where nothing is cut. Drag the slider to see where the picture
+      stops changing.</p>
   </div>
   <figure class="fig" data-fig="log">
     <figcaption>One sample of 1024 paths in the flat world, run as ShadyTracer runs a sample: for each iteration, the
       rays the march took in (<span data-say="cam">blue</span>), the hits and escapes shaded (in the sun's colour), the
-      shadow rays traced (<span data-say="shadow">green</span>), and as dots the rays still marching after it. Point at
-      an iteration. Set the number of iterations; switch the shadow rays off.</figcaption>
+      shadow rays traced (<span data-say="shadow">green</span>), and as dots the rays still marching after it; under
+      them, the picture's 64 pixels, the brightest of the full sample white. Point at an iteration. Set the number of
+      iterations (24 is the worst case, ShadyTracer's); switch the shadow rays off.</figcaption>
   </figure>
 </section>
 
 <section class="scene" id="queues">
   <div class="prose">
     <h2><span class="n">2</span>Queues in the card's memory</h2>
-    <p data-step="queues:march">Inside one iteration. The rays wait in one of two ray buffers; the march reads one and
+    <p data-step="queues:march">Inside one iteration, its eight kernels in turn: <code>prep_march</code>,
+      <code>march</code>, <code>prep_shade</code>, <code>surface</code> (each hit's material and normal from the scene,
+      written beside it), <code>shade</code>, <code>prep_occlude</code>, <code>occlude</code> and <code>flip</code>.
+      The rays wait in one of two ray buffers; the march reads one and
       writes the other, and the next iteration the two swap, so no ray is read and written in the same place at once
       (a <a data-g="ping-pong">ping-pong</a>). A ray that reaches something is written to the shade queue instead. Each
       write takes the next free place by an <a data-g="atomic">atomic</a> add on the buffer's count, so a thousand
       threads writing at once never take the same place.</p>
-    <p data-step="queues:march">Before each kernel runs a tiny one, one thread: it reads the count of rays waiting and
-      writes how many workgroups the next kernel needs, into a buffer the card reads the next dispatch's size from (an
-      <a data-g="indirect-dispatch">indirect dispatch</a>). The program on the main processor never learns the counts
-      while the sample runs; it records the whole chain once and the card sizes every step itself.</p>
+    <p data-step="queues:prep">Before each kernel that works on a queue runs a tiny one, a prep kernel of one thread:
+      it reads the count of rays waiting and writes how many workgroups the next kernel needs, into a buffer the card
+      reads that dispatch's size from (an <a data-g="indirect-dispatch">indirect dispatch</a>). The prep kernels
+      themselves are dispatched with a fixed size, one workgroup. The program on the main processor never learns the
+      counts while the sample runs; it records the whole chain once and the card sizes every queue's work itself.</p>
     <p data-step="queues:shade">Surface and shade run over the shade queue. Shade writes each path's next leg after the
       march's survivors in the buffer being written, and each shadow ray to the write side of the shadow queue, which
       takes turns the same way.</p>
     <p data-step="queues:flip">The flip, one thread: the buffers swap roles, and the counts of the side the next
       iteration will write are cleared. Press <strong>Next kernel</strong> to step through.</p>
-    <p data-step="queues:occlude">In iteration 2, occlusion traces the 523 shadow rays shade queued in iteration 1.
-      Shadow rays march too, 32 steps a round: on the last pass, the occlusion runs again, round after round, until
-      every one has ended, because one counted while still marching would be counted unblocked.</p>
-    <p data-step="queues:tail">Iteration 15: 56 rays marched, a few workgroups out of what the card could run at once,
-      each step of every kernel still paid for.</p>
+    <p data-step="queues:occlude">In iteration 2, occlusion traces the 523 shadow rays shade queued in iteration 1. Why
+      a round late: shade writes its shadow rays to one side of the shadow queue while occlusion reads the other, the
+      side written the iteration before, so no shadow ray is read while it is being written (the engine's comment on
+      the occlusion pass); the flip swaps the sides. Shadow rays march too, 32 steps a round: on the last pass, the
+      occlusion runs again, round after round, until every one has ended, because one counted while still marching
+      would be counted unblocked.</p>
+    <p data-step="queues:tail">Iteration 15: 56 rays marched (47 reached a surface, 1 left the room, 1 ran out of
+      steps, 7 go on), one workgroup of 64, on a card that can run thousands at once; each kernel of the iteration is
+      still dispatched and paid for.</p>
   </div>
   <figure class="fig" data-fig="queues">
     <figcaption>One iteration of the sample above, one kernel at a time: the two ray buffers (which is read and which
@@ -92,7 +121,8 @@
 <section class="scene" id="lanes">
   <div class="prose">
     <h2><span class="n">3</span>Why split a path</h2>
-    <p data-step="lanes:model">Chapter 21's lanes again, for the whole sample. Written as one big kernel, a thread a path,
+    <p data-step="lanes:model">Chapter 21's lanes again, for the whole sample (its first figure shows one group of 32
+      waiting for its slowest ray). Written as one big kernel, a thread a path,
       a group of 32 paths marches each leg as long as its slowest path's leg, shades whenever any of its paths has
       something to shade, and keeps going until its longest path ends, the finished lanes waiting. As a wavefront,
       each kernel runs over a queue of rays that all need that step, packed into full groups. Time is counted in lane
@@ -116,21 +146,22 @@
 <section class="plain wide" id="engine">
   <div class="prose">
     <h2><span class="n">4</span>How ShadyTracer does it</h2>
-    <p>The iteration, as the program on the main processor records it, every dispatch after the first sized by the card
-      (<code>dispatchIndirect</code>):</p>
+    <p>The iteration, as the program on the main processor records it: each prep kernel dispatched with a fixed size,
+      <code>dispatch(1, 1, 1)</code>, and the kernel after it sized by the card, <code>dispatchIndirect</code>:</p>
     <pre data-src="lib/pathtracer/core/raytrace_main.js" data-sym="for (let it = 0; it < iterations; it++) {" data-to="R.prog_wvfshade.dispatchIndirect(R.indirect_shade.b, 0);"
-         data-why="setU writes a kernel's uniforms: the whole set once a trace, then only what moves, the seed and lastpass (1 on the last iteration). sppmRuns is the photon map's kernel (chapter 19), between surface and shade." data-hash="405674dc"></pre>
+         data-why="setU writes a kernel's uniforms: the whole set (whole, baseUniforms) once a trace, then only what moves, the seed and lastpass (1 on the last iteration); { ...a, ...b } is JavaScript for a's fields with b's written over them. sppmRuns is the photon map's kernel (chapter 19), between surface and shade. The excerpt ends at shade; occlusion and the flip follow it in the same loop." data-hash="405674dc"></pre>
     <p>A prep kernel, one thread:</p>
     <pre data-src="lib/pathtracer/core/wavefront.js" data-sym="let prog_prep_march_indirect" data-to="{ wg: [1, 1, 1] }"
-         data-why="counters is a small buffer of counts: one for each ray buffer, the shade queue, the shadow queue's two sides, and which side is read (readfrom). select(a, b, c) is WGSL's c ? b : a, which the comment warns about. indirectOut is the buffer the next dispatch reads its size from." data-hash="b06ccf58"></pre>
+         data-why="counters is a small buffer of counts: one for each ray buffer, the shade queue, the shadow queue's two sides, and which side is read (readfrom). select(a, b, c) is WGSL's c ? b : a, which the comment warns about. groups_for divides a count by the workgroup's size, rounding up; ${wgsize} is that size (64) written into the text; 1u is the number 1 as an unsigned whole number. indirectOut is the buffer the next dispatch reads its size from." data-hash="b06ccf58"></pre>
     <p>The flip:</p>
     <pre data-src="lib/pathtracer/core/wavefront.js" data-sym="let prog_flip" data-to="{ wg: [1, 1, 1] }"
          data-why="used counts the iterations that had rays to march, for the stats. The comment's five dispatches over an empty buffer are eight today, the iteration's list above." data-hash="54037df7"></pre>
     <p>The flush, in the march kernel:</p>
-    <pre data-src="lib/pathtracer/core/wavefront.js" data-sym="/* THE FLUSH.  On the last wavefront iteration" data-to="atomicAdd(&amp;counters.flushed, 1u);" data-hash="a6c36c53"></pre>
+    <pre data-src="lib/pathtracer/core/wavefront.js" data-sym="/* THE FLUSH.  On the last wavefront iteration" data-to="atomicAdd(&amp;counters.flushed, 1u);"
+         data-why="Radiance is the light a path has gathered so far (chapter 5); the accumulator is the sample's frame buffer (chapter 23). hit.r = ray hands the ray itself to shade, marked RAY_MAXITER: ended for lack of steps. UB.lastpass is 1 on the last iteration. The last sentence is answered in section 1: the light gathered is kept, the light of legs never traced is not." data-hash="a6c36c53"></pre>
     <p>And the budget, the worst case:</p>
     <pre data-src="lib/pathtracer/core/raytrace_main.js" data-sym="const chunks = Math.ceil((uniforms.maxiter | 0) / MARCH_STEPS)" data-to="const worstCase = Math.max(2, ((uniforms.maxbounce | 0) + 1) + chunks)"
-         data-why="MARCH_STEPS is 32, the march's steps a pass; maxiter (400) the steps a path may take in all, maxbounce (10) its bounces." data-hash="60538e1f"></pre>
+         data-why="MARCH_STEPS is 32, the march's steps a pass; maxiter (400) the steps a path may take in all, maxbounce (10) its bounces. x | 0 is JavaScript for x as a whole number. Math.max(2, ...) keeps at least two iterations whatever the settings, one to march and one to trace the shadow rays it queued." data-hash="60538e1f"></pre>
   </div>
 </section>
 
@@ -141,24 +172,28 @@
     <div data-claim="measured">
       <p><strong>Where a sample's time goes.</strong> The Noise library scene at 1280 × 720 on the user's Pascal card
         (code 0.9.2): 243.1 ms a sample of wall clock, 184.7 of it on the card: march 102.8, shade 27.2, occlusion 45.5.
-        Between kernels the card waited under 0.13 ms a sample in every scene measured
-        (<code>docs/PERFORMANCE_REVIEW.md</code>, §10.1). The many small dispatches cost the card nothing measurable.</p>
+        Between kernels the card sat idle under 0.13 ms a sample in every scene measured
+        (<code>docs/PERFORMANCE_REVIEW.md</code>, §10.1): going from one small kernel to the next costs the card
+        nothing measurable. What the nearly empty kernels themselves cost is the next two stamps.</p>
     </div>
     <div data-claim="measured">
       <p><strong>Off the card, they cost.</strong> Over eight scenes in that run, the time outside the card fitted
-        1.5 ms + 2.35 ms for each iteration (R² 0.995), whatever the scene (the same section): recording and sending the
-        dispatches, and waiting for the card to say it is done. An added iteration with almost nothing to do cost the
+        1.5 ms + 2.35 ms for each iteration, whatever the scene, a straight line through all eight (the same section):
+        recording and sending the dispatches, and waiting for the card to say it is done. An added iteration with almost nothing to do cost the
         card 0.13 to 0.42 ms (<code>raytrace_main.js</code>, the budget's comment).</p>
     </div>
     <div data-claim="measured">
       <p><strong>The drained tail.</strong> In the Noise library, 21 of the 24 iterations marched under a tenth of the
-        first iteration's rays, and took 45% of the iterations' time on the card: 1.4 ms for a march of a few hundred
-        rays (§10.2). Section 1's tail, on a real card.</p>
+        first iteration's rays, and took 45% of the iterations' time on the card (§10.2). With 164 to 455 rays, a handful
+        of groups, the march still took 1.4 to 1.5 ms: the document calls it latency, not work, each of a group's 32 steps
+        waiting on memory in turn while the rest of the card has nothing to do. Section 1's tail, on a real card.</p>
     </div>
     <div data-claim="code">
-      <p><strong>A count clamped before it sizes a dispatch.</strong> A queue's writes check the buffer's end but still
-        add to the count, so a count can run past the buffer; a dispatch sized from it would read past the end and
-        queue more than it took, every iteration, without bound
+      <p><strong>A count clamped before it sizes a dispatch.</strong> A kernel writing to a queue takes its place by
+        adding 1 to the count, then writes only if that place is inside the buffer; so when a queue overflows, its count
+        runs past the buffer's size. A dispatch sized from that count would start threads for places past the end, which
+        would queue more than they took, every iteration, without bound. So the prep kernel clamps the count to the
+        buffer's size first
         (<cite data-src="lib/pathtracer/core/wavefront.js" data-sym="/* CLAMPED, and it is not belt and braces." data-to="a hung GPU process is a browser that disappears without an error message. */"></cite>).</p>
     </div>
     <div data-claim="code">
@@ -173,7 +208,9 @@
     <h2><span class="n">6</span>What went wrong before</h2>
     <ul>
       <li><strong>A budget that shrank by accident.</strong> The number of iterations used to adapt to the counts the
-        card reported. It tested one thing and set another, so from a fresh start it dropped to 4: the benchmark's
+        card reported a frame later. Its test compared the iterations used with the budget, or the worst case while no
+        budget was set, but its change lowered the budget itself, which at a fresh start was 0: so the first sample
+        fell to the floor of 4: the benchmark's
         materials row ran 8, 24 and 8 iterations in three runs, cutting 0.32% of its paths and counting 1,282 shadow
         rays a sample lit for lack of steps
         (<cite data-src="lib/pathtracer/core/raytrace_main.js" data-sym="- IT FIRED BY ACCIDENT." data-to="(measured by the user, §10.6); the same climb was reproduced in node on the real"></cite>).
@@ -183,7 +220,9 @@
         (<cite data-src="lib/pathtracer/core/raytrace_main.js" data-sym="/* THE LAST PASS'S SHADOW ROUNDS." data-to="6,253 shadow rays (the wavefront log, the user's Pascal, 2026-10-02)."></cite>).
         Hence section 2's extra rounds.</li>
       <li><strong>Occlusion skipped.</strong> The occlusion pass ran only with NEE on, but light tracing's connections
-        to the camera are shadow rays too: with NEE off they were queued and never traced, and glass cast a plain shadow
+        to the camera (chapter 18: a photon's landing point joined to the eye by a ray that must not be blocked) are
+        shadow rays too. With NEE off they were queued and never traced, while the camera's side had handed those paths
+        to the light tracer: the light that comes through glass was counted by neither, and glass cast a plain shadow
         (<cite data-src="lib/pathtracer/core/raytrace_main.js" data-sym="/* The occlusion pass, after shade so it sees last iteration's shadow rays in" data-to="over: glass cast a plain shadow with lt on and NEE off. */"></cite>).</li>
       <li><strong>Lost at the end of a sample.</strong> Before the flush, rays still marching on the last pass were
         written back to a buffer the next sample overwrote, and the light they carried disappeared: the picture simply

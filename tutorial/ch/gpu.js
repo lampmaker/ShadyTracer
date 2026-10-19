@@ -177,9 +177,10 @@ export const figures = {
                 pen.labelPx(px + pw / 2, yEnd + 8, `x: 0 to ${(c.flat - 1).toLocaleString('en-US')}, on through every row`, { role: c.flatOK ? 'cam' : 'blocked', size: 12, align: 'center', base: 'top' })
             }
             // the counts against the limit
-            const rect = { x: W * 0.64, y: H * 0.2, w: W * 0.32, h: H * 0.56 }, top = 270000
+            // the axis reaches the flat count where it is drawn, the limit with room above it where the rows are
+            const rect = { x: W * 0.64, y: H * 0.2, w: W * 0.32, h: H * 0.56 }, top = s.rows ? 80000 : 270000
             plot(pen, rect, {
-                x: [0, 3], y: [0, top], xticks: [], yticks: [0, 65535, 131070, 196605, 262140], fmt: v => v.toLocaleString('en-US'),
+                x: [0, 3], y: [0, top], xticks: [], yticks: s.rows ? [0, 65535] : [0, 65535, 131070, 196605, 262140], fmt: v => v.toLocaleString('en-US'),
                 hoverX: () => 'workgroups', hoverY: v => Math.round(v).toLocaleString('en-US'),
                 series: [
                     { name: 'the limit', role: 'blocked', w: 1.2, dash: [5, 4], pts: [[0, MAX_GROUPS], [3, MAX_GROUPS]] },
@@ -189,10 +190,14 @@ export const figures = {
             })
             pen.labelPx(rect.x + rect.w * 0.25, rect.y + rect.h + 6, 'along x', { role: 'soft', size: 11, align: 'center', base: 'top' })
             pen.labelPx(rect.x + rect.w * 0.75, rect.y + rect.h + 6, 'along y', { role: 'soft', size: 11, align: 'center', base: 'top' })
+            // each bar's number over it: one row per y's bars are too short to see beside the limit
+            const vx = s.rows ? c.rows.x : c.flat, vy = s.rows ? c.rows.y : 1, barTop = v => rect.y + rect.h - Math.min(v, top) / top * rect.h
+            pen.labelPx(rect.x + rect.w * 0.25, barTop(vx) - 6, vx.toLocaleString('en-US'), { role: s.rows || c.flatOK ? 'ink' : 'blocked', size: 12, align: 'center' })
+            pen.labelPx(rect.x + rect.w * 0.75, barTop(vy) - 6, vy.toLocaleString('en-US'), { role: 'ink', size: 12, align: 'center' })
         },
         readout(s) {
             const [w, h] = sizeOf(s.size), c = dispatchCounts(w, h)
-            return `${w} × ${h} = ${(w * h).toLocaleString('en-US')} pixels · ${s.rows ? `one row per y: ${c.rows.x} × ${c.rows.y.toLocaleString('en-US')} groups, within the limit` : `flat: ${c.flat.toLocaleString('en-US')} groups along x, ${c.flatOK ? 'within' : `over the ${MAX_GROUPS.toLocaleString('en-US')} limit: a validation error, not a slow frame`}`}`
+            return `${w} × ${h} = ${(w * h).toLocaleString('en-US')} pixels · ${s.rows ? `one row per y: ${c.rows.x} × ${c.rows.y.toLocaleString('en-US')} groups, within the limit` : `flat: ${c.flat.toLocaleString('en-US')} groups along x, ${c.flatOK ? 'within the limit' : 'over the limit: an error, nothing drawn'}`}`
         },
     },
 }

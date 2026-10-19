@@ -189,7 +189,14 @@ then a few pages … make a few mockups of different styles"). Nothing in the ap
   to 700), PBR Neutral's "lift" of the dark tones (it takes 0.04 off), and grazing light losing more to one
   reflection (it loses less). The second round found three of the first round's own sentences wrong (chapter 9's
   "top tenth" of a range that is its last hundredth, chapter 7's 18% grey "at 0.36", chapter 5's two rows with one
-  listed), now fixed, and steps of reasoning said as facts, each now shown.
+  listed), now fixed, and steps of reasoning said as facts, each now shown. Round seven read chapters 18 to 24. Every
+  reader met words the page took from earlier chapters (sample, NEE, the flat world, lane, resolve), so each page now
+  says them in a few sentences of its own. Five statements were wrong and are fixed: chapter 18's caustic seen through
+  glass "missing from both" sides (the engine keeps it on the camera's side, found by chance); chapter 22's short
+  budget costing "only convergence" while its own figure darkened (the flush keeps the light a path has gathered, and
+  its later legs' light is lost: a bias); chapter 23 reading resolve's `n == 0` return and `UB.maxaverages` as they
+  are not; chapter 24's section numbers; chapter 21's padding as described against its figure. The excerpt locator cut
+  a function whose parameters hold braces at those braces; it now looks for the body after the parameter list.
 - **Where to read more** (you: "add a box with recommended external references, eg where you learned the info. Inigo
   quilez definitely needs to be named. Probably more than once"): reading boxes beside the sections they belong to,
   every chapter at least one, from one list (`tutorial/kit/reading.js`) whose every link was opened and checked. Inigo

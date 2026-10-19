@@ -1089,8 +1089,11 @@ for (const [name, { mod }] of modules) {
     ok('ch.24: the records hold each shape\'s kind, join and numbers; the toy\'s distance is the block, the ball and the hole', recs[0].join() === '1,0,0,-0.35,1.2,0.65,0.3' && recs[2].join() === '0,1,-0.45,0.05,0.35,0,0.3'
         && SG.sceneDist(sc({ k: 0 }), -0.45, 0.05) > 0 && SG.sceneDist(sc({ k: 0 }), 0.9, 0) < 0 && SG.sceneDist(sc({ k: 0 }), 1.15, 1.1) < 0)
     // the page's compile counts, as its steps make them
-    const counts = Object.fromEntries(Object.entries(CG.figures.tree.steps).map(([k, st]) => { const s = JSON.parse(JSON.stringify({ ...CG.figures.tree.state, ...st })); CG.account(s); return [k, `${s.compiles} ${s.last}`] }))
-    ok('ch.24: the steps: 1 compile, then a move written, a ball compiled (2); baked, a move compiled; as data, a ball written', counts.codegen === '1 compiled' && counts.move === '1 written' && counts.add === '2 compiled' && counts.baked === '2 compiled' && counts.data === '1 written', JSON.stringify(counts))
+    const counts = Object.fromEntries(Object.entries(CG.figures.tree.steps).map(([k, st]) => { const s = JSON.parse(JSON.stringify(st)); CG.account(s); return [k, `${CG.MODES.map(([m]) => s.seen[m]?.n ?? 0).join('/')} ${s.last}`] }))
+    ok('ch.24: the steps one story: 1 compile, a move written, a ball compiled (2); baked, its first text and a move compiled (2); as data, its first text, a ball taken away and added written (1)', counts.codegen === '1/0/0 compiled' && counts.move === '1/0/0 written'
+        && counts.add === '2/0/0 compiled' && counts.baked === '2/2/0 compiled' && counts.data === '2/2/1 written', JSON.stringify(counts))
+    const added = CG.figures.tree.steps.add.seen.codegen, fresh = added.text.split('\n').filter(l => !added.prev.split('\n').includes(l))
+    ok('ch.24: adding a ball is one new line of code (and two new uniforms)', fresh.length === 1 && /csgUnion\(d, sdCircle\(p - UB\.pos_e, UB\.r_e\)/.test(fresh[0]), fresh.join(' | '))
     // inlined size: every call site a copy; the model equals the linear rate at its reference size
     const st = n => WG.inlineStats(SG.kernelText(40, n), 'main', ['SDF'])
     ok('ch.24: 40 objects called once 6,794 characters inlined, four times 27,020 (4 copies); 400 objects 273,500; the model 0.03, 0.22 and 5.18 s, the linear rate\'s at 151,000', st(1).inlined === 6794 && st(4).inlined === 27020 && st(4).copies.SDF === 4
@@ -1118,6 +1121,8 @@ for (const [name, { mod }] of modules) {
     ok('excerpt: a symbol found twice is refused', /2 times/.test(e?.message ?? ''))
     const n2 = locate(text, { sym: 'fn twice', nth: 2 })
     ok('excerpt: ...and found by nth', n2.first === 10 && n2.last === 12, `${n2.first}-${n2.last}`)
+    const dp = ['function plan(n, { first = null } = {}) {', '  return n', '}', 'fn after(a: f32) -> f32 { return a; }'].join('\n'), d = locate(dp, { sym: 'function plan' })
+    ok('excerpt: a function whose parameters hold braces reaches its body\'s end, not the parameters\'', d.first === 1 && d.last === 3, `${d.first}-${d.last}`)
     e = null; try { locate(text, { sym: 'function foo', to: 'nowhere' }) } catch (x) { e = x }
     ok('excerpt: a `to` never reached is refused', /not within/.test(e?.message ?? ''))
     ok('excerpt: the hash ignores indenting', hash(['  a', '    b']) === hash(['a', '  b']) && hash(['a']) !== hash(['b']))

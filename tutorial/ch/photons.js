@@ -215,7 +215,7 @@ export const figures = {
             // where a camera path through the pane gathers: the eye's paths end their glass at the floor; the radius
             if (s.on) for (const rec of s.shown.cam) { const e = rec.find(g => g.kind !== 'shadow' && g.kind !== 'blocked' && Math.abs(g.b[1]) < 0.02); if (e) pen.circle(e.b, Math.max(s.r, pen.world(2)), { role: 'accent', w: 1.2, dash: [3, 2], exact: true }) }
             pen.eye(CAM.eye, CAM.dir, { size: 18 })
-            strip(pen, s.pix, -4.3, -1.2, 3.9, 0.42, 1.2, 'the eye\'s picture, brightened 1.2 times: pixel 1 looks highest, 48 lowest', panePixels, 'through the pane')
+            strip(pen, s.pix, -4.3, -1.2, 3.9, 0.42, 1.2, 'the eye\'s picture, brightened 1.2 times: pixel 1 the top of its view, 48 the bottom', panePixels, 'through the pane')
         },
         readout(s) {
             const g = region(s.pix)
@@ -248,10 +248,11 @@ export const figures = {
             })
             for (const [k, t] of [[1, '1'], [10, '10'], [100, '100'], [300, '300']]) pen.labelPx(rect.x + rect.w * lg(k) / lg(SHRINK_K), rect.y + rect.h + 4, t, { role: 'soft', size: 10, align: 'center', base: 'top' })
             pen.labelPx(rect.x - 30, rect.y - 18, `the floor's brightness at the caustic's peak, averaged over the samples so far (true: ${TRUE_X0.toFixed(3)})`, { role: 'soft', size: 12 })
-            pen.labelPx(rect.x + rect.w, rect.y + rect.h + 18, 'samples (each mark ten times the last)', { role: 'soft', size: 11, align: 'right', base: 'top' })
+            pen.labelPx(rect.x + rect.w, rect.y + rect.h + 18, 'samples (marks at 1, 10, 100 and 300: each step ten times as many)', { role: 'soft', size: 11, align: 'right', base: 'top' })
             const rs = ks.map(k => s.shrink ? radiusFlat(s.r1, k, s.alpha) : s.r1)
             plot(pen, rect2, { x: [0, lg(SHRINK_K)], y: [0, 0.5], xticks: [], yticks: [0, 0.25, 0.5], fmt: v => v.toFixed(2), hoverX: v => `sample ${Math.round(10 ** v)}`, hoverY: v => `r = ${v.toFixed(3)}`, series: [{ name: 'r', pts: ks.map((k, i) => [lg(k), rs[i]]), role: s.shrink ? 'cam' : 'blocked', w: 1.4 }] })
-            pen.labelPx(rect2.x - 30, rect2.y - 16, 'the radius, sample by sample', { role: 'soft', size: 12 })
+            pen.labelPx(rect2.x - 30, rect2.y - 16, 'the radius, sample by sample (the same samples, the same marks)', { role: 'soft', size: 12 })
+            for (const [k, t] of [[1, '1'], [10, '10'], [100, '100'], [300, '300']]) pen.labelPx(rect2.x + rect2.w * lg(k) / lg(SHRINK_K), rect2.y + rect2.h + 4, t, { role: 'soft', size: 10, align: 'center', base: 'top' })
         },
         readout(s) {
             const run = shrinkRun(s.r1, s.alpha), f = run.fixed[SHRINK_K - 1], g = run.shrink[SHRINK_K - 1]
@@ -260,8 +261,8 @@ export const figures = {
     },
 
     grid: {
-        aspect: 1.9,
-        world: { x: [-2.2, 2.6], y: [-1.5, 1.0] },
+        aspect: 1.65,
+        world: { x: [-2.2, 2.6], y: [-1.5, 1.41] },
         state: { x: 0.31, r: 0.15, budget: false, start: 0 },
         controls: [
             { type: 'slider', key: 'r', label: 'radius r', min: 0.05, max: 0.4, step: 0.01, fmt: v => v.toFixed(2) },
@@ -283,7 +284,7 @@ export const figures = {
             }
             pen.line([s.x - s.r, 0.42], [s.x + s.r, 0.42], { role: 'cam', w: 2.2, exact: true })
             pen.handle('x', [s.x, 0.62], { role: 'cam', label: 'gather here' })
-            g.split.forEach((t, k) => pen.label([-2.15, 0.9 - k * 0.14], `list ${hash1(t.cell)}: ${t.count} records, over its share of 6: ${t.m} of its ${SUBS} sub-lists walked, each find × ${(SUBS / t.m).toFixed(2)}`, { role: 'accent', size: 11 }))
+            g.split.forEach((t, k) => pen.label([-2.15, 1.3 - k * 0.14], `list ${hash1(t.cell)}: ${t.count} records, over its share of 6: ${t.m} of its ${SUBS} sub-lists walked, each find × ${(SUBS / t.m).toFixed(2)}`, { role: 'accent', size: 11 }))
             // the hash table: each list's records and the cells they belong to, the two lists a gather walks marked
             const bw = 4.8 / HEADS
             for (let h = 0; h < HEADS; h++) {
@@ -294,6 +295,9 @@ export const figures = {
                 pen.label([x0 + bw / 2, -1.33], `list ${h}${cells.length ? `: cell${cells.length > 1 ? 's' : ''} ${cells.join(', ')}` : ''}`, { role: 'soft', size: 10, align: 'center' })
             }
             pen.label([-2.15, -0.6], 'the hash table, four lists: a cell\'s photons go on list (cell × 73856093) mod 4', { role: 'soft', size: 11 })
+            // the ticks' key, along the top right
+            const KEY = [['cam', 1.8, 0.95, 'counted (its own cell, within r)'], ['blocked', 1.8, 0.95, 'walked: another cell\'s'], ['light', 1.8, 0.95, 'walked: its own cell, farther than r'], ['light', 1, 0.35, 'not walked']]
+            KEY.forEach(([role, w, alpha, t], k) => { const y = 1.02 - k * 0.12; pen.line([1.05, y - 0.04], [1.05, y + 0.04], { role, w, alpha, exact: true }); pen.label([1.12, y], t, { role: 'soft', size: 10, base: 'middle' }) })
         },
         readout(s) {
             const g = gridGather(s.x, s.r, { budget: s.budget, start: s.start }), exact = gridGather(s.x, s.r).est

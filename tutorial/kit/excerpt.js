@@ -17,7 +17,8 @@
 //   to: 'text'      through the first line, from the symbol's on, holding that text
 //   otherwise       a symbol inside a block comment: to the comment's end;
 //                   any other: from the first { at or after the symbol to the brace that closes it -- comments and
-//                   quoted strings skipped, backticks NOT (the text inside them is shader code, braces and all)
+//                   quoted strings skipped, backticks NOT (the text inside them is shader code, braces and all); a
+//                   function's first { after its parameter list, which may hold braces of its own (`{ live } = {}`)
 //   doc: true       the comment directly above is included (the default for fn / function / const / class: that
 //                   comment is usually the "why", which is the point of showing the code)
 //   max             lines in all, 40 unless said: an extent that never closes fails instead of showing half a file
@@ -144,6 +145,14 @@ export function locate(text, { sym, nth, within, to, max = 40, doc } = {}) {
         endLine = startLine                     // `const f = (x) => x * 2` -- one line, and this repo writes no semicolons
     } else {
         let i = pos, depth = 0, open = false
+        if (/^(fn|function)\s/.test(sym.trim())) {     // past the parameters first: `{ first = null } = {}` is not the body
+            while (i < text.length && !(state[i] === 0 && text[i] === '(')) i++
+            for (let p = 0; i < text.length; i++) {
+                if (state[i] !== 0) continue
+                if (text[i] === '(') p++
+                else if (text[i] === ')' && --p === 0) break
+            }
+        }
         for (; i < text.length; i++) {
             if (state[i] !== 0) continue
             if (text[i] === '{') { depth++; open = true }

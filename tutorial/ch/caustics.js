@@ -7,7 +7,7 @@
 //            path space, and both without it -- the caustic counted twice
 //   learn    where the photons start: a line across the sun's rays in cells, uniform or learned as prog_lt_build
 //            learns (hits / emitted, a 20 % floor, halved at every rebuild), and how many of them connect
-//   kinds    four kinds of path to the sun, and which side counts each: the camera's, light tracing's, or nobody's
+//   kinds    four kinds of path to the sun, and which side counts each: the camera's (one only by chance) or light tracing's
 //            (a caustic seen through glass: chapter 19)
 //
 // The flat world's path tracer and light tracer (kit/flatland.js tracePath with `split`, lightTrace), its glass by
@@ -47,6 +47,15 @@ export const causticPixels = (() => {
     return out
 })()
 
+/** the open floor far from the ball, pixels 41 to 48: only the camera's shadow rays light it in every mode (the light
+ *  the ball reflects onto the floor nearer it is a little caustic of its own) */
+export const openPixels = Array.from({ length: 8 }, (_, k) => PIX - 8 + k)
+/** what the eye's first ray meets, pixel by pixel: the sky, the ball (and what it shows through it), the floor */
+export const firstHits = (() => {
+    const w = worldOf(), H = {}
+    return Array.from({ length: PIX }, (_, i) => { const [ox, oy, dx, dy] = cameraRay(CAM, i, 0.5); march(w, ox, oy, dx, dy, {}, H); return H.hit ? (H.i === 0 ? 'floor' : 'ball') : 'sky' })
+})()
+
 /* ONE SAMPLE, the four ways: the camera's paths (one a pixel) and a batch of photons, added as the mode says */
 export const MODES = { camera: { cam: true, lt: false, split: false }, light: { cam: false, lt: true, split: false }, both: { cam: true, lt: true, split: true }, twice: { cam: true, lt: true, split: false } }
 export const PHOTONS = 600
@@ -77,7 +86,7 @@ export function render(s) {
     film(r, 1e9)
     return r
 }
-const region = pix => { let m = 0, v = 0; for (const i of causticPixels) { m += pix[i].Y; v += (standardError(pix[i].V, pix[i].S) ?? 0) ** 2 } return { mean: m / causticPixels.length, se: Math.sqrt(v) / causticPixels.length } }
+const region = (pix, idx = causticPixels) => { let m = 0, v = 0; for (const i of idx) { m += pix[i].Y; v += (standardError(pix[i].V, pix[i].S) ?? 0) ** 2 } return { mean: m / idx.length, se: Math.sqrt(v) / idx.length } }
 
 /** the strip: the eye's picture under the scene, brightened `k` times, numbered, the caustic's pixels bracketed */
 function strip(pen, vals, x0, y0, x1, h, k, label) {
@@ -88,6 +97,14 @@ function strip(pen, vals, x0, y0, x1, h, k, label) {
     const a = at(causticPixels[0]) - w / PIX / 2, b = at(causticPixels[causticPixels.length - 1]) + w / PIX / 2, { ctx } = pen
     ctx.save(); ctx.strokeStyle = pen.col('accent'); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(a, top - 3); ctx.lineTo(a, top - 1); ctx.lineTo(b, top - 1); ctx.lineTo(b, top - 3); ctx.stroke(); ctx.restore()
     pen.labelPx(b + 6, top - 6, 'under the ball', { role: 'accent', size: 11, base: 'bottom' })
+    // what the first ray meets, under the strip: the sky, then the ball (the floor seen through it), then the floor
+    for (const what of ['sky', 'ball']) {
+        const idx = firstHits.flatMap((h, i) => h === what ? [i] : [])
+        if (!idx.length) continue
+        const l = at(idx[0]) - w / PIX / 2, r = at(idx[idx.length - 1]) + w / PIX / 2
+        ctx.save(); ctx.strokeStyle = pen.col('soft'); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(l, bot + 16); ctx.lineTo(l, bot + 18); ctx.lineTo(r, bot + 18); ctx.lineTo(r, bot + 16); ctx.stroke(); ctx.restore()
+        pen.labelPx((l + r) / 2, bot + 21, what === 'sky' ? 'sky' : 'the ball: the floor seen through it, its shadowed part dark', { role: 'soft', size: 9, align: what === 'sky' ? 'center' : 'left', base: 'top' })
+    }
 }
 /** the sun: a few of its parallel rays coming in from the upper right, and its name */
 function sunRays(pen, half) {
@@ -99,8 +116,8 @@ const drawScene = (pen, world) => { for (const sh of world.shapes) pen.flat(sh, 
 
 export const figures = {
     caustic: {
-        aspect: 1.45,
-        world: { x: [-4.8, 4.2], y: [-1.95, 4.15] },
+        aspect: 1.38,
+        world: { x: [-4.8, 4.2], y: [-2.35, 4.15] },
         state: { mode: 'camera', half: 0.27, seed: 1, spp: 0, max: 400 },
         controls: [
             { type: 'seg', key: 'mode', options: [['camera', 'Camera paths'], ['light', 'Light tracing'], ['both', 'Both, split'], ['twice', 'Both, no split']] },
@@ -119,14 +136,14 @@ export const figures = {
             drawScene(pen, world)
             sunRays(pen, s.half)
             for (const rec of s.shown.cam) for (const seg of rec) pen.ray(seg.a, seg.b, { role: seg.kind === 'shadow' ? 'shadow' : seg.kind === 'blocked' ? 'blocked' : seg.lamp ? 'light' : 'cam', w: 0.7, alpha: 0.55, arrow: false, exact: true })
-            for (const rec of s.shown.lt) for (const seg of rec) pen.ray(seg.a, seg.b, { role: seg.kind === 'connect' ? 'shadow' : 'light', w: 0.8, alpha: 0.6, arrow: false, exact: true })
+            for (const rec of s.shown.lt) for (const seg of rec) pen.ray(seg.a, seg.b, { role: seg.kind === 'connect' ? 'shadow' : 'light', w: 0.8, alpha: 0.6, arrow: false, exact: true, dash: seg.kind === 'connect' ? [5, 4] : undefined })
             pen.eye(CAM.eye, CAM.dir, { size: 18 })
-            strip(pen, s.pix.map(p => p.Y), -4.3, -1.2, 3.9, 0.42, 1.2, 'the eye\'s picture, brightened 1.2 times: pixel 1 looks highest, 48 lowest')
+            strip(pen, s.pix.map(p => p.Y), -4.3, -1.2, 3.9, 0.42, 1.2, 'the eye\'s picture, brightened 1.2 times: pixel 1 the top of its view, 48 the bottom')
         },
         readout(s) {
-            const g = region(s.pix), mean = s.pix.reduce((a, p) => a + p.Y, 0) / PIX
+            const g = region(s.pix), o = region(s.pix, openPixels)
             const what = { camera: 'the camera\'s own paths, aiming at the sun at every scattering point', light: 'light tracing alone: photons from the sun, connected to the eye', both: 'both, with the split: each path counted by one side', twice: 'both, without the split: paths through the glass counted by each' }[s.mode]
-            return `${what} · ${s.spp} sample${s.spp === 1 ? '' : 's'} · under the ball the pixels average ${g.mean.toFixed(3)} ± ${g.se.toFixed(3)} · the whole picture ${mean.toFixed(3)}`
+            return `${what} · ${s.spp} sample${s.spp === 1 ? '' : 's'} · under the ball (pixels ${causticPixels[0] + 1} to ${causticPixels[causticPixels.length - 1] + 1}) ${g.mean.toFixed(3)} ± ${g.se.toFixed(3)} · the open floor (pixels ${openPixels[0] + 1} to ${PIX}) ${o.mean.toFixed(3)} ± ${o.se.toFixed(3)}`
         },
     },
 
@@ -154,18 +171,22 @@ export const figures = {
                 const a = at((k + 0.15) / K), b = at((k + 0.85) / K), h = 1.1 * L.learn.p[k] / top
                 pen.shape([a, b, [b[0] + cx * h, b[1] + cy * h], [a[0] + cx * h, a[1] + cy * h]], { role: 'light', fill: 'fill', w: 0.6 })
             }
+            // the floor every cell keeps, 20% shared evenly: dashed across the bars, so it shows when the learned cells tower
+            const hf = 1.1 * (0.2 / K) / top, f0 = at(0), f1 = at(1)
+            pen.line([f0[0] + cx * hf, f0[1] + cy * hf], [f1[0] + cx * hf, f1[1] + cy * hf], { role: 'ink', w: 1, dash: [4, 3], exact: true })
+            pen.label([at(1)[0] + cx * hf + 0.15, at(1)[1] + cy * hf], 'the floor: 20% shared evenly', { role: 'ink', size: 10 })
             pen.label([at(0.5)[0] + 0.4, at(0.5)[1] + 1.3], 'where photons start: each cell\'s chance', { role: 'light', size: 11 })
             // a few of the last sample's photons, from where they cross the drawn line
             const along = q => (q[0] - sun.aim[0]) * cx + (q[1] - sun.aim[1]) * cy
             for (const rec of L.shown) for (const [i, seg] of rec.entries()) {
                 let a = seg.a
                 if (i === 0 && seg.kind === 'photon') { const sa = along(seg.a), sb = along(seg.b), t = (sa - back) / (sa - sb); a = [seg.a[0] + (seg.b[0] - seg.a[0]) * t, seg.a[1] + (seg.b[1] - seg.a[1]) * t] }
-                pen.ray(a, seg.b, { role: seg.kind === 'connect' ? 'shadow' : 'light', w: 0.7, alpha: 0.5, arrow: false, exact: true })
+                pen.ray(a, seg.b, { role: seg.kind === 'connect' ? 'shadow' : 'light', w: 0.7, alpha: 0.5, arrow: false, exact: true, dash: seg.kind === 'connect' ? [5, 4] : undefined })
             }
         },
         readout(s) {
             const L = learnState(s), top = Math.max(...L.learn.p)
-            return `${s.learned ? 'learned' : 'uniform'} · sample ${s.rounds}: ${L.last.sent} photons, ${L.last.connected} connected to the eye (${(100 * L.last.connected / L.last.sent).toFixed(1)}%) · the busiest cell is sent ${(100 * top).toFixed(1)}% of them`
+            return `${s.learned ? (s.rounds <= 1 ? 'learning: this sample was sent evenly, and the map is rebuilt from its counts for the next' : 'learned') : 'uniform'} · sample ${s.rounds}: ${L.last.sent} photons, ${L.last.connected} connected to the eye (${(100 * L.last.connected / L.last.sent).toFixed(1)}%) · the busiest cell is sent ${(100 * top).toFixed(1)}% of them`
         },
     },
 
@@ -183,7 +204,7 @@ export const figures = {
             pen.eye(CAM.eye, CAM.dir, { size: 18 })
             const k = KINDS[s.kind], { pts, cam } = k.path(world)
             for (let i = 0; i + 1 < pts.length; i++) pen.ray(pts[i], pts[i + 1], { role: i < cam ? 'cam' : 'light', w: 1.6, exact: true, arrow: false })
-            pen.label([-4.6, 4.6], k.label, { role: k.who === 'nobody' ? 'blocked' : 'ink', size: 13 })
+            pen.label([-4.6, 4.6], k.label, { role: k.who === 'chance' ? 'blocked' : 'ink', size: 13 })
         },
         readout(s) { return KINDS[s.kind].readout },
     },
@@ -254,9 +275,9 @@ const KINDS = {
         readout: 'eye → glass → glass → floor → sun: the floor seen through the pane. The camera reaches the floor through the glass and aims at the sun from there; light tracing\'s connection from that floor to the eye would meet the pane. It stays the camera\'s, as everything does that light tracing cannot connect.',
     },
     both: {
-        who: 'nobody', label: 'Counted by neither: a caustic seen through glass (chapter 19)',
+        who: 'chance', label: 'The camera\'s, found only by chance (chapter 19 does better)',
         path: world => { const ph = photonPath(world), t = eyeRayTo(world, ph.end[0]); return { pts: [...t.pts, ...ph.pts.slice(0, -1).reverse()], cam: t.pts.length - 1 } },
-        readout: 'eye → glass → glass → floor → glass → glass → sun: the caustic, seen through the pane. The camera\'s shadow ray from the floor meets the ball; light tracing\'s connection from the floor to the eye meets the pane. Neither side makes this path except by chance, so ShadyTracer has a third way, which meets in the middle: the photon map, chapter 19.',
+        readout: 'eye → glass → glass → floor → glass → glass → sun: the caustic, seen through the pane. The camera\'s shadow ray from the floor meets the ball; light tracing\'s connection from the floor to the eye meets the pane, so light tracing cannot count it and it stays the camera\'s. The camera finds it only by chance, a bounce from the floor that the ball happens to turn onto the sun, as in section 1: noisy, slow to settle. For this ShadyTracer has a third way, which meets in the middle: the photon map, chapter 19.',
     },
 }
 

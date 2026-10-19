@@ -199,7 +199,7 @@ real student.
 1. Why can a shadow ray from the floor not find the sun through a glass ball?
 2. What is light tracing, and which light does ShadyTracer give it?
 3. What goes wrong if both the camera's paths and the photons count a caustic?
-4. Which kind of path is nobody's, and why?
+4. Which kind of path does the camera keep though it finds it only by chance, and why?
 5. How does the renderer decide where to start photons, and why connections per photon sent rather than connections?
 6. What does the 20% floor protect against?
 
@@ -245,7 +245,7 @@ real student.
 **codegen** (From scene tree to shader)
 1. What is the difference between a value that is a uniform and one that is baked?
 2. Which edits need a new compile with code and uniforms, and which with baked code?
-3. Why does the scene as data never need a new compile for a shape added?
+3. Why does the scene as data need no new compile for a ball added, and when would it need one?
 4. What is a kernel's inlined size, and why does calling SDF in more places make compiling slower?
 5. Why is data not always the better choice?
 

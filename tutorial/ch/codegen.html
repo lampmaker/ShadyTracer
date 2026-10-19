@@ -15,10 +15,10 @@
   <div>
     <p class="eyebrow">Part VI · The machine · Chapter 24</p>
     <h1>From scene tree to shader</h1>
-    <p class="lede">The builder keeps a scene as a tree: groups, shapes, their sizes and joins. The kernels need the
-      scene's distance as WGSL code (chapter 2's SDF, every shape and join of chapter 3). Turning one into the other is
-      code generation, and how it is done decides what an edit costs: a value written, or the whole program compiled
-      again, seconds each. This chapter is ShadyTracer's three answers, code with uniforms, baked constants, and the
+    <p class="lede">The builder keeps a scene as a tree: groups, shapes, their sizes and joins. The <a data-g="kernel">kernels</a> need the
+      scene's distance as <a data-g="wgsl">WGSL</a> code (chapter 2's SDF, every shape and join of chapter 3). Turning
+      one into the other is code generation, and how it is done decides what an edit costs: a value written, or the
+      whole program <a data-g="compile">compiled</a> again, seconds each. This chapter is ShadyTracer's three answers, code with uniforms, baked constants, and the
       scene as data, and why a kernel's size, not its text, decides how long it takes to compile.</p>
   </div>
   <div class="titleblock" data-auto></div>
@@ -29,48 +29,67 @@
     <h2><span class="n">1</span>What changes the text</h2>
     <p data-step="tree:codegen">A small flat scene of one group: a block, a ball joined to it and a hole cut in it,
       blended by <var>k</var> (chapter 3). Written as ShadyTracer's code generator writes a scene: the structure as code,
-      a line for each shape and join, and every number a <a data-g="uniform">uniform</a> read, <code>UB.pos_c</code>,
-      the ball's position. That text is compiled into every kernel that needs the scene (chapter 21). One program
+      a line for each shape and join, and every number a <a data-g="uniform">uniform</a> read: <code>UB.pos_c</code>
+      is the ball's position (a uniform is named for its field and its shape, <code>pos</code> of <code>c</code>;
+      <code>k_g</code> is the blend of the group, <code>g</code>). That text is compiled into every kernel that needs the scene (chapter 21). One program
       compiled so far.</p>
     <p data-step="tree:move">Drag the ball (or the hole, or move the blend slider). The text is the same, so nothing
       compiles: the new position is written into the uniform buffer, and the next frame uses it. In the builder this is
       a "live" change, and why dragging a shape is smooth.</p>
-    <p data-step="tree:add">Add a ball. That is new code, two new lines (marked), so the program is compiled again. In
-      ShadyTracer a structural edit, a shape added, moved to another group or given another material, took 3.7 to 23
-      seconds uncached on the user's Ampere card for the bundled scenes (section 5).</p>
+    <p data-step="tree:add">Add a ball. That is new code, one new line (marked) and two new uniforms for it, so the
+      program is compiled again: the second. In ShadyTracer a structural edit, a shape added, moved to another group or
+      given another material (a material is a name written in the text, section 3), took 3.7 to 23 seconds on the
+      user's Ampere card for the bundled scenes, uncached (section 4). Uncached is the first time a text is compiled:
+      the browser keeps what it compiled, across a reload too, and the Noise library's 6.3-second build took 0.2 seconds
+      the next time (measured on the user's GTX 1080 Ti, <code>compileprogress.js</code>).</p>
     <p data-step="tree:baked"><a data-g="bake">Baked</a>: the same code, every uniform turned into a constant by the
-      engine's own bake (this page runs it). The compiler can fold constants into the arithmetic, and a shape not turned
-      or scaled loses its matrix products, so the kernels run faster (section 5). But now every change is new text: move
-      the ball and it compiles again. ShadyTracer bakes in the background once the edits stand still, and goes back to
-      the code with uniforms while they move.</p>
+      engine's own bake (this page runs it): <code>UB.pos_c</code> becomes <code>bk_pos_c</code>, declared at the top
+      with its value. A compiler can fold what it knows: arithmetic on known values alone is done once while compiling,
+      and a multiply by 1 or an add of 0 drops out. In the engine's code every shape's point is moved into its own frame
+      by a matrix (section 3), and a shape neither turned nor scaled has a matrix the compiler can see does nothing, so
+      it may drop those products (inferred in <code>roadmap/ARCHITECTURE.md</code>; the speed in section 4 is
+      measured). This small scene has no matrices to lose, so here only the text changes. And now every change is new
+      text: switching to Baked was its first compile, and moving the ball again its second. ShadyTracer bakes in the
+      background once the edits stand still, and goes back to the code with uniforms while they move.</p>
     <p data-step="tree:data">As data: one text for every such scene, a loop over <a data-g="record">records</a>, one a
-      shape: its kind, its join, its numbers. Adding the ball added a record and no line; nothing compiled. The price
-      is the loop: reading records costs more a step than numbers written into the code (section 5).</p>
+      shape: its kind, its join, its numbers. Switching to it was its first compile; then taking the ball away and
+      adding it back changed a record and no line, and nothing compiled. The text is the same for any scene of the kinds
+      the loop holds code for (here circles and boxes; a shape whose code the loop does not hold is new text still,
+      <code>scenedata.js</code>). The price is the loop: at every step it reads each record's numbers and asks its kind,
+      where codegen's text has the shapes and their places written in (section 4).</p>
   </div>
   <figure class="fig" data-fig="tree">
     <figcaption>Left: the scene, its inside shaded, each shape's handle (the hole's in
-      <span data-say="blocked">red</span>): drag them. Right: the text it compiles, the lines new at the last compile in
-      the <span data-say="accent">accent colour</span>, and the uniforms or records beside it. Below: the programs
-      compiled since the figure started. Choose the way, the blend, and add or take away a ball.</figcaption>
+      <span data-say="blocked">red</span>): drag them. Right: the text it compiles, the lines new at that way's last compile
+      in the <span data-say="accent">accent colour</span> (a line too long for the figure ends in …), and its uniforms
+      or records under it. Below: how many programs each way has compiled since the figure started, the way shown in
+      the accent colour. Choose the way, the blend, and add or take away a ball.</figcaption>
   </figure>
 </section>
 
 <section class="scene" id="inline">
   <div class="prose">
     <h2><span class="n">2</span>A kernel's size is its copies</h2>
-    <p data-step="inline:one">A kernel calls the scene's distance in several places: the march, the normal's
-      differences (four calls, chapter 4), the material lookup. The compilers behind WebGPU <em>inline</em> nearly every
-      call: a function called from four places is compiled four times. So what a compile costs follows the kernel's
-      size with every call written out, not its text. Here, a kernel with a scene of 40 objects written as the code
-      generator writes them, called once: 6,794 characters inlined.</p>
-    <p data-step="inline:four">Called from four places: the text barely grows, the inlined size is four times, 27,020.
-      The curve is the engine's own model of compile time, fitted on the user's GTX 1080 Ti over 16 builds: 15.2 ms
-      for every 1000 inlined characters at about 151,000, and growing faster than the size, as its 1.37th power (dashed:
-      the same rate held linear).</p>
-    <p data-step="inline:big">400 objects, four places: 273,500 characters inlined, about 5 seconds predicted. The
-      lens assembly copied 32 times, which the linear rate put at 97 seconds and the fitted model at 6.5 minutes, was
-      still compiling after ten minutes, which is one reason the scene as data exists. The other lever is fewer copies: section 6 has the six copies one function
-      held.</p>
+    <p data-step="inline:one">A kernel calls the scene's distance, <code>SDF</code> (chapter 2's signed distance
+      function), in several places: the march, the normal's differences (four calls, chapter 4), the material lookup.
+      The compilers behind WebGPU <em>inline</em> nearly every call: the function's body is written in where it is
+      called, so a function called from four places is compiled four times (<code>wgslgraph.js</code>, read in code). So
+      what a compile costs follows the kernel's size with every call written out, not its text: over 24 kernels the
+      inlined size predicted the time with a typical error (rms) of 33%, the text with 366% (<code>compileprogress.js</code>, measured).
+      Here, a kernel with a scene of 40 objects written as the code generator writes them, called once: 6,794
+      characters inlined, the kernel's own function once and <code>SDF</code> once, the text near enough.</p>
+    <p data-step="inline:four">Called from four places: the text barely grows, and the inlined size is about four
+      times, 27,020 (<code>SDF</code> four times, the kernel's own function once). The red curve is the engine's own model
+      of compile time, fitted on the user's GTX 1080 Ti (a Pascal card) over 16 builds: time = 15.2 ms × (size ÷ 1000)
+      × (size ÷ 151,000)<sup>0.37</sup>, so it grows faster than the size. The dashed line leaves out the last factor:
+      15.2 ms for every 1000 characters, straight. The two agree at 151,000 characters, a 2.3-second build; below that
+      the fit predicts less than the straight line, above it more, which is why at 40 objects the red curve lies under
+      the dashed one.</p>
+    <p data-step="inline:big">400 objects, four places: 273,500 characters inlined, past the crossing, 5.2 seconds
+      predicted against the straight line's 4.2. The lens assembly copied 32 times (a bundled scene of lenses, repeated),
+      which the straight line put at 97 seconds and the fitted model at 6.5 minutes, was still compiling after ten
+      minutes: one reason the scene as data exists. The other lever is fewer copies: section 5 has six copies one
+      function held, and a loop's 32 (another 32) unrolled.</p>
   </div>
   <figure class="fig" data-fig="inline">
     <figcaption>Predicted compile time of a kernel whose scene has the objects you set, against how many places it
@@ -83,13 +102,14 @@
 <section class="plain wide" id="engine">
   <div class="prose">
     <h2><span class="n">3</span>How ShadyTracer does it</h2>
-    <p>What the code generator writes for a group of a box minus a sphere, frozen in a test so any change to it is seen
-      (each child in a Hit of its own, its frame entered and left, the group's join folded in):</p>
-    <pre data-src="builder/test/fixtures/csg-v10/cases.off.wgsl" data-sym="{   // hs: skipped while farther than its box" data-to="XF_P = xfp_hs;" data-max="64"
-         data-why="WGSL. xfPoint moves the point into a node's frame by its matrix, a uniform (UB.xf_hs); XF_M, XF_S and XF_P carry the frame for normals and materials. cullDist and the box uniforms are the culling of chapter 26. add_new records a shape's distance and material in the Hit C; csgSubtract and fold are scene_api.js's join and the step that hands the joined shape on (chapter 3). The two lines starting at the left margin are the shapes' own code, as their authors wrote it." data-hash="fa71dafc"></pre>
+    <p>Figure 1's one line <code>d = csgSubtract(d, sdCircle(p - UB.pos_h, UB.r_h), UB.k_g)</code>, as the engine's
+      code generator writes it for a sphere cut out of a box (a case frozen in a test, so any change to what it writes
+      is seen):</p>
+    <pre data-src="builder/test/fixtures/csg-v10/cases.off.wgsl" data-in="{   // hs: skipped while farther than its box" data-sym="// node hsb (code)" data-to="k_hs = csgSubtract(k_hs, C.s, UB.blend_hs);"
+         data-why="WGSL. xfPoint moves the point into the sphere's frame by its matrix, a uniform (UB.xf_hsb): where figure 1 wrote p - UB.pos_h. XF_M, XF_S and XF_P keep the frame for normals and materials, and are put back after. The radius is a uniform; the material is a name in the text (matid_white), which is why a new material is a compile. The two lines at the left margin are the shape's own code, as its author wrote it: add_new records its distance and material in C, a Hit (the shape's answer). Then the join: the material taken where the cut wins (select picks C.m when its test is true), and csgSubtract with the group's blend, UB.blend_hs, figure 1's k (chapter 3)." data-hash="0144cd9a"></pre>
     <p>The bake, whole:</p>
     <pre data-src="builder/bake.js" data-sym="function baked"
-         data-why="scene.uniforms maps each uniform's name to its type and value. live(name) keeps a value a uniform: the builder keeps the culling boxes, measured after the compile, and values the user flagged as animated, so a timeline can still move them. bakeable refuses a value no WGSL literal can hold (infinite, or past f32's range)." data-hash="55af67cc"></pre>
+         data-why="scene.uniforms maps each uniform's name to its type and value. { live = () => false } = {} is JavaScript for an optional second argument: without it, live answers false for every name and every value is baked. live(name) keeps a value a uniform: the builder keeps the culling boxes (chapter 26), measured after the compile, and values the user flagged as animated, so a timeline can still move them. bakeable refuses a value no WGSL literal can hold (infinite, or past f32's range). rewrite turns each UB.name the bake took into bk_name." data-hash="64daaf76"></pre>
     <p>Why the scene became data:</p>
     <pre data-src="builder/scenedata.js" data-sym="// WHY. A builder scene was one WGSL function with a block of code per node" data-to="text is the same, so nothing compiles (builder/demo.js compares it)." data-hash="021b001e"></pre>
     <p>And how the compile model was found:</p>
@@ -103,26 +123,32 @@
     <h2><span class="n">4</span>Tricks and trade-offs</h2>
     <p>Each is stamped with how it is known; point at a stamp to see what it means.</p>
     <div data-claim="measured">
-      <p><strong>Baked runs faster, mostly.</strong> On the user's Pascal card, 1280 × 720 (0.28.0), codegen against
-        baked: the optics bench's march 189.7 to 61.2 ms a sample (−68%), its whole GPU time 297.4 to 109.1; baked faster
-        on seven of eight scenes. The exception, the Noise library, was 5% slower to march, not explained. Compiling baked
+      <p><strong>Baked runs faster, mostly.</strong> On the user's GTX 1080 Ti, 1280 × 720 (0.28.0), codegen against
+        baked, over the benchmark's eight scenes (bench/): the optics bench's march 189.7 to 61.2 ms a sample (−68%), its
+        whole GPU time 297.4 to 109.1; baked faster on seven of the eight. The exception, the Noise library, was 5% slower to march, not explained. Compiling baked
         was no slower anywhere: the optics bench's scene kernels 8,456 to 4,643 ms (<code>roadmap/ARCHITECTURE.md</code>,
         the bake run).</p>
     </div>
     <div data-claim="measured">
-      <p><strong>Data costs a step.</strong> The march as data against codegen, same card: 4.2, 3.9 and 3.1 times as long
-        on three small scenes, 8.9 and 9.4 on the demo and the Menger cubes, and 0.83 on the optics bench, the biggest,
-        where data was faster (the same document, before step 5). So the scene as data is a developer switch, off by
-        default, and the builder edits with code and renders baked.</p>
+      <p><strong>Data costs a step.</strong> The march as data against codegen, same card (the scenedata run of 0.22.6,
+        the same document): 4.2, 3.9 and 3.1 times as long on three small scenes, 8.9 and 9.4 on the demo and the Menger
+        cubes (scenes whose warps and subtraction the data walk keeps frames for), and 0.83 on the optics bench, the
+        biggest, where data was faster. Not more work a ray: counted on a software GPU, the Menger cubes take 107.6
+        steps a ray either way, and the data walk visits 11.4 records a step. Inferred in <code>scenedata.js</code>, not
+        measured: a record's cost is its reads from memory, each waiting for the last, since where the next record is,
+        is in this one. So the scene as data is a developer switch, off by default, and the builder edits with code and
+        renders baked.</p>
     </div>
     <div data-claim="measured">
-      <p><strong>A structural edit.</strong> A whole compile: 3.7 to 23 s uncached on the Ampere for the bundled scenes
-        of 2 to 14 objects (<code>docs/PERFORMANCE.md</code>, run 4).</p>
+      <p><strong>A structural edit.</strong> A whole compile: 3.7 to 23 s uncached on the user's Ampere card for the
+        bundled scenes of 2 to 14 objects (<code>docs/PERFORMANCE.md</code>, run 4; section 1's number).</p>
     </div>
     <div data-claim="code">
-      <p><strong>One text whatever the size.</strong> The records are copied into a uniform buffer of 4096 vec4s, the
-        64 KiB every device allows (chapter 21): room for 585 records; any past that are read from the storage buffer
-        where they also are, so a scene of any size is the same text (<code>scenedata.js</code>, the room).</p>
+      <p><strong>One text whatever the size.</strong> The records are copied into a uniform
+        <a data-g="buffer">buffer</a> of 4096 vec4s (a vec4 is four f32 numbers, 16 bytes): 64 KiB, the most every device
+        allows a uniform buffer (chapter 21). That holds a header and 585 records of 7 vec4s each; any past them are read
+        from the scene's storage buffer, the larger kind, where they also are, so a scene of any size is the same text
+        (<code>scenedata.js</code>, the room).</p>
     </div>
   </div>
 </section>
@@ -135,11 +161,13 @@
         patterned material, so a lookup with six such materials held six more copies of the scene at every place it was
         called, and the Noise library took over a minute to compile
         (<cite data-src="builder/codegen.js" data-sym="/* THE LOCAL POINT, ONCE, BEFORE THE SWITCH" data-to="an IOR. That, and the unrolled march, made the Noise library scene compile for over a minute."></cite>).</li>
-      <li><strong>Thirty-two copies of the scene.</strong> The march's loop of 32 steps had a constant bound, so the
-        compiler unrolled it and put 32 copies of the scene in the kernel; the bound now goes through
+      <li><strong>Thirty-two copies of the scene.</strong> The march's loop of 32 steps (chapter 22's pass) had a constant bound, so the
+        compiler unrolled it (wrote its body out 32 times, one after another) and put 32 copies of the scene in the
+        kernel; the bound now goes through
         <code>noUnroll</code> (wavefront.js, the march kernel; chapter 27).</li>
       <li><strong>A carved wall in the wrong material.</strong> Only a union used to switch the material where a shape
-        won, so a subtraction's carved walls kept the base's: the die's pips came out white
+        won, so a subtraction's carved walls kept the base's: the die in the Combining shapes example, a cube with its pips cut
+        out, came out with white pips
         (<cite data-src="builder/codegen.js" data-sym="Before 0.57.2 only a union switched"></cite>; chapter 3).</li>
       <li><strong>Every scene an error.</strong> The first builder wrote calls to a function the engine had already
         renamed, so every scene it produced failed to compile

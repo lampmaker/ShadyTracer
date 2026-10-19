@@ -112,7 +112,8 @@ const optsOf = mode => ({ nee: true, hazeNee: mode === 'aim', maxBounce: 12 })
 export function roomSample(world, mode, R, rec = null) {
     const v = new Float64Array(PIX), o = optsOf(mode)
     for (let i = 0; i < PIX; i++) {
-        const [ox, oy, dx, dy] = cameraRay(CAM, i, R()), pr = rec && i % 6 === 2 ? [] : null
+        // every sixth pixel's path drawn, and one across the beam's middle, whose shadow rays from the dust reach the sun
+        const [ox, oy, dx, dy] = cameraRay(CAM, i, R()), pr = rec && (i % 6 === 2 || i === beamPixels[beamPixels.length >> 1]) ? [] : null
         v[i] = tracePath(world, ox, oy, dx, dy, { ...o, rand: R, record: pr })
         if (pr) rec.push(pr)
     }
@@ -175,13 +176,16 @@ function strip(pen, pix, n, x0, y0, x1, h, k, label, marks = []) {
     pen.image(px0, top, w, pen.view.s * h, n, 1, i => { const v = k * pix[i].Y; return [v, v, v] })
     pen.labelPx(px0, top - 20, label, { role: 'soft', size: 11, base: 'bottom' })
     for (const q of [1, Math.round(n / 4), Math.round(n / 2), Math.round(3 * n / 4), n]) pen.labelPx(at(q - 1), bot + 3, String(q), { role: 'soft', size: 9, align: 'center', base: 'top' })
+    // each mark a bracket and its words over the strip; one whose words would run into the last's goes under it instead,
+    // beneath the pixel numbers, so a label always starts at its own bracket
     let lx = -Infinity
     for (const { idx, text, role } of marks) {
         if (!idx.length) continue
-        const a = at(idx[0]) - w / n / 2, b = at(idx[idx.length - 1]) + w / n / 2
-        ctx.save(); ctx.strokeStyle = pen.col(role); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(a, top - 3); ctx.lineTo(a, top - 1); ctx.lineTo(b, top - 1); ctx.lineTo(b, top - 3); ctx.stroke(); ctx.restore()
-        const tx = Math.max(a, lx + 8)
-        pen.labelPx(tx, top - 6, text, { role, size: 11, base: 'bottom' }); lx = tx + ctx.measureText(text).width + 30
+        const a = at(idx[0]) - w / n / 2, b = at(idx[idx.length - 1]) + w / n / 2, under = a < lx + 8
+        const y = under ? bot + 1 : top - 1, sgn = under ? 1 : -1
+        ctx.save(); ctx.strokeStyle = pen.col(role); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(a, y + 2 * sgn); ctx.lineTo(a, y); ctx.lineTo(b, y); ctx.lineTo(b, y + 2 * sgn); ctx.stroke(); ctx.restore()
+        if (under) pen.labelPx(a, bot + 15, text, { role, size: 11, base: 'top' })
+        else { pen.labelPx(a, top - 6, text, { role, size: 11, base: 'bottom' }); ctx.save(); ctx.font = `500 11px ${pen.theme.fonts.hand}`; lx = a + ctx.measureText(text).width; ctx.restore() }
     }
     const hp = pen.hover({ x: px0, y: top, w, h: bot - top })
     if (hp) {
@@ -229,11 +233,13 @@ export const figures = {
                     t += r * 0.9
                 }
                 const end = m.c ? [m.x0 + dx * t, m.y0 + dy * t] : m.hit ?? [m.x0 + dx * 12, m.y0 + dy * 12]
-                pen.ray([m.x0, m.y0], m.c ? [m.c.x, m.c.y] : end, { role: 'cam', w: 1.6, exact: true })
+                // the leg in blue up to the step that passed the particle, that step in red, the particle where it moved back to
+                const t0 = m.c ? t - Math.abs(m.steps[m.k].d) * 0.9 : 0, from = [m.x0 + dx * t0, m.y0 + dy * t0]
+                pen.ray([m.x0, m.y0], m.c ? from : end, { role: 'cam', w: 1.6, exact: true, arrow: !m.c })
                 if (m.c) {
-                    pen.line([m.c.x, m.c.y], end, { role: 'blocked', w: 1.4, dash: [3, 3], exact: true })
+                    pen.ray(from, end, { role: 'blocked', w: 2, exact: true })
                     pen.dot([m.c.x, m.c.y], { role: 'accent', r: 4 })
-                    pen.label([m.c.x + 0.3, m.c.y - 0.55], 'met a particle: moved back here from the end of the step that passed it (red)', { role: 'accent', size: 11, align: 'right' })
+                    pen.label([m.c.x, m.c.y + 0.32], 'the particle: the ray moved back to here', { role: 'accent', size: 11, align: 'center' })
                 }
                 pen.labelPx(W * 0.03, H * 0.8, m.c ? `drawn as the leg starts: ${m.c.t.toFixed(2)} along it; the march stopped after ${m.k + 1} steps` : 'no particle on this leg: it ends where the march ends it', { role: 'soft', size: 12 })
                 return
@@ -260,7 +266,7 @@ export const figures = {
             pen.labelPx(rect.x, rect.y + rect.h + 20, `passed through: ${hst.passed} (e^(−4/mfp) says ${(DRAWS * Math.exp(-4 * sig)).toFixed(0)})`, { role: 'soft', size: 11, base: 'top' })
         },
         readout(s) {
-            if (s.one) { const m = marchOne(s.mfp, rng(s.seed)()); return m.c ? `the particle ${m.c.t.toFixed(2)} along the leg, inside the box from ${hazeSpan2(FREE_BOX, m.x0, m.y0, Math.cos(m.a), Math.sin(m.a), 12)[0].toFixed(2)}` : 'this leg crosses the dust without meeting a particle' }
+            if (s.one) { const m = marchOne(s.mfp, rng(s.seed)()); return m.c ? `the particle ${m.c.t.toFixed(2)} along the leg, which enters the dust ${hazeSpan2(FREE_BOX, m.x0, m.y0, Math.cos(m.a), Math.sin(m.a), 12)[0].toFixed(2)} along it` : 'this leg crosses the dust without meeting a particle' }
             const h = histogram(s.mfp, s.seed + 100)
             return `mean free path ${s.mfp.toFixed(2)} · of ${DRAWS} crossings 4 long, ${h.passed} passed (${(100 * h.passed / DRAWS).toFixed(1)}%; e^(−4/${s.mfp.toFixed(2)}) = ${(100 * Math.exp(-4 / s.mfp)).toFixed(1)}%)`
         },
@@ -312,8 +318,8 @@ export const figures = {
     },
 
     beam: {
-        aspect: 1.9,
-        world: { x: [-5.6, 7.6], y: [-2.2, 4.75] },
+        aspect: 1.78,
+        world: { x: [-5.6, 7.6], y: [-2.66, 4.75] },
         state: { mode: 'aim', mfp: 6, g: 0.7, seed: 1, spp: 0, max: 300 },
         controls: [
             { type: 'seg', key: 'mode', options: MODES },
@@ -337,8 +343,16 @@ export const figures = {
             for (let k = -1; k <= 1; k++) { const y0 = 2.2 + k * 0.35, x = 5.5 + 1.0, y = y0 + 1.0 * tn; pen.ray([x + 0.7 * Math.cos(SUN_EL), y + 0.7 * Math.sin(SUN_EL)], [x, y], { role: 'light', w: 1.2, exact: true }) }
             pen.label([5.5, 4.4], 'the sun, 35° up', { role: 'light', size: 12, align: 'right' })
             drawPaths(pen, s.shown)
+            // most drawn shadow rays start outside the beam and meet a wall; one that starts in it, for the record, reaches
+            // the sun through the window: a point 3 down the beam's middle line
+            if (s.mode === 'aim') {
+                const P = [WALL_X + 0.2 - 3 * Math.cos(SUN_EL), 2.2 - 3 * Math.sin(SUN_EL)]
+                pen.ray(P, [P[0] + 3.7 * Math.cos(SUN_EL), P[1] + 3.7 * Math.sin(SUN_EL)], { role: 'shadow', w: 1.6, exact: true })
+                pen.dot(P, { role: 'accent', r: 3.5 })
+                pen.label([P[0] - 0.15, P[1] + 0.05], 'from dust in the beam, a shadow ray reaches the sun', { role: 'shadow', size: 10, align: 'right' })
+            }
             pen.eye(CAM.eye, CAM.dir, { size: 18 })
-            strip(pen, s.pix, PIX, -5.2, -1.3, 7.2, 0.45, 20, 'the eye\'s picture, brightened 20 times: pixel 1 looks highest, 48 lowest',
+            strip(pen, s.pix, PIX, -5.2, -1.3, 7.2, 0.45, 20, 'the eye\'s picture, brightened 20 times: pixel 1 the top of its view, 48 the bottom',
                 [{ idx: patchPixels, text: 'the lit floor', role: 'light' }, { idx: beamPixels, text: 'across the beam', role: 'accent' }])
         },
         readout(s) {

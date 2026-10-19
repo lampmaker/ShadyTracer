@@ -522,6 +522,91 @@ with one listed.
 | 11 | R for the reflectance and for red; §7's green reflections against "stay white"; the tag's formula; the gap's 0.00805 against 0.00806; 0.0029 of what. | **Fixed**, each. |
 | 11 | The beam inside the prism orange; the excerpt stopping before acc grows. | **Fixed.** Inside drawn in ink; the excerpt to `acc += p`, read and stamped. |
 
+## Round 7, 2026-10-19 (chapters 18 to 24, first read)
+
+A fresh reader a chapter, the same brief, with each page's questions from `README.md`. Reports:
+[caustics](reports/2026-10-19-round7/caustics.md), [photons](reports/2026-10-19-round7/photons.md),
+[haze](reports/2026-10-19-round7/haze.md), [gpu](reports/2026-10-19-round7/gpu.md),
+[wavefront](reports/2026-10-19-round7/wavefront.md), [accumulate](reports/2026-10-19-round7/accumulate.md),
+[codegen](reports/2026-10-19-round7/codegen.md).
+
+**What the round showed.** These chapters lean on earlier ones more than any before them, and every reader said so:
+"sample", "NEE", "the flat world", "lane" and "resolve" were used as if known. Each page now says its own words
+in a few sentences before it needs them, rather than pointing back. The readers also found five things the pages had
+wrong, not only unclear:
+- chapter 18 called a caustic seen through glass "missing from both" sides, where the engine's own comment keeps it
+  on the camera's side, found by chance (`materials_pbr.js`, THE SPLIT);
+- chapter 22 said a short budget only "costs convergence", after the flush's comment, while its own figure showed
+  the picture darker;
+- chapter 23 read the resolve kernel's `n == 0` return as the bug it once was, and `UB.maxaverages` as the setting
+  it is not;
+- chapter 24's section numbers were each one off;
+- chapter 21's "bad" struct was described otherwise than its figure drew it.
+
+And one bug in the kit: the excerpt locator cut a function whose parameters hold braces (`{ live } = {}`) at those
+braces, so "the bake, whole" showed five lines.
+
+| Chapter | Finding | |
+|---|---|---|
+| all | The excerpt locator stopped at a destructured parameter's brace. | **Fixed.** A `function` or `fn` symbol's body is looked for after its parameter list; a locator test plants the case. `baked` and `planBatches` re-read and stamped. |
+| 18 | "Missing from both" against the camera keeping it. | **Wrong, fixed.** The page, figure 2's label and readout say the camera's, by chance, citing the split's comment. |
+| 18 | "Nearly twice" against 0.738 / 0.313. | **Fixed.** About 2.4 times, both numbers given. |
+| 18 | "Compare the open floor" with no open-floor number; the bracket reading under the open floor. | **Fixed.** The readout gives pixels 41 to 48; the bracket's mean explained (the shadow either side of the spot, the spot itself pixel 25). |
+| 18 | Sample, ±, NEE, the flat world, "a rare find counts for more", Fresnel. | **Fixed**, each in a sentence; the second paragraph split in two. |
+| 18 | Connections drawn like shadow rays; the dark pixels; "pixel 1 looks highest". | **Fixed.** Connections dashed (`pen.ray` takes a dash); the sky and the ball marked under the strip. |
+| 18 | The 20% floor invisible; "learning" reading like "uniform"; 40 times from 0.963 / 0.160. | **Fixed.** The floor dashed across the bars; the readout says the sample was sent evenly; (0.963 ÷ 0.160)² ≈ 36, which the entry calls about 40. |
+| 18 | `camFootprint` opaque. | **Fixed.** Annotated line by line in its note. |
+| 18 | The narrow and wide screenshots look alike. | **Not changed.** At 400 samples the difference is the ± (0.106 against 0.022), which the readout gives. |
+| 19 | The budget paragraph: share, m, 24. | **Fixed.** In steps: share = 512 ÷ 8, m = 32 × share ÷ count, 24 = 32 × 6 ÷ 8. |
+| 19 | The double count shown only as its fix. | **Fixed.** Both ways it would happen, then the rule. |
+| 19 | Chapter 18 assumed; caustic and photon unmarked. | **Fixed.** A recap paragraph; both marked at first use. |
+| 19 | r = 0.06 and pixel 25's 0.72 not in the "with" paragraph; why the pane's mean barely moves; does the old way get there. | **Fixed**, each. |
+| 19 | Fold-out 2: ∝, variance, the exponents, the sums. | **Fixed.** Both words defined, exponents bracketed, the noise's 1/r in a line, a table of the radius with α = 2/3. |
+| 19 | The gather loop's `continue`s; where ÷πr² happens; `select`; the +1 heads. | **Fixed** in the excerpts' notes. |
+| 19 | Fig 3: the orange ticks' meaning; the header over "gather here"; cell −3 against "cells −11, 1". | **Fixed.** A key; the header moved up; the label names the cells with photons. |
+| 19 | §5's "checked" numbers; the uniforms.schema sentence; the irradiance card per square metre. | **Fixed.** A table (CHANGELOG 0.61.3's, re-read); the sentence rewritten; the card says per metre in the flat world. |
+| 19 | The negative cell's remainder. | **Fixed.** `hashCell` read: the product unsigned, its last bits. |
+| 20 | Why free flight works; "not divided by anything". | **Fixed.** 1 − u = e^(−t/mfp) solved; 37% of the rays carrying everything is 37% of the light. |
+| 20 | The flat world, leg, sample, ±, MIS, f cos θ. | **Fixed**, each in a sentence. |
+| 20 | Every drawn shadow ray red; "the 0.003 elsewhere"; the floor changing between modes; the bracket's label. | **Fixed.** One shadow ray from the beam drawn, reaching the sun; 0.0033 named; the eye's line through lit dust; the label under its bracket. |
+| 20 | The furnace's 1 against 1000; "noise 0" as a clue. | **Fixed.** The bench's sky said to be 1000, the stamps as shares of the no-box reading; the clue said. |
+| 20 | The ^3/2; g = 0; the 15° peak; the march figure's red step and label. | **Fixed**, each; the peak is 14°, worked out. |
+| 20 | The code: hazeC.w, r.n, absLtot, b1 and b2, the shadow's length; the :258 citation. | **Fixed** in the notes; the citation says it is the function's comment. |
+| 21 | Lock-step group against workgroup; lane; who decides the width. | **Fixed.** A lane card; the workgroup and lock-step cards say how they relate; the figure's width is "only to show". |
+| 21 | Alignment never stated; the "bad" struct's words against its figure. | **Fixed.** A table of sizes and alignments (a new `table.data`, and `extract.mjs` writes tables); the padding as drawn. |
+| 21 | "Over a second" hanging under a 2 s limit. | **Fixed.** As PERFORMANCE.md has it: the march rolled up that week may have made it slower, inferred. |
+| 21 | "Stopped working at 4,194,240"; 2048² called 4K. | **Fixed.** Worked up to it; 4K said as 3840 × 2160. |
+| 21 | Fig 3's rows too short to see; the readout cut off. | **Fixed.** Each bar's number over it, the axis shorter for rows; the readout shorter. |
+| 21 | The barrier's why; bind; device; BI and V3U; "five a round". | **Fixed**, each; the kernel card corrected (about eight a round). |
+| 21 | The rays-in-flight comment a wall of versions. | **Fixed.** A claim with a citation instead, and the old 4 M rays a story in §6. |
+| 22 | Iteration 15: 47 + 1 + 7 = 55, not 56. | **Fixed.** The readout counts the ray that ran out of steps. |
+| 22 | "Costs convergence" against a darker picture; what "cut" keeps. | **Wrong, fixed.** Both keep what they gathered and lose their later legs: a bias. The flush's comment is quoted and answered (an engine finding, reported, not edited). |
+| 22 | "Nothing measurable" against the tail's 45%. | **Fixed.** The gaps between kernels against the nearly empty kernels themselves: latency, as §10.2 says. |
+| 22 | The worst case in one sentence; the drop at 12; 523 from 774; why occlusion lags. | **Fixed**, each: a path of three legs walked; the cap at iteration 11; the sun above the surface; the two sides of the shadow queue. |
+| 22 | Prep dispatches are direct; "a few workgroups" for 56. | **Fixed.** |
+| 22 | Fig 1: the slider's "0: the worst case"; no picture; the tail step the same as the first. | **Fixed.** The slider in iterations, 24 marked; the picture as a strip; the tail shaded. |
+| 22 | Fig 2: the dispatch sizes always empty; no prep step; the flip's shade queue. | **Fixed.** The sizes written so far always shown; a prep step; the shade queue cleared at the flip. |
+| 22 | Lanes not explained here. | **Fixed** in a sentence, pointing at chapter 21's figure rather than drawing it again. |
+| 23 | What a sample is; the two buffers; resolve never named. | **Fixed.** An opening paragraph, with the running average worked. |
+| 23 | Line 418's return against §6; `maxaverages` 0. | **Wrong, fixed.** The excerpt now starts at the comments that say the words are taken first; the note says the host writes the capped count. |
+| 23 | 65,535; u32, f32, word, WGSL. | **Fixed.** 2³² − 1 at 65,536 a unit; each word defined. |
+| 23 | Batches dividing by the whole count; photons before gathers. | **Fixed.** |
+| 23 | Fig 3's clipped title and "the first 1 photons only"; fig 2's "kept to"; e-notation; fig 1's "struck", steps and rounds. | **Fixed**, each (numbers as 4.1 × 10⁻⁵). |
+| 23 | "Contention is low" against the crowd; §5's title; 2.3 million against 2,164,802; negative luminance against a negative channel; 537 MB. | **Fixed**, each. |
+| 24 | Section references one off; "the bake, whole" five lines. | **Wrong, fixed** (the second by the locator). |
+| 24 | Fig 1's counter against its caption; the add step undoing the move. | **Fixed.** Each way counts its own compiles; the steps are one story. |
+| 24 | "Two new lines" with one marked. | **Fixed.** One line and two uniforms; the test holds the one. |
+| 24 | "At about 151,000"; the curves crossing. | **Fixed.** The model's formula, and where it meets the straight line. |
+| 24 | Folding; why data costs a step; uncached; "never" a compile. | **Fixed**, each: the bake's names, ARCHITECTURE's steps and records a step, the browser's cache measured, the loop's kinds. |
+| 24 | The 58-line WGSL excerpt. | **Fixed.** Trimmed to the sphere's child and the join, said to be figure 1's line grown up. |
+| 24 | Named scenes, 1080 Ti and Pascal, vec4s, 32 twice. | **Fixed**, each. |
+
+**Engine findings from this round**, reported to the user and not edited here:
+- the flush's comment (`wavefront.js`) and budgetOverride's (`raytrace_main.js`) say a short budget costs
+  convergence, not light; the light tracer's comment on the same cut (`materials_pbr.js`) says it costs light;
+- PERFORMANCE.md's Noise library sample "over a second" sits beside a hang under a limit of about 2 s, explained
+  there only by an inference.
+
 ## Next round
 
 The pages stay drafts. Every written chapter has now had two readers (chapters 5 to 11 in rounds 5 and 6); the

@@ -114,6 +114,7 @@ for (const page of PAGES) {
                 else if (n.matches('aside.refs')) lines.push(`[READING BOX, "${n.querySelector('.tag')?.textContent.trim() ?? ''}": outside sources, each a link that opens another site]\n`
                     + [...n.querySelectorAll('li')].map(li => `- ${li.querySelector('.src-t')?.textContent.trim() ?? '?'} (${li.querySelector('.by')?.textContent.trim() ?? ''}): ${txt(li.querySelector('.why') ?? li)}`).join('\n'))
                 else if (n.matches('aside.note')) lines.push(`[NOTE IN THE MARGIN] ${txt(n)}`)
+                else if (n.matches('table')) lines.push([...n.querySelectorAll('tr')].map(tr => `| ${[...tr.children].map(c => txt(c)).join(' | ')} |`).join('\n'))
                 else if (n.matches('[data-step]')) lines.push(`[moves figure ${n.closest('section')?.querySelector('figure.fig')?.dataset.n ?? '?'}: ${n.dataset.step.split(':')[1]}] ${txt(n)}`)
                 else if (n.matches('p, ul, ol, dl, .eyebrow, .lede, pre')) lines.push(txt(n))
                 else walk(n)

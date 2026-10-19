@@ -34,8 +34,10 @@ export const world = {
 export const CAM = { eye: [-4.7, 2.9], dir: -18 * DEG, fov: 70 * DEG, pixels: 64 }
 export const SPP = 16
 const RUNS = new Map()
-/** the sample, by budget (0: the worst case) and NEE, made once each */
+/** the sample, by budget (0 or the worst case itself: the worst case) and NEE, made once each */
+export const WORST = 24
 export function run(budget = 0, nee = true) {
+    if (budget === WORST) budget = 0
     const key = `${budget}|${nee}`
     if (!RUNS.has(key)) RUNS.set(key, wavefrontRun(world, CAM, { spp: SPP, budget, nee, seed: 3 }))
     return RUNS.get(key)
@@ -58,15 +60,21 @@ export const figures = {
     log: {
         aspect: 1.75,
         world: { x: [0, 1], y: [0, 1] },
-        state: { budget: 0, nee: true },
+        state: { budget: WORST, nee: true, tail: false },
         controls: [
-            { type: 'slider', key: 'budget', label: 'iterations (0: the worst case)', min: 0, max: 30, step: 1, fmt: v => v ? String(v) : `${run().worst}, the worst case` },
+            { type: 'slider', key: 'budget', label: 'iterations', min: 2, max: 30, step: 1, fmt: v => v === WORST ? `${v}, the worst case` : String(v) },
             { type: 'toggle', key: 'nee', label: 'Shadow rays (NEE)' },
         ],
-        steps: { sample: { budget: 0, nee: true }, tail: { budget: 0, nee: true }, short: { budget: 8, nee: true }, tiny: { budget: 4, nee: true } },
+        steps: { sample: { budget: WORST, nee: true, tail: false }, tail: { budget: WORST, nee: true, tail: true }, short: { budget: 8, nee: true, tail: false }, tiny: { budget: 4, nee: true, tail: false } },
         draw(pen, s) {
-            const { W, H } = pen.view, r = run(s.budget, s.nee), n = r.iters.length
-            const rect = { x: W * 0.08, y: H * 0.1, w: W * 0.88, h: H * 0.7 }, top = Math.max(...r.iters.map(l => Math.max(l.marched, l.shadowsTraced))) * 1.08
+            const { W, H } = pen.view, r = run(s.budget, s.nee), n = r.iters.length, { ctx } = pen
+            const rect = { x: W * 0.08, y: H * 0.1, w: W * 0.88, h: H * 0.58 }, top = Math.max(...r.iters.map(l => Math.max(l.marched, l.shadowsTraced))) * 1.08
+            // the drained tail, shaded behind the bars: the iterations after the bounce cap's (11), fewer and fewer rays
+            if (s.tail && n > 11) {
+                const X = v => rect.x + (v - 0.4) / (n + 0.2) * rect.w
+                ctx.save(); ctx.fillStyle = pen.col('accent'); ctx.globalAlpha = 0.1; ctx.fillRect(X(11.5), rect.y, X(n + 0.5) - X(11.5), rect.h); ctx.restore()
+                pen.labelPx(X(11.5) + 6, rect.y + rect.h * 0.35, 'the drained tail: still dispatched', { role: 'accent', size: 12 })
+            }
             const at = (k, o) => [k + 1 + o, 0]
             plot(pen, rect, {
                 x: [0.4, n + 0.6], y: [0, top], xticks: Array.from({ length: n }, (_, k) => k + 1).filter(k => n <= 16 || k % 2 === 1 || k === n), fmt: v => String(Math.round(v)),
@@ -80,19 +88,23 @@ export const figures = {
             })
             const last = r.iters[n - 1]
             if (last.flushed || last.cut) pen.labelPx(rect.x + rect.w, rect.y + 6, `the last pass: ${last.flushed} flushed, ${last.cut ?? 0} shaded and cut`, { role: 'blocked', size: 12, align: 'right', base: 'top' })
-            pen.labelPx(rect.x, rect.y - 16, `one sample, ${r.paths.length} paths, iteration by iteration`, { role: 'soft', size: 11 })
+            pen.labelPx(rect.x, rect.y - 16, `rays, iteration by iteration: one sample, ${r.paths.length} paths`, { role: 'soft', size: 11 })
             pen.labelPx(rect.x + rect.w, rect.y + rect.h + 22, 'iteration', { role: 'soft', size: 11, align: 'right', base: 'top' })
+            // the picture itself, one exposure for every budget (the worst case's brightest pixel at white)
+            const full = run(0, true), k = 1 / Math.max(...full.img), sy = H * 0.8, sh = H * 0.05
+            pen.image(rect.x, sy, rect.w, sh, CAM.pixels, 1, i => { const v = k * r.img[i]; return [v, v, v] })
+            pen.labelPx(rect.x, sy - 4, `the picture: its ${CAM.pixels} pixels, the eye's view from the left of the room, at one exposure for every setting`, { role: 'soft', size: 10, base: 'bottom' })
             // the key
-            const { ctx } = pen
             ;[['rays marched', 'cam'], ['hits shaded', 'light'], ['shadow rays traced', 'shadow'], ['still marching (dots)', 'ink']].forEach(([t, role], k) => {
-                const kx = rect.x + k * W * 0.2, ky = H * 0.95
+                const kx = rect.x + k * W * 0.2, ky = H * 0.94
                 ctx.save(); ctx.fillStyle = pen.col(role); ctx.globalAlpha = 0.75; ctx.fillRect(kx, ky - 5, 12, 10); ctx.restore()
                 pen.labelPx(kx + 17, ky, t, { role: 'soft', size: 11, base: 'middle' })
             })
         },
         readout(s) {
             const r = run(s.budget, s.nee), full = run(0, s.nee), used = r.iters.filter(l => l.marched > 0).length
-            return `${r.budget} iterations${s.budget ? '' : ' (the worst case: (10 + 1) + ⌈400 / 32⌉)'} · rays in ${used} of them · ${r.flushed} flushed and ${r.iters[r.iters.length - 1].cut ?? 0} cut on the last pass · the picture's mean ${meanOf(r.img).toFixed(4)}${s.budget ? `, against ${meanOf(full.img).toFixed(4)} at the worst case` : ''}`
+            const worst = r.budget === r.worst
+            return `${r.budget} iterations${worst ? ' (the worst case: (10 + 1) + ⌈400 / 32⌉)' : ''} · rays in ${used} of them · ${r.flushed} flushed and ${r.iters[r.iters.length - 1].cut ?? 0} cut on the last pass · the picture's mean ${meanOf(r.img).toFixed(4)}${worst ? '' : `, against ${meanOf(full.img).toFixed(4)} at the worst case`}`
         },
     },
 
@@ -104,7 +116,7 @@ export const figures = {
             { type: 'slider', key: 'it', label: 'iteration', min: 1, max: 24, step: 1, fmt: v => String(v) },
             { type: 'button', label: 'Next kernel', act: s => { s.k++; if (s.k >= KERNELS.length) { s.k = 0; s.it = s.it % 24 + 1 } } },
         ],
-        steps: { march: { it: 1, k: 1 }, shade: { it: 1, k: 4 }, flip: { it: 1, k: 7 }, occlude: { it: 2, k: 6 }, tail: { it: 15, k: 1 } },
+        steps: { march: { it: 1, k: 1 }, prep: { it: 1, k: 2 }, shade: { it: 1, k: 4 }, flip: { it: 1, k: 7 }, occlude: { it: 2, k: 6 }, tail: { it: 15, k: 1 } },
         draw(pen, s) {
             const { W, H } = pen.view, r = run(), l = r.iters[s.it - 1], k = s.k, { ctx } = pen
             const readSide = (s.it - 1) % 2, writeSide = 1 - readSide
@@ -121,14 +133,16 @@ export const figures = {
                 read: [W * 0.04, H * 0.18], shadeQ: [W * 0.38, H * 0.18], write: [W * 0.72, H * 0.18],
                 sRead: [W * 0.04, H * 0.52], sWrite: [W * 0.72, H * 0.52], args: [W * 0.38, H * 0.52],
             }
-            const inA = k === 1 || k === 0 || k === 7, toQ = k === 1 || k === 3 || k === 4, toB = k === 1 || k === 4, sR = k === 5 || k === 6 || k === 7, sW = k === 4, args = k === 0 || k === 2 || k === 5
+            const inA = k === 1 || k === 0 || k === 7, toQ = k === 1 || k === 2 || k === 3 || k === 4 || k === 7, toB = k === 1 || k === 4, sR = k === 5 || k === 6 || k === 7, sW = k === 4, args = k === 0 || k === 2 || k === 5
             const afterMarch = k >= 2, afterShade = k >= 5, flipped = k === 7
-            box(...P.read, bw, bh, `rays ${readSide}: read`, flipped ? 'count cleared: written next' : k < 2 ? `${l.marched} waiting` : `${l.marched} read`, 'cam', inA)
-            box(...P.shadeQ, bw, bh, 'shade queue', afterMarch || k === 1 ? `${l.hits + l.escaped} hits and escapes` : '0', 'light', toQ)
+            box(...P.read, bw, bh, `rays ${readSide}: read`, flipped ? 'cleared: written next' : k < 2 ? `${l.marched} waiting` : `${l.marched} read`, 'cam', inA)
+            box(...P.shadeQ, bw, bh, 'shade queue', flipped ? 'cleared' : afterMarch || k === 1 ? `${l.hits + l.escaped} hits and escapes` : '0', 'light', toQ)
             box(...P.write, bw, bh, `rays ${writeSide}: written`, k < 1 ? '0' : k < 4 ? `${l.onward} still marching` : `${l.onward} + ${l.newLegs} new legs`, 'cam', toB)
-            box(...P.sRead, bw, bh, `shadow ${readSide}: read`, flipped ? 'count cleared: written next' : `${l.shadowsTraced} from the iteration before`, 'shadow', sR)
+            box(...P.sRead, bw, bh, `shadow ${readSide}: read`, flipped ? 'cleared: written next' : `${l.shadowsTraced} from the iteration before`, 'shadow', sR)
             box(...P.sWrite, bw, bh, `shadow ${writeSide}: written`, afterShade || k === 4 ? `${l.shadowsQueued} queued` : '0', 'shadow', sW)
-            box(...P.args, bw, bh, 'dispatch sizes', k === 0 ? `march: ${Math.ceil(l.marched / 64)} groups` : k === 2 ? `shade: ${Math.ceil((l.hits + l.escaped) / 64)} groups` : k === 5 ? `occlude: ${Math.ceil(l.shadowsTraced / 64)} groups` : '', 'accent', args)
+            // the sizes the prep kernels have written so far this iteration, workgroups of 64: the one being written or read strong
+            const g = n => Math.ceil(n / 64), sizes = [['march', g(l.marched), 0], ['shade', g(l.hits + l.escaped), 2], ['occlude', g(l.shadowsTraced), 5]].filter(([, , at]) => k >= at)
+            box(W * 0.35, P.args[1], W * 0.33, bh, 'dispatch sizes (groups of 64)', sizes.map(([nm, v]) => `${nm} ${v}`).join(' · ') || '(none yet)', 'accent', args || k === 1 || k === 3 || k === 4 || k === 6)
             // the kernel and what it does
             pen.labelPx(W * 0.04, H * 0.06, `iteration ${s.it} of ${r.budget}, kernel ${k + 1} of 8: ${KERNELS[k][0]}`, { role: 'accent', size: 14, base: 'middle' })
             // what the kernel does, in lines that fit
@@ -147,7 +161,7 @@ export const figures = {
         },
         readout(s) {
             const l = run().iters[s.it - 1]
-            return `iteration ${s.it}: ${l.marched} rays marched, ${l.hits} reached a surface and ${l.escaped} left, ${l.onward} still on their way; ${l.newLegs} new legs; ${l.shadowsTraced} shadow rays traced, ${l.shadowsQueued} queued`
+            return `iteration ${s.it}: ${l.marched} rays marched: ${l.hits} reached a surface, ${l.escaped} left the room, ${l.outOfSteps} ran out of steps, ${l.onward} still on their way · ${l.newLegs} new legs · ${l.shadowsTraced} shadow rays traced, ${l.shadowsQueued} queued`
         },
     },
 

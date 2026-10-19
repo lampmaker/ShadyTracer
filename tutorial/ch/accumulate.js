@@ -32,6 +32,10 @@ export const BUDGET = Math.floor(2 ** 30 / (2 * RAY_BYTES + SHADE_ITEM_BYTES))
 export const SIZES = [['1280x720', '1280 × 720'], ['1920x1080', '1920 × 1080'], ['2560x1440', '2560 × 1440'], ['3840x2160', '3840 × 2160']]
 export const planOf = s => { const [w, h] = s.size.split('x').map(Number); return { w, h, plan: planBatches(BUDGET, [w * h, Math.round(s.photons * 1e6)], 1, s.map ? { first: [1] } : {}) } }
 
+/** a number as a reader writes it, 4.1 × 10⁻⁵ rather than JavaScript's 4.1e-5 */
+const SUP = '⁰¹²³⁴⁵⁶⁷⁸⁹'
+export const sci = (x, d) => { const [m, e] = x.toExponential(d).split('e'); return `${m} × 10${String(+e).replace('-', '⁻').replace(/\d/g, c => SUP[c])}` }
+
 export const figures = {
     race: {
         aspect: 1.6,
@@ -70,7 +74,7 @@ export const figures = {
         },
         readout(s) {
             const r = raceOf(s)
-            return `${s.n} threads add ${r.expected} in all · the pixel ends at ${r.final}${r.final === r.expected ? ', every one counted' : `: ${r.expected - r.final} lost`} · ${r.steps.length} steps${s.mode === 'cas' ? `, ${r.failed} of them a compare-and-swap that failed` : ''}`
+            return `${s.n} threads add ${r.expected} in all · the pixel ends at ${r.final}${r.final === r.expected ? ', every one counted' : `: ${r.expected - r.final} lost`} · ${r.steps.length} steps (boxes)${s.sched === 'lockstep' ? ` in ${r.rounds} rounds (columns)` : ', one a column'}${s.mode === 'cas' ? `, ${r.failed} of them a compare-and-swap that failed` : ''}`
         },
     },
 
@@ -92,7 +96,7 @@ export const figures = {
             pen.shape([[lc, 0.85], [10, 0.85], [10, 1.35], [lc, 1.35]], { role: 'blocked', fill: 'blocked', w: 0.8, dash: [3, 3] })
             pen.label([-8, 1.62], 'the old u32 at 65536 a unit:', { role: 'ink', size: 12 })
             pen.label([(lf - 8) / 2, 1.1], 'nothing', { role: 'blocked', size: 11, align: 'center' })
-            pen.label([(lf + lc) / 2, 1.1], 'kept, to 1/65536', { role: 'ink', size: 11, align: 'center' })
+            pen.label([(lf + lc) / 2, 1.1], 'kept, rounded to steps of 1/65536', { role: 'ink', size: 11, align: 'center' })
             pen.label([(lc + 10) / 2, 1.1], 'clamped to 10,000', { role: 'blocked', size: 11, align: 'center' })
             // an f32: the whole line, to about 7 digits
             pen.shape([[-8, 1.95], [10, 1.95], [10, 2.35], [-8, 2.35]], { role: 'cam', fill: 'cam', w: 1 })
@@ -100,11 +104,11 @@ export const figures = {
             // the values the code names
             for (const [m, t] of MARKS) { const x = Math.log10(m); pen.line([x, -0.9], [x, 0.2], { role: 'soft', w: 0.8, dash: [2, 3], exact: true }); pen.label([x, -1.15], t, { role: 'soft', size: 11, align: 'center' }) }
             pen.handle('v', [s.lv, 0], { role: 'accent' })
-            pen.label([clamp(s.lv, -6.5, 8.5), -1.8], `a contribution of ${v >= 1e4 || v < 1e-2 ? v.toExponential(2) : String(+v.toPrecision(4))}`, { role: 'accent', size: 13, align: 'center' })
+            pen.label([clamp(s.lv, -6.5, 8.5), -1.8], `a contribution of ${v >= 1e4 || v < 1e-2 ? sci(v, 2) : String(+v.toPrecision(4))}`, { role: 'accent', size: 13, align: 'center' })
         },
         readout(s) {
-            const v = s.v, fx = fixedKeeps(v), f = f32Keeps(v), rel = k => k === v ? 'exactly' : Math.abs(k - v) / v > 0.01 ? `${(p => p > 99 ? p.toFixed(4) : p.toPrecision(4))(100 * (1 - k / v))}% of it lost` : `off by ${(Math.abs(k - v) / v).toExponential(1)} of it`
-            const num = x => x >= 1e4 || (x > 0 && x < 1e-2) ? x.toExponential(4) : String(+x.toPrecision(8))
+            const v = s.v, fx = fixedKeeps(v), f = f32Keeps(v), rel = k => k === v ? 'exactly' : Math.abs(k - v) / v > 0.01 ? `${(p => p > 99 ? p.toFixed(4) : p.toPrecision(4))(100 * (1 - k / v))}% of it lost` : `off by ${sci(Math.abs(k - v) / v, 1)} of it`
+            const num = x => x >= 1e4 || (x > 0 && x < 1e-2) ? sci(x, 4) : String(+x.toPrecision(8))
             return `a contribution of ${num(v)} · the old fixed point kept ${num(fx)} (${fx === 0 ? 'all of it lost' : rel(fx)}) · an f32 keeps ${num(f)} (${rel(f)})`
         },
     },
@@ -132,12 +136,12 @@ export const figures = {
                     { name: 'camera rays', kind: 'bars', role: 'cam', barWidth: 0.6, pts: cam.map((c, k) => [k + 1, c]) },
                 ],
             })
-            pen.labelPx(rect.x, rect.y - 16, `one sample of ${w} × ${h}: each batch's camera rays and photons, against the ${BUDGET.toLocaleString('en-US')} rays the buffers hold`, { role: 'soft', size: 11 })
+            pen.labelPx(rect.x, rect.y - 16, `${w} × ${h}: each batch's rays, against the ${BUDGET.toLocaleString('en-US')} the buffers hold`, { role: 'soft', size: 11 })
             pen.labelPx(rect.x + rect.w, rect.y + rect.h + 22, 'batch', { role: 'soft', size: 11, align: 'right', base: 'top' })
         },
         readout(s) {
             const { w, h, plan } = planOf(s)
-            return `${(w * h).toLocaleString('en-US')} camera rays and ${Math.round(s.photons * 1e6).toLocaleString('en-US')} photons · ${plan.batches} batch${plan.batches === 1 ? '' : 'es'}${plan.firstBatches ? `, the first ${plan.firstBatches} photons only` : ''} · resolve once, after the last`
+            return `${(w * h).toLocaleString('en-US')} camera rays and ${Math.round(s.photons * 1e6).toLocaleString('en-US')} photons · ${plan.batches} batch${plan.batches === 1 ? '' : 'es'}${plan.firstBatches ? `, the first ${plan.firstBatches === 1 ? 'of them' : plan.firstBatches} photons only` : ''} · resolve once, after the last`
         },
     },
 }

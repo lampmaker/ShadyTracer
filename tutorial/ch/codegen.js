@@ -28,37 +28,37 @@ export function sceneOf(s) {
     return { k: s.k, shapes }
 }
 export const MODES = [['codegen', 'Code with uniforms'], ['baked', 'Baked'], ['data', 'As data']]
-/** what the state's change asks of the card: the text it compiles against the one compiled last (idempotent: the
- *  figure asks it at every draw, and a second asking finds the same text) */
+/** what the state's change asks of the card, each way counted on its own: the text that way compiles against the one it
+ *  compiled last (idempotent: the figure asks it at every draw, and a second asking finds the same text). A way's first
+ *  text is its first compile; a way left and come back to with the same text compiles nothing (the browser keeps it). */
 export function account(s) {
-    const t = textOf(sceneOf(s), s.mode)
-    if (s.compiled == null) { s.compiled = t; s.prev = t; s.compiles = 1; s.last = 'compiled'; return }
-    if (t !== s.compiled) { s.prev = s.compiled; s.compiled = t; s.compiles++; s.last = 'compiled' }
+    const t = textOf(sceneOf(s), s.mode), seen = s.seen ?? {}, w = seen[s.mode]
+    if (!w || t !== w.text) { s.seen = { ...seen, [s.mode]: { text: t, prev: w ? w.text : t, n: (w?.n ?? 0) + 1 } }; s.last = 'compiled' }
     else if (s.lastKey !== keyOf(s)) s.last = 'written'
     s.lastKey = keyOf(s)
 }
 const keyOf = s => JSON.stringify([s.pos, s.k, s.extra, s.mode])
 const at = (s, id, x, y) => ({ ...s.pos, [id]: [x, y] })
-const stepState = (o, before) => { const s = { mode: 'codegen', k: 0.3, extra: false, pos: START, ...before }; account(s); return { ...s, ...o } }
+/* THE STEPS ARE ONE STORY: each the one before it and one thing more, every change accounted as the figure would */
+const INIT = { mode: 'codegen', k: 0.3, extra: false, pos: START }
+function story(...acts) { let s = { ...INIT }; account(s); for (const a of acts) { s = { ...s, ...a(s) }; account(s) } return s }
+const MOVE = s => ({ pos: at(s, 'c', 1.4, -0.35) }), ADD = () => ({ extra: true }), TAKE = () => ({ extra: false })
+const MOVE2 = s => ({ pos: at(s, 'c', 1.0, 1.05) }), TO = mode => () => ({ mode })
+export const STORY = { codegen: [], move: [MOVE], add: [MOVE, ADD], baked: [MOVE, ADD, TO('baked'), MOVE2], data: [MOVE, ADD, TO('baked'), MOVE2, TO('data'), TAKE, ADD] }
+export const storyOf = id => story(...STORY[id])
 
 export const figures = {
     tree: {
         aspect: 1.55,
         world: { x: [-2.6, 9.4], y: [-3.7, 4.5] },
-        state: { mode: 'codegen', k: 0.3, extra: false, pos: START, compiled: null, compiles: 0 },
+        state: storyOf('codegen'),
         controls: [
             { type: 'seg', key: 'mode', options: MODES },
             { type: 'slider', key: 'k', label: 'the blend k', min: 0, max: 0.8, step: 0.05, fmt: v => v.toFixed(2) },
             { type: 'button', label: 'Add a ball', act: s => { s.extra = true }, when: s => !s.extra },
             { type: 'button', label: 'Take it away', act: s => { s.extra = false }, when: s => s.extra },
         ],
-        steps: {
-            codegen: { mode: 'codegen', k: 0.3, extra: false, pos: START, compiled: null, compiles: 0 },
-            move: stepState({ pos: at({ pos: START }, 'c', 1.4, -0.35) }),
-            add: stepState({ extra: true }),
-            baked: stepState({ pos: at({ pos: START }, 'c', 1.4, -0.35) }, { mode: 'baked' }),
-            data: stepState({ extra: true }, { mode: 'data' }),
-        },
+        steps: Object.fromEntries(Object.keys(STORY).map(id => [id, storyOf(id)])),
         drag: {
             b: (s, p) => { s.pos = at(s, 'b', clamp(p[0], -1.6, 1.6), clamp(p[1], -1.6, 1.6)) },
             c: (s, p) => { s.pos = at(s, 'c', clamp(p[0], -2.2, 2.2), clamp(p[1], -2.2, 2.2)) },
@@ -73,11 +73,11 @@ export const figures = {
             pen.image(x0, y0, x1 - x0, y1 - y0, N, N, (i, j) => { const gx = -2.4 + 4.8 * (i + 0.5) / N, gy = 2.4 - 4.8 * (j + 0.5) / N; return sceneDist(scene, gx, gy) < 0 ? [0.22, 0.3, 0.45] : [0.86, 0.86, 0.82] })
             for (const sh of scene.shapes) pen.handle(sh.id, sh.c, { role: sh.join === 'subtract' ? 'blocked' : 'cam', label: { b: 'the block', c: 'a ball', h: 'a hole', e: 'another ball' }[sh.id] })
             // the text this mode compiles, the lines new at the last compile marked
-            const text = s.compiled.split('\n'), before = new Set((s.prev ?? '').split('\n')), tx = pen.X(2.75), ty = pen.Y(4.3)
+            const w = s.seen[s.mode], text = w.text.split('\n'), before = new Set(w.prev.split('\n')), tx = pen.X(2.75), ty = pen.Y(4.3)
             const fit = l => { const n = Math.floor((W - tx - 6) / 6.1); return l.length > n ? l.slice(0, n - 1) + '…' : l }
             pen.labelPx(tx, ty, s.mode === 'data' ? 'the text it compiles (every such scene):' : 'the text it compiles:', { role: 'soft', size: 11 })
             text.forEach((l, i) => {
-                const fresh = s.prev !== s.compiled && !before.has(l)
+                const fresh = w.prev !== w.text && !before.has(l)
                 if (fresh) { ctx.save(); ctx.fillStyle = pen.col('accent'); ctx.globalAlpha = 0.14; ctx.fillRect(tx - 3, ty + 16 + i * 14, W - tx - 4, 14); ctx.restore() }
                 pen.labelPx(tx, ty + 17 + i * 14, fit(l), { role: fresh ? 'accent' : 'ink', size: 10, kind: 'mono' })
             })
@@ -91,13 +91,22 @@ export const figures = {
                 Object.entries(u).forEach(([n, v], i) => pen.labelPx(tx + (i % 2) * 150, y + Math.floor(i / 2) * 14, `${n} ${Array.isArray(v.def) ? v.def.map(x => x.toFixed(2)).join(', ') : v.def.toFixed(2)}`, { role: 'cam', size: 10, kind: 'mono' }))
             }
             // what the last change asked for
-            pen.labelPx(pen.X(-2.4), pen.Y(-2.75), `programs compiled: ${s.compiles}`, { role: 'accent', size: 14 })
-            pen.labelPx(pen.X(-2.4), pen.Y(-2.75) + 20, s.last === 'compiled' ? 'the text changed: a compile (seconds, on a real card)' : 'the same text: the values written, no compile', { role: s.last === 'compiled' ? 'blocked' : 'shadow', size: 12 })
+            const cy = pen.Y(-2.4) + 16
+            pen.labelPx(pen.X(-2.4), cy, 'programs compiled since the figure started:', { role: 'soft', size: 11 })
+            // the three ways' counts in a row, each as wide as its words
+            let cx = pen.X(-2.4)
+            for (const [m, name] of MODES) {
+                const t = `${name}: ${s.seen[m]?.n ?? 0}`, size = m === s.mode ? 14 : 12
+                pen.labelPx(cx, cy + 18, t, { role: m === s.mode ? 'accent' : 'soft', size })
+                ctx.save(); ctx.font = `500 ${size}px ${pen.theme.fonts.hand}`; cx += ctx.measureText(t).width + 22; ctx.restore()
+            }
+            pen.labelPx(pen.X(-2.4), cy + 36, s.last === 'compiled' ? 'the text changed: a compile (seconds, on a real card)'
+                : `the same text: the ${s.mode === 'data' ? 'records' : 'values'} written, no compile`, { role: s.last === 'compiled' ? 'blocked' : 'shadow', size: 12 })
         },
         readout(s) {
             account(s)
             const scene = sceneOf(s)
-            return `${MODES.find(m => m[0] === s.mode)[1]} · ${scene.shapes.length} shapes · ${s.mode === 'codegen' ? `${Object.keys(codegen(scene).uniforms).length} uniforms` : s.mode === 'baked' ? `${Object.keys(bake(scene).baked.constants).length} constants` : `${scene.shapes.length} records`} · programs compiled so far: ${s.compiles}`
+            return `${MODES.find(m => m[0] === s.mode)[1]} · ${scene.shapes.length} shapes · ${s.mode === 'codegen' ? `${Object.keys(codegen(scene).uniforms).length} uniforms` : s.mode === 'baked' ? `${Object.keys(bake(scene).baked.constants).length} constants` : `${scene.shapes.length} records`} · compiled this way so far: ${s.seen[s.mode].n}`
         },
     },
 

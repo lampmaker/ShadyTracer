@@ -159,14 +159,14 @@ export function makePen(ctx, view, theme, handles = []) {
             ctx.restore()
         },
         /** a ray from a to b with an arrowhead (at b, or at the middle with `mid`), in its role's colour and dash */
-        ray(a, b, { role = 'cam', w = 1, arrow = true, mid = false, exact = true, alpha = 1, id } = {}) {
+        ray(a, b, { role = 'cam', w = 1, arrow = true, mid = false, exact = true, alpha = 1, id, dash } = {}) {
             const pa = P(a), pb = P(b)
             if (theme.misreg && !exact) {
                 ctx.save(); ctx.translate(theme.misreg, -theme.misreg * 0.6)
-                strokePx([pa, pb], { role, w, exact, alpha: alpha * 0.35, id })
+                strokePx([pa, pb], { role, w, exact, alpha: alpha * 0.35, id, dash })
                 ctx.restore()
             }
-            strokePx([pa, pb], { role, w, exact, alpha, id })
+            strokePx([pa, pb], { role, w, exact, alpha, id, dash })
             if (!arrow) return
             const L = Math.hypot(pb[0] - pa[0], pb[1] - pa[1])
             if (L < 10) return
