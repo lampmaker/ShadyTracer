@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dice and averages · ShadyTracer, inside out</title>
+<link rel="stylesheet" href="../kit/kit.css">
+<script type="module" src="montecarlo.js"></script>
+</head>
+<body data-chapter="montecarlo">
+<p class="kit-offline">This page runs from a web server, not from a file: in the repository run <code>python3 -m http.server 8000</code> and open http://localhost:8000/tutorial/.</p>
+<main class="sheet">
+
+<header class="sheet-head">
+  <div>
+    <p class="eyebrow">Part IV · Path tracing · Chapter 12</p>
+    <h1>Dice and averages</h1>
+    <p class="lede">The light reaching one pixel comes from every direction, bounced off everything in the scene. Nobody
+      can add all of that up exactly. A path tracer guesses instead: it follows one random path, then another, and
+      averages what they bring back. This chapter is about why an average of random guesses gets the right answer, how
+      fast it gets there, how the renderer knows how far it still is, and what happens when the dice are loaded.</p>
+  </div>
+  <div class="titleblock" data-auto></div>
+</header>
+
+<section class="scene" id="darts">
+  <div class="prose">
+    <h2><span class="n">1</span>An answer from random guesses</h2>
+    <p data-step="darts:few">Throw darts at a square one unit on a side, anywhere at random. A quarter circle of radius
+      one covers π/4 of the square, so that is the chance a dart lands inside it. Score 4 for a dart inside and 0 for one
+      outside: the average score is then π. Twenty darts give 3.4. That is a <a data-g="montecarlo">Monte Carlo</a>
+      <a data-g="estimator">estimate</a>: an answer worked out as the average of random tries.</p>
+    <p data-step="darts:more">Throw more (the button) and the estimate wanders less and settles towards π. The plot shows
+      it after every few darts, on a log scale (each label along the bottom four or sixteen times the one before, so
+      the first darts get as much room as the last thousands), with an <a data-g="error-bar">error bar</a> either side:
+      the faint lines. The bar says how far from the true answer the estimate typically is, and it is worked out from
+      the darts themselves, without knowing π. At the very start it cannot be trusted: the first twelve darts here all
+      landed inside, they agree perfectly, and the bar says ±0 while the estimate, 4, is far from π. A bar worked out
+      from the tries is only as good as the tries, and it settles after a few dozen.</p>
+    <p data-step="darts:lots">After 81,920 darts the estimate is 3.1440 ± 0.0057. The true value is 0.4 error bars away.
+      An error bar is not a wall: about one estimate in three lands more than one bar away, one in twenty more than two.
+      (Those two shares come from the bell-shaped curve that averages of many tries follow, a result to take on trust
+      here; the figure lets you check it, below.)
+      The readout counts the bars each time; <strong>Start again</strong> throws new darts. And the bar only measures
+      how much the tries disagree with each other. Dice loaded the same way every time (section 4) make tries that
+      agree on a wrong answer, and the bar shrinks round it just the same: it can see <a data-g="noise">noise</a>, never
+      <a data-g="bias">bias</a>.</p>
+    <p>A pixel is the same game. A <em>path</em> is a ray from the eye that bounces off surfaces until it finds light
+      (chapter 13 follows one). Each <a data-g="sample">sample</a> sends one random path through the pixel and brings
+      back the light it found, the pixel's value is the average of what its samples brought back, and the noise in a
+      young picture is each pixel's estimate still wandering.</p>
+  </div>
+  <figure class="fig" data-fig="darts">
+    <figcaption>Left: darts in a unit square, those inside the quarter circle in <span data-say="cam">blue</span>, those outside faint. Right: four times the share
+      inside, the estimate of π, as the darts add up, with its error bar either side, against the true π. The error
+      bar is kept with the renderer's own per-pixel arithmetic (<code>core/measure.js</code>).</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="spread">
+  <div class="prose">
+    <h2><span class="n">2</span>Four times the work, half the error</h2>
+    <p>How fast does it settle? Here are 240 separate estimates of π for each number of darts <var>N</var>, each dot one
+      estimate. With 4 darts they scatter over the whole range, and sit only on 0, 1, 2, 3 or 4 (0 is rare; each dart adds 0 or 1 to
+      the estimate); with 16, half as far; with 64, half again. The solid bar beside each column is how far they spread,
+      measured from the dots (their <a data-g="stddev">standard deviation</a>); the dashed one is the prediction, the
+      spread of one dart divided by √<var>N</var>. Four times the darts, half the spread: that rule holds for every
+      Monte Carlo estimate, and it is why a noisy picture needs four times the samples to look twice as clean. The
+      measured spread is itself worked out from 240 dots, so it wanders too, typically by about 5% and now and then by twice that (<strong>New darts</strong>
+      shows it): at <var>N</var> = 256 it may read 0.093 against the predicted 0.103. With 960 dots a column it wanders
+      half as much: the same √N rule, applied to the spread itself. Point at a column to read its numbers.</p>
+    <details class="maths">
+      <summary><span class="tag">The maths</span>Why √N</summary>
+      <div class="body">
+        <p>Each dart scores <var>X</var> = 4 with probability <var>p</var> = π/4, else 0, so its average is 4<var>p</var> = π.
+          How far it lands from that average, squared and averaged, is its <em>variance</em>: a score of 4 is 4 − π
+          away, a score of 0 is π away, and</p>
+        <p class="eq">σ² = <var>p</var>(4 − π)² + (1 − <var>p</var>) π² = 16 <var>p</var>(1 − <var>p</var>)</p>
+        <p>(put π = 4<var>p</var> in: 16<var>p</var>(1 − <var>p</var>)² + 16<var>p</var>²(1 − <var>p</var>) =
+          16<var>p</var>(1 − <var>p</var>)). Its square root, the standard deviation, is σ =
+          4√(<var>p</var>(1 − <var>p</var>)) = 1.642. Now the √<var>N</var>. For tries that do not depend on each other,
+          variances add. For two tries, the squared distance of their sum from its average is the first's squared
+          distance, plus the second's, plus twice the first's distance times the second's; and when the tries do not
+          depend on each other, that last product is as often positive as negative, and averages to 0. So the sum of
+          <var>N</var> darts has variance <var>N</var>σ², and spreads by √<var>N</var> σ.
+          The average is that sum divided by <var>N</var>, and so is its spread:</p>
+        <p class="eq">σ<sub>mean</sub> = <span class="frac"><span>√<var>N</var> σ</span><span><var>N</var></span></span> = <span class="frac"><span>σ</span><span>√<var>N</var></span></span></p>
+        <dl class="terms">
+          <dt>σ</dt><dd>how far one try typically lands from the answer</dd>
+          <dt>N</dt><dd>how many tries are averaged</dd>
+        </dl>
+        <p>The error bar in section 1 is this, with σ worked out from the darts so far: σ<sub>mean</sub> ≈ <var>s</var>/√<var>N</var>,
+          where <var>s</var> is the spread of the scores about their own average. It is called the <em>standard
+          error</em>. Nothing in it depends on how many random numbers each try is made of. A dart is two; a path
+          through a scene is dozens (a direction at every bounce, a point of a lamp, a point of the lens). Spacing tries
+          evenly instead, ten values for each of a dozen numbers, would take 10¹² tries; random tries settle as
+          1/√<var>N</var> however many numbers each one draws. That is why Monte Carlo is the way to add up light
+          arriving from every direction.</p>
+      </div>
+    </details>
+    <aside class="refs"><span class="tag">Read more</span><ul>
+      <li data-ref="pbr-montecarlo">Monte Carlo integration properly: expected values, estimators, variance and
+        importance sampling, with the maths written out.</li>
+    </ul></aside>
+  </div>
+  <figure class="fig" data-fig="spread">
+    <figcaption>240 estimates of π for each N (or as many as chosen), one dot each. Beside each column: the spread
+      measured from its dots (solid) and predicted, 1.642/√N (dashed), both one spread either side of π.</figcaption>
+  </figure>
+</section>
+
+<section class="plain wide" id="pixel">
+  <div class="prose">
+    <h2><span class="n">3</span>An error bar for every pixel</h2>
+    <p>After each sample, a <a data-g="kernel">kernel</a> (a program the GPU runs once for every pixel) called
+      <code>resolve</code> adds the sample to each pixel's average. It keeps no sum. It moves the average towards the new
+      sample by a share <var>w</var> = 1/<var>cnt</var> of the way, where <var>cnt</var> is how many samples the pixel
+      now holds: the first sample is the average (<var>w</var> = 1), the second moves it halfway, the third a third of
+      the way, and the result is always the plain average of all of them. With values 2, 4 and 9: 2, then 3, then
+      3 + (9 − 3)/3 = 5, which is (2 + 4 + 9)/3.</p>
+    <p>Beside the average it keeps two more numbers per pixel, so that the renderer knows each pixel's error bar too:
+      the cursor readout in ShadyTracer shows it, and the test bench reads pictures by it. <var>V</var> is how much the
+      pixel's samples scatter about their average (the average squared distance from it; for 2, 4 and 9, 8.67).
+      <var>S</var> is the sum of the squares of the weights each sample has in the average. In a true average of
+      <var>n</var> samples each weighs 1/<var>n</var>, so <var>S</var> = <var>n</var> · (1/<var>n</var>)² =
+      1/<var>n</var>, and the error bar the code works out, √(<var>S</var> · <var>V</var> / (1 − <var>S</var>)), becomes
+      √(<var>V</var> / (<var>n</var> − 1)): the darts' <var>s</var>/√<var>N</var> exactly, with <var>s</var> worked out
+      the way statisticians do, dividing by <var>n</var> − 1 rather than <var>n</var> (it corrects for measuring the
+      scatter about the samples' own average, which sits closer to them than the true answer does). For 2, 4 and 9 that
+      is √(8.67/2) = 2.08.</p>
+    <p>Both are updated a sample at a time, with <var>d</var> the new sample's distance from the <em>old</em> average.
+      For 2, 4 and 9: after 2, <var>V</var> = 0 and <var>S</var> = 1. After 4 (<var>w</var> = ½, <var>d</var> = 4 − 2
+      = 2): <var>V</var> = (1 − ½)(0 + ½ × 2²) = 1, <var>S</var> = (1 − ½)² × 1 + ½² = ½. After 9 (<var>w</var> = ⅓,
+      <var>d</var> = 9 − 3 = 6): <var>V</var> = ⅔ × (1 + ⅓ × 6²) = 8.67, <var>S</var> = (⅔)² × ½ + (⅓)² = ⅓. The same
+      8.67 and ⅓ as from all three at once. <var>S</var> is kept, rather
+      than worked out from <var>n</var>, because the average can also forget old samples (section 6), and then the
+      weights are not equal.</p>
+    <pre data-src="lib/pathtracer/core/wavefront.js" data-sym="/* THE ERROR BAR, kept beside the mean" data-to="moments[idx * 2u + 1u] = (1.0 - w) * (1.0 - w) * s0 + w * w;"
+         data-why="cnt is how many samples the pixel's average holds, so w = 1/cnt is the new sample's weight in it; y is the sample's brightness (luminance: the colour's three channels weighed as the eye weighs them, by dot with LUMA). V and S are updated a sample at a time, never from a sum of squares, which in the GPU's 32-bit numbers (about seven digits) would cancel to nothing (section 6). The error bar is then √(S · V / (1 − S))." data-hash="f4b02300"></pre>
+    <p>The host's side, and the darts figure above, use the same formula from a JavaScript copy of the update:
+      <cite data-src="lib/pathtracer/core/measure.js" data-sym="export function standardError"></cite>.</p>
+    <aside class="refs"><span class="tag">Where this comes from</span><ul>
+      <li data-ref="finch2009">The update of V and S, one sample at a time, for any weights. The code credits it by name
+        ("Finch 2009"). It works for a running average that forgets old samples as well as for a true one.</li>
+    </ul></aside>
+  </div>
+</section>
+
+<section class="scene" id="dice">
+  <div class="prose">
+    <h2><span class="n">4</span>Loaded dice</h2>
+    <p>All of this assumes the random numbers are fair: every value between 0 and 1 equally likely, every small stretch
+      of [0, 1) hit as often as its width says. A GPU has no dice; it has a <a data-g="prng">pseudo-random number
+      generator</a>, a formula that turns one number into the next in a way that looks random. ShadyTracer's is PCG4D
+      (section 5). Its old one was <code>fract(f32(state) / 671040)</code>, and the comment above the new one says why it
+      went.</p>
+    <p data-step="grid:wide">Here is the share of all possible states that land in each of 24 small windows of [0, 1),
+      worked out exactly, for the old formula (left bars) and for PCG4D's output (right). The line at 1 is the fair
+      share. In windows 0.001 wide, the old one is within about 4% of fair.</p>
+    <p data-step="grid:narrow">In windows of 0.0001 it is not: some get 0.95 of their share and some 1.83. The reason
+      starts with the <em>state</em>, the number the generator keeps and steps on: a whole number from 0 to about 4.3
+      billion (2³², 32 binary digits). The old formula divided it by 671,040 and kept what is after the point
+      (<code>fract</code>), a number in [0, 1): from 0 up to but not including 1. But first it turned the state into the
+      GPU's usual kind of number, an <a data-g="f32">f32</a>, which keeps 24 significant binary digits, the way a
+      calculator that shows seven digits turns 12,345,678 into 12,345,680. Every state below 2²⁴ (about 16.8 million)
+      fits whole. Larger ones are rounded to the nearest multiple of 2, 4, 8 …, and every state from 2²⁹ up, which is
+      seven-eighths of all of them, becomes a multiple of 64 or more: from 2²⁹ a state has 30 binary digits, six more
+      than f32 keeps, and dropping six binary digits leaves multiples of 2⁶ = 64. (From 2³⁰, multiples of 128; from
+      2³¹, of 256.) Divided by 671,040, which is 64 × 10,485, a multiple of 64 lands on a multiple of 1/10,485. A
+      multiple of 256 would seem to land only on a coarser grid, 256/671,040, about 1/2600, but <code>fract</code> keeps
+      only what is after the point, and as the numbers wrap round past each whole number, multiples of 256 fall on every
+      point of the 1/10,485 grid in turn. So seven-eighths of all states land on that grid, and the rest, below 2²⁹, on
+      finer ones. A window 0.0001 wide holds one of those points or two: on average 1.05. One point carries about
+      1/1.05 of seven-eighths of the window's fair share, plus a little of the finer eighth, which is why the bars read
+      0.95 and 1.83 rather than exactly 1 and 2.</p>
+    <p data-step="grid:tiny">In windows of 0.00001, narrower than the grid, some get almost nothing (0.01 of their
+      share), some a little (the low bars: windows between the coarse grid's points, reached only by finer grids of the
+      states below 2²⁹), and some nearly nine times (a window that holds a coarse point). PCG4D's output, the top 24 bits of its state divided by 2²⁴, is a grid
+      1/16,777,216 apart with every point equally likely. A window of 0.00001 holds 167 or 168 of those points, so its
+      share is within half a percent of fair (the readout's 0.995×), and the wider the window, the closer.</p>
+    <p>Why would a window matter? A small, bright sun is a small window: of all the random numbers a bounce can draw,
+      the few that send it into the sun. Which numbers those are depends on the surface the bounce leaves (the numbers
+      are turned into a direction about that surface's own normal), so, in the comment's words, "each pixel sees it at a
+      different place on the grid": one pixel's window holds an extra grid point, its neighbour's misses one. No number
+      of samples averages that away: each pixel settled, confidently, on its own wrong answer, and its error bar shrank
+      round it.</p>
+  </div>
+  <figure class="fig" data-fig="grid">
+    <figcaption>The share of all 2³² states whose output lands in each of 24 windows of [0, 1), as a multiple of the
+      window's fair share (the dashed line at 1): the old output in <span data-say="blocked">red</span> on the left of each pair, PCG4D's in <span data-say="cam">blue</span> on the
+      right. Worked out exactly, not sampled. Choose the windows' width, and where they start; point at a pair of bars
+      to read it.</figcaption>
+  </figure>
+</section>
+
+<section class="plain wide" id="code">
+  <div class="prose">
+    <h2><span class="n">5</span>How ShadyTracer does it</h2>
+    <p>The generator, and the story of the one before it:</p>
+    <pre data-src="lib/pathtracer/core/tracebasics.js" data-sym="PRNG -- four uniform numbers in [0,1)" data-to="return VEC4(NOISE_H >> vec4<u32>(8u)) * (1.0 / 16777216.0);" data-max="45"
+         data-why="NOISE_H is the generator's state, four 32-bit numbers. pcg4d scrambles all four together (multiplications mix bits upward, the shift by 16 brings high bits down); PRNG keeps each lane's top 24 bits, divided by 2^24: four numbers in [0, 1) a call." data-hash="a7e83f28"></pre>
+    <div data-claim="measured">
+      <p><strong>The comment's numbers and this page's differ.</strong> The comment says the old output's share of a
+        0.0001 window "ranged from 0.08x to 3.2x", at 0.001 "from 0.96x to 1.29x", and calls the grid "about 1/2600", the
+        multiples of 256 without the wrap of section 4. Counting every one of the 2³² states
+        through the formula it gives (this tutorial's test does, in node, and once checked it against 63 million random
+        states) gives 0.95× to 1.83×, 0.96× to 1.04×, and a grid of 1/10,485, as in the figure. The old code is not in the repository's
+        history, which starts at version 0.46.0, so whether it did more than the formula says cannot be checked. Either
+        way the comment's point stands: a bias in small windows that no number of samples removes.</p>
+    </div>
+    <p>Each pass of a sample hands the kernels a fresh random seed, and each ray mixes it with its pixel and its bounce
+      (<cite data-src="lib/pathtracer/core/wavefront.js" data-sym="SEED_u32(rayindex); // use pixel index and bounce count to seed RNG" data-nth="1"></cite>),
+      so no two pixels, bounces or samples start their dice from the same place.</p>
+    <aside class="refs"><span class="tag">Where this comes from</span><ul>
+      <li data-ref="jarzynski2020">PCG4D and many other hashes for GPUs, measured for quality and speed. The code names
+        this paper as its source.</li>
+      <li data-ref="oneill-pcg">The PCG family of generators PCG4D is named after, with an accessible account of what
+        makes a generator good or bad.</li>
+    </ul></aside>
+  </div>
+</section>
+
+<section class="plain wide" id="tricks">
+  <div class="prose">
+    <h2><span class="n">6</span>Tricks and trade-offs</h2>
+    <p>Each is stamped with how it is known; point at a stamp to see what it means.</p>
+    <div data-claim="measured">
+      <p><strong>An error bar from a count.</strong> With aiming at the light (<a data-g="nee">next-event
+        estimation</a>, chapter 14) switched off, a sun 5° across is found only when a bounce happens to go into it:
+        about 50,000 times in 37 million paths (1188 × 969 pixels, 32 samples each, on the user's graphics card, an
+        NVIDIA Pascal; <code>docs/TESTING.md</code>, the section "BSDF parity"). The document puts the standard error near
+        0.45%; 1/√50,000 is 0.45%. Light that arrives through rare events is as noisy as the count of those events: the
+        sun's light comes only through the hits, a count of rare hits wanders by about its own square root (50,000 ±
+        224), and so its share of the picture wanders by 1/√(hits), whatever the number of paths around them.</p>
+    </div>
+    <div data-claim="code">
+      <p><strong>A true mean, not a window.</strong> The average can forget old samples, which keeps a moving picture
+        fresh: <var>cnt</var> stops growing at the window's size plus one, so each new sample keeps a fixed weight and the
+        old ones fade. It used to, by default: a window of 10, each new sample weighing 1/11, which holds as much as a
+        true average of about 21 samples (the code's comment: <var>S</var> settles near 1/(2<var>N</var> + 1)). A still
+        picture then never converged. Through the usual tone curve (chapter 7) nobody saw it; in the false-colour view,
+        which paints each band of brightness its own colour, every pixel kept flickering between bands. Moving the camera
+        restarts the picture anyway, so the default is now the true mean
+        (<cite data-src="lib/pathtracer/core/uniforms.schema.js" data-sym="maxaverages: { type: 'u32'"></cite>).</p>
+    </div>
+    <div data-claim="code">
+      <p><strong>No sum of squares.</strong> The textbook variance, the mean of the squares less the square of the mean,
+        subtracts two nearly equal numbers wherever the noise is small beside the light, and in 32-bit numbers that
+        leaves nothing. With a calculator that keeps seven digits: samples 1000.1 and 1000.3 have squares 1,000,200 and
+        1,000,600 (their last digits gone), whose mean is 1,000,400; their mean, 1000.2, squared is 1,000,400 too. The
+        difference is 0, and the true variance, 0.01, is lost. The update in section 3 never forms either sum.</p>
+    </div>
+  </div>
+</section>
+
+<section class="plain wide" id="before">
+  <div class="prose">
+    <h2><span class="n">7</span>What went wrong before</h2>
+    <ul>
+      <li><strong>Loaded dice</strong>: the old generator, section 4.</li>
+      <li><strong>A light that leaked into the next sample.</strong> Each pixel has a slot where a sample's light is
+        added up before <code>resolve</code> takes it. <code>resolve</code> used to stop at once for a pixel "whose
+        camera path then did not count" in a sample (the comment's words), before clearing its slot, so light a <a data-g="shadow-ray">shadow ray</a> had added there
+        was counted in the next sample instead. It now takes and clears every slot first (the comments in
+        <code>prog_resolve</code>).</li>
+      <li><strong>Large pictures that would not run.</strong> The GPU runs a kernel in groups of threads, here 64 pixels
+        a group, and allows at most 65,535 groups along one direction. <code>resolve</code> once numbered pixels in one
+        long row of groups, so it stopped at 64 × 65,535 = 4,194,240 pixels: a 2048 × 2048 picture was over by one group,
+        and a 4K one far over. It is now one row of the picture per row of groups.</li>
+      <li><strong>A window nobody needed</strong>: the averaging window of 10, section 6.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="plain" id="try">
+  <div class="prose">
+    <h2><span class="n">8</span>Try it</h2>
+    <ul>
+      <li>In the darts figure, press <strong>Throw 4 times as many</strong> once (80 darts, past the few dozen a bar needs) and then
+        <strong>Start again</strong> a dozen times, throwing once more each time, and count how often π is
+        more than one error bar away. About a third?</li>
+      <li>In the dice figure, choose windows of 0.0001 and move <strong>where</strong>. Do the old bars' heights ever
+        change pattern?</li>
+      <li>In ShadyTracer, point at the picture with the cursor readout on (Render stats) and watch a pixel's ± shrink:
+        how many samples does it take to halve?</li>
+    </ul>
+    <h3>Words from this chapter</h3>
+    <ul class="words" data-words="montecarlo estimator sample error-bar stddev variance noise bias prng seed kernel f32"></ul>
+  </div>
+</section>
+
+<nav class="tabs" data-auto></nav>
+</main>
+</body>
+</html>

@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rays make a picture · ShadyTracer, inside out</title>
+<link rel="stylesheet" href="../kit/kit.css">
+<script type="module" src="rays.js"></script>
+</head>
+<body data-chapter="rays">
+<p class="kit-offline">This page runs from a web server, not from a file: in the repository run <code>python3 -m http.server 8000</code> and open http://localhost:8000/tutorial/.</p>
+<main class="sheet">
+
+<header class="sheet-head">
+  <div>
+    <p class="eyebrow">Part I · Seeing with rays · Chapter 1</p>
+    <h1>Rays make a picture</h1>
+    <p class="lede">ShadyTracer is a program that makes pictures of 3D scenes in your web browser. A computer picture is
+      a grid of coloured dots, and to colour one dot ShadyTracer asks one question: if I look out through this dot, what
+      do I see? This chapter is about how it asks.</p>
+  </div>
+  <div class="titleblock" data-auto></div>
+</header>
+
+<section class="scene" id="question">
+  <div class="prose">
+    <h2><span class="n">1</span>The question</h2>
+    <p data-step="scene:idea">You see the ball because light from the lamp landed on it, and some of that light bounced
+      off into your eye. A camera works the same way. A picture is a record of how much light arrived from each
+      direction, one <a data-g="pixel">pixel</a> per direction.</p>
+    <p>So to make a picture, a program needs to know, for every pixel: what is out there in that pixel's direction, and
+      how much light is it sending back?</p>
+    <aside class="note"><span class="tag">A flat world</span>Every figure in this tutorial is drawn in a slice of the
+      world, seen from the side: a <a data-g="flatland">flat world</a>. The ideas are the same as in ShadyTracer's 3D
+      scenes, and they are much easier to draw. In the flat world a picture is a single row of pixels instead of a
+      grid. Where a formula changes between flat and 3D, the page says so.</aside>
+    <p>Each line from the eye in the figure is a <a data-g="ray">ray</a>: a starting point and a direction. It stops at
+      the first thing it meets, and its pixel takes that thing's colour: brighter where the lamp shines on it, dark on
+      the faces turned away from the lamp (section 5 is why). A ray that meets nothing shows the
+      <a data-g="sky">sky</a>, the pale blue.</p>
+    <p>The strip at the top is the picture the eye would see. It is the screen turned on its side, so its left end is
+      the top of the screen. Drag the <strong>eye</strong>, the <strong>lamp</strong>, the ball and the block by their
+      circled crosses (⊕), and watch the picture change.</p>
+  </div>
+  <figure class="fig" data-fig="scene">
+    <figcaption>A flat room seen from the side. Each pixel of the screen sends one ray out into the room; the pixel
+      takes the colour of what the ray hits, or of the sky.</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="backwards">
+  <div class="prose">
+    <h2><span class="n">2</span>Follow the light, or follow the eye?</h2>
+    <p data-step="scene:forward">The obvious way to simulate light is to do what light does: send rays out of the lamp in
+      every direction and see which ones end up in the eye. Switch the figure to <strong>From the lamp</strong>. A ray
+      that meets something <a data-g="bounce">bounces</a> off it in a new direction. A matte surface like these
+      scatters light every way, not neatly like a mirror (<a data-ch="diffuse">Diffuse and mirror</a>), so each bounce
+      here goes in a random direction. Of every hundred rays, only one or two pass through the eye's pupil, and the
+      pupil is drawn far bigger than a real one. Everything else was work for nothing. The picture stays empty: a pixel
+      needs many rays to arrive before it has a value, and almost none do.</p>
+    <p data-step="scene:backward">So ray tracers run it backwards. Start at the eye, send a ray out through each pixel,
+      and see what it hits. Every one of these rays is useful, because every one belongs to a pixel. This works because
+      light paths can be walked in either direction: if light can go from the lamp, off the ball, into the eye, then a
+      ray from the eye can find the ball and then the lamp.</p>
+    <p>Why is one ray from the eye enough, when the lamp needed so many? The ray from the eye only has to find what the
+      pixel sees. How brightly that point is lit, it then asks the lamp directly, with a second ray aimed at it
+      (section 5). From the lamp's side nothing is aimed: a pixel gets light only when rays happen to arrive.</p>
+    <p>The ray from the eye is called a <a data-g="camera-ray">camera ray</a> (or primary ray). It is where every
+      picture ShadyTracer makes begins. How a ray finds the first thing in its way is the whole of the next chapter
+      (<a data-ch="distances">Shapes as distances</a>); for now, take it that it can.</p>
+    <aside class="note"><span class="tag">Not the whole story</span>Some light really is easier to find from the lamp's
+      side: light focused through glass onto a floor. ShadyTracer does trace some rays from its lights, for exactly that
+      (<a data-ch="caustics">Caustics</a>, <a data-ch="photons">Photon mapping</a>). But the picture starts at the eye.</aside>
+    <aside class="refs"><span class="tag">Read more</span><ul>
+      <li data-ref="rtiow">Builds a working ray tracer from nothing, in a weekend of C++, in this chapter's order: a ray
+        from the eye through each pixel, a camera you can aim, then several random rays a pixel to smooth the edges. The
+        best next step after this chapter, and free.</li>
+    </ul></aside>
+  </div>
+  <figure class="fig" data-fig="scene">
+    <figcaption>The same room. From the lamp, almost no light reaches the eye; from the eye, every ray finds
+      something.</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="pixels">
+  <div class="prose">
+    <h2><span class="n">3</span>One ray per pixel</h2>
+    <p data-step="scene:pixels">Put a screen a little way in front of the eye and divide it into pixels. Each pixel's
+      ray starts at the eye and goes through the middle of its pixel. More pixels means more rays, finer detail and more
+      work: the picture's <a data-g="resolution">resolution</a>. Move the <strong>pixels</strong> slider.</p>
+    <p data-step="scene:fov">How wide the screen is, compared with how far away it is, sets the <a data-g="fov">field of
+      view</a>: how much of the world fits in the picture. A wide field of view fits more in, and stretches what is near
+      the ends of the picture: the screen is flat, so a pixel near its end sees a narrower slice of angle than one in
+      the middle, and anything there covers more pixels.</p>
+    <p>All the rays start at one point, the eye. That is a <a data-g="pinhole">pinhole camera</a>: everything is sharp,
+      near and far. A real lens blurs what is out of focus; ShadyTracer can do that too (<a data-ch="lens">The camera's
+      lens</a>).</p>
+    <details class="maths">
+      <summary><span class="tag">The maths</span>The direction of a pixel's ray</summary>
+      <div class="body">
+        <p>Number the pixels across the screen from 0, and give each one a position <var>x</var> from −1 at one end of
+          the screen to +1 at the other (a place on the screen, not a coordinate of the room; in the figure, −1 is the
+          top). Pixel <var>i</var> of <var>N</var>, at a point <var>u</var> inside it (<var>u</var> from 0 to 1, ½ its
+          middle), sits at</p>
+        <p class="eq"><var>x</var> = 2 · <span class="frac"><span><var>i</var> + <var>u</var></span><span><var>N</var></span></span> − 1</p>
+        <p>so pixel 0's middle is just inside −1 and pixel <var>N</var>−1's just inside +1. The camera has a
+          <strong>forward</strong> direction (where it looks) and a direction across the screen, each an arrow one unit
+          long. In 3D that is <strong>right</strong>; in the side view of the figures the screen runs top to bottom, but
+          the sum is the same. The ray's direction is forward plus a bit of the across direction, then made one unit
+          long:</p>
+        <p class="eq"><var>d</var> = normalise( forward + right · <var>x</var> · tan(<span class="frac"><span>fov</span><span>2</span></span>) )</p>
+        <dl class="terms">
+          <dt>tan(fov/2)</dt><dd>how far the screen reaches either side, if it is one unit in front of the eye: the ray
+            to the screen's end makes the angle fov/2 with forward, and tan is the side across over the side along</dd>
+          <dt>normalise</dt><dd>divide an arrow by its length, √(<var>a</var>² + <var>b</var>²) for an arrow
+            (<var>a</var>, <var>b</var>), so it is one unit long and points the same way</dd>
+        </dl>
+        <p>An example, the figure's first: <var>N</var> = 12, a field of view of 52°, pixel 0 at its middle. Then
+          <var>x</var> = 2 · 0.5 / 12 − 1 = −0.917 and tan 26° = 0.488, so the direction is forward plus 0.917 × 0.488 =
+          0.447 of the across direction: 24° from straight ahead, just inside the edge of the 26° half-view.</p>
+        <p>In 3D there is also an <strong>up</strong> direction and a second position <var>y</var> for the pixel's row:
+          <var>d</var> = normalise(forward + right · <var>x</var> · <var>f<sub>x</sub></var> + up · <var>y</var> ·
+          <var>f<sub>y</sub></var>), where <var>f<sub>x</sub></var> and <var>f<sub>y</sub></var> are the half-widths
+          of the screen. ShadyTracer's field of view is the vertical one, top to bottom; across, the screen is wider by the
+          picture's width over its height. That is the line you will find in ShadyTracer's code below, where
+          <var>u</var> is the random point <code>rnd</code> and <var>N</var> the number of tiles across.</p>
+      </div>
+    </details>
+    <aside class="refs"><span class="tag">Read more</span><ul>
+      <li data-ref="pbr-camera">The whole camera, from the textbook renderers are built from: the matrices that
+        ShadyTracer's kernel reads its directions out of, and lenses. For when you want every detail.</li>
+    </ul></aside>
+  </div>
+  <figure class="fig" data-fig="scene">
+    <figcaption>More pixels, more rays. A wider field of view spreads the same pixels over more of the room.</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="grid">
+  <div class="prose">
+    <h2><span class="n">4</span>In 3D: a grid, not a row</h2>
+    <p data-step="grid:grid">The flat world has a row of pixels. A real picture has rows of them, so in 3D the screen
+      becomes a grid, and the eye sends one ray through each cell. This figure is three-dimensional: <strong>drag the
+      background to turn it</strong> and look at the rays from the side. Each cell of the screen is painted with what
+      its ray found, and laid flat the cells are the picture in the corner.</p>
+    <p data-step="grid:all">Switch on <strong>Every ray</strong> to see all of them at once: a fan spreading out from
+      one point, the eye, through the grid. Drag <strong>the circled cross</strong> on the screen to follow one pixel's
+      ray, and change <strong>pixels across</strong>: the picture gets finer, and the number of rays grows with the
+      square of it. Double the pixels across and down, and there are four times as many rays.</p>
+    <p>Everything else in this chapter is the same in 3D. The figures stay flat wherever a slice shows the idea more
+      clearly, and turn three-dimensional where the third dimension is the point.</p>
+  </div>
+  <figure class="fig" data-fig="grid">
+    <figcaption>The camera in 3D: the eye, a screen of pixels in front of it (wider than it is tall, like a monitor:
+      8 across, 5 down), one ray per pixel into a small scene, each cell painted with what its ray hit, lit by the lamp
+      or in shadow. Drag to turn it.</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="shade">
+  <div class="prose">
+    <h2><span class="n">5</span>What does the ray see?</h2>
+    <p data-step="scene:shade">When a ray hits something, the pixel needs to know how bright that point is. The simplest
+      answer asks one more question: <em>can this point see the lamp?</em> Here the chosen pixel's ray meets the ball.
+      Send a second ray from that point towards the lamp. If it gets there without hitting anything, the point is lit.
+      This second ray is a <a data-g="shadow-ray">shadow ray</a>. The arrow standing straight out of the surface is its
+      <a data-g="normal">normal</a>, and <var>θ</var> is the angle between it and the lamp's direction.</p>
+    <p data-step="scene:shadowed">Now a pixel near the bottom of the screen: its ray meets the floor just in front of the
+      block, on the side away from the lamp. The shadow ray from there is stopped by the block, crossed out where it is
+      blocked. The lamp cannot see this point, so it is in shadow. A face turned away from the lamp is in shadow too: the lamp is behind it. Drag
+      <strong>this pixel</strong> along the screen to try others.</p>
+    <p>How much light a lit point gets depends on two things. Distance: further from the lamp, less light. And angle:
+      light arriving at a slant spreads over more surface, so it lights each bit of it less. The next figure shows why.</p>
+  </div>
+  <figure class="fig" data-fig="scene">
+    <figcaption>One pixel's ray and the shadow ray from where it lands: towards the lamp, and either reaching it (lit)
+      or stopped by something in the way (in shadow).</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="slant">
+  <div class="prose">
+    <h2><span class="n">6</span>Light at a slant</h2>
+    <p data-step="slant:straight">Here is a beam of light <var>b</var> wide, from a lamp far enough away that its rays
+      are parallel. Straight down onto the floor, it lights a patch <var>b</var> long.</p>
+    <p data-step="slant:slant">Tip the beam (drag the lamp, or the slider). The same beam, with the same light in it,
+      now lands on a longer patch: <var>b</var> / cos <var>θ</var>. The same light shared over more floor gives each bit
+      of it less: cos <var>θ</var> as much. At 60°, cos <var>θ</var> is ½, so each bit gets half. That is the
+      <a data-g="cosine-law">cosine law</a>, and it is why the parts of the ball that face the lamp are the brightest.</p>
+    <details class="maths">
+      <summary><span class="tag">The maths</span>How bright a lit point is</summary>
+      <div class="body">
+        <p>A lamp of <a data-g="intensity">intensity</a> <var>I</var> (how strongly it shines in the point's direction),
+          at distance <var>r</var> from the point, seen at angle <var>θ</var> from the normal, gives the point this much
+          light, its <a data-g="irradiance">irradiance</a> <var>E</var>:</p>
+        <p class="eq"><var>E</var> = <span class="frac"><span><var>I</var> · cos <var>θ</var></span><span><var>r</var></span></span>
+          &nbsp; in the flat world, &nbsp; <var>E</var> = <span class="frac"><span><var>I</var> · cos <var>θ</var></span><span><var>r</var><sup>2</sup></span></span> &nbsp; in 3D</p>
+        <p>The cos <var>θ</var> is the figure's: the light a beam brings, shared over a patch 1 / cos <var>θ</var> times
+          longer. The <var>r</var> is the same idea at a larger scale. In 3D, light from a lamp spreads over a sphere
+          whose area grows with <var>r</var>²; in a flat world it spreads around a circle whose length grows with
+          <var>r</var>. The figures use the flat world's version, because that is the world they draw.</p>
+        <p>A surface's colour is three numbers between 0 and 1: how much of the red, the green and the blue light
+          falling on it it sends back. The pixel is each of them times <var>E</var>.
+          <a data-ch="photometry">Measuring light</a> explains the units ShadyTracer gives these numbers.</p>
+      </div>
+    </details>
+    <p>Rays, a hit, a shadow ray to the lamp, the cosine law: that is already a working ray tracer, and the oldest kind.
+      Its pictures look hard and dark, because it only counts light that comes <em>straight</em> from the lamp. A real
+      room is lit just as much by light bouncing off its walls. The rest of this tutorial is about counting that light
+      too (<a data-ch="paths">Following a path</a>), and chapter 14 shows why the shadow ray is still the most useful
+      trick in the whole renderer (<a data-ch="nee">Aim at the light</a>).</p>
+  </div>
+  <figure class="fig" data-fig="slant">
+    <figcaption>A beam meeting the floor at θ from the normal. The thick line is the patch it lights: longer
+      the more the beam slants, so each bit of it gets less.</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="jitter">
+  <div class="prose">
+    <h2><span class="n">7</span>Edges, and jitter</h2>
+    <p data-step="edge:still">Section 1 said a pixel is one direction. That was a simplification: a pixel covers a
+      small wedge of directions (the two faint lines). But a ray through its middle looks in one direction only, and
+      sees either the ball or the sky, never a bit of both. In the figure the ray goes through the middle every time,
+      and just misses: however many times you try, the pixel reads 0, though the ball covers 40% of it. In a picture
+      with rows and columns, a slanted edge then flips whole pixels from ball to sky, a row at a time, and comes out as
+      stair steps: <a data-g="aliasing">aliasing</a>. Look back at the picture in the corner of the 3D figure in
+      section 4: the edge of its ball is a staircase.</p>
+    <p data-step="edge:jitter">Now turn on <strong>Jitter</strong>. Each try (each <a data-g="sample">sample</a>) sends
+      its ray through a random point inside the pixel. Some hit the ball and some miss, and the average of all of them
+      settles on the share of the pixel the ball really covers. It wobbles on its way and takes many samples to get
+      close: after 35 it can still be well off, and the figure stops at 400, near. The edge comes out smooth.</p>
+    <p>ShadyTracer <a data-g="jitter">jitters</a> every camera ray, every sample. That is why its picture starts speckled
+      and gets better while you watch: each frame adds more samples to each pixel's average. The speckle is called
+      <a data-g="noise">noise</a>. How fast an average settles, and how ShadyTracer knows how settled it is, is
+      <a data-ch="montecarlo">Dice and averages</a>.</p>
+    <p>Move the <strong>edge</strong> slider to slide the ball's edge across the pixel, and press <strong>Start
+      again</strong>.</p>
+    <aside class="refs"><span class="tag">Read more</span><ul>
+      <li data-ref="pbr-sampling">Why random points inside a pixel smooth an edge, and ways of choosing them that
+        settle sooner than plain random ones (stratified, Halton, Sobol'). ShadyTracer's jitter is plain random: one
+        random point a pixel, each sample.</li>
+    </ul></aside>
+  </div>
+  <figure class="fig" data-fig="edge">
+    <figcaption>One pixel at the ball's edge, close up: its last few rays (<span data-say="cam">blue</span> ones hit the ball, <span data-say="soft">grey</span> ones miss it and
+      see the sky), the pixel's colour so far, and how its average approaches the share of the pixel the ball covers.</figcaption>
+  </figure>
+</section>
+
+<section class="plain wide" id="code">
+  <div class="prose">
+    <h2><span class="n">8</span>How ShadyTracer does it</h2>
+    <p>ShadyTracer's camera rays are made by a <a data-g="kernel">kernel</a> called <code>genrays</code>: a small program
+      the graphics card (the <a data-g="gpu">GPU</a>) runs once for every ray, thousands at the same time. It is
+      written in <a data-g="wgsl">WGSL</a>, inside a JavaScript file. Here is the part that makes one ray. It is the
+      flat world's recipe with one more direction (up) and a jitter:</p>
+    <pre data-src="lib/pathtracer/core/genrays.js" data-sym="let tile = UB.rayFirst + rayindex;" data-to="origin = camPos;"
+         data-why="tile is which ray of the sample this is; cellxy its column and row in the grid of rays; uv0 the middle of that cell, from 0 to 1 across the picture; rnd.xy a random point inside it (the jitter); xy the position from −1 to 1, the fold-out's x; fx and fy the screen's half-widths. The ray's direction is dir, and it starts at origin, the camera's position: the eye." data-hash="17a02015"></pre>
+    <p>Line by line, the parts that need saying:</p>
+    <ul>
+      <li><strong>The kernel gets a number, not a pixel.</strong> Each copy of it is handed its own number 0, 1, 2 …
+        (<code>rayindex</code>, and from it <code>tile</code>). The rays of a sample are laid over the picture as a grid
+        of <a data-g="tile">tiles</a>, <code>tilesX</code> across and <code>tilesY</code> down, and the number says
+        which tile: column <code>tile % tilesX</code> (the remainder after dividing) and row
+        <code>tile / tilesX</code> (rounded down). With one ray a pixel, the tiles are the pixels. Section 10 is what
+        happened when they were not.</li>
+      <li><strong><code>UB</code></strong> holds the kernel's <a data-g="uniform">uniforms</a>: the values that are the
+        same for every ray, such as the camera's position, the picture's size and the number of tiles. <code>invTX</code>
+        is 1 / <code>tilesX</code>, worked out once beforehand so no ray has to divide. <code>UB.rayFirst</code> is where
+        this batch starts: a sample can be sent to the GPU in several batches, and a ray's tile is its place in the whole
+        sample. <code>max(1u, …)</code> guards against a grid of 0 tiles (<code>1u</code> is the number 1, as a whole
+        number without a sign), and <code>clamp</code> keeps the jittered point inside the picture at its edges.</li>
+      <li><strong>The random numbers come from <code>PRNG()</code></strong>, ShadyTracer's
+        <a data-g="prng">random number generator</a>. Every sample starts it from a fresh <a data-g="seed">seed</a>
+        (<cite data-src="lib/pathtracer/core/raytrace_main.js" data-sym="{ seed: seed_vec4u32(), maxaverages: frames, sppmGeom" data-doc="no"></cite>),
+        so every sample jitters differently. <code>rnd</code> is four random numbers; <code>.xy</code> means its first
+        two.</li>
+      <li><strong>The camera's directions come from <code>invView</code></strong>, a
+        <a data-g="matrix">matrix</a> the camera keeps: four columns of numbers, of which the first three are exactly
+        the arrows right, up and backward (<code>.xyz</code>: the first three numbers of each). Backward, because the
+        maths cameras are built with puts a camera's own third axis out of its back, towards you; so the variable
+        <code>fwd</code>, despite its name, points from what the camera looks at to the camera, and the direction it
+        looks is minus <code>fwd</code>. That is why the ray's direction has −1.0 as its third number: one unit along
+        <code>fwd</code>, the other way. <code>fx</code> and <code>fy</code> come from the camera's other matrix,
+        <code>invProjection</code> (<code>[0][0]</code> is its first number): the comment's <code>a</code> is the
+        picture's width over its height.</li>
+      <li><strong><code>isPersp</code></strong> says which camera this is. There is a second kind, orthographic, where
+        every ray points the same way and they start side by side instead
+        (<cite data-src="lib/pathtracer/core/genrays.js" data-sym="// camtype: 0 = perspective, 1 = orthographic" data-doc="no"></cite>).
+        Technical drawings use it: sizes do not shrink with distance.</li>
+    </ul>
+    <p>The comments in the code (<code>// Stable method only</code>) are its authors' notes to each other; the caption
+      above says what each line does. <code>VEC2</code>, <code>u32</code> and <code>f32</code> are WGSL's kinds of
+      number: a pair of decimals, a whole number, a decimal. A name like genrays.js and a number after it, in brackets
+      below, is a file and a line in it: follow it to see that line of ShadyTracer's code.</p>
+  </div>
+</section>
+
+<section class="plain wide" id="tricks">
+  <div class="prose">
+    <h2><span class="n">9</span>Tricks and trade-offs</h2>
+    <p>Each of these is stamped with how it is known: <em>read in code</em> means the code does it and the page links the
+      line. Point at a stamp for what it means; other chapters have stamps for what was measured and for what is only
+      a guess.</p>
+    <div data-claim="code">
+      <p><strong>One ray per pixel per sample, then average.</strong> Instead of tracing a perfect pixel once, ShadyTracer
+        traces a rough one many times and keeps the average. The picture is usable after one sample and better after
+        each one, and the camera can move at any time: the average just starts again.</p>
+    </div>
+    <div data-claim="code">
+      <p><strong>The kernel that makes camera rays does not know the scene.</strong> Many of ShadyTracer's kernels are
+        written anew for each scene, with its shapes in them. This one never reads the shapes, so its program text is the
+        same for every scene. Before the GPU can run a kernel it has to
+        <a data-g="compile">compile</a> it, translate it into the card's own instructions, which can take seconds; the
+        compiled copy is kept and reused when you switch scenes
+        (<cite data-src="lib/pathtracer/core/genrays.js" data-sym="THE BASE UNIFORMS ONLY" data-doc="no"></cite>).
+        <a data-ch="compiles">Faster compiles</a> is about this idea.</p>
+    </div>
+    <div data-claim="code">
+      <p><strong>The lens costs nothing when it is off.</strong> With a lens radius of 0 the kernel makes exactly the
+        pinhole's ray. The lens's two random numbers are the other half of the four that one <code>PRNG()</code> call
+        already gives (<code>rnd.zw</code>, beside the jitter's <code>rnd.xy</code>), so switching it on or off changes no
+        other random choice (<cite data-src="lib/pathtracer/core/lens.js" data-sym="const lensDisc"></cite>).</p>
+    </div>
+  </div>
+</section>
+
+<section class="plain wide" id="before">
+  <div class="prose">
+    <h2><span class="n">10</span>What went wrong before</h2>
+    <p>Before any ray is made, ShadyTracer decides how to lay a sample's rays over the picture: as a grid of tiles,
+      <code>tilesX</code> across and <code>tilesY</code> down, one ray in each. Each ray goes through a random point of
+      its tile, and counts for whichever pixel that point lands in:</p>
+    <pre data-src="lib/pathtracer/core/genrays.js" data-sym="let p = vec2&lt;u32&gt;(clamp(uv * fres" data-to="ray.pix = p.x + p.y * u32(UB.res.x);"
+         data-why="uv is the ray's point, from 0 to 1 across and down the picture; fres the picture's size in pixels. Their product, rounded down, is the pixel the ray lands in; ray.pix numbers it row by row." data-hash="dc4ed02d"></pre>
+    <p>A sample has <code>N</code> rays, and for a picture <code>w</code> pixels wide and <code>h</code> high there is
+      one ray a pixel, so <code>N</code> = <code>w</code> × <code>h</code>. The grid should have the picture's shape:
+      <code>tilesX</code> × <code>tilesY</code> = <code>N</code>, and <code>tilesX</code> / <code>tilesY</code> =
+      <code>w</code> / <code>h</code>. Multiply the two and <code>tilesY</code> cancels: <code>tilesX</code>² =
+      <code>N</code> × <code>w</code> / <code>h</code>, so <code>tilesX</code> = √(<code>N</code> × <code>w</code> /
+      <code>h</code>), which with <code>N</code> = <code>w</code> × <code>h</code> is √(<code>w</code> ×
+      <code>w</code>) = <code>w</code>: one tile per column of pixels. <code>tilesY</code> is then <code>N</code> /
+      <code>tilesX</code>, rounded up so that every ray has a tile.</p>
+    <p>The code rounded <code>tilesX</code> down. A computer keeps a number like <code>w</code> / <code>h</code> with a
+      limited number of digits, so it is stored a tiny bit off, and the product can land a hair under the exact answer.
+      For a window 809 pixels wide and 395 high, it comes out as 654,480.9999999999 instead of 809² = 654,481; its
+      square root is 808.9999999999999, and rounded down that is 808 tiles across for 809 pixels. (Type
+      <code>Math.sqrt(809 * 395 * (809 / 395))</code> into a browser's console to see it.) Then <code>tilesY</code>
+      became 396 rows for 395 pixels.</p>
+    <p>Why that gives a pixel two rays, or none: take a row 4 pixels wide covered by 3 tiles, each 1⅓ pixels wide. Tile 0
+      covers pixel 0 and a third of pixel 1; tile 1 the rest of pixel 1 and two thirds of pixel 2; tile 2 the rest. Each
+      tile's one ray lands at a random point inside it, so in one sample pixel 1 may catch the rays of tiles 0 and 1,
+      two, and in the next neither. With 808 tiles for 809 pixels the drift is smaller, but it builds up across the
+      row, and the same happens down the 396 rows. It happened for about one window size in forty:</p>
+    <pre data-src="lib/pathtracer/core/genrays.js" data-sym="const raygenTiles"
+         data-why="ROUNDED, NOT FLOORED: Math.round instead of Math.floor, so 808.9999999999999 becomes 809. The comment above it is the story; the function is three lines. (1-spp in the comment means one sample per pixel.)" data-hash="d4c9b452"></pre>
+    <p>The picture looked fine: over many samples the jitter still covered every pixel. What was wrong was the noise.
+      A pixel that gets two rays a sample settles faster than one that gets one, so how speckled a picture was depended
+      on the window's size, which nobody comparing the noise of two pictures would think to keep the same. Rounding
+      instead of rounding down gives exactly one ray per pixel at every size. The comment says what happened, because the
+      next person to touch the line needs to know why it is written that way.</p>
+  </div>
+</section>
+
+<section class="plain" id="try">
+  <div class="prose">
+    <h2><span class="n">11</span>Try it</h2>
+    <ul>
+      <li>In the first figure, set <strong>pixels</strong> to 3, then to 40. Which details of the room appear first?</li>
+      <li>Drag the eye close to the ball and set the field of view to 130°. Why does the ball take up most of the
+        picture, and why do things near the ends of the strip look stretched?</li>
+      <li>Switch to <strong>From the lamp</strong> and press <strong>Throw 400 more</strong> a few times. Roughly what
+        share of the lamp's rays reaches the eye? What would happen with a smaller pupil?</li>
+      <li>In the slant figure, at what angle does each bit of floor get a quarter of the light it gets straight on?</li>
+      <li>In the edge figure, slide the edge to 50% with jitter off. Why is that the one setting where the middle ray cannot decide?</li>
+      <li>In ShadyTracer itself: open any example and watch the first second. The picture starts speckled and settles.
+        Each frame is more jittered samples added to every pixel.</li>
+    </ul>
+    <h3>Words from this chapter</h3>
+    <ul class="words" data-words="ray pixel resolution sky camera-ray bounce pinhole fov shadow-ray normal cosine-law intensity irradiance aliasing jitter sample noise kernel gpu wgsl tile uniform prng seed matrix compile flatland"></ul>
+  </div>
+</section>
+
+<nav class="tabs" data-auto></nav>
+</main>
+</body>
+</html>

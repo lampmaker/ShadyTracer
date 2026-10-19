@@ -15,6 +15,389 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.67.2 — 2026-10-18
+
+**A developer tutorial beside the program: its plan, its figure kit, eight styles and all thirty-four chapters**
+(you: "a tutorial for shadytracer, parallel to the program … that explains the inner workings of the code … interactive,
+2D visualisations … a solid toolkit for that so it looks the same everywhere … start with a plan and list of contents,
+then a few pages … make a few mockups of different styles"). Nothing in the application changed: the tutorial is
+`tutorial/`, which Pages serves beside it.
+
+- **The plan and contents** (`tutorial/PLAN.md`; the pages read the same contents from `tutorial/kit/chapters.js`):
+  34 chapters in ten parts, from rays and distance fields through light, surfaces, path tracing, caustics and
+  photons, haze, the GPU and wavefront tracing, to every speed trick and how its cost was measured. Each chapter has the
+  same shape: the question, the idea with a live figure, the maths in a fold-out, the real code, the tricks stamped
+  measured / read in code / inferred, what went wrong before, things to try.
+- **Written as drafts:** chapter 0, *How to read this* (a chapter's parts, the figure key, why the flat world's light
+  falls as 1/r and 3D's as 1/r², excerpts and stamps, where a measured number comes from, running the program and its
+  tests); chapter 1, *Rays make a picture*; chapter 3, *Building and bending shapes* (the three joins hard and blended,
+  the blend's normal and the warped fillet, which solid a point is in, a twist's step bound, a noise relief and its
+  shell); chapter 4, *Which way is up* (normals by a shape's own formula, forward and central differences, the f32
+  grain below the renderer's floor of 128 spacings, emulated with `Math.fround` as `floor.test.mjs` does); chapter 12,
+  *Dice and averages* (π from darts with the renderer's own error bar, the spread against 1/√N, the old random numbers
+  against PCG4D's); chapter 13, *Following a path* (a path's throughput, the bounce cap's lost light, Russian roulette
+  off against on, as the engine plays it); chapter 15, *Two ways to the light* (Veach's plates in the flat world:
+  lamp points, plate directions and MIS from the same random numbers, and the two densities and their weights);
+  chapter 16, *Every glowing thing is a light* (glow found by the paths that hit it, Crofton's random lines, the
+  brightness code); chapter 17, *The camera's lens* (the thin lens's blur by `lens.js`'s own `lensImage`, and a 3D
+  picture with depth of field through its `lensDisc` and `lensRay`); chapter 5, *Measuring light* (lumens, candela, lux
+  and luminance; a glowing panel whose pixels read the same at any distance while its lux falls as 1/d²; the sun's
+  luminance from its illuminance and width by `photometry.js`'s own `discLuminance`; a white floor's ρE/π against the
+  user's measured rows, 21,826 against 21,827.2); chapter 6, *Colour* (a band or a hot body against `spectral.js`'s
+  colour-matching functions; the chromaticity diagram with a point to drag to its CCT, Duv, exact and clipped RGB; the
+  user's three LEDs mixed by `colorimetry.js`'s own `mixToTarget`, 310.5 / 673.0 / 16.5 lm); chapter 7, *From light to pixels* (the meter as
+  `autoexposure.js` runs it, mirrored on an outdoor scene and a lamp-lit room, black voting as it used to; the six
+  tone curves ported from `rendertoscreen.js`; 8 bits kept linearly against sRGB); chapter 8, *Diffuse and mirror* (a matte point's bounce
+  directions and cos θ circle, a room whose wall becomes a mirror the shadow rays cannot see through, the white furnace
+  in the flat world, which gains mirrors); chapter 9, *Rough and shiny* (a GGX lobe and its
+  visible-normal draws, E against the renderer's old and new table grids, the old density right only straight on, on
+  a teaching mirror of `microfacet.js` that reproduces its comment's 0.97850); chapter 10, *Glass* (Snell and
+  Fresnel at an interface, a pane's bounces summed to (1 − R)/(1 + R) and Beer–Lambert, parallel light through a
+  ball, all on `optics/fresnel.js`); chapter 11, *Rainbows* (white light through a prism at each wavelength's
+  index, Cauchy through n_d and the Abbe number, the wavelength draw whose weights average to 1, a dichroic coat on
+  three channels); chapter 18, *Caustics* (a glass ball over a sunlit floor, its picture made by the camera's paths,
+  by light tracing, by both with ShadyTracer's split of path space and by both without it, the caustic counted nearly
+  twice; who counts each kind of path, a caustic seen through glass nobody's until the photon map; the learned
+  emission map, 11.7% of photons connecting evenly and 61% learned; the flat world gains glass, a sun and a light
+  tracer, held to the camera's own pictures); chapter 19, *Photon mapping* (the same ball behind a pane of glass, its
+  caustic through the pane found by the camera only by chance and gathered from photons stored on the floor; a
+  radius's blur against its noise; one point's estimate over 300 samples with the radius held, settling on the light
+  averaged over its window, and shrinking by Knaus and Zwicker's schedule towards the exact value from 400,000 rays;
+  the hashed grid with `sppm.js`'s own hash and sub-list rule, a collision, and the budget right on average over every
+  start); chapter 20, *Dust in the air* (free flight drawn by `haze.js`'s own `hazeCollideJS`, and one ray's march
+  stopped where its particle falls and moved back, the user's own sketch; Henyey–Greenstein by `hgEvalJS` and
+  `hgSampleJS`; a sunbeam through a window into a dusty room, found by the phase function's bounces alone and by aiming
+  at the sun from the air; the dust's furnace with its two controls, and the eye turned to the sky reading 1 with no
+  noise, as the first press of the bench's haze row did; the flat world gains a haze box, held to the single-scattering
+  integral); chapter 21, *A GPU for beginners* (128 rays as lanes in lock-step, each group as long as its slowest
+  ray; a uniform struct laid out by WGSL's rules and ShadyTracer's own UB, by a mirror of tinywebgpu's packing that the
+  test holds to the real one; the workgroups a pass over a picture asks for against the 65,535 limit the resolve kernel
+  ran into); chapter 22, *Wavefront path tracing* (a sunlit room's 1024 paths run as ShadyTracer runs a sample, by a
+  flat-world wavefront that reads what the path tracer reads: each iteration's queues, the drained tail, the worst-case
+  budget, a short one flushing and cutting; one iteration kernel by kernel; one big kernel against the wavefront as
+  lane-time in a model); chapter 23, *Adding up light on a GPU* (threads adding to one pixel by a plain load and store,
+  an atomic add and a compare-and-swap loop, in lock-step or interleaved; the old fixed-point frame buffer against an
+  f32 on a line of light values; a sample in batches by `photons.js`'s own `planBatches`); chapter 24, *From scene
+  tree to shader* (a flat scene of one group as code with uniforms, baked by the engine's own `bake.js`, and as data,
+  each edit counted as a uniform write or a compile; a kernel's inlined size by `wgslgraph.js` against
+  `compileprogress.js`'s fitted compile model); chapter 25, *Measure first* (the plan that was reverted, told by the
+  benchmark's first full run; one sample's compute passes as timestamps, the times a model and the reading the engine's
+  own `kerneltime.js`, rounded as a browser rounds them; the same code's drift, and two builds compared in separate
+  runs or interleaved under a model of it); chapter 26, *Fewer and cheaper steps* (a shelf of six objects, two with
+  reliefs, and 48 camera rays with every step's cost counted: every object at every step, culling boxes on every object
+  and on the dear ones only, the reliefs in their shell; why only at the root, a lens and a blend with one disc culled
+  inside the join; one relief divided everywhere or shelled, with the modifier's slope bound or the measured one; the
+  step cache's balls, its own cell and the cells ahead, and the fill that read the copy with boxes); chapter 27, *Faster
+  compiles* (one scene's kernels compiled blocking the page, off its thread one at a time and all at once, from the
+  user's measured times for six scenes; a builder session with the pipeline cache on or off, and the four kernels that
+  declared the scene's uniforms before 0.10.0 doing so or not, each build predicted by `compileprogress.js`, every
+  kernel's job in a table; the bar counting kernels against the bar by the clock, and a machine
+  learning its own rate); chapter 28, *Feeling fast* (the governor frame by frame, today's rule held to the real
+  `render-loop.js` and the one its comment says it replaced, hunting and tracing frames of no sample; a drag through
+  the real `interaction.js` and `quality.js`, held or only poked; the slice's cap on a light scene, held to the real loop told what each
+  frame traced; a heavy sample in slices and a heavy frame in submissions; six offscreen samples one in flight or two, in `runSamples`' own order); chapter 29, *Noise, bias and
+  checking* (one pixel of a lamp-lit corner read four ways, the whole path, a bounce cap, a firefly clamp and a moving
+  window, each with the error bar `measure.js` keeps, against a true value computed over a million paths: precise and
+  wrong side by side; the white furnace with one disc, its rows and a control, on a working page and broken the two
+  ways ShadyTracer's was, every row and the control reading 1; a thousand pixels' error bars against their real spread,
+  and the bench's seRatio catching an EMA window taken for its count); chapter 30, *Numbers have grain* (a
+  tolerance fattening every shape: a 2 cm lamp traced too large, in the flat world and by Steiner's formula in 3D, the
+  bench's 1.22 and its pair's 0.82; two slabs whose 0.5 mm gap a ray leaving the first steps over; the tolerance's three
+  terms against the distance from the origin by the engine's own tolerances.js and photometry.js, and the floor before
+  0.36.0; a few lines of an engine kernel with one planted, through the real unitlint.js against the real boundary);
+  chapter 31, *The optics bench* (a cos^n source's rays binned by direction with `farfield.js`'s own farBin into
+  intensity on a polar diagram, its peak read high by the largest of many noisy bins and the beam angle with it, and
+  pooling round the axis; the same source over a floor mapped by `detmap.js` plain, Gaussian and by the photon map's
+  nearest hits; a ray total in a 32-bit float stalling at 2^24 against the optics kernels' integer pair);
+  chapter 32, *A ray tracer in one page* (`tutorial/kit/onepage.js`, the figures' path tracer in 88 lines and no
+  imports, read part by part: one ray marched where you aim it, the room's picture from 1 to 64 samples, aiming at the
+  lamp, and a mirror in four lines; each part beside the engine's file it grew into; the test holds it to `flatland.js`'s
+  picture on the same random numbers); chapter 33, *Open problems* (a board of 54 open items, each quoting its
+  document and held to it by the test: 20 bench rows built and never run on a card, read from `docs/TESTING.md`'s own
+  status column, with every row it calls open on the board; 9 numbers measured and not explained; 7 designs not built;
+  4 limits stated; 13 comments and plan lines these chapters found saying what the code does not); chapter 2,
+  *Shapes as distances*; chapter 14, *Aim at the light* (next event estimation); the contents
+  map; a glossary of 150 terms, each linked from the pages with a card on hover or tap.
+- **The kit** (`tutorial/kit/`): one pen draws every figure in the style's colours and line; a figure is a spec with
+  state, controls, drag handles and steps that the paragraphs beside it trigger as they scroll by. The figures trace a
+  flat world (`kit/flatland.js`): signed distance shapes from the help's 2D mirrors of `sdf.js`, sphere tracing, a
+  camera, a path tracer with and without NEE whose per-pixel error bars are `core/measure.js`'s own. Code on a page is
+  never pasted: it is found by name in today's file when the page opens (`kit/excerpt.js`), with its lines and a link
+  to them.
+- **3D where it shows more** (`kit/space.js`, z up as the engine's world): figures stay flat where a slice says it
+  best and turn 3D where depth is the point. Chapter 1 shows the screen as a grid of pixels, its rays and the picture
+  they make, turned by dragging. Chapter 2 sphere traces a small scene into a real picture and shows how many steps
+  each pixel's ray took. Chapter 14 path traces a small room live, without and with NEE side by side. In 3D the real
+  laws hold, so the test holds it to them: a point light's I cos θ / d², a glowing ball's π L sin² α, a room's pixel
+  with and without NEE agreeing.
+- **A stale comment caught:** the NEE comment in `tracebasics.js` says the sun is "about 0.03 steradian" and found by a
+  cosine-weighted bounce "roughly once in two hundred tries". That was the old sun, drawn 21 times too wide (441 times
+  the sky), and two hundred is the chance for a direction picked evenly; a cosine-weighted bounce finds that sun about
+  once in a hundred. The real sun is 0.000067 steradian (0.53° across, `photometry.js`), found by such a bounce about once
+  in 47,000. Chapter 14 quotes the comment and says so; the comment itself is unchanged.
+- **A gap found in the twist's step bound, reported, not fixed:** the twist and bend modifiers
+  (`builder/modifiers.js`) divide distances by √(1 + c²), c = rate × extent, which is how much the twist stretches a move
+  along its axis; the most it stretches any move is (c + √(c² + 4)) / 2, up to 15% more. Measured by the tutorial's
+  test (node, 64-bit, on a copy of the modifier's arithmetic): a plate tilted 45° at the edge of a twist's extent keeps a
+  slope of 1.14 after the division, so a 0.9 step can be about 3% longer than the distance; a twisted box stays under 1.
+  Chapter 3 shows it in the flat world and says so; the modifier is unchanged.
+- **A comment's numbers that its own formula does not give, reported, not changed:** `tracebasics.js` says the old
+  random number output `fract(f32(state) / 671040)` put 0.08× to 3.2× of a window's share into windows of 0.0001 and
+  0.96× to 1.29× into windows of 0.001, on a grid of about 1/2600. Every one of the 2³² states counted (the tutorial's
+  test, in node): 0.95× to 1.83× and 0.96× to 1.04×, on a grid of 1/10,485 for seven-eighths of the states (the grid
+  wraps 3200 times, which 1/2600 leaves out). The old code is not in the history, which starts at 0.46.0. Chapter 12
+  says both and keeps the comment's point: a bias in small windows that no number of samples removes.
+- **A third comment number, smaller:** `tracebasics.js` LUM_CODE says the log code's step is "2e-5 of a stop"; from
+  its own constants (80 stops over 2²⁴ codes) it is 4.8e-6. Chapter 16 says so; the comment is unchanged.
+- **A comment's verdict out of date, reported, not changed:** the Russian roulette comment in `tracebasics.js` says
+  roulette "should earn its keep in a scene deep enough for the budget to shrink". Since 0.10.0 the number of rounds a
+  sample gets is the worst case, never shrunk (`raytrace_main.js`, "THE ITERATION BUDGET IS THE WORST CASE"), so
+  roulette can save only the work inside a round. Chapter 13 says both, stamped read in code; whether that work is ever
+  worth saving is not measured.
+- **Eight styles, for every reader** (you: "make the style a dropdown, expect to add more styles later. We'll keep this
+  in for everyone. give them names"; then "use different fonts for the lab notebook; more hand drawn technical. Add
+  more Styles. I like the drafting sheet, but make versions with sans serif, thin lines, minimalistic as well"):
+  *Lab notebook*, lettered throughout in Architects Daughter, an architect's even hand (it was Kalam headings over a
+  book face); *Chalkboard*, chalk on a green board in the dark and marker on a whiteboard in the light; *Blueprint*;
+  *Drafting sheet*, and three versions of it: *Drafting, sans serif* (IBM Plex, condensed capitals), *Drafting, fine
+  line* (hairlines, light Jost capitals, no grain) and *Minimal* (no frame, a white page, thin lines, Inter); and
+  *Risograph*. Each is light and dark, chosen by name from the menu at the top right of every page and kept on the
+  reader's device. They are listed once, in `tutorial/kit/styles.js`; a new style is a CSS file, its `@import` and an
+  entry there, and the test fails if a style misses a token or a dark colour. `tutorial/styles.html` shows each with a
+  labelled sample and its key to the figures' colours, its cards made from the list. Their typefaces are kept in the
+  repository (`tutorial/kit/fonts/`, 42 latin and greek woff2 files of 20 families, each family's OFL licence beside
+  them, THIRD_PARTY.md), fetched once by `tutorial/kit/fonts/fetch.mjs`: the tutorial loads nothing from another site.
+- **Colour words follow the style.** The text names what a figure draws by its colour ("blue while they bounce"), and
+  the drafting styles draw it black and orange-red. Each style now names its own colours (`--say-*` tokens), and a
+  word marked `data-say="cam"` is rewritten to the style's own when the page opens or the style changes, here and on a
+  styles-page card alike; a figure's own labels ask the pen (`pen.say`). The test checks every marked word names a role
+  every style names.
+- **Every figure answers the hand** (you: "make images more interactive … try to make every chart, graph etc
+  interactive, even if it is a little bit"): every chart reads out the values under the pointer (a tap on a phone), in
+  a box beside it, from the kit (`kit/plot.js`, `pen.hover`, `pen.tip`), and the hand-drawn ones (the darts' spreads,
+  the old random numbers' windows, the MIS plates' strips) say what they are pointed at too. Figures that had nothing
+  to touch got controls: chapter 13's roulette (the walls, where roulette starts, and survivors keeping their β, the
+  unfair game, which loses a third of the light: 0.233 against 0.346), its one path (the walls' albedo, a bounce
+  limit, which pixel), chapter 12's spreads (how many estimates a column), chapter 15's plates (samples, new random
+  numbers), chapter 16's glow finder (drag the ball out of sight, new paths), its random lines (new lines) and its
+  brightness codes (a brightness of your choosing, both codes and what each reads back as), chapter 17's focus plane
+  (drag it).
+- **Chapter 14's room, quieter** (you: "show only NEE too. the image shows a lot of random lines, moving, its hard to
+  see"): *Without NEE*, *NEE only* and *Both*, in the flat room and the 3D one; the flat room's drawn paths are three
+  of the chosen pixel, traced from their own seed and still until *Other paths*, the pixel or the room changes (they
+  were the last few the pictures traced, replaced every third sample), and *Show paths* hides them.
+- **Shapes you can move** (you: "make SDF elements draggable (the blend mode is not very visible now, the shapes are
+  too far apart)"): in chapter 2's distance field the circle and the box start touching, both drag by a handle at
+  their middle, and a blend slider (shown only while they are blended) widens the fillet. The ball, the block and the
+  wall of the march, the room's ball and block in chapter 1, and the block and the room's shapes in chapter 14 drag the
+  same way.
+- **Read by a blank reader** (you: "have every page read by an independent agent … that has no knowledge about
+  shadytracer"): `tutorial/review/extract.mjs` writes each page as a reader meets it, text and figure screenshots, and
+  a fresh agent that may read nothing else reads it as a beginner, answers a quiz and says where it got lost
+  (`tutorial/review/README.md`). The first round's reports are kept whole, and every finding is answered in
+  `tutorial/review/REVIEWS.md`. The worst were figures that did not show what their paragraph said: chapter 1's shadow
+  ray hit the block, not the ball; chapter 2's squeezed circle stepped right over the shape while its readout said it
+  stopped at the surface; chapter 14's blocked lamp was hidden entirely. All fixed, with a new figure for the cosine law
+  (chapter 1, *Light at a slant*), the NEE fold-out rewritten, the sun's numbers made to agree, and two kit bugs found
+  by them: a hidden control still showing, and an angle mark drawn the long way round. A second round of fresh
+  readers, on the revised pages, answered every quiz question from the page alone and found the numbers consistent;
+  what they found next (why one eye ray is enough, why aiming is quiet, why a ray inside a ball does not stop, a
+  WGSL excerpt labelled JavaScript, colours shared between meanings in three styles) is fixed too, each finding
+  answered in `REVIEWS.md`. A third round read the eight new chapters (0, 3, 4, 12, 13, 15, 16, 17) once each: every
+  reader could say each chapter's idea back, and was lost where a step of maths assumed calculus, where a number in the
+  text did not show its working against the readout (0.48 from a formula giving 0.175; 0.96 from numbers giving 0.98),
+  or where a word named a colour or line the figure drew otherwise. Each chapter was revised for it, every finding
+  fixed or answered in `REVIEWS.md`. A fourth round read the same eight again: round 3's fixes held, and the readers
+  found three figures that did not show what their paragraphs said. Chapter 16's tight boxes were drawn off the canvas
+  (`pen.rect` takes world units and was handed pixels); chapter 17's streak ran off the top of its picture; chapter 0's
+  3D side could not be counted (it now catches 16 rays at r = 1 and 4 at r = 2, with a close-up). Chapter 16 now lists
+  its cells as often as the engine does (every second sample, `EMIT_EPOCH`, tested against `raytrace_main.js`), so a
+  one-sample picture aims at nothing yet; chapter 17 explains why a lens focuses and why a point camera cannot see a
+  floor through glass, and shows the grain of a 2-sample picture; chapter 0 says how the renderer works before its key,
+  and what a terminal and `localhost:8000` are. The key gained a glowing line. `tutorial/review/affected.mjs` died once
+  the branch's diff passed `execFileSync`'s 1 MB default (ENOBUFS); its buffer is raised. Rounds five and six read
+  chapters 5 to 11, two fresh readers each. The first found one gap in five of them, picking a direction with chance
+  p and dividing by p, used as if known before chapter 12 teaches it: chapter 8 now teaches it where a renderer first
+  picks a direction (a pupil asked at random, the answer times 30). They also found four statements that were wrong,
+  each checked and fixed: the diamond ball's rays "going round" (no ray lit from outside is trapped in a ball: it
+  meets the far side at the angle it was bent to; the rays cross inside at 0.704 radii, now marked), the colour
+  diagram's edge crossing the map (the fitted curves fold back past 427 and 644 nm, and the edge was drawn from 380
+  to 700), PBR Neutral's "lift" of the dark tones (it takes 0.04 off), and grazing light losing more to one
+  reflection (it loses less). The second round found three of the first round's own sentences wrong (chapter 9's
+  "top tenth" of a range that is its last hundredth, chapter 7's 18% grey "at 0.36", chapter 5's two rows with one
+  listed), now fixed, and steps of reasoning said as facts, each now shown. Round seven read chapters 18 to 24. Every
+  reader met words the page took from earlier chapters (sample, NEE, the flat world, lane, resolve), so each page now
+  says them in a few sentences of its own. Five statements were wrong and are fixed: chapter 18's caustic seen through
+  glass "missing from both" sides (the engine keeps it on the camera's side, found by chance); chapter 23 reading resolve's `n == 0` return and `UB.maxaverages` as they
+  are not; chapter 24's section numbers; chapter 21's padding as described against its figure. The excerpt locator cut
+  a function whose parameters hold braces at those braces; it now looks for the body after the parameter list. Round
+  eight read them again: the recaps held, and following one reader's sum (49 rays stopped, 48 in the shade queue)
+  showed chapter 22's model did not follow the engine. A ray out of steps goes to shade, and a path cut on the last
+  pass hands nothing in and is left out of its pixel's average by resolve, where the model had counted it dark. With
+  the engine's rule a short budget costs mostly samples, as the flush's comment says, and light only when very short
+  (over 20 runs: the mean held at 12 and 10 iterations, fell 4% at 8 and 30% at 4); round seven had called that comment
+  wrong, and the page and REVIEWS.md now say what the model shows.
+- **Chapters 25 to 33** (round nine, two readers each): chapter 33's second reader caught "card" meaning a graphics card
+  and a card on the board in one paragraph, and a step opening one card's box showed `pen.tip` running a wide box off
+  the canvas's left edge (it checked only the right; now both, for every figure). Chapter 32's readers asked for
+  pictures, a whole path and the lamp's outline being picked from, now drawn; and one reader's question found the page
+  telling the old kit's error the wrong way round for its room (at four bounces aiming read brighter, the extra bounce
+  outweighing the thin lamp). Chapter 31's first reader caught C's bins called 5° (they are
+  15°, 24 to a turn) and the Gaussian map's middle, 831 lux, called the blur's bias: over 120 runs it averages 913, 4.4%
+  under the true 955, and 831 is that and the run's noise; its second found the 0.7 curve's clearest rise above 1 left
+  unexplained (0.7 is added as 0.75 while the total is 1 to 4 million) and the polar diagram unreadable without knowing
+  where the light sits. Chapter 30's first reader asked why two
+  slabs 0.5 mm apart read exactly one slab, and the answer corrected the page: not the ten tolerances a ray leaving a
+  surface is moved on, but the twenty across at which the medium beyond a face is asked (`tracebasics.js`
+  mediumBeyond); past the gap it finds glass, so the face between reads glass to glass. Its second reader found "the
+  floor passes the setting far outside the scene" false for a capped scene, which the page now says. chapter 28's second reader did the page's arithmetic and
+  found two sentences wrong: the slicing floor's batch count is rounded up, so 921,600 pixels make 57 batches of about
+  16,168 rays, a little under the 16,384 the engine's comment says no batch goes under (reported, not changed); and
+  every batch runs all the iterations, 24 at the defaults and 38 at High quality. Chapter 29's readers asked for the
+  error bar's arithmetic, now a fold-out, and found its seRatio of 1.08 outside the "3%" given for its noise: measured,
+  seRatio spreads by 3%, and that set is an unlucky draw, which the page now says. Chapter 28's first reader found its governor
+  figure at odds with the code: the live view's 30 ms slice holds a light scene to the samples that fit it, which the
+  figure left out; it now has the slice as a choice and a step of its own, held to the real loop. Chapter 27's second
+  reader found the page saying every kernel once declared the scene's uniforms: it was four (the 0.10.0 entry and
+  `genrays.js` say so), and the figure now models those four. The excerpt locator cut `export function` and
+  `export async function` excerpts at their parameters' braces; it now passes the parameters for those too. Chapter 25's readers found two steps showing nothing new, four
+  measures of spread called by one name, and the rounding's key idea missing; each is fixed, the last with a view of
+  its own. Chapter 26's figures are tested against true distances, not the scene's own bounds: a box's distance can be
+  more than a relief's divided field or a lens's formula, both underestimates, and never more than the truth. Its
+  second reader found the sentence the argument rests on misleading ("a box's distance in place of what it holds"):
+  the page now says what the code does, a skipped object leaving the union and the nearest skipped box capping the
+  answer, and why that is safe under a smallest-of and not a largest-of.
+- **The figures' own path tracer aimed at the wrong lamp, and one bounce too far** (found writing chapter 32, fixed in
+  `tutorial/kit/flatland.js` and `kit/space.js`): the flat world's lamps are capsules, which the bounces hit, but its
+  shadow rays went to points of the middle line, a lamp of no thickness; and the last surface of a path aimed at the
+  lamp too, counting light one bounce further than a path without aiming reaches. In chapter 14's room bouncing read
+  0.1326 ± 0.0014 and aiming 0.1213 ± 0.0004 (twelve bounces); allowed one, 0.0556 against 0.0870. The test's own room
+  had a lamp 0.001 thick and too few paths to see it. Aiming now picks points of the outline facing the point (the far
+  side sends it nothing) and the last surface does not aim, as pbrt stops; new tests hold a thick lamp to its closed
+  form and a room to the same answer both ways at one bounce and at six, and the old kit fails them. What moved:
+  chapter 8's room averages 0.1316 (was 0.1320); chapter 14's exact value is the capsule's, aiming's error bar ± 0.001,
+  "about a fifth" for the smallest lamp (it said a sixth), and its fold-out and the NEE card say which points and not the
+  last bounce; chapter 19's pane 0.323 without the map; chapter 20's room, one seeded run, retold from this run (its
+  lucky pixel is 46 now).
+- **Two things chapter 26 reports, not changed:** `wavefront.js` says the cache filled once was "6 to 22% faster" than the
+  lazy fill "on every scene"; the run it cites found one scene, in one mode, 2% apart, within its noise
+  (`roadmap/ARCHITECTURE.md`). And in the chapter's model a relief in its shell costs about its box test when far, so
+  its box would no longer pay; every culling run on the card used the frozen Noise library, whose reliefs have no
+  shell, so whether that holds is not measured.
+- **Where to read more** (you: "add a box with recommended external references, eg where you learned the info. Inigo
+  quilez definitely needs to be named. Probably more than once"): reading boxes beside the sections they belong to,
+  every chapter at least one, from one list (`tutorial/kit/reading.js`) whose every link was opened and checked. Inigo
+  Quilez is named all through chapter 2: his 2D and 3D distance functions (the code credits him shape by shape, and
+  the box cites that line), his smooth minimum (chapter 2's blend is his quadratic one, its k four times his), his
+  history of raymarching, distance estimation and interior SDFs for the "never too large" rule, his normals, and the
+  two formulas of his that ShadyTracer measured and replaced, told with why his list is still where to start; and again
+  in the glossary and in the plan for chapters 3, 4 and 26. "Where ShadyTracer learned it" is said only where the code's own comments credit the
+  source, which the test checks.
+- **The tutorial follows the code** (you: "any change to shadytracer will need a review of the tutorial to make sure it
+  is still aligned"): a new section in CLAUDE.md makes it part of every PR. `node tutorial/review/affected.mjs` lists the
+  chapters a branch touches: excerpts whose lines changed, citations, modules a figure runs, and chapters, planned
+  ones too, that are about a changed file (`code` in `kit/chapters.js`, each path checked to exist).
+- **A stamp written into a sentence, found and fixed:** `tutorial/stamp.mjs` took the first `>` after `<pre` as the
+  tag's end, and chapter 2's excerpt of the 2D distance functions says `(x, y) => …` in its note, so the stamp went
+  into the note and the page showed `data-hash="…">` in the middle of it. A tag now ends at the first `>` outside quotes
+  (the stamper, `affected.mjs` and the test alike), the test stamps a page with such a note, and every page is checked
+  for an attribute written inside another.
+- **Two kit bugs, found by the new chapters:** a progressive figure was drawn once before its work was reset, so
+  one that keeps its sums in state made by `reset` failed in the browser while the test, which resets first, passed
+  (`kit/figure.js` resets first now); and `tutorial/test/pages.check.mjs` checked a list of six pages typed in when there
+  were six, so no new chapter was ever opened in a browser by it (it reads the written chapters from the contents now).
+- **Checked:** `node tutorial/test/tutorial.test.mjs` (in CI) holds the pages, links, glossary and excerpts to the
+  contents and today's source, draws every figure and step into a recording canvas, and tests the flat world against
+  2D closed forms (a point light's I h / (x² + h²), a lamp's L (sin φ₂ − sin φ₁), a room traced with and without NEE
+  agreeing within their error bars). Measured headless in Chromium (`tutorial/test/pages.check.mjs`, Playwright 1.56.1,
+  in the container): every page in every style and theme loads with no error and every figure draws. That says the
+  pages run, not that they read well.
+
+What to look at:
+- **Chapter 5, Measuring light**: drag the panel from 2 m to 8 m and point at its pixels; widen the sun to 10°; the floor's
+  chart beside your card's numbers. Are the four units clear before the sun arrives?
+- **Chapter 6, Colour**: slide the band from blue to red; drag the point off the triangle to the royal blue; drag the
+  green LED. Does the coloured diagram read in your style, light and dark?
+- **Chapter 7, From light to pixels**: the room with the headroom slid from 0 to 12; the tone curves on the orange
+  light. Do the swatches look as your screen shows ShadyTracer?
+- **Chapter 8, Diffuse and mirror**: drag the lamp round the matte point; the room's wall made a mirror; the furnace
+  at albedo 1, then 0.7, then a bounce limit of 1.
+- **Chapter 9, Rough and shiny**: drag the light round the rough metal at roughness 0.6; the table chart at 0.3; the
+  old density at 60° and 80°.
+- **Chapter 10, Glass**: drag the ray past the critical angle from inside; the pane at 78° and coloured; the ball at
+  index 1.33, 1.5 and 2.42.
+- **Chapter 11, Rainbows**: the prism's fan with the Abbe number slid from 90 to 15; draw 10,000 wavelengths; tilt
+  the coating to 45°.
+- **Chapter 18, Caustics**: the first figure in all four modes, the sun widened to 8°; the learning figure sending ten
+  samples. Is it clear which side counts which light?
+- **Chapter 19, Photon mapping**: the map on and off through the pane, then the radius from 0.01 to 0.4 while pointing
+  at pixel 25; the shrinking radius with α at 0.25 and 0.95; the grid's gather point dragged, and the budget's starts
+  pressed through. Does the blur-against-noise trade come across?
+- **Chapter 20, Dust in the air**: the free-flight sheet with the mean free path slid; *One ray's march*; the phase
+  function at g 0.95 and −0.95; the room's three ways, then g from 0.95 to −0.9 with the sun aimed at; the furnace's
+  four steps. Does the beam read as a beam in your style?
+- **Chapter 21, A GPU for beginners**: the lanes with each width and both orders, pointing at a group; the engine's
+  UB, pointing at boxes; the picture sizes flat and by rows. Is it enough to read chapters 22 to 24?
+- **Chapter 22, Wavefront path tracing**: the iterations slider from 24 down to 4; *Next kernel* through iteration 1
+  and 2; the shading cost from 1 to 80. Do the queues' boxes make the ping-pong clear?
+- **Chapter 23, Adding up light on a GPU**: the race's three ways in lock-step and interleaved, *Run again*, 16
+  threads; the contribution dragged from a millionth to the sun; the batches at each size, the photon map on.
+- **Chapter 24, From scene tree to shader**: drag the ball and add one in each of the three ways, watching the compile
+  count; the objects and call sites of the second figure.
+- **Chapter 25, Measure first**: the three views of the first figure; the second's passes, by kernel and by iteration,
+  then rounded to 100 µs (do the outlined zero-length passes read clearly?), and *One pass, rounded*, dragging the pass
+  across a tick; the third's four readings, then the true difference from 0 to 30% in separate runs and interleaved,
+  *Compare again*.
+- **Chapter 26, Fewer and cheaper steps**: the first figure's three box settings with and without the shell, pointing at
+  a ray; the second's lens and blend with B culled inside the join, P dragged; the shell's roughness slid from 0.04 to
+  0.3; the step cache's three settings, pointing at a jump to see its ball. Is the cost model's bar enough to follow?
+- **Chapter 27, Faster compiles**: the first figure's three ways for each scene; *Next step* through the session, then
+  the cache off, and the four kernels declaring the scene's uniforms at *Open B* (seven compile, not three), pointing at
+  a row for its job; the maths fold-out's table against the *Learning the machine* readout; the bar with the build at 0.5, 1.3 and 3 times its prediction, pointing at
+  the curves; *Learning the machine* from 0.15 to 6.
+- **Chapter 31, The optics bench**: the beam at 20,000 rays with *Other rays* pressed a few times (is the peak ever
+  low?), then 2 million, then pooled; is "the light, shining up" at the diagram's foot clear? The map from 1,000 to
+  100,000 rays, each smoothing; the tally's weight 0.7 from 2^20 to 2^26.
+- **Chapter 32, A ray tracer in one page**: drag the aim along the box's top and up to the lamp; the picture from 1 to 64
+  samples, then aiming at 16, then the mirror. Is the code beside each part enough to write your own?
+- **Chapter 33, Open problems**: the board in each view, pointing at cards. Is it the list you would want to work
+  from, and is anything open missing from it?
+- **The flat world's lamp, after the fix**: chapter 14's aim figure (aiming ± 0.001 against bouncing's ± 0.009) and its
+  room at the smallest lamp; chapter 8's room; chapter 20's room in its three ways.
+- **Chapter 30, Numbers have grain**: the lamp from 1 µm to 3 mm and 0 to 75°, the red rays the tolerance adds; the
+  gap across the point where ten tolerances pass 0.5 mm; the three terms with the point dragged out past the scene,
+  and the old floor's step; each planted line in the lint.
+- **Chapter 29, Noise, bias and checking**: the four readings, then *Other paths* a few times on each: does the
+  whole path's band hold the true value, and the cut one never? The furnace on each page (do the strips read as a
+  picture of a disc?); the error bars from 2 to 512 samples, true mean and window, and the window's wrong error bar.
+- **Chapter 28, Feeling fast**: the governor at 5, 20 and 60 ms a sample, both rules, and today's with the slice on; the drag held and only poked, as
+  Draft and Sketch; the heavy sample from 20 ms to 20 s at each size (at 640 × 360 and 10 s, the white lines every 5 of the 24 iterations); one and two in flight with the recording slid
+  past the card's time. Does the drag's timeline match how the view feels to you when you pan?
+- **Chapter 16's first figure**: 1 sample (boxes, nothing circled), then 8. Chapter 17's side view, *near*: the ray from
+  the lens's top edge, in its own colour, and its mark on the picture; and its 3D picture's *the first 2* samples. Chapter 0's lamp figure at r = 1 and 2.
+- **The new styles.** Lab notebook's new lettering; Chalkboard (try it dark); the three drafting versions side by side
+  on `tutorial/styles.html`. Do the drafting ones read the colours right: the text says "black" where they draw black?
+- **Pointing at a chart.** Any chart: chapter 13's bars and curves, chapter 15's strips and densities, chapter 16's
+  codes. Is the box in the way, and is it there when a finger taps on a phone?
+- **Chapter 14's room**: *NEE only*, *Other paths*, *Show paths*. Is it calm enough to follow now?
+- **Chapter 13's roulette**: switch off *Survivors divide β by p* and watch the average fall.
+- **The reading boxes.** Chapter 2 above all: are these the sources you would send a student to, and is anything you
+  learned from missing?
+- **Chapter 1, sections 5 and 6**: the shadow ray now meets the lit ball, then a point in the block's shadow; and the
+  new beam at a slant.
+- **The stamps**: point at READ IN CODE on any chapter; the card says what it means.
+- **The styles.** The menu at the top right of any page, and `tutorial/styles.html`: are the names right, and does
+  each read well in light and dark?
+- **Dragging the shapes.** Chapter 2, section 1: *Blended*, then pull the circle away from the box and back.
+- **The direction.** Are chapters 1, 2 and 14 pitched right for a high-school reader who wants to build a renderer:
+  too much, too little, the right figures?
+- **The figures by hand**: drag the eye and the lamp in chapter 1, the ray's start in chapter 2, the lamp's size in
+  chapter 14, on a phone too. Do the handles and the scroll steps feel right?
+- **The 3D figures**: turn them by dragging. Is the mix of flat and 3D right? Are the CPU pictures fast enough on your
+  machine? Measured in node in the container: one sample of chapter 14's two 44 × 33 pictures takes 113 ms, and the
+  figure spends at most 14 ms a frame on it, so it adds a few samples a second. What a browser on your machine does is
+  not measured.
+
 ## 0.67.1 — 2026-10-17
 
 **A scene card dragged or clicked while the cards redraw is no longer lost** (you: "fix the flaky card-drag check").

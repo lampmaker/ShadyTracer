@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Faster compiles · ShadyTracer, inside out</title>
+<link rel="stylesheet" href="../kit/kit.css">
+<script type="module" src="compiles.js"></script>
+</head>
+<body data-chapter="compiles">
+<p class="kit-offline">This page runs from a web server, not from a file: in the repository run <code>python3 -m http.server 8000</code> and open http://localhost:8000/tutorial/.</p>
+<main class="sheet">
+
+<header class="sheet-head">
+  <div>
+    <p class="eyebrow">Part VII · Speed · Chapter 27</p>
+    <h1>Faster compiles</h1>
+    <p class="lede">Before a scene renders, its <a data-g="kernel">kernels</a> have to be
+      <a data-g="compile">compiled</a>: turned from text into the graphics card's own instructions, by the browser and
+      the card's driver. For a big scene that took over a minute, and every change to the scene's shape starts it
+      again. Why the scene is in a kernel's text at all: ShadyTracer writes each scene's shapes as code, the distance
+      function the rays march by (chapter 24), into the kernels that need it; a new shape is new text, and new text is a
+      new compile, while moving a shape only changes a number the kernel reads. Chapter 24 also showed why a kernel's
+      size, with every call written out, sets its time. This chapter is what ShadyTracer does around that: compiling without freezing the page, all at once, only what changed, and a bar
+      that says honestly how long is left.</p>
+  </div>
+  <div class="titleblock" data-auto></div>
+</header>
+
+<section class="scene" id="build">
+  <div class="prose">
+    <h2><span class="n">1</span>A compile that freezes the page</h2>
+    <p data-step="build:blocking">WebGPU, the browser's way for a page to use the graphics card, has two ways to make
+      a kernel ready (a <em>pipeline</em>, in its words). The plain one hands the text to the <em>driver</em>, the card
+      maker's software that compiles it, and waits, on the page's own thread, the one that draws the page and answers
+      clicks, until the compile is done: "seconds to a minute in which the page cannot paint", as ShadyTracer's own
+      WebGPU library says. Its first builds were made that way. Here are the Noise library's kernels (one of the scenes
+      that come with ShadyTracer) as the user's card compiled them, each timed. (The user, on these pages, is
+      ShadyTracer's developer, who runs its tests on their own cards and pastes the numbers back: here an NVIDIA GTX
+      1080 Ti, of the generation NVIDIA calls Pascal; elsewhere a newer card, an Ampere. ShadyTracer's versions are
+      numbered like 0.9.2 and 0.10.0, and the middle number counts up: 0.10 comes after 0.9.) That version, 0.9.2, had
+      13 kernels; today there are 16. 13.4 seconds in all, one after another, and the page frozen for every one of them. The Menger cubes showed what that
+      looks like: raising their iteration count froze the tab with no error, and the "recompiling…" line meant to say
+      so never reached the screen, because the compile began before the page could draw it.</p>
+    <p data-step="build:turn">The other way, <code>createComputePipelineAsync</code>, does the same work on another
+      thread and hands back a <em>promise</em> of the kernel: a value that arrives later, which the program can wait
+      for. The page keeps drawing and answering. The kernels here still
+      compile one after another, as ShadyTracer's build first did with them: "nine sequential awaits", its comment
+      says, "and every one of them awaited nothing" while they were the plain kind (nine is the comment's count; it
+      does not say when it was written, and figure 1's version built 13). Still 13.4 seconds.</p>
+    <p data-step="build:once">So ask for all of them at once, and wait for the last: the build is then about as long as
+      its slowest kernel, here the one that shades, which was 80% of the work by itself. They can run side by side
+      because the browser and the driver compile on several of the processor's cores at once (inferred: the
+      measurements say only that the total shrinks). Measured: 11.2 seconds all at
+      once against 13.4 one at a time, 16% less, and within half a second of shade alone. Not the slowest kernel's time
+      exactly, but half a second more: the small kernels, 12 to 126 ms each alone, were ready only at 177 to 402 ms,
+      queued behind the big ones, which suggests they share the processor with shade while it compiles (inferred).</p>
+    <p data-step="build:scenes">The same in every scene measured: all at once 16 to 21% under one at a time, and the
+      build as long as shade, give or take half a second. So the slow kernel is what to make smaller.</p>
+    <p>And 0.10.0 did: shade's compile fell by 38 to 48% in every scene, the Noise library's from 11.4 to 5.9 seconds
+      (the user's GTX 1080 Ti; figure 1's 10.7 is another run, of an earlier version). Mostly by calling the materials'
+      functions from fewer places: the compiler writes a function's body in wherever it is called, so every call is a
+      copy (chapter 24), and one of them went from nine places to three.</p>
+    <p>Since 0.20.8 shade holds no scene at all. A new kernel, <code>surface</code>, works out from the scene what each
+      ray hit (its normal, its material), and shade only uses that.</p>
+  </div>
+  <figure class="fig" data-fig="build">
+    <figcaption>One scene's 13 kernels compiled three ways, from the user's measurements (the user's Pascal card,
+      ShadyTracer 0.9.2, <code>docs/PERFORMANCE_REVIEW.md</code>): shade, occlusion and the march each timed alone, the
+      ten small kernels together (what one at a time leaves after the three, 0.28 to 0.39 s). Top row: the page's own
+      thread, <span data-say="shadow">painting</span> or <span data-say="blocked">frozen</span>. The dashed line: the
+      build ready. Choose the way and the scene.</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="session">
+  <div class="prose">
+    <h2><span class="n">2</span>Compile only what changed</h2>
+    <p data-step="session:open">A session in the <a data-g="builder">builder</a>, ShadyTracer's scene editor, step by step. Opening a scene
+      compiles every kernel, today sixteen; the table below says what each does, and pointing at a row says it too.
+      Each build's time is predicted the engine's way (section 3), as its slowest kernel's, from kernel sizes that are
+      a model's, not measured. Moving a shape compiles nothing (chapter 24: a value is written into the uniform buffer,
+      the memory of numbers the kernels read).</p>
+    <table class="data">
+      <tr><th>kernel</th><th>its job</th></tr>
+      <tr><td><code>genrays</code></td><td>the camera's rays, one a pixel (chapter 1)</td></tr>
+      <tr><td><code>march</code>, <code>occlude</code></td><td>step each ray to the surface it hits, and the shadow
+        rays to see whether they are blocked: <strong>they hold the scene</strong> (chapters 2, 14)</td></tr>
+      <tr><td><code>surface</code></td><td>what was hit: its normal, its material, the medium beyond: <strong>holds the
+        scene</strong></td></tr>
+      <tr><td><code>shade</code></td><td>the bounce and the light at each hit (chapters 13, 14)</td></tr>
+      <tr><td><code>flip</code>, <code>shadow_flip</code>, <code>prep_march</code>, <code>prep_shade</code>,
+        <code>prep_occlude</code></td><td>the wavefront's bookkeeping: swap the queues of rays for the next iteration,
+        and size the next round of work (chapter 22)</td></tr>
+      <tr><td><code>resolve</code></td><td>adds the sample into the picture (chapter 23)</td></tr>
+      <tr><td><code>genphotons</code>, <code>lt_build</code></td><td>the light tracer's photons from the lights, and its
+        map of where to aim them (chapter 18)</td></tr>
+      <tr><td><code>emit_collect</code>, <code>emit_publish</code></td><td>find the glowing surfaces and list them, to aim
+        at (chapter 16)</td></tr>
+      <tr><td><code>sppm</code></td><td>the photon map: stores the photons and gathers them (chapter 19)</td></tr>
+    </table>
+    <p data-step="session:add">Adding a shape changes the scene's text. Only three kernels hold the scene, the march,
+      the surface kernel and occlusion (and the step cache's fill, chapter 26, when that is on), so only they compile
+      again; the other thirteen are asked for with text the
+      device has compiled before, and come from the <a data-g="pipeline-cache">pipeline cache</a>. The build still takes
+      as long as its slowest kernel, the surface one, which holds the scene: what the cache saves here is the other
+      kernels' work alongside it, not the wait.</p>
+    <p data-step="session:back">Another scene, then back to the first: everything it needs is in the cache, keyed by the
+      kernels' whole text, and nothing compiles. The same for an undo that puts the text back as it was. Measured on the
+      user's card when the cache came in (0.10.0), in the Noise library: a part of the scene (a node of its tree,
+      chapter 24) hidden and shown once, then shown again and hidden again, so texts already compiled once. Showing it
+      again took 4.2 seconds before the cache and 2.0 with it; hiding it again, 3.0 and 0.56. Those times are the
+      builder's whole update of the scene, not the compile alone, so what is left with the cache is the rest of its
+      work.</p>
+    <p data-step="session:nocache">Without the cache, as before 0.10.0, a revisit is a compile like any other: every
+      step that changes a text compiles every kernel, and going back compiles them all again.</p>
+    <p data-step="session:before">And before 0.10.0 four of the kernels that hold no scene changed with it anyway: ray
+      generation, resolve, the light tracer's photons and the emitter list's collect pass. A kernel declares, at its
+      top, the <a data-g="uniform">uniforms</a> it is handed, and tinywebgpu, ShadyTracer's WebGPU library, refuses a
+      value no declaration names. The renderer handed every kernel the scene's whole list, so these four declared it,
+      and another scene, or an edit that changed the list, was new text for them, compiled again for values none of
+      them reads. Here, cache on: opening scene B compiles seven kernels, not three (the build no longer, since the surface kernel is
+      still its slowest: the four cost work beside it, not the wait). Since 0.10.0 those four declare
+      only the renderer's own uniforms and are handed only those (shade and the photon map's kernel are made the same
+      way), so their text is the same for every scene.</p>
+  </div>
+  <figure class="fig" data-fig="session">
+    <figcaption>Six steps of a session (columns) and today's sixteen kernels (rows): a kernel
+      <span data-say="blocked">red</span>: compiled, and it holds the scene; <span data-say="light">orange</span>:
+      compiled; <span data-say="cam">blue</span>: from the cache; faint: nothing to do, or a step not reached yet. Below each step, the build's time as the
+      engine's <code>compileprogress.js</code> predicts it from the kernels' sizes (a model's sizes, chosen near the
+      documents': shade 113,000 characters inlined, the surface
+      kernel 160,000 in scene A). Press <strong>Next step</strong>, point at a row for its job, and choose whether the
+      cache is on and how the four kernels of the last step declare their uniforms ("scene list": the scene's
+      too).</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="bar">
+  <div class="prose">
+    <h2><span class="n">3</span>A bar that does not stick</h2>
+    <p data-step="bar:count">While a build runs, the page shows a bar. It used to count kernels ready: "12 of 13". But
+      the kernels compile side by side, the small ones are ready in a few hundred milliseconds, and the build waits on
+      the biggest. So the bar jumped to nearly full at once and sat there for the rest: "often gets stuck on the last
+      part", the user wrote. Here a build predicted at 10 seconds that really takes 13.</p>
+    <p data-step="bar:clock">Since 0.10.0 the bar moves by the clock. When the build starts, its time is predicted from the
+      kernels that will compile (not those from the cache): the slowest one's, by chapter 24's model from its size (the
+      box below). The bar runs straight to 90% at the predicted time, then eases towards 99% and never reaches the end until the build
+      does, and the words beside it change from "about 3 s left" to "taking longer than usual". A build that takes far
+      longer than predicted, two and a half times here, keeps moving, slowly.</p>
+    <aside class="note"><span class="tag">Chapter 24's model, in short</span>A kernel's size is the characters of its text
+      with every call written out in full. Its compile time, fitted on the user's GTX 1080 Ti over 16 builds of 2 to 46
+      seconds: 15.2 ms × (size ÷ 1000) × (size ÷ 151,000)<sup>0.37</sup>. At 151,000 characters, a 2.3-second
+      build, the last factor is 1, so the time is 15.2 ms a thousand characters; below that size a little less a
+      thousand, above it more, and twice the size takes 2<sup>1.37</sup>, about 2.6 times as long. The 15.2 is the
+      <em>rate</em>, the one number a machine learns for itself.</aside>
+    <p data-step="bar:learn">That rate was measured on one card. Another machine learns its own: after each build, the
+      slowest kernel's time and size give the rate it showed, which is blended into the kept one, half old and half
+      new, and kept in the browser. Here a machine twice as slow, whose real rate is 30.4: its first build is predicted
+      at half its time, the next at three quarters, and after five builds that taught it, the sixth is within 2% (the
+      fold-out works it through).</p>
+    <p>Some builds teach nothing. One whose slowest kernel took under 300 ms. One four times faster than the kept rate:
+      that is the browser's own cache answering after a reload. The browser keeps compiled kernels of its own across a
+      reload, while ShadyTracer's pipeline cache lives in the page's memory and is gone, and the Noise library's
+      6.3-second build then took 0.2 seconds. The reload in the figure is such a build. And a build slowed by something
+      else on the card can at most double the rate.</p>
+    <p>The price of ignoring the cache's answers: a machine more than four times faster than the starting rate is
+      never believed, and keeps being told too long a time (slide below 0.25). Its bar ends early, which is better than
+      stuck.</p>
+    <details class="maths">
+      <summary><span class="tag">The maths</span>Learning a machine twice as slow, build by build</summary>
+      <div class="body">
+        <p>The kept rate starts at 15.2 ms a thousand characters; the machine's real one is 30.4. Each build that
+          teaches, the kept rate becomes half itself plus half what the build showed:</p>
+        <table class="data">
+          <tr><th>build</th><th>kept rate before</th><th>predicted against taken</th><th>kept after</th></tr>
+          <tr><td>1</td><td>15.2</td><td>−50%</td><td>(15.2 + 30.4) ÷ 2 = 22.8</td></tr>
+          <tr><td>2</td><td>22.8</td><td>−25%</td><td>26.6</td></tr>
+          <tr><td>3</td><td>26.6</td><td>−12.5%</td><td>28.5</td></tr>
+          <tr><td>4</td><td>28.5</td><td>−6.3%</td><td>29.45</td></tr>
+          <tr><td>the reload</td><td>29.45</td><td>it took 1/40 of the time: a rate of 0.76, under a quarter of 29.45</td><td>29.45: ignored</td></tr>
+          <tr><td>5, 6, 7</td><td>29.45, 29.93, 30.16</td><td>−3.1%, −1.6%, −0.8%</td><td>29.93, 30.16, 30.28</td></tr>
+        </table>
+        <p>The gap to 30.4 halves with each build, so the prediction's error does too. The reload took 0.51 s, over the
+          300 ms floor: it is the quarter rule that throws it out. A stalled build shows a rate held to three times the
+          kept one before the blend, so the kept rate can at most double: (1 + 3) ÷ 2 = 2.</p>
+      </div>
+    </details>
+  </div>
+  <figure class="fig" data-fig="bar">
+    <figcaption>Left view: a build's progress against time, the old bar (kernels ready, in
+      <span data-say="blocked">red</span>) and the bar by the clock (<span data-say="cam">blue</span>,
+      <code>compileFraction</code>), for a build predicted at 10 s that really takes what you set; point at it. Right
+      view: seven builds and a reload on a machine slower or faster than the rate it starts from, each predicted at the rate kept so
+      far (grey) and taken (<span data-say="cam">blue</span>; <span data-say="light">orange</span> where the browser's own
+      cache answered), the rate learned by <code>learnRate</code>.</figcaption>
+  </figure>
+</section>
+
+<section class="plain wide" id="engine">
+  <div class="prose">
+    <h2><span class="n">4</span>How ShadyTracer does it</h2>
+    <p>The two ways, as ShadyTracer's WebGPU library explains them:</p>
+    <pre data-src="lib/tinywebgpu/src/tinywebgpu.js" data-sym="// `async: true` opts out of exactly that, and only that. createRenderPipeline /" data-to="// before dispatching or drawing — bind() says so by name if you forget."
+         data-why="A pipeline is a compiled kernel ready to run (a render pipeline draws, a compute pipeline computes). The driver is the card maker's software that does the compiling. A promise is JavaScript's value that arrives later; await waits for it." data-hash="4dd333b7"></pre>
+    <p>Building all at once, in the renderer:</p>
+    <pre data-src="lib/pathtracer/core/raytrace_main.js" data-sym="/* BUILT IN PARALLEL, AND THE BIG FOUR OFF-THREAD." data-to="that is still compiling parks the values and replays them when it arrives. */"
+         data-why="'The four kernels that inline the scene' is out of date: three hold it now (march, surface, occlusion), and shade none. The table has sixteen kernels by default, not nine. Promise.all waits for a whole list of promises together. rebind() hands every kernel its buffers through tinywebgpu's setResources, which a kernel still compiling keeps until it is ready." data-hash="5453a288"></pre>
+    <p>The kernels that hold no scene:</p>
+    <pre data-src="lib/pathtracer/core/genrays.js" data-sym="/* THE BASE UNIFORMS ONLY, not the scene's." data-to="forCompute). `scene` stays a parameter so that no caller changes. */"
+         data-why="Section 2's four. computeUniformTypes(scene.uniforms) writes the scene's declarations, ComputeUniformTypes alone the base ones. R.trace is the renderer's call that traces a frame and hands the kernels their values; forCompute picks the base names for these four. Shade joined them in 0.20.8. check-shaders is the repository's shader check, run before every commit; its second pass builds every kernel against every scene." data-hash="2107fced"></pre>
+    <p>The cache, keyed by the whole text:</p>
+    <pre data-src="lib/tinywebgpu/src/tinywebgpu.js" data-sym="// THE KEY IS THE WHOLE TEXT, not a hash of it: two texts that hashed alike would hand one the" data-to="// its format, blend, topology and depth, and none here is costly enough to be worth keying."
+         data-why="A hash is a short number made from a text; two texts can share one. A Map is JavaScript's table from a key to a value. finalCode is the kernel's text as it will be compiled: the schema, the uniform declarations the library writes in front of the kernel, then the kernel with its workgroup size (chapter 21). G.defines is the library's list of short names for long ones, swapped in at compile. The entry point (the function a kernel starts at) and layout:'auto' are the same for every kernel here, so they need no place in the key." data-hash="acf8a5b9"></pre>
+    <p>And the bar by the clock:</p>
+    <pre data-src="lib/pathtracer/core/compileprogress.js" data-sym="export function compileFraction"
+         data-why="EASE_AT is 0.9, EASE_TO 0.99 and EASE_TAU 0.5 (defined just above). !(expectMs > 0) is true when there is no prediction, or it is not a positive number. x is the time so far over the prediction; past 1 the bar closes the gap to 0.99 by the same share every half a prediction: Math.exp(-t) is e, about 2.718, to the power -t, so each half prediction leaves 1/e, about a third, of the gap." data-hash="83d4e78a"></pre>
+  </div>
+</section>
+
+<section class="plain wide" id="tricks">
+  <div class="prose">
+    <h2><span class="n">5</span>Tricks and trade-offs</h2>
+    <p>Each is stamped with how it is known; point at a stamp to see what it means.</p>
+    <div data-claim="measured">
+      <p><strong>Loops that do not unroll.</strong> A loop with a fixed count around a scene call is unrolled by the
+        compiler into that many copies of the scene (chapter 24); the march's 32 steps were written so on purpose, for
+        speed. The Noise library then held about a hundred copies of itself and took over a minute to compile. Its loops
+        now take their count from a uniform that is always 0 added to it, which the compiler cannot see through
+        (<code>noUnroll</code>): about 20 seconds (the user's Ampere card, 2026-09-29, <code>docs/PERFORMANCE.md</code>).
+        Whether the unrolled march rendered faster was never measured.</p>
+    </div>
+    <div data-claim="measured">
+      <p><strong>The bar's model.</strong> 15.2 ms per thousand inlined characters, fitted over 24 kernels on the user's
+        GTX 1080 Ti (typical error a third), and growing as the size to the power 1.37, fitted over 16 builds of 2 to 46
+        seconds on the user's Pascal card (typical error 11%). Past 46 seconds it is a guess: the lens assembly copied
+        32 times, predicted at 6.5 minutes, was still compiling after ten (<code>compileprogress.js</code>).</p>
+    </div>
+    <div data-claim="code">
+      <p><strong>A prediction without a compile.</strong> The same prediction can be made from the kernels' text alone,
+        without a graphics card: a stand-in device keeps the text it is handed instead of compiling it. The benchmark,
+        ShadyTracer's page of timed test scenes (chapter 25), uses it to skip a scene predicted to compile for over a
+        minute, rather than wait (<code>raytrace_main.js</code> predictCompile, <code>tests.js</code>).</p>
+    </div>
+    <div data-claim="code">
+      <p><strong>No frame during a build.</strong> A kernel still compiling cannot run yet, and a frame that asked it to
+        (<em>dispatched</em> it, chapter 21) was refused whole by the browser. So the renderer counts the builds under
+        way and traces no frame while one runs (<code>raytrace_main.js</code>, <code>_building</code>).</p>
+    </div>
+    <div data-claim="measured">
+      <p><strong>Instead of compiling, data.</strong> Chapter 24's third way writes a scene not as code but as data: each
+        shape a record of numbers, which one fixed loop in the kernel walks. The lens assembly copied 32 times, as code,
+        was still compiling after ten minutes. As data it compiled in 1.8 seconds in 0.22.6, against 52.2 as data in
+        0.21.6 (the user's Pascal card, <code>roadmap/ARCHITECTURE.md</code>): its copies are more records, not more text,
+        so its kernels' text is the same as the optics bench's, the one lens assembly, as data.</p>
+    </div>
+    <div data-claim="inferred">
+      <p><strong>Whether the prediction costs the build anything.</strong> Measuring the kernels' sizes takes 30 to 40 ms
+        for the Noise library's, timed in Node.js (JavaScript run outside a browser); whether it runs while the kernels compile or before they start is not known
+        (<code>raytrace_main.js</code>, the prediction's comment, which names the test that would tell).</p>
+    </div>
+    <aside class="refs"><span class="tag">Read more</span><ul>
+      <li data-ref="webgpu-fundamentals">The pipelines and shader modules these pages talk about, and how a page asks for
+        them, from the start.</li>
+      <li data-ref="mdn-pipeline-async">The asynchronous way to make a compute pipeline, which section 1 is about, and
+        why it is preferred.</li>
+    </ul></aside>
+  </div>
+</section>
+
+<section class="plain wide" id="before">
+  <div class="prose">
+    <h2><span class="n">6</span>What went wrong before</h2>
+    <ul>
+      <li><strong>A frozen tab with no error.</strong> Section 1: the Menger cubes' compile on the page's own thread
+        (<cite data-src="lib/pathtracer/README.md" data-sym="This was found the hard way: raising the Menger iteration count froze the tab with no error" data-to="&quot;recompiling…&quot; line never even reached the screen."></cite>).</li>
+      <li><strong>Awaits of nothing.</strong> The build awaited each kernel in turn, and each await waited for nothing:
+        the calls underneath had already blocked until done
+        (<cite data-src="lib/pathtracer/core/raytrace_main.js" data-sym="This was nine sequential awaits, and every one of them awaited nothing: the pipeline"></cite>).</li>
+      <li><strong>The stuck bar.</strong> Section 3: a count of kernels, most of them tiny
+        (<cite data-src="lib/pathtracer/core/compileprogress.js" data-sym="// WHY NOT THE COUNT." data-to="// shade, 76-82% of the build, and all-at-once equal to shade alone within 0.5 s (measured on the user's GTX 1080 Ti,"></cite>).</li>
+      <li><strong>A profile that read the cache.</strong> An early profile of each kernel's compile kept its own list
+        of kernels; five came back in 0 to 3 ms, the live text byte for byte, most likely from a cache. The profile
+        now builds from the renderer's own table, and makes every text one no cache has seen
+        (<cite data-src="lib/pathtracer/core/raytrace_main.js" data-sym="uses it, and so does the benchmark's uncached compile (R.compileUncached), so that what is timed there" data-to="profile.js profileWG's, which makes every text one no cache has seen. */"></cite>).</li>
+      <li><strong>A cache that could hand back the wrong kernel.</strong> The toolkit before tinywebgpu keyed its cache
+        by a hash of the text; two texts with one hash would share a pipeline. The key is now the text itself (section
+        4).</li>
+      <li><strong>A frame traced during the first build.</strong> A redraw asked for while the page first loaded
+        dispatched kernels still compiling, and the frame was refused; it had been fixed for a scene change alone
+        before, and the state now lives where every build passes
+        (<cite data-src="lib/pathtracer/core/raytrace_main.js" data-sym="setScene alone (530a9d7). So the state lives here, where every build passes, and R.trace refuses on"></cite>).</li>
+    </ul>
+  </div>
+</section>
+
+</main>
+</body>
+</html>

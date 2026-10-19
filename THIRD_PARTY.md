@@ -17,6 +17,32 @@ The author's own libraries, separate repositories under MIT and included as git 
 Not code, but owed: the signed distance functions follow
 [Inigo Quilez's articles](https://iquilezles.org/articles/distfunctions/).
 
+The tutorial's typefaces, in `tutorial/kit/fonts/` (fetched once from [Google Fonts](https://fonts.google.com/) by
+`tutorial/kit/fonts/fetch.mjs`, latin and greek faces only), each under the
+[SIL Open Font License 1.1](https://openfontlicense.org/), whose text and copyright are kept beside the files as
+`<family>-OFL.txt`:
+
+| Family | Used by the style | Licence file |
+|---|---|---|
+| Architects Daughter | Lab notebook | `architectsdaughter-OFL.txt` |
+| IBM Plex Mono | Lab notebook, Drafting, sans serif | `ibmplexmono-OFL.txt` |
+| Cabin Sketch | Chalkboard | `cabinsketch-OFL.txt` |
+| Patrick Hand | Chalkboard | `patrickhand-OFL.txt` |
+| Space Mono | Chalkboard | `spacemono-OFL.txt` |
+| Saira Stencil One | Blueprint | `sairastencilone-OFL.txt` |
+| Barlow | Blueprint | `barlow-OFL.txt` |
+| B612 Mono | Blueprint | `b612mono-OFL.txt` |
+| Spectral, Spectral SC | Drafting sheet | `spectral-OFL.txt`, `spectralsc-OFL.txt` |
+| Courier Prime | Drafting sheet | `courierprime-OFL.txt` |
+| IBM Plex Sans, IBM Plex Sans Condensed | Drafting, sans serif | `ibmplexsans-OFL.txt`, `ibmplexsanscondensed-OFL.txt` |
+| Jost | Drafting, fine line | `jost-OFL.txt` |
+| Red Hat Mono | Drafting, fine line | `redhatmono-OFL.txt` |
+| Inter | Minimal | `inter-OFL.txt` |
+| Source Code Pro | Minimal | `sourcecodepro-OFL.txt` |
+| Bricolage Grotesque | Risograph | `bricolagegrotesque-OFL.txt` |
+| Atkinson Hyperlegible | Risograph | `atkinsonhyperlegible-OFL.txt` |
+| DM Mono | Risograph | `dmmono-OFL.txt` |
+
 ## The MIT licence
 
 The text below applies to each entry in the table, with the copyright line given there in place of

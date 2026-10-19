@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Noise, bias and checking · ShadyTracer, inside out</title>
+<link rel="stylesheet" href="../kit/kit.css">
+<script type="module" src="checking.js"></script>
+</head>
+<body data-chapter="checking">
+<p class="kit-offline">This page runs from a web server, not from a file: in the repository run <code>python3 -m http.server 8000</code> and open http://localhost:8000/tutorial/.</p>
+<main class="sheet">
+
+<header class="sheet-head">
+  <div>
+    <p class="eyebrow">Part VIII · Getting it right · Chapter 29</p>
+    <h1>Noise, bias and checking</h1>
+    <p class="lede">A picture made of random samples is wrong in two ways at once. Its <a data-g="noise">noise</a>
+      fades as samples add up, and every pixel carries an <a data-g="error-bar">error bar</a> that says how much is
+      left (chapter 12). Its <a data-g="bias">bias</a> does not fade, and no error bar sees it. This chapter is how to
+      tell the two apart, how ShadyTracer checks itself against answers known in advance, why every such check needs a
+      row that must fail, and how the error bar itself is checked. The checks are in the program; which of them have
+      been run on a real card, and which have not, is said for each.</p>
+  </div>
+  <div class="titleblock" data-auto></div>
+</header>
+
+<section class="scene" id="bias">
+  <div class="prose">
+    <h2><span class="n">1</span>Two ways to be wrong</h2>
+    <p data-step="bias:whole">One pixel, looking at a floor in a corner lit by a small lamp near the ceiling, in
+      the flat world these pages draw in (chapter 0: the renderer's rules in a slice, two dimensions instead of
+      three). Each
+      sample follows one path from the eye (chapter 13), bouncing off the matte walls, and never aims a ray at the lamp
+      on purpose (no <a data-g="nee">NEE</a>, chapter 14), so the lamp is found only by chance: most paths bring back
+      nothing, a few bring back a lot. The lamp's brightness is 10 and each bounce keeps 0.7 of the light (the walls'
+      <a data-g="albedo">albedo</a>), so a path that reaches the lamp straight off the floor brings 0.7 × 10 = 7, one
+      that bounces once more first 0.7 × 0.7 × 10 = 4.9. The pixel's reading is the average
+      of its samples, and the dashed lines either side of it are two error bars away. Its true value, 1.644, is the
+      long-run average over a million paths (computed). The reading wanders early, then closes in, and the dashed
+      lines hold the true value between them nearly all the way: an <a data-g="unbiased">unbiased</a> estimate, whose
+      only error is noise. (One error bar either side holds the true value about two times in three, chapter 12; two,
+      about 95 times in 100. The samples are counted on a log scale, each mark four times the last, so the first few
+      samples and the last thousands both fit.)</p>
+    <p data-step="bias:cut">The same paths, each cut after its first bounce, as a renderer with a bounce cap of 1
+      would trace them: the light that reaches the floor straight from the lamp, and none that comes off the walls
+      first. The reading settles just as neatly, its error bars close in just as fast, and it settles on 0.94, about
+      19 of its own error bars under the true value (its own long-run value is 0.926, computed). It is precise and wrong. Nothing in the picture says so: the
+      error bar measures how much the samples disagree with each other, and these all agree on the wrong answer.</p>
+    <p data-step="bias:clamp">A <a data-g="firefly">firefly</a> clamp is the other common bias: every sample brighter
+      than a limit is cut to it, here 4, to take the bright speckles out of an early picture. Every path that finds the
+      lamp in one or two bounces brings 7 or 4.9 and is cut, so the reading settles at 1.20, quieter and darker, 17
+      error bars under (1.183 in the long run). ShadyTracer has one (off by default: "a choice rather than a guard", its comment says), and it
+      clamps only light that has bounced, never what the camera sees directly.</p>
+    <p data-step="bias:window">The live view's <a data-g="moving-average">moving window</a> is not a bias. Averaged over a window of 10 (chapter 23:
+      each new sample weighs 1/11, and old ones fade), the reading follows the true value on average, but it never
+      settles: it is worth about 21 samples however long it runs (section 3), so its error bar stops shrinking.</p>
+    <p>Between unbiased and biased there is a third kind, <a data-g="consistent">consistent</a>: wrong on average
+      after any given number of samples, but by less the more there are, and right in the limit. The photon map of
+      chapter 19 is one: its radius shrinks with every sample, and so does its blur.</p>
+  </div>
+  <figure class="fig" data-fig="bias">
+    <figcaption>Left: the corner in the flat world, the eye, the pixel's point of floor, and a few of its paths
+      (<span data-say="light">orange</span> where one finds the lamp). Right: the pixel's reading after each sample, on a
+      log scale, ± two error bars, as the engine's <code>measure.js</code> keeps them; the other three readings faint;
+      the true value solid. The paths' legs that end on the lamp are drawn as the chosen reading counts them. Choose
+      the reading; <strong>Other paths</strong> draws new ones.</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="control">
+  <div class="prose">
+    <h2><span class="n">2</span>A check that cannot fail</h2>
+    <p data-step="control:pass">A check needs an answer known in advance. ShadyTracer's <a data-g="furnace">white
+      furnace</a> (chapter 8) is one: a ball of a material that reflects all the light it gets, in a sky that is
+      equally bright every way. No light can be made or lost on the way to the eye, so the whole picture must read the
+      sky's brightness, and the <em>ratio</em> of a row of such a material (the picture's average over the sky's)
+      must be 1. Here it is in
+      the flat world, one disc filling three quarters of the view, each pixel the average of 32 samples, read the way
+      ShadyTracer's test bench reads its pictures: the ratio, and the <em>noise</em>, how much neighbouring pixels
+      differ, over the average. The white rows pass: within 2% of 1, about five times this little picture's own
+      spread (0.4% from one run to the next, computed over 200; ShadyTracer's pictures, a million pixels each, are
+      held far closer). A grey disc reads less, and it must: the quarter of the
+      picture that is sky reads 1 and the disc 0.8, so 0.25 + 0.75 × 0.8 = 0.85. It shows the test can see a loss. The
+      last row is a <a data-g="control">control</a>: a black disc, which must read well below 1, and does, 0.25, the
+      sky's quarter alone. Its noise is not zero: the edges between black disc and white sky
+      are real detail, which the noise number counts too (section 5).</p>
+    <p data-step="control:empty">Now the disc is never drawn: a scene that did not load. Every pixel sees the sky, and
+      every white row reads 1.0000 and passes. They would pass whatever the material did, because an empty picture
+      reads exactly what a perfect one does. The grey row fails, and the control reads 1.0000 too: a row that must
+      fail, passing, is the sign that nothing above it was measured. This happened. On 2026-09-29 a page that mixed
+      old cached files with new ones read 1000.000244, against a sky of brightness 1000 (the last digits are 32-bit
+      rounding: inferred): a ratio of 1.000000244, "with zero noise on every row, rough
+      glass included" (a row that, like the grey here, reads below 1 when it works). The control row's comment tells
+      that story as its reason.</p>
+    <p data-step="control:sky">And the camera turned away from the disc: the same readings, from another cause. The
+      first time the test of dust in the air was run (the user, 2026-10-16), its camera was aimed at a point given in
+      the wrong unit, 40 millimetres read as 40 metres, so it looked at empty sky: "every row 1000.000244, noise 0, the CONTROL with
+      them". Noise 0 is a clue but not a proof: here the NEE-off row and the mirror read exactly 1 even when the page
+      works, because every one of their samples is exactly 1. The control is the proof.</p>
+  </div>
+  <figure class="fig" data-fig="control">
+    <figcaption>The white furnace, a row a material: the 56 pixels of each row's picture (white is the sky's 1), its
+      ratio and noise as <code>raytrace_main.js</code> computes the bench's, and whether it reads what it must; point at
+      a pixel for its value. Matte rows with NEE on aim a ray at the sky as well as
+      bouncing, and weigh the two by how likely each was to find that direction (<a data-g="mis">MIS</a>, chapter 15),
+      so their samples differ a little: noise. Rows read what they must within 2% of 1 (the white), under 0.95 (the
+      grey) and under 0.5 (the control). Choose how the page is working.</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="errorbar">
+  <div class="prose">
+    <h2><span class="n">3</span>Is the error bar right?</h2>
+    <p data-step="errorbar:mean">Chapter 12 showed how <code>resolve</code>, the <a data-g="kernel">kernel</a> that
+      adds each sample into the picture, keeps every pixel's error bar from two numbers: <var>V</var>, how much its
+      samples scatter, and <var>S</var>, the sum of the squares of their weights in the average (the fold-out below
+      recaps both: in a plain average every sample weighs the same, 1/<var>n</var>, and in a moving one the newer
+      samples weigh more). The error bar is a claim, and it can be checked:
+      here a thousand pixels, all of the same true brightness 1, each the average of 32 samples drawn as a path
+      tracer's are (mostly small, a few large: an exponential distribution, as the engine's own test of the error bar
+      draws them). Their averages really scatter by 0.175 (their standard deviation, the typical distance of one from the average of
+      all, chapter 12); the error bars they report say 0.176.</p>
+    <p data-step="errorbar:more">256 samples a pixel: both shrink to about 0.065, 2.7 times smaller, as
+      1/√<var>n</var> says for eight times the samples (√8 is 2.8). The check the engine can run on a real picture uses only that: on a flat, evenly lit floor,
+      two neighbouring pixels differ only by noise, so the average squared difference between neighbours must equal
+      the sum of their squared error bars. <em>seRatio</em> is the square root of the one over the other, and it must read 1: here 1.08. seRatio
+      is noisy too: from one set of a thousand pixels to the next it spreads by 3% (computed, over 100 sets), so this
+      set is an unlucky one, about 2.6 of those spreads high. <strong>Other pixels</strong> draws another.</p>
+    <p data-step="errorbar:window">The moving window of 10 (section 1): after 256 samples each new one weighs 1/11, and
+      the average is worth 21 samples, not 10 and not 256. The kernel does not need to be told: <var>S</var>, the sum of
+      squared weights, works its way to 1/21 by itself, and the error bar follows, 0.218 reported against 0.216 real.
+      Why 21 and not 11: the oldest samples still count a little, so the weight is spread over more of them than the
+      window's 10 (the sum of squared weights of a sample weighing <var>w</var> and the rest fading is
+      <var>w</var>/(2 − <var>w</var>), with <var>w</var> = 1/11 that is 1/21: the fold-out works it out).</p>
+    <p data-step="errorbar:wrong">Now the mistake the engine's comment warns of, "the window's real sample count, which
+      'N' is not": the error bar worked out as if the window's average were worth its count, 11. It reports 0.308, too
+      wide, and nothing in a picture would look wrong. seRatio sees it: 0.69. The check exists in ShadyTracer, as a
+      row of its test bench, <code>error-bar</code>, with a window-10 row for exactly this; it has been built and never
+      run on a real card, so no seRatio has been recorded anywhere (<code>docs/TESTING.md</code>).</p>
+    <details class="maths">
+      <summary><span class="tag">The maths</span>The error bar, the window's worth, and why neighbours check it</summary>
+      <div class="body">
+        <p><strong>The error bar from V and S</strong> (chapter 12). A pixel's average is a sum of its samples, each times a
+          weight <var>w</var><sub>i</sub>, the weights adding up to 1. If one sample scatters by <var>s</var> (its
+          variance is <var>s</var>²), the average scatters by √(Σ <var>w</var><sub>i</sub>² · <var>s</var>²) =
+          <var>s</var> √<var>S</var>: a sum of independent things has a variance that is the sum of their variances, and
+          a thing times <var>w</var> has <var>w</var>² times the variance. <var>V</var> estimates <var>s</var>² once
+          divided by (1 − <var>S</var>), so the error bar is √(<var>S</var> · <var>V</var> / (1 − <var>S</var>)). Why the
+        1 − <var>S</var>: <var>V</var> measures the scatter about the samples' own average, which sits a little closer
+        to them than the true value does, so it comes out a little small; dividing by 1 − <var>S</var> puts that back.
+        For a plain average of <var>n</var>, <var>S</var> = 1/<var>n</var>, the divisor is (<var>n</var> −
+        1)/<var>n</var>, and the error bar is √(<var>V</var> / (<var>n</var> − 1)): chapter 12's <var>s</var>/√<var>n</var>
+        with the statisticians' <var>n</var> − 1.</p>
+      <p><strong>Two rules used above.</strong> A spread is measured in the number's own units, its variance in their
+        square: multiply a number by <var>w</var> and its spread is <var>w</var> times as big, its variance
+        <var>w</var>² times. And two things that do not depend on each other: the variance of their sum is the sum of
+        their variances (the cross terms average to zero); so is the variance of their difference, since −<var>b</var>
+        scatters exactly as <var>b</var> does.</p>
+        <p><strong>1/S counts samples.</strong> <var>n</var> equal weights of 1/<var>n</var> give <var>S</var> =
+          <var>n</var> × (1/<var>n</var>)² = 1/<var>n</var>, so an average with any weights is as good as 1/<var>S</var>
+          equal samples.</p>
+        <p><strong>The window's worth.</strong> Each new sample weighs <var>w</var> = 1/11, and every older weight is
+          multiplied by (1 − <var>w</var>). So <var>S</var> becomes (1 − <var>w</var>)² <var>S</var> + <var>w</var>²,
+          the update resolve uses. Once it stops changing, <var>S</var> = (1 − <var>w</var>)² <var>S</var> +
+          <var>w</var>², so <var>S</var> (1 − (1 − <var>w</var>)²) = <var>w</var>², and since 1 − (1 − <var>w</var>)² =
+          <var>w</var>(2 − <var>w</var>), <var>S</var> = <var>w</var> / (2 − <var>w</var>) = (1/11) / (21/11) = 1/21.</p>
+        <p><strong>Why neighbours check it.</strong> Two neighbouring pixels of an evenly lit floor have the same true
+          value, so their difference <var>L</var><sub>a</sub> − <var>L</var><sub>b</sub> is noise alone, and the variance
+          of a difference of two independent things is again the sum of theirs: on average (<var>L</var><sub>a</sub> −
+          <var>L</var><sub>b</sub>)² = se<sub>a</sub>² + se<sub>b</sub>². seRatio is √ of the first averaged over all
+          neighbours, over the second: 1 when every error bar is right, below 1 when they are too wide, above when too
+          narrow, or when the picture has real detail.</p>
+      </div>
+    </details>
+  </div>
+  <figure class="fig" data-fig="errorbar">
+    <figcaption>A thousand pixels of true brightness 1: the first 60 averages, ± the error bar each reports
+      (<code>measure.js</code> stepMoments and standardError, the kernel's update), and the true value dashed; on the
+      right, how much the averages really scatter against the error bars' typical size, and seRatio over neighbours,
+      as <code>raytrace_main.js</code> computes it. Choose the samples, the average, and in a window how its error bar is
+      worked out.</figcaption>
+  </figure>
+</section>
+
+<section class="plain wide" id="engine">
+  <div class="prose">
+    <h2><span class="n">4</span>How ShadyTracer does it</h2>
+    <p>The furnace's control, in the test bench:</p>
+    <pre data-src="lib/pathtracer/tests.js" data-sym="/* THE CONTROL: a row that must FAIL." data-to="{ label: 'CONTROL: black sphere -- must read well below 1', set: { tBase: 0 } },"
+         data-why="Every row of the furnace test is one material on a unit sphere; set changes the test material's settings for that row, and tBase 0 makes its base colour black. The bench then reads each row's picture and divides its mean brightness by the sky's (FURNACE_L, 1000)." data-hash="0f39def9"></pre>
+    <p>The noise, and the error bar checked, as the bench reads a picture:</p>
+    <pre data-src="lib/pathtracer/core/raytrace_main.js" data-sym="/* THE ERROR BAR, CHECKED against the picture itself." data-to="if (ea != null &amp;&amp; eb != null) { d2 += (la - lb) ** 2; e2 += ea + eb; seSum += ea; sen++ }"
+         data-why="a and f are the same words of the accumulation read two ways, a as whole numbers (a[i + 3], the sample count) and f as decimals (f[i], f[i + 1], f[i + 2]: red, green, blue); w here is the picture's width. la and lb are two neighbours' brightness (LUMA weighs the three channels as the eye does); se2 a pixel's squared error bar, null with one sample (!= null: 'is not missing'; ** 2: squared). d2 adds up the squared differences, e2 the squared error bars; seRatio is then the square root of d2 over e2. seSum and sen make relSE, the typical error bar over the picture's mean." data-hash="e1f2c754"></pre>
+    <p>The error bar's arithmetic, on the host, with the window as an argument:</p>
+    <pre data-src="lib/pathtracer/core/measure.js" data-sym="export function stepMoments"
+         data-why="st is one pixel: Y its average, V and S as chapter 12 has them, cnt its count. window is the moving window's N, Infinity for a true mean: prevn, the samples already in the average, is capped at it, so w never falls below 1/(N + 1). d is the new sample's distance from the old average (0 at a reset, as the kernel's select() makes it); V's line shrinks the old scatter by (1 − w) and adds the new sample's share of it, w d², so V is always the weighted average squared distance from the weighted average. This is a copy of the kernel's update in JavaScript, and its own comment says it is only as right as its match with the kernel; the figures above run it." data-hash="2cdc1ede"></pre>
+    <p>Another check that could pass without checking: the shader check once only made sure the code could be read,
+      and said so on a day a kernel was empty. Why it now builds every kernel, from its own header:</p>
+    <pre data-src="lib/pathtracer/core/check-shaders.mjs" data-sym="WHY THIS EXISTS. Pass one only proves the JavaScript parses." data-to="prog_shade growing a ninth storage binding past the default limit of eight."
+         data-why="prog_guide_build was a kernel of a feature since removed (guiding), off unless switched on; GUIDE_CELLS a constant its text named and nothing declared. Async pipeline creation (chapter 27) reports a failure later, through a promise, not at the call. A storage binding is one buffer a kernel reads or writes (chapter 21); a device allows eight a kernel unless asked for more." data-hash="15db0617"></pre>
+  </div>
+</section>
+
+<section class="plain wide" id="tricks">
+  <div class="prose">
+    <h2><span class="n">5</span>Tricks and trade-offs</h2>
+    <p>Each is stamped with how it is known; point at a stamp to see what it means.</p>
+    <div data-claim="code">
+      <p><strong>A known answer for every kind of light.</strong> The bench's image tests each compare a picture with
+        arithmetic done in advance: a white floor under the sun and sky reads ρ<var>E</var>/π, its albedo times the light falling on it, over π (chapter 5); a tilted
+        plane <var>E</var> sin(elevation + tilt); a glowing disc's light on the floor, worked out numerically to match
+        the formula; the furnace 1 for every white material, a little under for rough glass (<code>lib/pathtracer/tests.js</code>).</p>
+    </div>
+    <div data-claim="code">
+      <p><strong>A trimmed mean for comparing two builds.</strong> Two renderers converging to the same picture can
+        differ by percent in a plain mean at a few samples: a handful of fireflies move it. So the bench also reports the
+        mean without the brightest 0.1% of pixels; a difference that survives that is real. The NEE test compares plain
+        means, because the brightest pixels are exactly what NEE changes (<code>raytrace_main.js</code>,
+        <code>docs/TESTING.md</code>).</p>
+    </div>
+    <div data-claim="code">
+      <p><strong>Noise compared only like with like.</strong> The noise number counts real detail in the picture as
+        well as noise, so it is compared only between two pictures of the same scene at the same sample count: halving
+        it there is worth four times the samples (<code>raytrace_main.js</code>).</p>
+    </div>
+    <div data-claim="measured">
+      <p><strong>The furnace, passed, nearly.</strong> Its first run: every material but rough glass 1.000 to 0.04%,
+        the NEE-off rows equal to their partners, nothing above 1 (the user's Pascal card, 1188 × 969, 32 samples,
+        <code>docs/TESTING.md</code>). Rough glass must read a little under 1, since its model loses the light that
+        would bounce between its tiny facets (chapter 9); it does (section 6), at values not yet explained between
+        runs. And later runs found the metal rows 0.02 to 0.09% <em>above</em> 1, light made, each about one
+        error bar: a bias at the edge of the noise, the largest traced to one table's coarse steps
+        (<code>roadmap/SURFACES.md</code>).</p>
+    </div>
+    <div data-claim="code">
+      <p><strong>The kernels' arithmetic held to a copy.</strong> Where the shader's arithmetic matters (the error bar,
+        the photon map's gates, the dust's free flight), a JavaScript copy is tested against known answers, and twelve
+        <code>*.gpu.mjs</code> tests run the shader's own text on a software graphics card in node to hold the two
+        together. Without that software they say SKIPPED, loudly, rather than pass; and they say what a kernel
+        computes, never how fast (<code>docs/TESTING.md</code>).</p>
+    </div>
+    <div data-claim="inferred">
+      <p><strong>Built is not run.</strong> Several of the bench's rows have been built and never run on a card:
+        <code>error-bar</code>, <code>render-modes</code>, <code>draft-lamps</code>, the firefly clamp's rows
+        (<code>docs/TESTING.md</code>). Until they are, what they check is unknown, and section 3's figure is a model
+        of what the error bar should do, not a measurement of what it does. What would settle it: one press of
+        <code>error-bar</code>.</p>
+    </div>
+    <aside class="refs"><span class="tag">Read more</span><ul>
+      <li data-ref="pbr-mcbasics">Bias, consistency and the error of a Monte Carlo estimate, in section 2.1.4, with
+        why a biased estimator can still be worth having.</li>
+      <li data-ref="wiki-bias">The definition of an estimator's bias, and the difference between an unbiased and a
+        consistent one.</li>
+      <li data-ref="wiki-consistent">Consistency on its own, with an example of an estimator that is biased and
+        consistent at once.</li>
+    </ul></aside>
+  </div>
+</section>
+
+<section class="plain wide" id="before">
+  <div class="prose">
+    <h2><span class="n">6</span>What went wrong before</h2>
+    <ul>
+      <li><strong>Every row passing, the control included.</strong> Section 2's two stories: old cached files, and a
+        camera target in the wrong unit
+        (<cite data-src="lib/pathtracer/tests.js" data-sym="/* EVERY TEST CAMERA NAMES ITS TARGET (0.62.1)" data-to="puts the view's target back once a test's camera names one (run's finally). */"></cite>).</li>
+      <li><strong>The mean wrong, the median right.</strong> The first run of the floor's test with the real sun, 0.53°
+        across (chapter 5), read 142 to 352 times the right brightness on average, and about right (1.01 to 1.04) in its median pixel, the
+        one with half the pixels brighter and half darker. A light sample
+        (a direction aimed at the sun, chapter 14) and the chance of drawing it were worked out by two different tests of whether a direction is inside the sun's disc,
+        which disagreed in a thin band at its rim, so a rare sample there counted about 100,000 times too much: a firefly
+        made by a bug. A firefly clamp would have hidden much of it (inferred: it cuts exactly such samples)
+        (<code>docs/TESTING.md</code>).</li>
+      <li><strong>Rough glass losing 8%.</strong> The furnace's rough glass read 0.9231: the code chose whether to reflect by
+        Fresnel's law (chapter 10) for the surface as a whole, which past the critical angle, where light can no longer
+        leave glass, says reflect always; but a rough surface is tilted facets (chapter 9), some of which would let the
+        light out, and that was never tried. Choosing by the facet first took it to 0.9587, what its model predicts
+        (<code>docs/TESTING.md</code>).</li>
+      <li><strong>A bias that was not there.</strong> Russian roulette (chapter 13: ending some paths at random, and
+        weighting the survivors up) seemed to brighten pictures by 6 to
+        8%; a test of it found every arm within 0.15%, and the brightening was another setting changing between the two
+        runs compared (<code>docs/TESTING.md</code>).</li>
+      <li><strong>"24 modules parse".</strong> The shader check said so on the day a kernel shipped with an empty text,
+        and failed to compile for everyone; section 4's excerpt is why it now builds every kernel against every scene.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="plain" id="try">
+  <div class="prose">
+    <h2><span class="n">7</span>Try it</h2>
+    <ul>
+      <li>In the first figure, press <strong>Other paths</strong> ten times on <em>the whole path</em>, and count how
+        often the true value is outside the dashed lines at the end. About once in twenty?</li>
+      <li>Do the same with <em>cut after 1 bounce</em>. Is the true value ever inside?</li>
+      <li>In the error-bar figure, choose the moving window and slide the samples from 2 to 512. Where does the real
+        spread stop shrinking, and why there?</li>
+    </ul>
+    <h3>Words from this chapter</h3>
+    <ul class="words" data-words="bias unbiased consistent noise error-bar firefly furnace control moving-average"></ul>
+  </div>
+</section>
+
+<nav class="tabs" data-auto></nav>
+</main>
+</body>
+</html>

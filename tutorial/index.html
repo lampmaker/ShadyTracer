@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ShadyTracer, inside out</title>
+<link rel="stylesheet" href="kit/kit.css">
+<style>
+  /* THE MAP: parts as districts, chapters as stations on one route (index.js draws the route behind them) */
+  #map { position: relative; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 17.5rem), 1fr)); gap: 2.4rem 2.2rem; margin: 1rem 0 0; }
+  #map > .route { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+  .district { position: relative; z-index: 1; min-width: 0; }
+  .district h3 { margin: 0 0 .7rem; display: flex; gap: .55rem; align-items: baseline; font: 700 1.15rem/1.2 var(--f-display); }
+  .district .pn { font: 700 .78rem/1 var(--f-mono); color: var(--accent); letter-spacing: .08em; min-width: 2.2ch; }
+  .stations { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .55rem; }
+  .stn { display: grid; grid-template-columns: 2.1rem minmax(0, 1fr); column-gap: .6rem; align-items: start; text-decoration: none; color: inherit; padding: .25rem .3rem .3rem 0; border-radius: var(--radius); }
+  a.stn:hover { background: var(--accent-soft); color: inherit; }
+  .stn .dot { grid-row: span 3; width: 2.1rem; height: 2.1rem; display: grid; place-items: center; border-radius: 50%; border: 1.6px solid var(--rule); background: var(--paper); font: 700 .8rem/1 var(--f-mono); }
+  .live .stn .dot { background: var(--accent); border-color: var(--accent); color: var(--paper); }
+  .stn .t { font: 600 1rem/1.25 var(--f-body); }
+  .live .stn .t { text-decoration: underline; text-decoration-color: var(--accent); text-underline-offset: 3px; }
+  .stn .l { font-size: .86rem; line-height: 1.35; color: var(--ink-soft); }
+  .stn .st { font: 600 .66rem/1.2 var(--f-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--ink-faint); margin-top: .15rem; }
+  .planned .stn { opacity: .78; }
+  .two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 2rem 3.5rem; align-items: start; }
+  @media (max-width: 860px) { .two { grid-template-columns: minmax(0, 1fr); } }
+  .stamps { display: flex; flex-direction: column; gap: 1rem; margin-top: 1.4rem; }
+  .stamps [data-claim] { margin: 0; }
+</style>
+<script type="module" src="index.js"></script>
+</head>
+<body data-chapter="">
+<p class="kit-offline">This page runs from a web server, not from a file: in the repository run <code>python3 -m http.server 8000</code> and open http://localhost:8000/tutorial/.</p>
+<main class="sheet">
+
+<header class="sheet-head">
+  <div>
+    <p class="eyebrow">A tutorial beside the program</p>
+    <h1>ShadyTracer, inside out</h1>
+    <p class="lede">ShadyTracer is a <a data-g="path-tracing">path tracer</a> that runs in your browser: it makes a
+      picture by following rays of light backwards from the camera, bouncing them around the scene at random, and
+      averaging what they find. This tutorial is how it works, from the first ray to every trick that makes it fast:
+      rays, distances, light, glass, <a data-g="noise">noise</a>, <a data-g="photon">photons</a>, haze and the graphics
+      card. For anyone who wants to understand
+      ShadyTracer's code, build their own <a data-g="renderer">renderer</a>, or improve this one.</p>
+  </div>
+  <div class="titleblock" data-auto></div>
+</header>
+
+<section class="plain wide" id="start">
+  <div class="prose two">
+    <div>
+      <h2><span class="n">◇</span>What you need</h2>
+      <p>A little programming: JavaScript's variables, loops, functions and arrays are enough to follow the code, and
+        the text says what each excerpt does. School maths: algebra, Pythagoras, sin, cos and tan, and arrows (vectors)
+        with an x and a y. No calculus, and no ray tracing, optics or graphics-card programming: the chapters start from
+        nothing. The harder maths waits in fold-outs marked <em>The maths</em>, and every chapter reads without them.</p>
+    </div>
+    <div>
+      <h2><span class="n">◇</span>Where to start</h2>
+      <p>Read chapter 1, <a data-ch="rays">Rays make a picture</a>, then chapter 2, <a data-ch="distances">Shapes as
+        distances</a>. Chapter 14, <a data-ch="nee">Aim at the light</a>, can be read straight after them: it says what it
+        borrows from the chapters in between, which are not written yet. To see the program itself, open
+        ShadyTracer in a browser with <a data-g="webgpu">WebGPU</a> (a recent Chrome or Edge, on a computer with a graphics
+        card).</p>
+    </div>
+  </div>
+</section>
+
+<section class="plain wide" id="contents">
+  <div class="prose">
+    <h2><span class="n">◇</span>The map</h2>
+    <p>Thirty-four chapters in ten parts, in reading order. The filled stations are written; the rest are planned,
+      each with a line on what it will cover. Every chapter has the same shape: the question, the idea with a live
+      figure, the maths in a fold-out, the real code, the tricks and what they cost, what went wrong before, things to
+      try, and where to read more.</p>
+    <div id="map"></div>
+  </div>
+</section>
+
+<section class="plain wide" id="legend">
+  <div class="prose two">
+    <div>
+      <h2><span class="n">◇</span>Reading the figures</h2>
+      <p>Most figures are drawn in a <a data-g="flatland">flat world</a>: a slice of a scene, so it can be drawn and
+        dragged; a few are 3D, and turn when you drag them. Within a style, the same colour and line mean the same thing
+        in every figure: the key here is drawn in the style you are viewing. Circled crosses (⊕) are handles: drag them.
+        Paragraphs with a dot beside them move the figure next to them when you scroll to them (or click them).</p>
+      <p>Words with a dotted underline are in the <a href="glossary.html">glossary</a>, the list of every word the
+        tutorial explains; hover or tap one for a short explanation. Code shown on a page is read from ShadyTracer's own
+        files when you open the page, with a link to the exact lines.</p>
+    </div>
+    <figure class="fig" data-fig="legend">
+      <figcaption>The figures' colours and lines, in the style you are viewing: a <a data-g="camera-ray">camera
+        ray</a>, a lamp's light, a <a data-g="shadow-ray">shadow ray</a>, a blocked ray, a
+        <a data-g="normal">normal</a>, a step of the <a data-g="march">march</a> (its circle reaches the nearest
+        surface), a solid shape, and a handle.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="plain wide" id="claims">
+  <div class="prose">
+    <h2><span class="n">◇</span>How sure is each claim?</h2>
+    <p>The people who write ShadyTracer hold every statement to one question: do I <em>know</em> this, or do I
+      <em>think</em> it? The tutorial marks the difference the same way, with a stamp, wherever it matters (mostly when
+      it is about speed). Point at a stamp on any page for what it means.</p>
+    <div class="stamps">
+      <div data-claim="measured"><p>Someone ran it on real hardware and wrote the number down. The page says who, on
+        which graphics card, and where it is recorded.</p></div>
+      <div data-claim="code"><p>The code does this, and the page links the line. It says what the code <em>does</em>,
+        never what it costs.</p></div>
+      <div data-claim="inferred"><p>A reasonable guess, not yet tested. The page says what would test it.</p></div>
+    </div>
+    <p>These pages come in several styles, each light or dark: the <strong>Style</strong> menu at the top right
+      switches the style, the <strong>Dark</strong> / <strong>Light</strong> button beside it between dark and light
+      pages, and the
+      <a href="styles.html">styles</a> page shows every style with its key. Your choice is kept on this device.</p>
+  </div>
+</section>
+
+</main>
+</body>
+</html>

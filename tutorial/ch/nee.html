@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Aim at the light · ShadyTracer, inside out</title>
+<link rel="stylesheet" href="../kit/kit.css">
+<script type="module" src="nee.js"></script>
+</head>
+<body data-chapter="nee">
+<p class="kit-offline">This page runs from a web server, not from a file: in the repository run <code>python3 -m http.server 8000</code> and open http://localhost:8000/tutorial/.</p>
+<main class="sheet">
+
+<header class="sheet-head">
+  <div>
+    <p class="eyebrow">Part IV · Path tracing · Chapter 14</p>
+    <h1>Aim at the light</h1>
+    <p class="lede">A picture lit by a small lamp comes out full of speckles, and stays that way for a long time. The
+      fix is one extra ray at every bounce, aimed at the lamp on purpose. It is called next event estimation, and it is
+      the most useful single trick in a path tracer.</p>
+  </div>
+  <div class="titleblock" data-auto></div>
+</header>
+
+<section class="scene" id="question">
+  <div class="prose">
+    <h2><span class="n">1</span>The question</h2>
+    <p>This chapter builds on two ideas from earlier ones: a picture is an average of many random samples per pixel
+      (<a data-ch="montecarlo">Dice and averages</a>), and each sample follows a <a data-g="path">path</a> that bounces
+      from surface to surface in random directions until it happens to meet a light (<a data-ch="paths">Following a
+      path</a>); the figure below shows what you need from them. Each bounce keeps only part of
+      the light, a share called the surface's <a data-g="albedo">albedo</a>: after two bounces off surfaces that keep
+      70%, 0.7 × 0.7 = 0.49 of it is left.</p>
+    <p data-step="room:off">The figure is a small flat room with a lamp near the ceiling, a ball and a box on the floor,
+      and an eye on the left with one row of pixels (the eye's screen is not drawn; each pixel is one direction out of
+      the eye). Every pixel sends paths into the room. A path that hits the lamp brings its light back; a path that
+      never does brings back nothing. The drawn lines are three paths of one pixel: <span data-say="cam">blue</span> while they bounce, <span data-say="light">orange</span> on
+      the piece that found the lamp, when one does. <strong>Other paths</strong> draws three more, and <strong>Show
+      paths</strong> hides them. The circled cross on that pixel's ray chooses which pixel: drag it. The lamp, the ball
+      and the box drag by their circled crosses too.</p>
+    <p>The first strip under the room is the picture so far, one grey square a pixel (the <span data-say="accent">red</span> frame marks the pixel
+      whose paths are drawn). The dots below it are each pixel's value with its <a data-g="error-bar">error bar</a>: how
+      far off the average may still be (point at them to read one). It is speckled, and it settles slowly. The lamp is small, so most paths miss it,
+      and the few that hit it make a pixel much too bright for one sample. That speckle is
+      <a data-g="noise">noise</a>.</p>
+  </div>
+  <figure class="fig" data-fig="room">
+    <figcaption>A flat room path traced live. Each pixel's paths start at the eye and bounce until they hit the lamp,
+      leave, or reach the bounce limit. Strip: the picture so far. Dots: each pixel's average with its error
+      bar.</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="chance">
+  <div class="prose">
+    <h2><span class="n">2</span>Finding a lamp by chance</h2>
+    <p data-step="aim:bounce">Look at a single point on the floor. When a path lands here, a matte
+      (<a data-g="diffuse">diffuse</a>) floor sends it on in a random direction: any direction is possible, those close
+      to straight up a bit more likely. (The surface itself sends light equally brightly every way; the figure picks
+      directions near straight up more often because, by the cosine law, those carry more light, and it divides by that
+      choice, as section 3 explains.) The figure draws 70 such directions. The <span data-say="light">orange</span> ones happen to point at the lamp
+      and find its light; the <span data-say="soft">grey</span> ones find nothing. The readout's second estimate, aiming, is the next section's.</p>
+    <p data-step="aim:small">Make the lamp small. It gives off the same total light (it gets brighter as it shrinks),
+      so the exact light at the point hardly changes. But now almost no random direction finds the lamp, and when one
+      does, it brings back a lot. The answer is still right <em>on average</em>: in the readout, the estimate from 3000
+      bounces lands within about one error bar of the exact value. (An error bar is not a fence: about one estimate in
+      three lands further than one error bar from the truth, one in twenty further than two.) But each single try is
+      either nothing or far too much. That is exactly the speckle in the room.</p>
+    <p>The figure can work out the exact value because it holds one lamp and one point. A real scene has no such
+      formula, which is why a renderer estimates at all.</p>
+    <aside class="note"><span class="tag">In ShadyTracer</span>The sun is the extreme case: a disc only 0.53° across,
+      about 0.000067 of a <a data-g="solid-angle">steradian</a>, and by far the brightest thing in a daylight scene. A
+      random bounce off a surface facing it, favouring directions near straight up as ShadyTracer's diffuse bounce
+      does, finds it about once in 47,000 tries: for such a bounce, the chance of landing in a small patch of sky
+      overhead is the patch's size divided by π, and 0.000067 / π is one in 47,000.</aside>
+  </div>
+  <figure class="fig" data-fig="aim">
+    <figcaption>One point on a floor under a lamp. Bouncing: random directions, <span data-say="light">orange</span> where they find the lamp, <span data-say="soft">grey</span>
+      where they miss. Aiming: shadow rays to random points of the lamp. The readout compares both estimates with the
+      exact light there.</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="aim">
+  <div class="prose">
+    <h2><span class="n">3</span>Aim at it instead</h2>
+    <p data-step="aim:aim">So don't wait for luck. At every bounce, also pick a random point <em>on the lamp</em> and send
+      a <a data-g="shadow-ray">shadow ray</a> to it (dashed in the figures). If nothing is in the way, add the light that
+      point sends. Every one of these rays is aimed at the lamp, so every one that is not blocked counts. This is
+      <a data-g="nee">next event estimation</a>, NEE: at each bounce, it estimates the light the <em>next</em> bounce
+      could have found, directly.</p>
+    <p>Compare the two estimates in the readout. Same answer, within the error bars. But the error bar when aiming is
+      many times smaller than when bouncing: here ± 0.001 against ± 0.009. Why so quiet? Because
+      every aimed try brings back nearly the same amount: the light of one point of the lamp, counted for the whole
+      lamp (the fold-out below says how). Bouncing gives nothing, nothing, nothing, then far too much; aiming gives
+      about the right amount every time. Tries that agree settle fast.</p>
+    <p data-step="aim:block">Shadows still work. Put something in the way of part of the lamp: the shadow rays that hit
+      it (<span data-say="blocked">red</span>, stopped where they are blocked) bring back nothing, and the estimate drops from about 0.21 to the light
+      that really gets past, about 0.05.</p>
+    <details class="maths">
+      <summary><span class="tag">The maths</span>What a shadow ray adds, and why it divides</summary>
+      <div class="body">
+        <p><strong>One point stands in for the whole lamp.</strong> Cut a lamp of length ℓ into ℓ pieces of length 1.
+          Pick one point at random, see what it sends, and multiply by ℓ: you have counted the lamp as if every piece sent
+          the same. Over many picks, the pieces that send more and the ones that send less are each picked as often, so
+          the average is exactly the total. (ℓ need not be a whole number: cut it into a thousand pieces of length
+          ℓ/1000 and the argument is the same.) The chance of picking any one exact point is zero, as for any one exact
+          number on a ruler; what can be given is the chance per unit of length: a bit of the lamp 0.1 long is picked
+          with chance 0.1/ℓ. That 1/ℓ is the <a data-g="pdf">pdf</a>, and multiplying by ℓ is dividing by it.</p>
+        <p><strong>The same rule for every choice.</strong> If there are two lamps and one is picked half the time, it
+          must count double when it is picked, so that on average it counts once. Divide by the chance of the choice.</p>
+        <p>The light <var>E</var> arriving at the floor point (its <a data-g="irradiance">irradiance</a>, as in
+          <a data-ch="rays">Rays make a picture</a>) is then estimated, from one point <var>y</var> of the lamp, as</p>
+        <p class="eq"><var>E</var> ≈ <span class="frac"><span><var>L</var><sub>e</sub> · cos <var>θ</var><sub>x</sub> · cos <var>θ</var><sub>y</sub></span><span><var>r</var></span></span> · ℓ
+          &nbsp; (flat world), &nbsp;&nbsp;
+          <var>E</var> ≈ <span class="frac"><span><var>L</var><sub>e</sub> · cos <var>θ</var><sub>x</sub> · cos <var>θ</var><sub>y</sub></span><span><var>r</var><sup>2</sup></span></span> · <var>A</var> &nbsp; (3D, a lamp of area <var>A</var>)</p>
+        <dl class="terms">
+          <dt>L<sub>e</sub></dt><dd>how bright the lamp's surface is (its <a data-g="radiance">radiance</a>)</dd>
+          <dt>θ<sub>x</sub></dt><dd>the angle at the floor point, between its <a data-g="normal">normal</a> and the shadow
+            ray: the cosine law of chapter 1, light at a slant spread over more floor</dd>
+          <dt>θ<sub>y</sub></dt><dd>the angle at the lamp: a lamp seen edge-on looks shorter, and sends less this way</dd>
+          <dt>r, r²</dt><dd>the distance between the two points. Light spreads around a circle in the flat world and over
+            a sphere in 3D, as in chapter 1</dd>
+          <dt>ℓ, A</dt><dd>the lamp's length, or its area in 3D: dividing by the pdf</dd>
+        </dl>
+        <p>That is the light arriving. What the path gets back is that times what the surface sends on towards the eye:
+          for a matte surface, its albedo <var>ρ</var> spread evenly over every direction out, which works out to
+          <var>ρ</var>/2 in the flat world and <var>ρ</var>/π in 3D. Take those on trust for now: dividing by 2, or by π,
+          is exactly what makes all the light leaving, added up over every direction with the cosine law, come to
+          <var>ρ</var> of what arrived (<a data-ch="diffuse">Diffuse and mirror</a> works it out). And
+          times what the path has kept so far from its earlier bounces, its <a data-g="throughput">throughput</a>. That
+          is the shadow ray's contribution.</p>
+        <p>The 3D room in section 5 aims at its lamp a different way: a random direction into the cone the ball fills,
+          divided by the chance of that direction. A different choice, divided by its own chance: the rule does not
+          change.</p>
+        <p><strong>Which points of the lamp.</strong> The lamp in these figures is not a line but a thin capsule,
+          everything within 0.02 of a line, glowing all round its outline, and that outline is what a bounce can hit. So
+          the point is picked on it: on the long side facing the floor point or on the two round ends, and ℓ is the
+          length of that much outline. The long side facing away sends this point nothing, so leaving it out changes
+          nothing on average; a point of a round end that faces away counts 0, and those tries are the aiming's small
+          spread. The flat world once picked points on the middle line, a lamp of no thickness, while the bounces found
+          the capsule: in the room of section 4, given twelve bounces, bouncing read 0.1326 ± 0.0014 and aiming
+          0.1213 ± 0.0004, nine percent apart (computed). Aim at exactly the light the bounces can find; chapter 30 is
+          the same lesson in the engine.</p>
+      </div>
+    </details>
+    <aside class="refs"><span class="tag">Read more</span><ul>
+      <li data-ref="rtrest">The same idea built into a small C++ renderer, step by step: aiming at the light, dividing
+        by the pdf, then mixing two ways of choosing a direction. The friendliest next step after this chapter.</li>
+      <li data-ref="pbr-lights">How a full renderer chooses which light to aim at when there are many: evenly, by how
+        much light each gives, or by which are near.</li>
+    </ul></aside>
+  </div>
+  <figure class="fig" data-fig="aim">
+    <figcaption>The same point, now with shadow rays (dashed): each goes to a random point of the lamp. Blocked ones are
+      <span data-say="blocked">red</span>, drawn to where they stop.</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="picture">
+  <div class="prose">
+    <h2><span class="n">4</span>In a whole picture</h2>
+    <p data-step="room:both">Back to the room, now traced both ways at once: the same number of paths per pixel, one
+      picture without NEE and one with it. The <span data-say="soft">grey</span> dots are the picture without NEE, the <span data-say="cam">blue</span> ones with it
+      (<strong>NEE only</strong> shows that one alone); the dashed lines in the room are the shadow rays (<span data-say="blocked">red</span> and dotted
+      where something blocks them). The pictures head for the same thing (their dots agree within the error
+      bars), but the one with NEE gets there much sooner. The readout gives the average error bar of each.</p>
+    <p data-step="room:small">Shrink the lamp. Without NEE, the picture gets worse and worse: a lamp nothing can find by
+      chance is a lamp the picture never sees. A point light, with no size at all, could never be hit; only NEE could
+      light anything with it. With NEE, the size hardly matters: at the smallest size its error bar is about a fifth of
+      the other's.</p>
+    <p data-step="room:big">Make the lamp large. Now random bounces find it often, and the two pictures are much closer:
+      NEE's error bar is about half the other's. NEE helps most where light is small and bright, and least where light
+      comes from everywhere.</p>
+    <p><strong>Don't count it twice.</strong> With NEE on, a bounce that happens to hit the lamp must not add the lamp's
+      light again: the shadow ray sent from the bounce before already counted all the light reaching that point
+      straight from the lamp. The flat world simply ignores such hits. That rule needs the shadow ray before it to have
+      been able to find the lamp. A camera ray that looks straight at the lamp had no shadow ray before it, so it
+      counts. Neither did a bounce off a mirror (section 6: a shadow ray from a mirror finds nothing), so a mirror's
+      reflected ray that hits the lamp must count too; the flat world has no mirrors yet, so it never meets this.
+      ShadyTracer does something better than ignoring: it keeps both and weighs each by how good it was at finding
+      that light. That is <a data-ch="mis">multiple importance sampling</a>, the next chapter.</p>
+    <p><strong>Not at the last bounce.</strong> A path allowed four bounces does not aim at the lamp from the surface
+      where it stops. The bounce from there is never traced, so a path without NEE could never find what that shadow ray
+      would; aiming there would count light one bounce further, and the two pictures would head for different answers.
+      Before the flat world followed this rule, the room allowed one bounce read 0.0870 aiming against 0.0556 without
+      (44,800 paths each, computed). pbrt stops the same way.</p>
+    <aside class="refs"><span class="tag">Read more</span><ul>
+      <li data-ref="veach1997">The thesis that gave path tracing its careful maths, and multiple importance sampling:
+        the better way not to count a light twice. Long, thorough, and where the next chapter comes from.</li>
+    </ul></aside>
+  </div>
+  <figure class="fig" data-fig="room">
+    <figcaption>The room traced without and with NEE, the same number of samples each. <span data-say="soft">Grey</span> dots: without NEE; <span data-say="cam">blue</span>:
+      with. The <span data-say="accent">red</span> frame on the strips marks the pixel whose paths are drawn. Both pictures head for the same answer;
+      one gets there much sooner.</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="room3">
+  <div class="prose">
+    <h2><span class="n">5</span>And in 3D</h2>
+    <p data-step="room3:both">The same comparison as a real picture: a small room lit by a glowing ball near the ceiling,
+      path traced on your computer's processor while you watch, without NEE on the left and with it on the right. Both
+      pictures get the same number of samples per pixel. Only the right one aims a shadow ray at the lamp, at every
+      bounce but the last.</p>
+    <p>In 3D the lamp is aimed at differently from the flat world. Instead of a random point on it, the shadow ray goes
+      in a random direction inside the cone of directions the ball fills, seen from the point. How big that cone is,
+      as a patch of the sky around the point, is its <a data-g="solid-angle">solid angle</a>; the shadow ray divides
+      by the chance of picking its direction in it. ShadyTracer aims at a glowing object it has found in this way: into
+      the cone of a sphere drawn around it, whatever the object's shape.</p>
+    <p data-step="room3:small">Shrink the lamp to a bright speck. The left picture is almost black with white dots: a
+      random bounce hardly ever finds the lamp. The right one barely changes.</p>
+    <p data-step="room3:big">Make the lamp large. The picture without NEE improves, but here NEE still has about a fifth
+      of its error bar: even at its largest, this lamp is small next to the room.</p>
+    <aside class="refs"><span class="tag">Read more</span><ul>
+      <li data-ref="pbr-spheres">Choosing a direction inside the cone a sphere fills, and the chance of each direction,
+        worked out in full: the section on sampling a sphere.</li>
+    </ul></aside>
+  </div>
+  <figure class="fig" data-fig="room3">
+    <figcaption>A small room lit by a glowing ball, path traced live: the same samples per pixel without NEE (left) and
+      with it (right). The readout gives each picture's average error bar.</figcaption>
+  </figure>
+</section>
+
+<section class="plain" id="limits">
+  <div class="prose">
+    <h2><span class="n">6</span>Where aiming cannot help</h2>
+    <p>A shadow ray only asks whether the way to the lamp is clear. The other half of what it brings back is the
+      surface's: of the light arriving from <em>that</em> direction, how much does it send on towards the eye? A matte
+      surface answers "some" for every direction. A perfect mirror answers "none" for every direction except one, the
+      exact reflection. A random point on the lamp is never exactly that direction, so for a mirror or clear glass the
+      shadow ray always brings back zero. Such surfaces are called <a data-g="delta">delta</a> surfaces, and the path
+      has to find the light through them by bouncing.</p>
+    <p>It gets worse with a lamp <em>behind</em> glass, shining through it onto a floor: the bright patterns under a glass
+      of water. A shadow ray from the floor stops at the glass; a random bounce from the floor has to pass through the
+      glass the exact way that leads to the lamp. These <a data-g="caustic">caustics</a> need a completely different
+      approach: tracing light from the lamp's side (<a data-ch="caustics">Caustics</a>, <a data-ch="photons">Photon
+      mapping</a>).</p>
+  </div>
+</section>
+
+<section class="plain wide" id="code">
+  <div class="prose">
+    <h2><span class="n">7</span>How ShadyTracer does it</h2>
+    <p>The reasoning is written at the top of the light-sampling code, in the renderer's own words (its
+      <em>variance</em> is how much the tries scatter):</p>
+    <pre data-src="lib/pathtracer/core/tracebasics.js" data-sym="WHY. Left to itself" data-to="the variance was not."
+         data-why="The estimate was right without NEE. The problem was how much it scattered." data-hash="aa6db3b2"></pre>
+    <aside class="note"><span class="tag">A stale number</span>The comment's sun, "about 0.03 steradian", is an old
+      one. ShadyTracer once drew the sun 21 times wider than the real one (its photometry file says so), and a disc 21
+      times wider covers 21 × 21 = 441 times as much sky: about 0.03 steradian. The real sun's 0.000067 is that much
+      smaller. The comment's "once in two hundred tries" is loose too: 0.03 out of the 6.28 in a hemisphere is the
+      chance for a direction picked evenly, but a cosine-weighted bounce, which favours directions near straight up,
+      finds a sun overhead about twice as often, 0.03 / π, once in a hundred. For the real sun the same sum gives once
+      in 47,000, which makes the case for NEE that much stronger. Comments go stale like this when the code around
+      them changes; this tutorial checks its quotes against the code (<a data-ch="checking">Noise, bias and
+      checking</a>), and when a quote and the facts disagree, it says so.</aside>
+    <p>ShadyTracer has three kinds of light to aim at: the faces of the light objects you place in the builder, glowing
+      surfaces it has discovered in the scene (<a data-ch="emitters">Every glowing thing is a light</a>), and the sky
+      with its sun. One random number chooses which, and each choice is then divided by its probability, as in the
+      fold-out above. The code is <a data-g="wgsl">WGSL</a>, the GPU's language:</p>
+    <pre data-src="lib/pathtracer/core/materials_pbr.js" data-sym="/* THREE LIGHTS NOW" data-to="let uL = PRNG().xy;"
+         data-why="pick00 is a random number from 0 to 1 (PRNG, the random number generator; .x is the first of the four it gives, .xy the first two). fs is the share of choices that go to light faces: if pick00 is below fs, a face is aimed at. Otherwise pick0 stretches what is left of pick00 back to 0 to 1 (max(…, 1e-6) only keeps it from dividing by 0), and is used the same way: below es (the discovered emitters' share), an emitter, else the sky. uL is two more random numbers, for the point or direction on the light chosen. The comment's names point to other parts of the code; the idea is in these lines." data-hash="f2dd9ee4"></pre>
+    <p>Each branch then multiplies its own chance by the share that picked it: for a discovered emitter, the chance of
+      its direction times <code>(1.0 - fs) * es</code>
+      (<cite data-src="lib/pathtracer/core/materials_pbr.js" data-sym="let pE = (1.0 - fs) * es * emitConePdf(res.r.pos, L);" data-doc="no"></cite>).
+      Dividing by that product is dividing by the chance of the whole choice, as in the fold-out. The chosen light
+      produces a direction <code>L</code>, the light arriving from it <code>le</code>, and that chance (<code>pS</code>;
+      <code>dS</code> is the same number, kept above zero so the division is safe). For a point on a light's face, the
+      fold-out's cos <var>θ</var><sub>y</sub>, <var>r</var>² and <var>A</var> are inside it: the chance of the
+      direction is the share times <var>r</var>² / (<var>A</var> cos <var>θ</var><sub>y</sub>)
+      (<cite data-src="lib/pathtracer/core/scene_api.js" data-sym="fn lightFaceDensity"></cite>), so dividing by it
+      multiplies by <var>A</var> cos <var>θ</var><sub>y</sub> / <var>r</var>². The contribution is computed once and
+      handed to a shadow ray. The shadow ray carries it: if
+      nothing blocks it, it adds exactly that to the pixel.</p>
+    <pre data-src="lib/pathtracer/core/materials_pbr.js" data-sym="let contrib = res.r.beta * f * NoL * le * (w / dS);" data-to="NEE_RAY.state = RAY_ACTIVE;"
+         data-why="beta is the path's throughput, f the surface's response, NoL the cosine law, w the MIS weight (the next chapter: 1 for now), dS the chance it divides by. max3 is the largest of the three colour channels: a contribution too small to matter sends no shadow ray. The ray starts a little off the surface (offsetTol) so it does not hit the surface it starts on." data-hash="69a09c53"></pre>
+    <p>Shadow rays then get their own <a data-g="kernel">kernel</a>, because they need so little:</p>
+    <pre data-src="lib/pathtracer/core/wavefront.js" data-sym="THE OCCLUSION PASS -- the other half of next-event estimation." data-to="kernel's machinery would cost the machinery and use none of it."
+         data-why="Occlusion means being in the way. A shadow ray never shades or bounces. Giving it the full shading machinery would cost compile time and GPU time for nothing. (Written when the sky was the only light: a shadow ray to a light's face stops just short of the point it aims at, and deposits if nothing was in the way; one aimed at a glowing surface counts the glow of whatever it hits first.)" data-hash="25230c7d"></pre>
+  </div>
+</section>
+
+<section class="plain wide" id="tricks">
+  <div class="prose">
+    <h2><span class="n">8</span>Tricks and trade-offs</h2>
+    <p>Each is stamped with how it is known; point at a stamp to see what it means.</p>
+    <div data-claim="measured">
+      <p><strong>Shadow rays are not free.</strong> ShadyTracer's developer measured it on their NVIDIA Pascal graphics
+        card (Chrome 154, Windows, 1280 × 720, ShadyTracer 0.9.2): the Noise library example scene took 184.7 ms of GPU
+        time a sample with NEE and 136.9 ms without. The shadow rays were about a quarter of the GPU's work, almost all
+        of it in the occlusion kernel (45.5 ms, against 0.1 ms with NEE off). One run on one machine, recorded in
+        <code>docs/PERFORMANCE_REVIEW.md</code> §10.1.</p>
+    </div>
+    <div data-claim="inferred">
+      <p><strong>What that quarter buys.</strong> Noise falls as one over the square root of the samples: four times the
+        samples halve it. So to make an error bar <var>k</var> times smaller without NEE takes <var>k</var>² times the
+        samples. In this page's flat room, NEE's error bar is a little over a quarter of the other's at the lamp's
+        starting size (0.28, so about 13 times the samples to match it) and a sixth at the smallest (about 34 times),
+        for 1.35 times the time a sample in the measurement above. ShadyTracer's own scenes were not measured this way; what would test it
+        is rendering one to the same error bar with NEE on and off, and timing both. NEE stays on.</p>
+    </div>
+    <div data-claim="code">
+      <p><strong>The sky counts as a light too.</strong> Half of the environment's shadow rays go to the sun's disc and
+        half to the sky, spread like a cosine. The comment records why: with shadow rays for the sun alone, the noise
+        fell 36% with the sun turned up but only 4% at the default, "because at the default most of the light in the
+        scene is sky, and nothing was sampling it". (The comment gives no hardware for that measurement.)
+        <cite data-src="lib/pathtracer/core/tracebasics.js" data-sym="WHAT IS SAMPLED." data-doc="no"></cite></p>
+    </div>
+    <div data-claim="code">
+      <p><strong>Memory only when used.</strong> The shadow-ray queue is two more ray-sized buffers, about 200 MB at
+        1024 × 1024. They are allocated the first time NEE actually runs, and stay one element each while it is off
+        (<cite data-src="lib/pathtracer/core/raytrace_main.js" data-sym="The occlusion queue, allocated the first time NEE actually runs" data-doc="no"></cite>).</p>
+    </div>
+    <div data-claim="code">
+      <p><strong>Not on the last round.</strong> The GPU processes rays in rounds (<a data-ch="wavefront">Wavefront path
+        tracing</a>), up to a fixed number of them. A shadow ray made in the very last round would have no round left to
+        be traced in, so none is made there. The code's comment says what that costs: the surface "falls back to BSDF
+        sampling alone there", meaning that whatever light reaches it is found only by bouncing, as with NEE off:
+        "noisier, still unbiased", still right on average
+        (<cite data-src="lib/pathtracer/core/materials_pbr.js" data-sym="Skipped on the last wavefront iteration" data-doc="no"></cite>).</p>
+    </div>
+    <aside class="refs"><span class="tag">Read more</span><ul>
+      <li data-ref="pbr-pathtracer">A path tracer with next event estimation in full, as a textbook renderer writes it.</li>
+    </ul></aside>
+  </div>
+</section>
+
+<section class="plain wide" id="before">
+  <div class="prose">
+    <h2><span class="n">9</span>What went wrong before</h2>
+    <p><strong>Two edges for one sun.</strong> To divide by its probability, a shadow ray to the sun needs to know whether
+      a direction is inside the sun's disc. The light itself had its own test for the same question. The two tests were
+      written differently and disagreed on a thin ring at the disc's edge, where rounding decides. A shadow ray landing
+      in that ring carried the full brightness of the sun divided by the probability of hitting <em>sky</em> (a direction's
+      chance mixes the sun's half of the shadow rays and the sky's half, section 8):</p>
+    <pre data-src="lib/pathtracer/core/tracebasics.js" data-sym="fn envPdf"
+         data-why="The fix: one test for the disc's edge, inSunDisc, used by both, and the old angle constant deleted so a second test cannot come back." data-hash="44157c68"></pre>
+    <p>The result was a floor 142 times too bright <em>on average</em>, while its typical (median) pixel looked right: a
+      few pixels were enormous. It was found because a test compared the floor with a number known in advance.</p>
+    <p><strong>A comparison that did not compare.</strong> When NEE was first written, it could only aim at the sun and
+      the sky. A lamp made of glowing geometry was invisible to it, found only by bouncing. So an NEE-on against NEE-off
+      comparison run in a scene lit by such a lamp measured nothing about NEE at all
+      (<cite data-src="lib/pathtracer/core/tracebasics.js" data-sym="LIGHTS THAT ARE NOT THE SKY." data-doc="no"></cite>).
+      The fix was to make NEE aim at those lights too. The lesson: before believing a measurement, check that the
+      thing being switched actually reaches what is measured.</p>
+  </div>
+</section>
+
+<section class="plain" id="try">
+  <div class="prose">
+    <h2><span class="n">10</span>Try it</h2>
+    <ul>
+      <li>In the flat room, set the lamp to its smallest size and press <strong>Start again</strong>. How many samples
+        does the picture without NEE need before you can tell where the ball on the floor is?</li>
+      <li>In the single-point figure, find a lamp size where bouncing and aiming have about the same error bar. What
+        does the lamp look like from the point then?</li>
+      <li>Drag the room's lamp to one side. Which pixels get noisier without NEE, and why?</li>
+      <li>In the 3D room, the ball is aimed at through its cone. Why would picking a random point on the ball's surface,
+        as the flat world does with its lamp, waste about half the shadow rays?</li>
+      <li>In ShadyTracer: with the developer settings shown, the Render settings have a <strong>Next-Event
+        Estimation</strong> switch. Turn it off in a sunlit scene and watch the picture; turn it on again.</li>
+    </ul>
+    <h3>Words from this chapter</h3>
+    <ul class="words" data-words="nee shadow-ray path albedo throughput diffuse noise error-bar pdf irradiance radiance solid-angle delta caustic wgsl kernel mis emitter"></ul>
+  </div>
+</section>
+
+<nav class="tabs" data-auto></nav>
+</main>
+</body>
+</html>

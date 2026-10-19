@@ -47,3 +47,4 @@ number, so a section that is cut leaves a stub rather than renumbering the rest.
 | `diagnose.js` | Help › Report: a report to paste back, for faults the page cannot see itself |
 | `popout.html` | the empty window a popped-out panel moves into |
 | `ui-mockups/` | the UI study of 2026-09-27 (UI_PLAN.md §6). `optics/test/page.html` still imports its `mock.js` |
+| `tutorial/` | *ShadyTracer, inside out*, the developer tutorial: its plan (`tutorial/PLAN.md`), its pages and the figure kit they share (`tutorial/kit/`). Not part of the application; served beside it |
