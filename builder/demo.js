@@ -289,11 +289,13 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
        last node with some code compiles nothing (call 2) */
     const carried = () => current === shown && RT.scene?.id === 'built' && RT.scene.blocks ? RT.scene.blocks : null
     const build = () => {
-        syncSources(doc())
-        /* COMPONENT PARAMETERS (model.js version 18): every bound value as its expression gives it now, as the light's
-           derived luminance above -- a node moved into a component, or pasted with its bindings, takes its values from
-           the groups it is under at this compile. A name none of them has keeps the value it had (resolveBindings). */
+        /* COMPONENT PARAMETERS (model.js version 18): every bound value as its expression gives it now -- a node moved
+           into a component, or pasted with its bindings, takes its values from the groups it is under at this compile. A
+           name none of them has keeps the value it had (resolveBindings). BEFORE the light's derived luminance below,
+           which reads what they write: a light's flux or size from its component's parameters (0.69.0; a size since
+           version 18) was resolved after it, and the shader compiled with the luminance of the values before. */
         M.resolveBindings(doc())
+        syncSources(doc())
         const data = dataMode()
         return generate(...M.generateArgs(doc(), { id: 'built', title: doc().title || 'Scene builder', editing: editedNow(), data,
                                                    carry: data ? carried() : null }))
@@ -631,8 +633,8 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
          *  them: index.html pushCull). Null when the scene being edited is not the one shown. */
         bakeScene() {
             if (current !== shown) return null
+            M.resolveBindings(doc())         // first: the luminance syncSources derives reads what they write (build above)
             syncSources(doc())
-            M.resolveBindings(doc())
             const S = generate(...M.generateArgs(doc(), { id: 'built', title: doc().title || 'Scene builder' }))
             /* the culling boxes, and every value flagged animated (animate.js): those stay uniforms, written live */
             const keep = keptUniforms(doc(), S)

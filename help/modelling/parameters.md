@@ -34,8 +34,33 @@ copies.along = x
 
 A target is one of the child's parameters (or one part of a vector, `size.x`), its position or rotation
 (`pos.x`, `rot.z`, `scale`), a group's `blend`, or an array's `copies.count`, `copies.pitch` and `copies.along`. An
-expression uses numbers, `+ - * /`, brackets, and the names of parameters of the groups above. A name that no group
-above has is reported, never guessed.
+expression uses numbers, `+ - * /`, brackets, and the names of parameters of the groups above. A vector parameter
+is read one part at a time (`corner.x`), and a colour the same way (`tint.r`, `tint.g`, `tint.b`). A name that no
+group above has is reported, never guessed.
+
+A whole vector or colour can be bound in one line, to a parameter of the same kind: `pos = at` or
+`light.colour = tint`. It is kept as one line for each part.
+
+**A light** can also bind its own settings, written `light.` and the setting: `light.flux`, `light.luminance`,
+`light.colour` (or `.r`, `.g`, `.b`), `light.cct`, `light.duv`, `light.xy.x`, `light.xy.y`, `light.n`,
+`light.halfAngle` and `light.emitN`. A lamp component could look like this:
+
+```
+light.flux = flux
+light.colour = tint
+width = size
+```
+
+A light setting also sets how the light is given. `light.flux` makes the light set by its flux, `light.luminance`
+by its luminance, `light.colour` coloured by RGB, `light.cct` by CCT. While it is bound, the matching *brightness
+by* or *colour by* row is held, so you cannot bind both `light.flux` and `light.luminance`. A value the light
+cannot take, such as a CCT out of range, is reported and the light keeps its last value.
+
+Some things cannot be bound:
+- **A material's fields.** A material is shared by every object that wears it, so one object cannot change its
+  colour alone. To give each copy of a component its own colour, give each its own material.
+- **A haze box or an export box.** Neither has a *from parameters* box.
+- **A light's choices:** its distribution, *both faces* and *transparent*.
 
 [Parametric part](example:parametric-part.json) is a heatsink built this way: change `fins` in its Properties.
 

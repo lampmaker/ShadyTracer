@@ -15,6 +15,50 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.69.0 — 2026-10-19
+
+**A light's flux and colour from its component's parameters.** The user asked whether a group's parameters, a colour and
+a flux, could drive a light inside it: they could not. *From parameters* bound only what sits in a node's own parameters
+(a light's width, height or radius), its placement, a blend and copies. A light's settings live in its `light`, not its
+parameters, so none of them was a target (read in code: `bind.js` targetsOf read `node.params` alone). And a colour
+parameter could not be read in an expression at all: the expression language took only `.x .y .z`, and the lookup
+refused a colour outright.
+- **A light binds its own settings**, named as the parameter registry names them: `light.flux`, `light.luminance`,
+  `light.colour.r .g .b`, `light.cct`, `light.duv`, `light.xy.x .y`, `light.n`, `light.halfAngle`, `light.emitN` (a ray
+  file: `light.flux` and `light.emitN`). `flux = ...` is answered with "write light.flux".
+- **A binding holds the way the light is given with its value**: `light.flux` makes the light set by its flux,
+  `light.luminance` by its luminance, `light.colour.*` coloured by RGB, `light.cct`/`light.duv` by CCT, `light.xy.*` by
+  xy. A CCT bound into a light coloured by RGB would be a number nothing reads. So two ways at once are refused (at the
+  line, and in a file), and the panel holds *brightness by* and *colour by* while one is bound, as it holds any bound
+  row, the binding on its label. A value the light's checks refuse (a CCT out of range, a luminance on a collimated
+  light) is said and the light keeps its last.
+- **A colour parameter is read by its components**: `tint.r`, `tint.g`, `tint.b`.
+- **A whole vector or colour binds in one line**: `light.colour = tint`, `pos = at`, `size = corner`, a parameter's
+  name of the same kind, kept as one line a component.
+- The parameter registry (and so the timeline) leaves out a bound light setting, as it leaves out any bound value; the
+  Optics page's colour mix refuses a light whose brightness is bound (its flux would be undone by the next resolve).
+- **A fix on the way:** a compile derived a flux-given light's luminance BEFORE it resolved the bindings, so a light's
+  bound size (bindable before this version) or flux compiled with the luminance of the values before them, until the next live
+  push. The bindings are resolved first now (`demo.js` build and bakeScene). `bindlive.test.mjs` fails with the old
+  order.
+
+**What is still not bindable** (help, *Component parameters*): a material's fields, because a material is shared by
+every object wearing it, so a per-component colour is a material per component; a haze box or an export box (no *from
+parameters* box, though the model would take their size and placement); a light's distribution, both faces and
+transparent.
+
+**What to look at:** a group with parameters `flux` (a number) and `tint` (a colour), a rectangle light inside it, and in
+the light's *from parameters*: `light.flux = flux` and `light.colour = tint`, Apply. The light's *brightness by*, *flux*,
+*colour by* and *colour* rows are greyed, their binding on each label. Drag the group's `flux` and `tint`: the light's
+glow and what it lights should follow live, with no compile, in the picture and in an Optics trace.
+
+**Tests:** `bind.test.mjs` (the light's targets, the slip, colour components, a whole value in one line, the modes
+written and held, two ways refused in a line and a file, a refused value kept, what moves with a lamp's flux and what an
+animated one keeps); `bindlive.test.mjs` (a lamp through the real builder, codegen and as data: compiled with the
+resolved luminance, live with no compile, the registry); `panel.check.mjs` (the rows held, headless); `expr.test.mjs`
+(the component message). **The tutorial:** no chapter is tied to the files changed (`affected.mjs`), and none describes
+component parameters; the photometry chapter's flux-to-luminance line (`syncSources`) still holds. Nothing changed there.
+
 ## 0.68.0 — 2026-10-19
 
 **The measure tool's ruler: where a point on a surface is, and the distances between points; a drag turns the view

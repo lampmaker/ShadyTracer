@@ -343,6 +343,10 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
             if (!pick || !m) return mixSay('choose three different lights first')
             if (!m.reachable) return mixSay('out of reach -- nothing changed')
             const doc = BUILDER.doc
+            /* a light whose brightness is from its component's parameters (builder/bind.js light.flux, light.luminance;
+               0.69.0): a flux set here would be undone by the next resolve, so it is the parameter that has to change */
+            const held = pick.filter(p => Object.keys(BUILDER.model.find(doc, p.id)?.node.bind || {}).some(t => t === 'light.flux' || t === 'light.luminance'))
+            if (held.length) return mixSay(`${held.map(p => p.label).join(', ')}: brightness from parameters -- change the group's parameter, or unbind it`)
             try {
                 // a light given by luminance becomes one given by flux: the flux is what is set
                 pick.forEach((p, i) => BUILDER.model.setLight(doc, p.id, { flux: m.flux[i] }))
