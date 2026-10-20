@@ -1215,6 +1215,9 @@ eq('uniformName', uniformName('n7', 'radius'), 'radius_n7')
     Model.addObject(d, 'root', { id: 'h', primitive: 'box', material: 'stone' })          // in no CSG at all
     Model.addGroup(d, 'root', { id: 'nr' })                                                // a CSG with no relief in it
     Model.addObject(d, 'nr', { id: 'n1', primitive: 'box' }); Model.addObject(d, 'nr', { id: 'n2', primitive: 'sphere', join: 'subtract' })
+    Model.addGroup(d, 'root', { id: 'cw', code: 'C = children(C, p);' })                  // code above a chain's top
+    Model.addGroup(d, 'cw', { id: 'cu' })
+    Model.addObject(d, 'cu', { id: 'u1', primitive: 'box', material: 'stone' }); Model.addObject(d, 'cu', { id: 'u2', primitive: 'sphere', join: 'subtract' })
     const g = generate(Model.toTree(d), { id: 'built' })
     const body = g.body, pick = g.pickWgsl
     const skip = (id, reach) => `if (abs(rs_${id}.w) > 2.0 * ra_${id}${reach}) { C = fold(C, VEC4(0.0, 0.0, 0.0, rs_${id}.w - sign(rs_${id}.w) * ra_${id}), rm_${id}); }`
@@ -1224,7 +1227,8 @@ eq('uniformName', uniformName('n7', 'radius'), 'radius_n7')
     ok('a smooth union\'s child: the band wider by 5/4 of every join that reads it', body.includes(skip('a', ' + 1.25 * 4.0 * UB.blend_bu')) && body.includes(skip('b', ' + 1.25 * 4.0 * UB.blend_bu')))
     ok('...its distance folded undivided, its slope left to the group', body.includes(up('a')) && body.includes(up('b')) && !body.includes(divided('a')))
     const B = body.slice(body.indexOf('// group bu'), body.indexOf('XF_M = xfm_bu; XF_S = xfs_bu;'))
-    const fin = 'C = fold(C, VEC4(k_bu.xyz, k_bu.w / XF_RL), km_bu);'
+    // ...outside a normal's look (scene_api.js NORMAL_LOOK, 0.70.1): there the division jumped at a band's edge
+    const fin = 'C = fold(C, VEC4(k_bu.xyz, k_bu.w / select(XF_RL, 1.0, NORMAL_LOOK)), km_bu);'
     ok('...the group saves XF_RL and starts it at 1 before its children, divides its result by it once, and puts it back',
         B.indexOf('let xfrl_bu = XF_RL; XF_RL = 1.0;') > 0 && B.indexOf('let xfrl_bu = XF_RL; XF_RL = 1.0;') < B.indexOf('// node a')
         && B.indexOf(fin) > 0 && B.indexOf('XF_RL = xfrl_bu;') > B.indexOf(fin))
@@ -1235,6 +1239,9 @@ eq('uniformName', uniformName('n7', 'radius'), 'radius_n7')
     ok('group code inside it ends the chain: wrapped as outside any CSG', body.includes(skip('f', '')) && body.includes(divided('f')))
     ok('a coded CSG group starts its own, in its children function', body.includes(skip('gg', ' + 1.25 * UB.blend_cs')) && body.includes(up('gg'))
         && body.indexOf('let xfrl_cs = XF_RL;') > body.indexOf('fn children_cs(') && body.indexOf('let xfrl_cs = XF_RL;') < body.indexOf('fn SDF('))
+    ok('...and divides in a normal\'s look too: its code reads the result off the surface', body.includes('C = fold(C, VEC4(k_cs.xyz, k_cs.w / XF_RL), km_cs);'))
+    ok('a chain\'s top under group code: divided in a normal\'s look too, as code reads it', body.includes(up('u1'))
+        && body.includes('C = fold(C, VEC4(k_cu.xyz, k_cu.w / XF_RL), km_cu);') && (g.wgsl.match(/NORMAL_LOOK/g) || []).length === 1)
     ok('an object in no CSG: the wrapper it had', body.includes(skip('h', '')) && body.includes(divided('h')))
     ok('a CSG with no relief in it: the text it had', !body.includes('xfrl_nr') && body.includes('C = fold(C, k_nr, km_nr);'))
     ok('the pick copy defers and divides as the render copy does', pick.includes(up('a')) && pick.includes(up('c')) && pick.includes(fin))

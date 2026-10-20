@@ -15,6 +15,35 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.70.1 — 2026-10-20
+
+**No hard line round a relief cut from another relief.** The user's case: a group with a box of white plaster and a
+sphere of knockdown stucco subtracted from it, a blend on. A thin dark line ran round the hole on the plaster,
+farther out with the blend on and nearer with it at 0, and it went away when both wore the same relief. A CSG group
+with a relief in it divides its result once by the steepest relief slope near the point, so the march does not step
+through a bump. A relief farther than two amplitudes (plus 5/4 of the blend) from its own surface is skipped, so the
+divisor on the plaster was the stucco's (4.67) inside that distance from the sphere and the plaster's (1.11) beyond it.
+The normal is taken by differences of the field, and where the differences straddled that step it turned by up to
+86° (measured in `relief.test.mjs`'s mirror of the two library materials, and on Dawn in the new
+`reliefnormal.gpu.mjs`). Now the normal's looks read the group's result undivided (`scene_api.js NORMAL_LOOK`): a
+normal needs only the field's direction, which the division does not change. The march still divides as before.
+- In a scene with such a group, a hit that takes its normal by differences (a relief's surface, or a shape that gives
+  no normal of its own) looks at the scene four times instead of three. The fourth look is at the hit itself, for the
+  differences' base (`normalAtHitWGSL`), in the surface kernel and the optics trace. Every other scene's kernels do
+  what they did. What the fourth look costs has not been measured, and the look count is a poor guide to it: an early
+  run found that switching the shapes' own normals off cost 4.3× the whole frame (docs/TESTING.md, "Where the render
+  time goes").
+- The surface kernel's loop runs up to 9 trips (was 8), so it keeps its one spare trip after the new look.
+- Not changed: a group under group code (a round, a twist, a relief modifier over it) still divides in a normal's
+  look, because its code reads the value off the surface. A line can still show there.
+- The golden shaders moved for scenes/lighting-room.json and scenes/office-lighting.json, one line each (the
+  division at the group's top), checked against the old codegen before refreezing.
+
+**What to look at:** the plaster box with the stucco sphere cut from it, blend on and at 0: no line round the hole on
+the plaster. Elsewhere the surfaces look as they did. lighting-room and office-lighting are the two examples that take
+the extra look: they should look as before, and if either renders noticeably slower than it did, that is where it
+comes from.
+
 ## 0.70.0 — 2026-10-19
 
 **Every picture and video saved is a file of its own, named with the time it was saved.** The user asked for it. A

@@ -165,7 +165,7 @@
          data-why="p is the point in the sphere's own frame, where its centre is the origin, so the normal is p made one unit long: the circle's arrow, in 3D. The VEC4 holds the normal, then the distance; every N... function returns this pair." data-hash="0360058f"></pre>
     <p>The renderer uses the shape's own normal when there is one, and differences when not:</p>
     <pre data-src="lib/pathtracer/core/tracebasics.js" data-sym="// calculate normals." data-to="return calcNormals_fast(hit.r, hit);"
-         data-why="SDFd asks the whole scene for its distance at a point moved by dif. A Hit's s holds the normal in .xyz and the distance in .w. VEC3(f32(k == 0u), f32(k == 1u), f32(k == 2u)) is (1, 0, 0) on the loop's first turn, (0, 1, 0) on the second, (0, 0, 1) on the third (0u is 0 as a whole number without a sign). normalTol is the step of section 3. hitNormal prefers the shape's own normal when it is not zero and fastnormals is on." data-hash="e0efa6f6"></pre>
+         data-why="SDFd asks the whole scene for its distance at a point moved by dif. A Hit's s holds the normal in .xyz and the distance in .w. VEC3(f32(k == 1u), f32(k == 2u), f32(k == 3u)) is (1, 0, 0) when k is 1, (0, 1, 0) when 2, (0, 0, 1) when 3 (1u is 1 as a whole number without a sign), and (0, 0, 0) when 0: a look at the hit itself. select(a, b, c) is b when c is true and a when not, so the loop starts at 0 only where NORMAL_AT_HIT is true (section 6, a line round a cut); everywhere else it starts at 1, and the hit's own distance, res.s.w, is the base. r.pos is the hit point. NORMAL_LOOK tells the scene these looks are for a normal; section 6 says why it needs to know. normalTol is the step of section 3. hitNormal prefers the shape's own normal when it is not zero and fastnormals is on." data-hash="f96cadfe"></pre>
     <p>The loop is there for the shader's size, not its speed. The whole scene's distance is one long function, and a
       loop the compiler is not allowed to unroll keeps one copy of it in the kernel instead of three
       (<code>noUnroll</code>). The shade kernel's own copy of this does the same, one look per pass of a loop it shares
@@ -224,6 +224,19 @@
         (chapter 3). The fix was to give no normal at all, and let differences find it.</li>
       <li><strong>Six looks nobody asked for.</strong> A central-difference normal sat in the shader beside the forward
         one, uncalled, until version 0.22.3 (the comment above <code>calcNormals_fast</code>).</li>
+      <li><strong>A line round a cut.</strong> A rough surface (a <em>relief</em>, chapter 3) makes the distance change
+        faster than one unit per unit of travel, so a march trusting it could step through a bump. The scene therefore
+        divides the distance by how steep the relief can get, and in a group of shapes blended together it does that
+        once, by the steepest relief near the point. Cut a sphere of steep stucco out of a box of gentle plaster, and on
+        the plaster that number was 4.67 near the hole, where the stucco's relief still counted, and 1.11 farther out.
+        Two looks a step apart could fall either side of that boundary: a distance of 0.05 came back as 0.05 / 1.11 =
+        0.045 from one and 0.05 / 4.67 = 0.011 from the other. Their difference measured the jump in the divisor, not
+        the slope of the surface, and the normal turned by up to 86°: a thin line round the hole. Dividing every
+        distance by the same number shrinks every difference by that number and leaves the arrow pointing the same way
+        (it is made one unit long anyway), so a normal does not need the division. Since version 0.70.1 the scene leaves
+        it out of a normal's looks (<code>NORMAL_LOOK</code>). The distance at the hit, which the march found divided,
+        is then no base for them, so in such a scene the normal takes a fourth look, at the hit itself
+        (<code>NORMAL_AT_HIT</code>).</li>
     </ul>
   </div>
 </section>

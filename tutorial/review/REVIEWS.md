@@ -1110,6 +1110,35 @@ changed: they are on sections this change did not touch, and they are the next r
 | Section 3's numbers against the screenshots beside it (± 0.001 against ± 0.009; "about 0.21"); "a fifth" in section 4 against "a sixth" in section 8; "0.28" read as a lamp size. | **Answered, not changed here**: sections this change did not touch; the next round's, first. |
 | NEE used before it is defined; "last bounce" and "last round" told twice; BSDF and pbrt; the cone's size; a colour meaning three things. | **Answered, not changed here**: as above. |
 
+## Round 11, 2026-10-20 (0.70.1: chapters 3 and 4, a line round a cut)
+
+Reports: [shapes](reports/2026-10-20-round11/shapes.md), [normals](reports/2026-10-20-round11/normals.md).
+
+**Why this round.** Version 0.70.1 stopped a CSG group with reliefs in it from dividing its distance while the renderer
+takes a normal (`NORMAL_LOOK`): the divisor jumped where a steep relief's band ended, and the normal's differences drew a
+line round a stucco hole cut in plaster. Chapter 3 and chapter 4 each gained a "What went wrong before" item for it, and
+their excerpts (`foldRelief`'s comment, `calcNormals_fast`) moved, so each page had a new reader, with a question on the
+new item. Both readers answered it: the jump in the divisor, the surface not moving, the normal turned. Findings on the
+rest of either page are answered below, not changed: sections this change did not touch, the next round's. The two items
+were rewritten for these findings and have not been read again; the next round's readers of these chapters read them
+first.
+
+### Chapter 3, Building and bending shapes
+
+| Finding | |
+|---|---|
+| "The looks a normal takes" read as appearance; the excerpt only declares NORMAL_LOOK, so the fix is not seen working; no number example; why the line is farther out with a wider blend not said; "a group under group code still divides" opaque. | **Fixed**: "when the renderer asks for the distances a normal is made from"; the excerpt's note says the line that reads the flag is the scene builder's and not shown; 0.05 / 1.11 = 0.045 against 0.05 / 4.67 = 0.011; the band is twice the relief's height plus 5/4 of the blend; "a group inside a group with code of its own (a rounding, say) may use the distance away from the surface". |
+| Section 6's code comments too long to tell what to read; kernel, NaN, argmax, XF_K, octaves against layers; `k` in `combine` a name, not the blend. | **Answered, not changed here**: excerpts and words this change did not touch (foldRelief's comment grew by NORMAL_LOOK's, which the note above now points to); the next round's. |
+| "Takes off up to k/4" for a subtraction, which adds; why a smaller distance moves the surface out; fig 3's overlap and its label; section 5's "1 +", the two 17.2s, "amount high" against 1.386 × amount, why the zigzag never shrinks; "Bumps 1/k too big" rushed. | **Answered, not changed here**: as above. |
+
+### Chapter 4, Which way is up
+
+| Finding | |
+|---|---|
+| "A line round a cut" lost the reader: relief, the division and stucco lean on chapter 3, and nothing says why the scene divides or why the undivided distance is right for a normal. | **Fixed**: the item says why the scene divides (a rough surface makes the distance change faster than the travel, and the march could step through a bump), gives the jump in numbers (0.045 against 0.011 for a distance of 0.05), and says why the fix is right (one divisor everywhere shrinks every difference alike and leaves the arrow's direction; it is made one unit long anyway). |
+| The excerpt: `select(1u, 0u, NORMAL_AT_HIT)` read backwards; why the scene cares about NORMAL_LOOK; r.pos never said to be the hit. | **Fixed** in the excerpt's note: select's order, r.pos the hit point, section 6 for why the scene needs to know. |
+| Kernel, shader, unroll, sample never explained; "Why 128" long and the "can stall" comment against the emulation; figure 2's ticks, its f32 bump past 128, a label collision, units; figure 1's labels and the crease from the other side; try-it 2's "smaller"; why a normal is one unit long. | **Answered, not changed here**: sections this change did not touch; the next round's. First to check: try-it 2's "smaller", which the reader read as wrong (central is 0.6° off at a step of 0.3, so its step for 1° would be larger). |
+
 ## Next round
 
 The pages stay drafts. Every written chapter has now had two readers (chapters 5 to 11 in rounds 5 and 6); the

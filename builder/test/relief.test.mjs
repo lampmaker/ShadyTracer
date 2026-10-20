@@ -18,7 +18,10 @@
 //     spheres in a smooth union wearing the print layers -- the fillet's surface is the true one (both raised,
 //     then blended), where the wrapper as it was left it bare, and its value no farther than that surface;
 //   - THE NOISE RELIEF MODIFIER IN A SMOOTH BLEND, the same on the real fBm: the template's surface is the true one
-//     where the code as it was (divided before the blend) is off, and its value no farther than that surface.
+//     where the code as it was (divided before the blend) is off, and its value no farther than that surface;
+//   - THE NORMAL ACROSS A BAND'S EDGE (0.70.1), on the real fBm: the library's knockdown stucco cut from its white
+//     plaster, smooth and hard -- the normal as it was turned where the stucco's band ends (the user's line), the
+//     undivided normal the field's own gradient all the way across, and the normal it was everywhere else.
 //======================================================================================================================
 import { readFileSync } from 'node:fs'
 import { MODIFIERS, RELIEF_CODE_FBM_BOUND } from '../modifiers.js'
@@ -251,8 +254,10 @@ console.log(`  shell: ${shellAnswered} probes; nearest surface point found at le
         both('rh') === '1.25 * (UB.jblend_rh + UB.jblend_zq) | true', both('rh'))
     ok('...a relief over a relief: the outer 0, the inner unbounded', both('rf') === '0.0 | false' && both('rg') === '1.0e30 | false', `${both('rf')} / ${both('rg')}`)
     ok('...code above a CSG group: unbounded, and the group divides', both('ri') === '1.0e30 | true', both('ri'))
-    ok('...the groups that divide save, reset and put back XF_RL; no other does',
-        ['x', 'y', 'z', 'tz'].every(id => now.includes(`let xfrl_${id} = XF_RL; XF_RL = 1.0;`) && now.includes(`C = fold(C, VEC4(k_${id}.xyz, k_${id}.w / XF_RL), km_${id});`))
+    // ...by it outside a normal's look (scene_api.js NORMAL_LOOK, 0.70.1) -- always under code (tz), which reads the value
+    const rl = id => id === 'tz' ? 'XF_RL' : 'select(XF_RL, 1.0, NORMAL_LOOK)'
+    ok('...the groups that divide save, reset and put back XF_RL; no other does; undivided in a normal\'s look, but under code',
+        ['x', 'y', 'z', 'tz'].every(id => now.includes(`let xfrl_${id} = XF_RL; XF_RL = 1.0;`) && now.includes(`C = fold(C, VEC4(k_${id}.xyz, k_${id}.w / ${rl(id)}), km_${id});`))
         && (now.match(/let xfrl_/g) || []).length === 4)
     ok('...and the template no longer names SURFACE_ONLY', !/SURFACE_ONLY/.test(now))
     ok('a parameter cannot take any of the names', ['SURFACE_ONLY', 'READ_REACH', 'DIVIDED_ABOVE'].every(name => GROUP_SCOPE.includes(name) && (() => {
@@ -301,7 +306,7 @@ console.log(`  shell: ${shellAnswered} probes; nearest surface point found at le
             w.includes('if (abs(rs_a.w) > 2.0 * ra_a + 1.25 * UB.blend_bu) { C = fold(C, VEC4(0.0, 0.0, 0.0, rs_a.w - sign(rs_a.w) * ra_a), rm_a); }')
             && w.includes('C = foldRelief(C, rs_a.w - mm(hs.x) * XF_K, rm_a, 1.0 + hs.y, true); }')
             && w.includes('let xfrl_bu = XF_RL; XF_RL = 1.0;') && w.includes('k_bu = csgUnion(k_bu, C.s, UB.blend_bu);')
-            && w.includes('C = fold(C, VEC4(k_bu.xyz, k_bu.w / XF_RL), km_bu);'))
+            && w.includes('C = fold(C, VEC4(k_bu.xyz, k_bu.w / select(XF_RL, 1.0, NORMAL_LOOK)), km_bu);'))
     }
     /* THE SURFACE, field by field: at each x and z, out along y from the axis to the first point where the field
        is not positive, then bisected -- the patch of the fillet facing +y. Along y the layers' height is constant,
@@ -383,7 +388,7 @@ console.log(`  shell: ${shellAnswered} probes; nearest surface point found at le
         const w = generate(Model.toTree(d)).wgsl
         ok('the modifier in a blend: READ_REACH 5/4 of the blend, the division left to the group, done once after it',
             w.includes('let READ_REACH = 1.25 * UB.blend_bu;') && w.includes('let DIVIDED_ABOVE = true;')
-            && w.includes('let xfrl_bu = XF_RL; XF_RL = 1.0;') && w.includes('C = fold(C, VEC4(k_bu.xyz, k_bu.w / XF_RL), km_bu);'))
+            && w.includes('let xfrl_bu = XF_RL; XF_RL = 1.0;') && w.includes('C = fold(C, VEC4(k_bu.xyz, k_bu.w / select(XF_RL, 1.0, NORMAL_LOOK)), km_bu);'))
     }
     /* the surface facing +y: from y0 down in steps of 0.05 to the first point not outside, then bisected. Every field
        on the same grid, so the true one's noise is reused; where two fields agree in sign, they find the same point */
@@ -428,6 +433,81 @@ console.log(`  shell: ${shellAnswered} probes; nearest surface point found at le
     ok('off the fillet, the field is no farther than any point found on its surface', probes > 40 && over <= 1 + 1e-9, `${probes} probes, worst ${over}`)
     ok('...and undivided it would be (so the check can fail)', overUndivided > 1, `${overUndivided}`)
     console.log(`  modifier blend: fillet surface off by ${worst.now.toExponential(1)} mm (as it was ${worst.was.toFixed(3)}, the root's shell ${worst.narrow.toFixed(3)}); value over the nearest surface point found: ${over.toFixed(3)} (undivided ${overUndivided.toFixed(3)})`)
+}
+
+// ---- THE NORMAL ACROSS A BAND'S EDGE (0.70.1; scene_api.js NORMAL_LOOK). The user's case (2026-10-20): a sphere of
+//      knockdown stucco cut from a box of white plaster, the library's two, and a hard line on the plaster round the
+//      cut -- farther out with the blend on, nearer with it at 0, gone when both wore the same relief. A chain's top
+//      divides by XF_RL, the steepest slope among the reliefs WITHIN THEIR BANDS: on the plaster face it was the
+//      stucco's where the stucco's band reaches (two amplitudes and 5/4 of the blend from the sphere) and the plaster's
+//      beyond, and the surface kernel's forward differences (wavefront.js prog_surface), from the march's own value at
+//      the hit, straddled the jump. Mirrored: the field codegen writes (the wrappers, the smooth subtraction, the one
+//      division), a hit where the march stops (its value a fraction of the tolerance), the normal as it was and as it
+//      is (undivided looks, and the base looked at undivided: normalAtHitWGSL), against the field's own gradient there.
+{
+    const lib = JSON.parse(readFileSync(new URL('../../library/items/materials.json', import.meta.url), 'utf8')).items
+    const reliefOf = name => lib.find(i => i.name === name)?.asset?.material?.relief
+    const PL = reliefOf('white plaster'), ST = reliefOf('knockdown stucco')
+    const has = (R, ...l) => !!R && l.every(x => lines(R.code).includes(x))
+    ok('the mirror is the library\'s white plaster and knockdown stucco',
+        has(PL, 'let n = fbm3(q / size, 1u, 4u, 2.0, 0.5);', 'h = amplitude * n.w / peak;', 'slope = amplitude / size * nzFbmLip(4u, 2.0, 0.5, NZ_GRAD_LIP_MEASURED) / peak;')
+        && has(ST, 'let n = fbm3(q / size, 1u, 4u, 2.0, 0.5);', 'h = amplitude * smoothstep(edge, edge + soft, n.w / peak);',
+            'slope = amplitude / size * nzFbmLip(4u, 2.0, 0.5, NZ_GRAD_LIP_MEASURED) / peak * 1.5 / soft;'))
+    const peak = nzFbmLip(4, 1.0, 0.5, 1.0), grad = nzFbmLip(4, 2.0, 0.5, NZ_GRAD_LIP_MEASURED)
+    const smoothstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t) }
+    const clampA = (h, A) => Math.max(-A, Math.min(A, h))         // codegen's relief function returns it clamped
+    const plaster = q => { const { amplitude: A, size } = PL.params, n = fbm3(q.map(v => v / size), 1, 4, 2.0, 0.5)
+        return { A, h: clampA(A * n[3] / peak, A), slope: A / size * grad / peak } }
+    const stucco = q => { const { amplitude: A, size, edge, soft } = ST.params, n = fbm3(q.map(v => v / size), 1, 4, 2.0, 0.5)
+        return { A, h: clampA(A * smoothstep(edge, edge + soft, n[3] / peak), A), slope: A / size * grad / peak * 1.5 / soft } }
+    const csgIntersect = (a, b, k) => { if (k <= 0) return Math.max(a, b); const h = Math.max(k - Math.abs(a - b), 0); return Math.max(a, b) + h * h * 0.25 / k }
+    // the plaster's face z = 0 (the box below it: only its top is near), the stucco sphere r 30 round (0, 0, 10) cut from it
+    const C = [0, 0, 10], R0 = 30
+    const sphere = p => Math.hypot(p[0] - C[0], p[1] - C[1], p[2] - C[2]) - R0
+    const field = (p, blend, undivided = false) => {
+        const reach = 1.25 * blend
+        let rl = 1
+        const wrap = (s, relief, q) => {         // codegen object() in a chain: the band, the height undivided, the slope kept
+            const A = (relief === plaster ? PL : ST).params.amplitude
+            if (Math.abs(s) > 2 * A + reach) return s - Math.sign(s) * A
+            const r = relief(q); rl = Math.max(rl, 1 + r.slope); return s - r.h
+        }
+        const v = csgIntersect(wrap(p[2], plaster, p), -wrap(sphere(p), stucco, p.map((x, k) => x - C[k])), blend)
+        return undivided ? v : v / rl                    // the chain's top: divided once, or undivided in a normal's look
+    }
+    const TOL = 0.05                                     // mm: the automatic tolerance of a scene about half a metre across
+    const unit = v => { const l = Math.hypot(...v); return v.map(x => x / l) }
+    const angle = (a, b) => Math.acos(Math.min(1, Math.abs(a[0] * b[0] + a[1] * b[1] + a[2] * b[2]))) * 180 / Math.PI
+    const forward = (f, p, base) => unit([0, 1, 2].map(k => { const q = [...p]; q[k] += TOL; return f(q) - base }))
+    const walk = (blend, x0, x1) => {
+        const out = { was: 0, wasOff: 0, now: 0, same: 0, steps: 0 }
+        const edge = 2 * ST.params.amplitude + 1.25 * blend      // the stucco's distance where its band ends
+        for (let i = 0, x = x0; x <= x1; i++, x = x0 + i * 0.004) {
+            // the hit: where the march stops coming down, its divided value a fraction of the tolerance (a different one each)
+            const f = 0.02 + 0.96 * ((i * 0.6180339887) % 1)
+            let lo = -1.5, hi = 1.5
+            for (let k = 0; k < 32; k++) { const m = (lo + hi) / 2; if (field([x, 0.3, m], blend) > f * TOL) hi = m; else lo = m }
+            const p = [x, 0.3, hi]
+            const was = forward(q => field(q, blend), p, field(p, blend))                        // the march's own value as base
+            const now = forward(q => field(q, blend, true), p, field(p, blend, true))           // looked at, undivided
+            const truth = unit([0, 1, 2].map(k => { const a = [...p], b = [...p]; a[k] += 1e-5; b[k] -= 1e-5; return field(a, blend, true) - field(b, blend, true) }))
+            const w = angle(was, truth)
+            if (w > out.was) { out.was = w; out.wasOff = sphere(p) - edge }
+            out.now = Math.max(out.now, angle(now, truth))
+            // where the jump is not within the differences' reach, the normal is what it was
+            if (Math.abs(sphere(p) - edge) > 4 * TOL) { out.same = Math.max(out.same, angle(was, now)); out.steps++ }
+        }
+        return out
+    }
+    // each walk across the band's edge on the face (x about 34.3 with the blend, 30.4 without), clear of the fillet
+    for (const [blend, x0, x1] of [[3, 33.5, 35.5], [0, 29.8, 31.3]]) {
+        const r = walk(blend, x0, x1)
+        ok(`blend ${blend}: as it was, the normal tilts where the stucco's band ends on the plaster (the line, mirrored)`,
+            r.was > 5 && Math.abs(r.wasOff) <= TOL, `worst ${r.was.toFixed(2)} deg, ${r.wasOff.toFixed(4)} mm from the band's edge`)
+        ok(`blend ${blend}: now the field's own gradient all the way across`, r.now < 0.1, `${r.now} deg`)
+        ok(`blend ${blend}: ...and elsewhere the normal it was`, r.steps > 200 && r.same < 1e-4, `${r.steps} hits, ${r.same} deg`)
+        console.log(`  band's edge, blend ${blend}: the normal off the field's gradient by up to ${r.was.toFixed(1)} deg as it was (${r.wasOff.toFixed(3)} mm from the stucco's band's edge), ${r.now.toExponential(1)} deg now`)
+    }
 }
 
 console.log(`relief: ${pass} passed, ${fail} failed`)
