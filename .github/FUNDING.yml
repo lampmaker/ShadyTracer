@@ -1,0 +1,4 @@
+# The repository page's Sponsor button (it also needs Settings > General > Features > Sponsorships ticked).
+# The app's Help > Support ShadyTracer... and the README link the same page; test/funding.test.mjs holds the three to
+# one name.
+github: lampmaker

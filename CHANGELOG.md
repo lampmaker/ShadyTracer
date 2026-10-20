@@ -15,6 +15,30 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.71.0 — 2026-10-20
+
+**A tip for the work: a ♥ Sponsor link at the menu bar's right end, a Help row, and the repository's Sponsor
+button.** The user asked how to receive tips. Their GitHub Sponsors page was already live (one-time or monthly, a
+custom amount), but nothing pointed to it: no `.github/FUNDING.yml`, nothing in the README, nothing in the app.
+- **The menu bar**: *♥ Sponsor* after the title (*ShadyTracer 0.71.0 · rev (branch) © Matthijs Keuper*), the
+  bar's last thing. It is a link, so its address shows on hover and it opens in a new tab. The shell gives the host
+  that place as `S.barEnd`, as it gives `S.tools` after the menus (`lib/shell/shell.js`), with the same hairline
+  before it.
+- **Help › Support ShadyTracer…** opens the same page; **Help › About** now ends with where to find it.
+- **`.github/FUNDING.yml`** (`github: lampmaker`) puts the Sponsor button in the repository page's header, once
+  *Settings › General › Features › Sponsorships* is ticked: a setting only the owner can change.
+- **The README** links it in its first line and under *Licence and credits*.
+
+**What to look at:** the menu bar's right end: *♥ Sponsor* after the title, the heart in pink, the menus' hover.
+Clicking it, or Help › Support ShadyTracer…, opens github.com/sponsors/lampmaker in a new tab. On the repository
+page, the ♥ Sponsor button in the header once Sponsorships is ticked.
+
+**Tests:** `test/funding.test.mjs` (new): FUNDING.yml's account, the page's one Sponsors address, the Help row and the
+bar's link opening it, the README linking it, so the four cannot name different pages; it fails when FUNDING.yml
+names another account. `lib/shell/test/example.check.mjs`: a button of the host's at the bar's right end, after the
+title, the bar's last element and to the title's right on screen, and it runs. **The tutorial:** `affected.mjs` ties
+chapter 25 to `CLAUDE.md:30-38`, which this change does not touch (only the list of tests moved). Nothing changed there.
+
 ## 0.70.0 — 2026-10-19
 
 **Every picture and video saved is a file of its own, named with the time it was saved.** The user asked for it. A

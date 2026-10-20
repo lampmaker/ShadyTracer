@@ -6,7 +6,8 @@ LED and luminaire design that traces the same scene the picture shows.
 
 Nothing to install and no server. The page runs on your own graphics card.
 
-**Run it: <https://lampmaker.github.io/ShadyTracer/>** · Open source, [MIT](LICENSE).
+**Run it: <https://lampmaker.github.io/ShadyTracer/>** · Open source, [MIT](LICENSE) ·
+[♥ Sponsor](https://github.com/sponsors/lampmaker).
 
 ![The raytracer: the scene tree, properties and library on the left, the picture in the middle, the renderer's settings on the right](docs/screenshots/hero.png)
 
@@ -602,6 +603,10 @@ in a `REVISION` file so the page can name its build there too.
 © Matthijs Keuper. **MIT licence**: see [`LICENSE`](LICENSE). TinyWebGPU and GUISTUFF are separate
 repositories, also MIT. What in this repository is someone else's, and under which licence, is in
 [`THIRD_PARTY.md`](THIRD_PARTY.md).
+
+ShadyTracer is free and stays free. If it is useful to you, a tip, one-time or monthly, through
+[GitHub Sponsors](https://github.com/sponsors/lampmaker) keeps it going. The app has the same link under
+Help › Support ShadyTracer….
 
 Built on, with thanks, all under the MIT licence:
 [dockview](https://github.com/dockview/dockview) 8.3.1 (docking),
