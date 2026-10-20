@@ -8,6 +8,7 @@
 //   before an analysis: every chart says why it is empty, the pane says there are no results
 //   each chart's own controls ON the chart (the user, 2026-10-02), none in the Analysis pane
 //   ▶ Run: the stand-in's batches reach every chart, the result cards, the totals and the run bar
+//   Save the chart (PNG): a file named with the chart's kind and the time, a second save in that second its own file
 //   the ray count: a number times a multiplier, 500k typed setting both, more than the most refused, either way
 //   Live: round after round, the count each; ▶ Run disabled; Σ off at first, each round on its own; with Σ the rounds
 //     adding up, and a reset of the picture starting them over; Σ off again; the rays traced between rounds and their own loop not started; switched off mid-round, the round let
@@ -221,6 +222,16 @@ ok('the run bar says how many rays and when', /1,000,000 rays|1 000 000 rays|100
 ok('the totals are filled', await p.evaluate(() => /emitted/.test(document.querySelector('.tp-fldv_c table')?.textContent ?? '')))
 ok('the map has colour, so it offers CCT (a map without would not)', await p.evaluate(() => /CCT/.test(document.querySelector('.shell-cards').textContent)))
 ok('...and the map\'s strip offers it now', (await options('map', 'q')).includes('CCT'))
+
+// SAVE THE CHART (PNG): named with its kind and the time it was saved, and saved twice in a second two files (lib/filename.js)
+const saveChart = async id => {
+    const d = p.waitForEvent('download', { timeout: 5000 }).catch(() => null)
+    await p.evaluate(id => [...CHECK.el[id].querySelectorAll('.chart-strip > button')].find(b => b.title === 'Save the chart (PNG)')?.click(), id)
+    return (await d)?.suggestedFilename() ?? null
+}
+const charts = [await saveChart('optics.polar'), await saveChart('optics.polar')]
+ok('Save the chart (PNG): a file named with its kind and the time it was saved', /^polar-\d{4}-\d\d-\d\d_\d\d-\d\d-\d\d(-\d+)?\.png$/.test(charts[0] ?? ''), JSON.stringify(charts))
+ok('...saved again, a file of its own', !!charts[1] && charts[1] !== charts[0], JSON.stringify(charts))
 
 // HOVER: the far field's two share an angle, the map's four a place
 let [x, y] = await at('polar', 0.5, 0.3)

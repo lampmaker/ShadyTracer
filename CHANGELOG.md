@@ -15,6 +15,37 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.70.0 — 2026-10-19
+
+**Every picture and video saved is a file of its own, named with the time it was saved.** The user asked for it. A
+save was always written under one name: `render.png` from Save picture, `polar.png` from a chart, `raytracer.mp4` from
+the Timeline. The second save of a session was the browser's `render (1).png`, and which render was which was lost
+once the folder was sorted. Now the name given is followed by the local date and time, largest unit first, with no `:`
+(Windows refuses one) and no space, so the files sort as they were made: `render-2026-10-19_14-03-22.png`. A second
+save of the same name in the same second gets `-2` (`lib/filename.js`).
+- **Save picture › Develop › Save PNG**: the name in *file*, then the time. The *file* field keeps what you typed.
+- **A chart's Save the chart (PNG)** in Optics: its kind (`map`, `polar`, `map-2` for a second map), then the time.
+- **The Timeline's RECORD** (MP4, the ZIP of PNG frames, GIF): the export menu's *name*, then the time the recording
+  started. The frames inside a ZIP keep `frame_00000.png`. lib/timeline is a vendored copy and was not changed:
+  `tools/timeline.js` puts the stamp into the name for the moment the sequencer reads it and takes it out again, so the
+  name typed stays in the menu and in the scene's file.
+- `RT.saveImage()` and `RT.darkroom.save()` called without a filename save as `render-<the time>.png`; a filename
+  given is used as it is.
+- Not changed: a scene, project, workspace or library file, a timeline's `.timeline.json`, and the CSVs keep their names.
+
+**What to look at:** Save picture, Render, then Save PNG twice: two files, `render-<date>_<time>.png` and the same
+name with `-2` if they fell in the same second, and the status line names the file. In Optics, Save the chart (PNG)
+on the map: `map-<date>_<time>.png`. In the Timeline, RECORD: `raytracer-<date>_<time>.mp4` (or the name you typed),
+and the export menu's *name* still reads what you typed afterwards.
+
+**Tests:** `test/filename.test.mjs` (the stamp in local time, sortable, nothing a file system refuses; twice in a
+second told apart); `tools/test/timeline.check.mjs` (a film named with the time by `record()` and by the RECORD button,
+the name typed still the setting and never kept into the scene; it fails both ways without the change in
+`tools/timeline.js`); `optics/test/page.check.mjs` (a chart saved twice: its kind and the time, two files). Save PNG in
+the darkroom needs WebGPU, so only your machine runs it. **The tutorial:** `affected.mjs` ties chapter 7 to
+`develop.js` (it says a save keeps the light, nothing of the file's name) and chapters 25 and 27 to lines of
+CLAUDE.md and the pathtracer README this change does not touch. Nothing changed there.
+
 ## 0.69.0 — 2026-10-19
 
 **A light's flux and colour from its component's parameters.** The user asked whether a group's parameters, a colour and

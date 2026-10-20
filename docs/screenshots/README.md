@@ -10,7 +10,8 @@ checks run on cannot start the raytracer.
 ## Two ways to take one
 
 - **A render**: File › **Save picture…** in the raytracer, **1280 × 720**, the samples given
-  below, and the file name below. It renders offscreen and downloads a PNG.
+  below. It renders offscreen and downloads a PNG named with the time it was saved
+  (`render-2026-10-19_14-03-22.png`): rename it to the file name below.
 - **A screenshot** of the window or part of it: Win + Shift + S on Windows (Cmd + Shift + 4 on a
   Mac), saved as PNG. A browser window of about 1600 × 900 gives pictures that read well at README
   width. Crop to what the caption talks about.
