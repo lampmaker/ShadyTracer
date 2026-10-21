@@ -35,7 +35,12 @@
 /* the host's buttons right after the menus (S.tools): a hairline before them, nothing when there are none */
 .shell-tools { display: flex; align-items: center; gap: 1px; }
 .shell-tools:not(:empty) { margin-left: 6px; padding-left: 6px; border-left: 1px solid var(--sh-line); }
+/* ...and the host's at the bar's right end, after the title (S.barEnd): the same hairline */
+.shell-bar-end { display: flex; align-items: center; gap: 1px; }
+.shell-bar-end:not(:empty) { padding-left: 6px; border-left: 1px solid var(--sh-line); }
 .shell-menu { font: inherit; color: var(--sh-ink); background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 2px 10px; cursor: default; }
+/* a link dressed as a menu button: the menus' look, a link's hand */
+a.shell-menu { text-decoration: none; cursor: pointer; }
 .shell-menu:hover, .shell-menu.on { background: var(--sh-accent-bg); color: #fff; }
 .shell-title { font-size: 11px; letter-spacing: 0.08em; color: var(--sh-faint); text-transform: uppercase; padding-right: 6px; }
 .shell-dropdown { position: fixed; z-index: 10000; min-width: 260px; background: #20262b; border: 1px solid #36404a; border-radius: 5px;
