@@ -336,6 +336,15 @@
         distance is wrong near the cell borders.</p>
     </div>
     <div data-claim="code">
+      <p><strong>Copies round an axis.</strong> The circular array puts copies round the group's centre instead, and it
+        does not fold. Folding would turn the point into one slice of the circle and ask one copy, with the same catch,
+        made worse because a slice narrows to nothing at the centre: a shape across the centre would come out as a wedge,
+        and a copy crossing a slice's edge would lose its tip. So it asks every copy and keeps the smallest distance, a
+        union: copies that overlap merge into one shape. That costs one evaluation of the shape per copy. Its
+        <code>reach</code> buys the speed back for copies that stay near their own slice: it asks only the nearest few,
+        and gives the rest a distance that is safely too small.</p>
+    </div>
+    <div data-claim="code">
       <p><strong>Every modifier says what it costs.</strong> A group's code runs at every step of every ray, so each
         modifier's first comment says what it adds per step: a sine and a cosine for the twist, four noises for the
         relief, nothing for round and shell (their code is in <code>builder/modifiers.js</code>; the twist's and the relief's

@@ -91,7 +91,7 @@ function shapes() {
 
 function modifiers() {
     let s = HEAD('Modifiers', 'A modifier is a group that changes what is inside it: the space its children are drawn in (twist, bend, '
-        + 'repeat, mirror) or the shape they make (round, shell, displace, relief). Put shapes in it; nest modifiers for more. '
+        + 'repeat, mirror, circular array) or the shape they make (round, shell, displace, relief). Put shapes in it; nest modifiers for more. '
         + 'Its parameters are live: dragging one compiles nothing.')
     for (const M of Object.values(MODIFIERS)) {
         s += `\n## ${M.label}\n\n${firstComment(M.code)}\n\n`

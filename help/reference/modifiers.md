@@ -2,7 +2,7 @@
 
 > Made by `help/reference.mjs` from the program's own lists: edit that, not this page.
 
-A modifier is a group that changes what is inside it: the space its children are drawn in (twist, bend, repeat, mirror) or the shape they make (round, shell, displace, relief). Put shapes in it; nest modifiers for more. Its parameters are live: dragging one compiles nothing.
+A modifier is a group that changes what is inside it: the space its children are drawn in (twist, bend, repeat, mirror, circular array) or the shape they make (round, shell, displace, relief). Put shapes in it; nest modifiers for more. Its parameters are live: dragging one compiles nothing.
 
 ## twist
 
@@ -35,6 +35,15 @@ Repeat: copies "spacing" apart, "count" each way along each axis (0: not along i
 
 Mirror across this group's x = 0 plane (turn the group to mirror across another): the children on the +x side and their reflection, for the price of one. A reflection turns analytic normals the wrong way, so they are taken by differences -- warp(1.0).
 
+
+## circular array
+
+Circular array: "count" copies of the children around this group's z axis, 360 / count degrees apart, the first where they are (turn the group for another axis). A child off the axis is drawn count times; one across it, or copies that overlap, make one merged shape -- a true union, the least distance of the copies, so a ring of overlapping glass is one glass with no faces inside it. Normals stay analytic, each turned with its copy. COST: every copy is evaluated, count times the children per step, which is right whatever they are. "reach" makes it cheaper when each copy stays within that many slices either side of its own (a slice is 360 / count degrees, the first centred on this group's +x; 0: inside its own slice, as a bolt circle's bolts or a gear's teeth -- so put the children on +x, off the axis): then only the copy nearest the point and reach + 1 either side are evaluated, 2 reach + 3 of them, and the rest bounded -- a slice away at least, and no nearer than the farthest evaluated less 2 x the distance from the axis, the farthest a turn moves a point. A copy reaching farther than "reach" says is drawn wrong. With 2 reach + 3 count or more, every copy is evaluated: so at 32, always.
+
+| parameter | starts at | a length |
+|---|---|---|
+| count | 6 |  |
+| reach | 32 |  |
 
 ## round
 

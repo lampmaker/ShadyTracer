@@ -147,6 +147,14 @@
 // test/fixtures/scenes/OpticsBench.json (the pillars' cylinder and shell, four groups) and OpticsBench2.json (those, and
 // the laser rig under its lens holder: six live, three off, the others hidden and pruned) moved, and their bench copies
 // exactly as they did; the other 46 documents, cases.*.wgsl and the imported parts among them, did not (key by key).
+//
+// ONE SCENE REFROZEN (2026-10-21, 0.next): scenes/modifiers.json, the Modifiers example, with the circular array the user
+// asked for (modifiers.js `circular`) added in a front row (scenes/make.mjs). No codegen change. Checked before freezing,
+// its texts old against new, both modes, each line trimmed and counted: in the render and optics texts no line left and
+// the lines that came are the two rings' -- their groups, children functions, uniforms and box tests; in the pick texts
+// the only lines that left were eleven `XF_TAG = <n>u` with their numbers moved (the rings' children functions, emitted
+// before SDF, take tags first). Uniforms: none left; the rings' count, reach, transforms and boxes and their children's
+// came. Every key of both modes of that document moved; no other document's did (key by key).
 //======================================================================================================================
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'

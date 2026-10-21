@@ -1044,6 +1044,10 @@ user on real hardware; undo / redo is built since (`history.js`). Format version
 - **Group code** (BUILDER.md §3; the Modifiers submenu, `modifiers.js`). naga compiles every preset and
   the nested / CSG / p_local combinations in check-shaders; whether they look right, and what a twist
   costs per frame, only the user's card can say.
+  The **circular array** (`0.next`): its distance, normals and captured local point held to the exact union of its
+  copies on Dawn (`circular.gpu.mjs`); **what to look at:** the Modifiers example's front row -- eight spheres apart,
+  and a block across the axis merged into one rosette with no faces inside; then `reach` on a ring of separate copies,
+  which should look the same and render faster.
 - **The joins in the tree, and a group's recipe** (`recipe.js`; headless, `tree.check` clicks the marks
   and `panel.check` types a recipe). **What to look at:** the demo's Carved row and its children's marks;
   click a plain group's second child from ∪ to − and see it cut; in a group's recipe, reorder and re-join

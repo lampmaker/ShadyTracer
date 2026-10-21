@@ -299,7 +299,8 @@ for the help.
 - **A group as a component**: its parameters drive what is inside it, *from parameters* -- a child's
   sizes, its place, a blend, a row of copies, and a light's flux and colour (`light.flux = flux`)
   *preview*.
-- **Eight modifiers**, groups whose code bends what is inside them: twist, bend, repeat, mirror,
+- **Nine modifiers**, groups whose code bends what is inside them: twist, bend, repeat, mirror,
+  **circular array** (copies round an axis: apart, or merged into one shape where they overlap),
   round, shell, displace, **noise relief** *preview*.
 - **Write any object, group or material in WGSL.** Give it parameters (a number, a vector or a
   colour; live, or baked into the shader; with a range; a length in the scene's unit). A probe
@@ -454,7 +455,7 @@ number carries its standard error**.
 | **First steps** | Start | mm | Shapes on a table in daylight: one glass, two blended into one |
 | **Shape gallery** | Shapes | mm | Every built-in shape, about 50 mm across |
 | **Combining shapes** | Shapes | mm | Union, subtract and intersect, sharp and blended; a die made the way a die is |
-| **Modifiers** | Shapes | mm | Twist, bend, repeat, mirror, round, shell, displace and relief, each on a plain shape |
+| **Modifiers** | Shapes | mm | Twist, bend, repeat, mirror, circular array, round, shell, displace and relief, each on a plain shape |
 | **From points** | Shapes | mm | An extruded star, a turned wine glass, a pipe along a path, a swept bar |
 | **Parametric part** | Shapes | mm | A heatsink whose fin count, pitch and height are its parameters |
 | **Imported parts** | Shapes | mm | STEP and STL parts imported as boxes, cylinders, cones, spheres, tori and rounded prisms |
