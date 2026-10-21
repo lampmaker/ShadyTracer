@@ -15,7 +15,7 @@ order of that work): `ARCHITECTURE.md`, beside this file (2026-10-04). **Media**
 photon map, scattering inside materials, an Optics-view beam view -- has its own: `MEDIA.md`, beside this file
 (2026-10-16).
 
-## STEP and STL import as shapes — built 2026-10-21 (0.72.0), NOT yet seen
+## STEP and STL import as shapes — built 2026-10-21 (0.73.0), NOT yet seen
 
 The user (2026-10-21): "Start working on stl and step import. Investigate possibilities to optimize these for
 sdf/pathtracing. Eg conversion to primitives with boolean operations if that helps." Built that way. A solid whose faces

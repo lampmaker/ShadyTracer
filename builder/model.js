@@ -2162,7 +2162,7 @@ export const VIEW_CAMERA = Object.freeze({
 export const CAMERA_DEFAULTS = Object.freeze({ mode: 'orbit', camtype: 0, fov: 40, dimensions: 10, target: [0, 0, 0],
     azimuth: 40, elevation: 70, distance: 20, up: [0, 0, 1], aperture: 0, focus: 0 })
 /* the camera's lengths: what a unit's change, or a camera from a scene in another unit, scales */
-const CAMERA_LENGTHS = ['dimensions', 'target', 'distance', 'pos', 'aperture', 'focus']
+export const CAMERA_LENGTHS = Object.freeze(['dimensions', 'target', 'distance', 'pos', 'aperture', 'focus'])
 
 function viewProblems(view) {
     if (!view || typeof view !== 'object' || Array.isArray(view)) return ['view must be an object']

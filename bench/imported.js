@@ -1,5 +1,5 @@
 //======================================================================================================================
-// WHAT AN IMPORTED PART COSTS TO RENDER (0.72.0, import/; the user, 2026-10-21: "investigate possibilities to optimize
+// WHAT AN IMPORTED PART COSTS TO RENDER (0.73.0, import/; the user, 2026-10-21: "investigate possibilities to optimize
 // these for sdf/pathtracing. Eg conversion to primitives with boolean operations if that helps"). A bench test of its own
 // (Tests > imported).
 //
@@ -10,7 +10,7 @@
 // fillets, a lens from its spheres), or whether the formula as it is costs no more than its box test spares
 // (roadmap/IMPORT.md section 11). Nothing here was measured on a card when it was written.
 //
-// THE ROWS, each the frozen scene (bench/scenes/imported.json, the Imported parts example of 0.72.0: six STEP fixtures and
+// THE ROWS, each the frozen scene (bench/scenes/imported.json, the Imported parts example of 0.73.0: six STEP fixtures and
 // the rounded box again from its STL) at 1280 x 720, its own sun, one change a row:
 //   as imported, baked                   the build the page shows once the edits stop
 //   the rounded boxes and the lens as one shape each

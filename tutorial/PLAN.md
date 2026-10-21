@@ -123,7 +123,7 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
    overlapping ones); `warp(k)` and the twist's divisor √(1 + c²) against the map's largest stretch
    (c + √(c² + 4)) / 2 (the flat world's swirl, and a 3D plate measured by the test at 1.14); the noise relief raw,
    divided and with its shell, a ray rocking for 300 steps → scene_api.js, modifiers.js, codegen.js combine,
-   noise.js. Planned for it (0.72.0): the same joins read backwards, a CAD part as a union of products over its faces'
+   noise.js. Planned for it (0.73.0): the same joins read backwards, a CAD part as a union of products over its faces'
    half-spaces -- separators where a curved surface's faces end (all of them together: four faces round one cylinder
    need none), no two products only touching inside the solid (a seam a ray in glass would stop at), the formula a
    bound by min and max of exact distances, a cut that shares a cap with what it cuts worth only the distance to that
@@ -326,9 +326,11 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
     formula in 3D (the bench's finding 7: 1.22 predicted, 0.80-0.84 measured), and two slabs whose 0.5 mm gap a ray
     leaving the first steps over (fresnel.js: one slab's 0.923 for two's 0.857); the tolerance's three terms against
     the distance from the origin for a scene's size, by tolerances.js and photometry.js, and the floor before 0.36.0;
-    a few lines of an engine kernel with one planted, through the real unitlint.js against the real boundary. Chapter
-    4 keeps the f32 normal noise and why 128. -> photometry.js autoEps, tolerances.js TOLERANCES, scene_api.js
-    sceneAt, tracebasics.js's two factors, unitlint.js. Measured: finding 7 (Ampere), the gap (Pascal), mm against m
+    a few lines of an engine kernel with one planted, through the real unitlint.js against the real boundary; and what a
+    number means when the scene's unit changes (0.72.0): kept, the scene growing by the factor, or the real size kept by
+    a scale on the top-level objects (exact for any code, which runs in its own frame) or by the numbers (exact only for
+    what the document says is a length, or per one). Chapter 4 keeps the f32 normal noise and why 128. -> photometry.js
+    autoEps, tolerances.js TOLERANCES, scene_api.js sceneAt, tracebasics.js's two factors, unitlint.js, builder/unitchange.js. Measured: finding 7 (Ampere), the gap (Pascal), mm against m
     (lavapipe). Inferred and said: the RGBW mixer's pattern. *Read:* wgsl-spec, iq-raymarching.
 31. **The optics bench** (draft): a cos^n source's rays binned by farfield.js's own farBin into intensity on a polar
     diagram, the peak read high by the largest of many noisy bins and the beam angle with it, and pooling round the

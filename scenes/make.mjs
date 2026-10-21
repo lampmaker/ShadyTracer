@@ -240,7 +240,7 @@ function fromPoints() {
     return { doc, camera: orbit([10, 0, 60], -80, 25, 600) }
 }
 
-/* IMPORTED PARTS (0.72.0, import/): six parts made in OpenCascade (import/test/fixtures/make.py), read from their STEP
+/* IMPORTED PARTS (0.73.0, import/): six parts made in OpenCascade (import/test/fixtures/make.py), read from their STEP
    files -- and the rounded box again from its STL -- by File › Import from file…'s own conversion, each a group of the
    builder's shapes: the plate a box less four holes and a pocket, the lens two spheres and a cylinder, the cup (made
    like the user's Onshape part) its circle and rounded squares. What the import makes is what is here; nothing was
@@ -279,6 +279,9 @@ function parametric() {
     floor(doc, lib(doc, 'white'))
     const al = lib(doc, 'anodised aluminium')
     const hs = group(doc, 'root', 'heatsink', { params: { fins: 9, pitch: 5, finHeight: 25, base: 4, depth: 40 } })
+    // its lengths said (0.72.0): "(mm)" beside them, and a unit's change that keeps the real size converts them, and so
+    // everything bound to them (builder/unitchange.js); the count is no length
+    for (const k of ['pitch', 'finHeight', 'base', 'depth']) M.setLength(doc, hs.id, k, true)
     const plate = shape(doc, hs.id, 'box', { label: 'base plate', params: { size: V(23, 20, 2), rounding: 0.5 }, at: [0, 0, 2], material: al })
     M.setBindings(doc, plate.id, 'size.x = fins * pitch / 2\nsize.y = depth / 2\nsize.z = base / 2\npos.z = base / 2')
     const fins = group(doc, hs.id, 'fins (an array)')

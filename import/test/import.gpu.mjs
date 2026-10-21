@@ -1,5 +1,5 @@
 //======================================================================================================================
-// THE IMPORTED SHAPES' OWN WGSL, RUN (0.72.0, import/). Run: node import/test/import.gpu.mjs
+// THE IMPORTED SHAPES' OWN WGSL, RUN (0.73.0, import/). Run: node import/test/import.gpu.mjs
 //
 // OPTIONAL, AND LOUD ABOUT IT, as the other GPU checks: the `webgpu` package and a Vulkan driver (lavapipe), or it says so
 // and passes.

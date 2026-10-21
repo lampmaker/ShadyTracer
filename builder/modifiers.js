@@ -26,6 +26,10 @@
 // (displace and the relief read the CSG chain above them) is compiled with its children, which is right but slower to
 // edit: a change here that moves a modifier out of its shape costs that, and scenedata.test.mjs says which is which.
 //
+// LENGTHS AND WHAT IS PER ONE, as primitives.js has them: `lengths` in the scene's unit, `perLength` per a length to a
+// power (a twist's rate, a ripple's frequency), so a unit's change that keeps the real size converts both
+// (unitchange.js `dimensions`).
+//
 // Parameter names avoid WGSL builtins -- a parameter is a `let` alias, and one called `round`
 // would hide round() from the code that needs it (codegen's header).
 //======================================================================================================================
@@ -79,6 +83,7 @@ export const MODIFIERS = {
         params: { rate: 1.0, extent: 1.0 },
         ranges: { rate: { min: -10, max: 10, step: 0.01 }, extent: LEN },
         lengths: ['extent'],
+        perLength: { rate: 1 },             // radians per unit: a unit's change converts it too (unitchange.js)
         code: [
             '// Twist about z: "rate" radians per unit of height. Costs a sin and a cos per step.',
             '// A twist stretches space, the more the farther from the axis; "extent" -- how far the',
@@ -95,6 +100,7 @@ export const MODIFIERS = {
         params: { amount: 0.3, extent: 2.0 },
         ranges: { amount: { min: -3, max: 3, step: 0.001 }, extent: LEN },
         lengths: ['extent'],
+        perLength: { amount: 1 },           // radians per unit of x
         code: [
             '// Bend along x, curling toward z: "amount" radians per unit of x. A cheap bend, not an',
             '// exact one; a sin and a cos per step. "extent" -- how far along x the children reach --',
@@ -168,6 +174,7 @@ export const MODIFIERS = {
         params: { amount: 0.05, frequency: 2.0 },
         ranges: { amount: { min: 0, max: 1, step: 0.001 }, frequency: { min: 0.1, max: 20, step: 0.01 } },
         lengths: ['amount'],                // a height; the frequency is waves per unit, not a length
+        perLength: { frequency: 1 },        // ...but per one: a unit's change converts it too
         code: [
             '// Displace: a ripple "amount" high, "frequency" waves per unit, on the children\'s',
             '// surface. Three sines per step, and the ripple steepens the field, so distances are',

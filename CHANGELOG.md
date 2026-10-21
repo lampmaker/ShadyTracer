@@ -15,7 +15,7 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
-## 0.72.0 — 2026-10-21
+## 0.73.0 — 2026-10-21
 
 **STEP and STL files import as the builder's own shapes.** The user asked to start on STL and STEP import and to see
 whether converting a part into primitives with boolean operations would make it fast to trace. It does, for CAD
@@ -104,6 +104,106 @@ file is not in the repository; a cup made like it is (`import/test/fixtures/cup.
 (the benchmark's fixed stage and cameras), and nothing there needed to change. Chapter 3 (Building and bending shapes)
 now names `import/` among what it is about, and its plan line the conversion it will teach: the joins read
 backwards.
+
+## 0.72.0 — 2026-10-21
+
+**A change of the scene's unit asks how: keep the real size, by a scale or by the numbers, or keep the numbers.** The
+user (2026-10-19): a new scene switched from cm to mm drew a box typed 10 "much too big", and 0.1 had to be typed to get
+what looked like 10 mm. Looked into first: the `(mm)` beside the size was right. The shader got 10 and the engine
+0.01 m (read in code: `photometry.js` UNITS, `tracebasics.js` engPerScene; and computed in node through the real model,
+codegen and camera). What was wrong was everything around it. A unit change only reinterpreted the numbers, so a new
+scene's camera, 4 cm from its centre (`project.js` NEW_SCENE_CAMERA), became 4 mm off, and its 25 cm world 25 mm. The
+picture did not change, so nothing on screen said so. And `size` is a box's half size, so 10 was a 20 mm cube with the
+camera inside it. The LED scene the user sent is built 100 times too small (a 35 µm LED, the camera 0.1 mm off), right
+to the eye only against itself.
+- **The question** (`builder/unitdialog.js`), beside the unit row when it is changed, three ways and Cancel:
+  - *Scale the objects (real size kept)*: each top-level node's position and scale times the factor, the numbers
+    inside it as they are -- what a library item pasted from another unit already got (`model.js` insertAsset). Exact
+    for any code, since a node's code runs in its own frame.
+  - *Convert the dimensions (real size kept)*: every position and every length the document says is one times the
+    factor (a block's marked lengths, a light's size, a box's, a blend, a copy's place, a path's and a profile's
+    points), the scales as they are. The built-ins' parameters that are per a length are divided by its power: an
+    aspheric lens's a4 to a10, a twist's rate, a bend's amount, a ripple's frequency (`perLength`, new in
+    `primitives.js` and `modifiers.js`). The scene's own blocks get their defaults and ranges converted; a built-in
+    block stays the built-in, as + makes it in that unit. **What it cannot convert is listed before it is chosen**, from
+    a trial on a copy: a number written in a node's own code, a parameter not marked as a length, a point that adds a
+    plain number to a length, a binding that does, a compile-time whole number that would stop being one.
+  - *Keep the numbers*: what every unit change did until now.
+
+  Both real-size ways also convert the camera's lengths, the scene's radius and tolerance, the optics trace's reach,
+  and the timeline's keys on what they converted. What is in real units already stays: a material's lengths (real mm),
+  a haze box's mean free path, a light's flux and luminance, a ray file's rays (its own scale is divided under a scale,
+  so its world scale stays). The conversion is `builder/unitchange.js`. It refuses only a problem it would make: one the
+  scene had already does not stop it.
+- **One undo step** (`builder/demo.js` setUnit). The view and the timeline are no part of an undo snapshot
+  (`project.js` OUTSIDE_HISTORY), so the step says what it was, and its undo converts them back and its redo on again.
+  A look around in between is kept. **The camera and the keys reach the renderer and the Timeline panel when the scene
+  in its new unit is swapped in** (markShown, after its setScene; or a live sync), not before. Handed over at once,
+  the old scene would be seen from ten times as far for the whole compile (inferred from the order of the code, and
+  changed before it shipped: never seen). An
+  orbit made meanwhile is kept, converted, and the meter's exposure changes write no camera in the old numbers.
+- **A library item being edited** is saved in the unit its numbers are in now, whichever way; one with no size of its
+  own (a built-in shape) stays so.
+- **A transform's scale row reaches its value.** It was held to 0.01 to 10 by 0.01. A scale of 1000 or 0.001 (a
+  conversion by scale; a paste from another unit, before this) showed as 10, or rounded to 0, and the first touch
+  wrote that. Its reach now widens to hold the value, and it steps by a hundredth of the value's decade, as the
+  parameter registry's entry does.
+- **Parametric part** (example): the heatsink's pitch, fin height, base and depth are marked as lengths (`(mm)` beside
+  them), so converting its dimensions converts them and everything bound to them.
+- **Help**: Modelling › *Numbers are in the scene's unit* says the three ways; Optics › units, Parameters and the
+  modifiers' reference ("per the scene's unit") follow.
+- **Tests**: `builder/test/unitchange.test.mjs` (listed in CLAUDE.md, so CI runs it). Every example goes to another
+  unit and back, and so does a scene of its own with blends, copies, lights in scaled groups and both boxes. It is
+  measured in metres through the builder's own readings: every node's place, the estimate of its box, every light's
+  face and flux, the blends, the camera, the radius, the tolerance. Both real-size ways leave all of it where it was
+  and agree with each other. Also the asphere through its JS twin, and the undo and redo through the real builder over
+  a stand-in renderer. A conversion of scale, lengths, blends or copies switched off fails it. `builder/test/panel.check.mjs`
+  answers the question: Cancel, keep, convert. Not run: the picture, which no GPU here can show.
+
+**What to look at:**
+1. A new scene, unit → mm, *Scale the objects* or *Convert the dimensions*: the picture should stay as it was, during
+   the compile too. Then + box with size 10: a 20 mm cube (size is half the side), seen whole from 40 mm.
+2. The same with *Keep the numbers*: as before, the box around the camera.
+3. Ctrl+Z after a conversion: the scene back in cm, the camera with it, no jump in the picture; Ctrl+Y on again.
+4. The LED scene: its unit is right and its numbers 100 times too small. Typing a scale of 100 will not do it: the
+   scale row widens to hold the value it has, and still holds a typed one to 10. Four unit changes will, each leaving
+   the picture as it is: mm → cm *Keep the numbers*, cm → mm *Convert the dimensions*, and both again. The LED is then
+   3.5 mm wide, its dome 1.75, its light 1.5, the camera 10.5 mm off (computed in node through the model on the file
+   sent; the Base keeps its own scale of 0.01, so its size reads 175). Then the light's flux, 0.001 lm: lumens are
+   absolute.
+
+**The tutorial**: chapter 3's excerpt of the twist (`modifiers.js`) now shows `perLength`. Its note says what
+`lengths` and `perLength` are for; it was re-read against the page and stamped. Chapter 30's plan (`tutorial/PLAN.md`)
+now covers what a number means when the scene's unit changes, and `builder/unitchange.js` is among its files. Chapter
+26's excerpt of `modifiers.js` did not change. Nothing else needed to.
+## 0.71.1 — 2026-10-21
+
+**No hard line round a relief cut from another relief.** The user's case: a group with a box of white plaster and a
+sphere of knockdown stucco subtracted from it, a blend on. A thin dark line ran round the hole on the plaster,
+farther out with the blend on and nearer with it at 0, and it went away when both wore the same relief. A CSG group
+with a relief in it divides its result once by the steepest relief slope near the point, so the march does not step
+through a bump. A relief farther than two amplitudes (plus 5/4 of the blend) from its own surface is skipped, so the
+divisor on the plaster was the stucco's (4.67) inside that distance from the sphere and the plaster's (1.11) beyond it.
+The normal is taken by differences of the field, and where the differences straddled that step it turned by up to
+86° (measured in `relief.test.mjs`'s mirror of the two library materials, and on Dawn in the new
+`reliefnormal.gpu.mjs`). Now the normal's looks read the group's result undivided (`scene_api.js NORMAL_LOOK`): a
+normal needs only the field's direction, which the division does not change. The march still divides as before.
+- In a scene with such a group, a hit that takes its normal by differences (a relief's surface, or a shape that gives
+  no normal of its own) looks at the scene four times instead of three. The fourth look is at the hit itself, for the
+  differences' base (`normalAtHitWGSL`), in the surface kernel and the optics trace. Every other scene's kernels do
+  what they did. What the fourth look costs has not been measured, and the look count is a poor guide to it: an early
+  run found that switching the shapes' own normals off cost 4.3× the whole frame (docs/TESTING.md, "Where the render
+  time goes").
+- The surface kernel's loop runs up to 9 trips (was 8), so it keeps its one spare trip after the new look.
+- Not changed: a group under group code (a round, a twist, a relief modifier over it) still divides in a normal's
+  look, because its code reads the value off the surface. A line can still show there.
+- The golden shaders moved for scenes/lighting-room.json and scenes/office-lighting.json, one line each (the
+  division at the group's top), checked against the old codegen before refreezing.
+
+**What to look at:** the plaster box with the stucco sphere cut from it, blend on and at 0: no line round the hole on
+the plaster. Elsewhere the surfaces look as they did. lighting-room and office-lighting are the two examples that take
+the extra look: they should look as before, and if either renders noticeably slower than it did, that is where it
+comes from.
 
 ## 0.71.0 — 2026-10-20
 

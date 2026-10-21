@@ -286,13 +286,13 @@
     <p>and the twist, written as a group's own code, calls it with one over the divisor of section 4 (warp multiplies
       the distances by what it is given):</p>
     <pre data-src="builder/modifiers.js" data-sym="twist: {" data-to="].join('\n'),"
-         data-why="A modifier is a group whose code starts as this; the user can change it. p is the point being asked about; children(C, p) asks the group's shapes at the turned point." data-hash="78234102"></pre>
+         data-why="A modifier is a group whose code starts as this; the user can change it. p is the point being asked about; children(C, p) asks the group's shapes at the turned point. lengths and perLength say which of its numbers are lengths in the scene's unit and which are per one (the rate is radians per unit): what a change of the scene's unit converts when it keeps the real size." data-hash="0937064b"></pre>
     <p>The relief, with its shell and its division, is code of the same kind:</p>
     <pre data-src="builder/modifiers.js" data-sym="const reliefCode" data-to="].join('\n')" data-max="40"
          data-why="peak is the four layers' strengths added up, slope the bound the distance is divided by, reach how far the noise can move the surface. Beyond 2 × reach (and a margin), the plain distance less the reach: no noise. Its comment lines are the code the user sees in the group." data-hash="be46cddc"></pre>
     <p>One more piece: a relief inside a blend is not divided until after the blend (section 8 says why):</p>
     <pre data-src="lib/pathtracer/core/scene_api.js" data-sym="/* A RELIEF'S DISTANCE INTO THE HIT" data-to="return fold(C, VEC4(0.0, 0.0, 0.0, d), m);"
-         data-why="foldRelief folds a relief's distance into the Hit: divided by its slope at once, or, under a blend, undivided, with the slope kept in XF_RL for the group at the top of the blend to divide by once." data-hash="41026d9a"></pre>
+         data-why="foldRelief folds a relief's distance into the Hit: divided by its slope at once, or, under a blend, undivided, with the slope kept in XF_RL for the group at the top of the blend to divide by once. NORMAL_LOOK, between them, is that group's one exception: while the renderer asks for the distances a normal is made from, it does not divide (section 8). The line in the group that reads it is written by the scene builder and is not shown here." data-hash="33d61afd"></pre>
   </div>
 </section>
 
@@ -362,6 +362,19 @@
         <var>k</var>) is exactly smin(<var>x</var>, <var>y</var>, <var>k c</var>) / <var>c</var>. So a relief inside a
         blend goes in undivided, and the top of the blend divides once, by the steepest relief below it
         (<code>foldRelief</code>).</li>
+      <li><strong>A line round a cut.</strong> "The steepest relief below it" is the steepest <em>near the point</em>: a
+        relief farther from its own surface than its band is skipped, and adds nothing. The band is twice the relief's
+        height plus 5/4 of the blend, so the wider the blend, the farther out it reaches. Cut a sphere of steep knockdown
+        stucco from a box of gentle white plaster, and on the plaster the divisor was the stucco's, 4.67, within the
+        stucco's band, and the plaster's, 1.11, beyond it. The surface stayed where it was, since 0 divided by anything
+        is 0. But a normal is worked out from the distances at points a small step apart (chapter 4), and two of them
+        either side of the band's edge came back divided differently: a distance of 0.05 read 0.05 / 1.11 = 0.045 on one
+        side and 0.05 / 4.67 = 0.011 on the other. Their difference was the jump, not the surface's slope, and the normal
+        turned by up to 86°: a thin dark line round the hole, farther out the wider the blend. Dividing every distance
+        by one number does not change which way the arrow points, so since version 0.71.1, when the renderer asks for
+        the distances a normal is made from, the group does not divide (<code>NORMAL_LOOK</code>, declared in the
+        excerpt in section 6). A group inside a group with code of its own still divides then: that code (a rounding,
+        say) may use the distance away from the surface, where the division changes the shape.</li>
       <li><strong>Bumps 1/<var>k</var> too big.</strong> A relief sized in millimetres needs the true scale of the space
         it is in. Under a twist, the scale ShadyTracer kept included the twist's factor <var>k</var> (one over its
         divisor), and the bumps came out 1/<var>k</var> times too big; it now keeps the factors apart
