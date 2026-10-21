@@ -6,7 +6,8 @@ LED and luminaire design that traces the same scene the picture shows.
 
 Nothing to install and no server. The page runs on your own graphics card.
 
-**Run it: <https://lampmaker.github.io/ShadyTracer/>** · Open source, [MIT](LICENSE).
+**Run it: <https://lampmaker.github.io/ShadyTracer/>** · Open source, [MIT](LICENSE) ·
+[♥ Sponsor](https://github.com/sponsors/lampmaker).
 
 ![The raytracer: the scene tree, properties and library on the left, the picture in the middle, the renderer's settings on the right](docs/screenshots/hero.png)
 
@@ -181,7 +182,6 @@ the picture; press **Ctrl K** and type what you are looking for.
   light, so its exposure, tone curve and grading are chosen on a preview afterwards, and saved as often as wanted.
 - Perspective or orthographic camera, orbit or walk.
 
-![The Noise library: surfaces displaced by fractal noise](docs/screenshots/noise.png)
 
 ### Light as numbers
 
@@ -329,14 +329,11 @@ number carries its standard error**.
 - **Colour mixing**: pick three of the scene's lights, a target colour and a total flux, and it sets
   their fluxes (one undo step).
 
-![The RGBW mixer: a map of colour temperature on the detector, and the colour mixing tool](docs/screenshots/colour.png)
 
 **Export**: the intensity table, the illuminance map and every detector hit as **CSV**; any chart as
 **PNG**.
 
 ### Export for 3D printing
-
-![A scene exported as a coloured 3MF and opened in the slicer](docs/screenshots/print.png)
 
 *preview*
 - Put an **export box** around what you want to print, placed with the handles.
@@ -348,7 +345,7 @@ number carries its standard error**.
 
 ### Animation and video
 
-![The Animate layout: keyframe tracks under the picture, with the export frame drawn over it](docs/screenshots/timeline.png)
+![The Animate layout: keyframe tracks under the picture, with the export frame drawn over it](docs/screenshots/animate.png)
 
 *preview*
 - **Keyframes on any live setting**: the camera, the sun, a light's flux, an object's position.
@@ -602,6 +599,10 @@ in a `REVISION` file so the page can name its build there too.
 © Matthijs Keuper. **MIT licence**: see [`LICENSE`](LICENSE). TinyWebGPU and GUISTUFF are separate
 repositories, also MIT. What in this repository is someone else's, and under which licence, is in
 [`THIRD_PARTY.md`](THIRD_PARTY.md).
+
+ShadyTracer is free and stays free. If it is useful to you, a tip, one-time or monthly, through
+[GitHub Sponsors](https://github.com/sponsors/lampmaker) keeps it going. The app has the same link under
+Help › Support ShadyTracer….
 
 Built on, with thanks, all under the MIT licence:
 [dockview](https://github.com/dockview/dockview) 8.3.1 (docking),

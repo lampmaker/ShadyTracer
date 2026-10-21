@@ -118,7 +118,7 @@
 // its two new parameters (`let softness = UB.softness_m1;`, `let level = UB.level_m1;`), and its uniforms gained exactly
 // those two. The freeze changed that scene's entries alone, key by key; the other 47 documents did not move.
 //
-// REFROZEN FOR TWO SCENES (2026-10-20, 0.70.1), for a fix the user asked for (a hard line round a stucco sphere cut from
+// REFROZEN FOR TWO SCENES (2026-10-20, 0.71.1), for a fix the user asked for (a hard line round a stucco sphere cut from
 // a plaster box, both with reliefs, gone when both wore the same one): a CSG chain's outermost group with no code at or
 // above it divides by XF_RL only outside a normal's look (scene_api.js NORMAL_LOOK). Checked before freezing, old
 // codegen (a worktree of d4f45de) against new, both modes, all four texts: in each exactly one line moved, `C = fold(C,

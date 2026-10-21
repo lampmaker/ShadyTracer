@@ -1227,7 +1227,7 @@ eq('uniformName', uniformName('n7', 'radius'), 'radius_n7')
     ok('a smooth union\'s child: the band wider by 5/4 of every join that reads it', body.includes(skip('a', ' + 1.25 * 4.0 * UB.blend_bu')) && body.includes(skip('b', ' + 1.25 * 4.0 * UB.blend_bu')))
     ok('...its distance folded undivided, its slope left to the group', body.includes(up('a')) && body.includes(up('b')) && !body.includes(divided('a')))
     const B = body.slice(body.indexOf('// group bu'), body.indexOf('XF_M = xfm_bu; XF_S = xfs_bu;'))
-    // ...outside a normal's look (scene_api.js NORMAL_LOOK, 0.70.1): there the division jumped at a band's edge
+    // ...outside a normal's look (scene_api.js NORMAL_LOOK, 0.71.1): there the division jumped at a band's edge
     const fin = 'C = fold(C, VEC4(k_bu.xyz, k_bu.w / select(XF_RL, 1.0, NORMAL_LOOK)), km_bu);'
     ok('...the group saves XF_RL and starts it at 1 before its children, divides its result by it once, and puts it back',
         B.indexOf('let xfrl_bu = XF_RL; XF_RL = 1.0;') > 0 && B.indexOf('let xfrl_bu = XF_RL; XF_RL = 1.0;') < B.indexOf('// node a')

@@ -292,7 +292,7 @@
          data-why="peak is the four layers' strengths added up, slope the bound the distance is divided by, reach how far the noise can move the surface. Beyond 2 × reach (and a margin), the plain distance less the reach: no noise. Its comment lines are the code the user sees in the group." data-hash="be46cddc"></pre>
     <p>One more piece: a relief inside a blend is not divided until after the blend (section 8 says why):</p>
     <pre data-src="lib/pathtracer/core/scene_api.js" data-sym="/* A RELIEF'S DISTANCE INTO THE HIT" data-to="return fold(C, VEC4(0.0, 0.0, 0.0, d), m);"
-         data-why="foldRelief folds a relief's distance into the Hit: divided by its slope at once, or, under a blend, undivided, with the slope kept in XF_RL for the group at the top of the blend to divide by once. NORMAL_LOOK, between them, is that group's one exception: while the renderer asks for the distances a normal is made from, it does not divide (section 8). The line in the group that reads it is written by the scene builder and is not shown here." data-hash="bfad0eea"></pre>
+         data-why="foldRelief folds a relief's distance into the Hit: divided by its slope at once, or, under a blend, undivided, with the slope kept in XF_RL for the group at the top of the blend to divide by once. NORMAL_LOOK, between them, is that group's one exception: while the renderer asks for the distances a normal is made from, it does not divide (section 8). The line in the group that reads it is written by the scene builder and is not shown here." data-hash="33d61afd"></pre>
   </div>
 </section>
 
@@ -371,7 +371,7 @@
         either side of the band's edge came back divided differently: a distance of 0.05 read 0.05 / 1.11 = 0.045 on one
         side and 0.05 / 4.67 = 0.011 on the other. Their difference was the jump, not the surface's slope, and the normal
         turned by up to 86°: a thin dark line round the hole, farther out the wider the blend. Dividing every distance
-        by one number does not change which way the arrow points, so since version 0.70.1, when the renderer asks for
+        by one number does not change which way the arrow points, so since version 0.71.1, when the renderer asks for
         the distances a normal is made from, the group does not divide (<code>NORMAL_LOOK</code>, declared in the
         excerpt in section 6). A group inside a group with code of its own still divides then: that code (a rounding,
         say) may use the distance away from the surface, where the division changes the shape.</li>

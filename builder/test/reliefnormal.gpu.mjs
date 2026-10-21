@@ -1,5 +1,5 @@
 //======================================================================================================================
-// THE NORMAL ACROSS A RELIEF'S BAND EDGE, on a WebGPU in node (Dawn) -- 0.70.1 (scene_api.js NORMAL_LOOK). Run:
+// THE NORMAL ACROSS A RELIEF'S BAND EDGE, on a WebGPU in node (Dawn) -- 0.71.1 (scene_api.js NORMAL_LOOK). Run:
 //   node builder/test/reliefnormal.gpu.mjs     (optional: npm i -g webgpu, and lavapipe; says so and passes without)
 //
 // The user's case (2026-10-20): a sphere of knockdown stucco cut from a box of white plaster, the library's two, a
@@ -11,7 +11,7 @@
 // neighbour a normal turns by a hair over that; the line turned it by degrees. The same for the two other normals by
 // differences: calcNormals_fast, the optics trace's (its text cut from tracebasics.js PROCESSING_ASKS), over the same
 // hits, and the pick's central differences (core/pick.js), ray by ray near the edge. And all three through the scene's
-// text as it was before 0.70.1 (the top dividing in a normal's look too, so NORMAL_AT_HIT false): the line, which the
+// text as it was before 0.71.1 (the top dividing in a normal's look too, so NORMAL_AT_HIT false): the line, which the
 // test must see, or it could not fail.
 //======================================================================================================================
 import { readFileSync } from 'node:fs'
@@ -65,7 +65,7 @@ M.addGroup(doc, 'root', { id: 'g', blend: BLEND })
 M.addObject(doc, 'g', { id: 'bx', primitive: 'box', material: plaster.id, params: { size: { x: 100, y: 100, z: 20 }, rounding: 0 }, transform: at(0, 0, -20) })
 M.addObject(doc, 'g', { id: 'sp', primitive: 'sphere', material: stucco.id, params: { radius: 30 }, transform: at(0, 0, 10), join: 'subtract' })
 const S = generate(...M.generateArgs(doc, { id: 'relief-normal' }))
-// ...and its text as before 0.70.1: the top dividing in a normal's look too
+// ...and its text as before 0.71.1: the top dividing in a normal's look too
 const was = t => t.replace('/ select(XF_RL, 1.0, NORMAL_LOOK))', '/ XF_RL)')
 const WAS = { ...S, wgsl: was(S.wgsl), pickWgsl: was(S.pickWgsl) }
 ok('the group is a chain\'s top that leaves its result undivided in a normal\'s look, and the surface kernel looks at the hit for it',

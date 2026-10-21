@@ -1110,11 +1110,11 @@ changed: they are on sections this change did not touch, and they are the next r
 | Section 3's numbers against the screenshots beside it (± 0.001 against ± 0.009; "about 0.21"); "a fifth" in section 4 against "a sixth" in section 8; "0.28" read as a lamp size. | **Answered, not changed here**: sections this change did not touch; the next round's, first. |
 | NEE used before it is defined; "last bounce" and "last round" told twice; BSDF and pbrt; the cone's size; a colour meaning three things. | **Answered, not changed here**: as above. |
 
-## Round 11, 2026-10-20 (0.70.1: chapters 3 and 4, a line round a cut)
+## Round 11, 2026-10-20 (0.71.1: chapters 3 and 4, a line round a cut)
 
 Reports: [shapes](reports/2026-10-20-round11/shapes.md), [normals](reports/2026-10-20-round11/normals.md).
 
-**Why this round.** Version 0.70.1 stopped a CSG group with reliefs in it from dividing its distance while the renderer
+**Why this round.** Version 0.71.1 stopped a CSG group with reliefs in it from dividing its distance while the renderer
 takes a normal (`NORMAL_LOOK`): the divisor jumped where a steep relief's band ended, and the normal's differences drew a
 line round a stucco hole cut in plaster. Chapter 3 and chapter 4 each gained a "What went wrong before" item for it, and
 their excerpts (`foldRelief`'s comment, `calcNormals_fast`) moved, so each page had a new reader, with a question on the

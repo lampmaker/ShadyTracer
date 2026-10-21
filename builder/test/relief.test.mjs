@@ -19,7 +19,7 @@
 //     then blended), where the wrapper as it was left it bare, and its value no farther than that surface;
 //   - THE NOISE RELIEF MODIFIER IN A SMOOTH BLEND, the same on the real fBm: the template's surface is the true one
 //     where the code as it was (divided before the blend) is off, and its value no farther than that surface;
-//   - THE NORMAL ACROSS A BAND'S EDGE (0.70.1), on the real fBm: the library's knockdown stucco cut from its white
+//   - THE NORMAL ACROSS A BAND'S EDGE (0.71.1), on the real fBm: the library's knockdown stucco cut from its white
 //     plaster, smooth and hard -- the normal as it was turned where the stucco's band ends (the user's line), the
 //     undivided normal the field's own gradient all the way across, and the normal it was everywhere else.
 //======================================================================================================================
@@ -254,7 +254,7 @@ console.log(`  shell: ${shellAnswered} probes; nearest surface point found at le
         both('rh') === '1.25 * (UB.jblend_rh + UB.jblend_zq) | true', both('rh'))
     ok('...a relief over a relief: the outer 0, the inner unbounded', both('rf') === '0.0 | false' && both('rg') === '1.0e30 | false', `${both('rf')} / ${both('rg')}`)
     ok('...code above a CSG group: unbounded, and the group divides', both('ri') === '1.0e30 | true', both('ri'))
-    // ...by it outside a normal's look (scene_api.js NORMAL_LOOK, 0.70.1) -- always under code (tz), which reads the value
+    // ...by it outside a normal's look (scene_api.js NORMAL_LOOK, 0.71.1) -- always under code (tz), which reads the value
     const rl = id => id === 'tz' ? 'XF_RL' : 'select(XF_RL, 1.0, NORMAL_LOOK)'
     ok('...the groups that divide save, reset and put back XF_RL; no other does; undivided in a normal\'s look, but under code',
         ['x', 'y', 'z', 'tz'].every(id => now.includes(`let xfrl_${id} = XF_RL; XF_RL = 1.0;`) && now.includes(`C = fold(C, VEC4(k_${id}.xyz, k_${id}.w / ${rl(id)}), km_${id});`))
@@ -435,7 +435,7 @@ console.log(`  shell: ${shellAnswered} probes; nearest surface point found at le
     console.log(`  modifier blend: fillet surface off by ${worst.now.toExponential(1)} mm (as it was ${worst.was.toFixed(3)}, the root's shell ${worst.narrow.toFixed(3)}); value over the nearest surface point found: ${over.toFixed(3)} (undivided ${overUndivided.toFixed(3)})`)
 }
 
-// ---- THE NORMAL ACROSS A BAND'S EDGE (0.70.1; scene_api.js NORMAL_LOOK). The user's case (2026-10-20): a sphere of
+// ---- THE NORMAL ACROSS A BAND'S EDGE (0.71.1; scene_api.js NORMAL_LOOK). The user's case (2026-10-20): a sphere of
 //      knockdown stucco cut from a box of white plaster, the library's two, and a hard line on the plaster round the
 //      cut -- farther out with the blend on, nearer with it at 0, gone when both wore the same relief. A chain's top
 //      divides by XF_RL, the steepest slope among the reliefs WITHIN THEIR BANDS: on the plaster face it was the
