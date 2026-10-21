@@ -15,6 +15,40 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.73.1 — 2026-10-21
+
+**The README brought up to date, with its pictures, and the site at shadytracer.com.** The user believed the README
+was outdated, and added nine screenshots. It was: written mostly around 0.46 to 0.63, it said nothing of the photon map,
+the haze box, the camera's lens, dispersion and coatings, the Quality presets, the bake, the ruler, the Points mode,
+component bindings, the Help panel or GIF export. Its counts were old: 17 panels, 24 shapes, 49 built-in items and 18
+materials, 1269 kernel builds, about forty test files, where there are 14 panels (plus a chart panel each), 26 shapes,
+43 items and 42 materials, 6358 builds and 135 test files. Its *Not there yet* listed autosave, depth of field,
+dispersion, the help's tracks and a light seen through its own lens, all built. The Files bullet described the File
+menu as it was before 0.63.0. And it still claimed an adaptive per-sample budget, which went in 0.10.0. Every fact was
+checked against the code, CHANGELOG, FEATURES.md, docs/TESTING.md and roadmap/PLAN.md before it was written.
+- **README.md**: every section above; the three answered tests it lacked (`light-vs-emitter`, `haze`, `optics-mode`)
+  and the full list waiting for a first press; the *Beam in dusty air* example; the missing keys (F1, the Points
+  mode's, the timeline's, Ctrl's grid); the layout's `help/` and `ui-mockups/`; *Not there yet* in the plans' order,
+  with the next steps they name. Each picture's caption now says what the picture shows: the old ones named scenes
+  from before 0.54.0.
+- **docs/screenshots/README.md**: the nine files taken, what each shows, and the three not taken.
+- **FEATURES.md**: the same facts, nothing else (the haze box row, GIF, the counts, the help's tracks, the Files row,
+  the scene format's version 22, the own-lens item done).
+- **shadytracer.com** in the README, `docs/README.md` and the tutorial's chapter 0 (*How to read this*), for
+  lampmaker.github.io.
+
+**What to look at:** the README on GitHub once merged. Each caption against its picture; the ✓ and *preview* marks
+against what you have seen on your card (✓ only where docs/TESTING.md records a closed-form answer on real hardware);
+and the shadytracer.com links.
+
+**Tests:** none changed: no code did. `version.test.mjs`, `funding.test.mjs` (the README still links the Sponsors
+page) and `check-shaders.mjs` (6358 builds) pass, and every relative link and image in README.md, FEATURES.md and
+docs/screenshots/README.md exists. **The tutorial:** chapter 0's one change is the link itself, read in place.
+`affected.mjs` ties chapter 26 to a CHANGELOG line this entry moved down; the chapter cites it by its text, which is
+unchanged, and `tutorial.test.mjs` passes. Nothing else in the tutorial needed to change. Written as 0.71.1; `main`
+took that number first (the relief normal), then 0.72.0 (the unit change) and 0.73.0 (STEP and STL import), so this
+is 0.73.1, its counts taken again after each merge; the import's own README and FEATURES lines kept beside these.
+
 ## 0.73.0 — 2026-10-21
 
 **STEP and STL files import as the builder's own shapes.** The user asked to start on STL and STEP import and to see
