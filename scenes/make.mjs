@@ -383,14 +383,21 @@ function glassLiquid() {
    the table -- daylight and a lamp together, each in real units: the sun through the window, the lamp's 1500 lm. */
 function lighting() {
     const doc = scene('Lighting a room', { unit: 'm', radius: 200, env: SUN(30, 20) })   // on the window's side, +y
-    floor(doc, lib(doc, 'wood'))
+    /* THE FLOOR'S GRAIN ALONG x (model.js setPattern, `0.next`; the user, 2026-10-21: "yes, turn the floor too"), as the
+       table top's below: unturned, the floor was one log's end grain 4 m across, rings round a point beside the origin */
+    const boards = floor(doc, lib(doc, 'wood'))
+    M.setPattern(doc, boards.id, { pos: { x: 0, y: 0, z: 0 }, rot: { x: 0, y: 90, z: 0 } })
     const room = group(doc, 'root', 'room')
     shape(doc, room.id, 'box', { label: 'outside', params: { size: V(2.1, 1.6, 1.4), rounding: 0 }, at: [0, 0, 1.3], material: lib(doc, 'white plaster') })
     shape(doc, room.id, 'box', { label: 'inside', params: { size: V(2, 1.5, 1.3), rounding: 0 }, at: [0, 0, 1.3], material: lib(doc, 'white plaster'), join: 'subtract' })
     shape(doc, room.id, 'box', { label: 'window', params: { size: V(0.8, 0.2, 0.6), rounding: 0 }, at: [0, 1.55, 1.5], material: lib(doc, 'white plaster'), join: 'subtract' })
     // a table 1.6 x 0.9 m, 0.75 high; a bowl on it
     const t = group(doc, 'root', 'table', { at: [0, -0.2, 0] })
-    shape(doc, t.id, 'box', { label: 'top', params: { size: V(0.8, 0.45, 0.02), rounding: 0.005 }, at: [0, 0, 0.73], material: lib(doc, 'wood') })
+    /* THE TOP'S GRAIN ALONG ITS LENGTH (model.js setPattern, `0.next`): wood's log runs along its object's z, which is the
+       legs' length and the top's thickness -- so the top showed end grain, rings round a point (the user, 2026-10-21).
+       Turned 90 degrees about y, the log's axis is the top's x; its heart, 15 cm along the log's x, is above the board */
+    const top = shape(doc, t.id, 'box', { label: 'top', params: { size: V(0.8, 0.45, 0.02), rounding: 0.005 }, at: [0, 0, 0.73], material: lib(doc, 'wood') })
+    M.setPattern(doc, top.id, { pos: { x: 0, y: 0, z: 0 }, rot: { x: 0, y: 90, z: 0 } })
     for (const [x, y] of [[-0.72, -0.38], [0.72, -0.38], [-0.72, 0.38], [0.72, 0.38]])
         shape(doc, t.id, 'box', { label: 'leg', params: { size: V(0.03, 0.03, 0.355), rounding: 0.003 }, at: [x, y, 0.355], material: lib(doc, 'wood') })
     shape(doc, 'root', 'sphere', { label: 'ball', params: { radius: 0.12 }, at: [0.3, -0.2, 0.87], material: lib(doc, 'glossy red plastic') })

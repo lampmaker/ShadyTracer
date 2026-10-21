@@ -72,8 +72,11 @@ for (const { name: file } of EVERY_SCENE) {
             && S1.every(x => !x.box || [0, 1, 2].every(k => x.box.lo[k] < x.box.hi[k])), `${S1.length} solids, ${S1.filter(x => x.box).length} boxed`)
     }
 
-    // ---- edits that are data alone
-    const o = topObject(doc) || objects(doc)[0]
+    /* ---- edits that are data alone, to an object that is a record: one compiled as before -- a relief's, or one in its
+       pattern frame (model.js setPattern, `0.next`: Lighting a room's floor, its first top-level object) -- is text, and
+       copying it is a compile, as a new block is */
+    const record = n => !s.compiledIds?.has(n.id)
+    const o = [topObject(doc), ...doc.root.children, ...objects(doc)].find(n => n?.kind === 'object' && n.type === 'code' && record(n))
     if (o) {
         /* a parameter that a scaling changes: a number other than zero, or a vector's x other than zero (a box's
            rounding is 0 in menger and RGBW_mixer, and 0 * 1.5 is no edit) */

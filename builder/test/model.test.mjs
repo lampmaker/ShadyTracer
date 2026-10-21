@@ -1055,7 +1055,7 @@ throws('another version is refused, not guessed at',
     ok('a file naming no material, a stored false and a root with one are refused', p.some(x => /'g': no material 'nope'/.test(x))
         && p.some(x => /'a': ownMaterial/.test(x)) && p.some(x => /root has no material/.test(x)), JSON.stringify(p))
     const v22 = JSON.parse(M.serialize(M.createDoc())); v22.version = 22
-    ok('a version 22 file reads as the current version, nothing changed', M.parse(JSON.stringify(v22)).version === M.VERSION && M.VERSION === 23)
+    ok('a version 22 file reads as the current version, nothing changed', M.parse(JSON.stringify(v22)).version === M.VERSION && M.VERSION >= 23)
 }
 
 //----------------------------------------------------------------------------------------------

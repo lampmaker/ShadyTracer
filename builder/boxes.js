@@ -142,8 +142,10 @@ export function geometryKey(doc, id) {
     /* a node's JOIN (model version 14) shapes what its surface is in its group -- the cut face of a subtraction
        -- and its siblings' shape it too: every group above carries its children's joins, as it carried its op */
     // its code and constants are its block's (model.js version 16): a block's code edited moves every user's shape
+    // ...and with a relief, its pattern frame (model.js setPattern): where the relief is read
     const own = (n, over) => ({ type: n.type, code: codeOf(doc, n), params: n.params, constants: blockOf(doc, n)?.constants, enabled: n.enabled,
-                        shape: n.light?.shape, twoSided: n.light?.twoSided, relief: reliefOf(n, over), join: n.join, joinBlend: n.joinBlend })
+                        shape: n.light?.shape, twoSided: n.light?.twoSided, relief: reliefOf(n, over), join: n.join, joinBlend: n.joinBlend,
+                        ...(reliefOf(n, over) && n.pattern ? { pattern: n.pattern } : {}) })
     // straightMaterial too: it moves where a relief inside is read, and a relief is shape
     const above = n => ({ code: codeOf(doc, n), params: n.params, blend: n.blend, enabled: n.enabled, straight: n.straightMaterial, copies: n.copies,
                           joins: (n.children || []).map(c => [c.join, c.joinBlend]) })

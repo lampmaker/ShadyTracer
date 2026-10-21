@@ -1,6 +1,6 @@
 {
   "format": "raytracer-scene",
-  "version": 23,
+  "version": 24,
   "title": "Fresnel or plano-convex",
   "nextId": 12,
   "unit": "mm",

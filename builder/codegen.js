@@ -357,6 +357,16 @@ export const OBJECT_CODE_TEMPLATE = [
 ].join('\n')
 
 export const xfName = id => uniformName(id, 'xf')
+/* A NODE'S PATTERN FRAME (model.js setPattern, version 24): one mat4 as a transform's, its scale 1 */
+export const patName = id => uniformName(id, 'pat')
+/** THE PATTERN FRAME IN THE TEXT: a node's (model.js setPattern) where it changes something -- an object (not a light
+ *  or a box) whose material code reads its point anywhere in the scene (`wantLocal`) or whose material has a relief, or
+ *  a group that folds its children into the scene as one shape, whose fold is where their material reads its point, when
+ *  one does: a CSG group, or group code on its children's result (isAfter: a round, a shell). Anywhere else it is
+ *  nothing, and the scene's text is what it was without it. The scene as data compiles a node it is in (scenedata.js). */
+export const patterned = (n, { wantLocal = false, relief = false } = {}) => !!n?.pattern
+    && (n.kind === 'object' ? (wantLocal || relief) && !!NODE_TYPES[n.type] && n.type !== 'light' && n.type !== 'export' && n.type !== 'haze'
+        : n.kind === 'group' && wantLocal && (isCsg(n) || isAfter(n, { straight: false })))
 /** An array's copy i (model.js copies, version 17): its transform, one mat4 uniform a copy (uniforms are not arrays) */
 export const copyName = (id, i) => uniformName(id, `cp${i}`)
 export const blendName = id => uniformName(id, 'blend')
@@ -1329,6 +1339,25 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
         if (inStraight(n)) line(d, `XF_Q = xfq_${n.id}; XF_QM = xfqm_${n.id}; XF_QS = xfqs_${n.id};`)
         if (wantLocal) line(d, `XF_P = xfp_${n.id};`)
     }
+    /* THE PATTERN FRAME (model.js setPattern, version 24): where a node's material lays its pattern out, a place and a
+       turn in the node's own frame. A hit records its point and its frame (scene_api.js fold, LOCAL_CAPTURE), so here
+       they are moved by it, as the material frame of a straight group's is: XF_P the point in the pattern's frame, XF_QM
+       its turn to the world, XF_STRAIGHT so fold records XF_QM. The scale is XF_S, or XF_QS in a straight group, as it
+       was: the frame has none. Only while capturing -- nothing else reads them, so a march pays one branch -- and put
+       back after, so a node folded next records its own. An object's whole block (its relief's fold too); a CSG group's
+       own fold; an after group's code (a round, a shell), whose children are a Hit of their own (XF_SUB) and whose fold
+       is its code's. */
+    const patIn = (d, n) => {
+        const T = `UB.${patName(n.id)}`
+        line(d, `let xfpp_${n.id} = XF_P; let xfpm_${n.id} = XF_QM; let xfps_${n.id} = XF_QS; let xfpst_${n.id} = XF_STRAIGHT;`)
+        line(d, 'if (LOCAL_CAPTURE) {     // its pattern frame: the point and the turn a hit on it records')
+        line(d + 1, 'if (!XF_STRAIGHT) { XF_QM = XF_M; XF_QS = XF_S; }')
+        line(d + 1, `XF_P = xfPoint(XF_P, ${T}); XF_QM = XF_QM * xfRot(${T}); XF_STRAIGHT = true;`)
+        line(d, '}')
+    }
+    const patOut = (d, n) => line(d, `XF_P = xfpp_${n.id}; XF_QM = xfpm_${n.id}; XF_QS = xfps_${n.id}; XF_STRAIGHT = xfpst_${n.id};`)
+    // declared wherever it changes something, so a value moved is a write to a uniform the scene has
+    const patDecl = n => { uniforms[patName(n.id)] = { type: 'mat4x4<f32>', def: matrixOf({ ...n.pattern, scale: 1 }) } }
 
     const object = (d, node) => {
         const type = NODE_TYPES[node.type]
@@ -1354,6 +1383,7 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
         const L = node.type === 'light' ? lightOfId.get(node.id) : null
         if (hidden(node) || (node.type === 'light' && !L) || node.type === 'export' || node.type === 'haze') {
             if (node.transform) uniforms[xfName(node.id)] = { type: 'mat4x4<f32>', def: matrixOf(node.transform) }
+            if (patterned(node, { wantLocal, relief: reliefOf.has(node.material) })) patDecl(node)
             const why = node.type === 'export' ? 'an export box: draws nothing'
                 : node.type === 'haze' ? 'a haze box: draws nothing (the renderer\'s dust, scene.haze)'
                 : node.type !== 'light' ? 'an optics limiter, not in the picture'
@@ -1396,10 +1426,13 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
            UNINDENTED -- the line and the column the error report quotes are the ones the user
            typed. (It used to be indented by eight spaces, and every column was eight off.) */
         const relief = reliefOf.get(node.material)
-        line(d, `// node ${node.id} (${node.type})${relief ? `, with the relief of material ${relief.id}` : ''}`)
+        const pat = patterned(node, { wantLocal, relief: !!relief })
+        if (pat) patDecl(node)
+        line(d, `// node ${node.id} (${node.type})${relief ? `, with the relief of material ${relief.id}` : ''}${pat ? ', in its pattern frame' : ''}`)
         line(d, '{')
         tagIn(d + 1, node)
         enter(d + 1, node)
+        if (pat && wantLocal) patIn(d + 1, node)
         if (!relief) {
             line(d + 1, '{')
             for (const a of aliasPrelude(node.id, params, material, constants, undefined, k => handleOf(node.id, k))) line(d + 2, a)
@@ -1439,12 +1472,15 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
             line(d + 1, `let ${a} = mm(${A}) * XF_K;`)
             line(d + 1, `if (abs(${s}.w) > 2.0 * ${a}${reach}) { C = fold(C, VEC4(0.0, 0.0, 0.0, ${s}.w - sign(${s}.w) * ${a}), ${sm}); }`)
             // under a straight group, the relief reads the material frame's point: layers level on a twisted shape
-            const at = inStraight(node) ? 'XF_Q * XF_QS' : 'p * (XF_S / XF_K)'
+            const at0 = inStraight(node) ? 'XF_Q * XF_QS' : 'p * (XF_S / XF_K)'
+            // ...and in its pattern frame, where it has one: the point moved and turned by it, the scale as it was
+            const at = !pat ? at0 : inStraight(node) ? `xfPoint(XF_Q, UB.${patName(node.id)}) * XF_QS` : `xfPoint(p, UB.${patName(node.id)}) * (XF_S / XF_K)`
             /* ...and the scene's point, where the relief reads it: the ray's own position, which SDF and every
                children function evaluate at (r in scope in both), whatever frame or warp the object is in */
             const world = readsWorld(relief.relief.code) ? ', r.pos / mm(1.0)' : ''
             line(d + 1, `else { let hs = relief_${relief.id}(${at} / mm(1.0)${world}); C = foldRelief(C, ${s}.w - mm(hs.x) * XF_K, ${sm}, 1.0 + hs.y, ${!!chain}); }`)
         }
+        if (pat && wantLocal) patOut(d + 1, node)
         leave(d + 1, node)
         tagOut(d + 1, node)
         line(d, '}')
@@ -1534,7 +1570,9 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
     const combineClose = (d, g) => {
         const k = `k_${g.id}`, km = `km_${g.id}`
         /* Already world-space: every child went through its own transform on the way in. Folded
-           BEFORE leaving the group's frame, so a local point recorded for it is the group's. */
+           BEFORE leaving the group's frame, so a local point recorded for it is the group's -- or its pattern frame's */
+        const pat = patterned(g, { wantLocal }) && isCsg(g)
+        if (pat) { patDecl(g); patIn(d, g) }
         if (!reliefTops.has(g.id)) line(d, `C = fold(C, ${k}, ${km});`)
         else {
             /* ...undivided in a normal's look (scene_api.js NORMAL_LOOK): the normal reads the direction alone, and the
@@ -1544,6 +1582,7 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
             line(d, `C = fold(C, VEC4(${k}.xyz, ${k}.w / ${rl}), ${km});`)
             line(d, `XF_RL = xfrl_${g.id};`)
         }
+        if (pat) patOut(d, g)
         // ...and then its lights, into the same C the combine went into, in this group's frame
         for (const n of hoistedAt.get(g.id) || []) emitHoisted(d, n)
     }
@@ -1705,6 +1744,9 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
                 line(d + 1, `let xfq_${g.id} = XF_Q; let xfqm_${g.id} = XF_QM; let xfqs_${g.id} = XF_QS; let xfst_${g.id} = XF_STRAIGHT;`)
                 line(d + 1, 'XF_Q = p; XF_QM = XF_M; XF_QS = XF_S / XF_K; XF_STRAIGHT = true;     // its materials straight from here down')
             }
+            // an after group's pattern frame round its code, whose fold is the one a hit on it records (a CSG group's: its combine)
+            const pat = patterned(g, { wantLocal }) && !isCsg(g)
+            if (pat) { patDecl(g); patIn(d + 1, g) }
             line(d + 1, '{')
             // a var, so the code can assign it; the aliases and the code in a block of their own
             line(d + 2, 'var p = p;')
@@ -1712,6 +1754,7 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
             const { text, shifts } = renameChildren(g.code, g.id)
             e.from(g.id, text, 1, shifts)
             line(d + 1, '}')
+            if (pat) patOut(d + 1, g)
             // XF_K with them when a relief reads it: a warp's factor must not outlive the group
             line(d + 1, `XF_M = xfmc_${g.id}; XF_S = xfsc_${g.id};${keepK ? ` XF_K = xfkc_${g.id};` : ''}`)
             if (root) line(d + 1, `XF_Q = xfq_${g.id}; XF_QM = xfqm_${g.id}; XF_QS = xfqs_${g.id}; XF_STRAIGHT = xfst_${g.id};`)

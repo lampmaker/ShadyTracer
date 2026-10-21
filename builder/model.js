@@ -32,7 +32,7 @@
 //======================================================================================================================
 
 import { FIELDS, defaults as materialDefaults, PALETTE_V3, PRESETS, MATERIAL_CODE_TEMPLATE, RELIEFS, RELIEF_SCOPE, reliefMaterialId, reliefOwner } from './materials.js'
-import { NODE_TYPES, GROUP_SCOPE, isCsg, hasCode } from './codegen.js'
+import { NODE_TYPES, GROUP_SCOPE, isCsg, hasCode, isAfter } from './codegen.js'
 import { PRIMITIVES, primitiveObject } from './primitives.js'
 import { MODIFIERS, modifierGroup } from './modifiers.js'
 
@@ -131,7 +131,14 @@ export const FORMAT = 'raytracer-scene'
    codegen, the scene as data and the bake see each object's worn material and nothing else, so a scene without a
    group material compiles to the text it did. Version 22 files have none: nothing to change. A builder of 22 refuses
    a file of 23, rather than show every object in its own material and save the scene without the group's. */
-export const VERSION = 23
+/* 24: A PATTERN FRAME (`0.next`; codegen.js THE PATTERN FRAME): an object, or a group that makes its children one shape (a
+   CSG group, a round, a shell: patternOwner), may hold `pattern` -- { pos, rot }, a place and a turn in its own frame, as
+   a child's transform would be, without a scale -- where its material's
+   pattern is laid out: a material's p_local and R_local (wood's rings, brushed metal's strokes, a checker's squares)
+   and its relief are read in that frame instead of the object's own. The user, 2026-10-21: the grain of a table's top
+   and of its legs, one wood, ran the same way in each, so the top showed end grain. Version 23 files have none:
+   nothing to change. A builder of 23 refuses a file of 24 rather than lose every pattern turned on its first save. */
+export const VERSION = 24
 /** The most copies an array has: each is a walk of its children at every step near them, until a BVH can tell which
  *  copies are near (call 4: chosen, not measured). */
 export const ARRAY_MAX = 16
@@ -177,9 +184,9 @@ import { INTERPS, EASES } from '../lib/timeline/timeline.js'
 /** Parameter names that would collide with what codegen declares for every node:
  *  `xf_<id>` (the transform), `blend_<id>` (a group's blend), `bxlo_<id>` / `bxhi_<id>` (a top-level
  *  node's bounding box, for culling), `vis_<id>` (its visibility under liveVisibility -- missing here
- *  until 2026-09-30, when a parameter `vis` would have been declared over it), and `jblend_<id>` (its
- *  own join blend, version 14). */
-export const RESERVED_PARAMS = ['xf', 'blend', 'bxlo', 'bxhi', 'vis', 'jblend']
+ *  until 2026-09-30, when a parameter `vis` would have been declared over it), `jblend_<id>` (its
+ *  own join blend, version 14), and `pat_<id>` (its pattern frame, version 24). */
+export const RESERVED_PARAMS = ['xf', 'blend', 'bxlo', 'bxhi', 'vis', 'jblend', 'pat']
 
 /** Ids codegen uses for things that are not nodes -- the functions block maps its lines to
  *  'functions' -- so no node or material may take them. */
@@ -1942,6 +1949,45 @@ export function setStraightMaterial(doc, id, on) {
     return doc
 }
 
+/* THE PATTERN FRAME (version 24; codegen.js THE PATTERN FRAME): where a node's material lays its pattern out, in the
+   node's own frame -- the pattern moved by `pos` and turned by `rot` (degrees about x, then y, then z, as a transform's),
+   the shape not. */
+/** The pattern frame that changes nothing: the object's own. */
+export const patternIdentity = () => ({ pos: { x: 0, y: 0, z: 0 }, rot: { x: 0, y: 0, z: 0 } })
+/** Whether a node can hold one: an object that wears a material (not a light or a box), or a group -- whose frame is
+ *  where its children's material is read when it folds them as one shape (patternOwner), and nothing for a plain one. */
+export const canPattern = n => n?.kind === 'group' || (n?.kind === 'object' && n.type !== 'light' && !isBoxType(n.type))
+/** Set node `id`'s pattern frame ({ pos, rot }, copied), or take it away (null): the object's own frame again. Having
+ *  one or not is the shader's text (a compile); its values after that are a uniform (live). */
+export function setPattern(doc, id, pattern) {
+    const { node, parent } = must(doc, id)
+    if (pattern == null) { delete node.pattern; return node }
+    const next = { ...node, pattern: structuredClone(pattern) }
+    const bad = patternProblems(next, !parent)
+    if (bad.length) throw new ModelError(bad)
+    node.pattern = next.pattern
+    return node
+}
+/** WHOSE PATTERN FRAME A NODE'S MATERIAL IS READ IN: the node's own -- or, inside a group that folds its children into
+ *  the scene as one shape, the outermost such group's, since a material's point is the frame of what folds into the
+ *  scene (codegen emitMaterials: a CSG shape's is its group's; scene_api.js fold, XF_SUB): a CSG group, or group code
+ *  that works on its children's result (codegen isAfter: a round, a shell). A plain group folds nothing of its own:
+ *  null for one. The panel says which, so a frame that would change nothing is never offered silently. */
+export function patternOwner(doc, id) {
+    let chain = null                                          // the root first, the node last
+    const go = (n, up) => { if (chain) return; if (n.id === id) { chain = [...up, n]; return } for (const c of n.children || []) go(c, [...up, n]) }
+    go(doc.root, [])
+    if (!chain) return null
+    const outer = chain.slice(0, -1).find(g => g !== doc.root && foldsAsOne(doc, g))
+    if (outer) return outer.id
+    const node = chain[chain.length - 1]
+    return node !== doc.root && canPattern(node) && (node.kind === 'object' || foldsAsOne(doc, node)) ? node.id : null
+}
+/** Whether a group folds its children into the scene as one shape (patternOwner): a CSG group, or group code that works
+ *  on its children's result (codegen isAfter: a round, a shell). Its pattern frame is where their material is read. */
+export const foldsAsOne = (doc, g) => g?.kind === 'group'
+    && (isCsg(g) || isAfter({ kind: 'group', code: codeOf(doc, g), params: g.params }, { straight: false }))
+
 /** A material's type (version 10): surface, emitter, detector or limiter. Surface removes the field.
  *  The parameters stay as they are, so switching back loses nothing; codegen reads only the ones
  *  the type uses (materials.js FIELDS_OF). */
@@ -2500,6 +2546,7 @@ export function toTree(doc, { keepDisabled = false } = {}) {
             }
             if (node.straightMaterial) g.straightMaterial = true
             if (node.copies) g.copies = structuredClone(node.copies)
+            if (node.pattern) g.pattern = structuredClone(node.pattern)
             return g
         }
         const B = blockOf(doc, node)
@@ -2507,6 +2554,7 @@ export function toTree(doc, { keepDisabled = false } = {}) {
         const n = off({ id: node.id, kind: 'object', type: node.type, material: worn,
                         params: B ? inOrder(B, node.params) : structuredClone(node.params || {}) })
         if (node.transform) n.transform = structuredClone(node.transform)
+        if (node.pattern) n.pattern = structuredClone(node.pattern)
         if (node.type === 'light') n.light = structuredClone(node.light)
         else if (node.type === 'export') n.export = structuredClone(node.export ?? {})
         else if (node.type === 'haze') n.haze = structuredClone(node.haze ?? {})
@@ -2620,6 +2668,7 @@ export function validate(doc) {
         seeId(n.id, where)
         if (typeof n.enabled !== 'boolean') p.push(`'${n.id}': enabled must be true or false`)
         if (n !== doc.root) checkTransform(n, p)
+        if (n.pattern !== undefined) p.push(...patternProblems(n, n === doc.root))
         // true or absent (setLock); the root has none to lock
         for (const key of Object.values(LOCKS)) if (n[key] !== undefined && (n === doc.root || n[key] !== true))
             p.push(n === doc.root ? `the root has no ${key}` : `'${n.id}': ${key} is true or absent`)
@@ -2711,6 +2760,18 @@ function checkTransform(n, p) {
     if (!finite3(t.rot)) p.push(`'${n.id}': transform.rot must be {x, y, z} numbers (degrees)`)
     if (!(Number.isFinite(t.scale) && t.scale > 0)) p.push(`'${n.id}': transform.scale must be a number > 0`)
 }
+/* A PATTERN FRAME (version 24): a place and a turn, nothing else -- a scale would cancel in every material that reads its
+   point in real units (p_local * S_local, MATERIAL_CODE_TEMPLATE), so it would mean something only to the few that do not */
+function patternProblems(n, root) {
+    if (root) return ['the root has no pattern frame: it is the world']
+    if (!canPattern(n)) return [`'${n.id}': a ${n.type === 'light' ? 'light' : BOX_WORDS[n.type] ?? n.type} has no material, so no pattern frame`]
+    const t = n.pattern, p = []
+    if (!t || typeof t !== 'object' || Array.isArray(t)) return [`'${n.id}': pattern is { pos, rot }`]
+    if (!finite3(t.pos)) p.push(`'${n.id}': pattern.pos must be {x, y, z} numbers`)
+    if (!finite3(t.rot)) p.push(`'${n.id}': pattern.rot must be {x, y, z} numbers (degrees)`)
+    for (const k of Object.keys(t)) if (k !== 'pos' && k !== 'rot') p.push(`'${n.id}': pattern.${k}: a pattern frame is a place and a turn only`)
+    return p
+}
 
 /** Older files, brought up to VERSION one version at a time, by filling in what they could not
  *  have said. Anything that is not a recognisable older document is passed through for
@@ -2741,6 +2802,7 @@ export function upgrade(doc) {
     if (d.version === 20) d = v20to21(d)
     if (d.version === 21) d.version = 22          // nothing to change: haze boxes are new
     if (d.version === 22) d.version = 23          // nothing to change: a group's material is new
+    if (d.version === 23) d.version = 24          // nothing to change: pattern frames are new
     return d
 }
 

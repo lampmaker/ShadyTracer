@@ -2111,7 +2111,7 @@
     "wood",
     "rings"
    ],
-   "help": "Wood: growth rings 3 mm apart about the heart of the log, 15 cm to one side -- light earlywood darkening into latewood -- bent by noise, with fine fibres along z. Shown on a cube: arcs on top, stripes on the sides.",
+   "help": "Wood: growth rings 3 mm apart about the heart of the log, 15 cm to one side -- light earlywood darkening into latewood -- bent by noise, with fine fibres along z. Shown on a cube: arcs on top, stripes on the sides. To run the log along another axis of an object -- a table top's length -- turn its pattern frame (the object's properties), not the object.",
    "asset": {
     "kind": "material",
     "material": {

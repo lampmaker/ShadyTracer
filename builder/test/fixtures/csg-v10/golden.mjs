@@ -155,6 +155,14 @@
 // the only lines that left were eleven `XF_TAG = <n>u` with their numbers moved (the rings' children functions, emitted
 // before SDF, take tags first). Uniforms: none left; the rings' count, reach, transforms and boxes and their children's
 // came. Every key of both modes of that document moved; no other document's did (key by key).
+//
+// REFROZEN FOR ONE SCENE (2026-10-21, `0.next`), for a feature the user asked for (a pattern frame per object: model.js
+// setPattern, codegen patIn): scenes/lighting-room.json's table top and floor have one, their wood's grain along x. Checked
+// before freezing, merged with dev at 8e1137f, the scene with its pattern frames against the same document without them,
+// both modes, all four texts: each one's comment gained ", in its pattern frame", and its block the capture's five lines
+// after its enter and the one that puts them back before its leave -- nothing else; the uniforms gained pat_n2 and
+// pat_n11 alone; the tags did not move. Against dev's expected.json (8e1137f) the other documents did not move (key by key), and
+// no document without a pattern frame can: the lines are emitted only for one.
 //======================================================================================================================
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'

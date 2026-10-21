@@ -437,6 +437,7 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
                 groupMaterial(folder, doc, node)
                 recipeEditor(folder, doc, node)
                 transform(folder, node)
+                patternFolder(folder, doc, node)
                 copiesFolder(folder, doc, node)
                 /* DOES THE MATERIAL FOLLOW THE WARP (model.js setStraightMaterial; the user, 2026-09-30: a print's
                    layers twisted with its shape): for a group whose code can bend space. Structural -- it changes
@@ -598,8 +599,9 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
         // ---- material: structural
         objectMaterial(folder, doc, node)
 
-        // ---- placement right under the material, then the parameters
+        // ---- placement right under the material, then where its pattern is laid out, then the parameters
         transform(folder, node)
+        patternFolder(folder, doc, node)
 
         // ---- parameters: live. Bound to the document's own values, so the document IS what
         //      the slider edits; the renderer is told afterwards.
@@ -620,6 +622,54 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
        line: x, y, z, and rx, ry, rz, scale after them for a copy turned or scaled. The same count is live -- a uniform a
        copy, or the records of a scene as data -- and another count a compile in codegen. A plain group's only: one with
        code or joins has none (setCopies says why). One undo step each. */
+    /* THE PATTERN FRAME (model.js setPattern, version 24; the user, 2026-10-21: "some of the materials have an axis/
+       direction, e.g. wood. Make that adjustable ... per object"): where this node's material lays its pattern out -- its
+       rings, strokes, squares, its relief -- moved and turned in the node's own frame while the shape stays. Folded and
+       offered until it has one; the first value moved gives it one (the shader's text: a compile), every one after is a
+       uniform (live). The rows edit a draft, copied into the node: a node without one has nothing to bind to. */
+    function patternFolder(folder, doc, node) {
+        if (!M.canPattern(node) || node.id === doc.root.id) return
+        const owner = M.patternOwner(doc, node.id)
+        // a plain group (or a twist, a bend: code on the point) folds nothing of its own: offered only to take one away
+        if (node.kind === 'group' && !M.foldsAsOne(doc, node) && !node.pattern) return
+        const pf = folder.addFolder({ title: node.pattern ? 'pattern frame · moved' : 'pattern frame', expanded: !!node.pattern })
+        const ownerLabel = owner ? M.find(doc, owner)?.node.label ?? owner : null
+        const note = owner === node.id ? null
+            : owner ? `A shape of '${ownerLabel}', which folds its shapes into the scene as one: its material is laid out in that group's `
+                + 'frame, so turn the pattern there. Here the frame moves only the relief of its material, if it has one.'
+            : 'This group folds nothing of its own (its children fold into the scene one by one): each of them has its own pattern '
+                + 'frame. This one changes nothing.'
+        if (note) {
+            const box = document.createElement('div')
+            Object.assign(box.style, { font: '12px/1.35 monospace', whiteSpace: 'pre-wrap', padding: '4px 6px', margin: '2px 4px 6px',
+                borderRadius: '3px', background: 'rgba(0,0,0,0.25)', color: '#ffd180' })
+            box.className = 'builder-pattern-said'
+            box.textContent = note
+            pf.element.append(box)
+        }
+        const D = structuredClone(node.pattern ?? M.patternIdentity())
+        const put = () => {
+            if (!node.pattern) {
+                try { M.setPattern(doc, node.id, D) } catch (e) { console.warn('[builder]', e.message); return }
+                edited(null); onStructure()
+                return
+            }
+            Object.assign(node.pattern.pos, D.pos); Object.assign(node.pattern.rot, D.rot)
+            live(node.id, 'pattern')
+        }
+        const tip = 'Where its material\'s pattern is laid out, in its own frame: wood\'s rings, a brushed metal\'s strokes, a checker\'s '
+            + 'squares and its relief move and turn with this, the shape does not. Rotation in degrees about x, then y, then z, as the '
+            + 'transform\'s. Only a material that reads its point (p_local, R_local) or has a relief shows it.'
+        // labels of their own: the transform's rows above are "position" and "rotation", and a row is found by its label
+        rowTip(bind(pf, D, 'pos', { label: `pattern at (${unitName()})` }, put), tip)
+        rowTip(bind(pf, D, 'rot', { label: 'pattern turn °' }, put), tip)
+        if (node.pattern) pf.addButton({ title: 'Take it away: the object\'s own frame' }).on('click', () => {
+            M.setPattern(doc, node.id, null)
+            edited(null); onStructure()
+            const at = shownId; setTimeout(() => { if (shownId === at) show(at) })
+        })
+    }
+
     function copiesFolder(folder, doc, node) {
         // a block with no code is the group's parameters alone (model.js version 18): an LED strip's count is its own
         if (M.groupHasCode(doc, node) || isCsg(node)) return

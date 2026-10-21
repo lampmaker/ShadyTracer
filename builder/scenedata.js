@@ -60,7 +60,7 @@
 // THE HEADER, one vec4: where the records end, where the light table starts, how many lights, 0.
 //======================================================================================================================
 
-import { hasCode, isBefore, isAfter, isCsg, combinedGroups, shapesOf, joinOf, isCompiledIn, isProfile, isPath, NODE_TYPES } from './codegen.js'
+import { hasCode, isBefore, isAfter, isCsg, combinedGroups, shapesOf, joinOf, isCompiledIn, isProfile, isPath, NODE_TYPES, patterned } from './codegen.js'
 import { hasFace } from './lights.js'
 import { matrixOf } from './transform.js'
 
@@ -149,20 +149,25 @@ const afterKind = n => isAfter(n, { straight: false })
    checks a tree against a plan) */
 function compiledOf(tree, reliefMaterials, wantLocal = false) {
     const reliefObject = n => n.kind === 'object' && reliefMaterials.has(n.material) && NODE_TYPES[n.type] && n.type !== 'light' && n.type !== 'export' && n.type !== 'haze'
+    /* A NODE IN ITS PATTERN FRAME (model.js setPattern, version 24; codegen patterned): compiled as before, its frame a
+       uniform -- the records carry one frame a node, the shape's, and a hit on a record records that one. As an object
+       wearing a relief is, and so is a CSG group above it. Only where the frame changes something: anywhere else the node
+       is the record it was. */
+    const patternedNode = n => patterned(n, { wantLocal, relief: reliefMaterials.has(n.material) })
     /* A BEFORE OR AN AFTER GROUP WHOSE OWN CHILDREN JOIN (isCsg: a subtraction, an intersection, a blend among them) is
        compiled: codegen's children function combines them, and the records of a BEFORE or an AFTER fold its children's in
        one by one -- until 0.76.0 a mirror of a box less a sphere was the box and the sphere as data. */
     const coded = n => hasCode(n) && (!native(n, wantLocal, reliefMaterials) || isCsg(n))
     const combined = combinedGroups(tree)
-    const special = new Set()          // groups with code or a relief object somewhere below
+    const special = new Set()          // groups with code, a relief object or a pattern frame somewhere below
     const mark = n => {
         let any = false
-        for (const c of n.children || []) if (mark(c) || coded(c) || reliefObject(c)) any = true
+        for (const c of n.children || []) if (mark(c) || coded(c) || reliefObject(c) || patternedNode(c)) any = true
         if (any) special.add(n.id)
         return any
     }
     mark(tree)
-    return n => n !== tree && (coded(n) || reliefObject(n) || (n.kind === 'group' && combined.has(n.id) && special.has(n.id)))
+    return n => n !== tree && (coded(n) || reliefObject(n) || patternedNode(n) || (n.kind === 'group' && combined.has(n.id) && special.has(n.id)))
 }
 /* every node's id in depth-first order, a compiled subtree's nodes together after its root: tag n is tags[n - 1] */
 function tagsOf(tree, compiled) {
