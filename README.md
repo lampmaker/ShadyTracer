@@ -333,8 +333,9 @@ for the help.
   materials**: plastics and paints, plaster, stucco and render, metals plain, brushed, turned,
   anodised, galvanised and hammered, clear, tinted, frosted and flint glass, PMMA and
   polycarbonate, stone, marble and granite, wood, cork, leather, rubber, concrete, rust and more;
-  **four optics parts** (a PMMA lens Ø 18 mm, an LED die 2 × 1 mm at 100 lm, a detector screen, and a
-  whole LED–lens–screen bench) *preview*.
+  **five optics parts** (a PMMA lens Ø 18 mm, an LED die 2 × 1 mm at 100 lm, a detector screen, a
+  triangular prism in N-BK7 -- any triangle, from a right-angle prism to an isosceles one, by its width,
+  height, depth and where its top stands -- and a whole LED–lens–screen bench) *preview*.
 - **Every item is a rendered picture**, made by a second, hidden path tracer while the main view is
   idle, and kept; rest the pointer on one to see it rendered live *preview*.
 - **Drag items onto the tree or into the picture**: a material onto the object under the pointer
