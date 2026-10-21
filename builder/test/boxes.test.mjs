@@ -214,6 +214,16 @@ await run()
     ok('...and a group above laying its material out straight (straightMaterial)', geometryKey(doc, inTw.id) !== k2)
     M.setStraightMaterial(doc, tw.id, false)
     ok('...back again, the key it had', geometryKey(doc, inTw.id) === k2)
+    /* A GROUP'S MATERIAL (model.js version 23, 0.76.0) is what its objects wear: its relief their shape -- for the
+       object's key and the group's, which holds its subtree -- and not one keeping its own */
+    M.addMaterial(doc, { id: 'paint' })
+    const g = M.addGroup(doc, 'root', { id: 'g' })
+    const inG = M.addObject(doc, 'g', { primitive: 'box', material: 'paint' })
+    const [k3, kg] = [geometryKey(doc, inG.id), geometryKey(doc, g.id)]
+    M.setMaterial(doc, g.id, 'stone')
+    ok('...a group above giving its objects a material with a relief', geometryKey(doc, inG.id) !== k3 && geometryKey(doc, g.id) !== kg)
+    M.setOwnMaterial(doc, inG.id, true)
+    ok('...not one keeping its own', geometryKey(doc, inG.id) === k3)
 }
 
 //----------------------------------------------------------------------------------------------------------------------

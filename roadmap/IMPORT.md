@@ -668,7 +668,7 @@ formula, each at an edge or grazing. Put back the plain groups and 9 to 98 do, i
 
 **The same was true of anything built by hand** (read in code then): a group of two shapes joined by union, put in
 a group that subtracts it or intersects with it, was folded, not combined. A builder question, not the import's.
-Fixed in 0.next: such a group is combined as a union (codegen.js combinedGroups), in codegen and as data, and
+Fixed in 0.76.0: such a group is combined as a union (codegen.js combinedGroups), in codegen and as data, and
 `builder/test/csgshape.gpu.mjs` measures it on Dawn against the exact value. The import still makes no such group,
 and `docsdf.mjs` mirrors the new rule.
 

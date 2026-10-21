@@ -107,6 +107,36 @@ ok('setting the group\'s blend', await set('blend', 0.2) === 'set')
 s = await state()
 ok('...is live (the group combines: one child subtracts)', s.g === 0.2 && s.live.at(-1) === 'g.blend' && s.structure === before.structure, JSON.stringify(s))
 
+/* A GROUP'S MATERIAL (model.js version 23, 0.76.0): chosen in the group's panel, a compile and an undo step; an object
+   in it then shows the group's, read-only, and "own material" -- checked, its own choice again; (each its own) back */
+const mat = () => p.evaluate(() => {
+    const n = id => CHECK.M.find(CHECK.doc, id).node
+    return { g: n('g').material ?? null, a: n('a').material ?? null, own: n('a').ownMaterial ?? null, worn: CHECK.M.wornMaterial(CHECK.doc, 'a'),
+             structure: CHECK.T.structure, commits: CHECK.T.commits.length }
+})
+rows = await rowsOf('a')
+ok('an object in a group with no material: its material chosen, no own-material box', rows.includes('material') && !rows.includes('own material'), JSON.stringify(rows))
+await rowsOf('g')
+before = await mat()
+ok('a group offers a material', await set('material', 'glass') === 'set')
+let m = await mat()
+ok('...the group\'s, worn by its objects over their own, a compile and an undo step', m.g === 'gl' && m.worn.material === 'gl' && m.worn.group === 'g'
+    && m.a === before.a && m.structure === before.structure + 1 && m.commits > before.commits, JSON.stringify(m))
+rows = await rowsOf('a')
+let matShown = await p.evaluate(() => [...document.querySelectorAll('.tp-lblv')].find(r => r.querySelector('.tp-lblv_l')?.textContent.trim() === 'material')?.querySelector('input')?.value ?? null)
+ok('an object in it shows the group\'s, read-only, and the own-material box', rows.includes('own material') && /^glass · from group/.test(matShown ?? ''), JSON.stringify([rows, matShown]))
+ok('checking own material', await set('own material') === 'set')
+m = await mat()
+ok('...keeps its own, as a compile', m.own === true && m.worn.material === m.a && m.worn.group === null && m.structure === before.structure + 2, JSON.stringify(m))
+await p.waitForTimeout(50)
+matShown = await p.evaluate(() => !![...document.querySelectorAll('.tp-lblv')].find(r => r.querySelector('.tp-lblv_l')?.textContent.trim() === 'material')?.querySelector('select'))
+ok('...and the panel redraws with its own choice', matShown)
+await set('own material')
+await rowsOf('g')
+ok('(each its own) takes the group\'s away', await set('material', '(each its own)') === 'set')
+m = await mat()
+ok('...no field, each its own again', m.g === null && m.worn.material === m.a, JSON.stringify(m))
+
 // THE RECIPE (recipe.js): typed, wrong at a line, put right, applied with Ctrl+Enter as one undo step
 await rowsOf('g')
 const recipe = (text, key) => p.evaluate(([text, key]) => {

@@ -4,11 +4,11 @@
 // frame, the distance out of it by its scale), each preset's own distance (core/sdf.js, written again here), and a
 // group's children as codegen combines them: a CSG group's (codegen.js isCsg) folded top to bottom by their joins (union
 // min, intersect max, subtract max(C, -d): scene_api.js csgUnion and the rest at blend 0) -- and a plain group's that
-// is one of such a group's shapes, as a union (codegen.js combinedGroups, 0.next) -- ANY OTHER PLAIN GROUP'S BY THE
+// is one of such a group's shapes, as a union (codegen.js combinedGroups, 0.76.0) -- ANY OTHER PLAIN GROUP'S BY THE
 // NEAREST BOUNDARY EITHER WAY (scene_api.js fold, the surface's argmin |d|), which is no union's distance: inside one
 // of two boxes and just outside the other, it is the other's, outside. The rounded box marched on Dawn went through
 // its own edges that way, its core a plain group intersected with its prisms (import.gpu.mjs, 2026-10-21), while this
-// file, taking every union as a min, saw nothing; codegen folded such a group then, and combines it since 0.next.
+// file, taking every union as a min, saw nothing; codegen folded such a group then, and combines it since 0.76.0.
 //
 // WHY: shapes.js's own shapeSDF evaluates the shapes it made, not the document it wrote; an Euler angle, a cap or a
 // join that went wrong on the way into the document showed nowhere before the picture (the user's Onshape part,

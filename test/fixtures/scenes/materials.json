@@ -1,6 +1,6 @@
 {
   "format": "raytracer-scene",
-  "version": 22,
+  "version": 23,
   "title": "Material test",
   "nextId": 5,
   "materials": [

@@ -166,8 +166,8 @@ node builder/test/scenedata.test.mjs # the scene as data: an edit that adds no c
 node builder/test/dataapply.test.mjs # the builder with the scene as data: what compiles and what is written, live values, undo, the boxes -- over a stand-in renderer; every write followed by the records' uniform copy's
 node builder/test/plainshape.test.mjs # one plain shape, which codegen gives no box: every built-in closed-form shape recognised from its own code, anything more than that one call not, an outline not
 node builder/test/scenedata.gpu.mjs  # ...the loop computes what codegen computed, every modifier as data too, an array what its copies written out do, on a WebGPU in node (optional: npm i -g webgpu, and lavapipe; says so)
-node builder/test/csgshape.gpu.mjs   # a plain group as one of a CSG group's shapes (0.next): its children a union, not folded -- subtracted, intersected, the base, nested, an array's overlapping copies, turned and scaled, a hidden child, a light in it -- codegen and as data against the exact CSG value in JS; group code whose own children join, as data (optional: webgpu + lavapipe)
-node builder/test/circular.gpu.mjs   # the circular array (`0.next`) on Dawn: every copy asked, the exact union of its copies everywhere -- off the axis, across it, turned and scaled, in a CSG group, codegen, as data and baked; with reach, a bound never above it, the union near the surfaces, no crawl at the axis; the normal the copy's own; capturing, the winning copy's point, frame and tag (optional: webgpu + lavapipe)
+node builder/test/csgshape.gpu.mjs   # a plain group as one of a CSG group's shapes (0.76.0): its children a union, not folded -- subtracted, intersected, the base, nested, an array's overlapping copies, turned and scaled, a hidden child, a light in it -- codegen and as data against the exact CSG value in JS; group code whose own children join, as data (optional: webgpu + lavapipe)
+node builder/test/circular.gpu.mjs   # the circular array (0.next) on Dawn: every copy asked, the exact union of its copies everywhere -- off the axis, across it, turned and scaled, in a CSG group, codegen, as data and baked; with reach, a bound never above it, the union near the surfaces, no crawl at the axis; the normal the copy's own; capturing, the winning copy's point, frame and tag (optional: webgpu + lavapipe)
 node builder/test/units.gpu.mjs      # the engine in metres on a WebGPU in node: scenes in mm against the same re-authored in m, plainly and as data; march, occlusion and shadow rays end the same (optional: webgpu + lavapipe)
 node builder/test/boxes.test.mjs    # the measured bounding boxes, against a sampler of exact shapes -- and the culling's: every shape inside its padded box, a copy moved off its original too; a part only the first coarse lattice finds kept, a part none finds leaving its group no culling box -- through the bench's view of the copies' boxes too (boxesFor `same`), and a store that cannot say what is missing refused
 node builder/test/relief.test.mjs   # the relief in a shell: its code mirrored, a lower bound on the real noise, the step bound in the band, what group code is told per parent; a material's relief and the modifier through a smooth blend; the normal across a band's edge (0.71.1): the library's stucco cut from its plaster, the line as it was, none now
@@ -293,7 +293,8 @@ bump: minor
 - Below the bump line, the entry exactly as it will sit under `## x.y.z — date`: what changed and **what to look
   at**. No `## ` heading in it.
 - Wherever you would name your own version -- a comment, a test's description, a line in this file, the tutorial,
-  the note itself -- write the placeholder `0.next`. Written in backticks like that, it is only its name and stays.
+  the note itself -- write the placeholder `0.next`. The release makes it the version in backticks or not, but in this
+  file and in a note: there, in backticks, it is only its name and stays, so name your version without them.
 - Do not edit `VERSION` or `CHANGELOG.md`.
 
 The user releases when they choose, from VS Code (Terminal › Run Task › *Release dev → main*, or *Release: dry run*

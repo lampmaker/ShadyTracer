@@ -122,7 +122,16 @@ export const FORMAT = 'raytracer-scene'
    it -- a size, and `haze` over HAZE_DEFAULTS (mean free path, albedo, g). One a scene. Version 21 files have none:
    nothing to change. A builder of 21 refuses a file of 22 (an object type it does not know), rather than drop the box
    on its first save. */
-export const VERSION = 22
+/* 23: A GROUP'S MATERIAL (0.76.0; the user, 2026-10-21: "often shapes are all made of the same material. Dragging a
+   material onto a child only changes that child. A similar approach to the blend could be used where certain children
+   can still override the parent's material"). A group (not the root) may hold `material`: every object below it wears
+   that one instead of its own -- the nearest such group winning, as a nested group's blend is its own -- unless the
+   object holds `ownMaterial: true`, as a child with its own join blend keeps it (wornMaterial). The object's own
+   `material` is kept under the group's, so taking the group's away gives each back what it had. Resolved in toTree:
+   codegen, the scene as data and the bake see each object's worn material and nothing else, so a scene without a
+   group material compiles to the text it did. Version 22 files have none: nothing to change. A builder of 22 refuses
+   a file of 23, rather than show every object in its own material and save the scene without the group's. */
+export const VERSION = 23
 /** The most copies an array has: each is a walk of its children at every step near them, until a BVH can tell which
  *  copies are near (call 4: chosen, not measured). */
 export const ARRAY_MAX = 16
@@ -1311,7 +1320,8 @@ export function remove(doc, id) {
  *  last one: a scene keeps at least one material (ensureMaterial), as a project keeps a scene. */
 export function removeMaterial(doc, id) {
     const users = []
-    walk(doc, n => { if (n.kind === 'object' && n.material === id) users.push(n.id) })
+    // a group giving it to its objects (version 23) uses it too
+    walk(doc, n => { if (n.material === id) users.push(n.id) })
     if (users.length) throw new ModelError(`material '${id}' is used by ${users.join(', ')}`)
     const i = doc.materials.findIndex(m => m.id === id)
     if (i < 0) throw new ModelError(`no material '${id}'`)
@@ -1426,14 +1436,22 @@ export function extractAsset(doc, id) {
     const { node, parent } = must(doc, id)
     if (!parent) throw new ModelError('the scene itself is not an asset; duplicate the scene instead')
     const used = new Set(), blocks = []
-    walkNode(node, n => {
-        if (n.kind === 'object' && n.material != null) used.add(n.material)
+    /* WHAT IT WEARS, NOT ONLY WHAT IT OWNS (version 23): under a group that gives its objects a material, the copy
+       takes that group's material with it -- as its own on a shape that does not keep its own, as the group's own on
+       a group that has none -- so it is pasted, dragged to another scene or kept in the library looking as it did.
+       Exactly what the group above did: what keeps its own, and a group inside with one of its own, still do. */
+    const copy = structuredClone(node)
+    const above = materialGroupAbove(doc, id)?.material
+    if (above != null && (node.kind === 'group' ? node.material == null : node.ownMaterial !== true && node.type !== 'light' && !isBoxType(node.type)))
+        copy.material = above
+    walkNode(copy, n => {
+        if (n.material != null) used.add(n.material)
         if (n.block != null && !blocks.includes(n.block)) blocks.push(n.block)
     })
     /* its blocks go with it (version 16): an asset is complete, as a file is -- in the order the subtree first uses
        them, which is the order an asset from before 16 gets its blocks in (blocksFromCode): the library compares the
        two (library/edit.js canon) */
-    const asset = { kind: 'node', node: structuredClone(node), unit,
+    const asset = { kind: 'node', node: copy, unit,
                     materials: structuredClone(doc.materials.filter(m => used.has(m.id))),
                     blocks: structuredClone(blocks.map(id => block(doc, id)).filter(Boolean)) }
     return withHelpers(doc, asset, [...asset.blocks.map(b => b.code ?? ''), ...asset.materials.flatMap(materialCodes)])
@@ -1531,7 +1549,7 @@ export function insertAsset(doc, asset, parentId = 'root', index) {
         const node = upgradeJoins(structuredClone(asset.node))
         walkNode(node, n => {
             n.id = newId(doc)
-            if (n.kind === 'object' && n.material != null) n.material = map.get(n.material) ?? n.material
+            if (n.material != null) n.material = map.get(n.material) ?? n.material      // a group's too (version 23)
         })
         // the nodes' ids first, then the new blocks', as an asset from before 16 has them: one order, either way
         for (const b of fresh) {
@@ -2391,12 +2409,46 @@ export function setOpticsMaxDist(doc, maxDist) {
     doc.optics = { ...(doc.optics || {}), maxDist }
     return doc
 }
+/** An object's own material; or a group's (version 23), which every object below it wears instead of its own unless
+ *  it keeps that (setOwnMaterial) -- null takes the group's away, and each wears its own again. Not the root's: the
+ *  scene's row is not a group of it, and a scene of one material is a group around everything. Not a light's or a
+ *  box's, which have none. */
 export function setMaterial(doc, id, mat) {
-    const { node } = must(doc, id)
-    if (node.kind !== 'object') throw new ModelError(`'${id}' is a group; materials go on objects`)
+    const { node, parent } = must(doc, id)
+    if (node.kind === 'group' && !parent) throw new ModelError('the scene itself has no material: put its objects in a group and give the group one')
+    if (node.kind === 'object' && (node.type === 'light' || isBoxType(node.type)))
+        throw new ModelError(`'${id}' is a ${node.type === 'light' ? 'light' : BOX_WORDS[node.type]}, which has no material`)
     if (mat != null && !material(doc, mat)) throw new ModelError(`no material '${mat}'`)
-    node.material = mat
+    if (node.kind === 'group' && mat == null) delete node.material
+    else node.material = mat
     return doc
+}
+/** Whether an object keeps its own material under a group that gives its children one (version 23): true or absent,
+ *  as straightMaterial. Kept where no group gives one too, unused until one does -- as the base's join waits. */
+export function setOwnMaterial(doc, id, on) {
+    const { node } = must(doc, id)
+    if (node.kind !== 'object' || node.type === 'light' || isBoxType(node.type))
+        throw new ModelError(`'${id}' is not a shape; only a shape keeps a material of its own`)
+    if (on) node.ownMaterial = true
+    else delete node.ownMaterial
+    return doc
+}
+/** The group nearest above `id` that gives what is below it a material (version 23), or null: its ancestors only, not
+ *  itself. Every object under it that does not keep its own wears that group's. */
+export function materialGroupAbove(doc, id) {
+    let f = find(doc, id), out = null
+    for (; f?.parent && !out; f = find(doc, f.parent.id)) if (f.parent.material != null) out = f.parent
+    return out
+}
+/** The material an object wears (version 23): its own, unless a group above gives its children one and it does not
+ *  keep its own -- then the nearest such group's. What toTree hands codegen, and what the tree and the panel show.
+ *  { material, group }: the material's id (null for none), and the group it comes from, null for its own. */
+export function wornMaterial(doc, id) {
+    const { node } = must(doc, id)
+    // a light and a box wear nothing, whatever the group says
+    const shape = node.kind === 'object' && node.type !== 'light' && !isBoxType(node.type)
+    const g = shape && node.ownMaterial !== true ? materialGroupAbove(doc, id) : null
+    return g ? { material: g.material, group: g.id } : { material: node.material ?? null, group: null }
 }
 
 //----------------------------------------------------------------------------------------------
@@ -2407,8 +2459,9 @@ export function setMaterial(doc, id, mat) {
  * What codegen.generate() takes: the tree with disabled nodes pruned -- a disabled group takes
  * its whole subtree out of the shader, which is what makes the eye on a group useful for
  * isolating part of a scene. Groups keep their blend and transform; objects their transform and
- * their material's id; every node its join and own blend. The materials ride on the root, as
- * `materials`.
+ * the id of the material they wear -- a group's above them, where one gives its objects one and they do not keep
+ * their own (version 23, wornMaterial), so codegen knows no group material; every node its join and own blend. The
+ * materials ride on the root, as `materials`.
  *
  * A GROUP CARRIES `csg`, whether it combines its children into one shape (codegen isCsg), decided on
  * the DOCUMENT, before disabled children are pruned. Decided on the tree, hiding the only child that
@@ -2416,13 +2469,14 @@ export function setMaterial(doc, id, mat) {
  * from the shader while params.js, which reads the document, still wrote it live. A version 10 group
  * was CSG by its own op, which pruning never changed; this keeps that. It is the group's OWN joins: a
  * plain group that is one of a CSG group's shapes keeps `csg` false and is combined all the same, as a
- * union (codegen combinedGroups, 0.next), which its parent decides -- the tree's, not this flag.
+ * union (codegen combinedGroups, 0.76.0), which its parent decides -- the tree's, not this flag.
  *
  * `keepDisabled` (for codegen's liveVisibility, the document's setting): disabled nodes stay, marked
  * `enabled: false`, so the shader has them and a uniform decides -- hiding one then compiles nothing.
  */
 export function toTree(doc, { keepDisabled = false } = {}) {
-    const go = node => {
+    // `over`: the material a group above gives its objects (version 23, wornMaterial), null for none
+    const go = (node, over = null) => {
         if (node.enabled === false && !keepDisabled) return null
         const off = n => {
             if (node.enabled === false) n.enabled = false
@@ -2431,8 +2485,9 @@ export function toTree(doc, { keepDisabled = false } = {}) {
             return n
         }
         if (node.kind === 'group') {
+            const mine = node !== doc.root && node.material != null ? node.material : over
             const g = off({ id: node.id, kind: 'group', blend: node.blend ?? 0, csg: isCsg(node),
-                            children: node.children.map(go).filter(Boolean) })
+                            children: node.children.map(c => go(c, mine)).filter(Boolean) })
             if (node.transform) g.transform = structuredClone(node.transform)
             /* ITS CODE AND SCHEMA FROM ITS BLOCK (version 16), its values in the block's order: what codegen reads is
                what a node with its own code would have been, so a version 15 file compiles to the shader it did */
@@ -2448,7 +2503,8 @@ export function toTree(doc, { keepDisabled = false } = {}) {
             return g
         }
         const B = blockOf(doc, node)
-        const n = off({ id: node.id, kind: 'object', type: node.type, material: node.material ?? null,
+        const worn = over != null && node.ownMaterial !== true && node.type !== 'light' && !isBoxType(node.type) ? over : node.material ?? null
+        const n = off({ id: node.id, kind: 'object', type: node.type, material: worn,
                         params: B ? inOrder(B, node.params) : structuredClone(node.params || {}) })
         if (node.transform) n.transform = structuredClone(node.transform)
         if (node.type === 'light') n.light = structuredClone(node.light)
@@ -2577,6 +2633,10 @@ export function validate(doc) {
             if (!(Number.isFinite(n.blend) && n.blend >= 0)) p.push(`'${n.id}': blend must be a number >= 0`)
             if (!Array.isArray(n.children)) p.push(`'${n.id}': a group needs a children list`)
             else n.children.forEach((c, i) => walkCheck(c, `'${n.id}' child ${i}`))
+            // version 23: a group's material, which its objects wear; the root has none (setMaterial)
+            if (n.material !== undefined && (n === doc.root || typeof n.material !== 'string' || !doc.materials.some(m => m?.id === n.material)))
+                p.push(n === doc.root ? 'the root has no material' : `'${n.id}': no material '${n.material}'`)
+            if (n.ownMaterial !== undefined) p.push(`'${n.id}': ownMaterial is a shape's, not a group's`)
             if (n !== doc.root) {
                 p.push(...groupProblems(n))
                 if (n.block !== undefined) usesBlock(n, 'group')
@@ -2588,6 +2648,9 @@ export function validate(doc) {
             if (!NODE_TYPES[n.type]) p.push(`'${n.id}': unknown object type '${n.type}'`)
             if (n.material != null && !doc.materials.some(m => m?.id === n.material))
                 p.push(`'${n.id}': no material '${n.material}'`)
+            // true or absent (setOwnMaterial, version 23), and a shape's only
+            if (n.ownMaterial !== undefined && (n.ownMaterial !== true || n.type === 'light' || isBoxType(n.type)))
+                p.push(`'${n.id}': ownMaterial is true or absent, and a shape's only`)
             if (!n.params || typeof n.params !== 'object' || Array.isArray(n.params)) p.push(`'${n.id}': params must be an object`)
             else {
                 const bad = Object.keys(n.params).filter(k => !PARAM.test(k) || RESERVED_PARAMS.includes(k))
@@ -2677,6 +2740,7 @@ export function upgrade(doc) {
     if (d.version === 19) d = v19to20(d)
     if (d.version === 20) d = v20to21(d)
     if (d.version === 21) d.version = 22          // nothing to change: haze boxes are new
+    if (d.version === 22) d.version = 23          // nothing to change: a group's material is new
     return d
 }
 

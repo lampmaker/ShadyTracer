@@ -114,7 +114,7 @@ ok('...and anything else refused, saying so', /not a STEP or STL file/.test(msg)
 
 /* EVERY GROUP ONE SHAPE (shapes.js addPart says why): a group whose children all join by union is a plain group to
    codegen, folded by the nearest boundary either way, which cut holes in four of the six parts as shapes of an
-   intersection (import.gpu.mjs, 2026-10-21; since 0.next codegen combines such a shape, but a part's own group, outside
+   intersection (import.gpu.mjs, 2026-10-21; since 0.76.0 codegen combines such a shape, but a part's own group, outside
    any CSG group, still folds). Every group an import makes combines its children into one shape */
 {
     const plain = []
