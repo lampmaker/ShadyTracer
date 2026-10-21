@@ -105,9 +105,12 @@ measures to the solid's shells, which gives every committed part's distances aga
 - check-shaders, naga included, compiles the new example through every kernel.
 
 **The tutorial:** `affected.mjs` ties chapter 25 to lines of CLAUDE.md and `bench/index.js` this change does not touch
-(the benchmark's fixed stage and cameras), and nothing there needed to change. Chapter 3 (Building and bending shapes)
-now names `import/` among what it is about, and its plan line the conversion it will teach: the joins read
-backwards.
+(the benchmark's fixed stage and cameras), and chapter 26 to a line of this file it does not touch: nothing there needed
+to change. Chapter 3 (Building and bending shapes) now names `import/` among what it is about, and its plan line the
+conversion it will teach: the joins read backwards, separators per surface, cuts reaching past what they cut, the
+rounded prism. Chapter 33 (Open problems), about `roadmap/PLAN.md`, gains a card and a clause among its limits: shapes
+joined only by union, cut or intersected as one, folded instead of combined (the builder's, left open). No excerpt's
+code changed, so nothing was stamped.
 
 ## 0.72.0 — 2026-10-21
 
