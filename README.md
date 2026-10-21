@@ -345,7 +345,7 @@ number carries its standard error**.
 
 ### Animation and video
 
-![The Animate layout: keyframe tracks under the picture, with the export frame drawn over it](docs/screenshots/timeline.png)
+![The Animate layout: keyframe tracks under the picture, with the export frame drawn over it](docs/screenshots/animate.png)
 
 *preview*
 - **Keyframes on any live setting**: the camera, the sun, a light's flux, an object's position.
