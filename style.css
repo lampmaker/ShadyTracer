@@ -27,3 +27,5 @@ body {
     height: 100vh;
 }
 
+/* the Sponsor link at the menu bar's right end (index.html, SHELL.barEnd) */
+.sponsor-heart { color: #e0607e; }

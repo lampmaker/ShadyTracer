@@ -15,7 +15,7 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
-## 0.70.0 — 2026-10-19
+## 0.72.0 — 2026-10-21
 
 **A change of the scene's unit asks how: keep the real size, by a scale or by the numbers, or keep the numbers.** The
 user (2026-10-19): a new scene switched from cm to mm drew a box typed 10 "much too big", and 0.1 had to be typed to get
@@ -86,6 +86,90 @@ to the eye only against itself.
 `lengths` and `perLength` are for; it was re-read against the page and stamped. Chapter 30's plan (`tutorial/PLAN.md`)
 now covers what a number means when the scene's unit changes, and `builder/unitchange.js` is among its files. Chapter
 26's excerpt of `modifiers.js` did not change. Nothing else needed to.
+## 0.71.1 — 2026-10-21
+
+**No hard line round a relief cut from another relief.** The user's case: a group with a box of white plaster and a
+sphere of knockdown stucco subtracted from it, a blend on. A thin dark line ran round the hole on the plaster,
+farther out with the blend on and nearer with it at 0, and it went away when both wore the same relief. A CSG group
+with a relief in it divides its result once by the steepest relief slope near the point, so the march does not step
+through a bump. A relief farther than two amplitudes (plus 5/4 of the blend) from its own surface is skipped, so the
+divisor on the plaster was the stucco's (4.67) inside that distance from the sphere and the plaster's (1.11) beyond it.
+The normal is taken by differences of the field, and where the differences straddled that step it turned by up to
+86° (measured in `relief.test.mjs`'s mirror of the two library materials, and on Dawn in the new
+`reliefnormal.gpu.mjs`). Now the normal's looks read the group's result undivided (`scene_api.js NORMAL_LOOK`): a
+normal needs only the field's direction, which the division does not change. The march still divides as before.
+- In a scene with such a group, a hit that takes its normal by differences (a relief's surface, or a shape that gives
+  no normal of its own) looks at the scene four times instead of three. The fourth look is at the hit itself, for the
+  differences' base (`normalAtHitWGSL`), in the surface kernel and the optics trace. Every other scene's kernels do
+  what they did. What the fourth look costs has not been measured, and the look count is a poor guide to it: an early
+  run found that switching the shapes' own normals off cost 4.3× the whole frame (docs/TESTING.md, "Where the render
+  time goes").
+- The surface kernel's loop runs up to 9 trips (was 8), so it keeps its one spare trip after the new look.
+- Not changed: a group under group code (a round, a twist, a relief modifier over it) still divides in a normal's
+  look, because its code reads the value off the surface. A line can still show there.
+- The golden shaders moved for scenes/lighting-room.json and scenes/office-lighting.json, one line each (the
+  division at the group's top), checked against the old codegen before refreezing.
+
+**What to look at:** the plaster box with the stucco sphere cut from it, blend on and at 0: no line round the hole on
+the plaster. Elsewhere the surfaces look as they did. lighting-room and office-lighting are the two examples that take
+the extra look: they should look as before, and if either renders noticeably slower than it did, that is where it
+comes from.
+## 0.71.0 — 2026-10-20
+
+**A tip for the work: a ♥ Sponsor link at the menu bar's right end, a Help row, and the repository's Sponsor
+button.** The user asked how to receive tips. Their GitHub Sponsors page was already live (one-time or monthly, a
+custom amount), but nothing pointed to it: no `.github/FUNDING.yml`, nothing in the README, nothing in the app.
+- **The menu bar**: *♥ Sponsor* after the title (*ShadyTracer 0.71.0 · rev (branch) © Matthijs Keuper*), the
+  bar's last thing. It is a link, so its address shows on hover and it opens in a new tab. The shell gives the host
+  that place as `S.barEnd`, as it gives `S.tools` after the menus (`lib/shell/shell.js`), with the same hairline
+  before it.
+- **Help › Support ShadyTracer…** opens the same page; **Help › About** now ends with where to find it.
+- **`.github/FUNDING.yml`** (`github: lampmaker`) puts the Sponsor button in the repository page's header. GitHub
+  reads the file from the default branch only, so the button appears once this is on main, and only with
+  *Settings › General › Features › Sponsorships* ticked: a setting only the owner can change.
+- **The README** links it in its first line and under *Licence and credits*.
+
+**What to look at:** the menu bar's right end: *♥ Sponsor* after the title, the heart in pink, the menus' hover.
+Clicking it, or Help › Support ShadyTracer…, opens github.com/sponsors/lampmaker in a new tab. On the repository
+page, after the merge to main and with Sponsorships ticked, the ♥ Sponsor button in the header.
+
+**Tests:** `test/funding.test.mjs` (new): FUNDING.yml's account, the page's one Sponsors address, the Help row and the
+bar's link opening it, the README linking it, so the four cannot name different pages; it fails when FUNDING.yml
+names another account. `lib/shell/test/example.check.mjs`: a button of the host's at the bar's right end, after the
+title, the bar's last element and to the title's right on screen, and it runs. **The tutorial:** `affected.mjs` ties
+chapter 25 to `CLAUDE.md:30-38`, which this change does not touch (only the list of tests moved). Nothing changed there.
+
+## 0.70.0 — 2026-10-19
+
+**Every picture and video saved is a file of its own, named with the time it was saved.** The user asked for it. A
+save was always written under one name: `render.png` from Save picture, `polar.png` from a chart, `raytracer.mp4` from
+the Timeline. The second save of a session was the browser's `render (1).png`, and which render was which was lost
+once the folder was sorted. Now the name given is followed by the local date and time, largest unit first, with no `:`
+(Windows refuses one) and no space, so the files sort as they were made: `render-2026-10-19_14-03-22.png`. A second
+save of the same name in the same second gets `-2` (`lib/filename.js`).
+- **Save picture › Develop › Save PNG**: the name in *file*, then the time. The *file* field keeps what you typed.
+- **A chart's Save the chart (PNG)** in Optics: its kind (`map`, `polar`, `map-2` for a second map), then the time.
+- **The Timeline's RECORD** (MP4, the ZIP of PNG frames, GIF): the export menu's *name*, then the time the recording
+  started. The frames inside a ZIP keep `frame_00000.png`. lib/timeline is a vendored copy and was not changed:
+  `tools/timeline.js` puts the stamp into the name for the moment the sequencer reads it and takes it out again, so the
+  name typed stays in the menu and in the scene's file.
+- `RT.saveImage()` and `RT.darkroom.save()` called without a filename save as `render-<the time>.png`; a filename
+  given is used as it is.
+- Not changed: a scene, project, workspace or library file, a timeline's `.timeline.json`, and the CSVs keep their names.
+
+**What to look at:** Save picture, Render, then Save PNG twice: two files, `render-<date>_<time>.png` and the same
+name with `-2` if they fell in the same second, and the status line names the file. In Optics, Save the chart (PNG)
+on the map: `map-<date>_<time>.png`. In the Timeline, RECORD: `raytracer-<date>_<time>.mp4` (or the name you typed),
+and the export menu's *name* still reads what you typed afterwards.
+
+**Tests:** `test/filename.test.mjs` (the stamp in local time, sortable, nothing a file system refuses; twice in a
+second told apart); `tools/test/timeline.check.mjs` (a film named with the time by `record()` and by the RECORD button,
+the name typed still the setting and never kept into the scene; it fails both ways without the change in
+`tools/timeline.js`); `optics/test/page.check.mjs` (a chart saved twice: its kind and the time, two files). Save PNG in
+the darkroom needs WebGPU, so only your machine runs it. **The tutorial:** `affected.mjs` ties chapter 7 to
+`develop.js` (it says a save keeps the light, nothing of the file's name) and chapters 25 and 27 to lines of
+CLAUDE.md and the pathtracer README this change does not touch. Nothing changed there.
+
 ## 0.69.0 — 2026-10-19
 
 **A light's flux and colour from its component's parameters.** The user asked whether a group's parameters, a colour and

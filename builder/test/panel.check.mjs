@@ -462,7 +462,7 @@ ok('typing 2.5', await set('environment radius (m)', 2.5) === 'set')
 const er1 = await state()
 ok('...sets the scene\'s radius, pushed live, one undo step, nothing compiled', await p.evaluate(() => CHECK.doc.envRadius) === 2.5
     && er1.live.at(-1) === 'root.envRadius' && er1.commits.at(-1) === 'root.envRadius' && er1.structure === er0.structure, JSON.stringify(er1))
-/* THE UNIT ASKS HOW (0.70.0, unitdialog.js): scale the objects, convert the dimensions, keep the numbers -- and Cancel,
+/* THE UNIT ASKS HOW (0.72.0, unitdialog.js): scale the objects, convert the dimensions, keep the numbers -- and Cancel,
    which leaves the scene as it was and the row at its unit */
 const unitDialog = () => p.evaluate(() => { const d = document.querySelector('.unit-dialog')
     return d && { text: d.textContent, ways: [...d.querySelectorAll('button')].map(b => b.dataset.how) } })
@@ -880,7 +880,7 @@ ok('...and the visibility beside it follows: 3.912 x 4 m, 15.6 m', /^visibility 
     await p.evaluate(() => { CHECK.T.showing = true; CHECK.viewPanel.show(null) })
 }
 
-/* ...AND A WAY THAT KEEPS THE REAL SIZE, through the question (0.70.0): the scene's numbers converted by the model's
+/* ...AND A WAY THAT KEEPS THE REAL SIZE, through the question (0.72.0): the scene's numbers converted by the model's
    own (unitchange.js), one undo step and a compile */
 {
     await rowsOf('root')

@@ -321,7 +321,7 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
     leaving the first steps over (fresnel.js: one slab's 0.923 for two's 0.857); the tolerance's three terms against
     the distance from the origin for a scene's size, by tolerances.js and photometry.js, and the floor before 0.36.0;
     a few lines of an engine kernel with one planted, through the real unitlint.js against the real boundary; and what a
-    number means when the scene's unit changes (0.70.0): kept, the scene growing by the factor, or the real size kept by
+    number means when the scene's unit changes (0.72.0): kept, the scene growing by the factor, or the real size kept by
     a scale on the top-level objects (exact for any code, which runs in its own frame) or by the numbers (exact only for
     what the document says is a length, or per one). Chapter 4 keeps the f32 normal noise and why 128. -> photometry.js
     autoEps, tolerances.js TOLERANCES, scene_api.js sceneAt, tracebasics.js's two factors, unitlint.js, builder/unitchange.js. Measured: finding 7 (Ampere), the gap (Pascal), mm against m

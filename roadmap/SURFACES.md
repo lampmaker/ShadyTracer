@@ -108,6 +108,13 @@ the SDF: codegen puts it around every object wearing the material (`object()`):
   that wider band, and smaller steps there. `relief.test.mjs` checks it against the true surface in a mirror.
   The division is `foldRelief` (scene_api.js), with the slope collected in `XF_RL`; the noise relief and
   displace modifiers fold through it too (below, phase 6).
+- ...AND NOT IN A NORMAL'S LOOKS (0.71.1; the user, 2026-10-20: a hard line on white plaster round a knockdown stucco
+  sphere cut from it, gone when both wore one relief). "The steepest relief evaluated" is the steepest within its
+  band: the divisor was the stucco's 4.67 within its band and the plaster's 1.11 beyond, and the normal's
+  differences across that step turned it by up to 86° (relief.test.mjs; reliefnormal.gpu.mjs on Dawn). A normal
+  needs only the field's direction, so its looks read the chain's result undivided (`NORMAL_LOOK`), with one more
+  look at the hit for their base in such a scene (`normalAtHitWGSL`; its cost not measured). Not under group code,
+  which reads the value off the surface: a line can still show there.
 
 Its parameters are live uniforms (`relief_<name>_<id>`) owned by `<id>#relief`, so the model's parameter
 operations, the Properties panel and the parameter registry reach them unchanged. No version change: an

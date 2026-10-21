@@ -1,7 +1,7 @@
 //======================================================================================================================
 // node builder/test/unitchange.test.mjs
 //
-// A UNIT CHANGE THREE WAYS (unitchange.js, 0.70.0): keep the numbers, keep the real size by a scale, keep it by the
+// A UNIT CHANGE THREE WAYS (unitchange.js, 0.72.0): keep the numbers, keep the real size by a scale, keep it by the
 // numbers. Measured IN METRES, through the builder's own readings of a document -- every node's place (bounds.js
 // selectionGeometry), the estimate of what it covers (estimateBox), every light's face and flux (sources.js
 // sourceTable), the camera, the radius, the tolerance -- for every example, to another unit and back: both real-size

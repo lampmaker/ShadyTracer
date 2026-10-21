@@ -1377,7 +1377,19 @@
                 SHELL.status(stale ? 'report copied -- the page ran STALE files: Help › Reload every file fresh' : 'report copied (also in the console)');
             } });
             C({ id: 'help.fresh', menu: 'Help', group: 'diagnose', label: 'Reload every file fresh (past the browser\'s cache)', run: () => reloadFresh() });
-            C({ id: 'help.about', menu: 'Help', label: 'About', run: () => SHELL.status(`${versionText()} © Matthijs Keuper · a wavefront SDF path tracer with a technical optics trace · what changed: CHANGELOG.md`) });
+            /* A TIP FOR THE WORK: the GitHub Sponsors page, the one .github/FUNDING.yml and the README name too
+               (test/funding.test.mjs holds the three to one). A row in Help, and a link at the menu bar's right end
+               after the title (the user, 2026-10-20) -- a link, so its address shows on hover and a middle click works */
+            const SPONSOR = 'https://github.com/sponsors/lampmaker';
+            C({ id: 'help.sponsor', menu: 'Help', label: 'Support ShadyTracer…', run: () => window.open(SPONSOR, '_blank', 'noopener'),
+                help: 'ShadyTracer is free: a tip, one-time or monthly, through GitHub Sponsors (opens in a new tab)' });
+            {
+                const a = Object.assign(document.createElement('a'), { className: 'shell-menu', href: SPONSOR, target: '_blank', rel: 'noopener',
+                    title: 'ShadyTracer is free: a tip, one-time or monthly, through GitHub Sponsors' });
+                a.innerHTML = '<span class="sponsor-heart">♥</span> Sponsor';
+                SHELL.barEnd.appendChild(a);
+            }
+            C({ id: 'help.about', menu: 'Help', label: 'About', run: () => SHELL.status(`${versionText()} © Matthijs Keuper · a wavefront SDF path tracer with a technical optics trace · what changed: CHANGELOG.md · support it: Help › Support ShadyTracer…`) });
         }
 
         //==============================================================================================================

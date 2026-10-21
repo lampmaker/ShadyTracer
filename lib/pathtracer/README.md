@@ -74,7 +74,7 @@ only softer — which is why `scale` is the control that matters on a large disp
 
 | | |
 |---|---|
-| `await saveImage({width, height, samples, filename, onProgress, signal})` | render and download a PNG as the view would show it; an aborted `signal` stops it between samples (AbortError, no file) |
+| `await saveImage({width, height, samples, filename, onProgress, signal})` | render and download a PNG as the view would show it, named `filename` or, without one, `render-<the time>.png` (`lib/filename.js`); an aborted `signal` stops it between samples (AbortError, no file) |
 | `await renderPicture({width, height, samples, onProgress, signal})` | render and **keep the result as light** (a copy of the accumulation, cd/m²) in `darkroom`; returns its size, samples and `view`, the settings the display used for it |
 | `darkroom.save(settings, filename)` / `.preview(ctx, settings)` / `.meter()` / `.discard()` | the kept picture exposed, tone-mapped and graded with settings chosen after the render (`develop.js`: `viewSettings`, the develop pass in `rendertoscreen.js`), written as PNG at full size; `view` saves the picture `saveImage` would have |
 | `await beginOffscreen({width, height})` | stop the loop, point the renderer at an offscreen target |

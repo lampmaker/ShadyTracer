@@ -49,6 +49,7 @@ import { drawXY, xyAt, nearestX, ticks } from '../lib/pathtracer/optics/xychart.
 import { drawHeatmap, heatmapAt } from '../lib/pathtracer/optics/heatmap.js'
 import { quantityMap, quantitiesOf, MAP_QUANTITIES, cellChroma } from '../lib/pathtracer/optics/quantities.js'
 import { chartStrip, saveCanvases, saveText } from '../lib/pathtracer/strip.js'
+import { stampedName } from '../lib/filename.js'
 import { icon, iconButton, iconPill, lit } from '../lib/pathtracer/icons.js'
 import { OPTICS_CHARTS, FAR_CHARTS, MAP_CHARTS, chartSet } from './charts.js'
 
@@ -1072,7 +1073,8 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
         S.spacer()
         // ITS SAVES, ANOTHER LIKE IT (beside it, its settings copied: two charts compared differ in one), AWAY
         for (const [ic, tip, run] of SAVES[type] ?? []) S.action(ic, tip, run)
-        S.action('image', 'Save the chart (PNG)', () => saveCanvases(p.plot, `${c.n > 1 ? `${type}-${c.n}` : type}.png`))
+        // with the time it was saved: every save its own file (lib/filename.js)
+        S.action('image', 'Save the chart (PNG)', () => saveCanvases(p.plot, stampedName(c.n > 1 ? `${type}-${c.n}` : type, 'png')))
         if (charts?.add) S.action('duplicate', `Another ${KIND[type].title} chart like this one, beside it: its settings copied, to change one`, () => addChart(type, c))
         if (charts?.remove && c.n > 1) S.action('close', `Remove ${c.title} (the first ${KIND[type].title} chart stays: it can only be closed)`, () => removeChart(c.id))
         p.refreshBar = () => {

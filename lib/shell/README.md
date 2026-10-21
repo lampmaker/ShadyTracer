@@ -20,6 +20,7 @@ S.layout.setDefault(() => { S.open('view'); S.open('tree', { referencePanel: 'vi
 S.standardCommands()          // View: one entry per panel, Reset; Window: float, pop out, maximise, close
 S.standardCommands({ window: false, layouts: false })   // ...or with those and "Layout: X" in the palette only (menu-less)
 S.tools.appendChild(button)   // the host's own buttons on the menu bar, right after the menus (the raytracer's Undo / Redo)
+S.barEnd.appendChild(link)    // ...and at its right end, after the title (the raytracer's Sponsor link)
 S.layout.preset('Analyse', () => { ... }, 'what it is for')   // in the menu bar's switcher and View
 S.layout.onApply(() => S.open('view'))                        // what every layout must still have
 S.layout.restore()            // the user's last arrangement, or the default

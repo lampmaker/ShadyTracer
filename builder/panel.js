@@ -492,7 +492,7 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
                    a centimetre or a millimetre. Changing it ASKS how (unitdialog.js, unitchange.js; the user,
                    2026-10-19): keep the real size by scaling the objects, keep it by converting their
                    dimensions -- the camera, the radius and the tolerance converted with them -- or keep the
-                   numbers, the scene shrinking or growing by the factor, as every change did until 0.70.0.
+                   numbers, the scene shrinking or growing by the factor, as every change did until 0.72.0.
                    That last one was the only one, and on a new scene it hid itself: cm to mm left the
                    picture as it was, the camera 4 mm off in a world 25 mm wide, and a box typed 10 swallowed
                    the camera. Structural, because it reaches the renderer with the scene object (codegen's
