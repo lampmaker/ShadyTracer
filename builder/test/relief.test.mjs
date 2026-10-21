@@ -237,7 +237,9 @@ console.log(`  shell: ${shellAnswered} probes; nearest surface point found at le
     ok('SURFACE_ONLY at the root: true', flag('ra') === 'true', flag('ra'))
     ok('...under a plain union: true', flag('rb') === 'true', flag('rb'))
     ok('...under a hard CSG: its blend\'s test (0 now, live)', flag('rc') === 'UB.blend_x <= 0.0', flag('rc'))
-    ok('...under a smooth blend, through a plain union: its blend\'s test (false while it blends)', flag('rd') === 'UB.blend_y <= 0.0', flag('rd'))
+    /* ...the plain union between is one of y's shapes, so it is combined too (0.72.1, codegen.js combinedGroups), and its
+       own blend's test is in (true: a plain group's blend is 0; above 0 it is a CSG group, the same code but its comment line) */
+    ok('...under a smooth blend, through a plain union: its blend\'s test (false while it blends)', flag('rd') === 'UB.blend_y <= 0.0 && UB.blend_yu <= 0.0', flag('rd'))
     ok('...under group code: false', flag('re') === 'false', flag('re'))
     ok('...joining with own blends: the group\'s and every own one\'s test, together', flag('rh') === 'UB.blend_z <= 0.0 && UB.jblend_rh <= 0.0 && UB.jblend_zq <= 0.0', flag('rh'))
     ok('...a relief over a relief: the outer true, the inner false', flag('rf') === 'true' && flag('rg') === 'false', `${flag('rf')} ${flag('rg')}`)

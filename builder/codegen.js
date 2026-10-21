@@ -389,9 +389,39 @@ export const shapesOf = g => (g?.children || []).filter(c => c.type !== 'export'
 /** Does this group combine its children into one shape (and so need the CSG path)? Not when every
  *  shape after the first joins by union with no blend of its own and the group has none: each child
  *  then folds into the scene on its own, which keeps each child's material and the medium tracking
- *  exact. A tree from model.toTree says so itself (`csg`), decided on the document before disabled
+ *  exact -- unless the group is itself one of a CSG group's shapes (combinedGroups, below: then its
+ *  children are a union). A tree from model.toTree says so itself (`csg`), decided on the document before disabled
  *  children were pruned; anything else -- a document's group, a tree built by hand -- is decided here. */
 export const isCsg = g => g.csg ?? (g.blend > 0 || shapesOf(g).some((c, i) => i > 0 && (joinOf(c) !== 'union' || c.joinBlend > 0)))
+
+/** THE GROUPS WHOSE CHILDREN ARE COMBINED INTO ONE SHAPE (children() below, and the scene as data's CSG records): every
+ *  CSG group, and every group without code that is one of such a group's SHAPES -- a plain group or an array, and plain
+ *  groups inside that one, at any depth. A Set of ids, decided on the whole tree, since it is the parent that decides.
+ *    WHY A PLAIN GROUP THAT IS A SHAPE TOO (0.72.1). A plain group's children fold into the Hit in scope one by one
+ *  (scene_api.js fold), which keeps the surface as argmin |d|: the nearest boundary in either direction. That is what
+ *  the march needs of separate objects, and NOT a union's signed distance -- at a point 0.6 inside one shape and 0.004
+ *  outside another that overlaps it, fold says +0.004, "outside". A CSG group reads its shapes' signed distances, so a
+ *  plain group as one of them was a wrong operand wherever its children overlap: the STEP/STL import's rounded box let
+ *  rays run through its own edges (47 of 256 hits millimetres off, its GPU check), and a box less a group of two
+ *  overlapping spheres cut the wrong part (builder/test/csgshape.gpu.mjs). As a shape, its children are a union, as a
+ *  CSG union at blend 0 is: an exact min. An array's copies too, into one combine (group()). (For exact distances, two
+ *  shapes that do not meet never disagree, which is why disjoint ones -- most arrays of holes -- had been right.)
+ *    NOT GROUP CODE (the user, 2026-10-21): a group with code combines only when it is a CSG group itself; its code is
+ *  handed its children as they fold. NOT THE TOP LEVEL, nor a plain group outside any CSG group: there each child folds
+ *  into the scene on its own, which keeps each child's material and the medium tracking exact. */
+export function combinedGroups(tree) {
+    const out = new Set()
+    if (Array.isArray(tree)) return out
+    const walk = (n, shape) => {
+        if (n.kind !== 'group') return
+        const combines = n !== tree && (isCsg(n) || (shape && !hasCode(n)))
+        if (combines) out.add(n.id)
+        const shapes = combines ? shapesOf(n) : []
+        for (const c of n.children || []) walk(c, shapes.includes(c))
+    }
+    walk(tree, false)
+    return out
+}
 
 const CSG_FN = { union: 'csgUnion', subtract: 'csgSubtract', intersect: 'csgIntersect' }
 // when the child just combined makes the surface, and so gives the group its material (combine below)
@@ -959,6 +989,8 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
        p_local does not pay it (see localPoint in scene_api.js). */
     const wantLocal = materials.some(m => readsLocal(m.code))
     const tags = []
+    // the groups whose children combine into one shape: the CSG groups and their shapes that are plain groups
+    const combined = combinedGroups(tree)
     /* THE SCENE AS DATA (`data`; builder/scenedata.js): what can be data becomes records, what cannot is compiled as
        below, each such subtree a function the evaluator calls. Visibility is data, so a compiled subtree's hidden nodes
        are live too (their vis_ uniforms), as the document's liveVisibility makes them. Tags are numbered once, in tree
@@ -1015,7 +1047,8 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
                               beam: beamOf(L), transparent: L.transparent, twoSided: L.twoSided, shape: L.shape,
                               xfChain: n.transform ? [...xfChain, n.id] : xfChain, visChain: [...visChain, n.id],
                               params: n.params || {}, constants: n.constants || {} })
-                const at = above.findIndex(g => isCsg(g))
+                // the outermost combine: always a CSG group (a plain group combines only as one's shape)
+                const at = above.findIndex(g => combined.has(g.id))
                 if (at >= 0) {
                     hoistOf.set(n.id, { at: above[at].id, through: above.slice(at + 1) })
                     hoistedAt.set(above[at].id, [...(hoistedAt.get(above[at].id) || []), n])
@@ -1418,42 +1451,56 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
     }
 
     /* A group's children, into the C in scope: one by one for a plain union, combined into one
-       shape first for CSG. Emitted inline in the group's block, or -- for a group with code --
-       as the body of its children function. */
+       shape first for CSG -- and for a plain group that is one of a CSG group's shapes (combinedGroups:
+       folded, its children were not a union's signed distance). Emitted inline in the group's block,
+       or -- for a group with code -- as the body of its children function. */
     const children = (d, g) => {
-        const kids = g.children || []
-        if (!isCsg(g)) {
-            for (const c of kids) node(d, c)
+        if (!combined.has(g.id)) {
+            for (const c of g.children || []) node(d, c)
             return
         }
-        /* AN EXPORT BOX IS NOT A CHILD OF THE SHAPE. It emits nothing but its uniforms, and as a CSG
-           child it would still be combined -- as an empty Hit, 1e7 away, which an intersect takes
-           as the result and so deletes the group's whole shape. Emitted for its uniforms, then left
-           out of the combine. NOR IS A LIGHT, which was combined the same way until 2026-09-30 (as the
-           base it emptied the group): it is drawn after the combine, outside it (collectLights,
-           emitHoisted) -- the ones this group is the outermost CSG group of, from anywhere below it.
-           One hoisted to an outer CSG group, or under group code (not drawn), is left where it is.
-           A LIMITER'S OBJECT STAYS IN, as the empty shape the picture leaves it as (`hidden`): as the
-           base it makes the group a limiter -- a plate with a hole cut from it is a limiter aperture --
-           and the picture must then show none of it, which an empty base gives (codegen.test). */
+        combineRest(d, g)
+        combineOpen(d, g)
+        combineShapes(d, g)
+        combineClose(d, g)
+    }
+    /* A COMBINE IN PARTS, so an array's copies can share one (group(): open before its loop, the rest and the shapes
+       once a copy, close after it). In this order for any other group, which is the order its text has always had.
+         AN EXPORT BOX IS NOT A CHILD OF THE SHAPE. It emits nothing but its uniforms, and as a CSG
+       child it would still be combined -- as an empty Hit, 1e7 away, which an intersect takes
+       as the result and so deletes the group's whole shape. Emitted for its uniforms, then left
+       out of the combine. NOR IS A LIGHT, which was combined the same way until 2026-09-30 (as the
+       base it emptied the group): it is drawn after the combine, outside it (collectLights,
+       emitHoisted) -- the ones this group is the outermost CSG group of, from anywhere below it.
+       One hoisted to an outer CSG group, or under group code (not drawn), is left where it is.
+       A LIMITER'S OBJECT STAYS IN, as the empty shape the picture leaves it as (`hidden`): as the
+       base it makes the group a limiter -- a plate with a hole cut from it is a limiter aperture --
+       and the picture must then show none of it, which an empty base gives (codegen.test). */
+    const combineRest = (d, g) => {
         const shape = shapesOf(g)
-        for (const c of kids) if (!shape.includes(c) && hoistOf.get(c.id)?.at !== g.id) node(d, c)
-        uniforms[blendName(g.id)] = { type: 'f32', def: g.blend }
-        const k = `k_${g.id}`, km = `km_${g.id}`
+        for (const c of g.children || []) if (!shape.includes(c) && hoistOf.get(c.id)?.at !== g.id) node(d, c)
+    }
+    /* `copies`: the shapes are walked once a copy of an array (group()), into this one combine */
+    const combineOpen = (d, g, copies = false) => {
+        // a plain group's blend is 0 (combinedGroups: it combines as a shape), and a tree made by hand may have none
+        uniforms[blendName(g.id)] = { type: 'f32', def: g.blend ?? 0 }
         /* EACH CHILD'S JOIN (model version 14): its op, and its own blend if it has one, else the
            group's. Every own blend is declared, the base's too -- it is dormant while that child is
            first, but a live write to it must find a uniform, and under live visibility a hidden base
            makes the next child the first. */
-        for (const c of shape) if (c.joinBlend != null) uniforms[joinBlendName(c.id)] = { type: 'f32', def: c.joinBlend }
-        const blendOf = c => `UB.${c.joinBlend != null ? joinBlendName(c.id) : blendName(g.id)}`
-        line(d, `var ${k} = VEC4(0.0, 0.0, 1.0, 1.0e7);`)
-        line(d, `var ${km} = MAT_AIR;`)
+        for (const c of shapesOf(g)) if (c.joinBlend != null) uniforms[joinBlendName(c.id)] = { type: 'f32', def: c.joinBlend }
+        line(d, `var k_${g.id} = VEC4(0.0, 0.0, 1.0, 1.0e7);`)
+        line(d, `var km_${g.id} = MAT_AIR;`)
         /* the top of a CSG chain with a relief in it (reliefChain): XF_RL collects the steepest relief folded in below
            (foldRelief), the result is divided by it once, and it is put back for a chain this one is inside */
-        const top = reliefTops.has(g.id)
-        if (top) line(d, `let xfrl_${g.id} = XF_RL; XF_RL = 1.0;`)
-        const first = `first_${g.id}`
-        if (liveVisibility) line(d, `var ${first} = true;`)
+        if (reliefTops.has(g.id)) line(d, `let xfrl_${g.id} = XF_RL; XF_RL = 1.0;`)
+        // the base found at run time where the first child need not be it: a hidden one, a copy after the first
+        if (liveVisibility || copies) line(d, `var first_${g.id} = true;`)
+    }
+    const combineShapes = (d, g, copies = false) => {
+        const shape = shapesOf(g)
+        const k = `k_${g.id}`, km = `km_${g.id}`, first = `first_${g.id}`
+        const blendOf = c => `UB.${c.joinBlend != null ? joinBlendName(c.id) : blendName(g.id)}`
         const combine = (dd, c) => {
             /* the material of whichever shape makes the surface there, by the same test the join's csg* function
                picks its side by: a union's nearer, an intersection's farther, a subtraction's cutter where -C.s
@@ -1469,21 +1516,26 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
             if (wantLocal) line(d + 1, 'XF_SUB += 1u;')
             emitNode(d + 1, c)
             if (wantLocal) line(d + 1, 'XF_SUB -= 1u;')
-            if (liveVisibility) {
+            if (liveVisibility || copies) {
                 line(d + 1, `if (${first}) { ${k} = C.s; ${km} = C.m; ${first} = false; } else {`)
-                /* THE BASE'S else IS NEVER TAKEN: first is still true when the first child comes. Written
-                   with the join of the child after it, so a version 10 group -- whose op was every
-                   child's -- keeps exactly the text it had (test/fixtures/csg-v10). */
-                combine(d + 2, i === 0 && shape[1] ? { ...c, join: shape[1].join } : c)
+                /* THE BASE'S else IS NEVER TAKEN in a group: first is still true when the first child comes. Written
+                   with the join of the child after it, so a version 10 group -- whose op was every child's -- keeps
+                   exactly the text it had (test/fixtures/csg-v10). IN AN ARRAY IT IS, at every copy after the first:
+                   a union of the copies, at the group's blend -- a plain group's, 0 -- whatever join and blend the
+                   base keeps dormant (isCsg reads neither). */
+                combine(d + 2, copies && i === 0 ? { ...c, join: 'union', joinBlend: undefined } : i === 0 && shape[1] ? { ...c, join: shape[1].join } : c)
                 line(d + 1, '}')
             } else if (i === 0) {
                 line(d + 1, `${k} = C.s; ${km} = C.m;`)
             } else combine(d + 1, c)
             line(d, '}')
         })
+    }
+    const combineClose = (d, g) => {
+        const k = `k_${g.id}`, km = `km_${g.id}`
         /* Already world-space: every child went through its own transform on the way in. Folded
            BEFORE leaving the group's frame, so a local point recorded for it is the group's. */
-        if (!top) line(d, `C = fold(C, ${k}, ${km});`)
+        if (!reliefTops.has(g.id)) line(d, `C = fold(C, ${k}, ${km});`)
         else {
             /* ...undivided in a normal's look (scene_api.js NORMAL_LOOK): the normal reads the direction alone, and the
                division jumps where a relief's band ends. Not under code, its own or above it: that reads the value off
@@ -1546,7 +1598,7 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
         /* under a CSG group every blend in play: the group's, and each own join blend it declares */
         const blends = n => [`UB.${blendName(n.id)} <= 0.0`,
             ...shapesOf(n).filter(c => c.joinBlend != null).map(c => `UB.${joinBlendName(c.id)} <= 0.0`)]
-        const mine = n === tree ? [] : hasCode(n) ? ['false'] : isCsg(n) ? blends(n) : []
+        const mine = n === tree ? [] : hasCode(n) ? ['false'] : combined.has(n.id) ? blends(n) : []
         for (const c of n.children || []) readers(c, [...above, ...mine])
     }
     readers(tree, [])
@@ -1592,7 +1644,7 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
             if (chain.length && hasCode(n) && /\bDIVIDED_ABOVE\b/.test(codeOnly(n.code))) reliefTops.add(chain[0].g.id)
         }
         for (const c of n.children || []) {
-            const next = n === tree ? [] : hasCode(n) ? (isCsg(n) ? [linkOf(n, c)] : []) : isCsg(n) ? [...chain, linkOf(n, c)] : chain
+            const next = n === tree ? [] : hasCode(n) ? (combined.has(n.id) ? [linkOf(n, c)] : []) : combined.has(n.id) ? [...chain, linkOf(n, c)] : chain
             chains(c, next, coded || (n !== tree && hasCode(n)))
         }
     }
@@ -1621,6 +1673,12 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
             // its names with an underscore no node id has (model.js ID), so none can be another node's
             const K = g.copies.length, c = `ci_${g.id}`, pseudo = { id: `${g.id}_c`, inStraightOf: g }
             g.copies.forEach((t, i) => { uniforms[copyName(g.id, i)] = { type: 'mat4x4<f32>', def: matrixOf(t) } })
+            /* ...ONE OF A CSG GROUP'S SHAPES (combinedGroups): one combine for all its copies, its result declared before
+               the loop and folded after it, in the group's frame -- the copies a union, as its children in each. Not a
+               CSG group with copies, which the model refuses (copiesProblems) and a tree made by hand can have: each
+               copy combined and folded on its own, as before (scenedata.js the same) */
+            const together = combined.has(g.id) && !isCsg(g)
+            if (together) combineOpen(d + 1, g, true)
             line(d + 1, `for (var ${c} = 0u; ${c} < ${K}u; ${c} = ${c} + 1u) {`)
             line(d + 2, `var T_${g.id}: mat4x4<f32>;`)
             line(d + 2, `switch ${c} {`)
@@ -1628,9 +1686,11 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
             line(d + 3, 'default: { }')
             line(d + 2, '}')
             enter(d + 2, pseudo, `T_${g.id}`)
-            children(d + 2, g)
+            if (together) { combineRest(d + 2, g); combineShapes(d + 2, g, true) }
+            else children(d + 2, g)
             leave(d + 2, pseudo, `T_${g.id}`)
             line(d + 1, '}')
+            if (together) combineClose(d + 1, g)
         }
         else if (!coded) children(d + 1, g)
         else {

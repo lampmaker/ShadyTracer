@@ -2414,7 +2414,9 @@ export function setMaterial(doc, id, mat) {
  * the DOCUMENT, before disabled children are pruned. Decided on the tree, hiding the only child that
  * joins by subtraction would turn the group into a plain union -- and its blend uniform would vanish
  * from the shader while params.js, which reads the document, still wrote it live. A version 10 group
- * was CSG by its own op, which pruning never changed; this keeps that.
+ * was CSG by its own op, which pruning never changed; this keeps that. It is the group's OWN joins: a
+ * plain group that is one of a CSG group's shapes keeps `csg` false and is combined all the same, as a
+ * union (codegen combinedGroups, 0.72.1), which its parent decides -- the tree's, not this flag.
  *
  * `keepDisabled` (for codegen's liveVisibility, the document's setting): disabled nodes stay, marked
  * `enabled: false`, so the shader has them and a uniform decides -- hiding one then compiles nothing.

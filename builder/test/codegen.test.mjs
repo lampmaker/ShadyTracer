@@ -9,7 +9,7 @@ import { readFileSync, readdirSync } from 'node:fs'
 // assertions so the rebuild cannot quietly reintroduce them.
 //======================================================================================================================
 import { generate, wgslTypeOf, aliasPrelude, uniformName, NODE_TYPES, xfName, blendName, boxLoName, boxHiName, codeOnly, wgslLiteral,
-    renameChildren, GROUP_CODE_TEMPLATE, isProfile, isPath, isCompiledIn, livePointsUpdate, pathPieceName, pathFrameName, pathOkName, pathValuesName, pathCountName, profilePieceName, profileOkName, profileReachName, EDIT_SPARE } from '../codegen.js'
+    renameChildren, GROUP_CODE_TEMPLATE, isProfile, isPath, isCompiledIn, livePointsUpdate, pathPieceName, pathFrameName, pathOkName, pathValuesName, pathCountName, profilePieceName, profileOkName, profileReachName, EDIT_SPARE, combinedGroups } from '../codegen.js'
 import { typedColumn } from '../emit.js'
 import * as Model from '../model.js'
 import { resolve, mapMessages } from '../emit.js'
@@ -22,6 +22,7 @@ import { MATERIALS } from '../../lib/pathtracer/core/materials.js'
 import { NOISE } from '../../lib/pathtracer/core/noise.js'
 import { SCENE_API } from '../../lib/pathtracer/core/scene_api.js'
 import { PRIMITIVES as LIBRARY, primitiveObject, SHAPE_GROUPS } from '../primitives.js'
+import { modifierGroup } from '../modifiers.js'
 
 let pass = 0, fail = 0
 const ok = (name, cond, extra = '') => {
@@ -853,6 +854,53 @@ eq('uniformName', uniformName('n7', 'radius'), 'radius_n7')
     const cm = build(); Model.setCode(cm, 'rig', '// nothing yet')
     ok('sources: a group with only comments for code is no group code: its light traced, as it is drawn',
         sourceTable(cm).sources.length === 1 && /\/\/ node lamp \(light, disc\)/.test(generate(Model.toTree(cm)).wgsl))
+}
+{
+    /* A PLAIN GROUP AS ONE OF A CSG GROUP'S SHAPES (0.72.1, codegen.js combinedGroups): its children combined as a union
+       (csgUnion at its blend, 0), not folded -- a fold keeps the nearest boundary by |d|, which is no union's signed
+       distance where they overlap, and the CSG group above read it as its operand (csgshape.gpu.mjs says so in numbers:
+       this is the text). Plain groups inside one too, and an array's copies, into ONE combine. Not group code, not the top
+       level, not a plain group outside any CSG group. */
+    const at = (x, y, z) => ({ pos: { x, y, z }, rot: { x: 0, y: 0, z: 0 }, scale: 1 })
+    const d = Model.createDoc()
+    Model.addGroup(d, 'root', { id: 'part' })
+    Model.addObject(d, 'part', { id: 'hb', primitive: 'box' })
+    Model.addGroup(d, 'part', { id: 'rig', join: 'subtract' })
+    Model.addObject(d, 'rig', { id: 'ra', primitive: 'sphere' })
+    Model.addGroup(d, 'rig', { id: 'inner' })
+    Model.addObject(d, 'inner', { id: 'ia', primitive: 'sphere' }); Model.addObject(d, 'inner', { id: 'ib', primitive: 'sphere' })
+    Model.addGroup(d, 'part', { id: 'row', join: 'subtract' })
+    Model.addObject(d, 'row', { id: 'rs', primitive: 'sphere', join: 'subtract' })       // the base: its join dormant
+    Model.setCopies(d, 'row', [at(-0.5, 0, 0), at(0.5, 0, 0)])
+    Model.addGroup(d, 'part', { id: 'mir', ...modifierGroup('mirror'), join: 'subtract' })
+    Model.addGroup(d, 'mir', { id: 'undercode' })
+    Model.addObject(d, 'undercode', { id: 'ua', primitive: 'sphere' }); Model.addObject(d, 'undercode', { id: 'ub', primitive: 'sphere' })
+    Model.addGroup(d, 'root', { id: 'loose' })
+    Model.addGroup(d, 'loose', { id: 'looser' })
+    Model.addObject(d, 'looser', { id: 'la', primitive: 'sphere' }); Model.addObject(d, 'looser', { id: 'lb', primitive: 'sphere' })
+    eq('combinedGroups: the CSG group, its plain shapes, a plain group in one, an array -- not group code, nor a plain group under it, nor outside any CSG group',
+        [...combinedGroups(Model.toTree(d))].sort(), ['inner', 'part', 'rig', 'row'])
+    for (const live of [false, true]) {
+        const how = live ? ' (live visibility)' : ''
+        const g = generate(Model.toTree(d, { keepDisabled: live }), { liveVisibility: live }), w = g.wgsl
+        const block = id => w.slice(w.indexOf(`// group ${id} (`), w.indexOf(`C = fold(C, k_${id}, km_${id});`))
+        ok(`a plain group that is a shape combines its children: each alone, joined by an exact union${how}`,
+            // (live: the base's else too, never taken in a group: the join of the child after it)
+            (block('rig').match(/csgUnion\(k_rig, C\.s, UB\.blend_rig\);/g) || []).length === (live ? 2 : 1)
+            && (block('inner').match(/csgUnion\(k_inner, C\.s, UB\.blend_inner\);/g) || []).length === (live ? 2 : 1)
+            // ...the union folded into the rig's own Hit, which part then subtracts
+            && w.indexOf('C = fold(C, k_rig, km_rig);') < w.indexOf('k_part = csgSubtract(k_part, C.s, UB.blend_part);', w.indexOf('// group rig (')))
+        eq(`...its blend declared at 0, as a union group's${how}`, ['rig', 'inner', 'row'].map(id => g.uniforms[blendName(id)]?.def), [0, 0, 0])
+        const loop = w.indexOf('for (var ci_row = 0u;'), loopEnd = w.indexOf('C = fold(C, k_row, km_row);')
+        ok(`an array that is a shape: one combine for its copies, opened before its loop and folded after it${how}`,
+            w.indexOf('var k_row = VEC4(') < loop && w.indexOf('var first_row = true;') < loop && loopEnd > loop
+            && (w.slice(loop, loopEnd).match(/var k_row|C = fold\(C, k_row/g) || []).length === 0)
+        ok(`...its base, at a copy after the first, a union at the group's blend, whatever join it keeps dormant${how}`,
+            /if \(first_row\) \{ k_row = C\.s; km_row = C\.m; first_row = false; \} else \{\s+km_row = select\(km_row, C\.m, C\.s\.w < k_row\.w\);\s+k_row = csgUnion\(k_row, C\.s, UB\.blend_row\);/.test(w))
+        ok(`group code that is a shape is handed its children as they fold, a plain group under it too${how}`,
+            !/k_mir\b|k_undercode\b/.test(w) && /\/\/ group undercode \(union\)/.test(w))
+        ok(`a plain group outside any CSG group folds its children into the scene, as ever${how}`, !/k_loose\b|k_looser\b/.test(w))
+    }
 }
 {
     // THE SCENE'S SIZE, an estimate: object positions, padded by the largest parameter

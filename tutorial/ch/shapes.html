@@ -276,8 +276,11 @@
       surface by size, and the solid the point is least deep in (section 3):</p>
     <pre data-src="lib/pathtracer/core/scene_api.js" data-sym="fn fold" data-max="34"
          data-why="sdf.w is the shape's distance and sdf.xyz its normal, as in the excerpt above. H.s and H.m are the nearest surface and its material; H.a and H.insideW the solid the point is in and how deep: read the two ifs, the first for the solid (of the negative distances, the one nearest zero: the solid the point is least deep in), the second for the surface (the smallest size of distance). The LOCAL_CAPTURE part records where on the object a point is, for materials fixed to an object, and runs only when asked." data-hash="ee27df92"></pre>
-    <p>A group of shapes picks its material by the same test the join uses to pick its side, so a hole's walls wear the
-      cutter's material:</p>
+    <p><code>fold</code> answers the march's questions, not a join's. Where two shapes overlap, the nearest surface by
+      size can be one the point is just outside of while it is deep inside the other, so it says nothing of which side
+      of their union the point is on. A group that is itself one shape of a join (a group cut away, say) therefore has
+      its own shapes joined first, by a hard union, and only that is folded in. A group of shapes picks its material by
+      the same test the join uses to pick its side, so a hole's walls wear the cutter's material:</p>
     <pre data-src="builder/codegen.js" data-sym="const combine = (dd, c) => {"
          data-why="This is JavaScript writing WGSL: each line(...) adds a line to the shader built for the scene (chapter 24). MAT_WINS gives the test per join, CSG_FN the join's function." data-hash="87056de1"></pre>
     <p>A warp says what it did to space, so the distances and normals after it can be put right:</p>

@@ -185,6 +185,11 @@
         won, so a subtraction's carved walls kept the base's: the die in the Combining shapes example, a cube with its pips cut
         out, came out with white pips
         (<cite data-src="builder/codegen.js" data-sym="Before 0.57.2 only a union switched"></cite>; chapter 3).</li>
+      <li><strong>A cut that cut the wrong part.</strong> A group used as one shape of a join was folded, not joined: its
+        shapes went into the Hit one by one, which keeps the nearest surface by size, and that says nothing of which side
+        of their union a point is on. Where they overlapped, a subtraction cut the wrong part, and an imported rounded box
+        let rays through its own edges. Such a group's shapes are now joined by a hard union first
+        (<cite data-src="builder/codegen.js" data-sym="WHY A PLAIN GROUP THAT IS A SHAPE TOO (0.72.1)"></cite>; chapter 3).</li>
       <li><strong>Every scene an error.</strong> The first builder wrote calls to a function the engine had already
         renamed, so every scene it produced failed to compile
         (<cite data-src="builder/codegen.js" data-sym="// Two node types and no UI. Nothing else gets built until that round-trips, because the" data-to="// anyone so."></cite>).</li>
