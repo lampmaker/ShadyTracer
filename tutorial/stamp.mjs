@@ -15,15 +15,16 @@ const unq = v => v.replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g
 
 /** One page's text with every excerpt's data-hash set; `read(path)` gives a repository file's text. A tag ends at the
  *  first > outside quotes: an attribute may hold one (a data-why writing `(x, y) => ...`), and a pattern that stopped
- *  at any > once wrote the stamp into the middle of that sentence. */
-export function stampPage(html, read, log = () => { }) {
+ *  at any > once wrote the stamp into the middle of that sentence. `should(attrs)` decides whether an excerpt whose
+ *  hash moved is stamped: always, here; release.mjs stamps only those the release itself moved, by its version number. */
+export function stampPage(html, read, log = () => { }, should = () => true) {
     let changed = 0
     const out = html.replace(/<pre\b((?:[^>"]|"[^"]*")*)>/g, (whole, inner) => {
         if (!/\bdata-src="/.test(inner)) return whole
         const a = {}; for (const m of inner.matchAll(/([\w-]+)="([^"]*)"/g)) a[m[1]] = unq(m[2])
         let h
         try { h = locate(read(a['data-src']), optionsOf(k => a[k])).hash } catch (e) { log(`skipped ${a['data-src']} "${a['data-sym']}": ${e.message}`); return whole }
-        if (a['data-hash'] === h) return whole
+        if (a['data-hash'] === h || !should(a)) return whole
         changed++
         log(`${a['data-src']} "${a['data-sym']}" ${a['data-hash'] ?? '(none)'} -> ${h}`)
         return a['data-hash'] != null ? whole.replace(/ data-hash="[^"]*"(?=(?:[^"]*"[^"]*")*[^"]*>$)/, ` data-hash="${h}"`) : whole.replace(/>$/, ` data-hash="${h}">`)

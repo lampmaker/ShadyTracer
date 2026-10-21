@@ -114,6 +114,7 @@ node test/diagnose.check.mjs    # stale cached files found and reloaded fresh, h
 node test/filename.test.mjs     # a saved picture's or video's name: the time it was saved, local, sortable, no `:`; twice in a second told apart
 node test/funding.test.mjs      # where a tip goes: .github/FUNDING.yml's account, the page's Help row and its Sponsor link at the bar's right end, and the README, one Sponsors page
 node test/version.test.mjs      # VERSION and CHANGELOG.md agree; the revision read from .git, or the REVISION file a Pages deploy writes, every failure null; a file's `app` stamp never read into a document
+node test/release.test.mjs      # the release (release.mjs): a change note read or refused naming its file, the largest bump, one entry above the newest, `0.next` replaced as a version and nowhere else, a tutorial excerpt re-stamped only when the release alone moved it; this repository's notes parse and a `0.next` has a note; through real git: main merged into dev, dev and main pushed together, a refused push or a conflict moving neither, the checkout run from untouched
 node test/start.test.mjs        # the page's start when its scene will not compile: the empty scene instead, why, and the safe start (?safe, or a start that never finished), no GPU
 node library/test/panel.check.mjs # the Library panel: search, filters, tags, put in, keep, rename, remove, duplicate, edit, export, import, drag out (optional: playwright)
 node builder/test/drop.check.mjs # a library item dropped on the tree or the picture: materials onto objects, nodes placed (optional: playwright)
@@ -235,8 +236,10 @@ someone set `guide != 0`. If you add a mode, find a way to execute it.
 
 - Comments explain **why**, including what went wrong before. Match the density around you.
 - Commit messages are prose that says what was wrong and what the fix rests on.
-- Work on a branch, never commit to `main` directly, and only open a PR if asked.
-- `main` is what GitHub Pages serves (`.github/workflows/pages.yml`): a merge is a release.
+- Work on a branch, never commit to `main` or `dev` directly, and only open a PR if asked. A PR targets `dev`.
+- `main` is what GitHub Pages serves (`.github/workflows/pages.yml`), and only a release moves it: the user runs
+  `node release.mjs`, which makes `dev`'s change notes a version and pushes `dev` to `main` (*Versions*). A merge into
+  `dev` is not deployed.
 - CI (`.github/workflows/test.yml`) runs `check-shaders.mjs` and every `*.test.mjs` above on each
   push and PR. It is no substitute for running them yourself before a push.
 
@@ -263,15 +266,36 @@ tutorial, in the same PR**:
 ## Versions
 
 The application has a version: `VERSION` in `version.js`, semver 0.x, with one entry
-per version in `CHANGELOG.md`, newest first. **Every PR that changes the application
-raises it, in the same PR, with its entry.**
-- **MINOR** for a feature, or for any change to a file format's `version` (scene, project, workspace,
-  library).
-- **PATCH** for a fix, a document or a test.
-- If `main` took that number first, take the next one when merging `main` in.
+per version in `CHANGELOG.md`, newest first. **A PR never picks the number**: two branches in parallel both took the
+next one, and the one merged second renumbered everything by hand. Instead, **every PR that changes the application
+adds a change note**, `changes/<slug>.md` (a slug saying what the change is, so no two branches share one):
 
-The entry says what changed and **what to look at**. `version.test.mjs` fails when the code and the
-changelog disagree.
+```
+bump: minor
+
+**What changed, in a sentence.** The rest of the entry...
+
+**What to look at:** ...
+```
+
+- `bump: minor` for a feature, or for any change to a file format's `version` (scene, project, workspace,
+  library). `bump: patch` for a fix, a document or a test.
+- Below the bump line, the entry exactly as it will sit under `## x.y.z — date`: what changed and **what to look
+  at**. No `## ` heading in it.
+- Wherever you would name your own version -- a comment, a test's description, a line in this file, the tutorial,
+  the note itself -- write the placeholder `0.next`. Written in backticks like that, it is only its name and stays.
+- Do not edit `VERSION` or `CHANGELOG.md`.
+
+The user releases when they choose, from VS Code (Terminal › Run Task › *Release dev → main*, or *Release: dry run*
+first), or `node release.mjs`. It takes `origin`'s `dev` and merges `main` into it if `main` has commits `dev`
+lacks. The largest bump among the notes sets the version. The notes become one entry and `0.next` becomes the
+number. A tutorial excerpt that only the number moved is re-stamped. The notes are deleted, and the result is
+pushed to `dev` and `main` together. Several PRs merged between releases share one version. `release.mjs`'s header
+has the details; `release.test.mjs` fails a PR whose note does not parse, or that writes `0.next` with no note, and
+`version.test.mjs` fails when the code and the changelog disagree.
+
+A branch written before this rule converts once: its CHANGELOG entry into a note, `version.js` and `CHANGELOG.md`
+taken from `dev`, and `0.next` for its own number.
 
 The exact code is the git revision, which the page reads from `.git` (on GitHub Pages, from the `REVISION`
 file the deploy writes) and shows beside the version. So a

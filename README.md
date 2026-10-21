@@ -562,6 +562,10 @@ The application's version is in `version.js`, and what each version changed is i
 [`CHANGELOG.md`](CHANGELOG.md). The page shows the version with the
 git revision it was served from, in its title, About, the report and every test result.
 
+Pull requests merge into `dev`, each with a change note in `changes/`. A release (`node release.mjs`, or VS
+Code's *Release dev → main* task) turns the notes into the next version and pushes `dev` to `main`, which is what
+GitHub Pages serves. CLAUDE.md's *Versions* section has the rule.
+
 ### Measuring
 
 The renderer cannot be measured usefully on a software adapter, so it carries an in-page bench that

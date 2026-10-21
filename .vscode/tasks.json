@@ -1,0 +1,26 @@
+{
+    // Terminal > Run Task. release.mjs says what each does: dev's change notes become a version, and dev becomes main.
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Release: dry run",
+            "detail": "What the next release would be, from origin's dev: nothing written, nothing pushed",
+            "type": "process",
+            "command": "node",
+            "args": ["release.mjs", "--dry-run"],
+            "options": { "cwd": "${workspaceFolder}" },
+            "problemMatcher": [],
+            "presentation": { "reveal": "always", "panel": "dedicated", "focus": true, "clear": true }
+        },
+        {
+            "label": "Release dev → main",
+            "detail": "Gather changes/*.md into a version, ask, then push it to dev and main together",
+            "type": "process",
+            "command": "node",
+            "args": ["release.mjs"],
+            "options": { "cwd": "${workspaceFolder}" },
+            "problemMatcher": [],
+            "presentation": { "reveal": "always", "panel": "dedicated", "focus": true, "clear": true }
+        }
+    ]
+}
