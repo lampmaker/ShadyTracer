@@ -25,13 +25,14 @@ custom amount), but nothing pointed to it: no `.github/FUNDING.yml`, nothing in 
   that place as `S.barEnd`, as it gives `S.tools` after the menus (`lib/shell/shell.js`), with the same hairline
   before it.
 - **Help › Support ShadyTracer…** opens the same page; **Help › About** now ends with where to find it.
-- **`.github/FUNDING.yml`** (`github: lampmaker`) puts the Sponsor button in the repository page's header, once
-  *Settings › General › Features › Sponsorships* is ticked: a setting only the owner can change.
+- **`.github/FUNDING.yml`** (`github: lampmaker`) puts the Sponsor button in the repository page's header. GitHub
+  reads the file from the default branch only, so the button appears once this is on main, and only with
+  *Settings › General › Features › Sponsorships* ticked: a setting only the owner can change.
 - **The README** links it in its first line and under *Licence and credits*.
 
 **What to look at:** the menu bar's right end: *♥ Sponsor* after the title, the heart in pink, the menus' hover.
 Clicking it, or Help › Support ShadyTracer…, opens github.com/sponsors/lampmaker in a new tab. On the repository
-page, the ♥ Sponsor button in the header once Sponsorships is ticked.
+page, after the merge to main and with Sponsorships ticked, the ♥ Sponsor button in the header.
 
 **Tests:** `test/funding.test.mjs` (new): FUNDING.yml's account, the page's one Sponsors address, the Help row and the
 bar's link opening it, the README linking it, so the four cannot name different pages; it fails when FUNDING.yml

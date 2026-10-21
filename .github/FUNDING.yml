@@ -1,4 +1,5 @@
-# The repository page's Sponsor button (it also needs Settings > General > Features > Sponsorships ticked).
+# The repository page's Sponsor button. GitHub reads this file from the default branch only, so the button appears
+# once it is on main, and only with Settings > General > Features > Sponsorships ticked.
 # The app's Help > Support ShadyTracer... and the README link the same page; test/funding.test.mjs holds the three to
 # one name.
 github: lampmaker
