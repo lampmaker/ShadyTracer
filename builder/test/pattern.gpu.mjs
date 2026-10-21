@@ -11,7 +11,8 @@
 //   - where the node whose frame a material is read in (model.js patternOwner) has a pattern frame { t, R }: the local
 //     point R^T (p - t) and the frame F R of the capture without it, the scale and the node the same -- an object at the
 //     top level, a CSG group (a shape's own frame inside it changing nothing), an object inside a straight group (its
-//     material frame XF_Q moved by the pattern's), a shell (its child's own frame changing nothing);
+//     material frame XF_Q moved by the pattern's), a shell (its child's own frame changing nothing), a circular array's
+//     child (its own, in the copy that won);
 //   - everywhere else, the capture without it, bit for bit;
 //   - the same as codegen's with the scene as data, where a node in its pattern frame is a compiled subtree;
 // and a relief read in a pattern frame: turned 90 degrees about y and moved along x, a relief of q.z is the relief of
@@ -171,6 +172,12 @@ function sceneDoc(withPatterns) {
     M.addGroup(d, 'root', { id: 'sh', ...modifierGroup('shell'), transform: T(0, -4, 0, 15, 0, 0) })
     M.find(d, 'sh').node.params.thickness = 0.1
     M.addObject(d, 'sh', { id: 'ss', primitive: 'sphere', material: 'grain', params: { radius: 1.2 } })
+    /* a circular array (modifiers.js circular): its copies folded in Hits of their own, and the winning copy evaluated once
+       more into the scene's under capture -- so its child records its own frame, in that copy's turn, and its own pattern
+       frame moves that */
+    const cg = modifierGroup('circular')
+    M.addGroup(d, 'root', { id: 'ring', ...cg, params: { ...cg.params, count: 5 }, transform: T(4, 4, 0) })
+    M.addObject(d, 'ring', { id: 'rb', primitive: 'box', material: 'grain', params: { size: { x: 0.3, y: 0.3, z: 0.5 }, rounding: 0 }, transform: T(1.2, 0, 0, 0, 0, 20) })
     if (withPatterns) {
         M.setPattern(d, 'a', P1)
         M.setPattern(d, 'cut', P2)
@@ -178,14 +185,16 @@ function sceneDoc(withPatterns) {
         M.setPattern(d, 'tc', P1)
         M.setPattern(d, 'sh', P3)
         M.setPattern(d, 'ss', P2)          // inside the shell: the same, nothing
+        M.setPattern(d, 'rb', P2)          // in a circular array's copy: its own
     }
     return d
 }
 const A = sceneDoc(false), B = sceneDoc(true)
 const treeOf = d => M.toTree(d, { keepDisabled: true })
-ok('patternOwner: an object its own, a CSG shape its group, a shelled shape its shell, a twist none',
+ok('patternOwner: an object its own, a CSG shape its group, a shelled shape its shell, a twist none, a circular array\'s child its own',
     M.patternOwner(B, 'a') === 'a' && M.patternOwner(B, 'cs') === 'cut' && M.patternOwner(B, 'cut') === 'cut' && M.patternOwner(B, 'tc') === 'tc'
-    && M.patternOwner(B, 'tw') === null && M.patternOwner(B, 'ss') === 'sh' && M.patternOwner(B, 'sh') === 'sh')
+    && M.patternOwner(B, 'tw') === null && M.patternOwner(B, 'ss') === 'sh' && M.patternOwner(B, 'sh') === 'sh'
+    && M.patternOwner(B, 'rb') === 'rb' && M.patternOwner(B, 'ring') === null)
 const plan = planOf(treeOf(B), { wantLocal: true })
 ok('as data, the nodes in their pattern frames are compiled subtrees, and only those', ['a', 'cut', 'tw', 'sh'].every(id => plan.sub.has(id)) && !plan.sub.has('b'),
     `subs: ${[...plan.sub.keys()].join(', ')}`)
@@ -226,8 +235,8 @@ for (const [name, X] of [['codegen', CB], ['as data', DB]]) {
         `${tagged} of ${N} on a surface, node ${badTag}, scale ${badScale}${ex ? ` (${ex})` : ''}`)
     ok(`${name}: in a pattern frame, the local point R^T (p - t) and the frame F R`, moved > 200 && badMoved === 0, `${badMoved} of ${moved}${ex ? ` (${ex})` : ''}`)
     ok(`${name}: anywhere else, the capture without one, bit for bit`, same > 200 && badSame === 0, `${badSame} of ${same}${ex ? ` (${ex})` : ''}`)
-    ok(`${name}: every part of the scene sampled -- its object, the CSG group, the straight group's capsule, the shell, the rest`,
-        ['a', 'cut', 'tc', 'sh', 'b', 'tb'].every(k => (counted.get(k) ?? 0) > 20), JSON.stringify([...counted]))
+    ok(`${name}: every part of the scene sampled -- its object, the CSG group, the straight group's capsule, the shell, a circular array's copies, the rest`,
+        ['a', 'cut', 'tc', 'sh', 'rb', 'b', 'tb'].every(k => (counted.get(k) ?? 0) > 20), JSON.stringify([...counted]))
 }
 
 // ---- a relief read in a pattern frame: q.z there is (p - t).x here

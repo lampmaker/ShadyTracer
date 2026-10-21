@@ -14,7 +14,7 @@
 //   in this group's frame by XF_S to have it in the world units the Hit holds.
 //
 // TAGS say which of three kinds a modifier is, for the library's tag row: SPACE (it moves where the
-// children are evaluated: twist, bend, repeat, mirror), SHAPE (it changes the distance by a size:
+// children are evaluated: twist, bend, repeat, mirror, circular array), SHAPE (it changes the distance by a size:
 // round, shell) or SURFACE (a relief on the children's surface: displace, noise relief). A material
 // can carry a relief itself now (materials.js RELIEFS), which is the usual way: what a surface is
 // belongs to its material. These groups stay for a relief over a whole assembly or a CSG result.
@@ -23,8 +23,9 @@
 // THE SCENE AS DATA KNOWS TWO SHAPES OF CODE, by reading it (codegen.js isBefore, isAfter): the space ones end with
 // `C = children(C, p);` and fold nothing before it, round and shell start with `var H = children(emptyHit(r), p);`
 // and warp nothing after -- so their children are records, and editing them compiles nothing. Code of another shape
-// (displace and the relief read the CSG chain above them) is compiled with its children, which is right but slower to
-// edit: a change here that moves a modifier out of its shape costs that, and scenedata.test.mjs says which is which.
+// (displace and the relief read the CSG chain above them; the circular array calls its children once a copy) is compiled
+// with its children, which is right but slower to edit: a change here that moves a modifier out of its shape costs that,
+// and scenedata.test.mjs says which is which.
 //
 // LENGTHS AND WHAT IS PER ONE, as primitives.js has them: `lengths` in the scene's unit, `perLength` per a length to a
 // power (a twist's rate, a ripple's frequency), so a unit's change that keeps the real size converts both
@@ -137,6 +138,63 @@ export const MODIFIERS = {
             'p.x = abs(p.x);',
             'warp(1.0);',
             'C = children(C, p);',
+        ].join('\n'),
+    },
+    circular: {
+        label: 'circular array',
+        tags: ['space'],
+        params: { count: 6, reach: 32 },
+        ranges: { count: { min: 1, max: 64, step: 1 }, reach: { min: 0, max: 32, step: 1 } },
+        code: [
+            '// Circular array: "count" copies of the children around this group\'s z axis, 360 / count',
+            '// degrees apart, the first where they are (turn the group for another axis). A child off the',
+            '// axis is drawn count times; one across it, or copies that overlap, make one merged shape --',
+            '// a true union, the least distance of the copies, so a ring of overlapping glass is one',
+            '// glass with no faces inside it. Normals stay analytic, each turned with its copy.',
+            '// COST: every copy is evaluated, count times the children per step, which is right whatever',
+            '// they are. "reach" makes it cheaper when each copy stays within that many slices either side',
+            '// of its own (a slice is 360 / count degrees, the first centred on this group\'s +x; 0: inside',
+            '// its own slice, as a bolt circle\'s bolts or a gear\'s teeth -- so put the children on +x, off',
+            '// the axis): then only the copy nearest the point and reach + 1 either side are evaluated,',
+            '// 2 reach + 3 of them, and the rest bounded -- a slice away at least, and no nearer than the',
+            '// farthest evaluated less 2 x the distance from the axis, the farthest a turn moves a point.',
+            '// A copy reaching farther than "reach" says is drawn wrong. With 2 reach + 3 count or more,',
+            '// every copy is evaluated: so at 32, always.',
+            'let n = u32(clamp(round(count), 1.0, 64.0));',
+            'let slice = 6.2831853 / f32(n);',
+            'let side = u32(clamp(round(reach), 0.0, 32.0)) + 1u;      // evaluated either side of the nearest',
+            'let every = 2u * side + 1u >= n;',
+            'let rho = length(p.xy);',
+            'let ang = select(atan2(p.y, p.x), 0.0, rho == 0.0);         // the point\'s angle (atan2(0, 0) is no number)',
+            'let first = select(i32(round(ang / slice)) - i32(side), 0, every);   // the nearest less side, or copy 0',
+            'let xfm = XF_M;',
+            'XF_SUB += 1u;                        // the copies\' own Hits: no local point recorded in them',
+            'var U = emptyHit(r);',
+            'var far = -1.0e30;                   // the farthest copy evaluated',
+            'var won = 0.0;                       // ...and the nearest\'s angle',
+            'for (var i = 0u; i < select(2u * side + 1u, n, every); i = i + 1u) {',
+            '    let t = f32(first + i32(i)) * slice;',
+            '    let c = cos(t); let s = sin(t);',
+            '    XF_M = xfm * mat3x3<f32>(c, s, 0.0, -s, c, 0.0, 0.0, 0.0, 1.0);    // the copy\'s frame, turned by t',
+            '    let H = children(emptyHit(r), VEC3(c * p.x + s * p.y, c * p.y - s * p.x, p.z));',
+            '    far = max(far, H.s.w);',
+            '    if (H.s.w < U.s.w) { U = H; won = t; }                             // the union: the least',
+            '}',
+            'XF_M = xfm;',
+            'XF_SUB -= 1u;',
+            'if (!every) {                        // the rest, bounded (their field no steeper than 1, as a shape\'s)',
+            '    let d = rho * XF_S;              // the distance from the axis in world units, as the Hit\'s',
+            '    U.s.w = min(U.s.w, max(d * sin(slice), far - 2.0 * d));',
+            '}',
+            'if (LOCAL_CAPTURE) {                 // a material\'s local point or the pick: the copy that won once more,',
+            '    let c = cos(won); let s = sin(won);                                // straight into a copy of C, so',
+            '    XF_M = xfm * mat3x3<f32>(c, s, 0.0, -s, c, 0.0, 0.0, 0.0, 1.0);    // what is recorded is its own',
+            '    _ = children(C, VEC3(c * p.x + s * p.y, c * p.y - s * p.x, p.z));',
+            '    XF_M = xfm;',
+            '    XF_SUB += 1u;                    // ...and the Hit folded as always, recording nothing more',
+            '}',
+            'C = fold(C, U.s, U.m);',
+            'if (LOCAL_CAPTURE) { XF_SUB -= 1u; }',
         ].join('\n'),
     },
     round: {

@@ -62,8 +62,11 @@ code is only comments emits exactly what it did before. The two rules below are 
 `warp(k)` in `scene_api.js`. **Modifiers** in the + menu are groups whose code and parameters
 start as one of `modifiers.js`: twist, bend, repeat, mirror, round, shell, displace, and the noise
 relief (SURFACES.md phase 6). Format version 5. Built, not yet confirmed on hardware (PLAN.md
-*Group code*). The original plan's two kinds, kept for their reasoning; **polar repeat** is still to
-build:
+*Group code*). The original plan's two kinds, kept for their reasoning. **Polar repeat** is built as
+the **circular array** (`0.next`), and not as this table's domain kind: folding the point into one
+slice cuts off a copy that crosses a slice's border and turns one across the axis into a wedge, so it
+evaluates every copy into a Hit of its own and keeps the least (a union) -- or, with `reach`, the
+nearest few and a bound on the rest (`builder/test/circular.gpu.mjs`):
 
 | kind | examples | what codegen emits | speed |
 |---|---|---|---|

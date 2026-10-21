@@ -176,8 +176,10 @@ function combining() {
     return { doc, camera: orbit([0, -25, 15], -70, 30, 420) }
 }
 
-/* MODIFIERS: a group that changes the space its children are drawn in (twist, bend, repeat, mirror) or the shape they
-   make (round, shell, displace, relief) -- each on the plainest shape that shows it, 80 mm apart. */
+/* MODIFIERS: a group that changes the space its children are drawn in (twist, bend, repeat, mirror, circular array) or
+   the shape they make (round, shell, displace, relief) -- each on the plainest shape that shows it, 80 mm apart. The
+   circular array twice, in a front row (`0.next`): a sphere off its axis drawn as eight, and a block across its axis
+   merged with its eleven turned copies into one rosette. */
 function modifiers() {
     const doc = scene('Modifiers', { radius: 3000, env: SUN(40) })
     floor(doc, lib(doc, 'white'))
@@ -209,7 +211,14 @@ function modifiers() {
     // NOISE RELIEF: bumps up to 1.5 mm, about 8 mm across
     const nr = group(doc, 'root', 'noise relief', { modifier: 'relief', params: { amount: 1.5, size: 8 }, at: [1.5 * P, -50, 0] })
     shape(doc, nr.id, 'sphere', { params: { radius: 25 }, at: [0, 0, 26.5], material: a })
-    return { doc, camera: orbit([0, 0, 20], -75, 35, 520) }
+    // CIRCULAR ARRAY, OFF THE AXIS: a sphere 24 mm out, drawn eight times round the group's centre
+    const ca = group(doc, 'root', 'circular array', { modifier: 'circular', params: { count: 8 }, at: [-0.5 * P, -150, 0] })
+    shape(doc, ca.id, 'sphere', { params: { radius: 7 }, at: [24, 0, 7], material: r })
+    // CIRCULAR ARRAY, ACROSS THE AXIS: a block 36 x 12 x 16 mm from 12 mm behind the centre to 24 in front, twelve
+    // copies a union -- one rosette, with no faces inside it
+    const cm = group(doc, 'root', 'circular array, merged', { modifier: 'circular', params: { count: 12 }, at: [0.5 * P, -150, 0] })
+    shape(doc, cm.id, 'box', { params: { size: V(18, 6, 8), rounding: 1 }, at: [6, 0, 8], material: b })
+    return { doc, camera: orbit([0, -50, 20], -75, 35, 620) }
 }
 
 /* FROM POINTS: shapes drawn as a list of points -- an outline extruded (a cookie cutter's star), an outline turned
@@ -635,7 +644,7 @@ export const EXAMPLES = [
     { audience: 'Modelling and rendering', group: 'Shapes', items: [
         ['shape-gallery.json', shapeGallery, 'Every built-in shape, about 50 mm across'],
         ['combining-shapes.json', combining, 'Union, subtract and intersect, sharp and blended; a die made the way a die is'],
-        ['modifiers.json', modifiers, 'Twist, bend, repeat, mirror, round, shell, displace and relief, each on a plain shape'],
+        ['modifiers.json', modifiers, 'Twist, bend, repeat, mirror, circular array, round, shell, displace and relief, each on a plain shape'],
         ['from-points.json', fromPoints, 'An extruded star, a turned wine glass, a pipe along a path, a swept bar'],
         ['parametric-part.json', parametric, 'A heatsink whose fin count, pitch and height are its parameters'],
         ['imported-parts.json', imported, 'STEP and STL parts imported as boxes, cylinders, cones, spheres, tori and rounded prisms'],

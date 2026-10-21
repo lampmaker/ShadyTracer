@@ -78,8 +78,8 @@ And folding space into one cell before asking draws endless copies for the price
 mode: repeat
 ```
 
-The [Modifiers](../reference/modifiers.md) reference lists them all: twist, bend, repeat, mirror, round, shell,
-displace and relief.
+The [Modifiers](../reference/modifiers.md) reference lists them all: twist, bend, repeat, mirror, circular array,
+round, shell, displace and relief.
 
 ## What this is good at
 
