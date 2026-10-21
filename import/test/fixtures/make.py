@@ -7,6 +7,10 @@
 # tessellation, binary) and <name>.json: what OpenCascade itself says of the solid -- its volume, its box, its faces'
 # surface types -- and points classified in or out by its own solid classifier (BRepClass3d_SolidClassifier), which is
 # what the Node tests hold the converted CSG to. Units are millimetres throughout.
+#
+# ONE PART IS NOT MADE HERE: onshape.step is the user's own file (Onshape's AP242 export of a 56 mm cup, in metres; the
+# user asked for it to be a test part, 2026-10-21), committed as it came. This reads it -- CadQuery converts it to mm --
+# and writes onshape.json from it as from the others. No STL: the user gave none.
 import json, random, sys, os
 import cadquery as cq
 from OCP.BRepClass3d import BRepClass3d_SolidClassifier
@@ -18,6 +22,8 @@ from OCP.BRepAdaptor import BRepAdaptor_Surface
 from OCP.GeomAbs import GeomAbs_Plane, GeomAbs_Cylinder, GeomAbs_Cone, GeomAbs_Sphere, GeomAbs_Torus
 from OCP.BRepExtrema import BRepExtrema_DistShapeShape
 from OCP.BRepBuilderAPI import BRepBuilderAPI_MakeVertex
+from OCP.TopoDS import TopoDS_Compound
+from OCP.BRep import BRep_Builder
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 TYPES = {GeomAbs_Plane: 'plane', GeomAbs_Cylinder: 'cylinder', GeomAbs_Cone: 'cone', GeomAbs_Sphere: 'sphere', GeomAbs_Torus: 'torus'}
@@ -74,8 +80,16 @@ def facts(shape, n_far=1500, n_near=1500, seed=1):
         c = BRepClass3d_SolidClassifier(solid.wrapped, gp_Pnt(*p), 1e-7)
         s = c.State()
         return 1 if s == TopAbs_IN else 0 if s == TopAbs_OUT else -1
+    # TO THE SURFACE, its shells: to the solid itself, a point inside a solid read from a STEP file is 0 away ("inner
+    # solution") -- the user's onshape.step had 1007 points inside at 0 -- while one CadQuery built here was not; the
+    # shells give every built part's stored distances again, to the 1e-6 they are written to (2026-10-21)
+    shells = TopoDS_Compound()
+    builder = BRep_Builder()
+    builder.MakeCompound(shells)
+    for sh in solid.Shells():
+        builder.Add(shells, sh.wrapped)
     def dist(p):
-        d = BRepExtrema_DistShapeShape(BRepBuilderAPI_MakeVertex(gp_Pnt(*p)).Vertex(), solid.wrapped)
+        d = BRepExtrema_DistShapeShape(BRepBuilderAPI_MakeVertex(gp_Pnt(*p)).Vertex(), shells)
         return d.Value()
     pts = []
     # far: anywhere in the padded box; near: around points on the faces, a little either side
@@ -122,6 +136,11 @@ def main():
         with open(os.path.join(HERE, 'assembly.json'), 'w') as fh:
             json.dump({'part': 'assembly', 'made': 'import/test/fixtures/make.py with CadQuery ' + cq.__version__, **f}, fh, separators=(',', ':'))
         print('assembly', f['faces'], f['kinds'], round(f['volume'], 3), len(f['points']))
+    if not only or 'onshape' in only:
+        f = facts(cq.importers.importStep(os.path.join(HERE, 'onshape.step')))
+        with open(os.path.join(HERE, 'onshape.json'), 'w') as fh:
+            json.dump({'part': 'onshape', 'made': 'import/test/fixtures/make.py with CadQuery ' + cq.__version__ + ' from the user\'s own onshape.step', **f}, fh, separators=(',', ':'))
+        print('onshape', f['faces'], f['kinds'], round(f['volume'], 3), len(f['points']))
     for name, shape in parts().items():
         if only and name not in only:
             continue

@@ -117,11 +117,12 @@ ok('...and anything else refused, saying so', /not a STEP or STL file/.test(msg)
    intersection (import.gpu.mjs, 2026-10-21). Every group an import makes combines its children into one shape */
 {
     const plain = []
-    for (const n of ['plate', 'bracket', 'boss', 'lens', 'roundbox', 'cup']) for (const ext of ['step', 'stl']) {
-        const r = convert(M, `${n}.${ext}`, fixture(`${n}.${ext}`))
-        walk(r.asset.node, g => { if (g.kind === 'group' && g.children.length > 1 && !isCsg(g)) plain.push(`${n}.${ext} › ${g.label}`) })
+    const files = ['plate', 'bracket', 'boss', 'lens', 'roundbox', 'cup'].flatMap(n => [`${n}.step`, `${n}.stl`]).concat('onshape.step')
+    for (const f of files) {
+        const r = convert(M, f, fixture(f)), n = f
+        walk(r.asset.node, g => { if (g.kind === 'group' && g.children.length > 1 && !isCsg(g)) plain.push(`${n} › ${g.label}`) })
     }
-    ok('every group of every fixture, STEP and STL, combined into one shape by codegen (none folded as a plain union)', !plain.length, plain.join(', '))
+    ok('every group of every fixture, STEP and STL, and of the user\'s Onshape part, combined into one shape by codegen (none folded as a plain union)', !plain.length, plain.join(', '))
     const r = convert(M, 'cup.step', fixture('cup.step'))
     const cup = []; walk(r.asset.node, g => { if (g.kind === 'group') cup.push(`${g.label}:${g.children.length}`) })
     ok('the cup: two groups, its union the start of its intersection\'s fold, not a group of its own', cup.length === 2 && r.parts[0].report.groups === 2, cup.join(' '))
@@ -154,6 +155,20 @@ ok('...and anything else refused, saying so', /not a STEP or STL file/.test(msg)
         if (label !== 'a union cut away') ok(`...closed with the part's box`, groups.some(n => n.children.some(c => c.label === 'the part\'s box')))
         else ok('...cut shape by shape, no box', !groups.some(n => n.children.some(c => c.label === 'the part\'s box')) && groups.length === 1)
     }
+}
+
+/* THE USER'S ONSHAPE PART (onshape.step, their own file, 2026-10-21: "did not convert/import too well"): 44 shapes in 29
+   groups and half under the floor then. In metres in the file, a 56 mm cylinder along y: as pasted, 7 shapes in 2 groups,
+   in mm, lying on its circle on z = 0 centred over the origin (the file's axes kept) */
+{
+    const r = convert(M, 'onshape.step', fixture('onshape.step'))
+    const R = r.parts[0]?.report
+    ok('the user\'s Onshape part: one part, 7 shapes in 2 groups, nothing refused or warned of', r.parts.length === 1 && R.shapes === 7 && R.groups === 2 && !r.refused.length && !r.warnings.length,
+        JSON.stringify([R, r.refused, r.warnings]))
+    const at = p => nodeSDF(r.asset.node, p, r.asset.blocks)
+    ok('...56 mm across, lying on its circle on z = 0, its top at 56, centred over the origin',
+        [[0, 0, 0], [0, 0, 56], [28, 0, 28], [-28, 0, 28]].every(p => Math.abs(at(p)) < 1e-5) && Math.abs(at([0, 0, -0.5]) - 0.5) < 1e-5,
+        [[0, 0, 0], [0, 0, 56], [28, 0, 28], [-28, 0, 28], [0, 0, -0.5]].map(at).join())
 }
 
 // THE STL OF THE SAME PART: the same shapes as its STEP

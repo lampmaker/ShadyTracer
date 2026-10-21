@@ -1,8 +1,9 @@
 //======================================================================================================================
 // Tests for the STEP reader (step.js) and the solid it becomes (brep.js). Run: node import/test/step.test.mjs
 //
-// The parts are OpenCascade's own (fixtures/make.py, CadQuery): the face types it reports for each, and points its
-// solid classifier put inside or outside. Every one of those points is held to brep.js's inside() here -- which is
+// The parts are OpenCascade's own (fixtures/make.py, CadQuery), and one is the user's own file from Onshape
+// (onshape.step, AP242, in metres; its facts written by make.py the same way): the face types OpenCascade reports for
+// each, and points its solid classifier put inside or outside. Every one of those points is held to brep.js's inside() here -- which is
 // what the conversion trusts to build and to check its formula (csg.js).
 // The Part 21 details are checked on records written here: a ';' inside a string, a comment, a complex entity, an
 // escaped name, and the units -- a file in inches and one in metres made from the plate's by changing its unit alone.
@@ -19,7 +20,8 @@ const ok = (name, cond, extra = '') => {
     console.log(`FAIL  ${name}${extra ? '\n      ' + extra : ''}`)
 }
 const fixture = n => new URL(`./fixtures/${n}`, import.meta.url)
-const PARTS = ['plate', 'bracket', 'boss', 'lens', 'roundbox', 'cup']
+const PARTS = ['plate', 'bracket', 'boss', 'lens', 'roundbox', 'cup', 'onshape']
+const UNIT = { onshape: 1000 }        // mm a unit of the file: the user's Onshape export is in metres
 
 // PART 21
 {
@@ -50,7 +52,7 @@ function eqs(name, got, want) { ok(name, JSON.stringify(got) === JSON.stringify(
 for (const n of PARTS) {
     const ref = JSON.parse(readFileSync(fixture(`${n}.json`), 'utf8'))
     const r = readSTEP(readFileSync(fixture(`${n}.step`), 'utf8'))
-    ok(`${n}: one solid, in mm, nothing to warn of`, r.solids.length === 1 && r.unitMM === 1 && !r.warnings.length, JSON.stringify(r.warnings))
+    ok(`${n}: one solid, in ${UNIT[n] ? 'metres' : 'mm'}, nothing to warn of`, r.solids.length === 1 && r.unitMM === (UNIT[n] ?? 1) && !r.warnings.length, JSON.stringify([r.unitMM, r.warnings]))
     const kinds = {}
     for (const f of r.solids[0].faces) kinds[f.surface.type] = (kinds[f.surface.type] || 0) + 1
     eqs(`${n}: the faces OpenCascade reports, by surface`, Object.entries(kinds).sort(), Object.entries(ref.kinds).sort())

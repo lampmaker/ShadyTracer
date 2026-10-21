@@ -73,8 +73,11 @@ Node, three things were wrong:
   intersection: read in code, not changed here.)
 
 The part now agrees with OpenCascade at all 3000 of its points, as the formula, the shapes and the scene document as
-codegen combines it; on Dawn, rays through each test part end where the formula has its surface, with its normal. The
-file is not in the repository; a cup made like it is (`import/test/fixtures/cup.step`), and is in the example.
+codegen combines it; on Dawn, rays through each test part end where the formula has its surface, with its normal. At the
+user's word the file itself is a test part now (`import/test/fixtures/onshape.step`, as it came, its header holding no
+name), beside a cup made like it (`cup.step` and `.stl`), which is in the example. Making its OpenCascade facts found
+one thing in the fixture maker: OpenCascade's distance to a solid read from a STEP file is 0 inside it, so `make.py`
+measures to the solid's shells, which gives every committed part's distances again to their 1e-6.
 
 **What to look at:**
 - Open the **Imported parts** example. On a white board: a plate with four holes and a pocket, an L bracket rounded
@@ -91,7 +94,8 @@ file is not in the repository; a cup made like it is (`import/test/fixtures/cup.
 
 **Tests:**
 - `import/test/step.test.mjs`, `stl.test.mjs`, `csg.test.mjs`, `import.test.mjs` against OpenCascade's own answers on
-  its own parts (`import/test/fixtures`, made by `make.py` with CadQuery: 18,000 classified points and an assembly).
+  its own parts and the user's file (`import/test/fixtures`, made by `make.py` with CadQuery: 21,000 classified points
+  and an assembly).
   csg.test holds the formula, the shapes and the scene document as the shader computes it (`import/test/docsdf.mjs`)
   to the sign, the bound, and no value near zero far from the surface, a plain group folded as codegen folds it.
   import.test holds where the part stands, and that every group it makes combines into one shape.

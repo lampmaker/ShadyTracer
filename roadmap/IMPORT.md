@@ -546,7 +546,7 @@ render time is measured.** A conversion time is the JavaScript's on that CPU, no
   refused.
 - **`import/brep.js`: inside the solid, exactly.** Rays meet the exact surfaces, and each hit is counted where its
   face's loops say, in the surface's (u, v). Plane, cylinder and cone faces use parity along their axis. Sphere and
-  torus faces use the nearest boundary point. Seam edges are dropped. On 18,000 OpenCascade points over six parts,
+  torus faces use the nearest boundary point. Seam edges are dropped. On 21,000 OpenCascade points over seven parts,
   and 2,000 more on an assembly, it disagrees nowhere (measured).
   - **Found on the way: OpenCascade 7.9's own STEP export breaks ISO 10303-42 for a torus whose axis it flipped.**
     The boss's inner fillet has its face on the wrong side of its loop. Read by the rule, the fillet was the other
@@ -635,7 +635,8 @@ rectangles.
     4978 triangles.
 
 **The user's Onshape part (2026-10-21, "this file did not convert/import too well").** An AP242 file in metres: a
-56 mm cup like the fixture above (made to match it; the user's file is not in the repository), its axis along y.
+56 mm cup like the fixture above (made to match it), its axis along y; at the user's word a test part itself since
+(`import/test/fixtures/onshape.step`, with `onshape.json` from `make.py`, measured to its shells: see the file).
 Read in code and measured in Node, three things were wrong:
 - **44 shapes in 29 groups**, oriented boxes among them turned 52 degrees. The 56 mm cylinder is four faces, cut apart
   by the square's corners; each face's own separators were planes through the axis at the angles it ends, which no
@@ -650,7 +651,8 @@ Read in code and measured in Node, three things were wrong:
   Cut shapes now reach a quarter of the box's size past it, and the least value under the user's opening is 2.
 
 After the change, the B-rep, the formula, the shapes and the scene document agree with OpenCascade at all 3000 of its
-points; the least |value| / distance at a point more than 0.1 mm from the surface is 0.72 (measured, Node).
+points, never more than its distance to the surface; the least |value| / distance at a point more than 0.1 mm from the
+surface is 0.72 (measured, Node). On Dawn, 1 of 256 rays ends otherwise than the formula, codegen, as data and baked.
 
 **And what the renderer made of every part (found running the shapes' WGSL, 2026-10-21).** Nothing had run the
 import's own WGSL; check-shaders compiles it. `import/test/import.gpu.mjs` marches rays through each fixture part on
