@@ -36,7 +36,9 @@ surface, and every case the test makes was wrong the same way in codegen and as 
 **The tutorial:** chapter 3 (Building and bending shapes) says why a group that is one shape of a join is joined by a
 hard union before it is folded; chapter 24 (From scene tree to shader) lists the bug among those its codegen has had.
 Chapter 33 (Open problems) loses the limit 0.73.0 gave it, its card and its clause, and `roadmap/PLAN.md` and
-IMPORT.md 11.3 say it is fixed. No excerpt's code changed, so nothing was stamped.
+IMPORT.md 11.3 say it is fixed. Chapter 29 (Noise, bias and checking) counted twelve `*.gpu.mjs` tests; there were
+fifteen before this change and are sixteen with it, and it says sixteen. Chapters 0, 25 and 26 are tied to files this
+change touches in lines they do not show, and needed nothing. No excerpt's code changed, so nothing was stamped.
 
 **What to look at:** a group of two overlapping cylinders, set to subtract from a box: the cut follows both cylinders,
 overlap and all, with no stray surface inside it, in the editing build and once it is baked. The same group
