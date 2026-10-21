@@ -122,7 +122,7 @@ export const FORMAT = 'raytracer-scene'
    it -- a size, and `haze` over HAZE_DEFAULTS (mean free path, albedo, g). One a scene. Version 21 files have none:
    nothing to change. A builder of 21 refuses a file of 22 (an object type it does not know), rather than drop the box
    on its first save. */
-/* 23: A GROUP'S MATERIAL (`0.next`; the user, 2026-10-21: "often shapes are all made of the same material. Dragging a
+/* 23: A GROUP'S MATERIAL (0.76.0; the user, 2026-10-21: "often shapes are all made of the same material. Dragging a
    material onto a child only changes that child. A similar approach to the blend could be used where certain children
    can still override the parent's material"). A group (not the root) may hold `material`: every object below it wears
    that one instead of its own -- the nearest such group winning, as a nested group's blend is its own -- unless the
