@@ -1,6 +1,6 @@
 {
   "format": "raytracer-scene",
-  "version": 22,
+  "version": 23,
   "title": "Builder demo",
   "nextId": 15,
   "unit": "m",

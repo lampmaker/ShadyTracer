@@ -12,6 +12,16 @@ Select one to edit it; every object wearing it changes.
 - **+ on the Materials row** makes one from a starting point: diffuse, plastic, metal, mirror, glass or glowing.
 - An object's Properties choose which of the scene's materials it wears.
 
+## A group's material
+
+A group can give one material to everything in it. Drag a material onto the group's row, or choose it as the
+group's **material** in its Properties. Every object in the group wears it instead of its own, also inside groups
+in the group.
+
+To make one object an exception, drag another material onto it, or check its **own material** in Properties. A
+group inside with a material of its own also keeps it. Each object remembers its own material underneath, so
+choosing *(each its own)* for the group gives every object back what it had.
+
 See [Material board](example:material-board.json) for the library's materials side by side.
 
 ## The fields

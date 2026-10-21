@@ -2,7 +2,8 @@
 //
 // A LIBRARY ITEM DROPPED ON THE TREE (builder/tree.js dropAsset, acceptLibrary), headless, over the real
 // tree, model and project with a stand-in builder: a material dropped on an object is used by it, on a
-// group by every object in it but its light; a node dropped on an object goes in after it, on a group into
+// group the group's, worn by every object in it but its light (`0.next`), and one then dropped on an object in it that
+// object's own; a node dropped on an object goes in after it, on a group into
 // it; a node dropped on the picture stands on the point hit (the host picks it; given here); a drop through
 // the DOM -- dragover, drop on a row -- takes the same path; and a drag the tree did not start from the
 // library is left alone. What the picture shows after is the user's to judge.
@@ -51,14 +52,28 @@ let r = await p.evaluate(() => {
 })
 ok('a material dropped on an object is used by it', r.label === 'gold' && r.metallic > 0.5, JSON.stringify(r))
 ok('...and by nothing else', r.b == null, JSON.stringify(r))
+/* ON A GROUP (`0.next`, model.js version 23): the group's material, which every object in it wears over its own --
+   their own kept underneath -- and one dropped on an object in it then that object's own, the others still the group's */
 r = await p.evaluate(() => {
     const { M, tree, BUILDER, material } = CHECK
+    const d0 = BUILDER.doc, before = M.find(d0, 'g1').node.material
     tree.dropAsset(material, { mid: 'g' })
-    const d = BUILDER.doc, lab = id => M.material(d, M.find(d, id).node.material)?.label ?? null
-    return { g1: lab('g1'), g2: lab('g2'), light: M.find(d, 'gl').node.material }
+    const d = BUILDER.doc, lab = id => M.material(d, M.wornMaterial(d, id).material)?.label ?? null
+    return { g: M.material(d, M.find(d, 'g').node.material)?.label, same: M.find(d, 'g').node.material === M.find(d, 'a').node.material,
+             g1: lab('g1'), g2: lab('g2'), from: M.wornMaterial(d, 'g1').group, kept: M.find(d, 'g1').node.material === before,
+             light: M.find(d, 'gl').node.material }
 })
-ok('on a group, by every object in it -- the same gold, not a copy of it', r.g1 === 'gold' && r.g2 === 'gold', JSON.stringify(r))
+ok('on a group, the group\'s -- the same gold, not a copy of it', r.g === 'gold' && r.same, JSON.stringify(r))
+ok('...worn by every object in it, their own kept under it', r.g1 === 'gold' && r.g2 === 'gold' && r.from === 'g' && r.kept, JSON.stringify(r))
 ok('...but not its light (a light has its own)', r.light == null, JSON.stringify(r))
+r = await p.evaluate(() => {
+    const { M, tree, BUILDER, material } = CHECK
+    tree.dropAsset({ ...material, material: { ...material.material, label: 'red', params: { ...material.material.params, baseColor: { r: 1, g: 0, b: 0 } } } }, { mid: 'g1' })
+    const d = BUILDER.doc, lab = id => M.material(d, M.wornMaterial(d, id).material)?.label ?? null
+    return { g1: lab('g1'), own: M.find(d, 'g1').node.ownMaterial, g2: lab('g2') }
+})
+ok('then one dropped on an object in it: that object\'s own, kept over the group\'s', /^red/.test(r.g1) && r.own === true, JSON.stringify(r))
+ok('...and the others still the group\'s', r.g2 === 'gold', JSON.stringify(r))
 
 // A NODE ON AN OBJECT, ON A GROUP, ON THE PICTURE
 r = await p.evaluate(() => {

@@ -317,6 +317,8 @@ for the help.
   *preview*; **hide and show** without recompiling *preview*.
 - **Four material types**: surface, glowing, **optics detector**, **ray limiter** (seen by the
   optics trace, invisible in the picture).
+- **A group's material**: one material for everything in a group, over their own; an object with
+  **own material** keeps its own, as a child's own blend keeps its own *preview*.
 - **Files**: **Export ▸** a scene, the project (every scene with its view, and the render settings),
   or a 3D print. **Import from file…** (Ctrl O, or drop a file on the page): a scene joins the
   project; a project file asks whether to open as a project of its own or add its scenes to this
@@ -335,8 +337,8 @@ for the help.
   whole LED–lens–screen bench) *preview*.
 - **Every item is a rendered picture**, made by a second, hidden path tracer while the main view is
   idle, and kept; rest the pointer on one to see it rendered live *preview*.
-- **Drag items onto the tree or into the picture**: a material onto the object under the pointer, a
-  shape standing on the surface where you drop it, units converted *preview*.
+- **Drag items onto the tree or into the picture**: a material onto the object under the pointer
+  (or onto a group's row, for the whole group), a shape standing on the surface where you drop it, units converted *preview*.
 - **Keep your own**: the selection becomes an item; rename, remove, export and import them as a file
   *preview*.
 - Search by name, category, tag or help text; filter by kind, built-in or your own, and tag; grid or
@@ -595,7 +597,7 @@ timeline, the shell, the help and the tutorial. The list is in
 
 | reads | writes |
 |---|---|
-| scenes, projects and workspaces (`.json`, every past version; scenes are at version 22) | scenes, projects and workspaces (`.json`) |
+| scenes, projects and workspaces (`.json`, every past version; scenes are at version 23) | scenes, projects and workspaces (`.json`) |
 | Zemax ray files (`.DAT`) | pictures (**PNG**); video (**MP4**, **GIF**, or a ZIP of PNG frames) |
 | **STEP** (`.step`, `.stp`) and **STL**: solids, converted into shapes | |
 | library files (`.json`) and timeline files (`.timeline.json`) | **3MF with colour**, **STL** |

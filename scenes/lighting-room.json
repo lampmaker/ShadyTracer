@@ -1,6 +1,6 @@
 {
   "format": "raytracer-scene",
-  "version": 22,
+  "version": 23,
   "title": "Lighting a room",
   "nextId": 20,
   "unit": "m",

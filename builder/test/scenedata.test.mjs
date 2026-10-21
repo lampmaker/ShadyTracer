@@ -16,7 +16,7 @@
 //======================================================================================================================
 import { readFileSync } from 'node:fs'
 import * as M from '../model.js'
-import { generate, isBefore, isAfter } from '../codegen.js'
+import { generate, isBefore, isAfter, codeOnly } from '../codegen.js'
 import { MODIFIERS, modifierGroup } from '../modifiers.js'
 import { planOf, KIND, FLAG, REC, HEADER, solidsOf } from '../scenedata.js'
 import { EVERY_SCENE, fixturePath } from '../../test/scenes.mjs'
@@ -91,6 +91,25 @@ for (const { name: file } of EVERY_SCENE) {
            since 0.54.0 have relief materials beside plain ones, which the scenes before never had) */
         const plainOther = n => doc.materials.find(m => m.id !== n.material && !m.relief)
         if (plainOther(o)) edits['another material'] = d => { const n = M.find(d, o.id).node; n.material = plainOther(n).id }
+        /* A GROUP'S MATERIAL (model.js version 23): worn by what is below it, resolved in toTree -- another material for
+           each, so data alone too, between plain materials: a surface with no code (code may read p_local, which is
+           text) and no relief (shape), worn by nothing below that is not one -- on a top-level group with no group code
+           in it, which is compiled text, the objects under it with it */
+        const plainMat = m => m && M.typeOf(m) === 'surface' && !m.relief && !codeOnly(m.code ?? '').trim()
+        const mats = doc.materials.filter(plainMat)
+        let groupEdit = null
+        M.walk(doc, (n, parent) => {
+            if (groupEdit || parent !== doc.root || n.kind !== 'group') return
+            const worn = []
+            let code = false
+            M.walk({ root: n }, x => {
+                if (x.kind === 'object' && x.type === 'code') worn.push(M.material(doc, x.material))
+                if (x.kind === 'group' && M.groupHasCode(doc, x)) code = true
+            })
+            const m = !code && worn.length && worn.every(plainMat) ? mats.find(m => worn.some(w => w.id !== m.id)) : null
+            if (m) groupEdit = [n.id, m.id]
+        })
+        if (groupEdit) edits['a group\'s material'] = d => M.setMaterial(d, ...groupEdit)
         /* A COPY OR A DELETE of a shape whose points are compiled in (a path or profile not live) adds those points to the
            text or takes them out: a compile, as a new block is (model.js "A PATH"). Seen first on the light guide example
            (0.54.0); the carried blocks (gen's second argument) do not carry points, so a delete is a compile too. */

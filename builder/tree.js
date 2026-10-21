@@ -196,7 +196,14 @@ export function rowsFor(project, { current = project.scenes[0]?.key, collapsed =
         /* a group's row says how it combines, if not plainly -- `a ∪ b ∪ c − d`, the recipe in one line, by the
            letters its children show (recipe.js) -- and that it has code */
         const groupNote = n => [isCsg(n) ? `${summaryOf(n)}${joinSummary(n).smooth ? ' (smooth)' : ''}` : null,
-            groupHasCode(doc, n) ? 'code' : null, n.copies?.length ? `× ${n.copies.length}` : null].filter(Boolean).join(', ')
+            groupHasCode(doc, n) ? 'code' : null, n.copies?.length ? `× ${n.copies.length}` : null,
+            // the material it gives its objects (model.js version 23)
+            n.material != null ? matLabel(n.material) : null].filter(Boolean).join(', ')
+        /* WHAT AN OBJECT WEARS (model.js wornMaterial): `over` is the material a group above gives it, which it wears
+           unless it keeps its own -- said "(own)" there, the one that stands out from its group */
+        const objectNote = (n, over) => n.type === 'export' ? 'export' : n.type === 'haze' ? 'haze'
+            : n.type === 'light' || over == null ? matLabel(n.material)
+            : n.ownMaterial === true ? `${matLabel(n.material)} (own)` : matLabel(over)
         /* A CHILD OF A GROUP (model version 14): its join as a toggle (TOGGLES.join) on every shape of a group;
            and in a boolean group, read top to bottom in the label too -- `● a  Plate`, `− d  Hole · blend 0.02`
            -- with the letter the recipe and the group's row call it by. The base is the first SHOWN shape:
@@ -211,13 +218,13 @@ export function rowsFor(project, { current = project.scenes[0]?.key, collapsed =
         }
         /* ◆ AFTER A ROW WITH A VALUE FLAGGED ANIMATED (model.js setAnimated): where to look for it, from the tree */
         const anim = o => Array.isArray(o?.animate) && o.animate.length ? '  \u25C6' : ''
-        const row = (n, parent) => {
+        const row = (n, parent, over = null) => {
             const j = joinOn(n, parent)
             return n.kind === 'group'
                 ? at(n.id, { label: `${j.mark}${groupNote(n) ? `${n.label}  · ${groupNote(n)}` : n.label}${j.own}${anim(n)}`,
                     type: 'group', expanded: !collapsed.has(rid(n.id)),
-                    toggles: { enabled: n.enabled, lock: lockToggle(n), join: j.toggle }, children: n.children.map(c => row(c, n)) })
-                : at(n.id, { label: `${j.mark}${n.label}  · ${n.type === 'export' ? 'export' : n.type === 'haze' ? 'haze' : matLabel(n.material)}${j.own}${anim(n)}`,
+                    toggles: { enabled: n.enabled, lock: lockToggle(n), join: j.toggle }, children: n.children.map(c => row(c, n, n.material ?? over)) })
+                : at(n.id, { label: `${j.mark}${n.label}  · ${objectNote(n, over)}${j.own}${anim(n)}`,
                     type: n.type, toggles: { enabled: n.enabled, lock: lockToggle(n), join: j.toggle } })
         }
         return at(doc.root.id, {
@@ -770,7 +777,11 @@ export function installBuilderTree(container, BUILDER, { onStatus = () => { }, o
     /* A LIBRARY ITEM DROPPED (library/panel.js drags it; the host routes the drop): on a row of the tree, or
        on the picture -- `mid` the object under the pointer, `pos` the point it hit (the host picks it). One
        undo step, selecting what it made or changed.
-         a material on an object       used by it; on a group, by every object in it (not its lights)
+         a material on an object       used by it -- kept as its own under a group that gives its objects one
+                                       (model.js version 23), or the drop would change nothing to see
+         a material on a group         given to every object in it, over their own (version 23): the user, 2026-10-21,
+                                       "a material setting for groups that override the materials of the children";
+                                       what keeps its own, and a group inside with one of its own, keep theirs
          a material anywhere else      kept in the scene's materials, as a paste
          a node on a group or scene    into it; on an object, after it; on the picture, into the scene,
                                        standing on the point hit */
@@ -788,14 +799,13 @@ export function installBuilderTree(container, BUILDER, { onStatus = () => { }, o
             if (!isNode(row)) return paste(asset, top.children.find(r => r.type === 'materials'), undefined)
             return edit('material dropped', () => {
                 const doc = BUILDER.doc
-                const targets = []
-                M.walk({ root: M.find(doc, row.mid).node }, x => {
-                    if (x.kind === 'object' && x.type !== 'light' && x.type !== 'export' && x.type !== 'haze') targets.push(x.id)
-                })
-                if (!targets.length) throw new Error('nothing there takes a material (a light has its own)')
-                // the one already there if it is the same: a material dropped on five objects is one material
+                const node = M.find(doc, row.mid).node
+                if (node.kind === 'object' && (node.type === 'light' || node.type === 'export' || node.type === 'haze'))
+                    throw new Error('a light or a box takes no material (a light has its own)')
+                // the one already there if it is the same: a material dropped twice is one material
                 const m = doc.materials.find(d => M.sameMaterial(d, asset.material)) ?? M.insertAsset(doc, asset)
-                for (const id of targets) M.setMaterial(doc, id, m.id)
+                M.setMaterial(doc, node.id, m.id)
+                if (node.kind === 'object' && M.materialGroupAbove(doc, node.id)) M.setOwnMaterial(doc, node.id, true)
                 return m
             }, { scene, select: row.mid })
         }
