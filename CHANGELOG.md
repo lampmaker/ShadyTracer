@@ -56,12 +56,20 @@ changed. The comments in `core/sppm.js` now say what the keep promises.
   looking away runs the map, the next does not. The race is inferred, not shown: 32 instrumented rounds here, alone and
   two at once, and every full run passed. What failed in the user's run 4 was not recorded. The detail line now names
   every part.
+- **Max Diffuse Bounces' new check (0.75.0) made the same kind of bet.** It required the camera's own picture under
+  the cap to be below 1.04 of the full one. That fixed slack is about one standard error of the difference (two camera
+  renders of about 3 % each), and at one diffuse bounce nearly all the light is kept (0.9890 ± 0.040, seed 1). So
+  about one run in seven would fail (inferred from those errors). The check now allows three of their standard errors,
+  and its line prints the batch-means error.
 - **The error bars come from batch means:** the region's mean over each 16 samples, independent from one 16 to the
   next. The pixels' spread used before was right for the camera's own paths, and 1.5 times too small for Draft and the
   200-record map, whose pixels share photons.
-- **Checked here:** seeds 1 to 6 single-threaded and seed 7 twice with 4 threads, 19 of 19 checks each time. The
-  largest excursion in any comparison was 1.85 sd, against a tolerance of 3. Kept on average: 0.47 to 0.65 % over the
-  plan. Dropped: 0.23 to 0.47 % of the stores.
+- **Checked here,** on 0.73.1: seeds 1 to 6 single-threaded and seed 7 twice with 4 threads, 19 of 19 checks each
+  time. On 0.75.0, whose Max Diffuse Bounces block adds four checks: seeds 1 to 4 single-threaded (the first six
+  renders the same as before, to the last digit) and seed 7 with 4 threads, 23 of 23 each time. The largest excursion
+  in any comparison was 2.39 sd (the threaded run's lens), against a tolerance of 3. Kept on average: 0.47 to 0.65 %
+  over the plan. Dropped: 0.23 to 0.47 % of the stores. At one diffuse bounce the camera's own picture read 0.9890 to
+  1.0213 of the full one.
 
 **What to look at:** nothing on screen: no renderer code changed. `prog_sppm` differs by a comment, so it compiles
 once more. On a run of `node lib/pathtracer/core/test/sppm.gpu.mjs`:
