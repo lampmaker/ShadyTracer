@@ -3,11 +3,12 @@
 One entry per version, newest first. The version is `VERSION` in `version.js` beside this file, and
 `test/version.test.mjs` holds the two to each other: the top entry is the version the code says it is.
 
-**How a version is raised** (CLAUDE.md, *Versions*): every PR that changes the application raises it in
-`version.js` and adds its entry here, in the same PR.
+**How a version is raised** (CLAUDE.md, *Versions*): a PR never edits this file or `version.js`. It merges into
+`dev` with a change note, `changes/<slug>.md`: a `bump:` line, then its entry. The user's release
+(`node release.mjs`) turns the notes on `dev` into one entry here, sets the version, and pushes `dev` to `main`.
 - **Semver 0.x.** MINOR (0.**2**.0) for a feature, or for any change to a file format (a scene, project,
-  workspace or library file's `version`). PATCH (0.1.**1**) for a fix, a document, or a test.
-- **If `main` took the number first**, take the next one when merging `main` in.
+  workspace or library file's `version`). PATCH (0.1.**1**) for a fix, a document, or a test. The largest bump
+  among a release's notes wins.
 
 The exact code is the git revision. The page reads it live from `.git` and shows it beside the version,
 for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.

@@ -1,9 +1,9 @@
 //======================================================================================================================
 // THE APPLICATION'S VERSION, and the exact revision it is running.
 //
-// VERSION is semver 0.x, raised by hand in the PR that changes the application, with an entry in CHANGELOG.md beside
-// this file (CLAUDE.md, *Versions*; test/version.test.mjs holds the two to each other): MINOR for a feature or a
-// file format's change, PATCH for a fix or a document. It says what a build is MEANT to be.
+// VERSION is semver 0.x, with an entry in CHANGELOG.md beside this file (CLAUDE.md, *Versions*; test/version.test.mjs
+// holds the two to each other): MINOR for a feature or a file format's change, PATCH for a fix or a document. A PR
+// never sets it: release.mjs does, from the change notes the PRs merged into dev. It says what a build is MEANT to be.
 //
 // The REVISION says exactly which code it is: the commit the server's checkout is on, read from .git at start-up.
 // There is no build step to stamp it in, and the page is served from the repository's root (README, *Quick

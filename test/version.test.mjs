@@ -3,8 +3,8 @@
 //
 // What has to hold, none of it needing a GPU or a browser:
 //   VERSION and CHANGELOG.md agree -- the top entry is the version the code says it is, versions only go up, and
-//     every entry has a date. That is the whole of the rule "raise it in the PR, with its entry": the test is what
-//     a PR that forgets half of it trips over.
+//     every entry has a date. release.mjs writes both and checks the same before it pushes (test/release.test.mjs);
+//     this is what an edit by hand to either trips over.
 //   the revision is read from a .git the way a server hands it out -- a branch's own file, packed-refs, a detached
 //     HEAD -- and every way that can fail (no .git, an HTML error page, a server that never answers) is null, not
 //     a throw: a page that cannot say its revision still has to start.
