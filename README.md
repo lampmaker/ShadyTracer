@@ -551,7 +551,7 @@ Built and waiting for their first run: `error-bar`, `illuminance`, `cosine-law`,
 `optics-farfield`, `optics-absorption`, `optics-coating`, `optics-dispersion`.
 
 Without a GPU, **`check-shaders`** builds every kernel against every scene (6274 builds) and checks
-each one, and 127 test files -- 98 in Node, 17 in headless Chromium, 12 on a WebGPU in Node over a
+each one, and 128 test files -- 98 in Node, 17 in headless Chromium, 13 on a WebGPU in Node over a
 software adapter -- cover the light units, the error bars, the colour science, the noise, the photon
 map, the haze, the lens, dispersion and coatings, the optics statistics and charts, the Zemax
 reader, the builder, the mesher and 3MF writer, the library, the projects kept in the browser, the

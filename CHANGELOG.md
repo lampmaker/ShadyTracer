@@ -15,14 +15,14 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
-## 0.71.1 — 2026-10-21
+## 0.71.2 — 2026-10-21
 
 **The README brought up to date, with its pictures, and the site at shadytracer.com.** The user believed the README
 was outdated, and added nine screenshots. It was: written mostly around 0.46 to 0.63, it said nothing of the photon map,
 the haze box, the camera's lens, dispersion and coatings, the Quality presets, the bake, the ruler, the Points mode,
 component bindings, the Help panel or GIF export. Its counts were old: 17 panels, 24 shapes, 49 built-in items and 18
 materials, 1269 kernel builds, about forty test files, where there are 14 panels (plus a chart panel each), 26 shapes,
-43 items and 42 materials, 6274 builds and 127 test files. Its *Not there yet* listed autosave, depth of field,
+43 items and 42 materials, 6274 builds and 128 test files. Its *Not there yet* listed autosave, depth of field,
 dispersion, the help's tracks and a light seen through its own lens, all built. The Files bullet described the File
 menu as it was before 0.63.0. And it still claimed an adaptive per-sample budget, which went in 0.10.0. Every fact was
 checked against the code, CHANGELOG, FEATURES.md, docs/TESTING.md and roadmap/PLAN.md before it was written.
@@ -45,7 +45,37 @@ and the shadytracer.com links.
 page) and `check-shaders.mjs` (6274 builds) pass, and every relative link and image in README.md, FEATURES.md and
 docs/screenshots/README.md exists. **The tutorial:** chapter 0's one change is the link itself, read in place.
 `affected.mjs` ties chapter 26 to a CHANGELOG line this entry moved down; the chapter cites it by its text, which is
-unchanged, and `tutorial.test.mjs` passes. Nothing else in the tutorial needed to change.
+unchanged, and `tutorial.test.mjs` passes. Nothing else in the tutorial needed to change. Written as 0.71.1; `main`
+took that number first (the relief normal), so this is 0.71.2, its counts taken again after the merge.
+
+## 0.71.1 — 2026-10-21
+
+**No hard line round a relief cut from another relief.** The user's case: a group with a box of white plaster and a
+sphere of knockdown stucco subtracted from it, a blend on. A thin dark line ran round the hole on the plaster,
+farther out with the blend on and nearer with it at 0, and it went away when both wore the same relief. A CSG group
+with a relief in it divides its result once by the steepest relief slope near the point, so the march does not step
+through a bump. A relief farther than two amplitudes (plus 5/4 of the blend) from its own surface is skipped, so the
+divisor on the plaster was the stucco's (4.67) inside that distance from the sphere and the plaster's (1.11) beyond it.
+The normal is taken by differences of the field, and where the differences straddled that step it turned by up to
+86° (measured in `relief.test.mjs`'s mirror of the two library materials, and on Dawn in the new
+`reliefnormal.gpu.mjs`). Now the normal's looks read the group's result undivided (`scene_api.js NORMAL_LOOK`): a
+normal needs only the field's direction, which the division does not change. The march still divides as before.
+- In a scene with such a group, a hit that takes its normal by differences (a relief's surface, or a shape that gives
+  no normal of its own) looks at the scene four times instead of three. The fourth look is at the hit itself, for the
+  differences' base (`normalAtHitWGSL`), in the surface kernel and the optics trace. Every other scene's kernels do
+  what they did. What the fourth look costs has not been measured, and the look count is a poor guide to it: an early
+  run found that switching the shapes' own normals off cost 4.3× the whole frame (docs/TESTING.md, "Where the render
+  time goes").
+- The surface kernel's loop runs up to 9 trips (was 8), so it keeps its one spare trip after the new look.
+- Not changed: a group under group code (a round, a twist, a relief modifier over it) still divides in a normal's
+  look, because its code reads the value off the surface. A line can still show there.
+- The golden shaders moved for scenes/lighting-room.json and scenes/office-lighting.json, one line each (the
+  division at the group's top), checked against the old codegen before refreezing.
+
+**What to look at:** the plaster box with the stucco sphere cut from it, blend on and at 0: no line round the hole on
+the plaster. Elsewhere the surfaces look as they did. lighting-room and office-lighting are the two examples that take
+the extra look: they should look as before, and if either renders noticeably slower than it did, that is where it
+comes from.
 
 ## 0.71.0 — 2026-10-20
 

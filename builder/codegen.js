@@ -1485,7 +1485,11 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
            BEFORE leaving the group's frame, so a local point recorded for it is the group's. */
         if (!top) line(d, `C = fold(C, ${k}, ${km});`)
         else {
-            line(d, `C = fold(C, VEC4(${k}.xyz, ${k}.w / XF_RL), ${km});`)
+            /* ...undivided in a normal's look (scene_api.js NORMAL_LOOK): the normal reads the direction alone, and the
+               division jumps where a relief's band ends. Not under code, its own or above it: that reads the value off
+               the surface, where the division is part of the shape. */
+            const rl = hasCode(g) || codeAbove.has(g.id) ? 'XF_RL' : 'select(XF_RL, 1.0, NORMAL_LOOK)'
+            line(d, `C = fold(C, VEC4(${k}.xyz, ${k}.w / ${rl}), ${km});`)
             line(d, `XF_RL = xfrl_${g.id};`)
         }
         // ...and then its lights, into the same C the combine went into, in this group's frame
