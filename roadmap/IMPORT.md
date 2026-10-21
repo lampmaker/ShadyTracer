@@ -666,9 +666,11 @@ plain group as codegen does, and found 377 points on the wrong side of the round
 is one fold codegen combines; and on Dawn, codegen, as data and baked, at most 4 of 256 rays a part end otherwise than the
 formula, each at an edge or grazing. Put back the plain groups and 9 to 98 do, in four of the six parts.
 
-**The same is true of anything built by hand** (read in code, not run): a group of two shapes joined by union, put in
-a group that subtracts it or intersects with it, is folded, not combined. A builder question, not the import's; the
-import no longer makes such a group.
+**The same was true of anything built by hand** (read in code then): a group of two shapes joined by union, put in
+a group that subtracts it or intersects with it, was folded, not combined. A builder question, not the import's.
+Fixed in 0.next: such a group is combined as a union (codegen.js combinedGroups), in codegen and as data, and
+`builder/test/csgshape.gpu.mjs` measures it on Dawn against the exact value. The import still makes no such group,
+and `docsdf.mjs` mirrors the new rule.
 
 ### 11.4 What a march step costs (inferred: Tests › imported measures it)
 

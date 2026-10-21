@@ -401,5 +401,50 @@ const framesAtEnds = w => {
     }
 }
 
+/* ---- A PLAIN GROUP AS ONE OF A CSG GROUP'S SHAPES (0.next, codegen.js combinedGroups), as codegen emits it: a CSG record
+   of its own, each child a JOIN of a union, an END -- not a GROUP whose children's records fold one by one. An array's
+   copies one combine: a CSG record around the ARRAY, a JOIN after every shape (the base's a union at the group's blend,
+   whatever join it keeps dormant: at the copies after the first it is taken), the END after the ARRAY_END. And GROUP
+   CODE WHOSE OWN CHILDREN JOIN is compiled as before: its children function combines them, which a BEFORE's or an
+   AFTER's records, folding its children's in, did not (a mirror of a box less a sphere was the box and the sphere). */
+{
+    const at = (x, y, z) => ({ pos: { x, y, z }, rot: { x: 0, y: 0, z: 0 }, scale: 1 })
+    const d = M.createDoc()
+    M.addGroup(d, 'root', { id: 'part' })
+    M.addObject(d, 'part', { id: 'hb', primitive: 'box' })
+    M.addGroup(d, 'part', { id: 'rig', join: 'subtract' })
+    M.addObject(d, 'rig', { id: 'ra', primitive: 'sphere' }); M.addObject(d, 'rig', { id: 'rb', primitive: 'sphere' })
+    M.addGroup(d, 'part', { id: 'row', join: 'subtract' })
+    M.addObject(d, 'row', { id: 'rs', primitive: 'sphere', join: 'intersect' })        // the base: its join dormant
+    M.setCopies(d, 'row', [at(-0.5, 0, 0), at(0.5, 0, 0)])
+    const s = gen(d), data = s.data, recs = recordsIn(data)
+    const NAME = Object.fromEntries(Object.entries(KIND).map(([k, v]) => [v, k]))
+    ok('a plain group and an array as shapes: each its own CSG record, a JOIN after each of its shapes, an END',
+        recs.map(i => NAME[kindAt(data, i)]).join(' ') === 'CSG OBJECT JOIN CSG OBJECT JOIN OBJECT JOIN END JOIN CSG ARRAY OBJECT JOIN ARRAY_END END JOIN END',
+        recs.map(i => NAME[kindAt(data, i)]).join(' '))
+    const joinOp = i => u32(data, 4 * i + 1), blendAt = i => data[4 * i + 7]
+    const joins = recs.filter(i => kindAt(data, i) === KIND.JOIN)
+    ok('...every JOIN inside them a union at 0, the array\'s base too; the part\'s their subtractions',
+        same(joins.map(joinOp), [0, 0, 0, 1, 0, 1]) && joins.every(i => blendAt(i) === 0), JSON.stringify(joins.map(joinOp)))
+    const [, , rowCsg] = recs.filter(i => kindAt(data, i) === KIND.CSG)
+    const ends = recs.filter(i => kindAt(data, i) === KIND.END)
+    ok('...the array\'s END closes the CSG record around it, and that record skips past it', nextOf(data, ends[1]) === rowCsg
+        && nextOf(data, rowCsg) === ends[1] + REC && kindAt(data, rowCsg + REC) === KIND.ARRAY)
+    ok('...the evaluator has a stack for the two levels', s.wgsl.includes('array<ScnFrame, 4>'))
+
+    for (const mod of ['mirror', 'round']) {
+        const x = M.createDoc()
+        M.addGroup(x, 'root', { id: 'g', ...modifierGroup(mod) })
+        M.addObject(x, 'g', { id: 'b', primitive: 'box' })
+        M.addObject(x, 'g', { id: 'h', primitive: 'sphere', join: 'subtract' })
+        const plan = planOf(M.toTree(x, { keepDisabled: true }))
+        ok(`a ${mod} whose own children join is compiled as before, its children function the combine`,
+            plan.sub.has('g') && plan.befores.length + plan.afters.length === 0, JSON.stringify([...plan.sub.keys()]))
+        M.setJoin(x, 'h', 'union')
+        const plain = planOf(M.toTree(x, { keepDisabled: true }))
+        ok(`...and with its children a plain union, data as before`, plain.subs.length === 0 && plain.befores.length + plain.afters.length === 1)
+    }
+}
+
 console.log(`${pass} passed, ${fail} failed`)
 process.exit(fail ? 1 : 0)

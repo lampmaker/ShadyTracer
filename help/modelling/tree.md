@@ -55,7 +55,8 @@ Each child of a group **joins what is above it** in that group. The mark in fron
 
 Click a mark to change it. A group's **blend** smooths every join in it, and a child's own blend overrides that for
 its join. A subtraction cuts only what is above it in the same group: to cut one part, put the part and the cutter in
-a group of their own.
+a group of their own. A group among the children is one shape there, all of its children together: a group of two
+overlapping cylinders, set to subtract, cuts away both, overlap and all. An array's copies count as one shape too.
 
 Each part of the surface wears the material of the shape that makes it there: a hole has the cutter's material on
 its walls, and an intersection has the second shape's wherever that shape bounds it. To cut a hole in the base's own

@@ -134,6 +134,19 @@
 // added, rounded prisms, cut shapes reaching past the part, every group one fold codegen combines (no plain union as a
 // shape of an intersection) and every part standing on the floor. Those two documents' entries moved, every key of both
 // modes; no other document's did (key by key).
+//
+// REFROZEN FOR FOUR DOCUMENTS (2026-10-21, 0.next), for a fix the user agreed (a plain group that is one of a CSG group's
+// shapes combines its children as a union, an array's copies too: codegen.js combinedGroups). Folded, its children were
+// no union's signed distance, and the CSG group above read a wrong operand where they overlap (csgshape.gpu.mjs). Checked
+// before freezing, dev's codegen (bbe475c's codegen.js and scenedata.js) against new, both modes, all four texts: with
+// whitespace ignored no line left any text; the lines that came are each such group's combine and nothing else -- `var
+// k_<g>`, `var km_<g>` (and `var first_<g>`, live), each child's `var C = emptyHit(r);` with its XF_SUB pair, the base's
+// `k_<g> = C.s; km_<g> = C.m;` (live, behind first_<g>) and each union's `km_<g> = select(...)` and `k_<g> = csgUnion(k_<g>,
+// C.s, UB.blend_<g>);`, and `C = fold(C, k_<g>, km_<g>);` -- the children's own lines re-indented into their blocks off,
+// not at all live. The uniforms gained exactly those groups' blend_<g>, at 0; the tags and roles did not move.
+// test/fixtures/scenes/OpticsBench.json (the pillars' cylinder and shell, four groups) and OpticsBench2.json (those, and
+// the laser rig under its lens holder: six live, three off, the others hidden and pruned) moved, and their bench copies
+// exactly as they did; the other 46 documents, cases.*.wgsl and the imported parts among them, did not (key by key).
 //======================================================================================================================
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'

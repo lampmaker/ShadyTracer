@@ -356,7 +356,9 @@ export function addPart(model, doc, parentId, ir, { unit = 'mm', label = 'part',
        box's core intersected with its prisms, marched on Dawn, ran through its own edges, and the bracket, the boss and
        the cup had it too (import.gpu.mjs, 2026-10-21) -- and as a part's own group it left its shapes' inner faces in
        the solid, the seams the formula keeps out (csg.js). So a group here is always one fold of csg ops, which
-       codegen combines into one shape (children(): k_<id>), at blend 0 an exact min and max:
+       codegen combines into one shape (children(): k_<id>), at blend 0 an exact min and max. (Since 0.next codegen
+       combines a plain group that is a CSG group's shape too, as a union -- combinedGroups -- but a part's own group is
+       not one unless it is pasted into a CSG group, and outside one a plain group still folds, so the rule stands.)
          - a union in an intersection is where the fold starts, its shapes joined by union: (A or B) and C is
            [A, B union, C intersect];
          - a union cut away is cut shape by shape: C less (A or B) is [C, A subtract, B subtract];

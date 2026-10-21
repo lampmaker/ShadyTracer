@@ -22,8 +22,12 @@
 //   a plain group             a record that only says where its subtree ends (for visibility and culling): frames are
 //                             composed here, on the CPU, so a child's record carries its whole frame to the world
 //   a CSG group               a record that opens a private Hit, a JOIN record after each of its shapes (its op and its
-//                             blend), and an END record that folds the combined shape in -- codegen children(), as data
-//   an array                  a record, its children's records in a copy's frame, an ARRAY_END that goes back for the next
+//                             blend), and an END record that folds the combined shape in -- codegen children(), as data.
+//                             A plain group that is one of its shapes too (codegen combinedGroups, 0.next): its children
+//                             a union, every JOIN a union at its blend -- folded, they were no union's signed distance
+//   an array                  a record, its children's records in a copy's frame, an ARRAY_END that goes back for the next;
+//                             as one of a CSG group's shapes, inside a CSG record and its END, a JOIN after each shape of
+//                             every copy: the copies one union
 //   a before group            group code that only moves the point its children see (codegen isBefore: a twist, a bend, a
 //                             repeat, a mirror): a BEFORE record that calls its code -- a function per distinct code, as an
 //                             object's -- its children's records in the frame it leaves, and a BEFORE_END
@@ -32,7 +36,8 @@
 //                             AFTER_END that calls its code with that Hit
 //   COMPILED, AS BEFORE       any other group with code (a relief, a displace -- they read the CSG chain above them --,
 //                             or anything that calls its children twice or reads what they gave first: the evaluator
-//                             cannot be called from code it calls -- WGSL has no recursion),
+//                             cannot be called from code it calls -- WGSL has no recursion), a before or an after group
+//                             whose own children join (a CSG group with code: its children function combines them),
 //                             an object wearing a material's relief, and a CSG group with either anywhere below it (their
 //                             rules read the group's blend: SURFACE_ONLY, READ_REACH, the deferred slope XF_RL). Each such
 //                             SUBTREE is a function the evaluator calls (a SUB record), emitted by codegen exactly as it was.
@@ -55,7 +60,7 @@
 // THE HEADER, one vec4: where the records end, where the light table starts, how many lights, 0.
 //======================================================================================================================
 
-import { hasCode, isBefore, isAfter, isCsg, shapesOf, joinOf, isCompiledIn, isProfile, isPath, NODE_TYPES } from './codegen.js'
+import { hasCode, isBefore, isAfter, isCsg, combinedGroups, shapesOf, joinOf, isCompiledIn, isProfile, isPath, NODE_TYPES } from './codegen.js'
 import { hasFace } from './lights.js'
 import { matrixOf } from './transform.js'
 
@@ -144,7 +149,11 @@ const afterKind = n => isAfter(n, { straight: false })
    checks a tree against a plan) */
 function compiledOf(tree, reliefMaterials, wantLocal = false) {
     const reliefObject = n => n.kind === 'object' && reliefMaterials.has(n.material) && NODE_TYPES[n.type] && n.type !== 'light' && n.type !== 'export' && n.type !== 'haze'
-    const coded = n => hasCode(n) && !native(n, wantLocal, reliefMaterials)
+    /* A BEFORE OR AN AFTER GROUP WHOSE OWN CHILDREN JOIN (isCsg: a subtraction, an intersection, a blend among them) is
+       compiled: codegen's children function combines them, and the records of a BEFORE or an AFTER fold its children's in
+       one by one -- until 0.next a mirror of a box less a sphere was the box and the sphere as data. */
+    const coded = n => hasCode(n) && (!native(n, wantLocal, reliefMaterials) || isCsg(n))
+    const combined = combinedGroups(tree)
     const special = new Set()          // groups with code or a relief object somewhere below
     const mark = n => {
         let any = false
@@ -153,7 +162,7 @@ function compiledOf(tree, reliefMaterials, wantLocal = false) {
         return any
     }
     mark(tree)
-    return n => n !== tree && (coded(n) || reliefObject(n) || (n.kind === 'group' && isCsg(n) && special.has(n.id)))
+    return n => n !== tree && (coded(n) || reliefObject(n) || (n.kind === 'group' && combined.has(n.id) && special.has(n.id)))
 }
 /* every node's id in depth-first order, a compiled subtree's nodes together after its root: tag n is tags[n - 1] */
 function tagsOf(tree, compiled) {
@@ -204,12 +213,14 @@ function arrayDepthOf(tree, compiled) {
     walk(tree, 0)
     return depth
 }
-/* the deepest nesting of data CSG groups and after groups: each a Hit of its own on the evaluator's stack */
+/* the deepest nesting of data CSG groups (codegen combinedGroups: a plain group that is a shape too) and after groups:
+   each a Hit of its own on the evaluator's stack */
 function depthOf(tree, compiled) {
     let depth = 0
+    const combined = combinedGroups(tree)
     const walk = (n, d) => {
         if (n !== tree && compiled(n)) return
-        const inner = n !== tree && n.kind === 'group' && (isCsg(n) || (hasCode(n) && afterKind(n))) ? d + 1 : d
+        const inner = n !== tree && n.kind === 'group' && (combined.has(n.id) || (hasCode(n) && afterKind(n))) ? d + 1 : d
         depth = Math.max(depth, inner)
         for (const c of n.children || []) walk(c, inner)
     }
@@ -301,6 +312,7 @@ export function recordsOf(tree, plan, { boxes = null, materialIndex, lightMateri
        scene needs new text, and the caller compiles. Objects are matched by their block's KEY, so a node copied, added
        or deleted is data as long as its code is a block there. */
     const compiled = compiledOf(tree, plan.reliefMaterials, plan.wantLocal)
+    const combined = combinedGroups(tree)
     const same = (a, b) => a.length === b.length && a.every((x, i) => x === b[i])
     const roots = []
     const findRoots = n => { if (n !== tree && compiled(n)) { roots.push(n.id); return } for (const c of n.children || []) findRoots(c) }
@@ -426,6 +438,20 @@ export function recordsOf(tree, plan, { boxes = null, materialIndex, lightMateri
         // AN ARRAY (model.js copies): its record, its children's records in the frame of a copy -- walked once a copy by
         // the evaluator -- and an ARRAY_END that goes back for the next. Its copies among the parameters.
         if (n.kind === 'group' && n.copies?.length) {
+            /* ...ONE OF A CSG GROUP'S SHAPES (codegen combinedGroups, group()): its copies one combine -- a CSG record
+               around the array and its END after the ARRAY_END, folding the union in, in the array's frame; a JOIN after
+               each shape of every copy, the base's a union at the group's blend (at every copy after the first it is
+               taken: the copies a union). Not a CSG group with copies, which the model refuses (copiesProblems): its
+               copies are walked as they were. */
+            const together = combined.has(n.id) && !isCsg(n)
+            let g = null
+            if (together) {
+                if (csgDepth === 0) hoisted.push([])
+                g = push()
+                head(g, KIND.CSG, 0, 0, visible(n) ? FLAG.VISIBLE : 0)
+                frameInto(g, here)
+                g[6] = u(tagOf.get(n.id) ?? 0)
+            }
             const r = push()
             head(r, KIND.ARRAY, n.copies.length, 0, (visible(n) ? FLAG.VISIBLE : 0) | (plainAbove && csgDepth === 0 ? FLAG.CULLABLE : 0))
             frameInto(r, here)
@@ -437,15 +463,36 @@ export function recordsOf(tree, plan, { boxes = null, materialIndex, lightMateri
                 params.push([m[0], m[1], m[2], m[12]], [m[4], m[5], m[6], m[13]], [m[8], m[9], m[10], m[14]], [m[15], 0, 0, 0])
             }
             r[5] = u(at)
-            for (const c of n.children || []) node(c, IDENTITY, on, plainAbove, csgDepth)
+            if (!together) for (const c of n.children || []) node(c, IDENTITY, on, plainAbove, csgDepth)
+            else {
+                const shape = shapesOf(n)
+                for (const c of n.children || []) {
+                    if (!shape.includes(c)) { node(c, IDENTITY, on, false, csgDepth + 1); continue }
+                    const start = recs.length
+                    node(c, IDENTITY, on, false, csgDepth + 1)
+                    const base = c === shape[0]
+                    const j = push()
+                    head(j, KIND.JOIN, base ? OPS.union : OPS[joinOf(c)] ?? 0, 0, visible(c) ? FLAG.VISIBLE : 0)
+                    j[7] = base || c.joinBlend == null ? n.blend ?? 0 : c.joinBlend
+                    j[4] = u(recs.length)
+                    if (recs.length - 1 > start && !visible(c)) recs[start][4] = u(recs.length)
+                }
+            }
             const e = push()
             head(e, KIND.ARRAY_END, 0, 0, FLAG.VISIBLE)
             e[4] = u(recs.indexOf(r))
             r[4] = u(recs.length)
+            if (together) {
+                const end = push()
+                head(end, KIND.END, 0, 0, FLAG.VISIBLE)
+                end[4] = u(recs.indexOf(g))         // the CSG record it closes (its frame, its tag)
+                g[4] = u(recs.length)
+                if (csgDepth === 0) for (const h of hoisted.pop()) lightRecord(h.n, h.here, false, h.on)
+            }
             return
         }
-        // a group
-        const csg = isCsg(n)
+        // a group: a CSG one, or a plain one that is one of a CSG group's shapes (codegen combinedGroups), combines
+        const csg = combined.has(n.id)
         const r = push()
         head(r, csg ? KIND.CSG : KIND.GROUP, 0, 0, (visible(n) ? FLAG.VISIBLE : 0) | (plainAbove && csgDepth === 0 ? FLAG.CULLABLE : 0))
         frameInto(r, here)

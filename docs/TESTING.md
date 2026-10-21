@@ -409,6 +409,13 @@ as data, nested, in arrays and in CSG groups, over a relief), on Dawn (the `webg
 driver there is -- lavapipe on the CPU in a container. It says what it computes, never how fast: a CPU's emulation
 predicts nothing about a card. Without the package or a device it says so and passes.
 
+That one holds the two paths to each other, so a mistake both make passes it. `node builder/test/csgshape.gpu.mjs`
+(0.next) holds both to the answer: documents with a plain group as one of a CSG group's shapes, the scene's SDF
+evaluated on Dawn at 4096 points around each, codegen with visibility off and live and as data, against the exact CSG
+value worked out in JS from the shapes' own distances (spheres and boxes, and a mirror's and a round's code). It is
+how a folded group was found to be no union where its children overlap, and it failed on that code (29 of its 36 rows)
+before it passed.
+
 `node bench/test/bench.test.mjs` checks, without a GPU, that every row is what its
 label says: the variants' scene text (the reliefs gone, or one left, the materials plain), the unit rows
 byte-identical with every length scaled by exactly the factor, every setting naming a real uniform,

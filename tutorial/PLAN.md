@@ -120,7 +120,8 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
    iq-raymarching); hart1996; keinert2014; iq-normals.
 3. **Building and bending shapes** (draft): union, intersection and subtraction, hard and blended; the blend's normal
    and the warped fillet; fold's surface (argmin |d|) and medium (least deep: right for nested solids, a guess for
-   overlapping ones); `warp(k)` and the twist's divisor √(1 + c²) against the map's largest stretch
+   overlapping ones), and why a group that is one shape of a join is joined by a hard union before it is folded;
+   `warp(k)` and the twist's divisor √(1 + c²) against the map's largest stretch
    (c + √(c² + 4)) / 2 (the flat world's swirl, and a 3D plate measured by the test at 1.14); the noise relief raw,
    divided and with its shell, a ray rocking for 300 steps → scene_api.js, modifiers.js, codegen.js combine,
    noise.js. Planned for it (0.73.0): the same joins read backwards, a CAD part as a union of products over its faces'
@@ -278,8 +279,8 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
     compile), as data (one text, a record a shape); a kernel's inlined size by `wgslgraph.js` and its compile time by
     `compileprogress.js`'s fitted model, call sites multiplying the copies. -> the frozen fixture csg-v10 (a box minus a
     sphere as codegen writes it), bake.js (baked), scenedata.js (why), compileprogress.js (what predicts it), codegen.js
-    (six copies, the carved walls, sdfResult); the data build the editing default since 0.74.0, the bake still the
-    still picture's. Measured: ARCHITECTURE.md's bake run and data/codegen ratios,
+    (six copies, the carved walls, the group cut as one shape, sdfResult); the data build the editing default since
+    0.74.0, the bake still the still picture's. Measured: ARCHITECTURE.md's bake run and data/codegen ratios,
     PERFORMANCE.md's structural edit. *Read:* iq-distfunctions, wgsl-spec.
 
 **VII. Speed** (every number stamped; the review's ±20% drift between runs stated)

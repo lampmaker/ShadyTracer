@@ -3,11 +3,12 @@
 // each node's transform (builder/transform.js matrixOf, read as scene_api.js xfPoint reads it: the point into the node's
 // frame, the distance out of it by its scale), each preset's own distance (core/sdf.js, written again here), and a
 // group's children as codegen combines them: a CSG group's (codegen.js isCsg) folded top to bottom by their joins (union
-// min, intersect max, subtract max(C, -d): scene_api.js csgUnion and the rest at blend 0), A PLAIN GROUP'S BY THE
-// NEAREST BOUNDARY EITHER WAY (scene_api.js fold, the surface's argmin |d|) -- which is no union's distance: inside one
+// min, intersect max, subtract max(C, -d): scene_api.js csgUnion and the rest at blend 0) -- and a plain group's that
+// is one of such a group's shapes, as a union (codegen.js combinedGroups, 0.next) -- ANY OTHER PLAIN GROUP'S BY THE
+// NEAREST BOUNDARY EITHER WAY (scene_api.js fold, the surface's argmin |d|), which is no union's distance: inside one
 // of two boxes and just outside the other, it is the other's, outside. The rounded box marched on Dawn went through
 // its own edges that way, its core a plain group intersected with its prisms (import.gpu.mjs, 2026-10-21), while this
-// file, taking every union as a min, saw nothing.
+// file, taking every union as a min, saw nothing; codegen folded such a group then, and combines it since 0.next.
 //
 // WHY: shapes.js's own shapeSDF evaluates the shapes it made, not the document it wrote; an Euler angle, a cap or a
 // join that went wrong on the way into the document showed nowhere before the picture (the user's Onshape part,
@@ -45,8 +46,9 @@ const PRESETS = new Map([
 ])
 
 /** The distance of a document node (a part's group, as an asset holds it) at a point of its parent's frame. `blocks`:
- *  the asset's or document's blocks, by which an object's code is found. */
-export function nodeSDF(n, p, blocks) {
+ *  the asset's or document's blocks, by which an object's code is found. `shape`: the node is one of a combining
+ *  group's shapes (combinedGroups), so a plain group combines its own as a union. */
+export function nodeSDF(n, p, blocks, shape = false) {
     const m = matrixOf(n.transform), s = m[15]
     const d = [p[0] - m[12], p[1] - m[13], p[2] - m[14]]
     const q = [0, 1, 2].map(c => (d[0] * m[4 * c] + d[1] * m[4 * c + 1] + d[2] * m[4 * c + 2]) / s)
@@ -57,9 +59,9 @@ export function nodeSDF(n, p, blocks) {
         return f(q, n.params) * s
     }
     let C = null
-    const csg = isCsg(n)
+    const csg = isCsg(n) || shape
     for (const c of n.children.filter(c => c.enabled !== false)) {
-        const v = nodeSDF(c, q, blocks)
+        const v = nodeSDF(c, q, blocks, csg)
         if (C === null) { C = v; continue }
         if (!csg) { if (Math.abs(v) < Math.abs(C)) C = v; continue }
         const join = c.join ?? 'union'

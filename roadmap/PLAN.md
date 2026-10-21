@@ -30,8 +30,10 @@ and what is only inferred, is `IMPORT.md` section 11).
   groups, half under the floor, with the value under its opening falling to 0.38 mm, and holes in it in the picture
   (a plain union group intersected: IMPORT.md 11.3). Now 7 shapes in 2 groups, standing on the floor, agreeing with
   OpenCascade at all 3000 points, and on Dawn with the formula: what the user saw wrong is asked, not yet answered.
-- **Found on the way, not fixed**: a union group built by hand inside a subtraction or an intersection is folded by
-  codegen, not combined (IMPORT.md 11.3). A builder question.
+- **Found on the way, fixed in 0.next**: a union group built by hand inside a subtraction or an intersection was
+  folded by codegen, not combined (IMPORT.md 11.3). Such a group is now combined as a union, an array's copies too
+  (codegen.js combinedGroups), in codegen and as data; `builder/test/csgshape.gpu.mjs` holds both to the exact CSG
+  value on Dawn.
 - **Not seen**: the Imported parts example's picture, the user's part re-imported, and what an imported part costs a
   march step. **Tests › imported** times the example against its rounded boxes and lens as one preset
   each (what recognising those patterns would save) and against the floor alone.
