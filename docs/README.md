@@ -1,7 +1,7 @@
 # The documents
 
 ShadyTracer is the LED and luminaire tool built on `lib/pathtracer`, at the root of this repository: open
-`index.html` through a local server, or at <https://lampmaker.github.io/ShadyTracer/>. What the
+`index.html` through a local server, or at <https://shadytracer.com>. What the
 program does is the repository's `README.md`; what is built, feature by feature, with its evidence, is
 `FEATURES.md` at the root.
 
