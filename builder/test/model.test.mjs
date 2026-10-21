@@ -981,6 +981,84 @@ throws('another version is refused, not guessed at',
 }
 
 //----------------------------------------------------------------------------------------------
+// A GROUP'S MATERIAL (version 23, `0.next`): worn by every object below it over its own, the nearest group's winning,
+// an object with ownMaterial keeping its own; resolved in toTree, so codegen sees each object's worn material
+//----------------------------------------------------------------------------------------------
+{
+    const d = M.createDoc()
+    const white = M.addMaterial(d, { label: 'white', preset: 'diffuse' }), steel = M.addMaterial(d, { label: 'steel', preset: 'metal' })
+    const glass = M.addMaterial(d, { label: 'glass', preset: 'glass' })
+    M.addGroup(d, 'root', { id: 'g' })
+    M.addObject(d, 'g', { id: 'a', primitive: 'box', material: white.id })
+    M.addObject(d, 'g', { id: 'b', primitive: 'sphere', material: glass.id })
+    M.addGroup(d, 'g', { id: 'inner' })
+    M.addObject(d, 'inner', { id: 'c', primitive: 'box', material: white.id })
+    M.addLight(d, 'g', { id: 'lamp' })
+    M.addObject(d, 'root', { id: 'out', primitive: 'box', material: white.id })
+    const worn = id => M.wornMaterial(d, id).material
+    const treeMat = id => { let m; const go = n => { if (n.id === id) m = n.material; (n.children || []).forEach(go) }; go(M.toTree(d)); return m }
+    const shader = doc => generate(M.toTree(doc), { id: 't', title: 't' }).wgsl
+    const plain = shader(d)
+    ok('a group starts with no material (no field): each wears its own', !('material' in M.find(d, 'g').node) && worn('a') === white.id && worn('b') === glass.id)
+
+    M.setMaterial(d, 'g', steel.id)
+    ok('given one: every object below it wears it, a group inside too', worn('a') === steel.id && worn('b') === steel.id && worn('c') === steel.id
+        && M.wornMaterial(d, 'c').group === 'g', JSON.stringify(M.wornMaterial(d, 'c')))
+    ok('...their own kept underneath', M.find(d, 'a').node.material === white.id && M.find(d, 'b').node.material === glass.id)
+    ok('...not a light, nor what is outside the group', M.find(d, 'lamp').node.material == null && treeMat('lamp') == null && worn('lamp') == null
+        && worn('out') === white.id)
+    ok('...sound, and the tree codegen reads has the worn one on each object and none on the group',
+        M.validate(d).length === 0 && treeMat('a') === steel.id && treeMat('c') === steel.id && !('material' in M.toTree(d).children[0]), JSON.stringify(M.validate(d)))
+    // the shader the same as each object given steel itself: nothing new in codegen, and a scene with none the text it was
+    const direct = structuredClone(d); delete M.find(direct, 'g').node.material
+    for (const id of ['a', 'b', 'c']) M.setMaterial(direct, id, steel.id)
+    ok('...the shader exactly the one of each object given it itself', shader(d) === shader(direct) && shader(d) !== plain)
+
+    M.setOwnMaterial(d, 'b', true)
+    ok('an object keeping its own (ownMaterial) wears its own', worn('b') === glass.id && treeMat('b') === glass.id && M.wornMaterial(d, 'b').group === null
+        && worn('a') === steel.id && M.validate(d).length === 0)
+    M.setMaterial(d, 'inner', glass.id)
+    ok('a group inside with one of its own: the nearer wins', worn('c') === glass.id && M.wornMaterial(d, 'c').group === 'inner' && worn('a') === steel.id)
+    ok('removing a material a group gives is refused, naming the group', /used by.*inner/.test((() => { try { M.removeMaterial(d, glass.id) } catch (e) { return e.message } })() ?? ''))
+
+    // a file, an undo snapshot, a duplicate
+    const back = M.parse(M.serialize(d))
+    ok('saved and read back: the group\'s material and the own flag', M.find(back, 'g').node.material === steel.id && M.find(back, 'b').node.ownMaterial === true)
+    const dup = M.find(d, M.duplicate(d, 'g').id).node
+    ok('a duplicate keeps its material', dup.material === steel.id)
+    M.remove(d, dup.id)
+
+    /* AN ASSET TAKES WHAT IT WEARS: a copy of an object under the group pasted elsewhere looks as it did -- the group's
+       material as its own; a group inside with none takes it as its own group material; one keeping its own keeps it */
+    const ea = M.extractAsset(d, 'a')
+    ok('an object copied out of the group takes the group\'s material as its own', ea.node.material === steel.id && ea.materials.some(m => m.id === steel.id))
+    ok('...one keeping its own, its own', M.extractAsset(d, 'b').node.material === glass.id)
+    M.setMaterial(d, 'inner', null)
+    ok('null takes a group\'s away: no field', !('material' in M.find(d, 'inner').node))
+    const ei = M.extractAsset(d, 'inner')
+    ok('...a group inside with none takes the group\'s as its own', ei.node.material === steel.id && ei.node.children[0].material === white.id)
+    const e2 = M.createDoc()
+    const pasted = M.insertAsset(e2, M.extractAsset(d, 'g'))
+    const m2 = id => M.material(e2, id)?.label
+    ok('...pasted into another scene: the group\'s material carried and rewired, its objects\' too', m2(pasted.material) === 'steel'
+        && m2(pasted.children[0].material) === 'white' && pasted.children[1].ownMaterial === true && M.validate(e2).length === 0, JSON.stringify(M.validate(e2)))
+
+    // refused
+    const refused = f => { try { f(); return null } catch (e) { return e.message } }
+    ok('the scene itself has none', /scene itself has no material/.test(refused(() => M.setMaterial(d, d.root.id, steel.id)) ?? ''))
+    ok('a light has none', /no material/.test(refused(() => M.setMaterial(d, 'lamp', steel.id)) ?? ''))
+    ok('a group has no own flag, nor a light', /only a shape/.test(refused(() => M.setOwnMaterial(d, 'g', true)) ?? '')
+        && /only a shape/.test(refused(() => M.setOwnMaterial(d, 'lamp', true)) ?? ''))
+    const bad = structuredClone(d)
+    M.find(bad, 'g').node.material = 'nope'; M.find(bad, 'a').node.ownMaterial = false; bad.root.material = steel.id
+    const p = M.validate(bad)
+    ok('a file naming no material, a stored false and a root with one are refused', p.some(x => /'g': no material 'nope'/.test(x))
+        && p.some(x => /'a': ownMaterial/.test(x)) && p.some(x => /root has no material/.test(x)), JSON.stringify(p))
+    const v22 = JSON.parse(M.serialize(M.createDoc())); v22.version = 22
+    ok('a version 22 file reads as the current version, nothing changed', M.parse(JSON.stringify(v22)).version === M.VERSION && M.VERSION === 23)
+}
+
+//----------------------------------------------------------------------------------------------
 // A MATERIAL'S RELIEF (materials.js RELIEFS): a height field in mm, its parameters owned by <id>#relief
 //----------------------------------------------------------------------------------------------
 {

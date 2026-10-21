@@ -1,6 +1,6 @@
 {
   "format": "raytracer-scene",
-  "version": 22,
+  "version": 23,
   "title": "Demo scene",
   "nextId": 40,
   "materials": [

@@ -116,7 +116,8 @@ function floorUnder(doc, sample, material) {
 function sampleAsset(d, li) {
     if (li.sample == null || !Model.find(d, li.sample)) return null
     const preview = Model.extractAsset(d, li.sample)
-    Model.walk({ root: preview.node }, x => { if (x.material === li.subject) x.material = null })
+    // a group giving it to its objects (model.js version 23) has no material then, which is no field
+    Model.walk({ root: preview.node }, x => { if (x.material === li.subject) { if (x.kind === 'group') delete x.material; else x.material = null } })
     preview.materials = preview.materials.filter(m => m.id !== li.subject)
     return preview
 }

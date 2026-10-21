@@ -131,20 +131,27 @@ const union = (a, b) => !a ? b : !b ? a : { lo: a.lo.map((v, k) => Math.min(v, b
 export function geometryKey(doc, id) {
     const chain = lineage(doc, id)
     if (!chain.length) return null
-    const reliefOf = n => n.kind === 'object' && n.material != null ? doc.materials?.find(m => m.id === n.material)?.relief ?? null : null
+    /* the material it WEARS (model.js version 23, wornMaterial): a group's above it, where one gives its objects one and
+       it does not keep its own -- a relief given that way is shape all the same. `over` is that group's material. */
+    const overOf = i => chain.slice(i + 1).find(g => g !== doc.root && g.material != null)?.material ?? null
+    const reliefOf = (n, over) => {
+        if (n.kind !== 'object') return null
+        const id = over != null && n.ownMaterial !== true && n.type === 'code' ? over : n.material
+        return id != null ? doc.materials?.find(m => m.id === id)?.relief ?? null : null
+    }
     /* a node's JOIN (model version 14) shapes what its surface is in its group -- the cut face of a subtraction
        -- and its siblings' shape it too: every group above carries its children's joins, as it carried its op */
     // its code and constants are its block's (model.js version 16): a block's code edited moves every user's shape
-    const own = n => ({ type: n.type, code: codeOf(doc, n), params: n.params, constants: blockOf(doc, n)?.constants, enabled: n.enabled,
-                        shape: n.light?.shape, twoSided: n.light?.twoSided, relief: reliefOf(n), join: n.join, joinBlend: n.joinBlend })
+    const own = (n, over) => ({ type: n.type, code: codeOf(doc, n), params: n.params, constants: blockOf(doc, n)?.constants, enabled: n.enabled,
+                        shape: n.light?.shape, twoSided: n.light?.twoSided, relief: reliefOf(n, over), join: n.join, joinBlend: n.joinBlend })
     // straightMaterial too: it moves where a relief inside is read, and a relief is shape
     const above = n => ({ code: codeOf(doc, n), params: n.params, blend: n.blend, enabled: n.enabled, straight: n.straightMaterial, copies: n.copies,
                           joins: (n.children || []).map(c => [c.join, c.joinBlend]) })
     /* A GROUP'S OWN SURFACE is made of its children, where they are in it: a child's radius, or a child moved
        inside a relief, moves the surface the group folds -- so its key is its whole subtree, transforms of
        the children included (its own transform still not: the box is in its frame) */
-    const below = n => (n.children || []).map(c => [own(c), c.transform ?? null, c.blend, below(c)])
-    const self = chain[0].kind === 'group' ? [above(chain[0]), below(chain[0])] : own(chain[0])
+    const below = (n, over) => (n.children || []).map(c => [own(c, over), c.transform ?? null, c.blend, below(c, c.material ?? over)])
+    const self = chain[0].kind === 'group' ? [above(chain[0]), below(chain[0], chain[0].material ?? overOf(0))] : own(chain[0], overOf(0))
     return JSON.stringify([self, ...chain.slice(1).filter(n => n !== doc.root).map(above), doc.functions])
 }
 /** Does a group fold a shape of its own -- group code, or a CSG combine -- and so tag points of its own? NOT a plain

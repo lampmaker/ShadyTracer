@@ -1,6 +1,6 @@
 {
   "format": "raytracer-scene",
-  "version": 22,
+  "version": 23,
   "title": "Depth of field",
   "nextId": 20,
   "unit": "mm",
