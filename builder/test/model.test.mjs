@@ -981,7 +981,7 @@ throws('another version is refused, not guessed at',
 }
 
 //----------------------------------------------------------------------------------------------
-// A GROUP'S MATERIAL (version 23, `0.next`): worn by every object below it over its own, the nearest group's winning,
+// A GROUP'S MATERIAL (version 23, 0.76.0): worn by every object below it over its own, the nearest group's winning,
 // an object with ownMaterial keeping its own; resolved in toTree, so codegen sees each object's worn material
 //----------------------------------------------------------------------------------------------
 {
