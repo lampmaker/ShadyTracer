@@ -1,7 +1,8 @@
 //======================================================================================================================
 // IMPORT -- a STEP or STL file into shapes the builder has: each solid in it converted into a group of boxes,
-// cylinders, cones, spheres and tori joined by union, intersect and subtract (csg.js, shapes.js), handed to the page as
-// an asset (builder/model.js extractAsset's form) that the tree pastes into the scene being worked on.
+// cylinders, cones, spheres, tori and rounded prisms joined by union, intersect and subtract (csg.js, shapes.js),
+// standing on z = 0 (convert's `place`), handed to the page as an asset (builder/model.js extractAsset's form) that the
+// tree pastes into the scene being worked on.
 //
 // WHAT CAN BE CONVERTED: a solid whose faces all lie on planes, cylinders, cones, spheres and tori -- most machined
 // and moulded parts, a spherical lens, a housing with holes, fillets and chamfers. What cannot is refused by name,
@@ -15,8 +16,8 @@
 // PURE, like everything in import/ (model.js is passed in), so the conversion can run in a Worker (worker.js) and in
 // Node (import/test/).
 //
-//   convert(model, name, bytes, { material, seed }) ->
-//       { asset | null, parts: [{ name, report, shapes }], refused: [{ name, why }], warnings, kind: 'step' | 'stl' }
+//   convert(model, name, bytes, { material, seed, place: 'floor' | 'file' }) ->
+//       { asset | null, parts: [{ name, id, report, ir, csg, box }], refused: [{ name, why }], warnings, kind: 'step' | 'stl' }
 //======================================================================================================================
 
 import { readSTEP } from './step.js'
@@ -42,7 +43,13 @@ export function convertSolid(B, { seed = 1 } = {}) {
     return { csg, ir, report: { ...csg.report, ...countShapes(ir.root) } }
 }
 
-export function convert(model, name, bytes, { material = null, seed = 1 } = {}) {
+/* WHERE THE IMPORT STANDS (the user's Onshape part, 2026-10-21): kept where the file put it, a part sat at its own
+   coordinates -- its group at the middle of its box, which for a part drawn around its origin is half under a floor at
+   z = 0. So, `place: 'floor'` (the page's): the whole import moved to stand on z = 0, centred over the origin; its
+   parts keep their places in it, so an assembly stays put together. `place: 'file'` leaves it where the file has it.
+   The file's axes are kept either way: STEP says nothing of which way is up, and one exporter's up is another's
+   front, so a part modelled along y comes in lying along y. */
+export function convert(model, name, bytes, { material = null, seed = 1, place = 'floor' } = {}) {
     const kind = kindOf(name, bytes)
     if (!kind) throw new Error(`${name}: not a STEP or STL file (by its name or its first line)`)
     const base = String(name).replace(/\.[^.]+$/, '') || 'part'
@@ -74,12 +81,25 @@ export function convert(model, name, bytes, { material = null, seed = 1 } = {}) 
             warnings.push(...(B.warnings || []))
             const part = convertSolid(B, { seed })
             const g = addPart(model, doc, holder ? holder.id : 'root', part.ir, { unit: 'mm', label: s.name, material: mat?.id ?? null })
-            parts.push({ name: s.name, id: g.id, report: part.report, ir: part.ir, csg: part.csg })
+            // the shapes and groups as pasted (addPart makes the formula's unions into folds, and may close one with a box)
+            const n = { shapes: 0, groups: 0 }
+            const count = x => { if (x.kind === 'object') n.shapes++; else { n.groups++; x.children.forEach(count) } }
+            count(g)
+            parts.push({ name: s.name, id: g.id, report: { ...part.report, ...n }, ir: part.ir, csg: part.csg, box: B.box })
         } catch (e) {
             refused.push({ name: s.name, why: e.message || String(e) })
         }
     }
     const top = holder ?? (parts.length ? model.find(doc, parts[0].id).node : null)
+    if (top && parts.length && place === 'floor') {
+        /* on the faces' own box, not the shapes' (ir.box): that one is padded, and the plate stood on it floated 0.15 mm
+           over the floor */
+        const lo = [0, 1, 2].map(k => Math.min(...parts.map(p => p.box.lo[k]))), hi = [0, 1, 2].map(k => Math.max(...parts.map(p => p.box.hi[k])))
+        // a part's group is at the middle of its shapes' box (shapes.js addPart); the holder of several at the origin
+        const at = holder ? [0, 0, 0] : [0, 1, 2].map(k => 0.5 * (parts[0].ir.box.lo[k] + parts[0].ir.box.hi[k]))
+        const r3 = x => Math.round(x * 1e3) / 1e3
+        top.transform.pos = { x: r3(at[0] - 0.5 * (lo[0] + hi[0])), y: r3(at[1] - 0.5 * (lo[1] + hi[1])), z: r3(at[2] - lo[2]) }
+    }
     const asset = top && parts.length ? model.extractAsset(doc, top.id) : null
     return { kind, asset, parts, refused, warnings: [...new Set(warnings)] }
 }

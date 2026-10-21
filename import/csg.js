@@ -38,7 +38,7 @@
 //         | { op: 'box', lo, hi }
 //======================================================================================================================
 
-import { add, sub, mul, dot, len, cross, norm, TAU, frame, plane, cylinder, cone, sameSurface } from './geom.js'
+import { add, sub, mul, dot, len, cross, norm, TAU, frame, plane, cylinder, cone, roundedRect, toLocal, sameSurface } from './geom.js'
 export { sameSurface }
 import { mulberry, outward } from './brep.js'
 
@@ -57,16 +57,20 @@ function extent(values, periodic, gap = 0.2) {
     return [lo, hi < lo ? hi + TAU : hi]
 }
 
-/** The surfaces where a curved face ends: see the header, step 2. */
-function separatorsOf(f, rnd) {
-    const S = f.surface, out = []
+/** The surfaces where a curved surface's faces end: see the header, step 2. ALL THE FACES ON ONE SURFACE TOGETHER: a CAD
+ *  program splits a surface into several faces -- Onshape cut a part's outer cylinder into four (the user's part,
+ *  2026-10-21) -- and each face's ends are not where the surface's faces end. Taken face by face, the four gave eight
+ *  planes through the axis at angles no face of the part has, the cover used them, and the part was 44 shapes in 29
+ *  groups, boxes turned 52 degrees among them. Together they go all the way round, and give none. */
+function separatorsOf(faces, rnd) {
+    const S = faces[0].surface, out = []
     if (S.type === 'plane') return out
     const F = S.F
     /* a point on the axis -- a sphere's pole, a cone's apex, often a vertex of a corner -- has no angle of its own, and
        atan2(0, 0) would put one anywhere: a separator through the axis at 45 degrees cut the rounded box's STL into
        cells sampling missed (2026-10-21) */
     const offAxis = p => { const d = sub(p, F.o); return len(sub(d, mul(F.z, dot(d, F.z)))) > 1e-6 * (S.r ?? 1) }
-    const pts = [...f.loops.flatMap(l => l.points), ...f.sample(48, rnd)]
+    const pts = faces.flatMap(f => [...f.loops.flatMap(l => l.points), ...f.sample(48, rnd)])
     const uv = pts.map(p => S.uv(p)), uvU = pts.filter(offAxis).map(p => S.uv(p))
     const across = u => plane(frame(F.o, cross(F.z, add(mul(F.x, Math.cos(u)), mul(F.y, Math.sin(u))))))   // through the axis
     const atHeight = z => plane(frame(add(F.o, mul(F.z, z)), F.z))                                         // across the axis
@@ -91,6 +95,71 @@ function separatorsOf(f, rnd) {
         }
     }
     return out
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// ROUNDED RECTANGLES: four cylinders of one radius along one axis, at the corners of a rectangle, and the planes their
+// sides lie on -- a pocket, a boss, a plate with its corners rounded. One prism (geom.js roundedRect) is the half-space
+// of all their faces together. Taken face by face they were eight half-spaces and the separators a corner's cylinder
+// needs, and the user's Onshape part had two of them: thirty shapes for a part a hand draws in five (2026-10-21).
+//----------------------------------------------------------------------------------------------------------------------
+/** Every rounded rectangle the faces make: [{ surface, faces: [face index] }]. A face is the prism's when every point
+ *  of it (its loops' and a sample's) is on the prism's side; a plane's face that runs on past the prism stays its own. */
+export function roundedRects(B, tol, angle = 1e-9) {
+    const rnd = mulberry(17)
+    const cyl = []                                  // the cylinders, each once, with their faces
+    B.faces.forEach((f, i) => {
+        if (f.unsupported || f.surface.type !== 'cylinder') return
+        let c = cyl.find(c => sameSurface(c.S, f.surface, tol, angle))
+        if (!c) cyl.push(c = { S: f.surface, faces: [] })
+        c.faces.push(i)
+    })
+    const pointsOf = f => [...f.loops.flatMap(l => l.points), ...f.sample(16, rnd)]
+    const pts = B.faces.map(f => f.unsupported ? [] : pointsOf(f))
+    const found = [], used = new Set()
+    for (let a = 0; a < cyl.length; a++) {
+        if (used.has(a)) continue
+        const A = cyl[a].S
+        const group = cyl.map((c, k) => k).filter(k => !used.has(k) && Math.abs(Math.abs(dot(cyl[k].S.F.z, A.F.z)) - 1) < 1e-9 && Math.abs(cyl[k].S.r - A.r) < tol)
+        if (group.length < 4) continue
+        // the axes where they cross a plane across them, in that plane
+        const F = frame(A.F.o, A.F.z)
+        const at = k => { const l = toLocal(F, cyl[k].S.F.o); return [l[0], l[1]] }
+        const C = group.map(at)
+        const near = (u, v) => Math.hypot(u[0] - v[0], u[1] - v[1]) < 10 * tol
+        for (let i = 0; i < group.length; i++) for (let j = i + 1; j < group.length; j++) {
+            if (used.has(group[i]) || used.has(group[j])) continue
+            // i and j a diagonal: the other two corners are the rectangle's, if they are there
+            const m = [(C[i][0] + C[j][0]) / 2, (C[i][1] + C[j][1]) / 2], h = Math.hypot(C[i][0] - m[0], C[i][1] - m[1])
+            if (h < 10 * tol) continue
+            const others = group.map((g, k) => k).filter(k => k !== i && k !== j && !used.has(group[k]) && Math.abs(Math.hypot(C[k][0] - m[0], C[k][1] - m[1]) - h) < 10 * tol)
+            for (const k of others) {
+                const opp = [2 * m[0] - C[k][0], 2 * m[1] - C[k][1]]
+                const l = others.find(q => q !== k && near(C[q], opp))
+                if (l === undefined) continue
+                const e1 = [C[k][0] - C[i][0], C[k][1] - C[i][1]], e2 = [C[l][0] - C[i][0], C[l][1] - C[i][1]]
+                const n1 = Math.hypot(...e1), n2 = Math.hypot(...e2)
+                if (n1 < 10 * tol || n2 < 10 * tol || Math.abs(e1[0] * e2[0] + e1[1] * e2[1]) > 1e-6 * n1 * n2) continue
+                const x = norm(add(mul(F.x, e1[0]), mul(F.y, e1[1])))
+                const o = add(F.o, add(mul(F.x, m[0]), mul(F.y, m[1])))
+                const R = roundedRect(frame(o, F.z, x), n1 / 2 + A.r, n2 / 2 + A.r, A.r)
+                const corners = [group[i], group[j], group[k], group[l]]
+                // its faces: every face of the part on its side, the corners' among them
+                const faces = B.faces.map((f, q) => q).filter(q => {
+                    const S = B.faces[q].surface
+                    if (B.faces[q].unsupported || (S.type !== 'plane' && S.type !== 'cylinder')) return false
+                    if (S.type === 'plane' && Math.abs(dot(S.F.z, F.z)) > 1e-9) return false
+                    return pts[q].length && pts[q].every(p => Math.abs(R.g(p)) < 10 * tol)
+                })
+                // its four corners, and a straight side: four pins standing at a rectangle's corners are not one
+                if (!corners.every(c => cyl[c].faces.some(q => faces.includes(q))) || !faces.some(q => B.faces[q].surface.type === 'plane')) continue
+                corners.forEach(c => used.add(c))
+                found.push({ surface: R, faces })
+                break
+            }
+        }
+    }
+    return found
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -198,12 +267,22 @@ export function toCSG(B, { seed = 1, volume = 6000, perFace = 64, perEdgePoint =
         H.push({ surface: S, from })
         return { j: H.length - 1, s: 1 }
     }
-    const faceLit = B.faces.map(f => {
-        const { j, s } = addSurface(f.surface, 'face')
+    /* a face a rounded rectangle claims is its: on the prism's inside when the face's outward normal is the prism's */
+    const claimed = new Map()
+    for (const R of roundedRects(B, tol, B.surfaceAngle ?? 1e-9)) for (const i of R.faces) {
+        const f = B.faces[i], q = [...f.sample(5, rnd), ...f.loops.flatMap(l => l.points).slice(0, 5)]
+        const vote = q.reduce((v, p) => v + Math.sign(dot(outward(f, p), R.surface.grad(p))), 0)
+        claimed.set(i, { S: R.surface, s: vote >= 0 ? 1 : -1 })
+    }
+    const faceLit = B.faces.map((f, i) => {
+        const c = claimed.get(i)
+        const { j, s } = addSurface(c ? c.S : f.surface, 'face')
         if (H[j].from !== 'face') H[j].from = 'face'
-        return { j, s: f.sense ? s : -s }
+        return c ? { j, s: c.s * s } : { j, s: f.sense ? s : -s }
     })
-    for (const f of B.faces) for (const S of separatorsOf(f, rnd)) addSurface(S, 'separator')
+    const onSurface = new Map()
+    B.faces.forEach((f, i) => { if (claimed.has(i)) return; const j = faceLit[i].j; if (!onSurface.has(j)) onSurface.set(j, []); onSurface.get(j).push(f) })
+    for (const faces of onSurface.values()) for (const S of separatorsOf(faces, rnd)) addSurface(S, 'separator')
     const n = H.length, W = words(n)
 
     // 3: points, classified, and their cells
@@ -349,7 +428,7 @@ export function toCSG(B, { seed = 1, volume = 6000, perFace = 64, perEdgePoint =
         if ((sdf(p) < 0) !== B.inside(p)) mismatches++
     }
     const report = {
-        faces: B.faces.length, halfspaces: H.length, used: halfspaces.length,
+        faces: B.faces.length, halfspaces: H.length, used: halfspaces.length, roundedRects: new Set([...claimed.values()].map(c => c.S)).size,
         separators: halfspaces.filter(h => h.from === 'separator').length,
         cells: all.length, conflicts: conflicts.length, global: G.length, products: kept.length, uncovered, literals: literalCount(tree),
         points: pts.length, skipped, checked, mismatches, ms: Date.now() - t0,

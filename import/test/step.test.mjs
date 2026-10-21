@@ -19,7 +19,7 @@ const ok = (name, cond, extra = '') => {
     console.log(`FAIL  ${name}${extra ? '\n      ' + extra : ''}`)
 }
 const fixture = n => new URL(`./fixtures/${n}`, import.meta.url)
-const PARTS = ['plate', 'bracket', 'boss', 'lens', 'roundbox']
+const PARTS = ['plate', 'bracket', 'boss', 'lens', 'roundbox', 'cup']
 
 // PART 21
 {

@@ -5,16 +5,19 @@
 // What is held: the asset is a sound piece of a document (model.js insertAsset takes it whole or refuses it); pasted
 // into a scene in metres it is the same size as in one in millimetres (the unit is the asset's, mm); every shape the
 // conversion makes is one of the builder's presets sharing its block, or the cone written in shapes.js; the part
-// generates (codegen) with its shapes in it; an assembly is one group of its parts; and what cannot be converted is
-// refused by name with why. Whether it compiles is check-shaders' (the Imported parts example, scenes/make.mjs), and
-// whether it looks right is the user's.
+// generates (codegen) with its shapes in it; an assembly is one group of its parts; it stands on the floor, centred
+// over the origin, or where the file has it; and what cannot be converted is refused by name with why. Whether it
+// compiles is check-shaders' (the Imported parts example, scenes/make.mjs), and whether it looks right is the user's.
 //======================================================================================================================
 import { readFileSync } from 'node:fs'
 import * as M from '../../builder/model.js'
-import { generate } from '../../builder/codegen.js'
+import { generate, isCsg } from '../../builder/codegen.js'
 import { convert, kindOf } from '../index.js'
-import { CONE_CODE, shapeSDF } from '../shapes.js'
+import { CONE_CODE, shapeSDF, addPart } from '../shapes.js'
+import { frame, sphere } from '../geom.js'
+import { mulberry } from '../brep.js'
 import { PRIMITIVES } from '../../builder/primitives.js'
+import { nodeSDF } from './docsdf.mjs'
 
 let pass = 0, fail = 0
 const ok = (name, cond, extra = '') => {
@@ -82,6 +85,75 @@ ok('...and anything else refused, saying so', /not a STEP or STL file/.test(msg)
     const lens = r.parts.find(p => p.name === 'lens')
     ok('...the lens where the assembly put it (its centre at x = 5, z = 8)', lens && Math.abs(0.5 * (lens.ir.box.lo[0] + lens.ir.box.hi[0]) - 5) < 0.2
         && Math.abs(0.5 * (lens.ir.box.lo[2] + lens.ir.box.hi[2]) - 8) < 0.2, JSON.stringify(lens?.ir.box))
+}
+
+/* WHERE IT STANDS (the user's Onshape part was half under the floor, 2026-10-21): by default on z = 0, centred over the
+   origin, on its faces and not on the padded box its shapes are cut to; with place: 'file', where the file has it. Held
+   on the document as the shader computes it (docsdf.mjs), against the parts' sizes as made (make.py), not against what
+   index.js computed them to be */
+{
+    const at = (r, p) => nodeSDF(r.asset.node, p, r.asset.blocks)
+    const floor = convert(M, 'plate.step', fixture('plate.step')), file = convert(M, 'plate.step', fixture('plate.step'), { place: 'file' })
+    // the plate is 40 x 30 x 5 about its origin, its holes at (±15, ±10) and its pocket in its top
+    ok('plate.step on the floor: its bottom face is z = 0', Math.abs(at(floor, [10, 5, 0])) < 1e-6 && Math.abs(at(floor, [10, 5, -0.5]) - 0.5) < 1e-6,
+       `${at(floor, [10, 5, 0])} ${at(floor, [10, 5, -0.5])}`)
+    ok('...centred over the origin: its sides at x = ±20 and y = ±15', [[20, 0, 1], [-20, 0, 1], [0, 15, 1], [0, -15, 1]].every(p => Math.abs(at(floor, p)) < 1e-6),
+       [[20, 0, 1], [-20, 0, 1], [0, 15, 1], [0, -15, 1]].map(p => at(floor, p)).join())
+    const ref = JSON.parse(readFileSync(new URL('./fixtures/plate.json', import.meta.url), 'utf8'))
+    let worst = 0
+    for (const [x, y, z] of ref.points) worst = Math.max(worst, Math.abs(at(floor, [x, y, z + 2.5]) - at(file, [x, y, z])))
+    ok('...and with place: \'file\', the same part where its file has it, 2.5 mm lower', worst < 1e-9, worst)
+    // an assembly: the whole stands on the floor, its parts where they are in it (the boss's base at z = -11)
+    const a = convert(M, 'assembly.step', fixture('assembly.step')), b = convert(M, 'assembly.step', fixture('assembly.step'), { place: 'file' })
+    const aref = JSON.parse(readFileSync(new URL('./fixtures/assembly.json', import.meta.url), 'utf8'))
+    worst = 0
+    for (const [x, y, z] of aref.points) worst = Math.max(worst, Math.abs(at(a, [x, y, z + 11]) - at(b, [x, y, z])))
+    ok('the assembly on the floor: both parts moved together, 11 mm up', worst < 1e-9, worst)
+    ok('...the parts in their group where they were', JSON.stringify(a.asset.node.children.map(c => c.transform.pos)) === JSON.stringify(b.asset.node.children.map(c => c.transform.pos)))
+}
+
+/* EVERY GROUP ONE SHAPE (shapes.js addPart says why): a group whose children all join by union is a plain group to
+   codegen, folded by the nearest boundary either way, which cut holes in four of the six parts as shapes of an
+   intersection (import.gpu.mjs, 2026-10-21). Every group an import makes combines its children into one shape */
+{
+    const plain = []
+    for (const n of ['plate', 'bracket', 'boss', 'lens', 'roundbox', 'cup']) for (const ext of ['step', 'stl']) {
+        const r = convert(M, `${n}.${ext}`, fixture(`${n}.${ext}`))
+        walk(r.asset.node, g => { if (g.kind === 'group' && g.children.length > 1 && !isCsg(g)) plain.push(`${n}.${ext} › ${g.label}`) })
+    }
+    ok('every group of every fixture, STEP and STL, combined into one shape by codegen (none folded as a plain union)', !plain.length, plain.join(', '))
+    const r = convert(M, 'cup.step', fixture('cup.step'))
+    const cup = []; walk(r.asset.node, g => { if (g.kind === 'group') cup.push(`${g.label}:${g.children.length}`) })
+    ok('the cup: two groups, its union the start of its intersection\'s fold, not a group of its own', cup.length === 2 && r.parts[0].report.groups === 2, cup.join(' '))
+}
+/* ...AND WHAT NO FIXTURE HAS, written as formulas by hand: two unions intersected (the second closed with the part's box),
+   a union that is the whole part (closed the same way), a union cut away (cut shape by shape). The document, as
+   codegen combines it (docsdf.mjs), is the formula's own value everywhere */
+{
+    const F0 = frame([0, 0, 0], [0, 0, 1], [1, 0, 0])
+    const box = (lo, hi) => ({ n: { kind: 'box', F: F0, lo, hi }, neg: false })
+    const ball = (c, r, neg = false) => ({ n: { kind: 'sphere', S: sphere(frame(c, [0, 0, 1], [1, 0, 0]), r) }, neg })
+    const or = (...kids) => ({ n: { kind: 'or', kids }, neg: false })
+    const CASES = {
+        'two unions intersected': { kind: 'and', kids: [or(box([-10, -10, -10], [2, 10, 10]), box([-2, -6, -10], [10, 6, 10])), or(ball([0, 0, -4], 8), ball([0, 0, 5], 7))] },
+        'a union as the whole part': { kind: 'or', kids: [box([-10, -10, -3], [10, 10, 3]), ball([6, 0, 0], 5), ball([-6, 0, 0], 5)] },
+        'a union cut away': { kind: 'and', kids: [box([-10, -10, -10], [10, 10, 10]), { ...or(ball([0, 0, 10], 6), ball([0, 0, 4], 5)), neg: true }] },
+    }
+    const rnd = mulberry(5)
+    for (const [label, root] of Object.entries(CASES)) {
+        const doc = M.ensureMaterial(M.createDoc()); doc.unit = 'mm'
+        const g = addPart(M, doc, 'root', { root, box: { lo: [-12, -12, -12], hi: [12, 12, 12] } }, { unit: 'mm', label })
+        const groups = []; walk(g, n => { if (n.kind === 'group') groups.push(n) })
+        let worst = 0
+        for (let i = 0; i < 4000; i++) {
+            const p = [0, 1, 2].map(() => -15 + 30 * rnd())
+            worst = Math.max(worst, Math.abs(nodeSDF(g, p, doc.blocks) - shapeSDF(root, p)))
+        }
+        ok(`${label}: every group combined into one shape, and the document the formula's value at 4000 points`,
+            groups.every(n => n.children.length < 2 || isCsg(n)) && worst < 1e-6, `${groups.map(n => `${n.label}:${isCsg(n)}`).join(' ')} worst ${worst}`)
+        if (label !== 'a union cut away') ok(`...closed with the part's box`, groups.some(n => n.children.some(c => c.label === 'the part\'s box')))
+        else ok('...cut shape by shape, no box', !groups.some(n => n.children.some(c => c.label === 'the part\'s box')) && groups.length === 1)
+    }
 }
 
 // THE STL OF THE SAME PART: the same shapes as its STEP

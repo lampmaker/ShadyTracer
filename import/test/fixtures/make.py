@@ -43,7 +43,14 @@ def parts():
     lens = lens_solid(12, 4, 20, 30)
     # a box with every edge rounded: 12 cylinders and 8 sphere corners, tangent to the planes
     roundbox = cq.Workplane('XY').box(20, 14, 10).edges().fillet(2)
-    return {'plate': plate, 'bracket': bracket, 'boss': boss, 'lens': lens, 'roundbox': roundbox}
+    # a cup lying along y, as a part drawn on a CAD program's front plane comes (a user's Onshape part of 2026-10-21 was
+    # one like it): a 56 mm disc and a 44 mm square rounded 3 mm at its corners, which stick out of the disc and split
+    # its cylinder into four faces; hollowed from below by a 40 mm square rounded 1 mm, 25 mm deep; two 2 mm holes in its lid
+    outer = cq.Workplane('XY').circle(28).extrude(29).union(cq.Workplane('XY').rect(44, 44).extrude(29).edges('|Z').fillet(3))
+    cup = outer.cut(cq.Workplane('XY').rect(40, 40).extrude(25).edges('|Z').fillet(1))
+    cup = cup.faces('>Z').workplane(centerOption='ProjectedOrigin').pushPoints([(13.79, 13.79), (-13.79, -13.79)]).hole(2)
+    cup = cup.rotate((0, 0, 0), (1, 0, 0), -90)
+    return {'plate': plate, 'bracket': bracket, 'boss': boss, 'lens': lens, 'roundbox': roundbox, 'cup': cup}
 
 def lens_solid(D, t, R1, R2):
     s1 = cq.Workplane('XY').sphere(R1).translate((0, 0, t / 2 - R1))

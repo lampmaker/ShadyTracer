@@ -2,8 +2,9 @@
 // Tests for the STL reader (stl.js) and the surfaces found in a mesh (fit.js). Run: node import/test/stl.test.mjs
 //
 // The meshes are OpenCascade's tessellations of the fixtures (fixtures/make.py, export tolerance 0.02 mm), so the
-// surfaces fit.js should find in each are exactly the faces OpenCascade reports for the solid it tessellated: a hole
-// that was a polygon in the STL is a cylinder again, a fillet a torus. The converted part is then held to OpenCascade's
+// surfaces fit.js should find in each are exactly the surfaces of the solid it tessellated: a hole that was a polygon
+// in the STL is a cylinder again, a fillet a torus. Surfaces, not faces: the cup's Ø56 cylinder is four faces in its
+// STEP file, cut apart by the square's corners, and one surface fitted to all four. The converted part is then held to OpenCascade's
 // classified points beyond the mesh's own error -- within a few hundredths of a millimetre of a curved face the STL
 // does not know where the surface is (the band), and a point there is not counted.
 // The fitters are held to surfaces given exactly; the reader to binary and ASCII of one mesh, a binary file that
@@ -14,8 +15,9 @@ import { readSTL } from '../stl.js'
 import { meshSolid, meshInside, fitCylinder, fitCone, fitSphere, fitTorus } from '../fit.js'
 import { toCSG } from '../csg.js'
 import { shapesOf, shapeSDF } from '../shapes.js'
-import { frame, cylinder, cone, sphere, torus, norm, add, mul } from '../geom.js'
-import { mulberry } from '../brep.js'
+import { frame, cylinder, cone, sphere, torus, norm, add, mul, sameSurface } from '../geom.js'
+import { mulberry, brep } from '../brep.js'
+import { readSTEP } from '../step.js'
 
 let pass = 0, fail = 0
 const ok = (name, cond, extra = '') => {
@@ -24,7 +26,7 @@ const ok = (name, cond, extra = '') => {
     console.log(`FAIL  ${name}${extra ? '\n      ' + extra : ''}`)
 }
 const fixture = n => new URL(`./fixtures/${n}`, import.meta.url)
-const PARTS = ['plate', 'bracket', 'boss', 'lens', 'roundbox']
+const PARTS = ['plate', 'bracket', 'boss', 'lens', 'roundbox', 'cup']
 
 /* a mesh back into STL: binary (with a header of our choosing) and ASCII */
 function binary(m, header = '') {
@@ -103,14 +105,22 @@ function ascii(m) {
 }
 
 // THE FIXTURES: the surfaces OpenCascade tessellated, found again, and the part they make
+/* the distinct surfaces among faces, counted by kind: faces on one surface counted once */
+function surfaces(faces, tol, angle) {
+    const S = []
+    for (const f of faces) if (!S.some(s => sameSurface(s, f.surface, tol, angle))) S.push(f.surface)
+    const k = {}
+    for (const s of S) k[s.type] = (k[s.type] || 0) + 1
+    return k
+}
 for (const n of PARTS) {
     const ref = JSON.parse(readFileSync(fixture(`${n}.json`), 'utf8'))
     const m = readSTL(readFileSync(fixture(`${n}.stl`)))
     const B = meshSolid(m)
-    const kinds = {}
-    for (const f of B.faces) kinds[f.surface.type] = (kinds[f.surface.type] || 0) + 1
-    ok(`${n}.stl: the faces OpenCascade's solid has, by surface`, JSON.stringify(Object.entries(kinds).sort()) === JSON.stringify(Object.entries(ref.kinds).sort()),
-       `${JSON.stringify(kinds)} against ${JSON.stringify(ref.kinds)}`)
+    const S = brep(readSTEP(readFileSync(fixture(`${n}.step`), 'utf8')).solids[0])
+    const kinds = surfaces(B.faces, B.surfaceTol, B.surfaceAngle), want = surfaces(S.faces, 1e-6 * S.scale)
+    ok(`${n}.stl: the surfaces of the solid OpenCascade tessellated, by kind`, JSON.stringify(Object.entries(kinds).sort()) === JSON.stringify(Object.entries(want).sort()),
+       `${JSON.stringify(kinds)} against ${JSON.stringify(want)}`)
     ok(`${n}.stl: its band (how far the facets stray from the surfaces) no more than the export tolerance and a little`, B.band < 0.05, B.band)
     const away = ref.points.filter(([, , , , d]) => d > 2.5 * B.band)
     let bad = 0

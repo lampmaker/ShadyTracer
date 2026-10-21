@@ -256,6 +256,23 @@ export function torus(F, R, r) {
     }
 }
 
+/** A ROUNDED RECTANGLE'S PRISM, endless along the frame's z: half sizes hx, hy across x and y (the rounding inside them),
+ *  its four edges along z rounded by r. Not a face's surface but several faces' together (csg.js roundedRects): four
+ *  planes and the four cylinders that round their corners, one half-space where they were eight and their separators.
+ *  g is the exact distance to the prism's side. */
+export function roundedRect(F, hx, hy, r) {
+    const parts = p => { const l = toLocal(F, p); return [l, Math.abs(l[0]) - (hx - r), Math.abs(l[1]) - (hy - r)] }
+    return {
+        type: 'rrect', F, hx, hy, r, periodicU: false, periodicV: false,
+        g: p => { const [, a, b] = parts(p); return Math.hypot(Math.max(a, 0), Math.max(b, 0)) + Math.min(Math.max(a, b), 0) - r },
+        grad: p => {
+            const [l, a, b] = parts(p)
+            if (a > 0 && b > 0) { const h = Math.hypot(a, b); return dirToWorld(F, [Math.sign(l[0]) * a / h, Math.sign(l[1]) * b / h, 0]) }
+            return a > b ? dirToWorld(F, [Math.sign(l[0]) || 1, 0, 0]) : dirToWorld(F, [0, Math.sign(l[1]) || 1, 0])
+        },
+    }
+}
+
 /** A surface moved by a rigid transform (an assembly's placement): its frame moved, its sizes kept. */
 export function moveSurface(S, T) {
     const F = frame(apply(T, S.F.o), applyDir(T, S.F.z), applyDir(T, S.F.x))
@@ -269,6 +286,7 @@ export function makeSurface(type, F, s) {
         case 'cone': return cone(F, s.r, s.semi)
         case 'sphere': return sphere(F, s.r)
         case 'torus': return torus(F, s.R, s.r)
+        case 'rrect': return roundedRect(F, s.hx, s.hy, s.r)
     }
     throw new Error(`no surface of type ${type}`)
 }
@@ -300,6 +318,13 @@ export function sameSurface(A, B, tol, angle = 1e-9) {
             return len(sub(A.F.o, B.F.o)) < tol && Math.abs(A.r - B.r) < tol ? 1 : 0
         case 'torus':
             return parallel(A.F.z, B.F.z, angle) && len(sub(A.F.o, B.F.o)) < tol && Math.abs(A.R - B.R) < tol && Math.abs(A.r - B.r) < tol ? 1 : 0
+        case 'rrect': {
+            // the same prism: one axis, one middle, the same sizes either way round across it
+            if (!parallel(A.F.z, B.F.z, angle) || offAxis(A, B.F.o) >= tol || Math.abs(A.r - B.r) >= tol) return 0
+            const turned = Math.abs(dot(A.F.x, B.F.x)) < 0.5
+            const [bx, by] = turned ? [B.hy, B.hx] : [B.hx, B.hy]
+            return (parallel(A.F.x, turned ? B.F.y : B.F.x, angle) && Math.abs(A.hx - bx) < tol && Math.abs(A.hy - by) < tol) ? 1 : 0
+        }
         case 'cone': {
             const a = coneShape(A), b = coneShape(B)
             return dot(a.open, b.open) > 1 - angle && len(sub(a.apex, b.apex)) < tol && Math.abs(a.a - b.a) < Math.sqrt(2 * angle) ? 1 : 0

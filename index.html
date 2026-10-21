@@ -1176,9 +1176,9 @@
                 }
             };
             /* A STEP OR STL FILE (import/, roadmap/IMPORT.md section 11): each solid in it converted into the builder's own shapes
-               -- boxes, cylinders, cones, spheres and tori joined by union, intersect and subtract -- in a Worker, and pasted
-               into the scene being worked on as one undo step, in mm converted to the scene's unit (model.js insertAsset),
-               made of the scene's default material. What cannot be converted is said by name, with why: a face on a
+               -- boxes, cylinders, cones, spheres, tori and rounded prisms joined by union, intersect and subtract -- in a
+               Worker, and pasted into the scene being worked on as one undo step, in mm converted to the scene's unit
+               (model.js insertAsset), made of the scene's default material, standing on z = 0 of where it is pasted. What cannot be converted is said by name, with why: a face on a
                B-spline, a mesh that is not closed or whose curves fit no such surface. */
             const convertCAD = (name, bytes, material) => new Promise((resolve, reject) => {
                 let w;

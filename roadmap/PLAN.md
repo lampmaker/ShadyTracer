@@ -23,10 +23,17 @@ lie on planes, cylinders, cones, spheres and tori becomes a group of the builder
 subtract; an STL from CAD is fitted back to those surfaces first (`import/`; the whole account, with what was measured
 and what is only inferred, is `IMPORT.md` section 11).
 - **Proved without a GPU**: on OpenCascade's own parts and its own classification, every point on the right side, the
-  formula never more than the true distance, no seam, the STL giving back the STEP's faces (`import/test/`).
-  check-shaders with naga compiles the Imported parts example through every kernel.
-- **Not seen**: the Imported parts example's picture, an import of one of the user's own files, and what an imported
-  part costs a march step. **Tests › imported** times the example against its rounded boxes and lens as one preset
+  formula, its shapes and the scene document never more than the true distance, no seam inside and no skin outside,
+  the STL giving back the STEP's surfaces (`import/test/`). check-shaders with naga compiles the Imported parts
+  example through every kernel.
+- **The user's first file** (an Onshape part, 2026-10-21): "did not convert/import too well". It was 44 shapes in 29
+  groups, half under the floor, with the value under its opening falling to 0.38 mm, and holes in it in the picture
+  (a plain union group intersected: IMPORT.md 11.3). Now 7 shapes in 2 groups, standing on the floor, agreeing with
+  OpenCascade at all 3000 points, and on Dawn with the formula: what the user saw wrong is asked, not yet answered.
+- **Found on the way, not fixed**: a union group built by hand inside a subtraction or an intersection is folded by
+  codegen, not combined (IMPORT.md 11.3). A builder question.
+- **Not seen**: the Imported parts example's picture, the user's part re-imported, and what an imported part costs a
+  march step. **Tests › imported** times the example against its rounded boxes and lens as one preset
   each (what recognising those patterns would save) and against the floor alone.
 - **Next** (IMPORT.md 11.5): that measurement; then pattern recognition or culling inside a part, whichever it points
   to; B-spline faces that are really planes or cylinders; STEP colours. Freeform faces and scans still need the

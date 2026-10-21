@@ -4,13 +4,13 @@
 // (Tests > imported).
 //
 // WHAT IT ANSWERS. A STEP or STL part comes in as the builder's shapes joined by union, intersect and subtract
-// (import/csg.js, shapes.js): exact, but as many shapes as the conversion found. The rounded box is 27 shapes and 8
-// groups where a person would write one rounded box; the lens 3 where the builder has a lens. What that costs a march
+// (import/csg.js, shapes.js): exact, but as many shapes as the conversion found. The rounded box is 14 shapes in one
+// group where a person would write one rounded box; the lens 3 where the builder has a lens. What that costs a march
 // step is the one number the conversion's next step waits on: whether to recognise such patterns (a rounded box from its
 // fillets, a lens from its spheres), or whether the formula as it is costs no more than its box test spares
 // (roadmap/IMPORT.md section 11). Nothing here was measured on a card when it was written.
 //
-// THE ROWS, each the frozen scene (bench/scenes/imported.json, the Imported parts example of 0.72.0: five STEP fixtures and
+// THE ROWS, each the frozen scene (bench/scenes/imported.json, the Imported parts example of 0.72.0: six STEP fixtures and
 // the rounded box again from its STL) at 1280 x 720, its own sun, one change a row:
 //   as imported, baked                   the build the page shows once the edits stop
 //   the rounded boxes and the lens as one shape each
@@ -72,8 +72,8 @@ export async function importedTest(load) {
         id: 'imported', kind: 'bench',
         title: 'What an imported part costs: STEP and STL parts as the builder\'s shapes, against one shape each, fixed camera',
         note: 'One sample per trace, each awaited; wall clock, then GPU time per kernel. The frozen Imported parts example'
-            + ' (five STEP parts and the rounded box again from its STL, each converted into boxes, cylinders, cones, spheres'
-            + ' and tori by File > Import), baked, in its sun. Row 2 makes the two rounded boxes (27 shapes each as imported)'
+            + ' (six STEP parts and the rounded box again from its STL, each converted into boxes, cylinders, cones, spheres,'
+            + ' tori and rounded prisms by File > Import), baked, in its sun. Row 2 makes the two rounded boxes (14 shapes each as imported)'
             + ' and the lens (3) one built-in shape each: row 1 against row 2 is what recognising those patterns would save.'
             + ' Row 3 is the floor alone: row 1 less row 3 is what the parts cost. Row 4 the editing build, row 5 row 1 again:'
             + ' if it differs from row 1, so may every row. The picture is the user\'s to judge: BENCH.imported.view(1).'

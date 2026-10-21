@@ -20,37 +20,70 @@ as PLAN.md does.
 **STEP and STL files import as the builder's own shapes.** The user asked to start on STL and STEP import and to see
 whether converting a part into primitives with boolean operations would make it fast to trace. It does, for CAD
 parts. File › Import from file… and a file dropped on the page take `.step`, `.stp` and `.stl`. Each solid in the
-file becomes a group of boxes, cylinders, cones, spheres and tori joined by union, intersect and subtract: the solid
-exactly, its normals analytic, nothing on the GPU but the shader any scene is (roadmap/IMPORT.md section 11).
+file becomes a group of boxes, cylinders, cones, spheres, tori and rounded prisms joined by union, intersect and
+subtract: the solid exactly, its normals analytic, nothing on the GPU but the shader any scene is (roadmap/IMPORT.md
+section 11).
 - **STEP is read by our own reader** (`import/step.js`), not OpenCascade:
   - the faces' surfaces, their loops and edges, the units (inches, metres, an angle in degrees);
   - an assembly's placements, each part where it sits, named by its product.
 - **STL from CAD is fitted back to the surfaces it was tessellated from** (`import/fit.js`): a 24-sided hole is a
-  cylinder again, a fillet a torus, a chamfer a cone. For each test part, the STL gives back exactly the faces the
+  cylinder again, a fillet a torus, a chamfer a cone. For each test part, the STL gives back exactly the surfaces the
   STEP has.
 - **The conversion** (`import/csg.js`, `shapes.js`):
-  - a formula over the faces' half-spaces, with separating surfaces where a curved face ends;
+  - a formula over the faces' half-spaces, each surface once, with separating surfaces where a curved surface's faces
+    end;
+  - four corner cylinders of one radius and the planes between them are one rounded rectangle's prism;
   - minimised so a plate is one box less four holes and a pocket, and a spherical lens two spheres and a cylinder;
   - no seam inside the solid, and a lower bound on the distance everywhere, so it marches safely;
-  - turned into the builder's presets, cut to the part's size. The chamfer's cone is written here, with its own
-    normal (the preset cone has none).
-- **Into the scene being worked on as one undo step**, in mm converted to the scene's unit, made of the scene's default
-  material, converted in a Worker so the picture keeps going.
+  - turned into the builder's presets, cut to the part's size, and what is cut away reaching past it. The chamfer's
+    cone and the rounded prism are written here, with their own normals (the preset cone has none);
+  - every group it pastes one shape codegen combines: a union inside an intersection starts its fold, a union cut away
+    is cut shape by shape, any other is closed with the part's box.
+- **Into the scene being worked on as one undo step**, standing on z = 0 centred over the origin (the floor, pasted at
+  the top of the scene; a selected group's own frame, pasted into it), in mm converted to the scene's unit, made of the scene's default material, converted in a Worker so the picture keeps going. Its axes
+  are the file's: STEP does not say which way is up.
 - **Refused by name, with why**, and the rest of the file still imported: a solid with a freeform (B-spline) face, a
   mesh that is not closed, a mesh whose curves fit no such surface (a scan: over 400 faces). Those need the distance
   grid of IMPORT.md sections 3-5, which is not built.
-- **A new example, Imported parts** (Shapes): five parts made in OpenCascade, imported from their STEP files, and one
+- **A new example, Imported parts** (Shapes): six parts made in OpenCascade, imported from their STEP files, and one
   again from its STL.
 - **A new bench, Tests › imported** (`bench/imported.js`). It times the example as imported against the same with its
-  rounded boxes (27 shapes each) and lens (3) as one preset each, and against the floor alone. That says what an
+  rounded boxes (14 shapes each) and lens (3) as one preset each, and against the floor alone. That says what an
   imported part costs on the card, and what recognising such patterns would save. Nothing about render speed is
   measured yet.
+
+**The user's Onshape part ("this file did not convert/import too well").** A 56 mm cup: a lid with a rounded square
+whose corners stand out of its circle, hollowed from below by a smaller rounded square, two holes through the lid. In
+Node, three things were wrong:
+- **It was 44 shapes in 29 groups**, some boxes turned 52 degrees. Its circle is four faces, cut apart by the square's
+  corners, and each face's separating planes stood at angles no face of the part has. Separators are now drawn per
+  surface, across all its faces (these four need none), and the rounded squares are one prism each: **7 shapes in 2
+  groups.**
+- **It stood half under the floor**, at its file's coordinates. Every import now stands on z = 0 of where it is
+  pasted: the floor, at the top of the scene.
+- **Under its opening the value a march steps by fell to 0.38 mm where the walls were 2 to 20 mm away**: the cylinder
+  and the pocket cut from it shared a cap just under the part, so a ray crept there. What is cut away now reaches a
+  quarter of the part's size past it.
+
+- **And the renderer cut holes in it**, as in the bracket, the boss and the rounded box, in this version as it first
+  stood. A group of shapes joined only by union is a plain group to codegen, folded by the nearest boundary either way,
+  not combined; as a shape of an intersection it reads "outside" inside one shape near another. Found by running the
+  import's own WGSL on Dawn (`import/test/import.gpu.mjs`): the rounded box's rays went through its own rounded edges.
+  The import now makes no such group. (The same holds for a union group built by hand inside a subtraction or an
+  intersection: read in code, not changed here.)
+
+The part now agrees with OpenCascade at all 3000 of its points, as the formula, the shapes and the scene document as
+codegen combines it; on Dawn, rays through each test part end where the formula has its surface, with its normal. The
+file is not in the repository; a cup made like it is (`import/test/fixtures/cup.step`), and is in the example.
 
 **What to look at:**
 - Open the **Imported parts** example. On a white board: a plate with four holes and a pocket, an L bracket rounded
   inside and out with a hole in each leg, a round base with a boss (rounded where they meet, chamfered on top, a hole
-  through it), a glass lens, and two blue and red rounded boxes. Does each look like that part, with no gap, sliver
-  or stray surface? The lens should refract like a lens.
+  through it), a glass lens, two blue and red rounded boxes, and the cup, lid up. Does each look like that part, with
+  no gap, sliver or stray surface, standing on the board rather than in it? The lens should refract like a lens.
+- **Import your Onshape part again** (File › Import from file…). The status line should say 7 shapes, and the tree
+  shows 2 groups. It stands on
+  the floor lying on its side, its axis along y as in the file; turning it upright is a quarter turn about x.
 - Then **import a STEP or STL file of your own** (File › Import from file…, or drop it on the page). Check the status
   line (parts, shapes, seconds; what was not converted and why), the tree (a group per part: its first shape the
   base, then what is subtracted), and the console's `[import]` line for each part.
@@ -58,7 +91,12 @@ exactly, its normals analytic, nothing on the GPU but the shader any scene is (r
 
 **Tests:**
 - `import/test/step.test.mjs`, `stl.test.mjs`, `csg.test.mjs`, `import.test.mjs` against OpenCascade's own answers on
-  its own parts (`import/test/fixtures`, made by `make.py` with CadQuery: 15,000 classified points and an assembly).
+  its own parts (`import/test/fixtures`, made by `make.py` with CadQuery: 18,000 classified points and an assembly).
+  csg.test holds the formula, the shapes and the scene document as the shader computes it (`import/test/docsdf.mjs`)
+  to the sign, the bound, and no value near zero far from the surface, a plain group folded as codegen folds it.
+  import.test holds where the part stands, and that every group it makes combines into one shape.
+- `import/test/import.gpu.mjs` (optional, webgpu and lavapipe): each test part marched on Dawn, codegen, as data and baked,
+  against the formula: where the rays hit, their normals, and that they enter the solid.
 - `bench/test/imported.test.mjs`.
 - check-shaders, naga included, compiles the new example through every kernel.
 

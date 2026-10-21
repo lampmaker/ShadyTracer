@@ -9,16 +9,21 @@
 //   NO SEAMS: a union of two products that only touch would be zero inside the solid along the wall between them, and
 // a ray inside glass would stop there (csg.js says how the cover avoids it). Such a wall shows as points deep inside
 // whose value is near zero; none may be.
+//   THE DOCUMENT TOO: what the page pastes is held as the shader will compute it (docsdf.mjs), not only the shapes it
+// was made from.
 //   SMALL: the formula's size is what each march step costs, so each part's is held to what a hand would write, or
 // near it (the plate: its box, four holes and a pocket).
 //======================================================================================================================
 import { readFileSync } from 'node:fs'
 import { readSTEP } from '../step.js'
 import { brep } from '../brep.js'
-import { toCSG, evaluate, literalCount, MAX_FACES } from '../csg.js'
+import { toCSG, evaluate, literalCount, MAX_FACES, roundedRects } from '../csg.js'
 import { shapesOf, shapeSDF, countShapes, eulerOf } from '../shapes.js'
 import { frame, cylinder, cone } from '../geom.js'
 import { matrixOf } from '../../builder/transform.js'
+import * as M from '../../builder/model.js'
+import { convert } from '../index.js'
+import { nodeSDF } from './docsdf.mjs'
 
 let pass = 0, fail = 0
 const ok = (name, cond, extra = '') => {
@@ -30,8 +35,25 @@ const fixture = n => new URL(`./fixtures/${n}`, import.meta.url)
 
 /* the most each part's formula may hold, and its shapes: what it holds now, the plate and the lens what a hand would
    write (the plate: box, four holes, pocket; the lens: two spheres and its edge) */
-const LIMITS = { plate: { literals: 16, shapes: 6 }, bracket: { literals: 18, shapes: 9 }, boss: { literals: 15, shapes: 10 },
-                 lens: { literals: 4, shapes: 3 }, roundbox: { literals: 42, shapes: 30 } }
+const LIMITS = { plate: { literals: 16, shapes: 6 }, bracket: { literals: 17, shapes: 9 }, boss: { literals: 14, shapes: 9 },
+                 lens: { literals: 4, shapes: 3 }, roundbox: { literals: 18, shapes: 14 }, cup: { literals: 10, shapes: 7 } }
+
+/* A VALUE HELD TO OPENCASCADE at every point it classified: on its side; never more than its distance (a bound); and
+   nowhere far from the surface near zero -- inside, a seam; OUTSIDE, A SKIN or nearly one: a shape less another that
+   shares its cap is worth only the distance to that cap across the opening, which the side alone never shows (the
+   plate's pocket, cut to the part's box: 0.07 over its opening, its walls millimetres away; shapes.js cap) */
+function held(name, ref, f) {
+    let side = 0, over = 0, seam = 0, skin = 0, worstOver = 0
+    for (const [x, y, z, c, d] of ref.points) {
+        const v = f([x, y, z])
+        if ((v < 0 ? 1 : 0) !== c) side++
+        if (Math.abs(v) > d + 3e-6) { over++; worstOver = Math.max(worstOver, Math.abs(v) - d) }
+        if (d > 0.1 && Math.abs(v) < 0.2 * d) { if (c === 1) seam++; else skin++ }
+    }
+    ok(`${name}: on OpenCascade's side at all ${ref.points.length} points`, side === 0, `${side} on the wrong side`)
+    ok(`${name}: ...never more than its distance to the surface (a bound, safe to march)`, over === 0, `${over} over, by up to ${worstOver}`)
+    ok(`${name}: ...no point far inside near zero (no seam), and none far outside (no skin)`, seam === 0 && skin === 0, `${seam} inside, ${skin} outside`)
+}
 
 for (const [n, lim] of Object.entries(LIMITS)) {
     const ref = JSON.parse(readFileSync(fixture(`${n}.json`), 'utf8'))
@@ -40,33 +62,44 @@ for (const [n, lim] of Object.entries(LIMITS)) {
     const R = C.report
     ok(`${n}: no cell both in and out, everything covered, its own check clean`, R.conflicts === 0 && R.uncovered === 0 && R.mismatches === 0, JSON.stringify(R))
     ok(`${n}: the formula holds at most ${lim.literals} literals`, R.literals <= lim.literals, R.literals)
-    let side = 0, over = 0, seam = 0, worstOver = 0
-    for (const [x, y, z, c, d] of ref.points) {
-        const v = C.sdf([x, y, z])
-        if ((v < 0 ? 1 : 0) !== c) side++
-        if (Math.abs(v) > d + 3e-6) { over++; worstOver = Math.max(worstOver, Math.abs(v) - d) }
-        if (c === 1 && d > 0.1 && Math.abs(v) < 0.2 * d) seam++
-    }
-    ok(`${n}: the formula on OpenCascade's side at all ${ref.points.length} points`, side === 0, `${side} on the wrong side`)
-    ok(`${n}: ...and never more than its distance to the surface (a bound, safe to march)`, over === 0, `${over} over, by up to ${worstOver}`)
-    ok(`${n}: ...and no point deep inside near zero (no seam)`, seam === 0, `${seam} points`)
-
+    held(`${n}: the formula`, ref, C.sdf)
     const ir = shapesOf(C)
     const k = countShapes(ir.root)
     ok(`${n}: at most ${lim.shapes} shapes`, k.shapes <= lim.shapes, JSON.stringify(k))
-    side = 0; over = 0; seam = 0; worstOver = 0
-    for (const [x, y, z, c, d] of ref.points) {
-        const v = shapeSDF(ir.root, [x, y, z])
-        if ((v < 0 ? 1 : 0) !== c) side++
-        if (Math.abs(v) > d + 3e-6) { over++; worstOver = Math.max(worstOver, Math.abs(v) - d) }
-        if (c === 1 && d > 0.1 && Math.abs(v) < 0.2 * d) seam++
-    }
-    ok(`${n}: the shapes on OpenCascade's side at every point`, side === 0, `${side} on the wrong side`)
-    ok(`${n}: ...a bound too`, over === 0, `${over} over, by up to ${worstOver}`)
-    ok(`${n}: ...with no seam`, seam === 0, `${seam} points`)
-
+    held(`${n}: the shapes`, ref, p => shapeSDF(ir.root, p))
+    /* THE DOCUMENT the page pastes, as the shader computes it (docsdf.mjs): each node's transform, each preset's own
+       distance, the joins in their order -- what the shapes became, not what they were */
+    const r = convert(M, `${n}.step`, readFileSync(fixture(`${n}.step`)), { place: 'file' })
+    held(`${n}: the scene document`, ref, p => nodeSDF(r.asset.node, p, r.asset.blocks))
     // the same every time: a seeded conversion
     ok(`${n}: the same formula a second time`, JSON.stringify(toCSG(B).tree) === JSON.stringify(C.tree))
+}
+
+/* THE CUP (made like the user's Onshape part, 2026-10-21): its 56 mm cylinder in four faces, which together go all the
+   way round and need no separator; its two rounded squares each one prism (roundedRects), not four planes and four
+   cylinders and their separators. Before, the four faces gave eight planes through the axis at angles no face has, and
+   the part was 44 shapes in 29 groups, boxes turned 52 degrees among them */
+{
+    const B = brep(readSTEP(readFileSync(fixture('cup.step'), 'utf8')).solids[0])
+    ok('the cup: its 56 mm cylinder in four faces, as OpenCascade writes it', B.faces.filter(f => f.surface.type === 'cylinder' && Math.abs(f.surface.r - 28) < 1e-6).length === 4)
+    const C = toCSG(B)
+    ok('...no separator: the four faces together go all the way round', C.report.separators === 0, C.report.separators)
+    ok('...its two rounded squares each one prism', C.report.roundedRects === 2, C.report.roundedRects)
+    const kinds = []
+    const walk = n => { if (n.kind === 'and' || n.kind === 'or') n.kids.forEach(k => walk(k.n)); else kinds.push(n.kind) }
+    walk(shapesOf(C).root)
+    ok('...as a hand draws it: the cylinder, two rounded squares (the lid\'s one more), two holes and the box that cuts it to height',
+        kinds.filter(k => k === 'rrect').length === 3 && kinds.filter(k => k === 'cylinder').length === 3 && kinds.length === 7, kinds.join(' '))
+    // what made the turned boxes: a separator through the axis at an angle no face has
+    const odd = C.halfspaces.filter(h => h.surface.type === 'plane' && ![[1, 0, 0], [0, 1, 0], [0, 0, 1]].some(a => Math.abs(Math.abs(h.surface.F.z[0] * a[0] + h.surface.F.z[1] * a[1] + h.surface.F.z[2] * a[2]) - 1) < 1e-9))
+    ok('...no plane at an angle the part has none', !odd.length, odd.length)
+}
+
+/* FOUR PINS AT A RECTANGLE'S CORNERS ARE NOT A ROUNDED RECTANGLE: the plate's four holes stand at the corners of one, of
+   one radius -- and a hole's face is all of its circle, not a corner's quarter, so no prism claims them */
+{
+    const B = brep(readSTEP(readFileSync(fixture('plate.step'), 'utf8')).solids[0])
+    ok('the plate\'s four holes: no rounded rectangle', roundedRects(B, 1e-6 * B.scale).length === 0)
 }
 
 /* THE PLATE, AS A HAND WOULD MODEL IT: one box, four holes subtracted, a pocket subtracted -- each its size */

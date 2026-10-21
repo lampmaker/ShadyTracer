@@ -1,6 +1,6 @@
 //======================================================================================================================
-// SHAPES -- csg.js's formula as the builder's own shapes: boxes, cylinders, cones, spheres and tori, in groups whose
-// children join by union, intersect and subtract, added to a scene document (builder/model.js).
+// SHAPES -- csg.js's formula as the builder's own shapes: boxes, cylinders, cones, spheres, tori and rounded prisms, in
+// groups whose children join by union, intersect and subtract, added to a scene document (builder/model.js).
 //
 // WHAT IS RECOGNISED, AND WHY IT IS SAFE. The formula's literals are infinite half-spaces; a builder shape is bounded,
 // because a bounded shape is what can be seen, selected and moved, and what a box can be measured around. Two facts
@@ -82,10 +82,13 @@ function span(box, o, d) {
 }
 const aligned = (a, b) => Math.abs(dot(a, b)) > 1 - 1e-9
 
-/* an oriented box: a frame and, along each of its axes, [lo, hi] -- the part's box where no plane bounds it */
-function boxFrom(F, planes, box) {
+/* an oriented box: a frame and, along each of its axes, [lo, hi] -- the part's box where no plane bounds it, and one
+   CUT AWAY further than it (cap says why: the plate's pocket, capped at the part's box 0.15 mm over the plate's top,
+   left values of 0.07 across its opening where its walls were millimetres away) */
+function boxFrom(F, planes, box, cut = false) {
     const axes = [F.x, F.y, F.z]
-    const lim = axes.map(a => span(box, F.o, a))
+    const more = cut ? beyond(box) : 0
+    const lim = axes.map(a => { const [l, h] = span(box, F.o, a); return [l - more, h + more] })
     for (const p of planes) {
         const k = axes.findIndex(a => aligned(a, p.normal)), s = Math.sign(dot(axes[k], p.normal)), at = dot(sub(p.o, F.o), axes[k])
         if (s > 0) lim[k][1] = Math.min(lim[k][1], at); else lim[k][0] = Math.max(lim[k][0], at)
@@ -93,9 +96,9 @@ function boxFrom(F, planes, box) {
     return { kind: 'box', F, lo: lim.map(l => l[0]), hi: lim.map(l => l[1]) }
 }
 
-function bounded(g, box) {
+function bounded(g, box, cut = false) {
     if (g.kind === 'and') {
-        let kids = g.kids.map(k => ({ n: bounded(k.n, box), neg: k.neg }))
+        let kids = g.kids.map(k => ({ n: bounded(k.n, box, cut || k.neg), neg: k.neg }))
         // planes, and the part's own box, into oriented boxes: the first plane's normal and one across it make a frame
         let planes = kids.filter(k => k.n.kind === 'plane').map(k => k.n)
         const boxes = kids.filter(k => k.n.kind === 'box' && !k.neg).map(k => k.n)
@@ -115,11 +118,11 @@ function bounded(g, box) {
             const F = frame(planes[0].o, z, across ? across.normal : null)
             const mine = planes.filter(p => [F.x, F.y, F.z].some(a => aligned(a, p.normal)))
             planes = planes.filter(p => !mine.includes(p))
-            made.push(boxFrom(F, mine, box))
+            made.push(boxFrom(F, mine, box, cut))
         }
         // a box that bounds a cylinder's (or cone's) axis only, wide enough across it: the cylinder's caps
         for (const k of kids) {
-            if (k.neg || (k.n.kind !== 'cylinder' && k.n.kind !== 'cone') || k.n.lo !== undefined) continue
+            if (k.neg || !ALONG.has(k.n.kind) || k.n.lo !== undefined) continue
             const S = k.n.S
             const b = made.find(b => aligned(b.F.z, S.F.z) && holdsAcross(b, S, box))
                 ?? made.find(b => [b.F.x, b.F.y, b.F.z].some(a => aligned(a, S.F.z)) && holdsAcross(reaxis(b, S.F.z), S, box))
@@ -133,9 +136,9 @@ function bounded(g, box) {
         kids = [...made.map(n => ({ n, neg: false })), ...kids]
         // a box another bounded shape lies inside adds nothing
         kids = kids.filter(k => !(k.n.kind === 'box' && !k.neg && kids.some(o => o !== k && !o.neg && o.n.kind !== 'box' && inside(o.n, k.n))))
-        return { kind: 'and', kids: kids.map(k => ({ ...k, n: cap(k.n, box) })) }
+        return { kind: 'and', kids: kids.map(k => ({ ...k, n: cap(k.n, box, cut || k.neg) })) }
     }
-    if (g.kind === 'or') return { kind: 'or', kids: g.kids.map(k => ({ n: cap(bounded(k.n, box), box), neg: k.neg })) }
+    if (g.kind === 'or') return { kind: 'or', kids: g.kids.map(k => ({ n: cap(bounded(k.n, box, cut || k.neg), box, cut || k.neg), neg: k.neg })) }
     return g
 }
 /* a box with its axes turned so that z is along d (one of its axes) */
@@ -146,8 +149,13 @@ function reaxis(b, d) {
     const F = { o: b.F.o, x: axes[order[0]], y: axes[order[1]], z: axes[order[2]] }
     return { kind: 'box', F, lo: order.map(i => b.lo[i]), hi: order.map(i => b.hi[i]) }
 }
-/* is a box's cross-section, across its z, wider than the cylinder's (or cone's) whole circle within the part's box? */
+/* is a box's cross-section, across its z, wider than the cylinder's (or cone's) whole circle within the part's box, or
+   than a rounded rectangle's outline? */
 function holdsAcross(b, S, box) {
+    if (S.type === 'rrect') return [[1, 1], [1, -1], [-1, 1], [-1, -1]].every(([u, v]) => {
+        const q = toLocal(b.F, add(S.F.o, add(mul(S.F.x, u * S.hx), mul(S.F.y, v * S.hy))))
+        return q[0] >= b.lo[0] - 1e-9 && q[0] <= b.hi[0] + 1e-9 && q[1] >= b.lo[1] - 1e-9 && q[1] <= b.hi[1] + 1e-9
+    })
     const r = S.type === 'cylinder' ? S.r : Math.max(...corners(box.lo, box.hi).map(c => Math.abs(S.radiusAt(dot(sub(c, S.F.o), S.F.z)))))
     const c = toLocal(b.F, S.F.o)
     return c[0] - r >= b.lo[0] - 1e-9 && c[0] + r <= b.hi[0] + 1e-9 && c[1] - r >= b.lo[1] - 1e-9 && c[1] + r <= b.hi[1] + 1e-9
@@ -161,6 +169,8 @@ function inside(n, b) {
         return [n.lo, n.hi].every(t => insideBox(b, add(n.S.F.o, mul(n.S.F.z, t)), r))
     }
     if (n.kind === 'box') return corners(n.lo, n.hi).every(c => insideBox(b, add(add(add(n.F.o, mul(n.F.x, c[0])), mul(n.F.y, c[1])), mul(n.F.z, c[2])), 0))
+    if (n.kind === 'rrect' && n.lo !== undefined) return [n.lo, n.hi].every(t => [[1, 1], [1, -1], [-1, 1], [-1, -1]].every(([u, v]) =>
+        insideBox(b, add(n.S.F.o, add(mul(n.S.F.z, t), add(mul(n.S.F.x, u * n.S.hx), mul(n.S.F.y, v * n.S.hy)))), 0)))
     return false
 }
 const insideBox = (b, p, r) => { const q = toLocal(b.F, p); return [0, 1, 2].every(k => q[k] - r >= b.lo[k] - 1e-9 && q[k] + r <= b.hi[k] + 1e-9) }
@@ -170,15 +180,23 @@ function nappe(n) {
     const k = Math.tan(n.S.semi), apex = -n.S.r / k
     return { ...n, lo: k > 0 ? Math.max(n.lo, apex) : n.lo, hi: k < 0 ? Math.min(n.hi, apex) : n.hi }
 }
-/* an infinite cylinder or cone, cut to the part's box along its axis */
-function cap(n, box) {
-    if ((n.kind === 'cylinder' || n.kind === 'cone') && n.lo === undefined) {
-        const [lo, hi] = span(box, n.S.F.o, n.S.F.z)
+/* an infinite cylinder, cone or rounded rectangle's prism, cut to the part's box along its axis -- and one CUT AWAY
+   reaching a quarter of the box's size further: across an opening, a shape less another whose cap is in the same
+   place is worth only the distance to that cap, and nothing at the cap but what else holds it off. The user's Onshape
+   part had its Ø56 cylinder less its pocket, both capped at the part's box 0.76 mm under it (2026-10-21): under the
+   opening the value fell to 0.38 where the pocket's walls were 2 to 20 away (its own box term kept it off zero) */
+function cap(n, box, cut = false) {
+    if (ALONG.has(n.kind) && n.lo === undefined) {
+        let [lo, hi] = span(box, n.S.F.o, n.S.F.z)
+        if (cut) { lo -= beyond(box); hi += beyond(box) }
         return nappe({ ...n, lo, hi })
     }
-    if (n.kind === 'plane') return boxFrom(frame(n.o, n.normal, null), [n], box)
+    if (n.kind === 'plane') return boxFrom(frame(n.o, n.normal, null), [n], box, cut)
     return n
 }
+/* how much further than the part's box a shape cut away reaches: a quarter of its size, so a cap shared with what it
+   cuts is that far outside everything there is */
+const beyond = box => 0.25 * Math.hypot(...box.hi.map((h, k) => h - box.lo[k]))
 
 /** The formula as shapes, bounded and grouped: { kind: 'and' | 'or', kids: [{ n, neg }] } or one shape. */
 export function shapesOf(csg) {
@@ -221,6 +239,11 @@ export function shapeSDF(n, p) {
             if (n.kind === 'cylinder' && n.lo !== undefined) { const a = Math.max(g, 0), b = Math.max(capd, 0); return Math.min(Math.max(g, capd), 0) + Math.hypot(a, b) }
             return Math.max(g, capd)
         }
+        case 'rrect': {
+            // exact, as RRECT_CODE: the outline's distance extruded between the caps
+            const g = n.S.g(p), z = dot(sub(p, n.S.F.o), n.S.F.z), capd = Math.max(n.lo - z, z - n.hi)
+            return Math.min(Math.max(g, capd), 0) + Math.hypot(Math.max(g, 0), Math.max(capd, 0))
+        }
         case 'sphere': case 'torus': return n.S.g(p)
         case 'plane': return dot(sub(p, n.o), n.normal)
     }
@@ -230,6 +253,23 @@ export function shapeSDF(n, p) {
 //----------------------------------------------------------------------------------------------------------------------
 // INTO THE DOCUMENT
 //----------------------------------------------------------------------------------------------------------------------
+/* the shapes along an axis: a literal of these is endless along it until a box's caps or the part's box cut it */
+const ALONG = new Set(['cylinder', 'cone', 'rrect'])
+
+/* A ROUNDED RECTANGLE'S PRISM (csg.js roundedRects): no preset is one -- the box rounds all twelve edges, and an
+   extrusion walks its outline's eight pieces a step -- so it is written here, exact and with its normal: the outline's
+   distance (a 2D box less the radius) extruded by g2Extrude (core/shapes.js), as `extrude` does its outline's */
+export const RRECT_CODE = [
+    '// A rectangle with its corners rounded, extruded along z, centred: size its half sizes across x and y (the',
+    '// rounding inside them), radius its corners\', height in all (imported: import/shapes.js). Exact, with its normal.',
+    'let rq = abs(p.xy) - (size - VEC2(radius));',
+    'let rside = length(max(rq, VEC2(0.0))) + min(max(rq.x, rq.y), 0.0) - radius;',
+    'let rs = select(VEC2(-1.0), VEC2(1.0), p.xy >= VEC2(0.0));',
+    'var rn = VEC2(0.0, rs.y);',
+    'if (rq.x > 0.0 && rq.y > 0.0) { rn = normalize(rq) * rs; } else if (rq.x > rq.y) { rn = VEC2(rs.x, 0.0); }',
+    'C = add_new(C, g2Extrude(p, VEC3(rn, rside), 0.5 * height), MATERIAL);',
+].join('\n')
+
 /* the cone: the preset's has no normal (primitives.js); this one's is the side's or the cap's, whichever is farther,
    which is the gradient of the max it returns */
 export const CONE_CODE = [
@@ -280,6 +320,12 @@ function nodeOf(n, neg, at, s) {
                      params: { base: round(Math.max(0, n.S.radiusAt(n.lo)) * s), top: round(Math.max(0, n.S.radiusAt(n.hi)) * s), height: round((n.hi - n.lo) * s) },
                      transform: place(o, n.S.F) }
         }
+        case 'rrect': {
+            const o = add(n.S.F.o, mul(n.S.F.z, 0.5 * (n.lo + n.hi)))
+            return { code: RRECT_CODE, label: `${neg ? 'pocket' : 'rounded rectangle'} ${fmt(2 * n.S.hx)} x ${fmt(2 * n.S.hy)}`,
+                     params: { size: { x: round(n.S.hx * s), y: round(n.S.hy * s) }, radius: round(n.S.r * s), height: round((n.hi - n.lo) * s) },
+                     transform: place(o, n.S.F) }
+        }
         case 'sphere':
             return { primitive: 'sphere', label: `${neg ? 'sphere cut' : 'sphere'} R${fmt(n.S.r)}`, params: { radius: round(n.S.r * s) }, transform: place(n.S.F.o, null) }
         case 'torus':
@@ -298,19 +344,53 @@ export function addPart(model, doc, parentId, ir, { unit = 'mm', label = 'part',
     const s = 1 / (MM[unit] ?? 1)
     const at = ir.box.lo.map((l, k) => round(0.5 * (l + ir.box.hi[k]), 1e3))
     const top = model.addGroup(doc, parentId, { label, transform: { pos: vec(mul(at, s)), rot: { x: 0, y: 0, z: 0 }, scale: 1 } }, index)
-    const put = (n, neg, parent, join) => {
-        if (n.kind === 'and' || n.kind === 'or') {
-            const g = parent === top.id && n === ir.root ? top : model.addGroup(doc, parent, { label: n.kind === 'and' ? 'intersection' : 'union', join })
-            // the base first: the largest shape that is there; then the rest of what is there, then what is cut away
-            const kids = n.kids.slice().sort((a, b) => (a.neg - b.neg) || (size(b.n) - size(a.n)))
-            kids.forEach((k, i) => put(k.n, k.neg, g.id, i === 0 ? undefined : n.kind === 'or' ? undefined : k.neg ? 'subtract' : 'intersect'))
-            return g
-        }
+    const object = (n, neg, parent, join, name) => {
         const o = nodeOf(n, neg, at, s)
-        return model.addObject(doc, parent, { ...o, material, join })
+        return model.addObject(doc, parent, { ...o, label: name ?? o.label, material, join })
     }
-    if (ir.root.kind === 'and' || ir.root.kind === 'or') put(ir.root, false, top.id)
-    else put(ir.root, false, top.id)
+    const bySize = (a, b) => size(b.n) - size(a.n)
+    /* EVERY GROUP ONE SHAPE. A group whose children all join by union is a plain group to codegen (isCsg): its children
+       fold into the scene one by one, each surface kept, the nearest boundary either way (scene_api.js fold). That is
+       right for separate objects and no union's distance: in one of two boxes and just outside the other it reads the
+       other's, outside. As a shape of a group that intersects or subtracts, it cut holes in the parts -- the rounded
+       box's core intersected with its prisms, marched on Dawn, ran through its own edges, and the bracket, the boss and
+       the cup had it too (import.gpu.mjs, 2026-10-21) -- and as a part's own group it left its shapes' inner faces in
+       the solid, the seams the formula keeps out (csg.js). So a group here is always one fold of csg ops, which
+       codegen combines into one shape (children(): k_<id>), at blend 0 an exact min and max:
+         - a union in an intersection is where the fold starts, its shapes joined by union: (A or B) and C is
+           [A, B union, C intersect];
+         - a union cut away is cut shape by shape: C less (A or B) is [C, A subtract, B subtract];
+         - a union that is neither -- a part's own group, a second one in an intersection -- is closed with the part's
+           box intersected: everything is in it, so no point changes, and the group combines. One box test a step. */
+    const child = (n, neg, parent, join) => {
+        if (n.kind !== 'and' && n.kind !== 'or') return object(n, neg, parent, join)
+        const g = model.addGroup(doc, parent, { label: n.kind === 'and' ? 'intersection' : 'union', join })
+        fill(n, g.id)
+        return g
+    }
+    const fill = (n, gid) => {
+        let count = 0, combines = false
+        const add = (m, neg, join) => {
+            child(m, neg, gid, count ? join : undefined)
+            if (count && join !== 'union') combines = true
+            count++
+        }
+        if (n.kind === 'or') for (const k of n.kids.slice().sort(bySize)) add(k.n, false, 'union')
+        else {
+            // the base first: the largest shape that is there (its material is the group's), then the rest, then the cuts
+            const pos = n.kids.filter(k => !k.neg).sort(bySize), cuts = n.kids.filter(k => k.neg).sort(bySize)
+            const start = pos.find(k => k.n.kind === 'or')
+            if (start) for (const k of start.n.kids.slice().sort(bySize)) add(k.n, false, 'union')
+            for (const k of pos) if (k !== start) add(k.n, false, 'intersect')
+            for (const k of cuts) {
+                if (k.n.kind === 'or') for (const m of k.n.kids.slice().sort(bySize)) add(m.n, true, 'subtract')
+                else add(k.n, true, 'subtract')
+            }
+        }
+        if (count > 1 && !combines) object({ kind: 'box', F: frame([0, 0, 0], [0, 0, 1], [1, 0, 0]), lo: ir.box.lo, hi: ir.box.hi }, false, gid, 'intersect', 'the part\'s box')
+    }
+    if (ir.root.kind === 'and' || ir.root.kind === 'or') fill(ir.root, top.id)
+    else object(ir.root, false, top.id)
     return top
 }
 /* how big a shape is, for choosing a group's base (its material is the group's): a box's or a cylinder's volume */
@@ -318,6 +398,7 @@ function size(n) {
     if (n.kind === 'box') return (n.hi[0] - n.lo[0]) * (n.hi[1] - n.lo[1]) * (n.hi[2] - n.lo[2])
     if (n.kind === 'cylinder') return Math.PI * n.S.r ** 2 * ((n.hi ?? 1) - (n.lo ?? 0))
     if (n.kind === 'cone') return Math.PI * Math.max(n.S.radiusAt(n.lo ?? 0) ** 2, n.S.radiusAt(n.hi ?? 0) ** 2) * ((n.hi ?? 1) - (n.lo ?? 0))
+    if (n.kind === 'rrect') return 4 * n.S.hx * n.S.hy * ((n.hi ?? 1) - (n.lo ?? 0))
     if (n.kind === 'sphere') return 4 / 3 * Math.PI * n.S.r ** 3
     if (n.kind === 'torus') return 2 * Math.PI ** 2 * n.S.R * n.S.r ** 2
     if (n.kind === 'and') return Math.min(...n.kids.filter(k => !k.neg).map(k => size(k.n)))

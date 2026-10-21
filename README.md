@@ -55,8 +55,8 @@ Nothing to install and no server. The page runs on your own graphics card.
   *preview*
 - **Zemax ray files** as light sources *preview*
 - **STEP and STL parts imported as shapes**: each solid in the file becomes boxes, cylinders, cones,
-  spheres and tori joined by union and subtract, exact, with analytic normals; a spherical lens from
-  STEP is its two spheres *preview*
+  spheres, tori and rounded prisms joined by union and subtract, exact, with analytic normals; a
+  spherical lens from STEP is its two spheres *preview*
 - **3MF with colour** for multi-colour 3D printing, straight from the scene *preview*
 - **A docking workspace**: pop-out windows for a second monitor, a command palette, every setting by
   name
@@ -217,9 +217,10 @@ the picture; press **Ctrl K** and type what you are looking for.
   the examples. **File** is five rows: New project, Projects…, Import from file…, Export ▸ (a scene,
   the project, a 3D print), Save picture…. A second tab on a project works on its own copy.
 - **Import STEP and STL** (File › Import from file…, or drop the file on the page): each solid in
-  the file becomes a group of the builder's own shapes -- boxes, cylinders, cones, spheres and tori
-  joined by union, intersect and subtract -- converted exactly from the faces' surfaces, an STL's
-  fitted back from its facets first; editable like anything built by hand. A freeform (B-spline)
+  the file becomes a group of the builder's own shapes -- boxes, cylinders, cones, spheres, tori and
+  rounded prisms joined by union, intersect and subtract -- converted exactly from the faces'
+  surfaces, an STL's fitted back from its facets first; editable like anything built by hand. It
+  stands on the floor, its axes the file's. A freeform (B-spline)
   face, a mesh that is not closed or a scan is refused by name, with why
   ([`roadmap/IMPORT.md`](roadmap/IMPORT.md) section 11) *preview*
 - **Twenty-four shapes in three groups**, each an editable piece of code from the start:
@@ -379,7 +380,7 @@ number carries its standard error**.
 | **Modifiers** | Shapes | mm | Twist, bend, repeat, mirror, round, shell, displace and relief, each on a plain shape |
 | **From points** | Shapes | mm | An extruded star, a turned wine glass, a pipe along a path, a swept bar |
 | **Parametric part** | Shapes | mm | A heatsink whose fin count, pitch and height are its parameters |
-| **Imported parts** | Shapes | mm | STEP and STL parts imported as boxes, cylinders, cones, spheres and tori |
+| **Imported parts** | Shapes | mm | STEP and STL parts imported as boxes, cylinders, cones, spheres, tori and rounded prisms |
 | **Infinite detail** | Shapes | m | A Menger sponge four levels deep, and columns repeated to the horizon |
 | **Material board** | Materials | mm | The library's materials on 40 mm spheres |
 | **Relief and texture** | Materials | mm | Plaster, stucco, render, stone, hammered metal, leather: reliefs in a raking light |

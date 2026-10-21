@@ -49,7 +49,7 @@ export const EXAMPLES = [
   "title": "Imported parts",
   "audience": "Modelling and rendering",
   "group": "Shapes",
-  "description": "STEP and STL parts imported as boxes, cylinders, cones, spheres and tori"
+  "description": "STEP and STL parts imported as boxes, cylinders, cones, spheres, tori and rounded prisms"
  },
  {
   "file": "infinite-detail.json",

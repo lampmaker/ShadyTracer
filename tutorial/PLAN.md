@@ -124,9 +124,11 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
    (c + √(c² + 4)) / 2 (the flat world's swirl, and a 3D plate measured by the test at 1.14); the noise relief raw,
    divided and with its shell, a ray rocking for 300 steps → scene_api.js, modifiers.js, codegen.js combine,
    noise.js. Planned for it (0.72.0): the same joins read backwards, a CAD part as a union of products over its faces'
-   half-spaces -- separators where a curved face ends, no two products only touching inside the solid (a seam a ray in
-   glass would stop at), the formula a bound by min and max of exact distances, and the facets of an STL fitted back to
-   the cylinders they were -> import/csg.js, shapes.js, fit.js. *Read:* iq-distfunctions, iq-interior, iq-fbmsdf,
+   half-spaces -- separators where a curved surface's faces end (all of them together: four faces round one cylinder
+   need none), no two products only touching inside the solid (a seam a ray in glass would stop at), the formula a
+   bound by min and max of exact distances, a cut that shares a cap with what it cuts worth only the distance to that
+   cap across the opening (so what is cut away reaches past it), four corner cylinders one rounded prism, and the
+   facets of an STL fitted back to the cylinders they were -> import/csg.js, shapes.js, fit.js. *Read:* iq-distfunctions, iq-interior, iq-fbmsdf,
    iq-smin; Shapiro and Vossler 1991 (named in words, not yet in kit/reading.js).
 4. **Which way is up** (draft): the normal as the field's gradient; a shape's own against forward differences (the
    shade kernel's 3 looks) and central ones (the pick's 6), their errors as h and h², a crease; the same differences

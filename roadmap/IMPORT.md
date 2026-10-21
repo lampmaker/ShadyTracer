@@ -519,14 +519,14 @@ render time is measured.** A conversion time is the JavaScript's on that CPU, no
   half-spaces** (Shapiro and Vossler, 1991). Min and max of exact half-space distances is 1-Lipschitz and zero
   exactly on the surface, so it is a lower bound on the distance, safe to march. Held, `import/test/csg.test.mjs`: at
   every OpenCascade point of every fixture, |f| <= OpenCascade's distance to the surface, and the sign is right.
-- **The formula becomes the builder's own presets**: box, cylinder, sphere, torus, and a cone written for the import
-  with its own normal. Each is a code node sharing its preset's block, in groups joined by union, intersect and
+- **The formula becomes the builder's own presets**: box, cylinder, sphere, torus, and two shapes written for the
+  import with their own normals, a cone and a rounded rectangle's prism. Each is a code node sharing its preset's block, in groups joined by union, intersect and
   subtract. So an imported part is something the user can see, select, edit and move. The renderer compiles it like any
   scene (check-shaders: all four passes, naga included, over the new Imported parts example). Its normals are analytic.
   The renderer's culling boxes are measured for it as for any top-level node.
 - **The same route takes an STL from CAD.** Its vertices lie on the surfaces it was tessellated from, so those
-  surfaces can be fitted back (`import/fit.js`). Each fixture's STL gives back exactly the faces OpenCascade's B-rep
-  has, and the same shapes as its STEP (measured, table below): a 24-sided hole is a cylinder again.
+  surfaces can be fitted back (`import/fit.js`). Each fixture's STL gives back exactly the surfaces of OpenCascade's
+  B-rep, and the same shapes as its STEP (measured, table below): a 24-sided hole is a cylinder again.
 - **Optics comes for free.** A STEP lens with spherical faces is two spheres and a capped cylinder, exactly: section
   6's route 3, without OpenCascade and without a profile.
 - **What it cannot do goes to the grid route of sections 3-5, which is still not built.** That is freeform (B-spline)
@@ -546,7 +546,7 @@ render time is measured.** A conversion time is the JavaScript's on that CPU, no
   refused.
 - **`import/brep.js`: inside the solid, exactly.** Rays meet the exact surfaces, and each hit is counted where its
   face's loops say, in the surface's (u, v). Plane, cylinder and cone faces use parity along their axis. Sphere and
-  torus faces use the nearest boundary point. Seam edges are dropped. On 15,000 OpenCascade points over five parts,
+  torus faces use the nearest boundary point. Seam edges are dropped. On 18,000 OpenCascade points over six parts,
   and 2,000 more on an assembly, it disagrees nowhere (measured).
   - **Found on the way: OpenCascade 7.9's own STEP export breaks ISO 10303-42 for a torus whose axis it flipped.**
     The boss's inner fillet has its face on the wrong side of its loop. Read by the rule, the fillet was the other
@@ -560,8 +560,12 @@ render time is measured.** A conversion time is the JavaScript's on that CPU, no
   through the same two circles; the facets' sag tells them apart. A cone's axis comes from its normals' plane,
   because the line-complex axis is ill-posed on a narrow band.
 - **`import/csg.js`: the formula.**
-  - Half-spaces from the faces, plus SEPARATORS where a curved face ends: planes through its axis at the angles it
-    spans, planes across it, a torus's cones.
+  - Half-spaces from the faces, each surface once, plus SEPARATORS where a curved surface's faces end: planes through
+    its axis at the angles they span, planes across it, a torus's cones. All of a surface's faces together: four faces
+    of one cylinder that go all the way round between them need none (the user's part, below).
+  - ROUNDED RECTANGLES (`roundedRects`): four cylinders of one radius, parallel, at the corners of a rectangle, with a
+    face on at least one of the planes between them, are one surface, a prism exact to its outline (geom.js
+    `roundedRect`). It takes the faces on it, and its cylinders need no separators.
   - Cells sampled on both sides of every face, around every edge and through the box, and classified by
     `brep.js`/`fit.js`.
   - GLOBAL literals taken out first (the outer planes, the through-holes).
@@ -570,49 +574,105 @@ render time is measured.** A conversion time is the JavaScript's on that CPU, no
     inside the solid (a SEAM, which a ray inside glass would stop at).
   - Factored, intersected with its sampled box, then checked against the solid at points it was not built from.
 - **`import/shapes.js`: bounded shapes.** Planes become oriented boxes (a pocket's five sides are one box standing
-  out of the top). A cylinder takes a box's caps when the box holds its circle. Anything infinite is cut to the
-  part's box, which is safe because the whole formula is inside it. De Morgan turns a union of complements into a
-  subtracted shape.
+  out of the top). A cylinder or a rounded prism takes a box's caps when the box holds its outline. Anything infinite
+  is cut to the part's box, which is safe because the whole formula is inside it, and anything CUT AWAY a quarter of
+  the box's size beyond it: across an opening, a shape less another whose cap is in the same place is worth only the
+  distance to that cap, nearly a skin (below). De Morgan turns a union of complements into a subtracted shape.
+  - **Every group it pastes is one fold codegen combines into one shape** (`addPart`). A group whose children all
+    join by union is a plain group to codegen (`isCsg`): its children fold into the scene one by one, the nearest
+    boundary either way (scene_api.js `fold`). That is right for separate objects, and no union's distance: inside one
+    of two boxes and just outside the other, it reads the other's, outside. So a union inside an intersection starts
+    that intersection's fold ((A or B) and C is [A, B union, C intersect]); a union cut away is cut shape by shape; any
+    other union (a part that is one, a second one in an intersection) is closed with the part's box intersected, which
+    changes no point.
 - **The page**: File › Import from file… and a dropped file take `.step`, `.stp` and `.stl`. The conversion runs in a
   module Worker (`import/worker.js`). The part is pasted into the scene being worked on as one undo step, in mm
-  converted to the scene's unit (model.js insertAsset), and made of the scene's default material.
+  converted to the scene's unit (model.js insertAsset), and made of the scene's default material. It stands on
+  z = 0 of where it is pasted (the floor, at the top of a scene; a selected group's own frame, inside it), centred
+  over the origin, by its faces' own box; an assembly as a whole, its parts where they are in it. Its axes are the
+  file's: STEP says nothing of which way is up.
 - **What is checked without a GPU:** `import/test/step.test.mjs`, `stl.test.mjs`, `csg.test.mjs`, `import.test.mjs`,
   `bench/test/imported.test.mjs`, and check-shaders over the Imported parts example (`scenes/make.mjs` makes it from
-  the fixtures).
+  the fixtures). csg.test holds the formula, the shapes and the scene document as the shader computes it
+  (`import/test/docsdf.mjs`) to OpenCascade's points: the sign, the bound, and no value near zero far from the
+  surface (a seam inside, a skin outside).
 
 ### 11.3 What it gives, part by part (measured, Node, the container, 2026-10-21)
 
-Times are two runs on an idle CPU, as a range.
+Times are two runs on an idle CPU, as a range. Half-spaces are the candidates and, after the slash, those the formula
+uses; separators are the used ones among them.
 
-| part | faces (OpenCascade) | half-spaces (separators) | literals | shapes / groups | STEP: read + convert | STL: triangles | STL: fit | STL: convert |
-|---|---|---|---|---|---|---|---|---|
-| plate | 15 (11 plane, 4 cylinder) | 15 (0) | 16 | 6 / 1 | 0.4-0.5 s | 1052 | 0.1 s | 0.1 s |
-| bracket | 12 (8 plane, 4 cylinder) | 16 (4) | 17 | 9 / 4 | 0.3 s | 660 | 0.07 s | 0.08-0.09 s |
-| boss | 9 (3 cylinder, 1 cone, 2 torus, 3 plane) | 13 (4) | 14 | 9 / 3 | 1.2-1.3 s | 4978 | 2.7-3.2 s | 0.1 s |
-| lens | 3 (2 sphere, 1 cylinder) | 3 (0) | 4 | 3 / 1 | 0.5 s | 534 | 0.05-0.06 s | 0.04 s |
-| rounded box | 26 (6 plane, 12 cylinder, 8 sphere) | 32 (6) | 39 | 27 / 8 | 0.8-0.9 s | 2796 | 0.3-0.4 s | 0.2 s |
+| part | faces (OpenCascade) | half-spaces (separators) | rounded rectangles | literals | shapes / groups, as pasted | STEP: read + convert | STL: triangles | STL: fit | STL: convert |
+|---|---|---|---|---|---|---|---|---|---|
+| plate | 15 (11 plane, 4 cylinder) | 15 / 15 (0) | 0 | 16 | 6 / 1 | 0.5 s | 1052 | 0.1 s | 0.1 s |
+| bracket | 12 (8 plane, 4 cylinder) | 16 / 16 (4) | 0 | 17 | 9 / 2 | 0.3-0.4 s | 660 | 0.06 s | 0.08-0.09 s |
+| boss | 9 (3 cylinder, 1 cone, 2 torus, 3 plane) | 14 / 13 (4) | 0 | 14 | 9 / 2 | 1.2-1.3 s | 4978 | 2.9-3.5 s | 0.1 s |
+| lens | 3 (2 sphere, 1 cylinder) | 5 / 3 (0) | 0 | 4 | 3 / 1 | 0.5-0.6 s | 534 | 0.05-0.06 s | 0.03-0.04 s |
+| rounded box | 26 (6 plane, 12 cylinder, 8 sphere) | 17 / 17 (6) | 3 | 18 | 14 / 1 | 0.6-0.7 s | 2796 | 0.4 s | 0.1-0.2 s |
+| cup | 29 (15 plane, 14 cylinder) | 10 / 8 (0) | 2 | 10 | 7 / 2 | 0.8 s | 1292 | 0.15-0.17 s | 0.1 s |
 
 In headless Chromium, the page's own Worker (`import/worker.js`) took the whole of each file in 0.5 s (plate.step),
-1.8 s (boss.stl), 1.7 s (assembly.step) and 0.2 s (lens.stl): measured once, in the container.
+1.8 s (boss.stl), 1.7 s (assembly.step) and 0.2 s (lens.stl): measured once, in the container, before the rounded
+rectangles.
 
-- **Every point agrees.** For the STEP of all five, the formula and the shapes are on OpenCascade's side of the
-  surface at all 3000 points each, and never more than its distance (`csg.test.mjs`). For the STL, they agree at
-  every point farther from the surface than 2.5 times the mesh's band, the distance its facets stray from the fitted
-  surfaces (0.002 to 0.04 mm here; the files were exported at 0.02 mm and 0.2 rad).
+- **Every point agrees.** For the STEP of all six, the formula, the shapes and the scene document are on
+  OpenCascade's side of the surface at all 3000 points each, never more than its distance, and nowhere far from it
+  near zero (`csg.test.mjs`). For the STL, they agree at every point farther from the surface than 2.5 times the
+  mesh's band, the distance its facets stray from the fitted surfaces (0.002 to 0.04 mm here; the files were
+  exported at 0.02 mm and 0.2 rad).
 - **The plate is what a hand writes:** a 40 x 30 x 5 box, four 4 mm holes, a 12 x 8 pocket.
 - **The lens is its two spheres (R 20 and R 30) and its edge.**
-- **The rounded box is not.** It is 27 shapes where one rounded box would do (11.5).
+- **The cup is close:** its Ø56 cylinder and 44 mm rounded square, less a 40 mm rounded pocket, less two holes. The
+  pocket is cut all the way through and the lid's middle put back as a slab of the rounded square: 7 shapes where a
+  hand writes 5.
+- **The rounded box is not.** It is 14 shapes where one rounded box would do (11.5): three rounded prisms, one along
+  each axis, and the core they leave as three boxes and eight corner spheres. Before the rounded rectangles it was
+  27 shapes in 8 groups.
 - **Where the conversion's time goes** (inferred from what each step does, not profiled):
   - for STEP, mostly the cell sampling's ray tests, every face's surface against every ray; a torus is stepped
     along each ray (geom.js);
   - for STL, the fits, refitted as a region grows and checked against every facet's probes. The boss's tori are
     4978 triangles.
 
+**The user's Onshape part (2026-10-21, "this file did not convert/import too well").** An AP242 file in metres: a
+56 mm cup like the fixture above (made to match it; the user's file is not in the repository), its axis along y.
+Read in code and measured in Node, three things were wrong:
+- **44 shapes in 29 groups**, oriented boxes among them turned 52 degrees. The 56 mm cylinder is four faces, cut apart
+  by the square's corners; each face's own separators were planes through the axis at the angles it ends, which no
+  face of the part has, and the cover used them. Separators per surface, across all its faces, need none here; the
+  rounded rectangles take the eight corner cylinders. 7 shapes in 2 groups, the cup's.
+- **Half under the floor**: the part kept the file's coordinates, its group at the middle of its box. It now stands
+  on z = 0 (above).
+- **Nearly a skin under it**: the cylinder less the pocket, both cut to the part's box 0.76 mm below the part, shared
+  that cap. Across the opening the value fell to 0.38 mm where the pocket's walls are 2 to 20 mm away (measured, Node,
+  the shapes' values under the opening): not zero, as the part's own box held it off, but steps of 0.4 mm where a
+  march could take 2 to 20. With the plate's pocket, cut to the same box 0.15 mm over the plate, it fell to 0.07.
+  Cut shapes now reach a quarter of the box's size past it, and the least value under the user's opening is 2.
+
+After the change, the B-rep, the formula, the shapes and the scene document agree with OpenCascade at all 3000 of its
+points; the least |value| / distance at a point more than 0.1 mm from the surface is 0.72 (measured, Node).
+
+**And what the renderer made of every part (found running the shapes' WGSL, 2026-10-21).** Nothing had run the
+import's own WGSL; check-shaders compiles it. `import/test/import.gpu.mjs` marches rays through each fixture part on
+Dawn (lavapipe, in the container) and holds them to a march of the formula. The first run found the rounded box's rays
+going through its own rounded edges: 47 of 256 hit millimetres from where the formula has its surface, 49 with another
+normal. Every shape alone agreed; the whole did not. The part was its three prisms intersected with a group of boxes
+and spheres joined by union, and that group, all unions, was a plain group to codegen, folded by the nearest boundary,
+not combined (above). The bracket, the boss and the cup had such groups too, in the first version of 0.72.0 as well;
+the mirror the Node tests used (`docsdf.mjs`) took every union as a min and saw none of it. Now: the mirror folds a
+plain group as codegen does, and found 377 points on the wrong side of the rounded box's document (Node); every group
+is one fold codegen combines; and on Dawn, codegen, as data and baked, at most 4 of 256 rays a part end otherwise than the
+formula, each at an edge or grazing. Put back the plain groups and 9 to 98 do, in four of the six parts.
+
+**The same is true of anything built by hand** (read in code, not run): a group of two shapes joined by union, put in
+a group that subtracts it or intersects with it, is folded, not combined. A builder question, not the import's; the
+import no longer makes such a group.
+
 ### 11.4 What a march step costs (inferred: Tests › imported measures it)
 
 - **Per step, every shape in the part is evaluated** while the ray is within its top-level box. codegen culls only at
   the root (ONLY AT THE ROOT, `builder/codegen.js`). Far from the part it is one box test. Near it, it is the
-  sum of its shapes: 6 closed-form shapes for the plate, 27 for the rounded box. Against section 3's
+  sum of its shapes: 6 closed-form shapes for the plate, 14 for the rounded box. Against section 3's
   alternatives: a grid is one filtered read or eight loads per step, plus its normal. A triangle BVH is tens of
   node and triangle tests. Neither is measured; nor is this.
 - **The step is a bound, not the distance.** Beyond a right-angled edge, max of the two planes' distances is never
@@ -627,7 +687,7 @@ In headless Chromium, the page's own Worker (`import/worker.js`) took the whole 
   them by min and max (a shape used by two products is evaluated twice now).
 - **Tests › imported** (`bench/imported.js`) measures the first question on the card:
   - the Imported parts example as imported;
-  - the same with its two rounded boxes (27 shapes each) and its lens (3) one preset each;
+  - the same with its two rounded boxes (14 shapes each) and its lens (3) one preset each;
   - the floor alone.
 
   Row 1 less row 3 is what the parts cost; row 1 against row 2 is what recognition would save.
@@ -637,7 +697,8 @@ In headless Chromium, the page's own Worker (`import/worker.js`) took the whole 
 1. **The user runs Tests › imported**, opens the Imported parts example and judges the picture. Both have to come
    first: nothing here has been seen.
 2. **Recognition of the patterns CAD makes most**, if row 1 is clearly slower than row 2:
-   - a box rounded on every edge (12 cylinders and 8 spheres of one radius: one `box` with `rounding`);
+   - a box rounded on every edge (12 cylinders and 8 spheres of one radius: one `box` with `rounding`). Its edges
+     are three rounded prisms now (0.72.0), still 14 shapes;
    - a tube (a cylinder less a coaxial one);
    - a spherical lens (`lens`);
    - a cylinder with a chamfer or a fillet at its end.
@@ -652,8 +713,8 @@ In headless Chromium, the page's own Worker (`import/worker.js`) took the whole 
 ### 11.6 Limits, said
 
 - **Sampled cells.** A cell of the arrangement smaller than the sampling can be missed. It is then decided by the
-  cover, possibly wrongly. The conversion checks itself at 3000 fresh points and reports `mismatches`; on these five
-  parts it is 0. Five parts are not every part.
+  cover, possibly wrongly. The conversion checks itself at 3000 fresh points and reports `mismatches`; on these six
+  parts and the user's it is 0. Seven parts are not every part.
 - **STL is taken as millimetres**, as every slicer and CAD exporter writes it.
 - **One material per import**, the scene's default; an assembly's parts are separate groups and can be given others.
 - **MAX_FACES = 400** a solid (csg.js). The rounded box's STL as 2598 facets, before fitting found its surfaces,
