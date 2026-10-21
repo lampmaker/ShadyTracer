@@ -434,6 +434,7 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
         if (node.kind === 'group') {
             if (node.id !== doc.root.id) {
                 groupBlend(folder, node)
+                groupMaterial(folder, doc, node)
                 recipeEditor(folder, doc, node)
                 transform(folder, node)
                 patternFolder(folder, doc, node)
@@ -596,16 +597,7 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
         }
 
         // ---- material: structural
-        // not a material: the shader's built-in grey for an object wearing none (model.ensureMaterial says why it was renamed)
-        const NONE = '(none: the built-in grey)'
-        const opts = { [NONE]: '' }
-        for (const m of doc.materials) opts[`${m.label} (${m.id})`] = m.id
-        const Mt = { material: node.material ?? '' }
-        folder.addBinding(Mt, 'material', { label: 'material', options: opts }).on('change', ev => {
-            M.setMaterial(doc, node.id, ev.value || null)
-            edited(null)
-            onLabel(); onStructure()
-        })
+        objectMaterial(folder, doc, node)
 
         // ---- placement right under the material, then where its pattern is laid out, then the parameters
         transform(folder, node)
@@ -630,7 +622,7 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
        line: x, y, z, and rx, ry, rz, scale after them for a copy turned or scaled. The same count is live -- a uniform a
        copy, or the records of a scene as data -- and another count a compile in codegen. A plain group's only: one with
        code or joins has none (setCopies says why). One undo step each. */
-    /* THE PATTERN FRAME (model.js setPattern, version 23; the user, 2026-10-21: "some of the materials have an axis/
+    /* THE PATTERN FRAME (model.js setPattern, version 24; the user, 2026-10-21: "some of the materials have an axis/
        direction, e.g. wood. Make that adjustable ... per object"): where this node's material lays its pattern out -- its
        rings, strokes, squares, its relief -- moved and turned in the node's own frame while the shape stays. Folded and
        offered until it has one; the first value moved gives it one (the shader's text: a compile), every one after is a
@@ -1511,6 +1503,55 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
         const l = b.element.querySelector('.tp-lblv_l')
         if (l) l.title = 'how smoothly its children join, where one has no blend of its own'
         flagRow(b, `scene/${g.id}/blend`)
+    }
+
+    /* WHAT AN OBJECT IS MADE OF. Under a group that gives its objects a material (model.js version 23), the group's,
+       unless it keeps its own: "own material" says which, as "own blend" does for a join -- unchecked, the group's is
+       shown and the object's own stays underneath, given back when it is checked or the group's is taken away. Each
+       row structural: another material is another number in the shader, or another record. */
+    function objectMaterial(folder, doc, node) {
+        const from = M.materialGroupAbove(doc, node.id)
+        if (from) {
+            const O = { own: node.ownMaterial === true }
+            const ob = folder.addBinding(O, 'own', { label: 'own material' })
+            const l = ob.element.querySelector('.tp-lblv_l')
+            if (l) l.title = `Unchecked: it wears the material its group '${from.label}' gives everything in it. Checked: its own.`
+            ob.on('change', ev => {
+                M.setOwnMaterial(doc, node.id, ev.value)
+                edited(null); onLabel(); onStructure()
+                setTimeout(() => { if (shownId === node.id) show(node.id) })
+            })
+            if (node.ownMaterial !== true) {
+                const label = M.material(doc, from.material)?.label ?? from.material
+                folder.addBinding({ material: `${label} · from ${from.label}` }, 'material', { readonly: true, label: 'material' })
+                return
+            }
+        }
+        // not a material: the shader's built-in grey for an object wearing none (model.ensureMaterial says why it was renamed)
+        const opts = { '(none: the built-in grey)': '' }
+        for (const m of doc.materials) opts[`${m.label} (${m.id})`] = m.id
+        const Mt = { material: node.material ?? '' }
+        folder.addBinding(Mt, 'material', { label: 'material', options: opts }).on('change', ev => {
+            M.setMaterial(doc, node.id, ev.value || null)
+            edited(null)
+            onLabel(); onStructure()
+        })
+    }
+    /* A GROUP'S MATERIAL (model.js version 23; the user, 2026-10-21: "a material setting for groups that override the
+       materials of the children"): one every object in it wears over its own, the nearest such group winning; what
+       keeps its own ("own material" on it) keeps it. None, and each wears its own -- what every group did before. */
+    function groupMaterial(folder, doc, node) {
+        const opts = { '(each its own)': '' }
+        for (const m of doc.materials) opts[`${m.label} (${m.id})`] = m.id
+        const b = folder.addBinding({ material: node.material ?? '' }, 'material', { label: 'material', options: opts })
+        const l = b.element.querySelector('.tp-lblv_l')
+        if (l) l.title = 'A material every object in this group wears instead of its own -- except one with "own material"'
+            + ' checked, and what is in a group inside with a material of its own. Each object keeps its own underneath.'
+        b.on('change', ev => {
+            M.setMaterial(doc, node.id, ev.value || null)
+            edited(null)
+            onLabel(); onStructure()
+        })
     }
 
     /* A GROUP'S RECIPE (recipe.js): how its children combine, as text -- `union a, b, c` / `subtract d` -- in the

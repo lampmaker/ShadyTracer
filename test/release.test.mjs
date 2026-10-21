@@ -6,8 +6,9 @@
 //     the PR, and not after the merge when the release meets it;
 //   the version: the largest bump wins, a minor resets the patch, never a major; one entry for all the notes, above
 //     the newest, as version.test.mjs reads the changelog;
-//   the placeholder replaced as a version and nowhere else: not inside a word, not as its own name in backticks, not
-//     in the files that define it or may not be touched;
+//   the placeholder replaced as a version and nowhere else: not inside a word, not as its own name in backticks where
+//     something is said about it (CLAUDE.md, the changelog, a note), not in the files that define it or may not be
+//     touched -- and in backticks anywhere else, which 0.76.0 left in seven files;
 //   a tutorial excerpt re-stamped only when the release alone moved it;
 //   THIS repository: every note parses, and a placeholder means a note to release it;
 //   the release through real git: a bare "origin" with main and dev, an upload made on main merged in, two notes
@@ -62,6 +63,13 @@ eq('replaced where it names the version', R.replaceNext(`the haze box (${N}), ($
 eq('not inside a word (code)', R.replaceNext(`iter${N}() ${N}s x${N}`, '0.72.0'), `iter${N}() ${N}s x${N}`)
 eq('not its own name, in backticks', R.replaceNext('write `' + N + '` where', '0.72.0'), 'write `' + N + '` where')
 eq('counted the same way', R.countNext(`(${N}) iter${N} \`${N}\` ${N}`), 2)
+/* 0.76.0 shipped with `(\`${N}\`; the user, ...)` in model.js and six more files: a version in backticks, kept */
+eq('in backticks in any other file: a version', R.replaceNext('A GROUP\'S MATERIAL (`' + N + '`; the user)', '0.76.0', 'builder/model.js'),
+   'A GROUP\'S MATERIAL (0.76.0; the user)')
+eq('...counted there', R.countNext(`(${N}) iter${N} \`${N}\` ${N}`, 'FEATURES.md'), 3)
+eq('...its name in CLAUDE.md, the changelog and a note', ['CLAUDE.md', 'CHANGELOG.md', 'changes/a.md'].map(p => R.replaceNext('write `' + N + '` where', '0.72.0', p)),
+   Array(3).fill('write `' + N + '` where'))
+eq('...a version there without them', R.replaceNext(`a line (${N})`, '0.72.0', 'CLAUDE.md'), 'a line (0.72.0)')
 
 // ---- the changelog ---------------------------------------------------------------------------------------------------
 const LOG = '# Changelog\n\nHow it works.\n\n## 0.1.0 — 2026-01-01\n\nFirst.\n'
@@ -82,7 +90,8 @@ const base = {
     'version.js': `export const VERSION = '0.1.0'\n`,
     'CHANGELOG.md': LOG,
     'src.js': SRC,
-    'doc.md': 'Write `' + N + '` where you would name your version.\n',
+    'doc.md': 'A feature (`' + N + '`).\n',
+    'CLAUDE.md': 'Write `' + N + '` where you would name your version.\n',
     'lib/utils.js': `// (${N}) never touched\n`,
     'lib/dockview/x.js': `// (${N})\n`,
     'release.mjs': `const T = '${N}'\n`,
@@ -95,7 +104,8 @@ eq('the plan: the version, from what', [plan.from, plan.version, plan.date], ['0
 eq('...the notes in file-name order', plan.notes.map(n => n.name), ['changes/a-feature.md', 'changes/b-fix.md'])
 eq('...deleted', plan.deletes, ['changes/a-feature.md', 'changes/b-fix.md'])
 eq('...the placeholder replaced where it is one', plan.writes.get('src.js'), SRC.replace(N, '0.2.0'))
-eq('...the files written: these and no others', [...plan.writes.keys()].sort(), ['CHANGELOG.md', 'src.js', 'version.js'])
+eq('...and in backticks outside CLAUDE.md, the changelog and a note', plan.writes.get('doc.md'), 'A feature (0.2.0).\n')
+eq('...the files written: these and no others', [...plan.writes.keys()].sort(), ['CHANGELOG.md', 'doc.md', 'src.js', 'version.js'])
 eq('...the changelog\'s new top', R.entriesOf(plan.writes.get('CHANGELOG.md'))[0], { v: '0.2.0', date: '2026-02-01' })
 ok('...holding both notes, the first bold sentence of each in the commit', R.commitMessage(plan) ===
    'Release 0.2.0\n\n- A. (changes/a-feature.md)\n- B. (changes/b-fix.md)\n', R.commitMessage(plan))
@@ -164,7 +174,8 @@ try {
     /* two pull requests merged into dev, and an upload made straight onto main */
     git(seed, 'checkout', '--quiet', '-b', 'dev', 'origin/dev')
     put(seed, { 'changes/b-fix.md': 'bump: patch\n\n**B.** Fixed.\n', 'changes/a-feature.md': `bump: minor\n\n**A.** In ${N}.\n`,
-                'src.js': `// the feature (${N})\n`, 'doc.md': 'Write `' + N + '` where you would name your version.\n' })
+                'src.js': `// the feature (${N})\n`, 'doc.md': 'A feature (`' + N + '`).\n',
+                'CLAUDE.md': 'Write `' + N + '` where you would name your version.\n' })
     git(seed, 'add', '.'); git(seed, 'commit', '--quiet', '-m', 'two PRs'); git(seed, 'push', '--quiet', 'origin', 'dev')
     git(seed, 'checkout', '--quiet', '-b', 'up', 'origin/main')
     const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0, 1, ...Buffer.from(` (${N}) `)])
@@ -196,7 +207,8 @@ try {
     eq('...the changelog: one entry for both notes, on top', R.entriesOf(show('main', 'CHANGELOG.md')).map(x => x.v), ['0.2.0', '0.1.0'])
     ok('...holding them in order, the placeholder replaced', show('main', 'CHANGELOG.md').includes('**A.** In 0.2.0.\n\n**B.** Fixed.'))
     eq('...the code\'s placeholder replaced', show('main', 'src.js'), '// the feature (0.2.0)')
-    eq('...its name in backticks kept', show('main', 'doc.md'), 'Write `' + N + '` where you would name your version.')
+    eq('...in backticks too', show('main', 'doc.md'), 'A feature (0.2.0).')
+    eq('...its name in backticks in CLAUDE.md kept', show('main', 'CLAUDE.md'), 'Write `' + N + '` where you would name your version.')
     eq('...the notes gone', git(origin, 'ls-tree', '--name-only', 'main', 'changes/'), '')
     ok('...the upload merged in, byte for byte (a binary never rewritten)',
        Buffer.from(execFileSync('git', ['show', 'main:shot.png'], { cwd: origin, env })).equals(PNG))

@@ -1,11 +1,11 @@
 //======================================================================================================================
-// A PATTERN FRAME (model.js setPattern, version 23; codegen patterned, patIn): where a node's material lays its pattern
+// A PATTERN FRAME (model.js setPattern, version 24; codegen patterned, patIn): where a node's material lays its pattern
 // out, moved and turned in the node's own frame. Run:
 //   node builder/test/pattern.test.mjs
 //
 // What it shows, with no GPU (builder/test/pattern.gpu.mjs runs the text on Dawn):
 //   - the model: set, copied, taken away; refused on the root, a light, a box, and with a scale or a bad number; a file
-//     of 22 read as 23 with nothing changed, a file of 23 with one read back; toTree, a duplicate, the library's asset
+//     of 23 read as 24 with nothing changed, a file of 24 with one read back; toTree, a duplicate, the library's asset
 //     and a paste in another unit carrying it; a unit change converting its place by the numbers and not by a scale;
 //     whose frame a material is read in (patternOwner);
 //   - the text: none where it changes nothing (no material reads its point, no relief), the scene byte for byte what it
@@ -49,10 +49,10 @@ const LOCAL = 'm.baseColor = fract(p_local);'
     ok('a parameter may not be called pat (its uniform is pat_<id>)', M.RESERVED_PARAMS.includes('pat'))
     M.setPattern(d, o.id, P1)
     const back = M.parse(JSON.stringify(d))
-    ok('saved and read back whole, at version 23', M.VERSION === 23 && JSON.stringify(M.find(back, o.id).node.pattern) === JSON.stringify(P1))
-    const old = structuredClone(d); old.version = 22; delete M.find(old, o.id).node.pattern
+    ok('saved and read back whole, at version 24', M.VERSION === 24 && JSON.stringify(M.find(back, o.id).node.pattern) === JSON.stringify(P1))
+    const old = structuredClone(d); old.version = 23; delete M.find(old, o.id).node.pattern
     const up = M.upgrade(old)
-    ok('a file of 22 is read as 23, nothing else changed', up.version === 23 && JSON.stringify({ ...up, version: 22 }) === JSON.stringify(old))
+    ok('a file of 23 is read as 24, nothing else changed', up.version === 24 && JSON.stringify({ ...up, version: 23 }) === JSON.stringify(old))
     const t = M.toTree(d).children.find(n => n.id === o.id)
     ok('toTree carries it', JSON.stringify(t.pattern) === JSON.stringify(P1))
     const copy = M.duplicate(d, o.id)
@@ -163,6 +163,19 @@ const textOf = d => generate(...M.generateArgs(d, { id: 'built' }))
     const S = textOf(d).wgsl
     ok('a relief alone: read at xfPoint(p, pat) in the node\'s true scale, and no capture lines',
         S.includes(`relief_rel(xfPoint(p, UB.${patName(o.id)}) * (XF_S / XF_K) / mm(1.0))`) && !S.includes('xfpp_'))
+}
+{
+    // UNDER A GROUP'S MATERIAL (version 23, wornMaterial): the material an object wears is the group's, and so is the relief
+    const d = M.createDoc()
+    M.addMaterial(d, { id: 'plain' }); M.addMaterial(d, { id: 'rel' }); M.setRelief(d, 'rel', 'noise')
+    M.addGroup(d, 'root', { id: 'g' })
+    M.addObject(d, 'g', { id: 'o', primitive: 'sphere', material: 'plain' })
+    M.setMaterial(d, 'g', 'rel')
+    M.setPattern(d, 'o', P1)
+    const tree = M.toTree(d, { keepDisabled: true })
+    ok('under a group\'s relief material: the relief read in its pattern frame, and as data compiled',
+        textOf(d).wgsl.includes('relief_rel(xfPoint(p, UB.pat_o)')
+        && planOf(tree, { reliefMaterials: new Set(['rel']) }).sub.has('o'))
 }
 {
     // the scene as data: such a node compiled as before, and nothing else

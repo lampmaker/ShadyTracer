@@ -1,6 +1,6 @@
 {
   "format": "raytracer-scene",
-  "version": 23,
+  "version": 24,
   "title": "Surface materials",
   "nextId": 30,
   "unit": "mm",

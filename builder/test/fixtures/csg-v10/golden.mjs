@@ -135,7 +135,7 @@
 // shape of an intersection) and every part standing on the floor. Those two documents' entries moved, every key of both
 // modes; no other document's did (key by key).
 //
-// REFROZEN FOR FOUR DOCUMENTS (2026-10-21, 0.next), for a fix the user agreed (a plain group that is one of a CSG group's
+// REFROZEN FOR FOUR DOCUMENTS (2026-10-21, 0.76.0), for a fix the user agreed (a plain group that is one of a CSG group's
 // shapes combines its children as a union, an array's copies too: codegen.js combinedGroups). Folded, its children were
 // no union's signed distance, and the CSG group above read a wrong operand where they overlap (csgshape.gpu.mjs). Checked
 // before freezing, dev's codegen (bbe475c's codegen.js and scenedata.js) against new, both modes, all four texts: with
@@ -149,11 +149,12 @@
 // exactly as they did; the other 46 documents, cases.*.wgsl and the imported parts among them, did not (key by key).
 //
 // REFROZEN FOR ONE SCENE (2026-10-21, `0.next`), for a feature the user asked for (a pattern frame per object: model.js
-// setPattern, codegen patIn): scenes/lighting-room.json's table top has one, its wood's grain along its length. Checked
-// before freezing, the scene with its pattern frame against the same document without it, both modes, all four texts:
-// the top's comment gained ", in its pattern frame", and its block the capture's five lines after its enter and the one
-// that puts them back before its leave -- nothing else; the uniforms gained pat_n11 alone; the tags did not move. The
-// other 49 documents did not (key by key), and no document without a pattern frame can: the lines are emitted only for one.
+// setPattern, codegen patIn): scenes/lighting-room.json's table top and floor have one, their wood's grain along x. Checked
+// before freezing, merged with dev at 6d45aa1, the scene with its pattern frames against the same document without them,
+// both modes, all four texts: each one's comment gained ", in its pattern frame", and its block the capture's five lines
+// after its enter and the one that puts them back before its leave -- nothing else; the uniforms gained pat_n2 and
+// pat_n11 alone; the tags did not move. Against dev's expected.json the other 49 documents did not move (key by key), and
+// no document without a pattern frame can: the lines are emitted only for one.
 //======================================================================================================================
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'

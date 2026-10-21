@@ -1,5 +1,5 @@
 //======================================================================================================================
-// A PATTERN FRAME ON A REAL WEBGPU (model.js setPattern, version 23; codegen patIn): what a hit records on a node in its
+// A PATTERN FRAME ON A REAL WEBGPU (model.js setPattern, version 24; codegen patIn): what a hit records on a node in its
 // pattern frame, against the same scene without one. Run:
 //   node builder/test/pattern.gpu.mjs
 //

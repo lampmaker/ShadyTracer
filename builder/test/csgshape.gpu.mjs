@@ -223,7 +223,7 @@ const DOCS = {
     },
     /* GROUP CODE WHOSE OWN CHILDREN JOIN: codegen's children function combines them; as data a before or an after
        group was a record whose children's records folded in one by one, so a mirror of a box less a sphere was the box
-       and the sphere (until 0.next: such a group is compiled as before). No plain group here: the other bug. */
+       and the sphere (until 0.76.0: such a group is compiled as before). No plain group here: the other bug. */
     'a mirror of a box less a sphere': () => {
         const d = M.createDoc()
         modified(d, 'root', 'mir', 'mirror', { transform: T(0.1, 0, 0, 20) })

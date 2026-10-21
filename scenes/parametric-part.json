@@ -1,6 +1,6 @@
 {
   "format": "raytracer-scene",
-  "version": 23,
+  "version": 24,
   "title": "Parametric part",
   "nextId": 11,
   "unit": "mm",

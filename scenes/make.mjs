@@ -374,7 +374,10 @@ function glassLiquid() {
    the table -- daylight and a lamp together, each in real units: the sun through the window, the lamp's 1500 lm. */
 function lighting() {
     const doc = scene('Lighting a room', { unit: 'm', radius: 200, env: SUN(30, 20) })   // on the window's side, +y
-    floor(doc, lib(doc, 'wood'))
+    /* THE FLOOR'S GRAIN ALONG x (model.js setPattern, `0.next`; the user, 2026-10-21: "yes, turn the floor too"), as the
+       table top's below: unturned, the floor was one log's end grain 4 m across, rings round a point beside the origin */
+    const boards = floor(doc, lib(doc, 'wood'))
+    M.setPattern(doc, boards.id, { pos: { x: 0, y: 0, z: 0 }, rot: { x: 0, y: 90, z: 0 } })
     const room = group(doc, 'root', 'room')
     shape(doc, room.id, 'box', { label: 'outside', params: { size: V(2.1, 1.6, 1.4), rounding: 0 }, at: [0, 0, 1.3], material: lib(doc, 'white plaster') })
     shape(doc, room.id, 'box', { label: 'inside', params: { size: V(2, 1.5, 1.3), rounding: 0 }, at: [0, 0, 1.3], material: lib(doc, 'white plaster'), join: 'subtract' })

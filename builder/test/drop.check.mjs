@@ -2,7 +2,8 @@
 //
 // A LIBRARY ITEM DROPPED ON THE TREE (builder/tree.js dropAsset, acceptLibrary), headless, over the real
 // tree, model and project with a stand-in builder: a material dropped on an object is used by it, on a
-// group by every object in it but its light; a node dropped on an object goes in after it, on a group into
+// group the group's, worn by every object in it but its light (0.76.0), and one then dropped on an object in it that
+// object's own; a node dropped on an object goes in after it, on a group into
 // it; a node dropped on the picture stands on the point hit (the host picks it; given here); a drop through
 // the DOM -- dragover, drop on a row -- takes the same path; and a drag the tree did not start from the
 // library is left alone. What the picture shows after is the user's to judge.
@@ -51,14 +52,28 @@ let r = await p.evaluate(() => {
 })
 ok('a material dropped on an object is used by it', r.label === 'gold' && r.metallic > 0.5, JSON.stringify(r))
 ok('...and by nothing else', r.b == null, JSON.stringify(r))
+/* ON A GROUP (0.76.0, model.js version 23): the group's material, which every object in it wears over its own --
+   their own kept underneath -- and one dropped on an object in it then that object's own, the others still the group's */
 r = await p.evaluate(() => {
     const { M, tree, BUILDER, material } = CHECK
+    const d0 = BUILDER.doc, before = M.find(d0, 'g1').node.material
     tree.dropAsset(material, { mid: 'g' })
-    const d = BUILDER.doc, lab = id => M.material(d, M.find(d, id).node.material)?.label ?? null
-    return { g1: lab('g1'), g2: lab('g2'), light: M.find(d, 'gl').node.material }
+    const d = BUILDER.doc, lab = id => M.material(d, M.wornMaterial(d, id).material)?.label ?? null
+    return { g: M.material(d, M.find(d, 'g').node.material)?.label, same: M.find(d, 'g').node.material === M.find(d, 'a').node.material,
+             g1: lab('g1'), g2: lab('g2'), from: M.wornMaterial(d, 'g1').group, kept: M.find(d, 'g1').node.material === before,
+             light: M.find(d, 'gl').node.material }
 })
-ok('on a group, by every object in it -- the same gold, not a copy of it', r.g1 === 'gold' && r.g2 === 'gold', JSON.stringify(r))
+ok('on a group, the group\'s -- the same gold, not a copy of it', r.g === 'gold' && r.same, JSON.stringify(r))
+ok('...worn by every object in it, their own kept under it', r.g1 === 'gold' && r.g2 === 'gold' && r.from === 'g' && r.kept, JSON.stringify(r))
 ok('...but not its light (a light has its own)', r.light == null, JSON.stringify(r))
+r = await p.evaluate(() => {
+    const { M, tree, BUILDER, material } = CHECK
+    tree.dropAsset({ ...material, material: { ...material.material, label: 'red', params: { ...material.material.params, baseColor: { r: 1, g: 0, b: 0 } } } }, { mid: 'g1' })
+    const d = BUILDER.doc, lab = id => M.material(d, M.wornMaterial(d, id).material)?.label ?? null
+    return { g1: lab('g1'), own: M.find(d, 'g1').node.ownMaterial, g2: lab('g2') }
+})
+ok('then one dropped on an object in it: that object\'s own, kept over the group\'s', /^red/.test(r.g1) && r.own === true, JSON.stringify(r))
+ok('...and the others still the group\'s', r.g2 === 'gold', JSON.stringify(r))
 
 // A NODE ON AN OBJECT, ON A GROUP, ON THE PICTURE
 r = await p.evaluate(() => {
@@ -123,6 +138,37 @@ r = await p.evaluate(() => {
 ok('a drag the library did not start is left to the widget', r.ignored, JSON.stringify(r))
 ok('a library drag over a row is accepted and the row marked', r.accepted && r.marked, JSON.stringify(r))
 ok('dropped on the row: the material is on that object, and the mark gone', r.b === 'gold' && r.cleared, JSON.stringify(r))
+
+/* A MATERIAL ROW OF THE TREE ITSELF dragged onto a shape's or a group's row (0.76.0, tree.js wear): TreeView keeps a
+   material row among Materials, so the tree lets the drop through and takes it -- as a Library material dropped there */
+const rowDrag = (from, to) => p.evaluate(([from, to]) => {
+    const { M, BUILDER } = CHECK
+    const rowOf = text => [...document.querySelectorAll('[data-path]')].find(e => e.textContent.trim().startsWith(text))
+    const fire = (type, target, dt) => { const e = new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer: dt }); target.dispatchEvent(e); return e }
+    const dt = new DataTransfer(), src = rowOf(from), dst = rowOf(to)
+    if (!src || !dst) return { error: `no row '${src ? to : from}'` }
+    fire('dragstart', src, dt)
+    const over = fire('dragover', dst, dt)
+    const marked = dst.classList.contains('shell-drop-target')
+    fire('drop', dst, dt)
+    fire('dragend', src, dt)
+    const d = BUILDER.doc, lab = id => M.material(d, M.wornMaterial(d, id).material)?.label ?? null
+    return { accepted: over.defaultPrevented, marked, cleared: !document.querySelector('.shell-drop-target'), materials: d.materials.length,
+             b: lab('b'), g: M.material(d, M.find(d, 'g').node.material)?.label ?? null, g2: lab('g2'), status: CHECK.T.status.at(-1) }
+}, [from, to])
+const n0 = await p.evaluate(() => CHECK.BUILDER.doc.materials.length)
+r = await rowDrag('red', 'bee')
+ok('a material row of the tree dragged over a shape\'s row: let through, the row marked', r.accepted && r.marked, JSON.stringify(r))
+ok('...dropped: worn by it, no material added, the mark gone', r.b === 'red' && r.materials === n0 && r.cleared && r.status !== 'cannot drop there', JSON.stringify(r))
+r = await rowDrag('red', 'group')
+ok('...on a group\'s row: the group\'s, worn by what is in it', r.g === 'red' && r.g2 === 'red', JSON.stringify(r))
+r = await p.evaluate(() => {
+    const row = [...document.querySelectorAll('[data-path]')].find(e => e.textContent.trim().startsWith('red'))
+    const e = new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: new DataTransfer() })
+    row.dispatchEvent(e)
+    return { marked: row.classList.contains('shell-drop-target') }
+})
+ok('...and with nothing dragged, a row is left alone', !r.marked, JSON.stringify(r))
 
 if (errs.length) failed++
 console.log(errs.join('\n') || 'no page errors'); await b.close(); server.close()

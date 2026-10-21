@@ -573,14 +573,15 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
         }
         if (k === 'transform' && f.node.transform)
             return RT.set({ [xfName(id)]: M.matrixOf(f.node.transform) }).length === 0
-        /* ITS PATTERN FRAME (model.js setPattern, version 23): a uniform where it changes something (codegen patterned),
+        /* ITS PATTERN FRAME (model.js setPattern, version 24): a uniform where it changes something (codegen patterned),
            and nothing to do where it does not -- a material that reads no point, no relief: no uniform, and no compile
-           would make one. Whether it has one at all is the shader's text, which the panel compiles for. */
+           would make one. The relief is the material it WEARS (wornMaterial: a group's above it, version 23), as codegen's
+           tree has it. Whether it has one at all is the shader's text, which the panel compiles for. */
         if (k === 'pattern') {
             if (!f.node.pattern) return false
             const name = patName(id)
             if (!(name in (RT.scene?.uniforms || {}))) return !patterned(f.node.kind === 'group' ? { ...f.node, csg: isCsg(f.node) } : f.node,
-                { wantLocal: doc.materials.some(m => readsLocal(m.code)), relief: !!M.material(doc, f.node.material)?.relief })
+                { wantLocal: doc.materials.some(m => readsLocal(m.code)), relief: !!M.material(doc, f.node.kind === 'object' ? M.wornMaterial(doc, id).material : null)?.relief })
             return RT.set({ [name]: M.matrixOf({ ...f.node.pattern, scale: 1 }) }).length === 0
         }
         // AN ARRAY'S COPIES (model.js version 17): a uniform each -- refused when the count is not the one compiled

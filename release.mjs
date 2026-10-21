@@ -17,8 +17,8 @@
 //   1. fetch dev and main; merge main into dev if main has commits dev lacks (an upload made straight to main);
 //   2. read the notes; none is nothing to release. The largest bump wins: MINOR 0.(m+1).0, PATCH 0.m.(p+1);
 //   3. one CHANGELOG.md entry, `## <version> — <date>`, the notes in file-name order; VERSION set to match;
-//   4. the placeholder replaced in every tracked text file, but where it is the placeholder's NAME, in backticks
-//      (`0.next`, as CLAUDE.md writes it), and in the files that define it (EXCLUDED);
+//   4. the placeholder replaced in every tracked text file, but in the files that define it (EXCLUDED), and where it
+//      is the placeholder's NAME: in backticks in CLAUDE.md, the changelog and a note (NAMES), nowhere else;
 //   5. a tutorial excerpt re-stamped only when the release alone moved it: its old stamp is the hash of its lines
 //      before the replacement. Any other stale excerpt stays listed for someone to read (CLAUDE.md);
 //   6. the notes deleted, the result checked as version.test.mjs checks it, committed as you, and pushed to dev and
@@ -42,8 +42,15 @@ export const NOTES = 'changes/'
    copies changed only by their own sync, and these two define the placeholder, so they hold it on purpose. */
 export const EXCLUDED = ['lib/utils.js', 'lib/timeline/', 'lib/dockview/', 'release.mjs', 'test/release.test.mjs']
 const BUMPS = ['patch', 'minor']
-/* Not after a word character (iter0.next is code), not after or before a backtick (the placeholder's name). */
-const TOKEN_RE = /(?<![\w`])0\.next(?![\w`])/g
+/* Never inside a word (iter0.next is code). In backticks it is the placeholder's NAME only where something is said
+   ABOUT the placeholder: CLAUDE.md, which tells a PR to write it, the changelog, whose entries have described it, and a
+   note, whose body becomes an entry. Everywhere else it is a version, backticks or not. Backticks kept it everywhere
+   until 0.76.0, which shipped with seven files still reading `0.next` (FEATURES.md, model.js, three tests, two
+   headless checks, tutorial/PLAN.md): the branch had written its version as CLAUDE.md shows the placeholder, in
+   backticks, and nothing told the two apart. */
+export const NAMES = ['CLAUDE.md', 'CHANGELOG.md']
+const NAME_RE = /(?<![\w`])0\.next(?![\w`])/g
+const TOKEN_RE = /`0\.next`|(?<!\w)0\.next(?!\w)/g      // the backticks go with it: a version is not code
 /* The entries as test/version.test.mjs reads them. */
 const ENTRY_RE = /^## (\S+) [—-] (\S+)\s*$/gm
 const SEMVER = /^(\d+)\.(\d+)\.(\d+)$/
@@ -73,8 +80,10 @@ export function nextVersion(v, bumps) {
     return bumps.includes('minor') ? `${maj}.${min + 1}.0` : `${maj}.${min}.${pat + 1}`
 }
 
-export const replaceNext = (text, v) => text.replace(TOKEN_RE, v)
-export const countNext = text => (String(text).match(TOKEN_RE) || []).length
+/* `path` is the file the text is from; none is a note's body or CLAUDE.md's, where backticks keep the name. */
+const tokenIn = path => path == null || NAMES.includes(path) || isNote(path) ? NAME_RE : TOKEN_RE
+export const replaceNext = (text, v, path) => text.replace(tokenIn(path), v)
+export const countNext = (text, path) => (String(text).match(tokenIn(path)) || []).length
 
 /** version.js's VERSION, and its text with VERSION set to `v`. */
 const VERSION_RE = /^(export const VERSION = )'([^']*)'/m
@@ -115,7 +124,7 @@ export function pending({ list, read }) {
     for (const p of list) {
         if (excluded(p) || isNote(p)) continue
         const t = read(p)
-        const n = t == null ? 0 : countNext(t)
+        const n = t == null ? 0 : countNext(t, p)
         if (n) tokens.push({ path: p, count: n })
     }
     return { notes, errors, tokens }
@@ -152,7 +161,7 @@ export function planRelease({ list, read }, { date = today(), log = () => { } } 
     const writes = new Map()
     const now = p => writes.has(p) ? writes.get(p) : read(p)
 
-    for (const t of tokens) writes.set(t.path, replaceNext(read(t.path), version))
+    for (const t of tokens) writes.set(t.path, replaceNext(read(t.path), version, t.path))
 
     /* Never dated before the entry under it (version.test.mjs): entries written in another time zone came first. */
     const old = read('CHANGELOG.md')

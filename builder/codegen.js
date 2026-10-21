@@ -357,7 +357,7 @@ export const OBJECT_CODE_TEMPLATE = [
 ].join('\n')
 
 export const xfName = id => uniformName(id, 'xf')
-/* A NODE'S PATTERN FRAME (model.js setPattern, version 23): one mat4 as a transform's, its scale 1 */
+/* A NODE'S PATTERN FRAME (model.js setPattern, version 24): one mat4 as a transform's, its scale 1 */
 export const patName = id => uniformName(id, 'pat')
 /** THE PATTERN FRAME IN THE TEXT: a node's (model.js setPattern) where it changes something -- an object (not a light
  *  or a box) whose material code reads its point anywhere in the scene (`wantLocal`) or whose material has a relief, or
@@ -407,7 +407,7 @@ export const isCsg = g => g.csg ?? (g.blend > 0 || shapesOf(g).some((c, i) => i 
 /** THE GROUPS WHOSE CHILDREN ARE COMBINED INTO ONE SHAPE (children() below, and the scene as data's CSG records): every
  *  CSG group, and every group without code that is one of such a group's SHAPES -- a plain group or an array, and plain
  *  groups inside that one, at any depth. A Set of ids, decided on the whole tree, since it is the parent that decides.
- *    WHY A PLAIN GROUP THAT IS A SHAPE TOO (0.next). A plain group's children fold into the Hit in scope one by one
+ *    WHY A PLAIN GROUP THAT IS A SHAPE TOO (0.76.0). A plain group's children fold into the Hit in scope one by one
  *  (scene_api.js fold), which keeps the surface as argmin |d|: the nearest boundary in either direction. That is what
  *  the march needs of separate objects, and NOT a union's signed distance -- at a point 0.6 inside one shape and 0.004
  *  outside another that overlaps it, fold says +0.004, "outside". A CSG group reads its shapes' signed distances, so a
@@ -1339,7 +1339,7 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
         if (inStraight(n)) line(d, `XF_Q = xfq_${n.id}; XF_QM = xfqm_${n.id}; XF_QS = xfqs_${n.id};`)
         if (wantLocal) line(d, `XF_P = xfp_${n.id};`)
     }
-    /* THE PATTERN FRAME (model.js setPattern, version 23): where a node's material lays its pattern out, a place and a
+    /* THE PATTERN FRAME (model.js setPattern, version 24): where a node's material lays its pattern out, a place and a
        turn in the node's own frame. A hit records its point and its frame (scene_api.js fold, LOCAL_CAPTURE), so here
        they are moved by it, as the material frame of a straight group's is: XF_P the point in the pattern's frame, XF_QM
        its turn to the world, XF_STRAIGHT so fold records XF_QM. The scale is XF_S, or XF_QS in a straight group, as it

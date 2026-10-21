@@ -1,6 +1,6 @@
 {
   "format": "raytracer-scene",
-  "version": 23,
+  "version": 24,
   "title": "Lighting a room",
   "nextId": 20,
   "unit": "m",
@@ -267,7 +267,19 @@
         },
         "material": "m1",
         "params": {},
-        "block": "b3"
+        "block": "b3",
+        "pattern": {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 90,
+            "z": 0
+          }
+        }
       },
       {
         "id": "n4",
