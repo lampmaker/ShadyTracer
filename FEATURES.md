@@ -32,7 +32,7 @@ so. See *Docs that disagree* at the end.
 |---|---|---|---|
 | **ShadyTracer** | A browser application: a physically based path tracer in real light units (cd/m², lux), a scene builder over signed-distance geometry, and a non-sequential optics trace for LED and luminaire optics — far field, illuminance maps, colour — over the same scene | `index.html` | Renderer, light units and refraction **verified**; builder **in use**; most of the optics analysis and the measuring **built** |
 | **TinyWebGPU** | A single-file WebGPU micro-framework | `lib/tinywebgpu/` (submodule) | Public at `lampmaker/tinywebgpu`, MIT; 0.5.0 took in everything this application's copy had grown |
-| **Shared libraries** | Application shell (docking, palette, parameters), keyframe timeline with MP4 export, property table / tree view, render loop and cost meter | `lib/` | Used by the raytracer |
+| **Shared libraries** | Application shell (docking, palette, parameters), keyframe timeline with MP4 and GIF export, property table / tree view, render loop and cost meter | `lib/` | Used by the raytracer |
 
 About 62 000 lines of JavaScript, WGSL and HTML (vendored libraries and the toolkit's release tree
 included) and 8 600 lines of documentation, weavesim not counted. Everything runs in the browser,
@@ -65,6 +65,7 @@ on the user's own GPU; there is no server.
 | **Emissive surfaces as lights, nothing declared**: discovered from the paths that hit them, sampled by NEE with MIS, and sending photons along random lines (Crofton) | **verified** (Pascal, third run): every row within 0.31 % | PLAN.md *Emissive surfaces* |
 | Russian roulette | verified unbiased (`rr-bias`) | TESTING.md |
 | Caustics seen *through* glass or in a mirror | **the photon map** (0.60.0; **on by default since 0.61.0**, Light sources › *Seen through glass and mirrors*): photons stored where they land past glass or a mirror, gathered by the camera's rays that reach that surface through glass or a mirror, a radius shrinking every sample; in the full renderer, Draft and Optics; a collimated beam's photons stored wherever they land (0.61.0); idle where nothing is seen through glass or a mirror (0.61.0). **Seen** on the user's card (2026-10-15: "this looks really good"), its cost not measured; `sppm.test.mjs` (0.997 and 1.003 of the camera's own sum, a collimated beam 1.000 of its closed form), `sppm.gpu.mjs` (the whole renderer on lavapipe, within its error bar; the idle skip); bench `sppm` not pressed. Before it, the lens's photons (0.43.0) and the manifold connection (0.44.0), both removed in 0.61.0 | `core/sppm.js`; PLAN.md C *The photon map* |
+| **Dust in the air: a haze box** (0.62.0): the air inside one box per scene scatters light -- a mean free path in metres, an albedo per channel, a Henyey-Greenstein g -- lit by light sampling (MIS) and by photons connected from the air; glass and water inside it stay clear; its values live. Draft scatters once; Sketch, the Optics view and the optics trace leave it out | **seen** on the user's hardware in several scenes (2026-10-16); **verified**: `haze` (Pascal, 0.62.2), albedo-1 dust within 0.024 % with NEE, 0.002 % without; `haze.test.mjs`, `haze.gpu.mjs` | `core/haze.js`, `builder/hazebox.js`; MEDIA.md |
 | **The camera's lens**: aperture and focus (Camera popover), depth of field; a perspective camera's | built (0.43.0), not yet seen; `lens.test.mjs`, `lens.gpu.mjs` | `core/lens.js` |
 | **Draft** (fast mode): a path stops at the first diffuse or glossy surface it meets, which gets the direct light from the sun, the sky and the lamps (one shadow ray, weight 1); mirrors, clear and frosted glass and near-mirror gloss are followed; light tracing as set; seek rays find lamps the camera cannot see | built 2026-10-01; naga-compiled; `render-modes`, `draft-lamps` not pressed; **not seen on hardware** | README § *Draft, Sketch and Optics*; `core/materials_pbr.js` FAST MODES |
 | **Sketch** (fast mode): the same stop, a fixed headlight / top / fill light and no shadow rays, no photons | built 2026-10-01; **not seen on hardware** | same |
@@ -84,7 +85,7 @@ on the user's own GPU; there is no server.
 | Glass, mirror, metal, plastic, Lambertian, emitter presets | in use | `builder/materials.js` |
 | **Material code**: any material field can be WGSL (checker, stripes, grain examples ship) | in use | `builder/codegen.js` |
 | **Surface noise library**: value, gradient, fBm, Worley, each with its analytic gradient and a proved or measured Lipschitz bound | built; Node-tested | `core/noise.js`, `core/test/noise.test.mjs` |
-| Rust, dust, wear, bump, sheen, clear coat, thin film, hair | planned (SURFACES.md phases 3–9) | |
+| Weathering masks and mixtures (patchy rust, edge wear, dust cover, wet), bump that conserves energy, sheen, a clear coat over anything, interference films (tarnish, anodised titanium), hair | planned (SURFACES.md phases 3–9). Dichroic, beam-splitter and AR coatings are in: §3.6 | |
 
 ### 1.4 Light in physical units
 
@@ -134,9 +135,9 @@ user on real hardware"). What PLAN.md or BUILDER.md marks unconfirmed is marked 
 
 | feature | status | evidence |
 |---|---|---|
-| **Scenes as documents**: groups and objects under a root, a material list, an environment, a WGSL functions block; format version 15, every older version upgraded on load; every problem listed on a failed load, nothing half-loaded | in use | `model.js` |
+| **Scenes as documents**: groups and objects under a root, a material list, an environment, a WGSL functions block; format version 22, every older version upgraded on load; every problem listed on a failed load, nothing half-loaded | in use | `model.js` |
 | **Projects of several scenes**; the tree shows the one being worked on, **its row the root** (a click shows its settings, its + in the + column; 0.26.0); **a click on any row selects it, only its chevron folds it** (0.26.0); **over it, one line for the project and a card per scene** (0.63.0, mockup H C′): its last picture (taken from the live one once settled, `RT.thumbnail`) and how long it took to open; a click shows it in Properties without compiling, ▶ or a double-click opens it, ⋯ duplicates (another beside it, staying), exports, deletes, a drag reorders, a tree row dropped on it is copied there (Shift: moved); ＋ an empty scene, a copy, an example; the ▶ of a scene not compiled on its card. **Undo of a change to the list of scenes stays on the scene being worked on** (0.63.0). Undo / Redo on the menu bar. A row's right-click **Copy to / Move to** another scene, compiling nothing there (2026-10-02; until then every scene was a row of the tree, and touching one switched and compiled) | built 2026-10-02, the root row 2026-10-05, the cards 2026-10-17; node-tested (`tree.test`, `scenestrip.test`, `project.test`) and headless-checked (`workspace/test/projects.check`); **not seen on hardware**, the cards' pictures least of all | `project.js`, `tree.js`, `scenestrip.js`, `toolbar.js`, `workspace/scenepics.js` |
-| **Ten shapes**, each an editable code node from the start: sphere, box, cylinder, capsule, torus, cone, **lens** (diameter, thickness, two signed radii), rectangle, disc, plane; or blank WGSL | built ("one kind of object", not confirmed) | `primitives.js` |
+| **Twenty-six shapes** (15 primitives, 6 optics, 5 from points), each an editable code node from the start; the first ten sphere, box, cylinder, capsule, torus, cone, **lens** (diameter, thickness, two signed radii), rectangle, disc, plane, the rest in the rows below; or blank WGSL | built ("one kind of object", not confirmed) | `primitives.js` |
 | **Shapes from points**: a **profile** parameter -- an outline, one point a line, `x, y` and a fillet radius to round a corner -- that a node's code turns into a shape with `extrude(outline, p, height)` or `revolve(outline, p)`; edges and fillet arcs, the distance exact both sides; presets extrusion, revolution, **Fresnel lens** | built; node-tested and panel-checked, not confirmed | `core/shapes.js` (profilePieces), `codegen.js`, `panel.js`, `core/test/shapes.test.mjs` |
 | **Sweeps along a path**: a **path** parameter -- an open line, one point a line, `x, y, z` and a fillet radius to round a corner (none: a sharp one), and since 2026-10-02 the section's scale and twist there (the row below) -- along which a node's code sweeps a tube, `tube(route, p, radius, rounded)` with rounded or flat ends, or a profile, `sweep(route, outline, p)`; segments and fillet arcs, the cross-section carried without twisting; outside exact at any bend however tight, inside never too deep (no faces inside at the joints); presets **bent tube**, **light guide** | built; node-tested and panel-checked, not confirmed | `core/shapes.js` (pathPieces, pathWGSL), `codegen.js`, `panel.js`, `core/test/shapes.test.mjs` |
 | **Live paths**: a path's points may be expressions of the object's parameters (`rise`, `-w/2`, `corner.x`); a **live** path's pieces are uniforms, so a slider on such a parameter -- or a typed edit -- moves it with no compile, unless it is given more points than it has room for (since 2026-10-02 the chain is slots, each on or off: a corner made straight, a point taken away, is written); a value that makes it unsound draws nothing and the editor says why; untick live to compile its numbers in. The bent tube preset is live, with a `rise` | built; node-tested (the live text equals the compiled one, an update equals a fresh compile) and panel-checked; **confirmed working on hardware by the user, 2026-10-02** | `builder/expr.js`, `codegen.js` (livePointsUpdate), `demo.js` (liveValue), `panel.js` |
@@ -163,7 +164,7 @@ user on real hardware"). What PLAN.md or BUILDER.md marks unconfirmed is marked 
 | **Undo / redo** across the whole project: 100 steps, edits coalesced | built | `history.js` |
 | **Clipboard**: copy, paste, duplicate nodes and materials, across scenes -- and through the system clipboard, so across tabs, projects and reloads (2026-10-02) | built; the system clipboard headless-checked | `tree.js` |
 | **Instant hide/show** without a recompile | built | `model.js` `liveVisibility` |
-| **Files**: scene, project, or workspace (all scenes + renderer settings + camera + size); open by menu, Ctrl O or dropping a file on the page -- a scene or project file joins the project, a workspace file becomes a project of its own (since 2026-10-02) | in use | `demo.js`, `project.js` |
+| **Files**: Export ▸ a scene, the project (the workspace format: every scene, its view, the renderer settings), a 3D print; Import from file…, Ctrl O or a file dropped on the page -- a scene file joins the project, a project or workspace file asks: a project of its own, or its scenes added here (0.63.0); a refused file names its first problem in the status bar and all of them in the console | in use (the asking: built 0.63.0, headless-checked in `projects.check`) | `filemenu.js`, `index.html` openText, `project.js` |
 | **Projects kept in the browser** (2026-10-02): the project being worked on saved in IndexedDB as it changes -- its scenes, the scene worked on, the renderer's settings, every scene's camera, a library item being edited -- so a reload comes back to it (not the undo history); the **Project panel** (0.63.0; a dialog until then; the project's name over the tree, or File › Projects…, opens it as a tab beside the picture) lists them: open, new, rename, duplicate, download, delete (asks), with this project's scenes and the examples; **File** is five rows (New project, Projects…, Import from file… -- a project file asks: a project of its own, or its scenes here -- Export ▸, Save picture…), no Save: the status bar says it is saved; a **second tab** on a project works on its own copy, kept once it is edited (Web Locks); one that cannot be read is kept as it was; Ctrl+S writes at once | built 2026-10-02; node-tested (`workspace/test/store.test`) and headless-checked over real IndexedDB and locks (`projects.check`); **not seen on hardware** | `workspace/` |
 | Mesh import (OBJ, STL, glTF) or CAD import (STEP, IGES) | **not there**; investigated, routes and phases in `roadmap/IMPORT.md` (2026-10-02) | |
 | Ellipsoid, polar repeat, smoother blend profiles | planned | `roadmap/BUILDER.md` |
@@ -255,8 +256,9 @@ into batches, so **every number carries a standard error**. Target: LED and lumi
 
 All planned, in PLAN.md *The plan from here* (**bulk absorption (Beer–Lambert)** was listed here and has been in
 since 0.37.0: a material's colour depth); a
-**reflectance for an LED's own face** (light sent back onto a die is lost); **a light seen through
-its own lens** (shows dark); **air gaps thinner than the surface offset** are jumped (measured:
+**reflectance for an LED's own face** (light sent back onto a die is lost); (**a light seen through
+its own lens** was here, and is done: step L4 of *Lights*, held by `light-vs-emitter`'s L4 rows on
+Ampere); **air gaps thinner than the surface offset** are jumped (measured:
 reads one slab; workaround: set the tolerance by hand); a **stratified source pick** (a mix's
 colour noise is only the random pick); **polarisation** (−0.3 % at 45°, −3 % at 70° on a slab,
 measured). (Aspheric and Fresnel lenses are shapes now: *Builder*.)
@@ -278,7 +280,7 @@ measured). (Aspheric and Fresnel lenses are shapes now: *Builder*.)
 
 | feature | status | evidence |
 |---|---|---|
-| **49 built-in items**: the 10 shapes, 8 modifiers, 3 lights and 6 material presets; **18 named materials** (plastics, gold, copper, brushed and turned aluminium, chrome, clear / tinted / frosted glass, polycarbonate…); **4 optics assemblies** (PMMA lens Ø 18 mm, LED die 2 × 1 mm 100 lm, detector screen, a whole LED-lens-screen bench) | built | `store.js`, `items/*.json` |
+| **43 built-in items**: the 26 shapes, 8 modifiers, 3 lights and 6 material presets; **42 named materials** (plastics and paints, plaster, stucco and render, metals plain, brushed, turned, anodised, galvanised and hammered, clear / tinted / frosted / flint glass, PMMA, polycarbonate, stone, wood, cork, leather, rubber, concrete, rust…); **4 optics assemblies** (PMMA lens Ø 18 mm, LED die 2 × 1 mm 100 lm, detector screen, a whole LED-lens-screen bench) | built | `store.js`, `items/*.json` |
 | **Your own items**: keep the selection, rename, remove; export and import as `library.json`; kept in IndexedDB | built; headless-tested | `panel.js` |
 | **Search**, kind filters, grid or list | built; headless-tested | |
 | **Drag onto the tree or the picture**: a material onto the object under the pointer; a node stands on the surface it was dropped on; units converted | built; headless-tested | `builder/test/drop.check.mjs` |
@@ -293,7 +295,7 @@ measured). (Aspheric and Fresnel lenses are shapes now: *Builder*.)
 | **Keyframes on any live parameter**: camera, a light's flux, an object's position, the sun… with linear / smooth / spline / step interpolation and easing | built; headless-tested over a stand-in renderer | `tools/timeline.js` |
 | **Each scene its own timeline** (0.67.0): the fps, duration, tracks and keys, and the film's size, samples, range and name saved in the scene's file, written as they change into the scene shown, put back whole when it is shown -- nothing left from the scene before; no undo step, saved as an edit is. The encoder's format, bitrate and "to disk" are the browser's. The page's one timeline from before goes to the first scene shown | built 2026-10-17; node-tested (`model`, `project`, `timeline`), headless-checked (`timeline.check`); **not seen on hardware** | `builder/model.js` TIMELINE, `demo.js` keepTimeline, `tools/timeline.js` showScene |
 | **Record**: every frame rendered offscreen at the export size with its own samples | built | |
-| **MP4** (H.264, else VP9 or AV1, in MP4; Chromium only) or a **ZIP of PNG frames** (any browser); stream to disk where the browser allows | built | `lib/timeline/encoders.js` |
+| **MP4** (H.264, else VP9 or AV1, in MP4; Chromium only), a looping **GIF** (256 colours a frame, dithered; any browser; 0.42.0) or a **ZIP of PNG frames** (any browser); stream to disk where the browser allows; named with the time the recording started (0.70.0) | built; the GIF read back exactly by its own decoder, and by Pillow and ffmpeg where installed (`gif.test.mjs`) and recorded headless (`timeline.check.mjs`) | `lib/timeline/encoders.js`, `gif.js` |
 | WebM | **not there** (README.md said so; corrected) | |
 
 ---
@@ -302,11 +304,11 @@ measured). (Aspheric and Fresnel lenses are shapes now: *Builder*.)
 
 | feature | status | evidence |
 |---|---|---|
-| **Menu bar, docked panels, status bar**; 17 panels, each can be dragged, stacked, floated, maximised, **popped out to another window** (second monitor) | built | `lib/shell/shell.js`, `index.html` |
+| **Menu bar, docked panels, status bar**; 14 panels and one for each optics chart opened, each can be dragged, stacked, floated, maximised, **popped out to another window** (second monitor) -- the picture stays in the main window | built | `lib/shell/shell.js`, `index.html` |
 | **Layout presets** Design, Analyse, Animate (Render dropped in 0.53.0: Design with the Analysis pane hidden); your own named layouts; the last layout restored | built | |
 | **Command palette** (Ctrl K) that also finds settings and sets them (`name = value`) | built | `lib/shell/paramspanel.js` |
 | **Parameters panel**: every renderer and scene setting by a path, typed exactly, ⌖ jumps to its control | built; Node-tested | `lib/shell/params.js` |
-| Help panel (F1), its links that open examples, run commands and point at panels; reference pages made from the program's lists; an SDF explainer | built (0.55.0), not yet seen — the tracks' pages are being written; no guided tour yet | help/README.md |
+| Help panel (F1), its links that open examples, run commands and point at panels; reference pages made from the program's lists; an SDF explainer | built (0.55.0), not yet seen; the two tracks written (0.56.0): ten pages of modelling and rendering, eight of optical design, with a welcome and five reference pages; no guided tour yet | help/README.md, `help/index.js` |
 | A study panel: parameter sweeps and an optimiser | planned (the parameter registry is the groundwork) | UI_PLAN.md |
 
 Also: a stale-cache check that reloads changed files at start-up, and Help › Report, which copies
@@ -318,10 +320,10 @@ a diagnostic report of the page's light and files.
 
 | | what | evidence |
 |---|---|---|
-| **In-page known-answer benches** (one button each, on the user's card): `photometry`, `error-bar`, `illuminance`, `cosine-law`, `disc-light`, `scale`, `furnace`, `bsdf-parity`, `rr-bias`, `nee`, `nee-split`, `lt`, `emitters`, `optics-light`, `optics-balance`, `optics-farfield`, `optics-refraction`, `optics-colour`, and cost tests | status per bench in TESTING.md | `lib/pathtracer/tests.js` |
+| **In-page known-answer benches** (one button each, on the user's card): `photometry`, `error-bar`, `illuminance`, `cosine-law`, `disc-light`, `render-modes`, `draft-lamps`, `scale`, `furnace`, `haze`, `bsdf-parity`, `rr-bias`, `nee`, `nee-split`, `lt`, `emitters`, `small-caustic`, `sppm`, `small-emitter`, `light-vs-emitter`, `optics-light`, `optics-mode`, `optics-balance`, `optics-farfield`, `optics-refraction`, `optics-absorption`, `optics-coating`, `optics-dispersion`, `optics-colour`, and cost tests | status per bench in TESTING.md | `lib/pathtracer/tests.js`, `builder/lightbench.js` |
 | **The benchmark**: a frozen scene at 1280 × 720, one change per row, GPU time per kernel, an uncached compile per scene; five full runs on a GTX 1080 Ti and an Ampere card | measured | `bench/`, PERFORMANCE.md |
-| **`check-shaders`**: every module parses; every kernel built against every scene (1269 builds) and checked for undeclared names, reachable bindings and binding limits; eslint; naga where installed | runs in Node | `lib/pathtracer/core/check-shaders.mjs` |
-| **About 40 Node and headless test files** (list in CLAUDE.md): light units, error bars, colorimetry, noise, optics, far field, illuminance, charts, Zemax, the builder's model, codegen, history, mesher, 3MF, the library, the timeline, the shell | run in Node; headless ones need Playwright | |
+| **`check-shaders`**: every module parses; every kernel built against every scene (6274 builds on 2026-10-21) and checked for undeclared names, reachable bindings and binding limits; eslint; naga where installed | runs in Node | `lib/pathtracer/core/check-shaders.mjs` |
+| **127 test files** (list in CLAUDE.md): 98 in Node, 17 headless in Chromium, 12 on a WebGPU in Node over lavapipe -- light units, error bars, colorimetry, noise, the photon map, the haze, the lens, dispersion and coatings, optics, far field, illuminance, charts, Zemax, the builder's model, codegen, history, mesher, 3MF, the library, projects in the browser, the timeline, the shell, the help, the tutorial | run in Node; headless ones need Playwright, the GPU ones `webgpu` and lavapipe | |
 
 For selling, this is the evidence behind any claim of accuracy: the light is checked against
 closed-form answers on real hardware, and every number carries its error bar.
@@ -330,13 +332,15 @@ closed-form answers on real hardware, and every number carries its error bar.
 
 ## 9. Bundled scenes
 
-**The Project panel's examples** (`scenes/index.js`), each opened as a copy into the project with a camera of its own: 23 scenes
+**The Project panel's examples** (`scenes/index.js`), each opened as a copy into the project with a camera of its own: 24 scenes
 made in code (`scenes/make.mjs`) in real sizes, by audience -- **Modelling and rendering** (Start; Shapes: the gallery,
 combining, modifiers, from points, a parametric part, infinite detail; Materials: the board, relief and texture,
 glass and liquid; Light and camera: a room, depth of field, animation, a product shot) and **Optical design** (an
-LED and lens, an aspheric condenser, Fresnel against plano-convex, a parabolic reflector, a light guide, RGBW mixing,
-a prism's dispersion, a dichroic combiner, office lighting). **Built (0.54.0), not yet seen**: none has been
-rendered on real hardware; the geometry and cameras are reasoned, not looked at. A first visit starts on *First
+LED and lens, a beam in dusty air (0.62.0), an aspheric condenser, Fresnel against plano-convex, a parabolic
+reflector, a light guide, RGBW mixing, a prism's dispersion, a dichroic combiner, office lighting). **Built (0.54.0)**;
+the geometry and cameras were reasoned, not looked at, when they were made. The README's screenshots (2026-10-21)
+show Material board, Relief and texture, LED lens and screen, Product shot, RGBW colour mixing and Glass and liquid
+rendered on the user's card. A first visit starts on *First
 steps*. The examples before 0.54.0 are test fixtures (`test/fixtures/scenes/`).
 
 ---
@@ -348,7 +352,7 @@ steps*. The examples before 0.54.0 are test fixtures (`test/fixtures/scenes/`).
   compiles and a pipeline cache, indirect dispatch, frame batching, texture upload. **Public at
   `lampmaker/tinywebgpu`, MIT, © Matthijs Keuper, 0.5.0**, not on npm. Until 0.5.0 this application
   ran its own copy, well ahead of the release; the submodule ended that.
-- **`lib/timeline/`**: keyframes, sequencer, editor, recorder, MP4 and PNG-ZIP encoders. A vendored
+- **`lib/timeline/`**: keyframes, sequencer, editor, recorder, MP4, GIF and PNG-ZIP encoders. A vendored
   copy of the author's CODE_WOOD library.
 - **`lib/guistuff/`** (a git submodule: property table, tree view, split pane — the author's public
   GUISTUFF, MIT), **`lib/shell/`**, **`lib/render-loop.js`**, **`lib/render-cost.js`**,
@@ -374,10 +378,10 @@ steps*. The examples before 0.54.0 are test fixtures (`test/fixtures/scenes/`).
 | read | written |
 |---|---|
 | Scenes, projects, workspaces (`.json`, every version) | Scenes, projects, workspaces (`.json`) |
-| Zemax ray files (`.DAT`) | **PNG** pictures; **MP4** or PNG-ZIP video |
-| Library files, timeline files (`.json`) | **3MF with colour**, **STL** |
+| Zemax ray files (`.DAT`) | **PNG** pictures; **MP4**, **GIF** or PNG-ZIP video |
+| Library files (`.json`), timeline files (`.timeline.json`) | **3MF with colour**, **STL** |
 | | **CSV**: measure readings, intensity table, illuminance map, detector hits; chart PNGs |
-| | Library files, timeline files (`.json`) |
+| | Library files (`.json`), timeline files (`.timeline.json`) |
 
 Since 0.1.0 every scene, project, workspace and library file written records the application's version
 and git revision that wrote it, as `app` (`version.js`, `CHANGELOG.md`); reading ignores it.
