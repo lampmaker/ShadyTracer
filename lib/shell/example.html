@@ -71,6 +71,8 @@ S.layout.onApply(() => S.open('view'))
 S.standardCommands(new URLSearchParams(location.search).has('bare') ? { window: false, layouts: false } : undefined)
 // a button of the page's own on the menu bar, right after the menus (S.tools)
 { const b = document.createElement('button'); b.className = 'shell-menu'; b.textContent = '↶'; b.title = 'A tool of the page\'s'; b.onclick = () => S.status('tool'); S.tools.appendChild(b) }
+// ...and one at the bar's right end, after the title (S.barEnd)
+{ const b = document.createElement('button'); b.className = 'shell-menu'; b.textContent = '♥'; b.title = 'The page\'s, at the end'; b.onclick = () => S.status('end'); S.barEnd.appendChild(b) }
 const how = S.layout.restore()
 S.open('view')
 // ------------------------------------------------------------------------------------------------------

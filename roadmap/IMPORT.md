@@ -6,7 +6,7 @@ mean different operations or tools for different file types. Optics?"* Sections 
 ground a plan would stand on: what the formats hold, what the renderer can take, what each route costs, and
 what has to be measured before choosing.
 
-> **Update 2026-10-21 (0.71.0): STEP and STL import is built, by a route sections 0-10 did not have.** A CAD part's
+> **Update 2026-10-21 (0.72.0): STEP and STL import is built, by a route sections 0-10 did not have.** A CAD part's
 > faces lie on planes, cylinders, cones, spheres and tori, and the part is a boolean formula over those surfaces'
 > half-spaces. The formula becomes the builder's own shapes joined by union, intersect and subtract. That needs none of
 > P0's plumbing (no GPU assets, no 3D textures) and no OpenCascade. It is exact, the lens included, and the normals
@@ -502,7 +502,7 @@ reaches:
 
 ---
 
-## 11. Primitives and booleans: built (2026-10-21, 0.71.0)
+## 11. Primitives and booleans: built (2026-10-21, 0.72.0)
 
 The user, 2026-10-21: *"Start working on stl and step import. Investigate possibilities to optimize these for
 sdf/pathtracing. Eg conversion to primitives with boolean operations if that helps to simplify the model/optimize for

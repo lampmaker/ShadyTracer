@@ -123,7 +123,7 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
    overlapping ones); `warp(k)` and the twist's divisor √(1 + c²) against the map's largest stretch
    (c + √(c² + 4)) / 2 (the flat world's swirl, and a 3D plate measured by the test at 1.14); the noise relief raw,
    divided and with its shell, a ray rocking for 300 steps → scene_api.js, modifiers.js, codegen.js combine,
-   noise.js. Planned for it (0.71.0): the same joins read backwards, a CAD part as a union of products over its faces'
+   noise.js. Planned for it (0.72.0): the same joins read backwards, a CAD part as a union of products over its faces'
    half-spaces -- separators where a curved face ends, no two products only touching inside the solid (a seam a ray in
    glass would stop at), the formula a bound by min and max of exact distances, and the facets of an STL fitted back to
    the cylinders they were -> import/csg.js, shapes.js, fit.js. *Read:* iq-distfunctions, iq-interior, iq-fbmsdf,

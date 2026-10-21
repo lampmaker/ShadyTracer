@@ -240,7 +240,7 @@ function fromPoints() {
     return { doc, camera: orbit([10, 0, 60], -80, 25, 600) }
 }
 
-/* IMPORTED PARTS (0.71.0, import/): five parts made in OpenCascade (import/test/fixtures/make.py), read from their STEP
+/* IMPORTED PARTS (0.72.0, import/): five parts made in OpenCascade (import/test/fixtures/make.py), read from their STEP
    files -- and the rounded box again from its STL -- by File › Import from file…'s own conversion, each a group of the
    builder's shapes: the plate a box less four holes and a pocket, the lens two spheres and a cylinder. What the
    import makes is what is here; nothing was placed by hand but where each stands on the table. A part keeps its own

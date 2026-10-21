@@ -118,7 +118,7 @@
 // its two new parameters (`let softness = UB.softness_m1;`, `let level = UB.level_m1;`), and its uniforms gained exactly
 // those two. The freeze changed that scene's entries alone, key by key; the other 47 documents did not move.
 //
-// TWO DOCUMENTS ADDED (2026-10-21, 0.71.0): scenes/imported-parts.json, the STEP and STL import's example (scenes/make.mjs,
+// TWO DOCUMENTS ADDED (2026-10-21, 0.72.0): scenes/imported-parts.json, the STEP and STL import's example (scenes/make.mjs,
 // made by import/), and bench/scenes/imported.json, its frozen copy for Tests > imported (bench/imported.js). No codegen
 // change: the freeze added their two entries and moved no other document's (compared key by key before and after).
 //======================================================================================================================
