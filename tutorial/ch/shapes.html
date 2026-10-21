@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Building and bending shapes · ShadyTracer, inside out</title>
+<link rel="stylesheet" href="../kit/kit.css">
+<script type="module" src="shapes.js"></script>
+</head>
+<body data-chapter="shapes">
+<p class="kit-offline">This page runs from a web server, not from a file: in the repository run <code>python3 -m http.server 8000</code> and open http://localhost:8000/tutorial/.</p>
+<main class="sheet">
+
+<header class="sheet-head">
+  <div>
+    <p class="eyebrow">Part I · Seeing with rays · Chapter 3</p>
+    <h1>Building and bending shapes</h1>
+    <p class="lede">A die with dots cut into it, a lamp shade melted onto its stand, a twisted column, a rough stone:
+      none of them is a sphere or a box, and all of them are built from spheres and boxes. Each way of combining or
+      changing a shape is a small change to its distance formula. The hard part is keeping the one rule of chapter 2
+      while doing it: a distance must never be too large.</p>
+  </div>
+  <div class="titleblock" data-auto></div>
+</header>
+
+<section class="scene" id="join">
+  <div class="prose">
+    <h2><span class="n">1</span>Three ways to join two shapes</h2>
+    <p data-step="csg:union">Chapter 2 joined a circle and a box by keeping the smaller of their two distances: the
+      nearest surface is the nearer of the two. Everything in either shape is in the result, a
+      <a data-g="union">union</a>. The faint outlines are the two shapes as they were; the bold line is the surface of
+      the result. Drag either shape by the circled cross in its middle.</p>
+    <p data-step="csg:intersect">Keep the <em>larger</em> of the two distances instead, and only what is in both shapes
+      is left: an <a data-g="intersection">intersection</a>. A point outside either shape has a positive distance to it,
+      and the larger number says so.</p>
+    <p data-step="csg:subtract">To cut the circle out of the box, turn the circle inside out first: change the sign of
+      its distance, so that inside becomes outside. Then take the larger, as for an intersection: what is in the box
+      and in the circle's outside is left. That is a <a data-g="subtraction">subtraction</a>. These three, with the shapes
+      themselves, are <a data-g="csg">constructive solid geometry</a>: a die is a rounded box with a sphere subtracted
+      for every dot.</p>
+    <p data-step="csg:blend">Each of the three can be blended. The <a data-g="smin">smooth blend</a> of chapter 2 takes a
+      little off the smaller distance where the two are within <var>k</var> of each other, and a
+      <a data-g="fillet">fillet</a> fills the corner. Its twin for the larger of the two adds a little instead.</p>
+    <p data-step="csg:carve">A blended subtraction rounds the edges of the cut, where the circle's bite meets the box's
+      sides (in 3D: the rim of a hole drilled into a block). Move the <strong>blend k</strong> slider to see how far the
+      rounding reaches. At the lower right the circle's edge runs close to the box's bottom edge, and the strip of box
+      left between them is thin; the blend, which takes off up to <var>k</var>/4 wherever the two distances are within
+      <var>k</var> of each other, thins it further, to a point. Move the circle up or down and watch the tail change.</p>
+    <details class="maths">
+      <summary><span class="tag">The maths</span>Min, max and their smooth twins</summary>
+      <div class="body">
+        <p class="eq"><var>d</var><sub>together</sub> = min(<var>a</var>, <var>b</var>), &nbsp;
+          <var>d</var><sub>overlap</sub> = max(<var>a</var>, <var>b</var>), &nbsp;
+          <var>d</var><sub>a minus b</sub> = max(<var>a</var>, −<var>b</var>)</p>
+        <p class="eq"><var>h</var> = max(<var>k</var> − |<var>a</var> − <var>b</var>|, 0), &nbsp;
+          smin = min(<var>a</var>, <var>b</var>) − <span class="frac"><span><var>h</var><sup>2</sup></span><span>4<var>k</var></span></span>, &nbsp;
+          smax = max(<var>a</var>, <var>b</var>) + <span class="frac"><span><var>h</var><sup>2</sup></span><span>4<var>k</var></span></span></p>
+        <dl class="terms">
+          <dt>a, b</dt><dd>the two shapes' distances at the same point</dd>
+          <dt>−b</dt><dd>the second shape turned inside out: negative outside it, positive inside</dd>
+          <dt>k</dt><dd>the blend: how close the two distances must be for the blend to change anything. With
+            <var>k</var> = 0 the blend is the plain min or max</dd>
+        </dl>
+        <p>Are these still distances? Outside, min of two true distances is the true distance to the nearer shape.
+          Inside, and for max, the result is not always the true distance, but it is never larger than it, which is
+          all chapter 2's rule asks. The blends take off or add at most <var>k</var>/4, and stay safe too: their slope
+          is a mix of the two shapes' slopes (section 2's maths), so it is never steeper than 1, and a formula that is
+          0 on its surface and never steeper than 1 is never larger than the distance to that surface.</p>
+      </div>
+    </details>
+    <aside class="refs"><span class="tag">Read more</span><ul>
+      <li data-ref="iq-distfunctions">The section on combining shapes: union, subtraction and intersection, their smooth
+        versions, and more ways of changing a shape (rounding, hollowing, repeating, twisting) that this chapter meets
+        below.</li>
+      <li data-ref="iq-interior">Where exactly min and max stop being true distances inside a shape, with pictures, and
+        what that costs a ray that travels inside glass.</li>
+    </ul></aside>
+  </div>
+  <figure class="fig" data-fig="csg">
+    <figcaption>A circle and a box joined: together (min), overlapping (max), or the box with the circle cut out. The
+      faint outlines are the two shapes, the bold line the result's surface, the thin lines places of equal distance.
+      Drag the circled crosses to move the shapes.</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="normal">
+  <div class="prose">
+    <h2><span class="n">2</span>Which way does a fillet face?</h2>
+    <p data-step="fillet:now">Light bounces off a surface according to which way the surface faces: its
+      <a data-g="normal">normal</a>, the arrow straight out of it. Two families of shape functions meet here. The
+      shapes the scene builder offers are mostly made from functions that hand back their normal along with their
+      distance (<code>Nsphere</code>, <code>Nbox</code>; chapter 4 says why that saves work). The plain functions of the
+      renderer's shape library (<code>sdBox</code> and the other <code>sd…</code> ones), which the comment in section 6
+      calls "most primitives", hand back none. A blend has to make one for the fillet,
+      which neither shape has. Here a ball sits on a box, blended. The arrows are normals, and the thick line is the surface lit from
+      the upper left: brighter where its normal faces the lamp. In the blend's zone the arrows are drawn in the accent
+      colour (<span data-say="accent">red</span>). Every arrow stands square to the surface, and the light runs smoothly
+      over the fillet. On the fillet, which curves inwards, arrows square to the surface lean towards each other and
+      cross a little way out: that is how they should look on a hollow.</p>
+    <p data-step="fillet:before">This is how it looked before a bug was fixed. Here the box is one of the shapes that
+      give no normal (an arrow of length zero), like the plain box of ShadyTracer's shape library; the ball gives one. The blend mixed the two arrows and stretched the mix back to length
+      one, and a mix of nothing with the ball's arrow is the ball's arrow, whatever the mix. So the whole fillet was lit
+      as if it were part of the ball: look at the accent arrows on the box's top near the ball, pointing away from the
+      ball's centre instead of straight up.</p>
+    <p data-step="fillet:wide">With a wider blend the wrong zone is wider. The surface itself was always in the right
+      place, since the distances were right; only its light was wrong, so the fillet <em>looked</em> warped, and no
+      smaller step could fix it. The fix: if either shape gives no normal, the blend gives none either, and the renderer
+      works it out from the blended distance itself, which is always right (chapter 4 shows how). That is the
+      <strong>Now</strong> button.</p>
+    <details class="maths">
+      <summary><span class="tag">The maths</span>The slope of a blend</summary>
+      <div class="body">
+        <p>A normal is the direction in which the distance grows fastest, its <a data-g="gradient">gradient</a>, written
+          ∇. Where <var>a</var> is the nearer shape and the blend is active (<var>h</var> &gt; 0), smin =
+          <var>a</var> − <var>h</var>²/4<var>k</var> with <var>h</var> = <var>k</var> − (<var>b</var> − <var>a</var>).
+          Working out how it changes when <var>a</var> or <var>b</var> changes (a step of calculus; a check: where the
+          two distances are equal, <var>t</var> = ½ and the two normals are mixed half and half) gives</p>
+        <p class="eq">∇ smin = (1 − <var>t</var>) ∇<var>a</var> + <var>t</var> ∇<var>b</var>, &nbsp; <var>t</var> = <span class="frac"><span><var>h</var></span><span>2<var>k</var></span></span></p>
+        <dl class="terms">
+          <dt>∇a, ∇b</dt><dd>the two shapes' normals</dd>
+          <dt>t</dt><dd>how much of <var>b</var>'s normal goes into the mix: 0 outside the blend, ½ where the two
+            distances are equal</dd>
+        </dl>
+        <p>So the blended normal is exactly a mix of the two normals, <code>mix(∇a, ∇b, t)</code>, made one unit long,
+          as long as both exist. With ∇<var>a</var> = 0, the mix is <var>t</var> ∇<var>b</var>, and made one unit long
+          that is ∇<var>b</var> for any <var>t</var> above 0: the bug, in one line.</p>
+      </div>
+    </details>
+  </div>
+  <figure class="fig" data-fig="fillet">
+    <figcaption>A ball blended onto a box. Arrows: the normals ShadyTracer would shade the surface with, in the blend's
+      zone in the accent colour (where a shape gives no normal, the arrow is worked out from the distances, as chapter 4
+      explains). The thick line: the surface lit by the lamp at the upper left through those normals, brighter where
+      it faces the lamp.
+      <strong>Before the fix</strong> shows the fillet lit with the ball's normal.</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="inside">
+  <div class="prose">
+    <h2><span class="n">3</span>Which solid is a point in?</h2>
+    <p data-step="fold:nested">A renderer asks a joined scene two different questions at a point. Which surface is
+      nearest, so a ray knows how far it may step and what it hits? And which solid is the point <em>inside</em>, so a
+      ray travelling through glass or water knows what it is in? (Light bends by how much the two sides of a surface
+      differ, which chapter 10 explains.) Here a glass ball lies in a pool of water. Drag the probe, and the ball. The
+      readout gives both answers; the glass-coloured region is everywhere the renderer would say "in glass".</p>
+    <p data-step="fold:water">Why two questions? Here the probe is in the water, just outside the ball: the nearest
+      surface is the ball's, 0.10 away, the one whose distance is smallest in size, inside or out; but the point is in
+      water. The solid a point is in, ShadyTracer decides another way:
+      of all the solids the point is inside (negative distances), the one it is <em>least deep</em> in. A ball lying
+      wholly in the water wins inside itself, always, because no path from a point in the ball reaches the water's
+      surface without crossing the ball's first: the ball's surface is the nearer.</p>
+    <p data-step="fold:overlap">Drag the ball half out of the water. Now the rule is a guess, and here it guesses
+      wrong: the probe is inside the glass, but nearer the water's surface than the ball's, so the renderer says
+      "water". Part of the ball, near the water's edge, has lost its glass. Two solids claiming the same space have no
+      right answer, so build scenes with one inside the other, or cut one out of the other with a subtraction.</p>
+  </div>
+  <figure class="fig" data-fig="fold">
+    <figcaption>A glass ball in a pool of water (drawn as a disc). The glass-coloured region is where the renderer's
+      rule says a point is in glass. The probe (the accent-coloured ⊕) has a circle reaching the nearest surface; the
+      other ⊕ moves the ball.</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="warp">
+  <div class="prose">
+    <h2><span class="n">4</span>Bending space</h2>
+    <p data-step="swirl:plain">To twist a column, ShadyTracer does not change the column. It changes the point the column
+      is asked about: before asking, it turns the point the other way, by an angle that grows with the height. Every
+      slice of the column comes out turned. Changing the point instead of the shape is a <a data-g="warp">warp</a>; the
+      same trick bends, mirrors and repeats shapes. The flat world has no height, so here the angle grows with the
+      distance from the middle instead: a bar, about to become a swirl.</p>
+    <p data-step="swirl:raw">Turned. The shape looks right, but look at the lines of equal distance: on the arms they
+      crowd together. A warp stretches space, and the farther from the middle, the more. A short move across an arm
+      changes the formula by up to 1.77 times what a true distance could change. That breaks chapter 2's rule: the dots
+      mark where it is broken, and the probe's circle, drawn <span data-say="blocked">red</span> when it does, claims empty space that is not: it
+      reaches well into the arm.</p>
+    <p data-step="swirl:sqrt">The fix is chapter 2's: divide by the steepest slope (the formula's
+      <a data-g="lipschitz">Lipschitz bound</a>). ShadyTracer's twist divides by √(1 + <var>c</var>²), with
+      <var>c</var> = the turn rate × the <em>extent</em>, how far the shape reaches from the axis (the dashed circle).
+      That is how much the twist stretches a move straight along the axis (in the flat swirl: straight away from the
+      middle). But some dots stay:
+      a move partly along and partly around is stretched more. The steepest slope left is 1.13, and the probe's circle
+      still cuts a little way into the arm.</p>
+    <p data-step="swirl:exact">The most the map can stretch any move is (<var>c</var> + √(<var>c</var>² + 4)) / 2. Divided
+      by that, no dot is left anywhere inside the extent, the steepest slope is 1.00, and the circle only touches the
+      arm. Both divisors are worked out for the extent: beyond it the swirl stretches more, so the probe stays inside
+      the dashed circle. (Whether the 3D twist's steps are safe beyond its extent is not measured here.)</p>
+    <details class="maths">
+      <summary><span class="tag">The maths</span>How much a twist stretches</summary>
+      <div class="body">
+        <p>Near a point at distance <var>r</var> from the axis, take two directions: along the axis (up), and around it.
+          A small move up by <var>u</var> turns the point by an extra angle rate × <var>u</var>, and turning a point at
+          distance <var>r</var> by an angle φ moves it <var>r</var>·φ along its circle: so the turned point moves around
+          by <var>c</var>·<var>u</var>, with <var>c</var> = rate × <var>r</var>. A move around by <var>v</var> stays a
+          move around by <var>v</var>. So a move
+          (<var>u</var>, <var>v</var>) becomes (<var>u</var>, <var>v</var> + <var>c u</var>):</p>
+        <p class="eq">|(<var>u</var>, <var>v</var> + <var>c u</var>)|² = <var>u</var>² + (<var>v</var> + <var>c u</var>)²</p>
+        <p>For a move straight up (<var>v</var> = 0, <var>u</var> = 1) that is 1 + <var>c</var>², so the move is
+          stretched by √(1 + <var>c</var>²). But a move can point any way: write it as <var>u</var> = cos θ,
+          <var>v</var> = sin θ, one unit long, and look for the θ that makes cos²θ + (sin θ + <var>c</var> cos θ)²
+          largest. That expression is the stretch squared. Trying every θ (or a little algebra) finds its largest value,
+          <var>L</var>², and the largest stretch itself is</p>
+        <p class="eq"><var>L</var> = <span class="frac"><span><var>c</var> + √(<var>c</var>² + 4)</span><span>2</span></span></p>
+        <p>For <var>c</var> = 1 that is 1.618 against √2 = 1.414. The gap is largest near <var>c</var> = 0.7, where
+          <var>L</var> is 1.155 times √(1 + <var>c</var>²). (For <var>c</var> = 1 the largest squared stretch is 2.618, and its
+          square root 1.618.) The flat world's swirl stretches moves in the very same way, with
+          <var>r</var> the distance from the middle, which is why the figure shows the twist's numbers.</p>
+      </div>
+    </details>
+  </div>
+  <figure class="fig" data-fig="swirl">
+    <figcaption>A bar turned by an angle that grows with the distance from the middle: the flat world's twist. Dots:
+      places where the distance formula is still steeper than 1. The dashed circle is the extent, the reach the divisor
+      is worked out for. Drag the probe (it stays inside the extent).</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="rough">
+  <div class="prose">
+    <h2><span class="n">5</span>Rough surfaces</h2>
+    <p data-step="relief:raw">A rough surface is a shape with a little added to its distance: a
+      <a data-g="noise-pattern">noise pattern</a>, smooth hills and valleys of number that are the same every time the
+      same point is asked about. ShadyTracer adds four layers of it, each twice as fine and half as strong as the one
+      before (<a data-g="fbm">fBm</a>), and calls it a <a data-g="relief">relief</a>. Here it is on a circle. Added
+      as it is, it makes the formula steeper, as a warp does, and a ray marched through it (the dots are its steps)
+      gets stuck. A march stops when the distance falls below its tolerance (chapter 2); here each step lands just past
+      the surface, the next steps back just short of it, by the same amount, for ever, and the distance never gets
+      small enough. The steps are too
+      close together to tell apart here, so the plot at the right shows the distance the march saw at each of its last
+      ones (its scale changes with the mode, to fit them): a zigzag about zero. After 300 steps it gives up, with half of them inside the shape (<span data-say="blocked">red</span>).</p>
+    <p data-step="relief:divided">Divided by the steepest the noise can make it, the slope bound in the readout, the
+      march is safe and settles, the plot's last steps falling to zero: 33 steps. The bound is 1 + (amount ÷ size) ×
+      17.2 ÷ 1.875. The noise is four layers, each half as strong as the one before and twice as fine; half the height
+      over half the width is the same slope, so every layer is as steep as the first, 4.3 at most (a measured number,
+      section 7), and four of them 17.2. Their strengths add up to 1 + ½ + ¼ + ⅛ = 1.875, and dividing by that turns
+      "amount" into the first layer's share. Scaled by how tall the bumps are against how wide: wider bumps of the same
+      height are gentler. But it pays for the noise at every step, even out where the noise cannot possibly matter, and
+      its steps are a fraction of what they could be.</p>
+    <p data-step="relief:shell">The noise can move the surface by at most a known amount, its <em>reach</em>. So further
+      than twice that from the plain circle (outside the dashed band), the circle's own distance, less the reach, is a
+      safe distance: no noise, no division. Twice, not once: just past the reach that distance is tiny, and a ray
+      grazing the band would crawl along it in tiny steps; from twice the reach out, every step is at least the reach
+      long (the code's comment says so). Only points inside the band pay for the noise. The same ray: 22 steps, most
+      of them near the surface, where the plot's scale makes them look like zero. The reach is not "amount" itself
+      but 1.386 times it, the furthest the noise can reach (section 7): the readout's 0.166 for an amount of 0.12.</p>
+    <aside class="refs"><span class="tag">Read more</span><ul>
+      <li data-ref="iq-fbmsdf">Quilez starts where this section does: adding noise to a distance is "not an SDF
+        anymore". His answer is different: grow the detail as small shapes joined to the surface with smooth unions, so
+        the result stays a distance. ShadyTracer adds the noise and divides instead.</li>
+      <li data-ref="iq-smin">The smooth minimum, which Quilez's answer above is built from, as is every blend on this
+        page.</li>
+    </ul></aside>
+  </div>
+  <figure class="fig" data-fig="relief">
+    <figcaption>A circle with a noise relief (the noise is a 3D pattern; the figure shows one flat slice of it): the
+      bold line is its surface, the thin lines
+      places of equal distance as the march sees them. A ray marched from the circled cross, its steps as dots, <span data-say="blocked">red</span> where
+      they are inside; the plot at the right, the distance it saw at each of its last steps. The dashed band: where the
+      shell still asks the noise.</figcaption>
+  </figure>
+</section>
+
+<section class="plain wide" id="code">
+  <div class="prose">
+    <h2><span class="n">6</span>How ShadyTracer does it</h2>
+    <p>Most of this section's code is <a data-g="wgsl">WGSL</a>, the language the graphics card runs (chapter 21), kept
+      as text inside JavaScript files. For each scene the renderer writes its shapes and joins into one program for the
+      card, a <a data-g="shader">shader</a> (chapter 24); the functions from <code>scene_api.js</code> below are part of every such program,
+      and the three from <code>codegen.js</code> and <code>modifiers.js</code> are JavaScript that writes the rest.</p>
+    <p>The joins work on a shape's normal and distance together, four numbers (a <code>VEC4</code>: the normal's three,
+      then the distance <code>w</code>). Blending needs both normals, and a missing one means none:</p>
+    <pre data-src="lib/pathtracer/core/scene_api.js" data-sym="fn csgNormal" data-to="fn csgSubtract"
+         data-why="The three joins of section 1 and the normal of section 2. Each shape comes as four numbers: a.xyz, the first three, is its normal, and a.w, the fourth, its distance. dot(a, a) is a vector's length squared, so the first line returns no normal when one side has none. select(x, y, c) is y if c is true, else x; mix(a, b, t) is a + (b − a) t. Read the lines with h: the blend takes off (or adds) h²/4k, at most k/4, m is 0 when a is the nearer and 1 when b is, and t, the weight of b's normal, is then h/2k or 1 − h/2k: a half each where the two distances are equal (h = k), all the nearer one's at the blend's edge (h = 0). A hard join (k = 0) keeps the winner whole, normal and all." data-hash="a5598ee6"></pre>
+    <p>Every shape's answer then goes into one record per point, the <code>Hit</code>, by <code>fold</code>: the nearest
+      surface by size, and the solid the point is least deep in (section 3):</p>
+    <pre data-src="lib/pathtracer/core/scene_api.js" data-sym="fn fold" data-max="34"
+         data-why="sdf.w is the shape's distance and sdf.xyz its normal, as in the excerpt above. H.s and H.m are the nearest surface and its material; H.a and H.insideW the solid the point is in and how deep: read the two ifs, the first for the solid (of the negative distances, the one nearest zero: the solid the point is least deep in), the second for the surface (the smallest size of distance). The LOCAL_CAPTURE part records where on the object a point is, for materials fixed to an object, and runs only when asked." data-hash="ee27df92"></pre>
+    <p>A group of shapes picks its material by the same test the join uses to pick its side, so a hole's walls wear the
+      cutter's material:</p>
+    <pre data-src="builder/codegen.js" data-sym="const combine = (dd, c) => {"
+         data-why="This is JavaScript writing WGSL: each line(...) adds a line to the shader built for the scene (chapter 24). MAT_WINS gives the test per join, CSG_FN the join's function." data-hash="87056de1"></pre>
+    <p>A warp says what it did to space, so the distances and normals after it can be put right:</p>
+    <pre data-src="lib/pathtracer/core/scene_api.js" data-sym="fn warp"
+         data-why="Its k is not the blend's k: here it is the factor every distance is multiplied by (1 / the divisor). XF_S scales every distance folded in after it; XF_M is the frame the shapes' normals are turned by, and zeroing it makes them zero, so the renderer takes the normal from the distances (chapter 4)." data-hash="a898dc0e"></pre>
+    <p>and the twist, written as a group's own code, calls it with one over the divisor of section 4 (warp multiplies
+      the distances by what it is given):</p>
+    <pre data-src="builder/modifiers.js" data-sym="twist: {" data-to="].join('\n'),"
+         data-why="A modifier is a group whose code starts as this; the user can change it. p is the point being asked about; children(C, p) asks the group's shapes at the turned point. lengths and perLength say which of its numbers are lengths in the scene's unit and which are per one (the rate is radians per unit): what a change of the scene's unit converts when it keeps the real size." data-hash="0937064b"></pre>
+    <p>The relief, with its shell and its division, is code of the same kind:</p>
+    <pre data-src="builder/modifiers.js" data-sym="const reliefCode" data-to="].join('\n')" data-max="40"
+         data-why="peak is the four layers' strengths added up, slope the bound the distance is divided by, reach how far the noise can move the surface. Beyond 2 × reach (and a margin), the plain distance less the reach: no noise. Its comment lines are the code the user sees in the group." data-hash="be46cddc"></pre>
+    <p>One more piece: a relief inside a blend is not divided until after the blend (section 8 says why):</p>
+    <pre data-src="lib/pathtracer/core/scene_api.js" data-sym="/* A RELIEF'S DISTANCE INTO THE HIT" data-to="return fold(C, VEC4(0.0, 0.0, 0.0, d), m);"
+         data-why="foldRelief folds a relief's distance into the Hit: divided by its slope at once, or, under a blend, undivided, with the slope kept in XF_RL for the group at the top of the blend to divide by once. NORMAL_LOOK, between them, is that group's one exception: while the renderer asks for the distances a normal is made from, it does not divide (section 8). The line in the group that reads it is written by the scene builder and is not shown here." data-hash="33d61afd"></pre>
+  </div>
+</section>
+
+<section class="plain wide" id="tricks">
+  <div class="prose">
+    <h2><span class="n">7</span>Tricks and trade-offs</h2>
+    <p>Each is stamped with how it is known; point at a stamp to see what it means.</p>
+    <div data-claim="code">
+      <p><strong>Noise only near the surface.</strong> The relief's shell (section 5) asks the noise only within twice
+        its reach of the plain surface. Its reach is <em>proved</em>, not measured, in <code>noise.js</code>
+        (<cite data-src="lib/pathtracer/core/noise.js" data-sym="export const NZ_GRAD_VALUE_BOUND"></cite>): 1.386 times
+        the strength. A reach that were only measured could cut the relief off wherever the noise went further, and the
+        comment says so.</p>
+    </div>
+    <div data-claim="measured">
+      <p><strong>A measured bound, a quarter the steps.</strong> One layer of the noise can be proved never to slope more
+        than 1.6 × (1 + 5.625√3) = 17.2 (the same number as section 5's four measured layers, by chance). A dense search for its steepest found 3.437 (<code>test/noise.test.mjs</code>, 2026-09-29), and the
+        relief divides by that times 1.25, 4.3: steps four times as long as the proof allows. A later, longer search
+        found 3.854, so the margin for one layer alone is 12%, not 25%. A measurement is not a proof, and
+        <code>noise.js</code> says so beside the number:
+        <cite data-src="lib/pathtracer/core/noise.js" data-sym="export const NZ_GRAD_LIP_MEASURED"></cite>.</p>
+    </div>
+    <div data-claim="measured">
+      <p><strong>The twist's divisor is too small for some shapes.</strong> Section 4's gap is real in 3D too. Measured by
+        this tutorial's test (<code>tutorial/test/tutorial.test.mjs</code>, in node, in 64-bit numbers, on a copy of the
+        modifier's arithmetic): a thin plate tilted 45° at the edge of a twist's extent (rate 0.8, extent 1) still has a
+        slope of 1.14 after the twist's division, so a step of 0.9 × the distance can be about 3% longer than the true
+        distance. A plain box in a twist stays under 1 (0.98). A step 3% too long near a surface usually lands just inside
+        it and steps back; it could jump a sheet thinner than that. The swept shapes in <code>shapes.js</code> use the
+        same √(1 + <var>c</var>²), and there it is exact: their slices have no slope along the path. The figure's
+        exact divisor, up to 15% larger, would cost a twist up to 13% shorter steps; this tutorial does not change the engine, so the gap is
+        reported, not fixed.</p>
+    </div>
+    <div data-claim="code">
+      <p><strong>Copies for the price of one.</strong> The repeat modifier folds space into one cell,
+        <code>p − spacing × round(p / spacing)</code>, and asks one shape there: endless copies, one distance each step.
+        Its comment calls it "the cheapest thing here", and says the catch: the shape must fit inside its cell, or the
+        distance is wrong near the cell borders.</p>
+    </div>
+    <div data-claim="code">
+      <p><strong>Every modifier says what it costs.</strong> A group's code runs at every step of every ray, so each
+        modifier's first comment says what it adds per step: a sine and a cosine for the twist, four noises for the
+        relief, nothing for round and shell (their code is in <code>builder/modifiers.js</code>; the twist's and the relief's
+        are in section 6).</p>
+    </div>
+  </div>
+</section>
+
+<section class="plain wide" id="before">
+  <div class="prose">
+    <h2><span class="n">8</span>What went wrong before</h2>
+    <ul>
+      <li><strong>A hard join was not a number.</strong> ShadyTracer's shape library has its own smooth joins
+        (<cite data-src="lib/pathtracer/core/sdf.js" data-sym="fn Nsmin"></cite>), and the scene's joins do not use them,
+        for two reasons the comment above <code>csgNormal</code> gives: they divide by <var>k</var>, so a hard join,
+        <var>k</var> = 0, gives NaN ("not a number", what 0/0 gives); and they make the mixed normal one unit long even
+        when both are zero, which is NaN again. A NaN normal fails the test <code>fold</code> holds every surface to
+        (does it face the ray?), and the surface silently disappears.</li>
+      <li><strong>The warped fillet</strong> of section 2: the comment's own example is a sphere scooped out of a box,
+        the same mix of nothing and the sphere's normal.</li>
+      <li><strong>White dots on a black die.</strong> A group used to wear its first shape's material everywhere, and
+        switched only for a union's nearer shape. So the dots cut into the die, by charcoal-coloured spheres, had white
+        walls. Since version 0.57.2 every part of the surface wears the material of the shape that makes it there, by
+        the join's own test (the <code>combine</code> excerpt).</li>
+      <li><strong>A relief divided too early.</strong> Divide each shape's distance by <var>c</var> before a blend, and
+        the blend comes out <var>c</var> times too wide: smin(<var>x</var>/<var>c</var>, <var>y</var>/<var>c</var>,
+        <var>k</var>) is exactly smin(<var>x</var>, <var>y</var>, <var>k c</var>) / <var>c</var>. So a relief inside a
+        blend goes in undivided, and the top of the blend divides once, by the steepest relief below it
+        (<code>foldRelief</code>).</li>
+      <li><strong>A line round a cut.</strong> "The steepest relief below it" is the steepest <em>near the point</em>: a
+        relief farther from its own surface than its band is skipped, and adds nothing. The band is twice the relief's
+        height plus 5/4 of the blend, so the wider the blend, the farther out it reaches. Cut a sphere of steep knockdown
+        stucco from a box of gentle white plaster, and on the plaster the divisor was the stucco's, 4.67, within the
+        stucco's band, and the plaster's, 1.11, beyond it. The surface stayed where it was, since 0 divided by anything
+        is 0. But a normal is worked out from the distances at points a small step apart (chapter 4), and two of them
+        either side of the band's edge came back divided differently: a distance of 0.05 read 0.05 / 1.11 = 0.045 on one
+        side and 0.05 / 4.67 = 0.011 on the other. Their difference was the jump, not the surface's slope, and the normal
+        turned by up to 86°: a thin dark line round the hole, farther out the wider the blend. Dividing every distance
+        by one number does not change which way the arrow points, so since version 0.71.1, when the renderer asks for
+        the distances a normal is made from, the group does not divide (<code>NORMAL_LOOK</code>, declared in the
+        excerpt in section 6). A group inside a group with code of its own still divides then: that code (a rounding,
+        say) may use the distance away from the surface, where the division changes the shape.</li>
+      <li><strong>Bumps 1/<var>k</var> too big.</strong> A relief sized in millimetres needs the true scale of the space
+        it is in. Under a twist, the scale ShadyTracer kept included the twist's factor <var>k</var> (one over its
+        divisor), and the bumps came out 1/<var>k</var> times too big; it now keeps the factors apart
+        (<cite data-src="lib/pathtracer/core/scene_api.js" data-sym="var<private> XF_K: f32 = 1.0;"></cite>).</li>
+    </ul>
+  </div>
+</section>
+
+<section class="plain" id="try">
+  <div class="prose">
+    <h2><span class="n">9</span>Try it</h2>
+    <ul>
+      <li>In the first figure, choose <strong>Box minus circle</strong> and drag the circle until it cuts the box in
+        two. Then blend it.</li>
+      <li>In the fillet figure, choose <strong>Before the fix</strong> and move the blend from 0.05 to 1. Where do the
+        arrows go wrong first?</li>
+      <li>In the swirl, set the turn to 0.6 and compare the two divisors' steepest slopes. Then 1.6. Where is the gap
+        largest?</li>
+      <li>In the relief figure, make the size larger with the amount fixed. Why does the slope bound fall? Then drag the
+        ray's start up and down with <strong>Not divided</strong>: how often does it get stuck?</li>
+      <li>In ShadyTracer, open <strong>File › Projects…</strong>, add a copy of the example <em>Combining shapes</em>,
+        select a group in the Scene tree, and look at its joins in the Properties panel.</li>
+    </ul>
+    <h3>Words from this chapter</h3>
+    <ul class="words" data-words="csg union intersection subtraction smin fillet normal gradient warp lipschitz noise-pattern fbm relief"></ul>
+  </div>
+</section>
+
+<nav class="tabs" data-auto></nav>
+</main>
+</body>
+</html>

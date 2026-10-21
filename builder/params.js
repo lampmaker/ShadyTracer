@@ -96,7 +96,11 @@ export function sceneParams(doc, hooks = {}) {
         if (!bound(node, 'rot')) out.push({ ...base, path: `scene/${node.id}/transform/rotation`, label: `${where} › rotation`, unit: '°',
                    help: 'degrees about x, then y, then z', get: () => toArray(t.rot),
                    set: (x, o = {}) => { intoObject(t.rot, x); H.live(node.id, 'transform', o) } })
-        if (!bound(node, 'scale')) out.push({ ...base, dims: 1, path: `scene/${node.id}/transform/scale`, label: `${where} › scale`, min: 0.01, max: 10, step: 0.01,
+        /* a scale outside 0.01 to 10 is a real one (a part pasted from another unit, a unit changed by scaling the
+           objects: unitchange.js): the reach held to hold it, the step a hundredth of its decade, as the panel's row */
+        const s = t.scale > 0 ? t.scale : 1
+        if (!bound(node, 'scale')) out.push({ ...base, dims: 1, path: `scene/${node.id}/transform/scale`, label: `${where} › scale`,
+                   min: Math.min(0.01, s), max: Math.max(10, s), step: Math.min(0.01, 10 ** Math.floor(Math.log10(s)) / 100),
                    get: () => t.scale, set: (x, o = {}) => { t.scale = x > 0 ? x : 0.01; H.live(node.id, 'transform', o) } })
     }
 
@@ -158,7 +162,8 @@ export function sceneParams(doc, hooks = {}) {
     //      and the photons when they run
     function light(node, where) {
         const L = M.lightOf(node)
-        const add = (key, e, patch) => out.push({ path: `scene/${node.id}/light/${key}`, label: `${where} › ${e.label ?? key}`,
+        // a setting bound to its component's parameters (bind.js light.<setting>, 0.69.0) is theirs, as any bound value is
+        const add = (key, e, patch) => bound(node, `light.${key}`) ? undefined : out.push({ path: `scene/${node.id}/light/${key}`, label: `${where} › ${e.label ?? key}`,
             group: `scene · ${where}`, reveal: reveal(node.id), ...e,
             set: (x, o = {}) => H.light(doc, node, patch(x), o) })
         const byFlux = L.flux != null

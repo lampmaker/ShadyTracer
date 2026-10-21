@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>A ray tracer in one page · ShadyTracer, inside out</title>
+<link rel="stylesheet" href="../kit/kit.css">
+<script type="module" src="yours.js"></script>
+</head>
+<body data-chapter="yours">
+<p class="kit-offline">This page runs from a web server, not from a file: in the repository run <code>python3 -m http.server 8000</code> and open http://localhost:8000/tutorial/.</p>
+<main class="sheet">
+
+<header class="sheet-head">
+  <div>
+    <p class="eyebrow">Part IX · Build your own · Chapter 32</p>
+    <h1>A ray tracer in one page</h1>
+    <p class="lede">Every flat figure in this tutorial runs a small path tracer: a ray tracer, which follows rays from
+      the eye to what they hit, whose rays also bounce at random and are averaged over many tries. This chapter is that
+      path tracer, whole: one file, <code>tutorial/kit/onepage.js</code>, 88 lines of code and no imports, read part by part. It
+      finds surfaces by their distances, makes a picture from a camera, bounces light off matte walls and aims at a
+      lamp. Then it is extended by a mirror, in four lines, and set beside ShadyTracer, part by part, to show where each
+      piece grew up. Writing it also found two mistakes in the tutorial's own figures, told in section 6.</p>
+  </div>
+  <div class="titleblock" data-auto></div>
+</header>
+
+<section class="scene" id="march">
+  <div class="prose">
+    <h2><span class="n">1</span>Finding the first surface</h2>
+    <p data-step="march:hit">The world is the flat world of chapter 0: a slice, light spreading round circles. The room
+      is a floor, a ceiling, two walls and a box, each a shape the program knows only by its distance: for any point,
+      how far the nearest part of the shape is, negative inside (chapter 2). The lamp under the ceiling is a capsule:
+      every point within 0.015 of a line (drawn as a line; its outline matters in section 3). A ray leaves the eye and <a data-g="march">marches</a>: at each step it asks
+      every shape for its distance, and the smallest is a circle around the ray's point with nothing inside it, so the
+      ray can safely jump that far: in the figure each circle touches the nearest wall or the box. Here it reaches the
+      box's side in 8 steps. Drag the handle on the ray to aim it.</p>
+    <p data-step="march:graze">Skim the box's top and the march slows down: along the top the box is always close, so
+      every circle there is small (too small to see: the dots crowded along the top are its steps), and the ray takes 69
+      steps to get to where it hits. A real renderer pays for grazing rays the same way
+      (chapter 2). The march stops when a distance is below 0.001 (a hit) or the ray is 50 away (a miss), and gives up
+      after 200 steps. It steps 0.9 of each distance, not all of it: ShadyTracer's default
+      <a data-g="stepscale">step scale</a>
+      (<cite data-src="lib/pathtracer/core/uniforms.schema.js" data-sym="stepscale: { type: 'f32', def: 0.9"></cite>),
+      a margin for distances that are not quite exact and numbers that are slightly off (chapter 2).</p>
+    <p data-step="march:lamp">Aimed up, the ray reaches the lamp in 9 steps. At a hit the program needs the surface's
+      <a data-g="normal">normal</a>, the way it faces: the direction in which the hit shape's distance grows fastest,
+      found by asking for the distance a hair to each side of the point across and up, four looks: central differences
+      (chapter 4).</p>
+  </div>
+  <figure class="fig" data-fig="march">
+    <figcaption>One ray from the eye, marched by <code>onepage.js</code> march: each step's point and the circle its
+      distance draws (grey), the hit and its normal (<span data-say="accent">red</span>). Drag the handle to aim the
+      ray.</figcaption>
+  </figure>
+</section>
+
+<section class="plain wide" id="parts1">
+  <div class="prose">
+    <p>One piece of arithmetic runs through the code: the <em>dot product</em> of two arrows, their x's multiplied plus
+      their y's multiplied. For two arrows 1 long it is the cosine of the angle between them (chapter 1): 1 for the same
+      way, 0 at a right angle, below 0 when they point apart. It is the segment's <code>t</code> (how far along it a
+      point lies), every cosine in <code>lampLight</code>, the path's test of which side the ray came from, and the
+      mirror's <code>dn</code>.</p>
+    <p>The shapes, one function each: a circle, a box, a capsule (a segment with a radius).</p>
+    <pre data-src="tutorial/kit/onepage.js" data-sym="/* 1. SHAPES AS DISTANCES" data-to="const DIST = { circle, box, segment }"
+         data-why="s is the shape: c its centre, r its radius, h a box's half width and half height, a and b a segment's ends. Math.hypot(a, b) is √(a² + b²). In box, qx and qy are how far outside each pair of faces the point is (negative inside); outside a corner both are positive and the distance is the hypot of the two, inside it is the larger, the nearer face. In segment, t is how far along the segment the nearest point is, from 0 at a to 1 at b: the dot product of (p - a) with (b - a), over the segment's length squared, clamped so it stays on it. DIST names each function by its kind." data-hash="6326c01d"></pre>
+    <p>The scene's distance is the nearest shape's, and which shape that is:</p>
+    <pre data-src="tutorial/kit/onepage.js" data-sym="export function nearest"
+         data-why="DIST[shapes[k].kind] picks the shape's own function by its kind. i is the index of the nearest shape, -1 if there are none." data-hash="7d99315e"></pre>
+    <p>The march, and the normal:</p>
+    <pre data-src="tutorial/kit/onepage.js" data-sym="export function march"
+         data-why="(x, y) is where the ray starts and (dx, dy) its direction, of length 1, so the point at distance t along it is (x + dx t, y + dy t). The { eps = 1e-3, ... } = {} gives each setting a default. steps, when given, collects every point for the figure. Math.abs: a point that ends up a hair inside a shape has a negative distance, and the march still steps by its size. n + 1 is how many steps it took." data-hash="9cffc1fd"></pre>
+    <pre data-src="tutorial/kit/onepage.js" data-sym="export function normal"
+         data-why="h is the hair, 0.0001. gx is how much the shape's distance changes across the point from left to right, gy from below to above; together they point the way the distance grows fastest, out of the shape. Dividing by their length l makes the normal 1 long (|| 1 avoids dividing by 0)." data-hash="320899bc"></pre>
+  </div>
+</section>
+
+<section class="scene" id="film">
+  <div class="prose">
+    <h2><span class="n">2</span>From rays to a picture</h2>
+    <p data-step="film:one">The camera is a pinhole at the eye, its film 56 pixels across a field of view of 64°
+      (chapter 1). Each pixel's ray goes through a random point across the pixel, so its samples cover all of it. One
+      ray a pixel finds a surface; then the <a data-g="path">path</a> bounces: a matte surface sends the light it
+      receives evenly in every direction, so the program draws the next direction at random, more often near the normal,
+      because of the cosine law (chapter 1): light arriving at a slant is spread over more surface, so the directions
+      near the normal carry more of it (chapter 8), and multiplies the path's
+      <a data-g="throughput">throughput</a> by the surface's <a data-g="albedo">albedo</a>, the share it keeps (0.7 here).
+      A path that hits the lamp brings back its brightness, 1, times the throughput; most hit nothing glowing in five legs (the
+      eye's and one after each of up to four bounces) and bring back 0. The picture is one row of 56 pixels, the
+      first looking along the upper dashed line and the last along the lower; under the strip, what each stretch of it
+      sees first. Every strip is shown on one scale, white at 0.4 and above. The noise number in the readout is the
+      average jump between neighbouring pixels, divided by the picture's average. One sample a pixel: the picture's average 0.1118, and from pixel to pixel it jumps
+      by 1.5 times the average, nearly all noise.</p>
+    <p data-step="film:many">Each pixel is the average of its samples (chapter 12). 64 samples a pixel: the average
+      0.1184, the jumps down to 0.22 of it. The noise falls as one over the square root of the samples: 64 is 8 times
+      quieter than 1, and here 7 times.</p>
+    <p data-step="film:nee">Now aim at the lamp: next event estimation, NEE (chapter 14). At every bounce but the last, a
+      <a data-g="shadow-ray">shadow ray</a> to a random point of the lamp, and if nothing is in the way, the light that
+      point sends, divided by the chance of picking it. A path that then happens to hit the lamp adds nothing: the shadow ray
+      from that bounce already counted the light coming straight from the lamp, and the hit would count the same light
+      again. 16 samples a pixel: the average 0.1190, the same picture as 64 without aiming within
+      their noise, and its jumps 0.26 of it, nearly as quiet as 64 samples were, at a quarter of the paths (each also sends up to four shadow rays, so not a
+      quarter of the work).</p>
+    <p data-step="film:path">One path of pixel 15, drawn whole: its five legs numbered, each bounce's shadow ray dashed
+      to a point of the lamp (<span data-say="shadow">green</span> where it gets there, <span data-say="blocked">red</span>
+      where something is in the way), and at the end the last surface, which sends none. The figure draws it with the
+      tutorial's <code>flatland.js</code>, which on the same random numbers makes this program's paths exactly (the
+      test holds the two pictures to each other). Other paths draws another.</p>
+    <p data-step="film:mirror">The extension: the right wall becomes a mirror keeping 95% of the light. The eye sees the
+      room again in it, the lamp included, and the picture's average rises to 0.1602. Its noise rises too, to 0.39: the
+      lamp seen in the mirror is found only by paths that happen to hit it, since nothing aims through a mirror. That is
+      chapter 8's rule for its room: a mirror's reflection is followed, never aimed at. Section 4 is the code.</p>
+  </div>
+  <figure class="fig" data-fig="film">
+    <figcaption>The room, the eye and its field of view (dashed), the mirror in the glass colour when it is on, and
+      under them the picture <code>onepage.js</code> render makes, on one scale, with what each stretch of it sees.
+      Choose the samples a pixel, whether paths aim at the lamp, the extension, and one path drawn whole; Other paths
+      draws new random numbers.</figcaption>
+  </figure>
+</section>
+
+<section class="plain wide" id="parts2">
+  <div class="prose">
+    <p>The camera: pixel <var>i</var>'s ray through the point <var>u</var> across it, 0 at its left edge and 1 at its
+      right.</p>
+    <pre data-src="tutorial/kit/onepage.js" data-sym="export function camera"
+         data-why="x runs from -1 at the film's left edge to 1 at its right. k = x tan(fov / 2) is how far to the side of straight ahead the ray goes for each unit forward. (cos dir, sin dir) is straight ahead and (sin dir, -cos dir) is the film's sideways direction, a right angle from it; the ray is ahead plus k times sideways, then made 1 long." data-hash="9ef0e53e"></pre>
+    <p>Aiming at the lamp. The light a point of the lamp sends to a surface is the lamp's brightness, times the two
+      cosines (how squarely the surface faces it, and how squarely it faces the surface), over the distance: the flat
+      world's 1/<var>r</var> where 3D has 1/<var>r</var>² (chapter 0). The surface sends back albedo/2 of it towards
+      each direction (3D: albedo/π, chapter 8), and the pick is divided by its chance. The fold-out says why both.</p>
+    <details class="maths">
+      <summary><span class="tag">The maths</span>Dividing by the chance, and why a bounce does not seem to</summary>
+      <div class="body">
+        <p><strong>A point stands for the whole lamp.</strong> Picking one point evenly along a length ℓ and
+          multiplying what it sends by ℓ counts the lamp as if every point sent that much; over many picks the points
+          that send more and less are each picked as often, so the average is the lamp's total. The chance of any one
+          exact point is zero, but the chance per unit of length is 1/ℓ, the <a data-g="pdf">pdf</a>: multiplying by ℓ is
+          dividing by it. With two lamps each picked half the time, the one picked must count double:
+          <code>* lamps.length</code>. Chapter 14 works it through.</p>
+        <p><strong>Albedo/2.</strong> A matte surface sends the same brightness every way. Added up over the half circle
+          of directions, each weighted by its cosine (light leaving at a slant covers less), that brightness counts twice,
+          since the cosine over a half circle adds up to 2 (check it without calculus: cos of 1000 angles evenly from
+          −90° to 90°, each times the step π/1000, adds up to 2.000). So for the total to be the albedo's share of what arrived,
+          each direction gets albedo/2 (in 3D the cosine adds up to π). Chapter 8 works it out.</p>
+        <p><strong>The bounce divides too, and it cancels.</strong> The bounce's direction is drawn with chance
+          cos θ / 2 per radian at the angle θ from the normal: <code>v</code> is drawn evenly from −1 to 1 and taken as
+          sin θ, and evenly spread sines bunch the angles near the normal exactly as their cosine: of 1000 draws, about
+          87 land between 0° and 10° from the normal (half of sin 10° − sin 0°, times 1000) but only 8 between 80° and
+          90°, eleven times fewer, as cos 5° is eleven times cos 85°. What the surface
+          sends back that way, albedo/2 × cos θ, divided by that chance, is the albedo: so the code only multiplies by
+          it.</p>
+      </div>
+    </details>
+    <p>Which point of the lamp, in steps (section 3 draws them): pick a lamp; find the long side facing the point
+      lit; lay that side and the two round ends end to end, <code>len</code> long; take the point <code>u</code> of the
+      way along.</p>
+    <pre data-src="tutorial/kit/onepage.js" data-sym="export function lampPoint"
+         data-why="L is the lamp, (x, y) the point it lights, u a random number from 0 to 1. 1: seg is the lamp's length and (tx, ty) its direction. 2: side is +1 if (x, y) is to the lamp's left looking from a to b ((-ty, tx) is that left, and the dot product says how far that way the point is), -1 if to its right. 3: len is the facing side plus the two round ends, which put together make one circle, 2πr round. 4: d = u len along: on the side, a point r out from the middle line, its normal (mx, my) pointing out; past the side, an angle phi round the ends' circle, its point on a's end if it points back along the lamp, else on b's. It returns the point, its normal and len." data-hash="4c139172"></pre>
+    <p>And the light it sends:</p>
+    <pre data-src="tutorial/kit/onepage.js" data-sym="export function lampLight"
+         data-why="lamps are the shapes that glow (emit), and L the one picked; Math.min keeps the pick in range should rand() ever give exactly 1. q is the point drawn. cx is the cosine at the surface (its normal n against the direction u to the lamp), cy the cosine at the lamp: u points from the surface to the lamp, so the lamp's point faces the surface when its normal points back along u, hence the minus; below 0 for a point facing away. The march from the surface checks that the first thing on the way is the lamp itself. q.len / r * lamps.length: the pick's chances divided away, and the flat world's 1/r." data-hash="212f8459"></pre>
+    <p>The path, the heart of it:</p>
+    <pre data-src="tutorial/kit/onepage.js" data-sym="export function path"
+         data-why="light is what the path has gathered, beta its throughput, aimed whether the last surface sent a shadow ray. Each round of the loop marches one leg: the eye's, then one after each bounce, so bounces = 4 is five rounds. A hit on a glowing shape ends the path: counted unless a shadow ray already counted it. The normal is turned to face the ray, and the next start moved 0.004 off the surface so the march does not find the same surface at once (chapter 30). The cosine-weighted direction: v, drawn evenly from -1 to 1, is the sine of the angle from the normal, c its cosine; (c, v) is the direction in the normal's own frame, and nx c - ny v, ny c + nx v turns it into the room's. aimed = nee is set on the last round too, where nothing aimed; the loop ends there, so it is never read. s.emit is both whether a shape glows (any number but 0) and how brightly." data-hash="24bff7a2"></pre>
+    <p>And the picture: every pixel the average of its paths.</p>
+    <pre data-src="tutorial/kit/onepage.js" data-sym="export function render"
+         data-why="film holds one number a pixel (a Float64Array: an array of numbers, all 0 to start). rand() is the source of random numbers, called for every choice; the figures give it a seed, so the same picture comes back every time. opts passes nee and bounces on to path." data-hash="af1a0891"></pre>
+  </div>
+</section>
+
+<section class="scene" id="outline">
+  <div class="prose">
+    <h2><span class="n">3</span>Which points of the lamp, and which bounces</h2>
+    <p data-step="outline:below">The lamp drawn large: a capsule, everything within <var>r</var> of its middle line,
+      glowing all round its outline, which is what a bounce can hit. Seen from the point below it, only the outline's
+      points facing that point can send it light. So <code>lampPoint</code> lays the facing long side and the two round
+      ends end to end and picks evenly along them; the far side is never picked, because it sends this point nothing
+      and leaving it out changes nothing on average. Of 28 points evenly spread, 17 face the point (<span
+      data-say="light">orange</span>, a shadow ray to each) and 11, on the far halves of the ends, face away and count 0
+      (<span data-say="blocked">red</span>). Drag the point.</p>
+    <p data-step="outline:end">Beyond the lamp's end, level with it, neither long side faces the point: only the round
+      end does, and 5 of 28 points count. The room's lamp is far thinner (0.015 round a line 1.5 long), so its ends are
+      6% of the outline it picks from, not the 47% drawn here.</p>
+    <p>Now which bounces aim. A path allowed four bounces is five legs, and aiming must count exactly the light
+      bouncing can find, no more: each shadow ray stands for the leg after its surface hitting the lamp.</p>
+    <table class="data">
+      <thead><tr><th>the leg</th><th>found by bouncing if it hits the lamp</th><th>found by aiming as</th></tr></thead>
+      <tbody>
+        <tr><td>1, from the eye</td><td>the lamp seen directly</td><td>itself (no surface before it to aim)</td></tr>
+        <tr><td>2, after surface 1</td><td>light after 1 bounce</td><td>surface 1's shadow ray</td></tr>
+        <tr><td>3, after surface 2</td><td>after 2 bounces</td><td>surface 2's shadow ray</td></tr>
+        <tr><td>4, after surface 3</td><td>after 3 bounces</td><td>surface 3's shadow ray</td></tr>
+        <tr><td>5, after surface 4</td><td>after 4 bounces</td><td>surface 4's shadow ray</td></tr>
+        <tr><td>6, after surface 5: never traced</td><td>nothing</td><td>so surface 5 does not aim</td></tr>
+      </tbody>
+    </table>
+    <p>A shadow ray from surface 5 would stand for a sixth leg that bouncing never traces: it would add light after
+      five bounces, and the two ways would head for different answers.</p>
+  </div>
+  <figure class="fig" data-fig="outline">
+    <figcaption>A capsule lamp drawn large: the long side facing the point lit and the two round ends, which
+      <code>onepage.js</code> lampPoint picks from (thick), the far side it never picks (faint), and 28 points picked
+      evenly, each with its outline's normal: those facing the point get a shadow ray. Drag the point.</figcaption>
+  </figure>
+</section>
+
+<section class="plain wide" id="extend">
+  <div class="prose">
+    <h2><span class="n">4</span>Extend it</h2>
+    <p>The mirror is four lines inside the path, before the matte bounce: the ray reflected about the normal, the
+      throughput times the mirror's albedo, and no shadow ray, because a mirror sends a lamp's light along one
+      direction only, which a random point of the lamp would never lie on (chapter 8). So <code>aimed</code> is false,
+      and a lamp seen in the mirror counts in full.</p>
+    <pre data-src="tutorial/kit/onepage.js" data-sym="if (s.mirror) {" data-to="continue"
+         data-why="dn is the cosine between the ray and the normal (negative: the ray comes in against it). Taking 2 dn n away flips the part of the direction along the normal and keeps the part along the surface: the angle out equals the angle in. continue starts the next bounce." data-hash="800a9765"></pre>
+    <p>Each of these is the next step, with the chapter that explains it and the place in the tutorial's own
+      <code>kit/flatland.js</code> where it is done; that file is this one grown, and on the same random numbers the
+      two make the same picture (the tutorial's test holds them to it).</p>
+    <ul>
+      <li><strong>Glass</strong>: at a glass face reflect or refract by Fresnel's law, carrying all the light either
+        way (chapter 10; <code>glassStep</code>).</li>
+      <li><strong>A sun</strong>: light from one direction, found by a shadow ray out of the scene in its small cone
+        (chapter 18; tracePath's <code>NEE TO THE SUN</code>).</li>
+      <li><strong>Russian roulette</strong>: after a few bounces end dim paths at random and give the survivors their
+        light (chapter 13; tracePath's <code>rr</code>).</li>
+      <li><strong>Dust</strong>: a path that meets a particle before the next surface scatters there (chapter 20;
+        <code>hazeCollide2</code>).</li>
+      <li><strong>Colour</strong>: three numbers where this has one, an albedo per channel (chapter 6).</li>
+      <li><strong>A third dimension</strong>: distances of points in space, a film of rows as well as columns, and
+        albedo/π for albedo/2; the tutorial's <code>kit/space.js</code> is this program in 3D.</li>
+    </ul>
+    <aside class="refs"><span class="tag">Read more</span><ul>
+      <li data-ref="smallpt">A whole 3D path tracer of spheres in 99 lines of C++, with a line-by-line explanation:
+        this chapter's program in its best-known form.</li>
+      <li data-ref="rtiow">The same journey in 3D, a step at a time, with spheres.</li>
+      <li data-ref="iq-raymarching">Where the march comes from, for distance fields in 3D.</li>
+    </ul></aside>
+  </div>
+</section>
+
+<section class="plain wide" id="engine">
+  <div class="prose">
+    <h2><span class="n">5</span>From one page to ShadyTracer</h2>
+    <p>Every part of the one page is in the renderer, grown for a GPU and for 3D. Part by part, each row naming the
+      chapters that explain its words:</p>
+    <table class="data">
+      <thead><tr><th>One page</th><th>ShadyTracer</th><th>Chapters</th></tr></thead>
+      <tbody>
+        <tr><td>shapes and <code>nearest</code></td><td>the shapes of <code>sdf.js</code>, joined into one scene
+          function the builder writes and compiles</td><td>2, 3, 24</td></tr>
+        <tr><td><code>march</code></td><td>the march kernel in <code>wavefront.js</code>, at most 32 steps a ray
+          each time it runs (<cite data-src="lib/pathtracer/core/raytrace_main.js" data-sym="const MARCH_STEPS = 32"></cite>), with culling boxes and a step cache to make steps cheaper</td><td>22, 26</td></tr>
+        <tr><td><code>normal</code></td><td>the exact one, which most shapes give with their distance; for the rest,
+          forward differences, three looks in 3D where this page's central ones take four in 2D</td><td>4</td></tr>
+        <tr><td><code>camera</code></td><td><code>genrays.js</code>, with a lens</td><td>1, 17</td></tr>
+        <tr><td><code>lampLight</code></td><td>light sampling in <code>materials_pbr.js</code>, weighed against the
+          bounces by MIS instead of choosing one</td><td>14, 15, 16</td></tr>
+        <tr><td><code>path</code></td><td>many rays at once, a thread each, the path's work split into kernels
+          (march, shade, occlusion) run round after round</td><td>13, 21, 22</td></tr>
+        <tr><td><code>render</code></td><td>the frame buffer and the running average of the picture</td><td>23</td></tr>
+      </tbody>
+    </table>
+    <p>What the one page leaves out is most of the book: materials beyond matte and mirror (chapters 8 to 11),
+      wavelengths, photon maps, units and tolerances, and the work of keeping it fast. But the questions a path asks are
+      these seven.</p>
+  </div>
+</section>
+
+<section class="plain wide" id="before">
+  <div class="prose">
+    <h2><span class="n">6</span>What went wrong before</h2>
+    <p>The first draft of this page aimed at the lamp as the tutorial's figures then did, and its picture read brighter
+      with aiming than without: 0.1210 ± 0.0005 against 0.1163 ± 0.0010, four bounces, 44,800 paths each (computed; ±
+      is the error bar, chapter 12, so they were four error bars apart: not luck). Two mistakes, both in the figures' own
+      path tracer, pulling opposite ways:</p>
+    <ul>
+      <li><strong>The wrong lamp.</strong> The shadow rays went to points of the lamp's middle line, a lamp of no
+        thickness, while the bounces hit the capsule, everything within 0.015 of it, whose outline is longer by the two
+        round ends. In chapter 14's room, given twelve bounces, bouncing read 0.1326 ± 0.0014 and aiming 0.1213 ±
+        0.0004, nine percent apart and eight error bars (at twelve bounces the second mistake adds almost nothing). Aiming now
+        picks points of the outline the bounces can hit.</li>
+      <li><strong>One bounce too many.</strong> The last surface of a path also aimed at the lamp, counting light one
+        bounce further than a path without aiming can reach. Allowed one bounce, that room read 0.0870 aiming against
+        0.0556 without, with the lamp already fixed. The last surface no longer aims.</li>
+    </ul>
+    <p>At four bounces in this chapter's room the extra bounce won, and aiming read brighter; in chapter 14's, at
+      twelve, the thin lamp won and aiming read darker. Fixed, this room reads 0.1151 ± 0.0005 aiming and 0.1163 ±
+      0.0010 without. The tutorial's test had a room checked both ways all along, and it passed: its lamp was 0.001 thick and its
+      12,000 paths a pixel could not see a few percent. A check is only as good as the case it is given; chapter 29 is
+      that lesson, and chapter 30's fattened lamp is the same mistake in the engine.</p>
+  </div>
+</section>
+
+<section class="plain" id="try">
+  <div class="prose">
+    <h2><span class="n">7</span>Try it</h2>
+    <ul>
+      <li>In the first figure, find an aim that takes more than 100 steps. Where is it?</li>
+      <li>In the second, how many samples without aiming match the noise of 16 with it?</li>
+      <li>Copy <code>onepage.js</code> and make the box a circle of radius 0.55. What changes in the code, and what in
+        the picture?</li>
+      <li>Change <code>bounces</code> from 4 to 1 and to 12. Which picture gets darker, and why does aiming not change
+        the answer?</li>
+    </ul>
+    <h3>Words from this chapter</h3>
+    <ul class="words" data-words="march normal path throughput albedo shadow-ray nee"></ul>
+  </div>
+</section>
+
+<nav class="tabs" data-auto></nav>
+</main>
+</body>
+</html>

@@ -71,6 +71,8 @@ S.layout.onApply(() => S.open('view'))
 S.standardCommands(new URLSearchParams(location.search).has('bare') ? { window: false, layouts: false } : undefined)
 // a button of the page's own on the menu bar, right after the menus (S.tools)
 { const b = document.createElement('button'); b.className = 'shell-menu'; b.textContent = '↶'; b.title = 'A tool of the page\'s'; b.onclick = () => S.status('tool'); S.tools.appendChild(b) }
+// ...and one at the bar's right end, after the title (S.barEnd)
+{ const b = document.createElement('button'); b.className = 'shell-menu'; b.textContent = '♥'; b.title = 'The page\'s, at the end'; b.onclick = () => S.status('end'); S.barEnd.appendChild(b) }
 const how = S.layout.restore()
 S.open('view')
 // ------------------------------------------------------------------------------------------------------
@@ -84,7 +86,8 @@ const V = installViewToolbar(view, { PropertyTable, RT, tips: { 1: 'a host note'
 untitledTable(V.sections.Show).addFolder({ title: 'Show' }).addBinding(state, 'measureBands', { min: 0, max: 40, step: 1 })
 /* THE MEASURE TOOL (lib/pathtracer/measure/tool.js), the real one, over a picture of nothing: its buttons are the
    MEASURE group of the view's analysis drawer, and a pin placed marks the drawer's button. Readings need a renderer,
-   which this stand-in has not: a pin reads nothing, and says so. */
+   which this stand-in has not: a pin reads nothing, and says so. The check gives the stand-in a pick and a camera of
+   its own (EXAMPLE.RT) before it tries the ruler, whose points are nothing but picks. */
 const pic = document.createElement('canvas')
 Object.assign(pic.style, { position: 'absolute', inset: '0', width: '100%', height: '100%' })
 view.appendChild(pic)
@@ -101,7 +104,7 @@ P.provide('scene', () => [{ path: 'scene/disc/radius', label: 'Disc › radius',
 const reveal = p => { if (p.path.startsWith('view/show/')) V.open('Show'); else S.status(`reveal ${p.path}`) }
 const PP = installParamsPanel(paramsEl, P, { reveal, say: t => S.status(t) })
 S.searchIn(paramsSearch(P, { reveal, say: t => S.status(t) }))
-window.EXAMPLE = { S, how, log, V, state, P, PP, states, disc, CH, strip, MEASURE, pic }
+window.EXAMPLE = { S, how, log, V, state, P, PP, states, disc, CH, strip, MEASURE, pic, RT }
 </script>
 </body>
 </html>

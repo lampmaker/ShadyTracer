@@ -30,6 +30,7 @@ import * as M from '../builder/model.js'
 import { modifierGroup } from '../builder/modifiers.js'
 import { rotationTowards } from '../builder/lights.js'
 import { COAT_PRESETS } from '../builder/materials.js'
+import { convert } from '../import/index.js'
 
 const here = new URL('./', import.meta.url)
 const LIB = JSON.parse(readFileSync(new URL('../library/items/materials.json', import.meta.url), 'utf8')).items
@@ -239,6 +240,37 @@ function fromPoints() {
     return { doc, camera: orbit([10, 0, 60], -80, 25, 600) }
 }
 
+/* IMPORTED PARTS (0.73.0, import/): six parts made in OpenCascade (import/test/fixtures/make.py), read from their STEP
+   files -- and the rounded box again from its STL -- by File › Import from file…'s own conversion, each a group of the
+   builder's shapes: the plate a box less four holes and a pocket, the lens two spheres and a cylinder, the cup (made
+   like the user's Onshape part) its circle and rounded squares. What the import makes is what is here; nothing was
+   placed by hand but where each stands on the table, and the cup turned upright. A part keeps its own sizes in mm.
+   Daylight from the left, on a white board. */
+function imported() {
+    const doc = scene('Imported parts', { radius: 3000, env: SUN(40) })
+    floor(doc, lib(doc, 'white'))
+    const parts = [
+        ['plate.step', 'brushed aluminium', [-110, 30]], ['bracket.step', 'anodised aluminium', [-45, 30]], ['boss.step', 'turned aluminium', [20, 30]],
+        ['lens.step', 'clear glass', [75, 30]], ['roundbox.step', 'glossy blue plastic', [-60, -40]], ['roundbox.stl', 'glossy red plastic', [0, -40]],
+        ['cup.step', 'anodised aluminium', [70, -40], true],
+    ]
+    for (const [file, mat, [x, y], upright] of parts) {
+        const bytes = readFileSync(new URL(`../import/test/fixtures/${file}`, import.meta.url))
+        const material = structuredClone(M.material(doc, lib(doc, mat)))
+        const r = convert(M, file, bytes, { material })
+        if (!r.asset || r.refused.length) throw new Error(`${file}: ${JSON.stringify(r.refused)}`)
+        const g = M.insertAsset(doc, r.asset, 'root')
+        g.label = file
+        /* standing on the board as the import puts it (index.js: the part's group, at the middle of its box, as high
+           over z = 0 as the box goes under it), moved across it. The cup was drawn like the user's Onshape part, along
+           y: turned upright, a quarter turn about x about that middle, it stands half its length along y up */
+        const box = r.parts[0].box
+        if (upright) g.transform.rot = V(90, 0, 0)
+        g.transform.pos = V(x, y, upright ? 0.5 * (box.hi[1] - box.lo[1]) : g.transform.pos.z)
+    }
+    return { doc, camera: orbit([-20, 0, 8], -70, 35, 330) }
+}
+
 /* A PARAMETRIC PART: a heatsink whose fin count, pitch and height are the group's parameters (component parameters,
    bind.js) and whose fins are one fin drawn as an array -- change `fins` in its properties and the part follows. A
    40 mm-class aluminium heatsink, fins 1.5 mm thick. */
@@ -247,6 +279,9 @@ function parametric() {
     floor(doc, lib(doc, 'white'))
     const al = lib(doc, 'anodised aluminium')
     const hs = group(doc, 'root', 'heatsink', { params: { fins: 9, pitch: 5, finHeight: 25, base: 4, depth: 40 } })
+    // its lengths said (0.72.0): "(mm)" beside them, and a unit's change that keeps the real size converts them, and so
+    // everything bound to them (builder/unitchange.js); the count is no length
+    for (const k of ['pitch', 'finHeight', 'base', 'depth']) M.setLength(doc, hs.id, k, true)
     const plate = shape(doc, hs.id, 'box', { label: 'base plate', params: { size: V(23, 20, 2), rounding: 0.5 }, at: [0, 0, 2], material: al })
     M.setBindings(doc, plate.id, 'size.x = fins * pitch / 2\nsize.y = depth / 2\nsize.z = base / 2\npos.z = base / 2')
     const fins = group(doc, hs.id, 'fins (an array)')
@@ -596,6 +631,7 @@ export const EXAMPLES = [
         ['modifiers.json', modifiers, 'Twist, bend, repeat, mirror, round, shell, displace and relief, each on a plain shape'],
         ['from-points.json', fromPoints, 'An extruded star, a turned wine glass, a pipe along a path, a swept bar'],
         ['parametric-part.json', parametric, 'A heatsink whose fin count, pitch and height are its parameters'],
+        ['imported-parts.json', imported, 'STEP and STL parts imported as boxes, cylinders, cones, spheres, tori and rounded prisms'],
         ['infinite-detail.json', infinite, 'A Menger sponge four levels deep, and columns repeated to the horizon'],
     ] },
     { audience: 'Modelling and rendering', group: 'Materials', items: [

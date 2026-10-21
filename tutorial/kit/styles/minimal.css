@@ -1,0 +1,60 @@
+/* MINIMAL -- the drafting sheet (drafting.css) with everything taken away that is not the drawing: no frame, no zone
+   marks, no grain, a white page and a lot of it. Thin black lines told apart by their dashes, a pale wash for solids,
+   one vermilion for light and for the handles, Inter for every word and a quiet mono for code. Dark: light grey on
+   near-black. A style: tokens, texture and frame (kit/styles.js names it); kit.css holds the layout. */
+:root[data-style="minimal"], [data-style="minimal"] {
+    --paper: #fcfcfb; --paper-deep: #eeeeec; --paper-raised: #ffffff;
+    --ink: #161616; --ink-soft: #5a5a5a; --ink-faint: #a2a29f; --grid: rgba(0, 0, 0, .04); --rule: #d6d6d3;
+    --accent: #e0461f; --accent-soft: rgba(224, 70, 31, .08);
+    --c-cam: #161616; --c-light: #e0461f; --c-shadow: #161616; --c-blocked: #161616; --c-solid: #161616;
+    --c-fill: rgba(22, 22, 22, .07); --c-glass: #161616; --c-normal: #8a8a8a; --c-hit: #161616; --c-step: rgba(22, 22, 22, .2);
+    --code-bg: #f4f4f2; --code-ink: #161616; --code-comment: #7c7c78; --code-kw: #161616; --code-num: #e0461f;
+    --stamp-measured: #161616; --stamp-code: #161616; --stamp-inferred: #e0461f;
+    --f-display: 'Inter', 'Helvetica Neue', Arial, system-ui, sans-serif; --f-body: 'Inter', 'Helvetica Neue', Arial, system-ui, sans-serif;
+    --f-hand: 'Inter', 'Helvetica Neue', Arial, system-ui, sans-serif; --f-mono: 'Source Code Pro', ui-monospace, Menlo, Consolas, monospace;
+    --pen-rough: 0; --pen-double: 0; --pen-width: 1; --pen-misreg: 0; --pen-fill: wash;
+    --say-cam: "black"; --say-light: "orange-red"; --say-shadow: "black"; --say-blocked: "black"; --say-accent: "orange-red"; --say-soft: "grey"; --say-normal: "grey"; --say-glass: "black";
+    --radius: 0;
+    --tex: none;
+}
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"])[data-style="minimal"], :root:not([data-theme="light"]) [data-style="minimal"] {
+        --paper: #121212; --paper-deep: #0a0a0a; --paper-raised: #1a1a1a;
+        --ink: #e6e6e3; --ink-soft: #a3a3a0; --ink-faint: #6b6b68; --grid: rgba(255, 255, 255, .04); --rule: #343432;
+        --accent: #ff6a40; --accent-soft: rgba(255, 106, 64, .1);
+        --c-cam: #e6e6e3; --c-light: #ff6a40; --c-shadow: #e6e6e3; --c-blocked: #e6e6e3; --c-solid: #e6e6e3;
+        --c-fill: rgba(230, 230, 227, .08); --c-glass: #e6e6e3; --c-normal: #9a9a97; --c-hit: #e6e6e3; --c-step: rgba(230, 230, 227, .22);
+        --code-bg: #1a1a1a; --code-ink: #e6e6e3; --code-comment: #8d8d89; --code-kw: #e6e6e3; --code-num: #ff6a40;
+        --stamp-measured: #e6e6e3; --stamp-code: #e6e6e3; --stamp-inferred: #ff6a40;
+        --say-cam: "white"; --say-light: "orange-red"; --say-shadow: "white"; --say-blocked: "white"; --say-accent: "orange-red"; --say-soft: "grey"; --say-normal: "grey"; --say-glass: "white";
+        color-scheme: dark;
+    }
+}
+:root[data-theme="dark"][data-style="minimal"], :root[data-theme="dark"] [data-style="minimal"] {
+    --paper: #121212; --paper-deep: #0a0a0a; --paper-raised: #1a1a1a;
+    --ink: #e6e6e3; --ink-soft: #a3a3a0; --ink-faint: #6b6b68; --grid: rgba(255, 255, 255, .04); --rule: #343432;
+    --accent: #ff6a40; --accent-soft: rgba(255, 106, 64, .1);
+    --c-cam: #e6e6e3; --c-light: #ff6a40; --c-shadow: #e6e6e3; --c-blocked: #e6e6e3; --c-solid: #e6e6e3;
+    --c-fill: rgba(230, 230, 227, .08); --c-glass: #e6e6e3; --c-normal: #9a9a97; --c-hit: #e6e6e3; --c-step: rgba(230, 230, 227, .22);
+    --code-bg: #1a1a1a; --code-ink: #e6e6e3; --code-comment: #8d8d89; --code-kw: #e6e6e3; --code-num: #ff6a40;
+    --stamp-measured: #e6e6e3; --stamp-code: #e6e6e3; --stamp-inferred: #ff6a40;
+    --say-cam: "white"; --say-light: "orange-red"; --say-shadow: "white"; --say-blocked: "white"; --say-accent: "orange-red"; --say-soft: "grey"; --say-normal: "grey"; --say-glass: "white";
+    color-scheme: dark;
+}
+
+/* no frame: the page is the paper; thin rules where a box is needed */
+[data-style="minimal"] .sheet::before { display: none; }
+[data-style="minimal"] h1 { font-weight: 600; letter-spacing: -.025em; line-height: 1.02; }
+[data-style="minimal"] h2 { font-weight: 600; letter-spacing: -.015em; font-size: clamp(1.3rem, 2.6vw, 1.75rem); }
+[data-style="minimal"] h3 { font-weight: 600; font-size: 1rem; }
+[data-style="minimal"] h2 .n { color: var(--ink-faint); font-family: var(--f-body); font-weight: 400; font-size: .85em; vertical-align: 0; }
+[data-style="minimal"] .eyebrow { font-family: var(--f-body); font-weight: 500; letter-spacing: .08em; color: var(--ink-faint); }
+[data-style="minimal"] .lede { color: var(--ink-soft); font-weight: 400; }
+[data-style="minimal"] .titleblock { border: 0; border-top: 1px solid var(--rule); background: none; font-family: var(--f-body); font-size: .72rem; letter-spacing: .04em; }
+[data-style="minimal"] .titleblock > div { border-color: var(--rule); border-right-color: transparent !important; }
+[data-style="minimal"] .fig figcaption::before { content: "Fig. " counter(fig) "  "; font-family: var(--f-body); font-weight: 600; color: var(--ink); }
+[data-style="minimal"] details.maths, [data-style="minimal"] .excerpt, [data-style="minimal"] [data-claim],
+[data-style="minimal"] .tabs a { border-width: 1px; border-color: var(--rule); }
+[data-style="minimal"] .kbtn, [data-style="minimal"] .seg button { border-width: 1px; border-color: var(--ink-faint); }
+[data-style="minimal"] .note { border-left: 1px solid var(--accent); background: none; }
+[data-style="minimal"] a { text-decoration-color: var(--ink-faint); text-decoration-thickness: 1px; }

@@ -12,6 +12,8 @@
 //     traced, the values the frame's time says, a grab each, end once, a file downloaded, the view
 //     covered while it ran and uncovered after
 //   RECORD (GIF): offered in the menu, a .gif downloaded, Chromium's decoder reading each frame's colour
+//   each film named with the time it started (lib/filename.js), through seq.record() and through the menu's RECORD
+//     button alike; the name typed (the scene's) still the setting after, and never kept into the scene
 //   each scene its own timeline (0.67.0): a change kept into the scene shown, the encoder's settings this
 //     browser's; another scene shown: its timeline whole (the defaults where it has none, never the last one's),
 //     playback stopped, nothing written for being shown; a scene shown while it records comes in once it ends
@@ -107,16 +109,28 @@ try {
     ok('the view was covered while it recorded, and is not after', run.covered && !run.after, JSON.stringify(run))
     ok('the menu says it is done', /done/.test(run.status ?? ''), run.status)
     const file = await dl
-    ok('a file was downloaded', file?.suggestedFilename() === 'raytracer.zip', file?.suggestedFilename())
+    // the scene's name and the time the recording started (tools/timeline.js, lib/filename.js)
+    const stamped = ext => new RegExp(`^raytracer-\\d{4}-\\d\\d-\\d\\d_\\d\\d-\\d\\d-\\d\\d(-\\d+)?\\.${ext}$`)
+    ok('a file was downloaded, named with the time it started', stamped('zip').test(file?.suggestedFilename() ?? ''), file?.suggestedFilename())
+    ok('...the menu says which', run.status === `done: ${file?.suggestedFilename()}`, run.status)
+    ok('...and the name typed is still the setting', await p.evaluate(() => CHECK.TL.settings.filename) === 'raytracer')
 
     // ---- RECORD as a GIF: the same frames, read back by Chromium's own decoder ---------------------------
     // the stand-in fills each frame with one red, flux / 4: one colour a frame, so the palette holds it exactly
     const formats = await p.$$eval('[data-panel="tools.timeline"] .tl-export .tl-sel option', os => os.map(o => o.value))
     ok('the export menu offers GIF', formats.includes('gif'), JSON.stringify(formats))
+    // this one by the menu's RECORD button: its click calls lib/timeline's own record, not CHECK.TL.record, so the
+    // host catches it on the way down to stamp the name (tools/timeline.js)
     const gdl = p.waitForEvent('download', { timeout: 15000 }).catch(() => null)
-    await p.evaluate(async () => { CHECK.TL.settings.format = 'gif'; await CHECK.TL.record() })
+    await p.evaluate(() => { CHECK.TL.settings.format = 'gif' })
+    await p.click('[data-panel="tools.timeline"] .tl-export .tl-rec')
     const gfile = await gdl
-    ok('a GIF was downloaded', gfile?.suggestedFilename() === 'raytracer.gif', gfile?.suggestedFilename())
+    await p.waitForFunction(() => !CHECK.TL.recording, null, { timeout: 15000 }).catch(() => { })
+    ok('a GIF was downloaded, by the RECORD button, named with the time it started', stamped('gif').test(gfile?.suggestedFilename() ?? ''), gfile?.suggestedFilename())
+    ok('...a file of its own: not the last one\'s name', !!gfile && gfile.suggestedFilename().replace(/\.gif$/, '') !== file?.suggestedFilename().replace(/\.zip$/, ''),
+        `${file?.suggestedFilename()} then ${gfile?.suggestedFilename()}`)
+    ok('...and the name typed is still the setting, in the menu too', JSON.stringify(await p.evaluate(() =>
+        [CHECK.TL.settings.filename, document.querySelector('[data-panel="tools.timeline"] .tl-export .tl-text').value])) === '["raytracer","raytracer"]')
     if (gfile) {
         const bytes = [...await readFile(await gfile.path())]
         const gif = await p.evaluate(async bytes => {
@@ -149,6 +163,7 @@ try {
     // the whole panel as it is, the film the RECORD above set (64 x 36) with it
     ok('a change in the panel is kept into the scene shown: the fps typed, its track, the film\'s size', a1.kept?.fps === 24
         && a1.kept.tracks.some(k => k.prop === 'scene/lamp/light/flux' && k.keys.length === 2) && a1.kept.export?.width === 64, JSON.stringify(a1.kept))
+    ok('...its file name the one typed, never a recording\'s with the time', a1.kept?.export?.filename === 'raytracer', JSON.stringify(a1.kept?.export))
     ok('...the encoder\'s settings are this browser\'s, not the scene\'s', !('format' in (a1.kept?.export ?? {})) && a1.prefs?.format === 'png', JSON.stringify(a1))
     const state = () => ({ fps: CHECK.TL.timeline.fps, dur: CHECK.TL.timeline.duration, tracks: CHECK.TL.timeline.tracks.length,
         size: [CHECK.TL.settings.width, CHECK.TL.settings.height], format: CHECK.TL.settings.format,

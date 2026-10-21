@@ -15,6 +15,30 @@ order of that work): `ARCHITECTURE.md`, beside this file (2026-10-04). **Media**
 photon map, scattering inside materials, an Optics-view beam view -- has its own: `MEDIA.md`, beside this file
 (2026-10-16).
 
+## STEP and STL import as shapes — built 2026-10-21 (0.73.0), NOT yet seen
+
+The user (2026-10-21): "Start working on stl and step import. Investigate possibilities to optimize these for
+sdf/pathtracing. Eg conversion to primitives with boolean operations if that helps." Built that way. A solid whose faces
+lie on planes, cylinders, cones, spheres and tori becomes a group of the builder's presets joined by union, intersect and
+subtract; an STL from CAD is fitted back to those surfaces first (`import/`; the whole account, with what was measured
+and what is only inferred, is `IMPORT.md` section 11).
+- **Proved without a GPU**: on OpenCascade's own parts and its own classification, every point on the right side, the
+  formula, its shapes and the scene document never more than the true distance, no seam inside and no skin outside,
+  the STL giving back the STEP's surfaces (`import/test/`). check-shaders with naga compiles the Imported parts
+  example through every kernel.
+- **The user's first file** (an Onshape part, 2026-10-21): "did not convert/import too well". It was 44 shapes in 29
+  groups, half under the floor, with the value under its opening falling to 0.38 mm, and holes in it in the picture
+  (a plain union group intersected: IMPORT.md 11.3). Now 7 shapes in 2 groups, standing on the floor, agreeing with
+  OpenCascade at all 3000 points, and on Dawn with the formula: what the user saw wrong is asked, not yet answered.
+- **Found on the way, not fixed**: a union group built by hand inside a subtraction or an intersection is folded by
+  codegen, not combined (IMPORT.md 11.3). A builder question.
+- **Not seen**: the Imported parts example's picture, the user's part re-imported, and what an imported part costs a
+  march step. **Tests › imported** times the example against its rounded boxes and lens as one preset
+  each (what recognising those patterns would save) and against the floor alone.
+- **Next** (IMPORT.md 11.5): that measurement; then pattern recognition or culling inside a part, whichever it points
+  to; B-spline faces that are really planes or cylinders; STEP colours. Freeform faces and scans still need the
+  distance grid (IMPORT.md sections 3-5, P0), not built.
+
 ## Each scene its own camera, exposure and tolerance — built 2026-10-17 (0.66.0), NOT yet seen
 
 The user (2026-10-17): camera settings and exposure "can vary per scene ... the information should belong to the
@@ -266,7 +290,7 @@ reflections, and illuminance measured on surfaces.
 and `emitters` and `lt` held their means through it -- `lib/pathtracer/README.md` § *Units*,
 TESTING.md); the **display**, looked at on hardware (tone curves, GPU auto-exposure, compensation,
 meter / lock; README § *Units*); the **material review**, verified (below); and along the way `spp`
-removed, `moveAverages` (a window kept through a reset; itself removed in 0.68.0), and a reset that replaces the picture
+removed, `moveAverages` (a window kept through a reset; itself removed in 0.74.0), and a reset that replaces the picture
 instead of averaging into it.
 
 **Next, in this order** (agreed with the user; pick up from 1):
@@ -283,9 +307,11 @@ instead of averaging into it.
    floor, read by sensors in the picture at 0 to 1.5 m from its axis against the closed form plus the
    integrated rim, through NEE, BSDF sampling alone, light tracing and the ordinary picture.
    `cosine-law`: a plane tilted towards and away from the sun must read E_sun sin(elevation + tilt).
-4. **A realistic camera — not built** (no f-number, shutter, ISO, sensor or depth of field anywhere in
-   `genrays.js` or the schema): f-number, shutter and ISO giving the EV; sensor size and focal length
-   giving the field of view; depth of field. With the simple/realistic split: one physical engine,
+4. **A realistic camera — the lens built, the rest not.** Depth of field is there since 0.43.0: a thin
+   lens, its aperture and focus (`core/lens.js`, `genrays.js`; *The camera's lens*, below). Not built (no
+   f-number, shutter, ISO or sensor anywhere in `genrays.js` or the schema; the camera takes a field of
+   view, and an aperture in the scene's units): f-number, shutter and ISO giving the EV; sensor size and
+   focal length giving the field of view. With the simple/realistic split: one physical engine,
    *simple* controls computing the physical parameters, never a second renderer (`photometry.derive()`
    is already that seam).
 5. **Emitter units beyond cd/m² — half there.** Lights take lumens (`builder/lights.js`: `flux`, the
@@ -293,9 +319,9 @@ instead of averaging into it.
    gives no area to divide by (README § *Units*); *Lights* L8 measures their flux by Crofton lines
    instead. IES profiles: not built.
 6. **Deferred material work.** Rough transmission is still sampled and not evaluated, so NEE cannot
-   connect through frosted glass (`materials_pbr.js:306`, "no evaluable BTDF"); a multiple-scattering
-   compensation for rough glass is *C* below. The anisotropy tangent is done (SURFACES.md phase 1,
-   `Material2.tangent`).
+   connect through frosted glass (`materials_pbr.js`, rough transmission's "no evaluable BTDF on the
+   other side"); a multiple-scattering compensation for rough glass is *C* below. The anisotropy
+   tangent is done (SURFACES.md phase 1, `Material2.tangent`).
 7. **The performance pass** — PERFORMANCE.md is that pass now; the parked light-tracing cost is in *To
    check or review later*.
 
@@ -446,7 +472,7 @@ code, a look each.
    connect, with the n^2 radiance factor; its bench is L0's lamp in a glass block. What a glare or
    luminance assessment of a luminaire through its optic needs.
 5. **Thin air gaps — open.** The index beyond a surface is probed 2 x the surface offset away (20 x
-   eps; `materials_pbr.js:626`), and a gap under the offset is jumped -- optics-refraction's 0.5 mm row
+   eps; `tracebasics.js` mediumBeyond), and a gap under the offset is jumped -- optics-refraction's 0.5 mm row
    measures it (reads one slab, 0.923, against 0.857). In a 5 cm LED scene at the automatic tolerance
    that is ~0.1 mm, which a die-to-lens gap can be. Fix the probe so it does not depend on the offset
    (probe just past the surface, or take the medium from the SDF's own inside test), and step off a

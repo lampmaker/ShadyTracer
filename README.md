@@ -6,7 +6,8 @@ LED and luminaire design that traces the same scene the picture shows.
 
 Nothing to install and no server. The page runs on your own graphics card.
 
-**Run it: <https://lampmaker.github.io/ShadyTracer/>** · Open source, [MIT](LICENSE).
+**Run it: <https://lampmaker.github.io/ShadyTracer/>** · Open source, [MIT](LICENSE) ·
+[♥ Sponsor](https://github.com/sponsors/lampmaker).
 
 ![The raytracer: the scene tree, properties and library on the left, the picture in the middle, the renderer's settings on the right](docs/screenshots/hero.png)
 
@@ -53,6 +54,9 @@ Nothing to install and no server. The page runs on your own graphics card.
   **✓**; far field in candela with beam and field angles, illuminance maps in lux, CCT and Duv
   *preview*
 - **Zemax ray files** as light sources *preview*
+- **STEP and STL parts imported as shapes**: each solid in the file becomes boxes, cylinders, cones,
+  spheres, tori and rounded prisms joined by union and subtract, exact, with analytic normals; a
+  spherical lens from STEP is its two spheres *preview*
 - **3MF with colour** for multi-colour 3D printing, straight from the scene *preview*
 - **A docking workspace**: pop-out windows for a second monitor, a command palette, every setting by
   name
@@ -181,7 +185,6 @@ the picture; press **Ctrl K** and type what you are looking for.
   light, so its exposure, tone curve and grading are chosen on a preview afterwards, and saved as often as wanted.
 - Perspective or orthographic camera, orbit or walk.
 
-![The Noise library: surfaces displaced by fractal noise](docs/screenshots/noise.png)
 
 ### Light as numbers
 
@@ -213,6 +216,13 @@ the picture; press **Ctrl K** and type what you are looking for.
   Projects…) lists them (open, new, rename, duplicate, download, delete), this project's scenes and
   the examples. **File** is five rows: New project, Projects…, Import from file…, Export ▸ (a scene,
   the project, a 3D print), Save picture…. A second tab on a project works on its own copy.
+- **Import STEP and STL** (File › Import from file…, or drop the file on the page): each solid in
+  the file becomes a group of the builder's own shapes -- boxes, cylinders, cones, spheres, tori and
+  rounded prisms joined by union, intersect and subtract -- converted exactly from the faces'
+  surfaces, an STL's fitted back from its facets first; editable like anything built by hand. It
+  stands on the floor, its axes the file's. A freeform (B-spline)
+  face, a mesh that is not closed or a scan is refused by name, with why
+  ([`roadmap/IMPORT.md`](roadmap/IMPORT.md) section 11) *preview*
 - **Twenty-four shapes in three groups**, each an editable piece of code from the start:
   - *Primitives:* sphere, box, cylinder, capsule, torus, cone, round cone, **pyramid** (a rectangular
     base and top: an apex or a frustum), **prism** (its number of sides a live slider), octahedron,
@@ -329,14 +339,11 @@ number carries its standard error**.
 - **Colour mixing**: pick three of the scene's lights, a target colour and a total flux, and it sets
   their fluxes (one undo step).
 
-![The RGBW mixer: a map of colour temperature on the detector, and the colour mixing tool](docs/screenshots/colour.png)
 
 **Export**: the intensity table, the illuminance map and every detector hit as **CSV**; any chart as
 **PNG**.
 
 ### Export for 3D printing
-
-![A scene exported as a coloured 3MF and opened in the slicer](docs/screenshots/print.png)
 
 *preview*
 - Put an **export box** around what you want to print, placed with the handles.
@@ -348,7 +355,7 @@ number carries its standard error**.
 
 ### Animation and video
 
-![The Animate layout: keyframe tracks under the picture, with the export frame drawn over it](docs/screenshots/timeline.png)
+![The Animate layout: keyframe tracks under the picture, with the export frame drawn over it](docs/screenshots/animate.png)
 
 *preview*
 - **Keyframes on any live setting**: the camera, the sun, a light's flux, an object's position.
@@ -373,6 +380,7 @@ number carries its standard error**.
 | **Modifiers** | Shapes | mm | Twist, bend, repeat, mirror, round, shell, displace and relief, each on a plain shape |
 | **From points** | Shapes | mm | An extruded star, a turned wine glass, a pipe along a path, a swept bar |
 | **Parametric part** | Shapes | mm | A heatsink whose fin count, pitch and height are its parameters |
+| **Imported parts** | Shapes | mm | STEP and STL parts imported as boxes, cylinders, cones, spheres, tori and rounded prisms |
 | **Infinite detail** | Shapes | m | A Menger sponge four levels deep, and columns repeated to the horizon |
 | **Material board** | Materials | mm | The library's materials on 40 mm spheres |
 | **Relief and texture** | Materials | mm | Plaster, stucco, render, stone, hammered metal, leather: reliefs in a raking light |
@@ -499,6 +507,7 @@ mesher and 3MF writer, the library, the timeline and the shell. The list is in
 |---|---|
 | scenes, projects and workspaces (`.json`, every past version) | scenes, projects and workspaces (`.json`) |
 | Zemax ray files (`.DAT`) | pictures (**PNG**); video (**MP4**, or a ZIP of PNG frames) |
+| **STEP** (`.step`, `.stp`) and **STL**: solids, converted into shapes | |
 | library and timeline files (`.json`) | **3MF with colour**, **STL** |
 | | **CSV**: measurements, intensity table, illuminance map, detector hits; charts as PNG |
 | | library and timeline files (`.json`) |
@@ -521,9 +530,11 @@ Planned, in the order the plans give, with more in [`FEATURES.md`](FEATURES.md) 
 - **More surfaces**: rust, dust, wear, sheen, clear coat, thin film, hair.
 - **The help's pages**: the panel is there (Help › Contents, F1), with a welcome, the SDF explainer and the reference; the two tracks are being written. A study panel with parameter sweeps and an optimiser.
 
-And not planned yet, but asked of a tool like this: **importing meshes or CAD** (investigated: the
-routes per format are in [`roadmap/IMPORT.md`](roadmap/IMPORT.md)),
-**autosave**, UGR and other glare metrics, CRI and TM-30.
+- **More of import**: freeform (B-spline) faces and scans, through a distance grid; recognising the
+  patterns CAD makes most (a rounded box, a tube, a lens) as one shape; colours from STEP; OBJ, PLY
+  and 3MF ([`roadmap/IMPORT.md`](roadmap/IMPORT.md) section 11.5).
+
+And not planned yet, but asked of a tool like this: **autosave**, UGR and other glare metrics, CRI and TM-30.
 
 ---
 
@@ -536,6 +547,7 @@ test/                 the application's own tests (each module folder has its te
 roadmap/              the plans: where things stand (PLAN.md), the builder, surfaces, UI, analytics, import
 docs/                 the test bench (TESTING.md), the measured performance (PERFORMANCE.md), and
   screenshots/        the pictures in this README, and the list of how each is taken
+tutorial/             ShadyTracer, inside out: how the renderer works, chapter by chapter, with live figures
 lib/                  shared, project-agnostic — see lib/README.md before adding anything
   pathtracer/         the renderer as a component; optics/ and measure/ inside it
   shell/ timeline/ dockview/   the application shell and its vendored libraries
@@ -553,6 +565,10 @@ Working on this with an agent? **[`CLAUDE.md`](CLAUDE.md)** holds the rules and 
 without a GPU; **[`roadmap/PLAN.md`](roadmap/PLAN.md)** holds where the path
 tracer actually stands, including the parts that are finished but unproven. For the renderer,
 [`lib/pathtracer/README.md`](lib/pathtracer/README.md) is the real orientation.
+
+**[`tutorial/`](tutorial/index.html)** explains the renderer from zero, for developers new to ray tracing:
+rays, distance fields, light, noise and every trick for speed, each with live figures and the real code
+beside it. It is being written; [`tutorial/PLAN.md`](tutorial/PLAN.md) has its contents and where it stands.
 
 ### Versions
 
@@ -597,6 +613,10 @@ in a `REVISION` file so the page can name its build there too.
 © Matthijs Keuper. **MIT licence**: see [`LICENSE`](LICENSE). TinyWebGPU and GUISTUFF are separate
 repositories, also MIT. What in this repository is someone else's, and under which licence, is in
 [`THIRD_PARTY.md`](THIRD_PARTY.md).
+
+ShadyTracer is free and stays free. If it is useful to you, a tip, one-time or monthly, through
+[GitHub Sponsors](https://github.com/sponsors/lampmaker) keeps it going. The app has the same link under
+Help › Support ShadyTracer….
 
 Built on, with thanks, all under the MIT licence:
 [dockview](https://github.com/dockview/dockview) 8.3.1 (docking),

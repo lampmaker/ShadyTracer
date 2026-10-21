@@ -462,8 +462,29 @@ ok('typing 2.5', await set('environment radius (m)', 2.5) === 'set')
 const er1 = await state()
 ok('...sets the scene\'s radius, pushed live, one undo step, nothing compiled', await p.evaluate(() => CHECK.doc.envRadius) === 2.5
     && er1.live.at(-1) === 'root.envRadius' && er1.commits.at(-1) === 'root.envRadius' && er1.structure === er0.structure, JSON.stringify(er1))
-ok('the unit changed to cm', await set('unit', 'cm') === 'set')
+/* THE UNIT ASKS HOW (0.72.0, unitdialog.js): scale the objects, convert the dimensions, keep the numbers -- and Cancel,
+   which leaves the scene as it was and the row at its unit */
+const unitDialog = () => p.evaluate(() => { const d = document.querySelector('.unit-dialog')
+    return d && { text: d.textContent, ways: [...d.querySelectorAll('button')].map(b => b.dataset.how) } })
+const unitRow = () => p.evaluate(() => [...document.querySelectorAll('.tp-lblv')].find(r => r.querySelector('.tp-lblv_l')?.textContent.trim() === 'unit')
+    ?.querySelector('select')?.selectedOptions[0]?.textContent.trim())
+const answer = how => p.evaluate(how => document.querySelector(`.unit-dialog button[data-how=${how}]`).click(), how)
+const u0 = await state()
+ok('the unit chosen: cm', await set('unit', 'cm') === 'set')
+const dlg = await unitDialog()
+ok('...asks how: scale, dimensions, keep, and Cancel, the factor said', dlg?.ways.join() === 'scale,dimensions,keep,cancel'
+    && /m \u2192 cm/.test(dlg.text) && /\u00d7100/.test(dlg.text), JSON.stringify(dlg))
+ok('...converting the dimensions says first what it cannot: the plate\'s and the pipe\'s own code', /plate: its own code/.test(dlg?.text) && /pipe: its own code/.test(dlg?.text), dlg?.text)
+await answer('cancel')
 await p.waitForTimeout(50)
+ok('Cancel: the scene in m, nothing committed or compiled, the row back at m, the question gone', await p.evaluate(() => CHECK.doc.unit ?? 'm') === 'm'
+    && (await state()).commits.length === u0.commits.length && (await state()).structure === u0.structure && await unitRow() === 'm' && !(await unitDialog()),
+    JSON.stringify([await unitRow(), await state()]))
+ok('the unit chosen again: cm', await set('unit', 'cm') === 'set')
+await answer('keep')
+await p.waitForTimeout(50)
+ok('keep the numbers: the unit cm, one undo step, a compile, the question gone', await p.evaluate(() => CHECK.doc.unit) === 'cm'
+    && (await state()).commits.length === u0.commits.length + 1 && (await state()).structure === u0.structure + 1 && !(await unitDialog()))
 ok('...and the radius row says so by itself (the panel redrawn), the number kept: the scene reinterpreted, as its shapes',
     (await readRows()).includes('environment radius (cm)') && await p.evaluate(() => CHECK.doc.envRadius) === 2.5, JSON.stringify(await readRows()))
 /* THE SCENE'S SURFACE TOLERANCE (0.66.0, model.js setTolerance): after the radius, in its unit, 0 the automatic one; live,
@@ -618,6 +639,30 @@ ok('...and the radius row says so by itself (the panel redrawn), the number kept
     rr = await p.evaluate(() => [...document.querySelectorAll('.tp-lblv')].map(r => r.querySelector('.tp-lblv_l')?.textContent.trim()))
     ok('...an array of count copies, pitch apart; its copies said to be from parameters, nothing to type there',
         JSON.stringify(strip) === '[-0.5,0,0.5]' && rr.includes('bound') && !rr.includes('places'), JSON.stringify({ strip, rr }))
+    /* A LAMP (0.69.0): a light's flux and colour from its group's parameters -- the colour whole, in one line -- and its
+       rows held: the value's, and the choice it holds (brightness by, colour by) */
+    await p.evaluate(() => {
+        CHECK.M.addGroup(CHECK.doc, 'root', { id: 'lampg', label: 'lamp', params: { flux: 500, tint: { r: 1, g: 0.5, b: 0.25 } } })
+        CHECK.M.addLight(CHECK.doc, 'lampg', { id: 'lled', shape: 'rectangle', label: 'led' })
+    })
+    rr = await rowsOf('lled')
+    ok('a light in a group with parameters: its bindings', rr.includes('bindings') && rr.includes('brightness by'), JSON.stringify(rr))
+    const p0 = await p.evaluate(() => CHECK.T.pushed.length)
+    await bindings('light.flux = flux\nlight.colour = tint', 'apply')
+    await p.waitForTimeout(50)
+    const lamp = await p.evaluate(() => { const n = CHECK.M.find(CHECK.doc, 'lled').node; return { light: n.light, bind: n.bind, pushed: CHECK.T.pushed.slice() } })
+    ok('...its flux and its colour from the lamp\'s: written, the light set by its flux, pushed live as the light',
+        lamp.light.flux === 500 && lamp.light.colour?.g === 0.5 && lamp.bind?.['light.colour.b'] === 'tint.b' && lamp.pushed.slice(p0).includes('lled.light'), JSON.stringify(lamp))
+    const lheld = await p.evaluate(() => {
+        const row = l => [...document.querySelectorAll('.tp-lblv')].find(r => r.querySelector('.tp-lblv_l')?.textContent.trim().replace(/^\W+/, '').startsWith(l))
+        const at = l => { const r = row(l); return r && { off: !!r.querySelector(':disabled') || !!r.closest('.tp-v-disabled'), tip: r.querySelector('.tp-lblv_l')?.title ?? '' } }
+        return { by: at('brightness by'), flux: at('flux (lm)'), colourBy: at('colour by'), colour: at('colour'), dist: at('distribution'), emitN: at('emits into n'),
+                 text: document.querySelector('.builder-bind-said')?.textContent ?? '', bindText: [...document.querySelectorAll('textarea')].map(t => t.value).find(v => v.includes('light.')) }
+    })
+    ok('...the flux row and its colour held, their bindings on the label; brightness by and colour by held with them; the rest free',
+        lheld.flux?.off && /light.flux = flux/.test(lheld.flux.tip) && lheld.colour?.off && /light.colour.r = tint.r/.test(lheld.colour.tip)
+        && lheld.by?.off && lheld.colourBy?.off && lheld.dist && !lheld.dist.off && lheld.emitN && !lheld.emitN.off, JSON.stringify(lheld))
+    ok('...and the editor shows the colour as the three lines it is', /light.colour.r = tint.r\nlight.colour.g = tint.g\nlight.colour.b = tint.b/.test(lheld.bindText ?? ''), JSON.stringify(lheld.bindText))
 }
 
 /* THE ASPHERIC LENS'S COEFFICIENTS (2026-10-04): numbers with no range, typed from a datasheet. Tweakpane showed such a
@@ -833,6 +878,26 @@ ok('...and the visibility beside it follows: 3.912 x 4 m, 15.6 m', /^visibility 
     cf = await folderOf('camera')
     ok('a scene still compiling: the folder says so, and binds nothing', cf && cf.rows.length === 1 && !cf.rows.includes('distance'), JSON.stringify(cf))
     await p.evaluate(() => { CHECK.T.showing = true; CHECK.viewPanel.show(null) })
+}
+
+/* ...AND A WAY THAT KEEPS THE REAL SIZE, through the question (0.72.0): the scene's numbers converted by the model's
+   own (unitchange.js), one undo step and a compile */
+{
+    await rowsOf('root')
+    const before = await p.evaluate(() => ({ unit: CHECK.doc.unit, r: CHECK.M.find(CHECK.doc, 'top').node.params.radius, env: CHECK.doc.envRadius,
+                                              pos: CHECK.M.find(CHECK.doc, 'top').node.transform.pos.x }))
+    const to = before.unit === 'mm' ? 'm' : 'mm', k = before.unit === 'cm' ? 10 : before.unit === 'm' ? 1000 : 0.001
+    const s0 = await state()
+    ok(`the unit chosen: ${to}`, await set('unit', to) === 'set')
+    await answer('dimensions')
+    await p.waitForTimeout(50)
+    const after = await p.evaluate(() => ({ unit: CHECK.doc.unit, r: CHECK.M.find(CHECK.doc, 'top').node.params.radius, env: CHECK.doc.envRadius,
+                                             pos: CHECK.M.find(CHECK.doc, 'top').node.transform.pos.x }))
+    const near = (a, b) => Math.abs(a - b) <= 1e-9 * Math.max(1, Math.abs(b))
+    ok('convert the dimensions: a sphere\'s radius and the scene\'s radius times the factor, one undo step, a compile',
+        after.unit === to && near(after.r, before.r * k) && near(after.env, before.env * k) && (await state()).commits.length === s0.commits.length + 1
+        && (await state()).structure === s0.structure + 1, JSON.stringify([before, after]))
+    ok('...the row says the new unit', await unitRow() === to && (await readRows()).some(r => r === `environment radius (${to})`), JSON.stringify(await readRows()))
 }
 
 ok('no page errors', !errs.length, errs.join('\n'))

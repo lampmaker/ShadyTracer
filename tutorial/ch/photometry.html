@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Measuring light · ShadyTracer, inside out</title>
+<link rel="stylesheet" href="../kit/kit.css">
+<script type="module" src="photometry.js"></script>
+</head>
+<body data-chapter="photometry">
+<p class="kit-offline">This page runs from a web server, not from a file: in the repository run <code>python3 -m http.server 8000</code> and open http://localhost:8000/tutorial/.</p>
+<main class="sheet">
+
+<header class="sheet-head">
+  <div>
+    <p class="eyebrow">Part II · What light is · Chapter 5</p>
+    <h1>Measuring light</h1>
+    <p class="lede">So far a ray has brought back "light" as a bare number. ShadyTracer's numbers are real units: a lamp
+      in candela per square metre, the sun in lux, every pixel in candela per square metre, so that a picture can be
+      checked against a light meter, and a floor in the sun against a line of arithmetic. This chapter is those units,
+      the two laws that connect them, and the sun.</p>
+  </div>
+  <div class="titleblock" data-auto></div>
+</header>
+
+<section class="scene" id="distance">
+  <div class="prose">
+    <h2><span class="n">1</span>Four ways to say how bright</h2>
+    <p data-step="distance:near">"How bright is this lamp?" has four answers, each a different question, and lighting
+      uses all four. Each counts light the way the eye does: green light counts for more than blue of the same power,
+      because the eye is more sensitive to it (chapter 6 says how much).</p>
+    <ul>
+      <li><strong>How much light it gives off in all</strong>: its <em>flux</em>, in <a data-g="lumen">lumens</a>
+        (lm). A household LED bulb gives about 800.</li>
+      <li><strong>How much it sends one way</strong>: its <a data-g="intensity">intensity</a>, in
+        <a data-g="candela">candela</a> (cd): lumens per unit of <a data-g="solid-angle">solid angle</a>, the
+        steradian. A lamp of 1 candela in every direction gives 4π lumens in all, since the whole sphere of directions
+        is 4π steradians.</li>
+      <li><strong>How much lands on a surface</strong>: its <a data-g="illuminance">illuminance</a>, in
+        <a data-g="lux">lux</a> (lx): lumens per square metre. A light meter on a desk measures this.</li>
+      <li><strong>How bright a surface looks</strong>: its <a data-g="luminance">luminance</a>, in candela per square
+        metre (cd/m²): the intensity each square metre of it sends towards you, counting only the area you see
+        (a tile seen at a slant looks smaller). A camera's pixel measures this.</li>
+    </ul>
+    <p data-step="distance:near">Light lands as illuminance; anything seen, a lamp or a lit wall, has a luminance. A
+      camera ray brings back luminance, so a pixel holds candela per square metre. The figure is a glowing panel, 0.5 m
+      square, of luminance 1000 cd/m², 2 m from the eye. The eye's picture is 60 × 40 pixels. Every pixel wholly on
+      the panel reads 1000; a pixel at its edge reads its share, the average of the many rays through it of which some
+      miss (chapter 1's jitter). Point at the picture to read a pixel. Add up what each pixel brings the eye (its
+      reading, times the small solid angle it covers, times the cosine of its direction from straight ahead, chapter 1's
+      slant) and the panel puts 61.2 lux on the eye.</p>
+    <p data-step="distance:far">Drag the panel twice as far, to 4 m. A pixel wholly on it still reads 1000: the panel
+      looks exactly as bright. What changes is how much of the picture it covers: counting each pixel at its edge by
+      the share it sees, 348.2 pixels' worth at 2 m and 87.1 at 4 m, a quarter. With it the light it brings the eye
+      falls to a quarter too: 15.5 lux. (The readout gives both: the pixels wholly or partly on the panel, and the
+      area they add up to.) That is the inverse square law of chapter 0, and it lives in how much of the
+      view the panel fills, not in the light along a ray. Along a ray, luminance does not change: a ray is one line of
+      sight, and what it sees looks as bright from near as from far.</p>
+    <p data-step="distance:farther">At 8 m the panel is small beside its distance, and the lux follows the simplest
+      formula: the panel's intensity is its luminance times its area, <var>I</var> = 1000 × 0.25 = 250 cd, and
+      <var>E</var> = <var>I</var>/<var>d</var>² = 3.91 lux. The pixels' sum says 3.90; the exact answer for a square
+      this size is 3.90.</p>
+    <p>This is why a path tracer carries luminance (radiance, in the physicist's units) along its rays: it is the one
+      quantity a ray does not need to change as it travels. Nor does it care how big the scene is: a room twice as big,
+      seen from twice as far, looks exactly the same, pixel for pixel, so a room built in millimetres and the same room
+      in metres give the same picture, which section 5 shows measured.</p>
+    <p>One quantity holds the rest together, and the next two sections lean on it: how much light a bright patch of
+      sky (or a lamp, or the sun) puts on a floor. The fold-out works it out; its two answers are <var>E</var> =
+      π<var>L</var> for a whole sky of luminance <var>L</var>, and <var>E</var> = π<var>L</var> sin² α for a round lamp
+      straight overhead whose edge is α from its middle.</p>
+    <details class="maths">
+      <summary><span class="tag">The maths</span>The four quantities, and light from a patch of sky</summary>
+      <div class="body">
+        <dl class="terms">
+          <dt>Φ</dt><dd>flux, lumens: all the light, counted by the eye's sensitivity</dd>
+          <dt><var>I</var></dt><dd>intensity, candela: flux per steradian, in one direction</dd>
+          <dt><var>E</var></dt><dd>illuminance, lux: flux per square metre arriving</dd>
+          <dt><var>L</var></dt><dd>luminance, cd/m²: intensity per square metre of the surface as seen from that
+            direction, its area times the cosine of the angle from its normal</dd>
+        </dl>
+        <p>A small lamp of intensity <var>I</var>, <var>d</var> away, its light arriving at an angle θ from the
+          surface's normal:</p>
+        <p class="eq"><var>E</var> = <span class="frac"><span><var>I</var> cos θ</span><span><var>d</var><sup>2</sup></span></span></p>
+        <p>A large one, or the sky: picture a glass dome of radius 1 over a point of the floor, the bright patches of
+          sky painted on it. Shine a light straight down from above the dome, and each patch casts a shadow on the
+          floor's disc of radius 1 under it. A patch of luminance <var>L</var> lights the point by <var>L</var> times the
+          area of its shadow. Why: a small patch of the dome, of area Ω, is Ω of solid angle (the dome has radius 1), so
+          it would put <var>L</var>Ω on a surface facing it; the floor meets its light at a slant θ from straight up,
+          and the cosine law takes that down to <var>L</var>Ω cos θ. And a small patch tilted by θ from facing straight
+          down casts a shadow cos θ as big: Ω cos θ. The two match. (This is Nusselt's way of seeing it.) Two cases
+          follow:</p>
+        <ul>
+          <li>A whole sky of luminance <var>L</var> presses down onto the whole disc, of area π: <var>E</var> =
+            π<var>L</var>.</li>
+          <li>A round lamp straight overhead, of angular radius α (the angle from its middle to its edge), presses down
+            onto a circle of radius sin α (its edge is a ring on the dome α from the top, at height cos α and radius sin
+            α): <var>E</var> = π <var>L</var> sin² α. For a lamp at a slant, the same
+            illuminance falls on a surface turned to face it, and a level floor gets cos θ of it.</li>
+        </ul>
+        <p>Many renderers write a small lamp's illuminance as <var>L</var> times its solid angle instead: the usual
+          shortcut. The solid angle of a round lamp is 2π(1 − cos α) (the area of that cap of the unit sphere, a fact of
+          geometry), which for a small α is very nearly π sin² α, so the shortcut is close; since sin² α = (1 − cos α)(1 +
+          cos α), it is off by (1 − cos α)/(1 + cos α) of the answer, about α²/4 (for small α, cos α is close to 1 −
+          α²/2) (α in radians: the angle measured as the length of arc it cuts from a circle
+          of radius 1, so 180° is π).</p>
+      </div>
+    </details>
+  </div>
+  <figure class="fig" data-fig="distance">
+    <figcaption>Left, from the side: the eye, the edges of its view (faint), the line straight ahead (dotted), and the
+      glowing panel at a distance you drag by its handle; the two lines from the eye to its edges are the angle it
+      fills. Right: the eye's picture, 60 × 40
+      pixels, each pixel the panel's luminance where it is wholly on the panel and its share at the edge; point at it to
+      read a pixel. The sliders set the distance and the panel's size.</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="sun">
+  <div class="prose">
+    <h2><span class="n">2</span>The sun, in two numbers</h2>
+    <p data-step="sun:real">ShadyTracer's sun is set by two numbers: the illuminance it puts on a surface facing it,
+      100,000 lux by default, and how wide its disc looks, 0.53°
+      (<cite data-src="lib/pathtracer/core/uniforms.schema.js" data-sym="sunIlluminance:    { type: 'f32', def: 100000"></cite>).
+      Its luminance follows from those two: <var>E</var> = π<var>L</var> sin² α (section 1: the disc's shadow on the
+      floor's unit disc is a circle of radius sin α), with α half of 0.53°, 0.00463 radians (an angle measured as the arc it cuts from a circle of radius 1: 180° is π), gives <var>L</var> = 1.488
+      billion cd/m². The figure draws the disc at its true size over
+      a point of the ground, and on the right its luminance for every width, at the same 100,000 lux.</p>
+    <p data-step="sun:real">That luminance is a problem for a path tracer. The disc is 0.0000672 steradians, a speck of
+      the sky. A ray bouncing off a matte ground goes in a random direction, more often near straight up (chapter 8
+      shows how: the chance of a direction goes as the cosine of its angle from straight up, divided by π so that the
+      chances add up to 1), and it finds the disc with the chance 0.0000672 × cos 45° / π, 1 time in 66,111 when the
+      sun is 45° up (45° from straight up as well as from the ground). A few rays that find it bring back a billion; the rest
+      bring back nothing. That is why chapter 14 aims at the sun instead of waiting to hit it.</p>
+    <p data-step="sun:wide">Widen the disc to 10° across. The illuminance is held at 100,000 lux, so its luminance drops
+      to 4.19 million, and a random bounce finds it 1 time in 186. A bigger sun is a softer shadow, not a brighter
+      picture: the setting's comment says just that. The shortcut <var>L</var> × solid angle is now 0.19% off the
+      exact answer, where at the real sun it was 0.0005%; ShadyTracer uses the exact one at every size.</p>
+    <p>Small as it is, the real sun's disc is a test of arithmetic. Its 1 − cos α is 0.0000107. The graphics card
+      computes with 32-bit numbers (<a data-g="f32">f32</a>), and near 1 those are kept in steps of about 0.00000006, so
+      cos α is about 180 steps below 1, and 1 − cos α comes out with an error near half a percent. That number is the
+      disc's solid angle (the fold-out), and when the renderer aims a ray at the sun (chapter 14) it says how likely
+      each direction in the disc is; the luminance needs sin² α, as small. So ShadyTracer works both out once, in the
+      program on the main processor, in 64-bit numbers, and hands them to the graphics card (section 4).</p>
+  </div>
+  <figure class="fig" data-fig="sun">
+    <figcaption>Left: a point of the ground, the sky over it (dashed), and the sun's disc at its true size, drawn no
+      smaller than a dot, with the two edges of its cone from the point. Right: the disc's luminance for each width
+      across, at 100,000 lux, on stretched scales: up the side each mark is ten times the last, and along the bottom
+      equal steps are equal ratios too. On such scales the curve is a straight line, because the luminance falls as one
+      over the width squared. The dot is the width the slider sets; the elevation changes only how often a random
+      bounce finds the disc (the readout).
+      Choose the disc's width and its elevation; <strong>The real sun</strong> puts 0.53° back; point at the curve to
+      read it.</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="floor">
+  <div class="prose">
+    <h2><span class="n">3</span>A white floor, measured</h2>
+    <p data-step="floor:noon">Now everything at once, and checked on a real graphics card. A floor of
+      <a data-g="albedo">albedo</a> 0.8, matte (it sends its light out evenly in every direction, so it looks equally
+      bright from anywhere), under the default sun at 45° and the default sky. The sun's 100,000 lux arrive at a slant:
+      on the level floor they give 100,000 × sin 45° = 70,711 lux (the <a data-g="cosine-law">cosine law</a>, with the
+      angle measured from the floor up). The sky adds 15,000, its setting being the illuminance it alone puts on a level
+      surface. In all, 85,711 lux.</p>
+    <p data-step="floor:noon">The floor sends back 0.8 of it (its albedo, written ρ). A matte surface of luminance
+      <var>L</var> sends out π<var>L</var> lux's worth (section 1's sky, turned round: the floor is a sky for the space
+      above it), so <var>L</var> = ρ<var>E</var>/π = 0.8 × 85,711 / π = 21,826 cd/m². ShadyTracer's own test of this rendered the
+      floor on the user's NVIDIA Pascal card, 1188 × 969 pixels, 32 samples a pixel: 21,827.2. The ratio is 1.0001.</p>
+    <p data-step="floor:low">The sun alone at 20°: sin 20° × 100,000 = 34,202 lux, so 8,709.5 cd/m², and the card
+      measured 8,709.3. Every row of that test is within 0.07% of its arithmetic, except one with aiming switched off
+      (section 5).</p>
+  </div>
+  <figure class="fig" data-fig="floor">
+    <figcaption>Left, from the side: the floor, the sun's parallel rays at its elevation, the sky over it (dashed), and an
+      eye looking at the floor from the right. Right: the floor's luminance ρ<var>E</var>/π for every elevation of the sun (the line),
+      the elevation the slider sets (the dot), and what the user's card measured (the
+      <span data-say="shadow">green</span> rings, at albedo 0.8 only). Choose the elevation, the albedo, and which light;
+      point at the chart to read it.</figcaption>
+  </figure>
+</section>
+
+<section class="plain wide" id="engine">
+  <div class="prose">
+    <h2><span class="n">4</span>How ShadyTracer does it</h2>
+    <p>The units, as the file that turns every light setting into numbers for the graphics card states them:</p>
+    <pre data-src="lib/pathtracer/core/photometry.js" data-sym="// THE UNITS. The frame and accumulation buffers hold linear Rec.709 RGB whose luminance" data-to="// builder."
+         data-why="Rec.709 is the standard set of red, green and blue a screen shows (chapter 6); Y, the luminance, weighs them by the eye's sensitivity. A chromaticity is a colour without its brightness (chapter 6). 'Invariant along a ray' is section 1's figure: a pixel on the panel reads the same at any distance." data-hash="375b06ac"></pre>
+    <p>The sun's disc, in 64-bit numbers on the main processor. <code>sunCone</code> keeps everything the graphics card
+      needs about the disc; <code>discLuminance</code> is the fold-out's <var>E</var> = π<var>L</var> sin² α turned
+      round:</p>
+    <pre data-src="lib/pathtracer/core/photometry.js" data-sym="/** The real sun: 0.53 degrees across, seen from the ground. */" data-to="export const discLuminance"
+         data-why="half is α, half the diameter in radians (the 360 is two halvings: degrees to radians is × π/180, and half of that). 1 − cos α is worked out as 2 sin²(α/2), the same number (from cos 2x = 1 − 2 sin² x, with x = α/2) written so that no two nearly equal numbers are subtracted: 1 − cos α takes 1.0000000 − 0.9999893 and keeps only the last digits, where the rounding is. sin2 is sin² α, which the next excerpt's test compares against." data-hash="856b0ad8"></pre>
+    <p>On the graphics card, every way of reaching the sun asks one function whether a direction is inside the disc, so
+      they all agree where its edge is:</p>
+    <pre data-src="lib/pathtracer/core/sdf.js" data-sym="/* INSIDE THE DISC, tested as" data-to="return dot(L, sd) > 0.0"
+         data-why="WGSL, the graphics card's language (chapter 21). sd is the direction to the sun's middle, L the direction asked about, both arrows of length 1 in 3D. Two products of arrows do the work: the dot product dot(a, b) = aₓbₓ + a_yb_y + a_zb_z is the cosine of the angle between two such arrows, and the cross product cross(a, b) is an arrow whose length is its sine. So dot(c, c), c's length squared, is sin² of the angle, compared with sin² α from the host, the program on the main processor (UB holds what it hands over). The dot product is cos of that angle, which near the sun is a hair below 1, where 32-bit numbers are coarse; sin² is a small number, which keeps its precision. 'dot(L, sd) > 0' keeps the disc on the sun's side: sin² is the same for the opposite direction." data-hash="3a85be87"></pre>
+    <p>A lamp can be given by its flux in lumens instead of its luminance. A matte face of area <var>A</var> and
+      luminance <var>L</var> gives off π<var>L</var><var>A</var> lumens (the fold-out again), so the lumens become a
+      luminance by dividing by π<var>A</var>; a face that sends its light into a narrower beam has a smaller factor in
+      place of π:</p>
+    <pre data-src="builder/lights.js" data-sym="/** k: flux per unit luminance and unit area, one face." data-to="return 2 * Math.PI * (1 - Math.pow(Math.max(c, 0), n + 1)) / (n + 1)"
+         data-why="cos^n is how the face's intensity falls off its axis: n = 1 is matte (Lambertian), larger n a tighter beam, and halfAngle cuts the beam off at a cone. For n = 1 and no cut-off, c = 0 and k = 2π / 2 = π. The builder then sets the face's luminance to flux / (k × A) (builder/sources.js, syncSources)." data-hash="eedcc639"></pre>
+    <p>And the check of section 3, in the test that ran it on the user's card:</p>
+    <pre data-src="lib/pathtracer/tests.js" data-sym="const floorExpected = v => {" data-to="return FLOOR_ALBEDO"
+         data-why="h is the sun's elevation turned into its sine, the cosine law of a level floor; FLOOR_ALBEDO is 0.8. The test compares the picture's mean luminance with this." data-hash="c55f2b33"></pre>
+    <div data-claim="code">
+      <p><strong>Numbers in the comments, checked.</strong> The file's header says the solar disc "is 0.00465 rad
+        across" and 1 − cos of it is 1.08 × 10⁻⁵: at 0.53° across, 0.00463 is the angle from its middle to its edge,
+        and 1 − cos of that is 1.07 × 10⁻⁵, as <code>sunCone</code> works out. <code>discLuminance</code>'s comment
+        says the shortcut is "1% off at a 10-degree" sun: for a disc 10° across, as the setting means it, it is 0.19%,
+        and 1% at about 23° across. Several comments elsewhere give the sun in a mirror as 1.6 × 10⁹ cd/m²; at 100,000
+        lux it is 1.49 × 10⁹.</p>
+    </div>
+  </div>
+</section>
+
+<section class="plain wide" id="tricks">
+  <div class="prose">
+    <h2><span class="n">5</span>Tricks and trade-offs</h2>
+    <p>Each is stamped with how it is known; point at a stamp to see what it means.</p>
+    <div data-claim="measured">
+      <p><strong>The units hold, to a tenth of a percent.</strong> The test of section 3 (<code>docs/TESTING.md</code>,
+        "Physical units: third run", the user's Pascal card, 1188 × 969, 32 samples): sun and sky 1.0001, sun alone
+        1.0000, sky alone 0.9993, a 10° sun 1.0000, the same floor in millimetres 0.9999. One row is further off, 0.9984: sun
+        and sky with aiming at the sun switched off and a 10° disc, so that only random bounces find it (section 2). Its
+        noise was ten times the other rows', and it sits within that. The two sky-only rows, both 0.9993, are the one
+        steady remainder (the scene in metres and in millimetres, both listed in the document); its first suspect is the sky's own measurement (next), which is inferred.</p>
+    </div>
+    <div data-claim="code">
+      <p><strong>The sky is measured, then scaled.</strong> The sky's colours come from a model of sunlight scattered
+        by air, with no units of its own. The graphics card measures the illuminance that model puts on a level
+        surface, and the sky is multiplied by the setting over that measurement, so it gives exactly its 15,000 lux.
+        Until the first measurement arrives the sky is dark, "rather than wrongly bright" (the comment above
+        <code>derive</code> in <code>photometry.js</code>).</p>
+    </div>
+    <div data-claim="code">
+      <p><strong>A setting sun goes out by its top edge.</strong> The sun is off once its whole disc is below the
+        horizon (elevation + α &lt; 0), not when its middle is
+        (<cite data-src="lib/pathtracer/core/photometry.js" data-sym="/* BELOW THE HORIZON THE SUN IS OFF." data-to="not its centre."></cite>).</p>
+    </div>
+  </div>
+</section>
+
+<section class="plain wide" id="before">
+  <div class="prose">
+    <h2><span class="n">6</span>What went wrong before</h2>
+    <ul>
+      <li><strong>No units at all.</strong> The sun was an "intensity" of 1, its disc 0.1 radians from middle to edge
+        (21 times the real sun's), the sky a multiplier on a sky made to look like the one before it, and glowing
+        materials were 5: each number was set against the one before it, nothing could be measured, and the sun gave 3%
+        of the sky's light (the comment above the sun's settings in <code>uniforms.schema.js</code>, and
+        <code>photometry.js</code>'s header).</li>
+      <li><strong>Two edges to one sun.</strong> The first run of section 3's test found the rows with the real sun at
+        142 to 352 times the right mean, with their median right (<code>docs/TESTING.md</code>, "Physical units: the
+        first absolute check", Pascal). A path reaches the sun two ways: by aiming a ray at it (chapter 14), and by a
+        bounce that happens to go there. Each asks whether a direction is inside the disc, and they asked differently:
+        the aiming by dot(L, S) ≥ cos α, the bounce by section 4's cross product. Near the sun the cosine is about 180
+        steps below 1, so the two disagreed on a thin ring at the rim. A bounce into that ring was taken as one the
+        aiming could never make, so it counted the whole disc's luminance divided by a bounce's tiny chance of finding
+        the sun (a rare find counts for more: chapter 8), about 10⁵ too much, in a few pixels. Since then there is one
+        test, <code>inSunDisc</code>, and the other was deleted so a second edge cannot come back.</li>
+      <li><strong>A matte floor that was not quite matte.</strong> After that fix every row read 0.975, sun and sky,
+        metres and millimetres alike. The light was right; the floor was not: its material sent 4% of its light off as
+        a shine and reflected like an albedo of about 0.78. With a pure matte floor, the third run's 1.0001.</li>
+      <li><strong>A soft edge that lost light.</strong> The sun's disc used to fade over its outer 2%, which every way of
+        reaching it saw alike but which took about 1% off its illuminance: a number that is a setting now, and has to
+        come out as set (the comment above <code>sunDiscRadiance</code> in <code>sdf.js</code>).</li>
+      <li><strong>A sun under the floor.</strong> Below the horizon the sun used to keep shining, through the ground of
+        any scene that had none modelled (the comment in <code>derive</code>).</li>
+    </ul>
+  </div>
+</section>
+
+<section class="plain" id="try">
+  <div class="prose">
+    <h2><span class="n">7</span>Try it</h2>
+    <ul>
+      <li>In the first figure, drag the panel out to 10 m. Does a pixel wholly on it read any less? How many are left,
+        and what does the lux do?</li>
+      <li>In the second, widen the disc until <var>L</var> × solid angle is 1% off (section 4 says about 23°), then
+        find where it is 0.1% off. Does the error grow as the width, or as its square?</li>
+      <li>In the third, put the sun at 0°, then choose <strong>Sky only</strong>. Why does the line go flat?</li>
+      <li>In ShadyTracer, choose <strong>View › Tests</strong> and run <em>Physical units: does a white floor come out at
+        rho E / pi?</em> on your own card. Then switch the picture to <strong>lux on surfaces</strong> (one of the three
+        view buttons over the picture) and point at a sunlit floor.</li>
+    </ul>
+    <aside class="refs"><span class="tag">Read more</span><ul>
+      <li data-ref="pbr-radiometry">The physicist's version of the four quantities (flux, intensity, irradiance and
+        radiance), with why radiance stays the same along a ray.</li>
+      <li data-ref="pbr-radint">Integrals over directions, the cosine law in them, and the sky pressed down onto the
+        disc done properly.</li>
+      <li data-ref="wiki-photometry">Lumens, candela, lux and luminance side by side, with the radiometric unit each
+        matches.</li>
+      <li data-ref="wiki-lambert">Lambert's cosine law, and why a matte surface looks equally bright from every
+        direction.</li>
+    </ul></aside>
+    <h3>Words from this chapter</h3>
+    <ul class="words" data-words="lumen candela intensity lux illuminance luminance radiance solid-angle cosine-law albedo f32"></ul>
+  </div>
+</section>
+
+<nav class="tabs" data-auto></nav>
+</main>
+</body>
+</html>

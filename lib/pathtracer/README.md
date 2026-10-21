@@ -74,7 +74,7 @@ only softer — which is why `scale` is the control that matters on a large disp
 
 | | |
 |---|---|
-| `await saveImage({width, height, samples, filename, onProgress, signal})` | render and download a PNG as the view would show it; an aborted `signal` stops it between samples (AbortError, no file) |
+| `await saveImage({width, height, samples, filename, onProgress, signal})` | render and download a PNG as the view would show it, named `filename` or, without one, `render-<the time>.png` (`lib/filename.js`); an aborted `signal` stops it between samples (AbortError, no file) |
 | `await renderPicture({width, height, samples, onProgress, signal})` | render and **keep the result as light** (a copy of the accumulation, cd/m²) in `darkroom`; returns its size, samples and `view`, the settings the display used for it |
 | `darkroom.save(settings, filename)` / `.preview(ctx, settings)` / `.meter()` / `.discard()` | the kept picture exposed, tone-mapped and graded with settings chosen after the render (`develop.js`: `viewSettings`, the develop pass in `rendertoscreen.js`), written as PNG at full size; `view` saves the picture `saveImage` would have |
 | `await beginOffscreen({width, height})` | stop the loop, point the renderer at an offscreen target |
@@ -810,7 +810,7 @@ light through its glass.
 ### `maxaverages` is an EMA window; 0, the default, is the true mean
 
 It defaulted to 10 "so an interactive view forgets the frames from before the camera moved". A
-move restarts the picture now (always since 0.68.0, when `moveAverages` went), as every edit does, so all the 10 still did was
+move restarts the picture now (always since 0.74.0, when `moveAverages` went), as every edit does, so all the 10 still did was
 stop a still view converging past about 21 samples' worth -- hidden by the tone curve, plain in the
 false-colour views. Set to N it is still an EMA of N: a 500-sample save would be an N-sample image,
 which is why `saveImage` and the test bench pin it to 0 whatever it is.

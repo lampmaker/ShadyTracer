@@ -58,7 +58,7 @@ export function fileCommands({ actions = {}, item = null } = {}) {
     A('projects', { id: 'file.projects', group: 'project', label: 'Projects…',
         help: 'The Project panel: the projects kept in this browser, this one\'s scenes, the examples' })
     A('importFile', { id: 'file.import', group: 'files', label: 'Import from file…', keys: 'Ctrl O', when: free,
-        help: 'A .json file from disk -- a backup, or one sent to you: a scene joins this project; a project asks whether to open it as one of its own or add its scenes here' })
+        help: 'A .json file from disk -- a backup, or one sent to you: a scene joins this project; a project asks whether to open it as one of its own or add its scenes here. A STEP or STL file: each solid in it as the builder\'s own shapes (boxes, cylinders, cones, spheres, tori joined by union and subtract), into this scene' })
     const exports = [
         actions.exportScene && { label: 'Scene file…', run: () => actions.exportScene(), title: 'The scene being worked on, alone' },
         actions.exportProject && { label: 'Project file…', run: () => actions.exportProject(),

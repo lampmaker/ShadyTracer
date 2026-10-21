@@ -1,0 +1,89 @@
+/* LAB NOTEBOOK -- an engineering pad: pale green squared paper, blue-black ink, a red pencil for what matters, and
+   every word lettered by hand the way an engineer letters a drawing (Architects Daughter: an architect's even, upright
+   hand; it was Kalam's looser script with the text in a book face, until the user asked for something more hand drawn
+   and technical, 2026-10-18). Dark: a slate page, white gel pen.
+   A style: tokens, texture and frame (kit/styles.js names it); kit.css holds the layout. */
+:root[data-style="notebook"], [data-style="notebook"] {
+    --paper: #edf1e4; --paper-deep: #d6dccb; --paper-raised: #f7f9f1;
+    --ink: #1e2944; --ink-soft: #4a536a; --ink-faint: #858e9f; --grid: rgba(70, 130, 95, .17); --rule: #1e2944;
+    --accent: #c4302a; --accent-soft: rgba(196, 48, 42, .10);
+    --c-cam: #1d4fb8; --c-light: #d97c00; --c-shadow: #4f5a70; --c-blocked: #c4302a; --c-solid: #1e2944;
+    --c-fill: rgba(30, 41, 68, .55); --c-glass: #1f8aa3; --c-normal: #7b3db8; --c-hit: #1e2944; --c-step: rgba(29, 79, 184, .32);
+    --code-bg: rgba(255, 255, 255, .42); --code-ink: #1e2944; --code-comment: #5f6b62; --code-kw: #8d2a7f; --code-num: #b2560c;
+    --stamp-measured: #237a45; --stamp-code: #1d4fb8; --stamp-inferred: #b2560c;
+    --f-display: 'Architects Daughter', 'Segoe Print', 'Bradley Hand', cursive; --f-body: 'Architects Daughter', 'Segoe Print', 'Bradley Hand', cursive;
+    --f-hand: 'Architects Daughter', 'Segoe Print', 'Bradley Hand', cursive; --f-mono: 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
+    --pen-rough: 1.15; --pen-double: 1; --pen-width: 1.6; --pen-misreg: 0; --pen-fill: hatch;
+    --say-cam: "blue"; --say-light: "orange"; --say-shadow: "grey"; --say-blocked: "red"; --say-accent: "red"; --say-soft: "grey"; --say-normal: "purple"; --say-glass: "teal";
+    --radius: 3px;
+    --tex-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .1 0 0 0 0 .15 0 0 0 0 .1 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    --tex: var(--tex-grain),
+        linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    --tex-size: 180px 180px, 20px 20px, 20px 20px;
+    --hand-border: 255px 12px 225px 14px / 14px 225px 12px 255px;
+}
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"])[data-style="notebook"], :root:not([data-theme="light"]) [data-style="notebook"] {
+        --paper: #1d2321; --paper-deep: #121615; --paper-raised: #252c2a;
+        --ink: #e8ece5; --ink-soft: #b4bbb2; --ink-faint: #7b847c; --grid: rgba(150, 210, 175, .075); --rule: #e8ece5;
+        --accent: #ff7d6b; --accent-soft: rgba(255, 125, 107, .13);
+        --c-cam: #8fb8ff; --c-light: #ffc554; --c-shadow: #aeb6c4; --c-blocked: #ff7d6b; --c-solid: #e8ece5;
+        --c-fill: rgba(232, 236, 229, .5); --c-glass: #6ad2e6; --c-normal: #c9a5ff; --c-hit: #e8ece5; --c-step: rgba(143, 184, 255, .32);
+        --code-bg: rgba(0, 0, 0, .22); --code-ink: #e8ece5; --code-comment: #93a096; --code-kw: #e7a0ff; --code-num: #ffb267;
+        --stamp-measured: #78d69c; --stamp-code: #8fb8ff; --stamp-inferred: #ffb267;
+        --tex-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+        color-scheme: dark;
+    }
+}
+:root[data-theme="dark"][data-style="notebook"], :root[data-theme="dark"] [data-style="notebook"] {
+    --paper: #1d2321; --paper-deep: #121615; --paper-raised: #252c2a;
+    --ink: #e8ece5; --ink-soft: #b4bbb2; --ink-faint: #7b847c; --grid: rgba(150, 210, 175, .075); --rule: #e8ece5;
+    --accent: #ff7d6b; --accent-soft: rgba(255, 125, 107, .13);
+    --c-cam: #8fb8ff; --c-light: #ffc554; --c-shadow: #aeb6c4; --c-blocked: #ff7d6b; --c-solid: #e8ece5;
+    --c-fill: rgba(232, 236, 229, .5); --c-glass: #6ad2e6; --c-normal: #c9a5ff; --c-hit: #e8ece5; --c-step: rgba(143, 184, 255, .32);
+    --code-bg: rgba(0, 0, 0, .22); --code-ink: #e8ece5; --code-comment: #93a096; --code-kw: #e7a0ff; --code-num: #ffb267;
+    --stamp-measured: #78d69c; --stamp-code: #8fb8ff; --stamp-inferred: #ffb267;
+    --tex-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    color-scheme: dark;
+}
+
+/* the page: squared, a red margin rule down the left, holes punched for a binder */
+[data-style="notebook"] .sheet { background-size: var(--tex-size); }
+[data-style="notebook"] .sheet::before { border: 0; inset: 0 auto 0 calc(max(16px, 4vw) - 14px); width: 0; border-left: 1.5px solid var(--accent); opacity: .55; border-radius: 0; }
+[data-style="notebook"] .sheet::after {
+    content: ""; position: absolute; top: 0; bottom: 0; left: 4px; width: 14px; pointer-events: none;
+    background: radial-gradient(circle at 7px 7px, var(--paper-deep) 5px, transparent 5.6px) 0 40px / 14px 120px repeat-y;
+}
+@media (max-width: 640px) { [data-style="notebook"] .sheet::after { display: none; } }
+/* one weight only: headings by size and spacing, never a bold the browser would smear out of it */
+[data-style="notebook"] h1 { font-weight: 400; letter-spacing: .01em; line-height: 1.05; }
+[data-style="notebook"] h1::after {     /* a pen stroke under the title */
+    content: ""; display: block; height: 12px; margin-top: .25rem; width: min(26rem, 80%);
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 12' preserveAspectRatio='none'%3E%3Cpath d='M2 8 C 60 3, 120 10, 190 6 S 330 3, 398 7' fill='none' stroke='%23c4302a' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat 0 0 / 100% 100%;
+}
+[data-style="notebook"] h2, [data-style="notebook"] h3, [data-style="notebook"] .tabs a span, [data-style="notebook"] details.maths > summary { font-weight: 400; }
+[data-style="notebook"] strong, [data-style="notebook"] b { font-weight: 400; text-decoration: underline; text-decoration-color: var(--accent); text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
+[data-style="notebook"] .titleblock b { text-decoration: none; }
+[data-style="notebook"] h2 .n { font-family: var(--f-hand); font-size: .95em; vertical-align: 0; color: var(--accent); }
+[data-style="notebook"] .eyebrow { font-family: var(--f-hand); text-transform: none; letter-spacing: .02em; font-size: 1rem; font-weight: 400; }
+[data-style="notebook"] .titleblock {      /* a label taped to the page */
+    border-radius: var(--hand-border); transform: rotate(-1.2deg); background: var(--paper-raised); position: relative;
+    font-family: var(--f-hand); text-transform: none; letter-spacing: 0; font-size: .92rem; border-width: 1.6px;
+}
+[data-style="notebook"] .titleblock::before {
+    content: ""; position: absolute; top: -10px; right: -14px; width: 70px; height: 20px; rotate: 32deg;
+    background: rgba(255, 238, 170, .55); border: 1px solid rgba(160, 140, 60, .25);
+}
+[data-style="notebook"] .titleblock > div { border-color: rgba(30, 41, 68, .25); }
+[data-style="notebook"] .fig figcaption::before { content: "fig. " counter(fig); font: 400 1.05rem/1 var(--f-hand); text-transform: none; letter-spacing: 0; color: var(--accent); }
+[data-style="notebook"] .kbtn, [data-style="notebook"] .seg button, [data-style="notebook"] details.maths, [data-style="notebook"] .excerpt,
+[data-style="notebook"] .tabs a, [data-style="notebook"] .words a { border-radius: var(--hand-border); }
+[data-style="notebook"] .seg button { border-radius: 0; }
+[data-style="notebook"] .seg button:first-child { border-radius: 12px 2px 2px 14px / 14px 2px 2px 12px; }
+[data-style="notebook"] .seg button:last-child { border-radius: 2px 14px 12px 2px / 2px 12px 14px 2px; }
+[data-style="notebook"] .note { border-left: 0; background: none; padding: .2rem 0 .2rem 1rem; position: relative; font-family: var(--f-hand); font-size: 1.06rem; line-height: 1.45; color: var(--accent); }
+[data-style="notebook"] .note::before { content: ""; position: absolute; left: 0; top: .2rem; bottom: .2rem; width: 3px; border-radius: 3px; background: var(--accent); opacity: .7; }
+[data-style="notebook"] .note .tag { font-family: var(--f-hand); text-transform: none; letter-spacing: 0; font-size: 1.06rem; }
+[data-style="notebook"] [data-claim] { border-radius: var(--hand-border); }
+[data-style="notebook"] [data-claim]::before, [data-style="notebook"] [data-claim] > .stamp { background: var(--paper); rotate: -2deg; }
+[data-style="notebook"] details.maths > summary { font-family: var(--f-hand); font-size: 1.12rem; }

@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Photon mapping · ShadyTracer, inside out</title>
+<link rel="stylesheet" href="../kit/kit.css">
+<script type="module" src="photons.js"></script>
+</head>
+<body data-chapter="photons">
+<p class="kit-offline">This page runs from a web server, not from a file: in the repository run <code>python3 -m http.server 8000</code> and open http://localhost:8000/tutorial/.</p>
+<main class="sheet">
+
+<header class="sheet-head">
+  <div>
+    <p class="eyebrow">Part V · Light the camera can't find · Chapter 19</p>
+    <h1>Photon mapping</h1>
+    <p class="lede">Chapter 18 ended on a path neither side could make: a caustic seen through a pane of glass. The
+      camera's shadow rays cannot aim through the ball, and a photon's straight line to the eye meets the pane. A
+      <a data-g="photon-map">photon map</a> meets the two in the middle: photons are kept where they land, and the eye's
+      path, arriving through the pane, asks how much light landed near it. This chapter is how that works, why it blurs,
+      how the blur is made to fade, and how a GPU finds the photons near a point among millions.</p>
+  </div>
+  <div class="titleblock" data-auto></div>
+</header>
+
+<section class="scene" id="map">
+  <div class="prose">
+    <h2><span class="n">1</span>Light kept where it lands</h2>
+    <p>Chapter 18 in short. A <a data-g="caustic">caustic</a> is light that glass or a mirror gathers onto a surface.
+      The camera's paths find the sun at every matte point by aiming a <a data-g="shadow-ray">shadow ray</a> at it, but
+      not through glass, which bends the line: through glass they find it only by a lucky bounce. A lucky find counts
+      for a lot, 85 here against the open floor's 0.39, because what a path finds is divided by the chance of finding
+      it, and that chance is small. So light tracing sends <a data-g="photon">photons</a> from the sun through the glass and joins each landing
+      point to the eye, and one rule gives every kind of path exactly one owner, the camera or the photons, so no light
+      is counted twice. A sample is one path through every pixel; the picture is the average of the samples, and ± is
+      its error bar (chapter 12).</p>
+    <p data-step="map:missing">Chapter 18's ball and sun, with a pane of glass standing on the floor between the eye
+      and the ball. The strip below is the eye's picture; the pixels that look through the pane are bracketed, and the
+      caustic is among them. Here the picture is made as chapter 18 left it, the camera's paths with light tracing.
+      Light tracing cannot count the caustic through the pane (its line to the eye meets the pane), and the camera's
+      bounces find the sun through the ball only by chance: 9 times in 300 samples over the pane's 14 pixels, each find
+      worth 85. Point at the strip: pixel 24 reads 1.45 ± 0.63, a value as unsure as it is big, and pixel 25 beside it,
+      where the caustic is brightest, 0.03. The readout's error bar over the pane, ±0.060, is that luck. Given enough
+      samples the camera's paths get there (0.323 ± 0.060 is within its error bar of the map's 0.366 below, and the
+      tutorial's test runs both long enough to agree); the map gets there in a few.</p>
+    <p data-step="map:with">Now the photon map. Each sample's photons go first, as in chapter 18, and every one that
+      has passed glass or a mirror is <em>stored</em> where it lands on a surface that scatters: where, how much light,
+      which way the surface faces (the short ticks on the floor, the first sample's 181). Then the camera's paths. One
+      that has met only glass since the eye, here through the pane and onto the floor, <a data-g="gather">gathers</a>
+      there: it adds up the photons stored within a radius <var>r</var> of where it landed, 0.06 here (the dashed
+      circles), and turns them into the light the floor sends back to the eye (the fold-out). The caustic is there from
+      the first sample, and smooth: pixel 25 reads 0.72, and over the pane the pixels average 0.366 ± 0.003 after 300
+      samples. The path then bounces on, and any light it reaches through glass alone is the map's now, so it is not
+      counted twice: chapter 18's rule of one owner for each kind of path, with the map a third owner.</p>
+    <p data-step="map:wide">The price is <var>r</var>. Make it 0.4: the gather now averages the light over 0.8 of
+      floor, and the caustic's peak is spread over its surroundings. Pixel 25 reads 0.48 where it read 0.72. This is a
+      <a data-g="bias">bias</a>, an error that does not average away: every sample makes the same blur. The pane's
+      average hardly changes, though: a blur moves light from the peak to the pixels beside it, mostly inside the pane,
+      rather than losing it. The error is in where the light is.</p>
+    <p data-step="map:narrow">Make it 0.012, and the blur is gone, but each gather now finds only a photon or two, so
+      every pixel's error bar is about twice as large (point at pixels 25 and 26: ±0.02 where 0.06 gave ±0.01; the
+      pane's average, over 14 pixels, hides most of it). Wide is
+      smooth and wrong, narrow is right and noisy. Section 2 has both.</p>
+    <details class="maths">
+      <summary><span class="tag">The maths</span>What a gather adds</summary>
+      <div class="body">
+        <p>A photon carries Φ, its share of the sun's light (chapter 18). The photons that land on a stretch of floor of
+          length ℓ, added up and divided by ℓ, are the light arriving per length there: the floor's
+          <a data-g="irradiance">irradiance</a> <var>E</var>, measured. The matte floor sends back <var>f</var> × <var>E</var>
+          towards the eye, <var>f</var> = ρ/2 in the flat world (chapter 8). A gather takes ℓ to be the stretch within
+          <var>r</var> of the point, 2<var>r</var> long:</p>
+        <p class="eq"><var>L</var> ≈ <var>f</var> × <span class="frac"><span>Σ Φ<sub>p</sub></span><span>2<var>r</var></span></span>
+          &nbsp; in the flat world, &nbsp; <var>L</var> ≈ <span class="frac"><span>Σ <var>f</var> Φ<sub>p</sub></span><span>π<var>r</var>²</span></span> &nbsp; on a surface in 3D</p>
+        <p>where the sum is over the photons within <var>r</var>, and in 3D <var>f</var> depends on the direction each
+          came from, so it sits inside the sum. What this measures is <var>E</var> averaged over the 2<var>r</var> (or
+          the disc), not <var>E</var> at the point: that average is the blur. A photon whose surface faces more than
+          about 25° away from the gather's is on another surface (a wall meeting the floor) and is not counted.</p>
+      </div>
+    </details>
+  </div>
+  <figure class="fig" data-fig="map">
+    <figcaption>The ball and the pane (in the glass colour) over a matte floor, the sun's parallel rays from the upper
+      right, the eye at the left. Faint lines are a few of the first sample's paths through the pane: the eye's rays
+      <span data-say="cam">blue</span>, shadow rays <span data-say="shadow">green</span> or
+      <span data-say="blocked">red</span> where something blocks them. With the map on, the photons stored on the floor
+      are ticks in the sun's colour, and each gather's radius a dashed circle in the <span data-say="accent">accent
+      colour</span>. Below: the eye's picture, brightened 1.2 times; point at a pixel for its value and error bar. The
+      figure goes on adding samples up to 300: the text's numbers are at 300, a quick look may be at fewer. Switch the
+      map, and set its radius.</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="shrink">
+  <div class="prose">
+    <h2><span class="n">2</span>A blur that fades</h2>
+    <p data-step="shrink:fixed">One point of the floor, under the ball where the caustic peaks. Its true brightness is
+      0.938, found without any randomness: 400,000 of the sun's rays sent evenly across the ball and followed through it
+      exactly (the dashed line). Each sample sends 600 photons and gathers within <var>r</var>₁ = 0.25 of the point; the
+      <span data-say="blocked">red</span> curve is the average of the samples so far. It settles, but on 0.623, not on
+      0.938: on the light averaged over the 0.5 of floor round the point (the dotted line). More samples only make it
+      surer of the wrong value.</p>
+    <p data-step="shrink:shrinking">Claude Knaus and Matthias Zwicker's way out (2011): each sample is a photon map of its
+      own, so each can have its own radius, smaller every time, by the rule</p>
+    <p class="eq" data-step="shrink:shrinking"><var>r</var><sub><var>k</var></sub> = <var>r</var>₁ × <span class="frac"><span>1 + α</span><span>2</span></span> ×
+      <span class="frac"><span>2 + α</span><span>3</span></span> × … × <span class="frac"><span><var>k</var> − 1 + α</span><span><var>k</var></span></span></p>
+    <p data-step="shrink:shrinking">with α between 0 and 1 (the lower panel; α = 2/3 here, ShadyTracer's). The first
+      samples are blurred and the late ones sharp, and the average of them all, the <span data-say="cam">blue</span> curve, climbs towards the true value:
+      0.905 after 300 samples, the radius down to 0.041. Slowly, because the blurred early samples stay in the average,
+      but the blur's share of it falls towards nothing while the late samples' noise, though larger, is averaged over
+      more and more of them. No pixel has to remember anything but its average, which every pixel keeps anyway (chapter
+      12): the paper's point. A renderer whose error fades to 0 with more samples, though every finite picture is a
+      little wrong, is called <a data-g="consistent">consistent</a>.</p>
+    <p data-step="shrink:fast">α sets the pace. At 0.25 the radius falls to 0.004 by sample 300, the blur goes sooner, and
+      the average reaches 1.002, past the true value: a late sample's gather catches one photon or none, so each sample
+      jumps and the curve jumps with them. ShadyTracer uses α = 2/3, the paper's recommendation. In 3D it is the disc's
+      area π<var>r</var>² that shrinks by the rule, so <var>r</var>² does; on the flat world's line the "area" is
+      2<var>r</var>, so <var>r</var> itself does.</p>
+    <details class="maths">
+      <summary><span class="tag">The maths</span>Why the average converges</summary>
+      <div class="body">
+        <p>Two words first. "<var>a</var> ∝ <var>b</var>" says <var>a</var> grows in proportion to <var>b</var>:
+          double one and the other doubles. <em>Variance</em> is the square of the noise, the spread of a sample's value
+          about its mean (chapter 12); averaging <var>k</var> samples of equal variance divides it by <var>k</var>.</p>
+        <p>How the radius shrinks, with α = 2/3, in numbers:</p>
+        <table class="data">
+          <tr><th>sample <var>k</var></th><th><var>r</var><sub><var>k</var></sub> ÷ <var>r</var>₁</th><th>photons a gather finds</th><th>its blur</th></tr>
+          <tr><td>1</td><td>1</td><td>1</td><td>1</td></tr>
+          <tr><td>10</td><td>0.51</td><td>0.51</td><td>0.26</td></tr>
+          <tr><td>100</td><td>0.24</td><td>0.24</td><td>0.057</td></tr>
+          <tr><td>300</td><td>0.17</td><td>0.17</td><td>0.027</td></tr>
+          <tr><td>1000</td><td>0.11</td><td>0.11</td><td>0.012</td></tr>
+        </table>
+        <p>(the last two columns as a share of the first sample's). For large <var>k</var> the product behaves like a
+          power, <var>r</var><sub><var>k</var></sub> ∝ <var>k</var><sup>(α−1)</sup>: here about
+          <var>k</var><sup>(−1/3)</sup>, a tenth by sample 1000. Two errors, sample by sample:</p>
+        <dl class="terms">
+          <dt>noise</dt><dd>with <var>N</var> photons landing on each unit of floor, a gather finds about <var>N</var> ×
+            2<var>r</var><sub><var>k</var></sub>, give or take its square root (how counts of independent random events
+            spread). The gather divides the count by 2<var>r</var><sub><var>k</var></sub>, so its spread is
+            √(<var>N</var> 2<var>r</var>) ÷ 2<var>r</var> = √(<var>N</var> ÷ 2<var>r</var>), and its square, the variance,
+            is ∝ 1/<var>r</var><sub><var>k</var></sub>: fewer photons, more noise, growing as
+            <var>k</var><sup>(1−α)</sup>. The variance of an average of <var>k</var> independent samples is the sum of
+            their variances divided by <var>k</var>², here about <var>k</var> × <var>k</var><sup>(1−α)</sup> ÷
+            <var>k</var>² = <var>k</var><sup>(−α)</sup>: it falls, for any α above 0.</dd>
+          <dt>blur</dt><dd>a smooth curve averaged over ±<var>r</var> differs from its middle value by about its bend ×
+            <var>r</var>²/6, so the error grows as <var>r</var>² ∝ <var>k</var><sup>(2α−2)</sup>, the table's last column.
+            Its average over <var>k</var> samples falls too, for any α below 1.</dd>
+        </dl>
+        <p>So both go, and α trades one against the other: small α kills the blur fast and the noise slowly, large α the
+          reverse. At α = 1 the radius never shrinks (section 2's first step); at 0 it shrinks so fast that the noise
+          never falls.</p>
+      </div>
+    </details>
+  </div>
+  <figure class="fig" data-fig="shrink">
+    <figcaption>Above: the floor's brightness at the caustic's peak, averaged over the samples so far, against the
+      number of samples (each mark ten times the last): with the radius held at <var>r</var>₁
+      (<span data-say="blocked">red</span>, its settling value dotted) and shrinking (<span data-say="cam">blue</span>),
+      the true value dashed. Below: the radius, sample by sample. The 300 samples are the same photons for both curves.
+      Point at a curve for its value; set <var>r</var>₁ and α.</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="grid">
+  <div class="prose">
+    <h2><span class="n">3</span>Finding the photons near a point</h2>
+    <p data-step="grid:walk">A ShadyTracer sample keeps up to two million photons, and every camera ray seen through
+      glass gathers: for each of the 921,600 pixels of a 1280 × 720 picture
+      to look at every one would be nearly two million million records a sample. So the floor is cut into cells
+      2<var>r</var> wide (the ticks on it). The photons within <var>r</var> of a point can then lie only in its own cell
+      or in the neighbour on the side of the cell's middle the point is on: two cells (shaded), and in 3D, two on each
+      axis, 2 × 2 × 2 = 8. Most cells hold no photon, so they are not kept as an array but in a
+      <a data-g="hash-table">hash table</a>: a cell's number times a large constant (73856093, the engine's), and the
+      remainder after dividing by the table's size, picks its list. (The large constant spreads neighbouring cells
+      over the lists. The product is kept as a 32-bit whole number without a sign, so a negative cell's wraps round to
+      a large positive one: cell −3 gives −221,568,279, which wraps to 2³² − 221,568,279 = 4,073,399,017; and since the
+      table's size is a power of two, its remainder is just the product's last bits, here 1: list 1. In 3D a cell is
+      three numbers, each multiplied by a constant of its own and the three combined into one, bit by bit. The page
+      runs the engine's JavaScript, <code>hashCell</code>; its WGSL twin, <code>sppmHash</code>, is the same formula.) Drag the gather point; the
+      <span data-say="cam">blue</span> ticks are the photons it counts, the blue bar its 2<var>r</var>. Here it walked
+      20 records and counted 10.</p>
+    <p data-step="grid:collide">Two cells can pick the same list. With four lists (ShadyTracer has a million, so this
+      is rare there), cell −3 shares list 1 with cells 1 and −11, and cell −2 shares list 2 with cell 2 (a list's label
+      names the cells that have photons on it; −3 has none). A gather at −0.5 walks ten records of those other cells
+      (<span data-say="blocked">red</span>; one of them far off the figure's left edge) to count the one of its own.
+      Counting every record a list holds would be wrong twice over: a record of cell 1, far away, would count for a
+      gather at −0.5, and a gather whose two cells picked the same list would walk it twice and count its records
+      twice. So each record keeps where it is, and is counted only on the visit to its own cell, and only within
+      <var>r</var>. A collision costs time, never light.</p>
+    <p data-step="grid:budget">Light piled into a line can put thousands of photons in one cell: 8,315 records in one
+      list, counted on the dichroics scene. A gather walking them all takes that long, and the code bounds a thread's
+      time, so until version 0.61.3 a gather stopped at 512, and the light it did not reach was lost where the
+      photons were densest. Now every record is also put on one of a cell's 32 <em>sub-lists</em>, drawn at random as it
+      is stored, and each list counts its records (all the records on it, whichever cells share it). Past its share of the budget, a gather walks only <var>m</var> of
+      the sub-lists, from a random start, and every record it finds counts 32/<var>m</var> times. Step by step:</p>
+    <ul data-step="grid:budget">
+      <li>The budget is the records one gather may walk: 512 in the engine. Shared over the 8 cells it visits, each
+        cell's <em>share</em> is 512 ÷ 8 = 64. This figure uses a share of 6.</li>
+      <li>A cell whose list holds no more than its share is walked whole.</li>
+      <li>One that holds more is walked through <var>m</var> = 32 × share ÷ count of its sub-lists, rounded down:
+        on average that is about a share's worth of records.</li>
+      <li>Here list 1 holds 8 records: <var>m</var> = 32 × 6 ÷ 8 = 24 sub-lists, each find counting 32/24 = 1.33.
+        List 0 holds 12: <var>m</var> = 32 × 6 ÷ 12 = 16, each find counting 2.</li>
+    </ul>
+    <p data-step="grid:budget">From start 0 the gather reads 0.738 against the whole walk's 0.615; press <strong>The next start</strong>
+      to see the others. Averaged over all 32 starts it reads 0.615 exactly: each record is on the walked sub-lists in
+      <var>m</var> of the 32 starts, and counts 32/<var>m</var> each time. And <var>m</var> is decided by the list's
+      count alone, never by which sub-list a record drew, or the weights would favour some records. Right on average,
+      a little noisier only where it acts.</p>
+  </div>
+  <figure class="fig" data-fig="grid">
+    <figcaption>One sample's photons on the floor, seen from the side: each is a tick where it landed, its cell's
+      edges the ticks below. The gather point is the circled cross (drag it), its 2<var>r</var> the
+      <span data-say="cam">blue</span> bar, the two cells it visits shaded in the <span data-say="accent">accent
+      colour</span>. Ticks: <span data-say="cam">blue</span> counted, <span data-say="blocked">red</span> walked but
+      another cell's, in the sun's colour walked but farther than <var>r</var> (faint: not walked); the key is at the top
+      right. Below, the hash table's four lists, the two the gather walks marked. Set the radius, and switch the budget
+      on.</figcaption>
+  </figure>
+</section>
+
+<section class="plain wide" id="engine">
+  <div class="prose">
+    <h2><span class="n">4</span>How ShadyTracer does it</h2>
+    <p>In outline. <em>Storing</em>: a photon that has passed glass and lands on a surface that scatters takes the
+      next record number (an atomic add on a counter), writes where it is, its light and its two directions there, and
+      puts itself at the front of its cell's list and of one of its 32 sub-lists (an atomic exchange of the list's
+      head). <em>Gathering</em>: a camera ray visits its 8 cells; for each it reads the list's count, walks the whole
+      list or <var>m</var> of its sub-lists, and adds every record that is its own cell's, within <var>r</var>, on a
+      surface facing the same way and within the bounce cap, each times the surface's <var>f</var>; the sum is divided
+      by π<var>r</var>². What the map is, in the file's own words:</p>
+    <pre data-src="lib/pathtracer/core/sppm.js" data-sym="WHAT IT IS. Probabilistic progressive photon mapping" data-to="consistent in the limit."
+         data-why="'A delta event' is a mirror or clear glass (chapter 8). 'An evaluable lobe' is a surface a connection can evaluate, matte or rough enough (chapter 9; LT_MIN_ALPHA, chapter 18). f(x; l_p -> v) is the surface's BSDF from the photon's direction to the eye's. 'The picture's own true mean' is the per-pixel average every pixel keeps (chapter 12)." data-hash="323bfc9f"></pre>
+    <p>The schedule, with the square root that makes it the area that shrinks:</p>
+    <pre data-src="lib/pathtracer/core/sppm.js" data-sym="function sppmRadius" data-hash="d29a9d21"></pre>
+    <p>And where <var>r</var>₁ comes from: a number of pixels at the distance the camera is focused on, so the blur
+      starts at a few pixels whatever the scene's size. The setting is 3 pixels by default, and its own comment says
+      why 3: "3 is a choice made without seeing it"
+      (<cite data-src="lib/pathtracer/core/uniforms.schema.js" data-sym="3 is a choice made without seeing it."></cite>).</p>
+    <pre data-src="lib/pathtracer/core/raytrace_main.js" data-sym="const sppmGeomFor"
+         data-why="camLens[1] is the focus distance (chapter 17), invProjection[5] tan(fov/2): pixelFootprint gives one pixel's height at that distance. frames + 1 is k. The four numbers go to the GPU as UB.sppmGeom: the radius, the cell size 2r, 1/(pi r^2), and a slot the host fills with the stores' keep probability." data-hash="bb85be34"></pre>
+    <p>The grid, built as photons are stored, with no sorting:</p>
+    <pre data-src="lib/pathtracer/core/sppm.js" data-sym="// THE GRID: a hash table of linked lists" data-to="so none twice."
+         data-why="tinywebgpu is the small WebGPU library ShadyTracer runs its kernels through (chapter 21). A sort or a prefix sum would let the photons be ordered by cell, but it has neither; linked lists need only the two atomic operations." data-hash="6c4fcb3b"></pre>
+    <pre data-src="lib/pathtracer/core/sppm.js" data-sym="fn sppmStore"
+         data-why="WGSL (chapter 21). sppmHeads is one buffer: four header words, then the lists' heads, their counts, and the sub-lists' heads, a million words each. atomicAdd returns the old value, so each photon gets its own record number; atomicExchange puts this record at the list's head and returns the old head, which becomes this record's 'next' (word 8; word 10 for its sub-list). A head holds the record's number + 1, so that 0 can mean an empty list. bitcast stores an f32's bits in a u32 word; sppmOct packs a direction into 32 bits; | and &lt;&lt; pack the bounces and the sub-list into one word (bitwise or, and shift left). select(a, b, c) is c ? b : a. An atomic operation is one that no other thread can interrupt." data-hash="84d1f27b"></pre>
+    <p>The gather's walk, cell by cell, with the budget (the loop over the eight cells and its start are just above):</p>
+    <pre data-src="lib/pathtracer/core/sppm.js" data-sym="let count = atomicLoad(&amp;sppmHeads[SPPM_HEADER + SPPM_HEADS + h]);" data-to="sum += w * f * vec3&lt;f32&gt;("
+         data-why="share is the budget, 512 records, over the 8 cells; whole says whether this cell's list fits in it, and subs is section 3's m. A list's heads hold record number + 1, so 0 means the end. Each continue is a record not counted: another cell's or farther than r (the first); another sub-list's, where two hash alike; a photon on a surface facing another way (more than about 25° off this one's normal); and one whose path with the camera's would pass the bounce cap. noUnroll keeps the compiler from copying the loop's body eight times (the BSDF inside is large: chapter 24). lobesEval is the surface's BSDF (its f, chapter 9) from the photon's direction, through lb, the surface's lobes. rad is r; bc the camera path's bounces so far, plus one; hard a hard cap, 8 budgets' worth of visits, past which the gather stops and is counted as cut; SPPM_ALL marks a photon of a light no camera path can meet (sppmUnmet), counted on every lobe. The excerpt stops in the middle of the sum; after the loop the sum is multiplied by UB.sppmGeom.z, 1/(πr²): the fold-out's division by the disc's area." data-hash="c34b4f55"></pre>
+    <p>Why the budget is right on average, as the file states it:</p>
+    <pre data-src="lib/pathtracer/core/sppm.js" data-sym="NEITHER FULL NOR CUT MAY DARKEN IT" data-to="still bounds a thread's time; a gather that reaches it is counted, as the cut was."
+         data-why="The first part, the keep probability, is the same trick for the stores: a sample that would overfill the buffer keeps each photon with a probability p and multiplies its power by 1/p (chapter 13's Russian roulette, on the stores). The comment says 0.61.2; CHANGELOG.md puts the fix in 0.61.3, after 0.61.2's bench run found the problem." data-hash="3467cc62"></pre>
+    <p>And one factor a gather inside glass needs (the bottom of a pool, seen through the water's surface):</p>
+    <pre data-src="lib/pathtracer/core/wavefront.js" data-sym="THE MEDIUM'S ABSORPTION on the last leg" data-to="test/sppm.test.mjs plants its absence."
+         data-why="Radiance is the light along one ray (chapter 5). Inside glass of index n the same light is n² times the radiance it was outside, because the glass squeezes the rays' directions into a narrower cone (Snell's law, chapter 10). Absorption is the light the glass takes on the way (Beer and Lambert, chapter 10). The camera's refractions leave that factor out, since a path that starts and ends in air would take it on the way in and give it back on the way out; so a gather made inside glass divides by n² itself. 'Plants its absence': the test removes the factor and checks that it then fails." data-hash="8da45b3d"></pre>
+  </div>
+</section>
+
+<section class="plain wide" id="tricks">
+  <div class="prose">
+    <h2><span class="n">5</span>Tricks and trade-offs</h2>
+    <p>Each is stamped with how it is known; point at a stamp to see what it means.</p>
+    <div data-claim="measured">
+      <p><strong>What it costs.</strong> On the user's Ampere card, the dichroics scene (glass plates lit by a sheet of
+        light, the floor seen through them) at 1280 × 720 took 196.0 ms a sample with the map and 173.3 without: 22.7
+        ms, of which the map's own kernel was 16.2 (<code>docs/PERFORMANCE.md</code>, Tests &gt; dichroics, version
+        0.61.2). That was before the sub-lists, which walk more where the old gather stopped; their cost on a card is
+        not measured yet.</p>
+    </div>
+    <div data-claim="measured">
+      <p><strong>Neither full nor cut, checked.</strong> On Dawn (Chrome's WebGPU run outside the browser) on an RTX 3080
+        Laptop, the dichroics scene (glass plates lit by a sheet of light): the light the map put in its pixels, as a
+        share of a map with room for everything (<code>CHANGELOG.md</code>, 0.61.3). A seed is the start of the random numbers, so two seeds are two
+        different runs of the same picture.</p>
+      <table class="data">
+        <tr><th></th><th>1280 × 720</th><th>1920 × 1080</th></tr>
+        <tr><td>the old gather, stopped at 512</td><td>0.355</td><td>0.274</td></tr>
+        <tr><td>the sub-lists and kept stores</td><td>0.965, 1.000 (two seeds)</td><td>0.884 to 0.903 (three seeds)</td></tr>
+        <tr><td>the exact map, run again</td><td>0.978</td><td>0.894</td></tr>
+      </table>
+      <p>The exact map, run a second time, reads 0.978 and 0.894 of its own first run: that is how far two runs of the
+        same thing differ, and the new gather is within that spread.</p>
+    </div>
+    <div data-claim="code">
+      <p><strong>Photons first, in every sample.</strong> A map built in one sample and gathered in the next would cost
+        no second pass, but what the two sides read changes between samples (which glowing objects are known, chapter
+        16), so the camera would hand over light the photons were drawn without. So a sample runs its photons, then its
+        camera rays (<cite data-src="lib/pathtracer/core/sppm.js" data-sym="// WHY PHOTONS FIRST, THEN CAMERA RAYS, IN EVERY SAMPLE" data-to="(inferred: its iterations' fixed cost; not measured)."></cite>).
+        That comment still calls the second pass's cost "not measured"; the 22.7 ms above includes it.</p>
+    </div>
+    <div data-claim="code">
+      <p><strong>Idle when nothing looks.</strong> A gather marks a word in the map's header. A sample in which no
+        camera ray gathered makes the next traces run without the map, until a new scene, size or mode, or every 16th
+        trace looks again; a camera move does not wake it (<code>SPPM_PROBE</code>; <code>raytrace_main.js</code>, the photon map this trace). A view with no
+        glass in it pays nothing.</p>
+    </div>
+    <div data-claim="code">
+      <p><strong>Memory.</strong> A record is 11 words, 44 bytes: where, the power in three colours, the photon's direction
+        and its surface's normal packed into 32 bits each, the next record in its list and in its sub-list, and its
+        bounces. Two million photons, the default, are 88 MB (<code>SPPM_REC</code>; the setting
+        <code>sppmCapacity</code>).</p>
+    </div>
+  </div>
+</section>
+
+<section class="plain wide" id="before">
+  <div class="prose">
+    <h2><span class="n">6</span>What went wrong before</h2>
+    <ul>
+      <li><strong>Black, with white specks.</strong> The map exists because of one picture: a lamp, a glass slab on a
+        white floor before a white wall, and through the slab, black with white specks
+        (<cite data-src="lib/pathtracer/core/sppm.js" data-sym="// WHY. The user's picture (2026-10-15, the full renderer, an aperture)" data-to="and the two before it went (materials_pbr.js, THE CLASS THE PHOTON MAP OWNS, says what they were)."></cite>).
+        Two earlier mechanisms each covered part of that path class; the specks were photons that happened to cross the
+        camera's lens. The map replaced both.</li>
+      <li><strong>A mirror that was not a mirror to the map.</strong> The test for "can a gather here see anything"
+        compared a surface's roughness with a floor set for alpha, roughness squared (chapter 9), so a silver mirror of
+        roughness 0.02, a delta to the BSDF, stored every photon that reached it, and every camera ray seen through glass
+        gathered there, all for an <var>f</var> of 0
+        (<cite data-src="lib/pathtracer/core/sppm.js" data-sym="IN ALPHA, AS lobesEval DECIDES (0.61.2)" data-to="(test/sppm.gpu.mjs holds lobesEval to this). */"></cite>).</li>
+      <li><strong>Photons nobody could count.</strong> A photon stored on its last allowed bounce takes a record, its
+        atomics and every gather's visit, but a camera ray gathers with at least two bounces of its own, so the bounce
+        cap never lets it be counted
+        (<cite data-src="lib/pathtracer/core/sppm.js" data-sym="/* WITHIN THE CAP A GATHER CAN ACCEPT (0.61.2)" data-to="visits for nothing. */"></cite>).
+        It is no longer stored.</li>
+      <li><strong>A gather that stopped, and a buffer that filled.</strong> Section 3's budget and the keep probability:
+        both lost light exactly where it was densest, which no number of samples brings back.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="plain" id="try">
+  <div class="prose">
+    <h2><span class="n">7</span>Try it</h2>
+    <ul>
+      <li>In the first figure, with the map on, move the radius from 0.01 to 0.4 and watch pixel 25 and its error bar.
+        Where would you set it for 10 samples? For 300?</li>
+      <li>In the second, set <var>r</var>₁ to 0.05. How close do the two curves end, and why does shrinking help less?
+        Then set α to 0.95.</li>
+      <li>In the third, make the radius 0.4. How many records does a gather walk, and how many does it count? What happens
+        to the hash table's lists?</li>
+      <li>In ShadyTracer, stand a glass slab on a white floor in front of a lamp, and look through it. Switch
+        <strong>Seen through glass and mirrors (photon map)</strong> off and on (Render settings). With the Developer
+        switch on, change <strong>Photon map: radius (pixels)</strong> and watch the first samples.</li>
+    </ul>
+    <aside class="refs"><span class="tag">Read more</span><ul>
+      <li data-ref="wiki-photon">Photon mapping from its start: two passes, a map, a radius, and where it is used.</li>
+      <li data-ref="pbr3-sppm">The progressive version step by step, with code: a renderer gathering at camera points
+        and shrinking each point's radius.</li>
+      <li data-ref="knaus2011">The paper ShadyTracer follows: every sample its own photon map, the radius shrinking by
+        a schedule, nothing kept per pixel but the average.</li>
+      <li data-ref="wiki-hash">Hash tables, collisions and lists.</li>
+    </ul></aside>
+    <h3>Words from this chapter</h3>
+    <ul class="words" data-words="photon-map gather consistent bias hash-table atomic photon caustic"></ul>
+  </div>
+</section>
+
+<nav class="tabs" data-auto></nav>
+</main>
+</body>
+</html>

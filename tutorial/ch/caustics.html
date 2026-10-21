@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Caustics · ShadyTracer, inside out</title>
+<link rel="stylesheet" href="../kit/kit.css">
+<script type="module" src="caustics.js"></script>
+</head>
+<body data-chapter="caustics">
+<p class="kit-offline">This page runs from a web server, not from a file: in the repository run <code>python3 -m http.server 8000</code> and open http://localhost:8000/tutorial/.</p>
+<main class="sheet">
+
+<header class="sheet-head">
+  <div>
+    <p class="eyebrow">Part V · Light the camera can't find · Chapter 18</p>
+    <h1>Caustics</h1>
+    <p class="lede">Sunlight through a glass of water makes a bright, wavy patch on the table under it: a
+      <a data-g="caustic">caustic</a>, light that glass or a mirror has gathered onto a surface. Everything so far
+      follows light backwards from the eye, and for a caustic that fails: the eye's paths almost never find it. This
+      chapter is why, and the cure ShadyTracer uses, following light forwards from the sun as well, with a rule that
+      shares the work out so that no light is counted twice.</p>
+  </div>
+  <div class="titleblock" data-auto></div>
+</header>
+
+<section class="scene" id="caustic">
+  <div class="prose">
+    <h2><span class="n">1</span>A shadow where the light should be</h2>
+    <p data-step="caustic:shadow">A glass ball over a matte floor, the sun 75° up on the right, in the flat world (this
+      tutorial's 2D world, where light spreads round a circle instead of over a sphere: chapter 0). The ball bends the
+      sun's light together, so the floor under it should show a bright spot. The eye's picture is the strip below,
+      made as chapter 14 makes it: a <a data-g="path">path</a> from the eye through every pixel, and at each point of
+      the floor a <a data-g="shadow-ray">shadow ray</a> aimed at the sun (next-event estimation,
+      <a data-g="nee">NEE</a>). One path through every pixel is a <em>sample</em>; the strip is the average of the
+      samples so far, and the readout's ± is its error bar: the average lies within about that of the true value two
+      times in three (chapter 12). Under the ball (bracketed, pixels 22 to 29) the shadow rays meet the glass and count
+      it as in the way: a shadow, with bright specks. The open floor reads 0.39 from the first sample; under the ball
+      the average jumps about from sample to sample and settles only slowly.</p>
+    <p data-step="caustic:shadow">The shadow ray cannot do better. It has to aim at the sun, but through the ball the
+      sun is not where it is: the glass bends the line. The only line from the floor through the glass to the sun is the
+      one Snell's law makes (the law of how glass bends light, chapter 10), and a shadow ray picked at random lies on it
+      with chance 0. A mirror or glass sends light one exact way (chapter 8: a <a data-g="delta">delta</a>), so there is
+      nothing to aim at.</p>
+    <p data-step="caustic:shadow">What is left is the floor's bounce: its direction picked at random (chapter 8), it
+      goes into the ball, and only if the glass happens to turn it onto the sun does it bring the sun's light back. In
+      the flat world that happens about once in 220 bounces for a sun half a degree across. A find carries the sun's
+      brightness, 106, times the 0.8 the floor sends back: 85, where the open floor reads 0.39. It counts that much
+      because a path's weight is what it found divided by the chance of finding it (chapter 8): a rare find counts for
+      a lot, and most samples find nothing. On average the sums agree: once in 220 bounces, 85 each, is 85 ÷ 220 ≈ 0.39,
+      what the open floor gets; the glass moves the sun's light about, it does not add to it. Those rare big finds are
+      the specks, and why the average jumps. In 3D the real sun is found far more rarely: 1 bounce in 66,111, for a sun
+      45° up (chapter 5's case).</p>
+    <p data-step="caustic:wide">Make the sun 8° across, the light it sends onto a surface facing it held the same
+      (its illuminance, as ShadyTracer's setting holds it: chapter 5), so each degree of it is dimmer. Now a bounce through the ball finds the sun far more often, and the bright spot appears under the
+      ball, still grainy. A bigger sun is a softer caustic and an easier one to find; a real one, small and bright, is
+      the hard case.</p>
+    <p data-step="caustic:light"><strong>From the light instead.</strong> Turn it round: start at the sun. A
+      <a data-g="photon">photon</a>, a ray sent from the light, goes through the glass by Snell's law and Fresnel's (how much glass reflects and how much it lets through:
+      chapter 10)
+      with nothing to guess, and lands where the optics put it. Then the only question is whether the eye sees that
+      point of the floor, and that is one straight line: a <em>connection</em> from the point to the eye, which adds
+      the photon's light to the pixel the point lands in. This is <a data-g="light-tracing">light tracing</a>. The
+      strip shows it alone: the caustic, clean after a few samples, and a faint glow over the open floor, the light the
+      ball's surface reflects there like a mirror, a caustic of its own. Nothing else, because a photon is connected
+      only after it has passed glass or a mirror.</p>
+    <p data-step="caustic:both">Both together: the camera's paths for everything they find well, the photons for the
+      caustic. ShadyTracer divides the paths between the two (section 2): a path that reaches the sun through glass
+      from the floor the eye sees first belongs to the photons, and the camera's side leaves it out. Everything else
+      stays the camera's. Each path is counted by exactly one side, and the picture is all there. The bracket averages
+      the bright spot with the ball's shadow on either side of it, which is why it reads less than the open floor even
+      with the caustic in it: the spot itself is pixel 25, 0.83 after 400 samples.</p>
+    <p data-step="caustic:twice">Without that division, both sides count the caustic: the camera's chance finds and
+      the photons. After 400 samples the bracket reads 0.738, against 0.313 with the split: the photons' 0.282 on top
+      of the camera's own 0.455, about 2.4 times. (The camera's 0.455 is itself off the true value by the luck of its
+      specks at 400 samples.) The open floor far from the ball reads the same either way, 0.395 (compare the readout's
+      numbers with <strong>Both, split</strong>); the camera alone read it a little lower, 0.388, because the light the
+      ball reflects there it finds only by chance. A renderer that adds a second way of finding
+      light must take the light it finds away from the first.</p>
+    <details class="maths">
+      <summary><span class="tag">The maths</span>What one connection adds to its pixel</summary>
+      <div class="body">
+        <p>A camera pixel is an average over the rays through it, spread evenly over its width on the film (chapter 1).
+          A photon lands at a point x of the floor carrying light Φ (its share of the sun's). The camera would have
+          seen x by a ray through some pixel, and what that pixel reads of x is the floor's radiance there,
+          <var>f</var> × the light arriving, where <var>f</var> = ρ/2 in the flat world (ρ the floor's albedo, the share
+          of light it sends back; the 2 spreads it over the half circle of directions it can go, chapter 8). So a
+          connection adds</p>
+        <p class="eq">Φ × <var>f</var> × <span class="frac"><span>cos θ<sub>x</sub></span><span><var>d</var> cos²θ<sub>c</sub> Δ<var>u</var></span></span></p>
+        <dl class="terms">
+          <dt>cos θ<sub>x</sub> / <var>d</var></dt><dd>the angle a piece of floor fills, seen from the eye
+            <var>d</var> away, tilted θ<sub>x</sub> from facing it: the flat world's 1/d (chapter 0)</dd>
+          <dt>1 / cos²θ<sub>c</sub></dt><dd>the film is flat, at distance 1 along the camera's axis, so towards its edge
+            the same angle spreads over more film, twice over: a direction θ<sub>c</sub> off the axis meets the film
+            1/cos θ<sub>c</sub> away, which widens the angle's footprint by that, and meets it slanted, which widens it
+            by that again</dd>
+          <dt>Δ<var>u</var></dt><dd>a pixel's width on the film; dividing by it turns "light landing on the film" into
+            the pixel's average, as the camera's rays measure it</dd>
+        </dl>
+        <p>In 3D the angle becomes a solid angle, 1/<var>d</var> becomes 1/<var>d</var>², and the film's stretch
+          1/cos³θ<sub>c</sub>: ShadyTracer's <var>G</var> = |n·v| <var>d</var> / <var>z</var>³, z the depth along the
+          axis (section 4). The test holds this page's version to the camera's own pictures: a sunlit floor by photons
+          alone reads what the camera's shadow rays read, pixel for pixel, and the caustic by photons what plain path
+          tracing finds by chance, given long enough.</p>
+      </div>
+    </details>
+  </div>
+  <figure class="fig" data-fig="caustic">
+    <figcaption>A glass ball (in the glass colour) over a matte floor, the sun's parallel rays from the upper right, and
+      the eye at the left. Faint lines are a few of the first sample's paths: the eye's rays
+      <span data-say="cam">blue</span>, shadow rays to the sun <span data-say="shadow">green</span> (or
+      <span data-say="blocked">red</span> where something blocks them), photons from the sun in the sun's colour and
+      their connections to the eye <span data-say="shadow">green</span> and dashed. Below: the eye's picture, refining
+      as samples add up, the floor under the ball bracketed above it; under it, the pixels that see the sky and the
+      ball. Choose who counts the light, and the sun's width.</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="kinds">
+  <div class="prose">
+    <h2><span class="n">2</span>Who counts what</h2>
+    <p data-step="kinds:direct">The division is by the shape of a path, from the eye to the sun. A floor in the sun:
+      eye, floor, sun. The camera's shadow ray finds it every time; it is the camera's.</p>
+    <p data-step="kinds:caustic">The caustic: eye, floor, then the glass (once or more), then the sun. The first point
+      the eye sees scatters light (a matte or rough surface: chapter 9's evaluable lobes), and every event after it is
+      a delta. That exact class is the photons', and nothing else is. The camera's side tags a path as it forms: a camera
+      path can still reach the sun this way, by the floor's bounce through the ball (section 1's lucky finds), and when
+      a path of that class does, it adds nothing.</p>
+    <p data-step="kinds:seen">Now stand a pane of glass on the floor, between the eye and the ball. The floor seen
+      through it: eye, glass, floor, sun. The camera gets there through the pane and aims at the sun from the floor. A photon could land on that floor too, but its connection to the eye
+      would meet the pane, so it cannot count it: this stays the camera's.</p>
+    <p data-step="kinds:both">And a caustic seen through glass: eye, glass, floor, glass, sun. The camera's shadow ray
+      from the floor meets the ball; the photon's connection from the floor meets the pane, so light tracing cannot
+      count it, and it stays the camera's. The camera finds it only by chance, as in section 1 before the photons: the
+      floor's bounce through the ball, rare and bright, a shadow with specks that settles slowly
+      (<cite data-src="lib/pathtracer/core/materials_pbr.js" data-sym="through glass stays on the camera side (only the disc is emitted), as do caustics seen" data-to="THROUGH glass or in a mirror (x1 not directly visible): those need SPPM."></cite>).
+      ShadyTracer has a third way for exactly this, which meets the two in the middle: the photon map of chapter 19.</p>
+  </div>
+  <figure class="fig" data-fig="kinds">
+    <figcaption>The same ball and sun, and for the last two kinds a pane of glass standing on the floor. One path of each kind, traced through
+      the glass by refraction alone: <span data-say="cam">blue</span> from the eye to the first matte point it reaches
+      (through the pane, where there is one), then in the sun's colour from there to the sun. The readout writes each
+      glass surface a path crosses as one "glass": in and out of the ball is glass → glass. Choose the kind.</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="learn">
+  <div class="prose">
+    <h2><span class="n">3</span>Sending photons where they help</h2>
+    <p data-step="learn:uniform">Where should photons start? The sun lights the whole scene, so ShadyTracer starts them
+      evenly over a square across its rays, wide enough to cover the scene (here a line, its 24 cells drawn as bars
+      of their chance). Most of them land on open floor, and a photon that has met no glass
+      is not connected: the camera already counts that light. Of 1500 photons, 176 connect, about one in nine; the rest
+      were work for nothing. (In 3D, where the ball is a far smaller part of a square than of a line, it was 1 in 115:
+      section 5.)</p>
+    <p data-step="learn:learning">So the renderer learns. Each cell keeps two counts, the photons it sent and the
+      connections they made, and between samples its worth is connections per photon sent. Not connections alone: a
+      cell already favoured sends more photons and would collect more connections for that reason only, and the map
+      would feed on itself. The next sample's photons start in proportion to the cells' worth, and each is divided by
+      that chance, chapter 8's rule, so the picture stays right while the photons move. (The step after one sample
+      shows the map rebuilt from that sample's counts; the photons it drew were still sent evenly.)</p>
+    <p data-step="learn:learned">After ten samples the photons crowd over the ball, and 919 of 1500 connect, 61%. A
+      fifth of them still go evenly (a minimum share of 20%, dashed), so a caustic the map has not found yet is still found,
+      slowly, and the picture is never wrong while it learns: every cell keeps a chance above 0, so every photon a
+      cell sends is divided by a chance it really had, and no light is left with no way to be found. And both counts are halved at every rebuild, so the map forgets:
+      it follows a moving sun or an edited scene within a few samples.</p>
+  </div>
+  <figure class="fig" data-fig="learn">
+    <figcaption>The scene from further off, and where the photons start: a line across the sun's rays, drawn closer
+      than it really is (the rays are parallel, so where along them makes no difference), in 24 cells, each cell's bar as long as its chance of being picked. A few of the last sample's photons that reached the ball, in the
+      sun's colour, their connections to the eye <span data-say="shadow">green</span>. Send a sample's photons (the map
+      is rebuilt after each), switch the learning on or off, or start again.</figcaption>
+  </figure>
+</section>
+
+<section class="plain wide" id="engine">
+  <div class="prose">
+    <h2><span class="n">4</span>How ShadyTracer does it</h2>
+    <p>Why light tracing, and the split, as the shading code states them:</p>
+    <pre data-src="lib/pathtracer/core/materials_pbr.js" data-sym="LIGHT TRACING -- caustics, by walking from the sun instead of from the eye." data-to="THROUGH glass or in a mirror (x1 not directly visible): those need SPPM."
+         data-why="EVAL is the kind of event a connection can evaluate: a matte or rough lobe (chapter 9), as opposed to a DELTA (mirror, smooth glass). CLS_CAND and CLS_SPEC are two bits in the ray's tag: 'the first vertex scattered' and 'only deltas since'. ltCovers asks whether a photon could have come down that line at all: outside the square the photons start on, the camera keeps the sun, so the square's size changes the noise and never the total. SPPM is chapter 19's photon map. x1 is the first point the eye's path reaches; flux, a photon's share of the sun's light; beta, a path's weight so far; MIS, weighing two ways of finding the same light against each other (chapter 15)." data-hash="ac563b82"></pre>
+    <p>A photon walks only through deltas, and ends at the first surface that scatters it:</p>
+    <pre data-src="lib/pathtracer/core/tracebasics.js" data-sym="/* The walk continues only through delta events." data-to="else if (res.r.state == RAY_ACTIVE) { res.r.state = RAY_TERMINATED; }"
+         data-why="TAG_PASSED is set once the photon has passed a delta: only such photons connect (the camera counts the rest). The lens's walk is chapter 17's story." data-hash="46483ae5"></pre>
+    <p>Where on the picture a connection lands and what it adds, the maths fold-out in 3D, with the camera's footprint
+      (the line that adds it: <cite data-src="lib/pathtracer/core/materials_pbr.js" data-sym="let contrib = ray.radiance * ray.beta * f * (G / apx * w);"></cite>):</p>
+    <pre data-src="lib/pathtracer/core/materials_pbr.js" data-sym="/* THE CONNECTION. Where on the picture this point lands and what it adds there." data-to="return VEC2(abs(dot(nrm, fwd)), apx);"
+         data-why="WGSL (chapter 21), line by line. fwd is the camera's backward direction (the third column of invView, the camera's frame). fx and fy, read from invProjection, are the film's half-width and half-height at distance 1, so apx = (2 fx)(2 fy) / (w h) is one pixel's area on it. d runs from the point to the eye; dist is its length and z its depth along the camera's axis. dot(nrm, d / dist) is cos θx, the fold-out's tilt. dist / z³ is the 3D version of the fold-out's 1 / (d cos²θc): z = dist cos θc, so dist / z³ = 1 / (dist² cos³θc). The pair returned is G and the pixel's area; a point behind the camera gets G = 0. An orthographic camera (camtype not 0) has parallel rays, and its film is the area measure itself." data-hash="3f174e67"></pre>
+    <p>One constant decides which glossy surfaces count as "scattering" for both sides at once:</p>
+    <pre data-src="lib/pathtracer/core/tracebasics.js" data-sym="/* Below this GGX alpha a glossy lobe is left to BSDF sampling rather than connected to." data-to="const LT_MIN_ALPHA: FLOAT = 0.05;"
+         data-why="alpha is the roughness squared (chapter 9): 0.05 is a roughness of 0.22. Below it a surface is shiny enough that a connection would evaluate a needle of a lobe; such surfaces stay on the camera's side, which samples them." data-hash="cb26c9b5"></pre>
+    <p>And the learned map, rebuilt between samples:</p>
+    <pre data-src="lib/pathtracer/core/wavefront.js" data-sym="WHAT A CELL IS WORTH: connections per photon sent, hits / emitted." data-to="moving camera and an edited scene within a few rebuilds, with no reset to get wrong."
+         data-why="ltEmit and learn hold the two counts per cell, added to while a sample runs; ltCDF is what the photons are drawn from, and is rebuilt only between samples, so a photon is always divided by the density it was drawn from. The cells are LT_GRID × LT_GRID, 128 × 128, over the square, and LT_FLOOR is the 20% that go evenly." data-hash="7adbebaa"></pre>
+  </div>
+</section>
+
+<section class="plain wide" id="tricks">
+  <div class="prose">
+    <h2><span class="n">5</span>Tricks and trade-offs</h2>
+    <p>Each is stamped with how it is known; point at a stamp to see what it means.</p>
+    <div data-claim="measured">
+      <p><strong>The split is exact.</strong> The <code>lt</code> test on the developer's Ampere card, a scene with
+        glass in the sun, read the picture's mean luminance within 0.03% of its reference on all eight rows: light
+        tracing off and on, a tiny photon square, the map learning and learned, and NEE off with light tracing off and
+        on (<code>roadmap/PLAN.md</code>, light tracing).</p>
+    </div>
+    <div data-claim="measured">
+      <p><strong>The map learns.</strong> Connections per photon went from 0.0087 with the photons spread evenly to
+        0.605 once the map had learned, 70 times more useful photons, and the busiest 1% of cells took 72% of them (the
+        same test, Ampere). In the caustic's own pixels the noise read 0.963 with light tracing off, 0.380 with an even
+        map and 0.160 with the learned one at a tenth of a photon a pixel. Noise falls as one over the square root of
+        the samples (chapter 12), so equal noise takes (0.963 ÷ 0.160)² ≈ 36 times fewer samples with the learned map
+        (the entry rounds it to about 40), and (0.963 ÷ 0.380)² ≈ 6 with the even one (a later run,
+        <code>PLAN.md</code>'s open items; that entry does not name the card).</p>
+    </div>
+    <div data-claim="measured">
+      <p><strong>It costs.</strong> On the developer's GTX 1080 Ti (Pascal), 1280 × 720, the Noise library scene took
+        736.5 ms a sample with light tracing and 508.8 without: 31% of the time
+        (<code>docs/PERFORMANCE.md</code>, the benchmark's first full run). It is on by default, paired with NEE: the
+        photons do the glass, the shadow rays the direct sun.</p>
+    </div>
+    <div data-claim="code">
+      <p><strong>No direct light from the photons.</strong> A photon that meets no glass is not connected, though it
+        could be: the camera's shadow rays find direct sunlight with less noise, so the split gives it to them (the
+        first excerpt).</p>
+    </div>
+  </div>
+</section>
+
+<section class="plain wide" id="before">
+  <div class="prose">
+    <h2><span class="n">6</span>What went wrong before</h2>
+    <ul>
+      <li><strong>A caustic nobody counted.</strong> With light tracing off and NEE on, the camera's weights for the
+        sun seen through glass were 0, so a glass ball cast a plain shadow; and the pass that traces connections ran
+        only with NEE on, so with NEE off the photons' light was lost. Both found when the developer looked for the
+        caustic in all four combinations (<code>PLAN.md</code>; chapter 15 tells the first).</li>
+      <li><strong>An emitter's caustic counted twice.</strong>
+        <cite data-src="lib/pathtracer/core/tracebasics.js" data-sym="/* EITHER photon source. This read UB.lt alone" data-to="light tracing on read 0.6% brighter than off on the emitters bench. */"></cite>:
+        the camera's side tagged its paths only when the sun's photons ran, so with only glowing objects' photons
+        running, both sides counted their caustics, 0.6% too bright.</li>
+      <li><strong>Light tracing that switched itself off.</strong> Its photons share the rays' buffer with the camera's
+        rays, and at about 2.3 million pixels there was no room left for them, so a large picture had no caustics; a
+        sample is now traced in batches that make room (<code>photons.js</code>'s header; chapter 23).</li>
+    </ul>
+  </div>
+</section>
+
+<section class="plain" id="try">
+  <div class="prose">
+    <h2><span class="n">7</span>Try it</h2>
+    <ul>
+      <li>In the first figure, with <strong>Camera paths</strong>, widen the sun until the caustic shows. How grainy is
+        it after 100 samples, against <strong>Light tracing</strong> after 10?</li>
+      <li>With <strong>Both, no split</strong>, how much brighter is the floor under the ball than with the split? Is
+        the open floor brighter too, and why not?</li>
+      <li>In the third figure, switch the learning off after it has learned. How fast does the share that connects fall
+        back?</li>
+      <li>In ShadyTracer, put a glass sphere on a floor in the sun and switch light tracing off (Render settings). What
+        happens under it?</li>
+    </ul>
+    <aside class="refs"><span class="tag">Read more</span><ul>
+      <li data-ref="wiki-caustic">What caustics are, with photographs: a ring in a cup, the bright net under a
+        swimming pool's surface.</li>
+      <li data-ref="pbr3-pathspace">Light paths as the thing a renderer adds up, and how one path can be made from both
+        ends.</li>
+      <li data-ref="pbr3-bdpt">Bidirectional path tracing, of which light tracing (connecting to the camera) is one
+        end; ShadyTracer uses only that end, and splits the paths instead of weighing them.</li>
+      <li data-ref="veach1997">Chapter 10 builds the same family of methods from the start.</li>
+    </ul></aside>
+    <h3>Words from this chapter</h3>
+    <ul class="words" data-words="caustic light-tracing photon delta shadow-ray path"></ul>
+  </div>
+</section>
+
+<nav class="tabs" data-auto></nav>
+</main>
+</body>
+</html>

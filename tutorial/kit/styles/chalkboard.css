@@ -1,0 +1,65 @@
+/* CHALKBOARD -- a lecture written up by hand. Dark: chalk on a green-black board, sketchy capitals for headings, a
+   neat printed hand for the text, coloured chalks (yellow for light, blue for the camera, pink for what matters), lines
+   a little doubled as chalk leaves them, smudges in the board. Light: the same lecture in marker on a whiteboard.
+   A style: tokens, texture and frame (kit/styles.js names it); kit.css holds the layout. */
+:root[data-style="chalkboard"], [data-style="chalkboard"] {
+    --paper: #f8f9f7; --paper-deep: #e4e7e3; --paper-raised: #ffffff;
+    --ink: #1f2328; --ink-soft: #4b525b; --ink-faint: #9aa1a8; --grid: rgba(31, 35, 40, .04); --rule: #1f2328;
+    --accent: #d1263b; --accent-soft: rgba(209, 38, 59, .09);
+    --c-cam: #1f4fbf; --c-light: #e08a00; --c-shadow: #1c8a4a; --c-blocked: #d1263b; --c-solid: #1f2328;
+    --c-fill: rgba(31, 35, 40, .5); --c-glass: #127d96; --c-normal: #7b35b5; --c-hit: #1f2328; --c-step: rgba(31, 79, 191, .3);
+    --code-bg: rgba(31, 35, 40, .04); --code-ink: #1f2328; --code-comment: #6c737c; --code-kw: #1f4fbf; --code-num: #d1263b;
+    --stamp-measured: #1c8a4a; --stamp-code: #1f4fbf; --stamp-inferred: #d1263b;
+    --f-display: 'Cabin Sketch', 'Segoe Print', 'Bradley Hand', cursive; --f-body: 'Patrick Hand', 'Segoe Print', 'Comic Sans MS', cursive;
+    --f-hand: 'Patrick Hand', 'Segoe Print', 'Comic Sans MS', cursive; --f-mono: 'Space Mono', ui-monospace, Menlo, Consolas, monospace;
+    --pen-rough: 1.3; --pen-double: 0; --pen-width: 1.9; --pen-misreg: 0; --pen-fill: hatch;
+    --say-cam: "blue"; --say-light: "orange"; --say-shadow: "green"; --say-blocked: "red"; --say-accent: "red"; --say-soft: "grey"; --say-normal: "purple"; --say-glass: "teal";
+    --radius: 4px;
+    /* a whiteboard's faint sheen, not a grain */
+    --tex: radial-gradient(120% 60% at 30% 0%, rgba(255, 255, 255, .9), transparent 60%);
+    --board-frame: #aab0b7;                     /* a whiteboard's aluminium edge */
+}
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"])[data-style="chalkboard"], :root:not([data-theme="light"]) [data-style="chalkboard"] {
+        --paper: #1f2d27; --paper-deep: #14201b; --paper-raised: #26362f;
+        --ink: #eef0ea; --ink-soft: #bfc6bd; --ink-faint: #829187; --grid: rgba(238, 240, 234, .04); --rule: #dfe3dc;
+        --accent: #ff8fa8; --accent-soft: rgba(255, 143, 168, .12);
+        --c-cam: #9cc7ff; --c-light: #ffe27a; --c-shadow: #a8e6b8; --c-blocked: #ff8fa8; --c-solid: #eef0ea;
+        --c-fill: rgba(238, 240, 234, .45); --c-glass: #8fe3ef; --c-normal: #d6b4ff; --c-hit: #eef0ea; --c-step: rgba(156, 199, 255, .3);
+        --code-bg: rgba(0, 0, 0, .18); --code-ink: #eef0ea; --code-comment: #9aa89e; --code-kw: #9cc7ff; --code-num: #ffe27a;
+        --stamp-measured: #a8e6b8; --stamp-code: #9cc7ff; --stamp-inferred: #ffe27a;
+        --pen-double: 1; --board-frame: #8a6a46;   /* a blackboard's wooden frame */
+        /* chalk dust: a light, coarse noise, and the smear of a wiped board */
+        --tex: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+            radial-gradient(80% 40% at 20% 10%, rgba(255, 255, 255, .05), transparent 70%), radial-gradient(60% 50% at 85% 60%, rgba(255, 255, 255, .04), transparent 70%);
+        --say-cam: "blue"; --say-light: "yellow"; --say-shadow: "green"; --say-blocked: "pink"; --say-accent: "pink"; --say-soft: "grey"; --say-normal: "purple"; --say-glass: "cyan";
+        color-scheme: dark;
+    }
+}
+:root[data-theme="dark"][data-style="chalkboard"], :root[data-theme="dark"] [data-style="chalkboard"] {
+    --paper: #1f2d27; --paper-deep: #14201b; --paper-raised: #26362f;
+    --ink: #eef0ea; --ink-soft: #bfc6bd; --ink-faint: #829187; --grid: rgba(238, 240, 234, .04); --rule: #dfe3dc;
+    --accent: #ff8fa8; --accent-soft: rgba(255, 143, 168, .12);
+    --c-cam: #9cc7ff; --c-light: #ffe27a; --c-shadow: #a8e6b8; --c-blocked: #ff8fa8; --c-solid: #eef0ea;
+    --c-fill: rgba(238, 240, 234, .45); --c-glass: #8fe3ef; --c-normal: #d6b4ff; --c-hit: #eef0ea; --c-step: rgba(156, 199, 255, .3);
+    --code-bg: rgba(0, 0, 0, .18); --code-ink: #eef0ea; --code-comment: #9aa89e; --code-kw: #9cc7ff; --code-num: #ffe27a;
+    --stamp-measured: #a8e6b8; --stamp-code: #9cc7ff; --stamp-inferred: #ffe27a;
+    --pen-double: 1; --board-frame: #8a6a46;
+    --tex: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+        radial-gradient(80% 40% at 20% 10%, rgba(255, 255, 255, .05), transparent 70%), radial-gradient(60% 50% at 85% 60%, rgba(255, 255, 255, .04), transparent 70%);
+    --say-cam: "blue"; --say-light: "yellow"; --say-shadow: "green"; --say-blocked: "pink"; --say-accent: "pink"; --say-soft: "grey"; --say-normal: "purple"; --say-glass: "cyan";
+    color-scheme: dark;
+}
+
+/* the board's frame: wood round a chalkboard, aluminium round a whiteboard */
+[data-style="chalkboard"] .sheet::before { inset: 8px; border: 10px solid var(--board-frame); border-radius: 6px; opacity: 1; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .25), 0 0 0 1px rgba(0, 0, 0, .2); }
+@media (max-width: 640px) { [data-style="chalkboard"] .sheet::before { inset: 3px; border-width: 5px; } }
+[data-style="chalkboard"] h1 { font-weight: 700; letter-spacing: .01em; line-height: 1.05; }
+[data-style="chalkboard"] h2 { font-weight: 700; letter-spacing: .01em; }
+[data-style="chalkboard"] h2 .n { font-family: var(--f-display); color: var(--accent); vertical-align: 0; font-size: .95em; }
+[data-style="chalkboard"] .eyebrow { font-family: var(--f-hand); text-transform: none; letter-spacing: .02em; font-size: 1.05rem; font-weight: 400; }
+[data-style="chalkboard"] body, [data-style="chalkboard"] .prose { font-size: 1.12rem; }
+[data-style="chalkboard"] .titleblock { font-family: var(--f-hand); text-transform: none; letter-spacing: .02em; font-size: .95rem; border-style: dashed; }
+[data-style="chalkboard"] .fig figcaption { font-size: 1rem; }
+[data-style="chalkboard"] .fig figcaption::before { content: "fig. " counter(fig) "  "; font: 700 1.05rem/1 var(--f-display); color: var(--accent); }
+[data-style="chalkboard"] .note { border-left: 3px solid var(--accent); background: none; font-size: 1.12rem; }

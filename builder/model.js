@@ -132,7 +132,7 @@ export const MATERIAL_TYPES = ['surface', 'emitter', 'detector', 'limiter']
 /** The type of a material, with the default filled in. */
 export const typeOf = m => m?.type ?? 'surface'
 export { LIGHT_SHAPES, LIGHT_DEFAULTS, lightOf, hasFace, lightRGB, lightDisplayRGB, lightChromaticity } from './lights.js'
-import { LIGHT_SHAPES, LIGHT_DEFAULTS, lightProblems, rotationTowards } from './lights.js'
+import { LIGHT_SHAPES, LIGHT_DEFAULTS, lightOf, lightProblems, rotationTowards } from './lights.js'
 export { EXPORT_PARAMS, EXPORT_DEFAULTS, exportOf } from './exportbox.js'
 import { EXPORT_PARAMS, EXPORT_DEFAULTS, exportProblems } from './exportbox.js'
 export { HAZE_PARAMS, HAZE_DEFAULTS, hazeSettings } from './hazebox.js'
@@ -150,7 +150,7 @@ import { UNITS, Y, ENV_RADIUS_DEFAULT_M } from '../lib/pathtracer/core/photometr
 import { profilePieces, pathPieces } from '../lib/pathtracer/core/shapes.js'
 import { resolvePath, resolveProfile, pathNames, pathUses, pointNames, pointUses, renameIn, parseExpr, namesOf, LIVE_PATH_MAX, LIVE_PROFILE_MAX } from './expr.js'
 import { helpersOf, helpersFor, sameHelper } from './helpers.js'
-import { targetsOf, lookupIn, parseBindings, bindingsText as bindText, applyBindings, boundOf, isParamTarget, liveKeyOf, TRANSFORM_TARGETS, COPIES_TARGETS } from './bind.js'
+import { targetsOf, lookupIn, parseBindings, bindingsText as bindText, applyBindings, bindingsProblems, boundOf, isParamTarget, liveKeyOf, TRANSFORM_TARGETS, COPIES_TARGETS } from './bind.js'
 
 /** How a child joins what is above it in its group (`join`, version 14; a group's `op` before). A
  *  group whose children all join by union with no blend folds each into the scene separately, which
@@ -1810,7 +1810,7 @@ export function resolveBindings(doc) {
     const changed = [], problems = []
     const go = (n, up) => {
         if (n.bind && n !== doc.root) {
-            const r = applyBindings(n, lookupFor(doc, n, up), { copiesRow, arrayMax: ARRAY_MAX })
+            const r = applyBindings(n, lookupFor(doc, n, up), { copiesRow, arrayMax: ARRAY_MAX, setLight: lightBound })
             for (const key of r.changed) changed.push({ id: n.id, key })
             problems.push(...r.problems)
         }
@@ -1905,6 +1905,7 @@ function bindProblems(doc, n, parent) {
     if (n.bind === undefined) return []
     if (!n.bind || typeof n.bind !== 'object' || Array.isArray(n.bind)) return [`'${n.id}': bind is an object of target: expression`]
     const p = [], targets = targetsOf(n, { plainGroup: !!parent && plainGroup(doc, n), root: !parent })
+    p.push(...bindingsProblems(n.bind).map(m => `'${n.id}': bind: ${m}`))
     for (const [t, e] of Object.entries(n.bind)) {
         if (typeof e !== 'string') { p.push(`'${n.id}': bind ${t} is not an expression`); continue }
         if (!targets.includes(t)) { p.push(`'${n.id}': bind ${t} is not one of its values`); continue }
@@ -1959,13 +1960,28 @@ export function addLight(doc, parentId, { shape = 'rectangle', id, label, transf
 export function setLight(doc, id, patch) {
     const { node } = must(doc, id)
     if (node.type !== 'light') throw new ModelError(`'${id}' is not a light`)
-    const next = { ...node.light, ...structuredClone(patch), shape: node.light.shape }
-    for (const [k, v] of Object.entries(next))
-        if (v === undefined || (k in LIGHT_DEFAULTS && JSON.stringify(v) === JSON.stringify(LIGHT_DEFAULTS[k]))) delete next[k]
-    const bad = lightProblems({ ...node, light: next })
+    const { next, bad } = lightPatched(node, patch)
     if (bad.length) throw new ModelError(bad)
     node.light = next
     return doc
+}
+/* A LIGHT'S SETTINGS WITH `patch` OVER THEM, as stored (a setting at its default dropped) and checked: { next, bad } */
+function lightPatched(node, patch) {
+    const next = { ...node.light, ...structuredClone(patch), shape: node.light.shape }
+    for (const [k, v] of Object.entries(next))
+        if (v === undefined || (k in LIGHT_DEFAULTS && JSON.stringify(v) === JSON.stringify(LIGHT_DEFAULTS[k]))) delete next[k]
+    return { next, bad: lightProblems({ ...node, light: next }) }
+}
+/* ...FOR A BINDING (bind.js applyBindings, 0.69.0): an object's components over what the light has now (a colour's r alone,
+   an xy's x), its defaults filled in -- written when sound, refused with why when not: { changed, problems } */
+function lightBound(node, patch) {
+    const L = lightOf(node), full = {}
+    for (const [k, v] of Object.entries(patch)) full[k] = v && typeof v === 'object' ? { ...L[k], ...v } : v
+    const { next, bad } = lightPatched(node, full)
+    if (bad.length) return { changed: false, problems: bad }
+    const changed = JSON.stringify(next) !== JSON.stringify(node.light)
+    node.light = next
+    return { changed, problems: [] }
 }
 
 /** AN EXPORT BOX (exportbox.js): the part of the scene a 3MF or STL export takes. Draws nothing.
@@ -2146,7 +2162,7 @@ export const VIEW_CAMERA = Object.freeze({
 export const CAMERA_DEFAULTS = Object.freeze({ mode: 'orbit', camtype: 0, fov: 40, dimensions: 10, target: [0, 0, 0],
     azimuth: 40, elevation: 70, distance: 20, up: [0, 0, 1], aperture: 0, focus: 0 })
 /* the camera's lengths: what a unit's change, or a camera from a scene in another unit, scales */
-const CAMERA_LENGTHS = ['dimensions', 'target', 'distance', 'pos', 'aperture', 'focus']
+export const CAMERA_LENGTHS = Object.freeze(['dimensions', 'target', 'distance', 'pos', 'aperture', 'focus'])
 
 function viewProblems(view) {
     if (!view || typeof view !== 'object' || Array.isArray(view)) return ['view must be an object']

@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Which way is up · ShadyTracer, inside out</title>
+<link rel="stylesheet" href="../kit/kit.css">
+<script type="module" src="normals.js"></script>
+</head>
+<body data-chapter="normals">
+<p class="kit-offline">This page runs from a web server, not from a file: in the repository run <code>python3 -m http.server 8000</code> and open http://localhost:8000/tutorial/.</p>
+<main class="sheet">
+
+<header class="sheet-head">
+  <div>
+    <p class="eyebrow">Part I · Seeing with rays · Chapter 4</p>
+    <h1>Which way is up</h1>
+    <p class="lede">Once a ray has found a surface, almost everything that happens next depends on which way that surface
+      faces: how much light falls on it, where a bounce goes, how glass bends the ray. A distance field knows the answer
+      without being told, because the direction straight out of a surface is the direction its distance grows fastest.
+      Finding it costs either a few lines of maths per shape, or a few more looks at the whole scene per hit.</p>
+  </div>
+  <div class="titleblock" data-auto></div>
+</header>
+
+<section class="scene" id="slope">
+  <div class="prose">
+    <h2><span class="n">1</span>Uphill, by looking around</h2>
+    <p data-step="slope:round">The <a data-g="normal">normal</a> is the arrow straight out of a surface, one unit long.
+      In a distance field, it is the way the distance grows fastest, straight across the lines of equal distance: the
+      field's <a data-g="gradient">gradient</a>. For a circle that is the direction from its middle to the point, one
+      line of maths, and many shapes give theirs like that, with their distance (the arrow marked <em>exact</em>). For
+      any other, the renderer finds it by <a data-g="differences">differences</a>: it asks the distance a small step
+      <var>h</var> away, once to the right and once up (the dots), and sees how much it grew each way. Think of the
+      distance as the height of a hill: if a step east climbs 3 cm and a step north 1 cm, the arrow (3, 1) points the way
+      the hill climbs fastest. So those two changes, as an arrow, point uphill: straight out of the surface
+      (<em>forward</em> differences). Asking a step either side in each direction, four looks instead of two, gives
+      <em>central</em> differences.</p>
+    <p data-step="slope:small">In the last picture the step was large (0.3, in the figure's units, where the circle's
+      radius is 0.95), and on the curved surface both arrows were a little off: forward by 3.9°, central by 0.6°. The
+      surface bends within the step. Here the step is a tenth of that: forward is 0.5° off, central 0.0°. Halve the step
+      and forward's error halves, but central's falls to a quarter: forward measures the slope half a step to one side of
+      the point, central measures it centred on the point. (Here forward fell to an eighth, not a tenth: the halving
+      rule holds once the step is small, and 0.3 is a third of the circle's radius.) So central is far better for the
+      same step, and costs twice the looks. ShadyTracer's renderer still uses forward differences: three looks in 3D
+      instead of six, at a step so small (section 3) that forward's error does not show.</p>
+    <p data-step="slope:crease">Near a <em>crease</em>, where the circle meets the box, a step can land on the other
+      shape. Here the probe is on the circle, a short way from the crease: the central differences' looks to the left
+      and below land in the box's field, and their arrow leans 20° towards the box's own normal (straight up from its
+      top). The forward looks go right and up,
+      away from the box, and stay within 7°.</p>
+    <p data-step="slope:creaseSmall">With a step a tenth as big, no look reaches the box, and both are nearly right
+      again (forward 0.8° off, central 0.0°). A
+      differences normal blurs every crease over about one step's width; with ShadyTracer's step, a hair's breadth
+      (section 3), nobody sees it.</p>
+    <details class="maths">
+      <summary><span class="tag">The maths</span>Forward and central differences</summary>
+      <div class="body">
+        <p class="eq"><var>n</var><sub>forward</sub> ∝ ( <var>f</var>(<var>p</var> + <var>h</var> <var>x̂</var>) − <var>f</var>(<var>p</var>),
+          <var>f</var>(<var>p</var> + <var>h</var> <var>ŷ</var>) − <var>f</var>(<var>p</var>), … )</p>
+        <p class="eq"><var>n</var><sub>central</sub> ∝ ( <var>f</var>(<var>p</var> + <var>h</var> <var>x̂</var>) − <var>f</var>(<var>p</var> − <var>h</var> <var>x̂</var>), … )</p>
+        <dl class="terms">
+          <dt>f(p)</dt><dd>the scene's distance at the point; the renderer already has it from the march</dd>
+          <dt>x̂, ŷ</dt><dd>one unit along each axis (and ẑ in 3D, the "…")</dd>
+          <dt>∝</dt><dd>"points the same way as": the arrow is then made one unit long</dd>
+        </dl>
+        <p>Forward needs one new look per axis, 3 in 3D; central needs two, 6 in 3D. Their errors on a smooth surface
+          shrink like <var>h</var> and like <var>h</var>²: the bend of the surface spoils forward's difference at
+          first order and cancels between central's two sides (a Taylor series, if you meet one, shows it in a line).
+          Forward differences also lean:
+          they look only one way along each axis, which is why, near the crease, they missed the box that central ones
+          found. Quilez's article below shows a third way, four looks at the corners of a tetrahedron: even-handed like
+          central differences, for four looks instead of six.</p>
+      </div>
+    </details>
+    <aside class="refs"><span class="tag">Read more</span><ul>
+      <li data-ref="iq-normals">Normals for a distance field by differences: forward, central, and the four-look
+        tetrahedron, with a loop that keeps the compiler from copying the whole scene into the shader four times
+        (ShadyTracer's loop in section 4 is the same idea).</li>
+    </ul></aside>
+  </div>
+  <figure class="fig" data-fig="slope">
+    <figcaption>A circle and a box, joined; the thin lines are places of equal distance. At the probe: the exact normal
+      (<span data-say="normal">purple</span>), and the normal by forward differences (<span data-say="cam">blue</span>:
+      two looks, the plain dots, right and up) and by central ones (<span data-say="accent">red</span>: four, the
+      ringed dots, two of them where forward's are), each arrow labelled (where two arrows agree, their labels sit
+      together). Drag the probe; the slider sets the step, in the figure's units.</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="grain">
+  <div class="prose">
+    <h2><span class="n">2</span>Too small a step</h2>
+    <p data-step="grain:floor">So the smaller the step, the better? Not on a GPU. Its numbers are 32-bit
+      (<a data-g="f32">f32</a>): about seven significant digits. At a metre from the scene's origin, two neighbouring f32
+      numbers are 0.12 µm apart, one <em>spacing</em>, and a distance can only change in such jumps. This figure does
+      the sums the way the GPU does, every one rounded to f32, for a circle of radius a tenth of a metre, a metre from
+      the origin. On the left it is lit through its normals by differences, and each normal's error is drawn as a tick
+      outside it, longer for a larger error; on the right, the worst error around the circle against the step. At 128
+      spacings it is 2.2 milliradians (an eighth of a degree), and the ticks are too short to see.</p>
+    <p data-step="grain:fine">At 2 spacings, the change the differences measure is a few jumps, and rounding decides
+      it: the normal is off by up to 110 mrad (6°), and the ticks are a ragged fringe, different from one point to the
+      next, a pattern made by f32 rather than by the shape. On a shiny surface that is grain in the highlight. It is the
+      <span data-say="blocked">red</span> curve, labelled f32 noise, falling as the step grows.</p>
+    <p data-step="grain:coarse">At 16,384 spacings, 2 mm, the rounding is gone, but the step is large enough for the
+      circle to bend within it: the error of section 1 (the curve labelled the step's own error, rising). Now the ticks are
+      smooth, the same at neighbouring points. The best step for this circle sits between the two, around 500 spacings,
+      at about 0.7 mrad. The renderer's floor is lower than that because it is only a floor: the step it really takes is
+      the surface tolerance, which is usually larger (section 3).</p>
+    <p data-step="grain:tiny">A shape much smaller than its distance from the origin is different: a circle of radius
+      one millimetre, a metre away. Here f32's part stays small at every step (the <span data-say="blocked">red</span>
+      curve; the renderer's own floor test finds the same, and puts it down to the shape's numbers being its own size).
+      That backwards-sounding result has a reason: the circle's distance is worked out from the point less its centre,
+      two numbers near a metre whose difference is about a millimetre and comes out exactly, and from then on every
+      number is millimetre-sized, with f32's spacing a thousand times finer than at a metre. But at 128 spacings, 15
+      µm, the step is a fair part of the circle's size, and its normal is off by 7.7 mrad, smoothly.</p>
+  </div>
+  <figure class="fig" data-fig="grain">
+    <figcaption>Left: the circle (drawn large whatever its size), its surface a thick ring lit from the upper left, with a
+      shine, through its normals by forward differences worked out in f32 at the chosen step; the dashed circle inside
+      only marks it. Outside it, a tick for each normal, as long as its error (a tick as long as the circle's radius
+      would be 200 mrad). Right: the worst angle error around it (bold) against the step, and its two parts: f32's
+      rounding (dashed, <span data-say="blocked">red</span>) and the step's own error. Both scales are logarithmic: up
+      the side each mark is ten times the last, and along the bottom the steps are in spacings of f32 (1, 16, 128 …). The
+      dashed upright line is the renderer's floor of 128 spacings.</figcaption>
+  </figure>
+</section>
+
+<section class="plain wide" id="floor">
+  <div class="prose">
+    <h2><span class="n">3</span>The step ShadyTracer takes</h2>
+    <p>The renderer's step for a normal is its surface tolerance at the point (chapter 2): the distance at which a ray
+      counts as having hit. One number does both jobs, because a normal by differences only has to see the surface at
+      the scale the march sees it. Unless a scene sets its own, the tolerance is a ten-thousandth of the scene's size,
+      never coarser than a millimetre: 0.1 mm for a scene a metre across.</p>
+    <p>It is never smaller than a floor of 128 × 2⁻²³ times the point's largest coordinate. 2⁻²³ (about 0.00000012) is
+      f32's spacing just above 1: a number between 1 and 2 is kept in steps of 2⁻²³, between 2 and 4 in steps twice
+      that, and so on. So 2⁻²³ times a coordinate is one to two spacings there, and the floor is 128 to 256 spacings,
+      depending on where the coordinate sits between two powers of two; the figure above counts it as 128. At a metre
+      from the middle of the scene, that is 15 µm.</p>
+    <pre data-src="lib/pathtracer/core/tolerances.js" data-sym="// THE ONE TOLERANCE." data-to="whatever the setting."
+         data-why="marchTol is the tolerance at point p, in metres, the larger of three: the setting (UB.eps, or at 0 the automatic one the scene sets, sceneEps and autoEps), a never-zero minimum (TOL_MIN_M, a nanometre), and the floor. A tolerance set finer than the floor is not given." data-hash="f851cec4"></pre>
+    <div data-claim="measured">
+      <p><strong>Why 128.</strong> Measured in an f32 emulation in 3D (<code>core/test/floor.test.mjs</code>, every sum
+        through <code>Math.fround</code>, 2026-10-07; not on a GPU): the worst noise in a normal by differences, on spheres
+        and turned boxes a tenth to a third of their distance from the origin, at a step of K spacings, was about 700
+        mrad at K = 1, 150 at 4, 44 at 16, 11 at 64, 5 at 128 and 2 at 256 (<code>lib/pathtracer/PRECISION.md</code>).
+        The figure above is the same kind of sum in 2D, with fewer numbers in it to round, so smaller errors at small
+        steps: 2.2 mrad at 128 against 5. The document states no threshold; its rule is that "below a hundred or so
+        spacings, a surface's shading is f32's pattern", and 128 is the first power of two past that, where the noise is
+        about 5 mrad, a third of a degree (inferred: the document does not say why 128 rather than 100). So the floor is
+        for the normal's noise. It is <em>not</em> for the march: in the same emulation every march ended at a tolerance
+        of a single spacing. The code's comment above also says the march "can stall" below about a hundred spacings;
+        the emulation did not find that, and this page goes by what was found.</p>
+    </div>
+  </div>
+</section>
+
+<section class="plain wide" id="code">
+  <div class="prose">
+    <h2><span class="n">4</span>How ShadyTracer does it</h2>
+    <p>A shape that knows its normal hands it over with its distance, four numbers at once. The sphere, from the shape
+      library:</p>
+    <pre data-src="lib/pathtracer/core/sdf.js" data-sym="fn Nsphere"
+         data-why="p is the point in the sphere's own frame, where its centre is the origin, so the normal is p made one unit long: the circle's arrow, in 3D. The VEC4 holds the normal, then the distance; every N... function returns this pair." data-hash="0360058f"></pre>
+    <p>The renderer uses the shape's own normal when there is one, and differences when not:</p>
+    <pre data-src="lib/pathtracer/core/tracebasics.js" data-sym="// calculate normals." data-to="return calcNormals_fast(hit.r, hit);"
+         data-why="SDFd asks the whole scene for its distance at a point moved by dif. A Hit's s holds the normal in .xyz and the distance in .w. VEC3(f32(k == 1u), f32(k == 2u), f32(k == 3u)) is (1, 0, 0) when k is 1, (0, 1, 0) when 2, (0, 0, 1) when 3 (1u is 1 as a whole number without a sign), and (0, 0, 0) when 0: a look at the hit itself. select(a, b, c) is b when c is true and a when not, so the loop starts at 0 only where NORMAL_AT_HIT is true (section 6, a line round a cut); everywhere else it starts at 1, and the hit's own distance, res.s.w, is the base. r.pos is the hit point. NORMAL_LOOK tells the scene these looks are for a normal; section 6 says why it needs to know. normalTol is the step of section 3. hitNormal prefers the shape's own normal when it is not zero and fastnormals is on." data-hash="f96cadfe"></pre>
+    <p>The loop is there for the shader's size, not its speed. The whole scene's distance is one long function, and a
+      loop the compiler is not allowed to unroll keeps one copy of it in the kernel instead of three
+      (<code>noUnroll</code>). The shade kernel's own copy of this does the same, one look per pass of a loop it shares
+      with its other questions (<cite data-src="lib/pathtracer/core/wavefront.js" data-sym="if (q < 3u) { at.pos = hit.r.pos"></cite>).
+      The pick, which finds what is under the mouse, takes central differences, six looks, for one ray at a time
+      (<cite data-src="lib/pathtracer/core/pick.js" data-sym="// +x, -x, +y, -y, +z, -z: pickNormal's own points"></cite>).</p>
+  </div>
+</section>
+
+<section class="plain wide" id="tricks">
+  <div class="prose">
+    <h2><span class="n">5</span>Tricks and trade-offs</h2>
+    <p>Each is stamped with how it is known; point at a stamp to see what it means.</p>
+    <div data-claim="measured">
+      <p><strong>A shape's own normal is worth a lot.</strong> With the shapes' own normals switched off
+        (<code>fastnormals 0</code>, a developer setting), every hit takes its normal by differences, and a sample took
+        4.3 times as long: 63.6 ms against 14.8, on the user's card, an NVIDIA of the Pascal family (<code>docs/TESTING.md</code>, "Where
+        the render time goes"; the setting's own comment in <code>uniforms.schema.js</code>). The setting's label says
+        so: <em>off = 4.3x slower</em>.</p>
+    </div>
+    <div data-claim="inferred">
+      <p><strong>Why that much is not known.</strong> Three more looks per hit, against a march of dozens of looks to find
+        it, would suggest a few percent, not four times. That count is a guess about what costs what; the 4.3 is the
+        measurement. The renderer can time each of its kernels on
+        the GPU (<code>core/kerneltime.js</code>, used by the Tests bench); timed with the setting on and off, it would
+        show which kernel grows, and that would say why.</p>
+    </div>
+    <div data-claim="code">
+      <p><strong>A normal left out on purpose.</strong> The cone's exact distance comes from Quilez's list, but its
+        normal is left to the renderer: "the exact gradient has four regions, and a normal that is wrong in one of them is
+        worse than a slower right one"
+        (<cite data-src="lib/pathtracer/core/sdf.js" data-sym="fn sdCappedCone"></cite>). Each newer shape's normal is
+        held to central differences by <code>core/test/shapes.test.mjs</code>.</p>
+    </div>
+    <div data-claim="code">
+      <p><strong>Bent space throws normals away.</strong> A twist or bend (chapter 3) zeroes every shape's normal inside
+        it, since the shapes' own arrows were worked out in unbent space; the renderer then takes them by differences of
+        the bent field, which are right.</p>
+    </div>
+  </div>
+</section>
+
+<section class="plain wide" id="before">
+  <div class="prose">
+    <h2><span class="n">6</span>What went wrong before</h2>
+    <ul>
+      <li><strong>A normal that was not one unit long.</strong> <code>sign(x)</code> gives −1, 0 or 1, the side of zero
+        x is on. A normal built from the signs of the point's coordinates (an octahedron's, where this was measured) loses
+        a part of its arrow exactly on an axis or a fold, where a coordinate is 0 and its sign 0: an arrow shorter than
+        one unit. The newer shapes ask "is it at or above zero?" instead, <code>select(-1, 1, x &gt;= 0)</code>, which is
+        always −1 or 1 (the comment at the top of <code>shapes.js</code>).</li>
+      <li><strong>A normal that was not a number</strong> deleted its surface: making a zero arrow one unit long divides
+        by zero, and the surface then fails the facing test every surface goes through (chapter 3). Every normalize in the
+        newer shapes is guarded.</li>
+      <li><strong>The warped fillet</strong>: a blend made its normal from one shape's arrow and another's zero
+        (chapter 3). The fix was to give no normal at all, and let differences find it.</li>
+      <li><strong>Six looks nobody asked for.</strong> A central-difference normal sat in the shader beside the forward
+        one, uncalled, until version 0.22.3 (the comment above <code>calcNormals_fast</code>).</li>
+      <li><strong>A line round a cut.</strong> A rough surface (a <em>relief</em>, chapter 3) makes the distance change
+        faster than one unit per unit of travel, so a march trusting it could step through a bump. The scene therefore
+        divides the distance by how steep the relief can get, and in a group of shapes blended together it does that
+        once, by the steepest relief near the point. Cut a sphere of steep stucco out of a box of gentle plaster, and on
+        the plaster that number was 4.67 near the hole, where the stucco's relief still counted, and 1.11 farther out.
+        Two looks a step apart could fall either side of that boundary: a distance of 0.05 came back as 0.05 / 1.11 =
+        0.045 from one and 0.05 / 4.67 = 0.011 from the other. Their difference measured the jump in the divisor, not
+        the slope of the surface, and the normal turned by up to 86°: a thin line round the hole. Dividing every
+        distance by the same number shrinks every difference by that number and leaves the arrow pointing the same way
+        (it is made one unit long anyway), so a normal does not need the division. Since version 0.71.1 the scene leaves
+        it out of a normal's looks (<code>NORMAL_LOOK</code>). The distance at the hit, which the march found divided,
+        is then no base for them, so in such a scene the normal takes a fourth look, at the hit itself
+        (<code>NORMAL_AT_HIT</code>).</li>
+    </ul>
+  </div>
+</section>
+
+<section class="plain" id="try">
+  <div class="prose">
+    <h2><span class="n">7</span>Try it</h2>
+    <ul>
+      <li>In the first figure, put the probe inside the box, near a corner. Which way does the exact arrow point, and
+        why does it jump as you cross the box's diagonal?</li>
+      <li>Find the step at which forward differences are 1° off on the circle. How many times smaller must it be for
+        central ones?</li>
+      <li>In the second figure, find the step with the smallest error for a tenth-sized circle, and for a third-sized
+        one. Section 2 says why the renderer's floor is lower than both.</li>
+      <li>In ShadyTracer, turn on <strong>Developer</strong> in the Render settings, find <em>Fast Normals</em>, and turn
+        it off. Watch the samples per second in Render stats.</li>
+    </ul>
+    <h3>Words from this chapter</h3>
+    <ul class="words" data-words="normal gradient differences f32 tolerance march"></ul>
+  </div>
+</section>
+
+<nav class="tabs" data-auto></nav>
+</main>
+</body>
+</html>

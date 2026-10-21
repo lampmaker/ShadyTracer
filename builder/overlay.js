@@ -440,7 +440,8 @@ export function installSelectionOverlay({ stage, canvas, RT, BUILDER, onPick = (
     const onCanvas = e => e.target === canvas
 
     stage.addEventListener('mousemove', e => {
-        if (drag || e.buttons !== 0) return
+        // defaultPrevented: the measure tool's, with a pin or the ruler on -- the cursor is its own (measure/tool.js)
+        if (drag || e.buttons !== 0 || e.defaultPrevented) return
         const h = onCanvas(e) ? hitTest(e.offsetX, e.offsetY) : null
         if (mode === 'points') {
             if (h?.name !== hover?.name) { hover = h; points.setHover(h); stage.style.cursor = points.cursor(h) }
@@ -450,7 +451,9 @@ export function installSelectionOverlay({ stage, canvas, RT, BUILDER, onPick = (
     })
 
     stage.addEventListener('mousedown', e => {
-        if (e.button !== 0 || !onCanvas(e) || !enabled) return
+        /* defaultPrevented: a press another tool has taken and hands on to the camera -- the measure tool's, a drag
+           begun with a pin or the ruler on (lib/pathtracer/measure/tool.js): it orbits, and selects nothing */
+        if (e.button !== 0 || !onCanvas(e) || !enabled || e.defaultPrevented) return
         const handle = selected != null ? hitTest(e.offsetX, e.offsetY) : null
         // in Points a click on nothing lets the point go: picking would select the object's group and end the editing
         if (!handle) { watchClick(e, mode === 'points' ? () => points.select(null) : null); return }

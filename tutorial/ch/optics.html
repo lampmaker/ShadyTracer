@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The optics bench · ShadyTracer, inside out</title>
+<link rel="stylesheet" href="../kit/kit.css">
+<script type="module" src="optics.js"></script>
+</head>
+<body data-chapter="optics">
+<p class="kit-offline">This page runs from a web server, not from a file: in the repository run <code>python3 -m http.server 8000</code> and open http://localhost:8000/tutorial/.</p>
+<main class="sheet">
+
+<header class="sheet-head">
+  <div>
+    <p class="eyebrow">Part VIII · Getting it right · Chapter 31</p>
+    <h1>The optics bench</h1>
+    <p class="lede">ShadyTracer also measures light the way a lighting lab does: not a picture, but numbers. Its Optics
+      page traces a light's rays through a lens or a reflector and reports where the light went: how much leaves the
+      fitting in each direction, how much falls on each part of a wall, how much each object absorbs. This chapter is
+      how those numbers are made: rays binned by direction into intensity, hits on a surface turned into a map of
+      illuminance, and every ray's light added up in integers, because a float sum cannot be trusted with millions of
+      them. Which of its checks have passed on a real card, and which have not been run, is said for each.</p>
+  </div>
+  <div class="titleblock" data-auto></div>
+</header>
+
+<section class="scene" id="beam">
+  <div class="prose">
+    <h2><span class="n">1</span>A light seen from far away</h2>
+    <p data-step="beam:lambert">The optics trace starts rays at a light and follows each through every surface it
+      meets: a photon (chapter 18) that never stops to make a picture. A ray that leaves the scene is counted by its
+      direction alone, on the lighting trade's grid: γ, the angle from the light's axis, in 5° steps, and C, the angle
+      around it, in 15° steps (24 to a turn). Light is counted in lumens (lm); the share of all directions a bin
+      covers is its solid angle, in steradians (a whole sphere is 4π); a bin's lumens over its steradians is the
+      <a data-g="intensity">intensity</a> in that direction, in candela (chapter 5), as a lab's goniophotometer measures
+      it from far enough away that the fitting is a point. Each of <var>N</var> rays carries 1000/<var>N</var> lm of a
+      1000 lm light, and a ring of bins between the angles γ<sub>1</sub> and γ<sub>2</sub> covers
+      2π (cos γ<sub>1</sub> − cos γ<sub>2</sub>) steradians, a 24th of it each (<code>farfield.js</code>). The figure is a
+      polar diagram: the light sits at its bottom point, pointing up, and the curve's distance from that point in each
+      direction is the intensity that way (the rings are marked in candela). Here a matte (Lambertian) source of
+      1000 lm, whose true intensity is <var>I</var><sub>0</sub> cos γ, <var>I</var><sub>0</sub> = 318 cd (the fold-out
+      says why; on a polar diagram cos γ is a circle through the light): 200,000 rays, and the curve follows the true
+      one, spiky only near the axis. Its peak reads
+      362 cd, 14% high, and the <em>beam angle</em>, the width where the intensity falls to half its peak, 111°
+      against the true 120°.</p>
+    <p data-step="beam:few">Why the peak reads high: like lines of longitude meeting at a pole, the bins crowd together
+      near the axis (a small cap round it, then rings 5° wide, each cut into 24), so they are smallest there, catch the
+      fewest rays and are the noisiest; and the peak is the largest of all the bins. The largest of many noisy numbers is
+      high, by the noise. A narrower source, cos⁵ (its intensity falls as cos⁵ γ), at 20,000 rays: 34% high. The beam
+      angle is read where the curve falls to half that peak; a peak too high puts that level too high, so the beam
+      comes out too narrow: 44° against 59°. "The largest of many noisy bins
+      reads high, and the beam angle inherits that", the optics module's own notes say.</p>
+    <p data-step="beam:many">Two million rays: the peak 2% high, the beam 57.8°. Noise falls only as one over the
+      square root of the rays (chapter 12), so a hundred times the rays is ten times less of it.</p>
+    <p data-step="beam:pooled">For a round beam there is a cheaper remedy: every bin of a ring round the axis holds the
+      same light, so they can be pooled into one, 24 times the rays each. The same 200,000 rays pooled: the peak 1%
+      high, the beam 58.9° against 58.95°.</p>
+    <details class="maths">
+      <summary><span class="tag">The maths</span>318 cd, the beam angle, and 955 cos⁸ γ lux</summary>
+      <div class="body">
+        <p><strong>The peak.</strong> A source whose intensity is <var>I</var><sub>0</sub> cosⁿ γ over the half of all
+          directions it faces sends out <var>I</var><sub>0</sub> × 2π / (<var>n</var> + 1) lumens in all (adding the
+          intensity over the half sphere's solid angle), so <var>I</var><sub>0</sub> = (<var>n</var> + 1) × 1000 / (2π):
+          318 cd for <var>n</var> = 1, 955 for <var>n</var> = 5.</p>
+        <p><strong>The beam angle.</strong> Half the peak where cosⁿ γ = ½, so cos γ = 0.5<sup>(1/<var>n</var>)</sup>
+          (the <var>n</var>-th root of a half), and the full width is twice that γ: for <var>n</var> = 1, cos γ = ½, γ =
+          60°, a beam of 120°; for <var>n</var> = 5, 2 × acos(0.5<sup>(1/5)</sup>) = 58.95°.</p>
+        <p><strong>The floor.</strong> 1 m below the source, a point at angle γ off the axis is
+          <var>d</var> = 1 / cos γ metres away, and the light reaches it slanted by γ, so its illuminance is
+          <var>I</var>(γ) cos γ / <var>d</var>² (chapter 5) = 955 cos⁵ γ × cos γ × cos² γ = 955 cos⁸ γ lux.</p>
+      </div>
+    </details>
+  </div>
+  <figure class="fig" data-fig="beam">
+    <figcaption>A source's intensity on a polar diagram, the light's axis straight up: the true curve dashed, the
+      grid's (<span data-say="cam">blue</span>) from rays binned by the optics kernels' own rule
+      (<code>farfield.js</code> farBin, the JavaScript copy of <code>kernels.js</code>), read by its
+      <code>intensity</code> and <code>farStats</code>, and the beam's half-peak points
+      (<span data-say="accent">red</span>). Choose the source, the rays, and whether a ring's bins are pooled.</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="map">
+  <div class="prose">
+    <h2><span class="n">2</span>Light on a floor</h2>
+    <p data-step="map:plain">A surface can be made a <em>detector</em> (lux, chapter 5: lumens falling on each square
+      metre): every ray that reaches it stops there, and its
+      landing point and light are recorded. The optics module turns the hits into a map: square cells over them, each
+      cell's light over its area in square metres, which is illuminance in lux (chapter 5). Here the cos⁵ source of
+      1000 lm, 1 m above a floor, 50,000 rays on a floor 2 m square cut into 40 × 40 cells of 5 cm: about 29 hits a
+      lit cell, so each cell is about 19% noise (one over the square root of its hits). The profile through the middle
+      scatters round the true illuminance, 955 cos⁸ γ lux (the fold-out says why).</p>
+    <p data-step="map:few">5,000 rays: 4 hits a cell, 51% noise, a map of noise. More rays is one way out.</p>
+    <p data-step="map:gauss">The other is to smooth: let each hit count, a little, in its neighbours' cells too (a
+      Gaussian bump around it, its spread, sigma, 1.5 cells, cut off at three times that). The noise falls to about 10% (the map's own estimate for a typical lit cell),
+      but the map is now blurred over 8 cm, and at the spot's middle, where the light is sharpest, the blur reads low:
+      over 120 runs its middle cell averages 913 lux, 4.4% under the true 955 (computed). This run's 831 is that bias
+      and its own noise together. Less noise, more <a data-g="bias">bias</a>, the trade of chapter 29.</p>
+    <p data-step="map:knn">Or the photon map's own estimate (chapter 19): at each cell, the light of its 32 nearest hits
+      over the disc they fill. Where hits are dense the disc is small, so an edge would stay sharp (this spot has
+      none); where they are sparse it reaches further. Its noise is about 1/√32, 18% of each cell's own light,
+      everywhere: small in the dim fringe, where the light is small, and still visible in the bright middle.</p>
+  </div>
+  <figure class="fig" data-fig="map">
+    <figcaption>Left: the floor's map from the hits (white where it is brightest), as the engine's
+      <code>detmap.js</code> detectorMap makes it. Right: its middle row, cell by cell
+      (<span data-say="cam">blue</span>), against the true illuminance (dashed); point at it for values. Choose the
+      rays and the smoothing.</figcaption>
+  </figure>
+</section>
+
+<section class="scene" id="tally">
+  <div class="prose">
+    <h2><span class="n">3</span>Counting light exactly</h2>
+    <p data-step="tally:one">An optics ray carries a <em>weight</em>: it starts at 1, its share of the light, and
+      every surface that absorbs some lowers it (a white wall keeps 0.8 of it, say); nothing ends it at random. Every
+      ray's weight has to be added into a total: what left the fitting, what each object absorbed. Thousands of GPU threads add at once, so the adds are atomic (chapter 23). A 32-bit float is a poor
+      total for millions of rays. Its steps grow with the number (chapter 30): past 16,777,216 (2²⁴) the step is 2,
+      and adding 1 rounds back to where it was. Here rays of weight 1: after 2²⁵ of them the float reads 16,777,216,
+      half the light.</p>
+    <p data-step="tally:seven">A weight of 0.7 goes wrong sooner: each add is rounded to the float's step at the total
+      so far. While the total is between 1 and 4 million the step is ⅛ and then ¼, and 0.7 is added as 0.75, too much:
+      the curve rises 4% above 1. Between 4 and 8 million the step is ½ and 0.7 is added as 0.5, too little, and the
+      curve falls: after 8.4 million rays, a total near 5.9 million, the float is 5.8% low. Between 8 and 16 million the
+      step is 1, 0.7 is added as 1, and the curve climbs back; past 16 million the step is 2, 0.7 rounds to nothing, and
+      the total stops.
+      And the result depends on the order of the adds: the same 100,000 random weights summed forwards and backwards
+      give two different floats (the readout).</p>
+    <p data-step="tally:more">So the optics kernels count in integers: each weight is turned into 2²⁰ units per unit
+      of weight, rounded once (0.7 is 734,003 units, 0.2 units short), and added into a pair of 32-bit whole numbers,
+      like an odometer's two wheels: when the low one passes its largest value, 4,294,967,295, it wraps round to 0, and
+      the code adds 1 to the high one by hand. Exact for any count it will ever see, in units: the only error is each
+      weight's first rounding (the readout's 12.8 short after 67 million rays of 0.7 is 0.2 units each, a unit being
+      2⁻²⁰: 67 million × 0.2 / 2²⁰), the same in any order, and with no retries. A GPU adds whole numbers atomically
+      but not floats (WGSL's atomics are integers only), so a float total needs a compare-and-swap loop (chapter 23):
+      read the total, add, and write it back only if no other thread changed it meanwhile, else try again. When a
+      narrow beam sends every ray to the same object, nearly every try fails and is retried, a "retry storm" in the
+      code's words.</p>
+  </div>
+  <figure class="fig" data-fig="tally">
+    <figcaption>A total of rays of one weight read back, over what it should be: a 32-bit float
+      (<span data-say="blocked">red</span>, every add rounded as <code>Math.fround</code> rounds it) and the optics
+      kernels' integer pair (<span data-say="cam">blue</span>, <code>kernels.js</code> optAdd's arithmetic, its
+      constant copied), the rays on a log scale. Choose the weight and how many rays.</figcaption>
+  </figure>
+</section>
+
+<section class="plain wide" id="engine">
+  <div class="prose">
+    <h2><span class="n">4</span>How ShadyTracer does it</h2>
+    <p>The tallies, in the optics kernels:</p>
+    <pre data-src="lib/pathtracer/optics/kernels.js" data-sym="/* Flux into a lo/hi pair: the carry is the wrap of the low word. */" data-to="if (old + v < old) { atomicAdd(&amp;optData[slot + 1u], 1u); }"
+         data-why="WGSL. w is the ray's weight, clamped to 0..4000 and turned into u32 units (OPT_FX = 2^20 of them per unit, + 0.5 to round); the clamp keeps one ray's units under 2^32 (4000 × 2^20 = 4,194,304,000), so one add wraps the low word at most once. slot is the tally's place in the buffer optData, &amp; its address, and the u on a number makes it a u32. atomicAdd returns the word as it was before; if adding v made it smaller, the 32-bit word wrapped round, so one is carried into the high word, slot + 1." data-hash="f1d11807"></pre>
+    <p>A direction into a bin, the JavaScript copy the figures use:</p>
+    <pre data-src="lib/pathtracer/optics/farfield.js" data-sym="export function farBin"
+         data-why="d is the ray's direction, axis the light's (γ = 0), c0 the direction of C = 0, all unit vectors; c90 is a third at right angles to both (a cross product). γ is the angle from the axis (acos of a dot product), C the angle round it (atan2). The bins are centred on 0, so + 0.5 before rounding down." data-hash="6c4db314"></pre>
+    <p>Smoothing a map, from the detector map's notes:</p>
+    <pre data-src="lib/pathtracer/optics/detmap.js" data-sym="// SMOOTHING (`smooth`), for when more hits are not to be had." data-to="//             fewer than k hits inside that reads 0."
+         data-why="bandwidth is in cells, so a blur follows the map's own scale. A kernel here is a weighting bump, not a GPU program: Gaussian or Epanechnikov (a parabola). Jensen is Henrik Wann Jensen, who brought photon maps to rendering; r_k is the distance to the k-th nearest hit." data-hash="d6de3ad1"></pre>
+  </div>
+</section>
+
+<section class="plain wide" id="tricks">
+  <div class="prose">
+    <h2><span class="n">5</span>Tricks and trade-offs</h2>
+    <p>Each is stamped with how it is known; point at a stamp to see what it means.</p>
+    <div data-claim="code">
+      <p><strong>Weights, not survival.</strong> An optics ray carries what is left of its light; nothing ends it at
+        random, and absorption only lowers its weight. Most path tracers play Russian roulette (chapter 13): a dim ray
+        is ended at random and the survivors carry the light of the ones ended, which is right on average, but then any
+        one run's totals move with the luck of the draw and the ended rays' light is in no tally. Here only a black
+        surface, a glowing one, the bounce cap (its light counted as lost) or leaving the scene ends a ray. So the
+        totals add up exactly, run by run: what was emitted equals
+        what escaped, what the cap cut, and what each object absorbed, the last being what arrived at it less what left
+        (<code>optics/README.md</code>).</p>
+    </div>
+    <div data-claim="measured">
+      <p><strong>Glass as the textbook says.</strong> The bench's refraction test, 400,000 rays a row: slabs of glass at
+        0, 45 and 70° within 0.1% of what Fresnel's law says passes (chapter 10), total internal reflection exactly 1, a
+        wedge's exit angle to 2 × 10⁻⁶ degrees; against an answer that treats light's two polarisations apart, the
+        model's average of them off by 3% at 70°, as predicted (the user's Pascal
+        card, 2026-09-27, <code>docs/TESTING.md</code>).</p>
+    </div>
+    <div data-claim="measured">
+      <p><strong>One readback for many batches.</strong> The optics module traces its rays in batches and reads each
+        batch's totals back from the card to the page. A readback waits for everything sent to the card before it, the
+        live picture's frames too: a Live round of four batches took 1.4 s with the picture running
+        and 0.2 s with it stopped, at 1,000 rays as at 100,000 (the user, 2026-10-04). Now a group of batches is copied
+        on the card and read back once (<code>optics/README.md</code>).</p>
+    </div>
+    <div data-claim="inferred">
+      <p><strong>The far field, not yet run.</strong> The bench's test of this chapter's first figure, a Lambertian,
+        a cos⁵ and a 30° cone against their beam angles, is built and has not been run on a card
+        (<code>docs/TESTING.md</code>, <code>optics-farfield</code>: "open — first press"); the figure runs the same
+        binning in JavaScript, not the kernel. Until version 0.67.3 the document gave cos⁵'s beam angle as 58.98°;
+        2 acos(0.5<sup>1/5</sup>) is 58.95° (computed), as the test itself expects, and the row says so now.</p>
+    </div>
+    <aside class="refs"><span class="tag">Read more</span><ul>
+      <li data-ref="pbr-radiometry">Intensity, illuminance and the solid angles between them, the quantities this
+        chapter's numbers are in.</li>
+      <li data-ref="wiki-photometry">The photometric units, candela, lux and lumen, side by side.</li>
+    </ul></aside>
+  </div>
+</section>
+
+<section class="plain wide" id="before">
+  <div class="prose">
+    <h2><span class="n">6</span>What went wrong before</h2>
+    <ul>
+      <li><strong>A ray file read seven at a time.</strong> The old reader of Zemax ray files (a lens maker's format)
+        ignored the field saying how many numbers a ray has, so a file with wavelengths was read seven numbers at a
+        time, "garbage from the second ray on"
+        (<cite data-src="lib/pathtracer/optics/zemax.js" data-sym="ignored rayFormatType, so a spectral file"></cite>).</li>
+      <li><strong>A colour from seventeen photons.</strong> A mix of three LEDs read a colour temperature (chapter 6) of
+        4247 K where 4000 was right: the
+        sensor was 3 × 3 pixels holding about 17 blue photons, where one error bar is 250 K. Read over the whole frame,
+        about a million hits, it read 3999.9 K (<code>docs/TESTING.md</code>).</li>
+      <li><strong>Batches flashing over the view.</strong> The drawn rays were whatever was in the trace's buffer last,
+        and a Live analysis's batches would have drawn over them; each trace now publishes its paths to a copy of its
+        own (<code>optics/README.md</code>).</li>
+    </ul>
+  </div>
+</section>
+
+<section class="plain" id="try">
+  <div class="prose">
+    <h2><span class="n">7</span>Try it</h2>
+    <ul>
+      <li>In the first figure, press <strong>Other rays</strong> several times at 20,000 rays: is the peak ever
+        low?</li>
+      <li>In the second, how many rays does the plain map need before its middle cell is within 10% of the truth?</li>
+      <li>In the third, at which count does the float total of weight 0.3 first fall 1% short?</li>
+    </ul>
+    <h3>Words from this chapter</h3>
+    <ul class="words" data-words="intensity illuminance bias f32 atomic"></ul>
+  </div>
+</section>
+
+<nav class="tabs" data-auto></nav>
+</main>
+</body>
+</html>

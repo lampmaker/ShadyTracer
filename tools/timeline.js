@@ -42,6 +42,7 @@
 //======================================================================================================================
 
 import { makeSequencer } from '../lib/timeline/sequencer.js'
+import { stampedName } from '../lib/filename.js'
 
 /* the export settings last used, the encoder's among them (the header) */
 export const PREFS_KEY = 'raytracer.timeline.export'
@@ -223,6 +224,29 @@ export function installTimeline(el, { PARAMS, RT, stage, busy = () => { }, progr
         if (old === 'not kept') showScene(scene.timeline())
     }
     seq.showScene = showScene
+
+    /* A VIDEO'S FILE WITH THE TIME IT WAS STARTED: `raytracer-2026-10-19_14-03-22.mp4` (lib/filename.js), every
+       recording its own file rather than the browser's `raytracer (3).mp4`. The name is the sequencer's, made from
+       S.filename as a recording starts, before its first await (read in code: lib/timeline/sequencer.js doRecord, `let
+       name = ...` and then showSaveFilePicker or E.make), and lib/timeline is changed in CODE_WOOD, never here. So the
+       stamp goes into the setting for that one synchronous stretch and comes out as it returns: the name typed stays the
+       person's, in the menu and in the scene (nothing in that stretch calls onSettings, so keep() never sees it), and
+       the film carries the time. Both ways a recording starts come here: seq.record(), and the menu's RECORD, whose
+       click calls the sequencer's own record and not seq.record (lib/timeline/export-ui.js `rec`) -- so an idle
+       RECORD's click is caught on its way down and sent here instead; while it records it goes on to the button, which
+       stops it. tools/test/timeline.check.mjs records both ways and reads the name downloaded. */
+    const record = seq.record
+    seq.record = () => {
+        if (seq.recording) return record()
+        const S = seq.settings, typed = S.filename
+        S.filename = stampedName(typed || 'timeline')
+        try { return record() } finally { S.filename = typed }
+    }
+    seq.exportUI.root.addEventListener('click', e => {
+        if (seq.recording || !e.target.closest?.('.tl-rec')) return
+        e.stopPropagation()
+        seq.record()
+    }, true)
     /* THE GRIP IS FOR A PANEL AT THE BOTTOM OF A PAGE: it sets the host's height. In a dock the panel's
        size is the dock's, and a height set on the element would only fight it (hidden in timeline.css). */
 

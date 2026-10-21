@@ -107,6 +107,7 @@ on the user's own GPU; there is no server.
 |---|---|---|
 | **Three views**: photographic; **lux on surfaces** (every visible surface's illuminance, whatever its material); **luminance in cd/m²**; both measuring views in log false colour with bands and a legend | built; `illuminance`, `cosine-law`, `disc-light` benches not pressed | `lib/pathtracer/viewtools.js`; README § *The illuminance view* |
 | **Measure tool**: pins that stay on the clicked surface and re-read as the picture converges; a rectangle's mean ± error, min, max, **U0**; each reading's colour as **CCT + Duv** or CIE xy, an area's **Δu′v′** spread; **CSV** | built; Node-tested | `lib/pathtracer/measure/tool.js` |
+| **Measure tool's ruler** (0.68.0): points picked on surfaces with their (x, y, z) in the scene's unit, each joined to the last, each stretch's length, its Δx Δy Δz as red, green and blue legs (the Points mode's, `lib/pathtracer/legs.js`), and a line's total, Shift-click a new line, shown to the surface tolerance's digits; in the CSV. With a pin or the ruler on, a click places, a drag on a pin or a point moves it over the surfaces, and a drag elsewhere turns the view | built 2026-10-19; Node-tested (`measure.test`) and headless-checked over a stand-in pick, camera and selection (`example.check`); **not seen on hardware** | `lib/pathtracer/measure/tool.js` |
 | Point sensors and work-plane grids that are not visible surfaces | planned | PLAN.md *Next* item 2 |
 | Glare (UGR), CRI, TM-30 | not there | |
 
@@ -164,7 +165,8 @@ user on real hardware"). What PLAN.md or BUILDER.md marks unconfirmed is marked 
 | **Instant hide/show** without a recompile | built | `model.js` `liveVisibility` |
 | **Files**: scene, project, or workspace (all scenes + renderer settings + camera + size); open by menu, Ctrl O or dropping a file on the page -- a scene or project file joins the project, a workspace file becomes a project of its own (since 2026-10-02) | in use | `demo.js`, `project.js` |
 | **Projects kept in the browser** (2026-10-02): the project being worked on saved in IndexedDB as it changes -- its scenes, the scene worked on, the renderer's settings, every scene's camera, a library item being edited -- so a reload comes back to it (not the undo history); the **Project panel** (0.63.0; a dialog until then; the project's name over the tree, or File › Projects…, opens it as a tab beside the picture) lists them: open, new, rename, duplicate, download, delete (asks), with this project's scenes and the examples; **File** is five rows (New project, Projects…, Import from file… -- a project file asks: a project of its own, or its scenes here -- Export ▸, Save picture…), no Save: the status bar says it is saved; a **second tab** on a project works on its own copy, kept once it is edited (Web Locks); one that cannot be read is kept as it was; Ctrl+S writes at once | built 2026-10-02; node-tested (`workspace/test/store.test`) and headless-checked over real IndexedDB and locks (`projects.check`); **not seen on hardware** | `workspace/` |
-| Mesh import (OBJ, STL, glTF) or CAD import (STEP, IGES) | **not there**; investigated, routes and phases in `roadmap/IMPORT.md` (2026-10-02) | |
+| **STEP and STL import as shapes** (0.73.0, 2026-10-21): File › Import from file… or a dropped `.step`, `.stp` or `.stl`; each solid becomes a group of the builder's own presets (box, cylinder, sphere, torus, and a cone and a rounded rectangle's prism with their own normals) joined by union, intersect and subtract -- a formula over its faces' half-spaces with separators where a curved surface's faces end, minimised, no seam inside and no skin over an opening, a lower bound on the distance. STEP read by our own reader (units, assemblies' placements, products' names); an STL from CAD fitted back to its planes, cylinders, cones, spheres and tori first. Converted in a Worker, pasted as one undo step in the scene's unit, the scene's default material, standing on z = 0 where it is pasted (the file's axes kept). A B-spline face, an open mesh or a scan (over 400 faces) refused by name, with why. The example Imported parts; Tests › imported | built; node-tested against OpenCascade's own classification of its own parts (`import/test/step.test`, `stl.test`, `csg.test`, `import.test`: 21,000 points, the user's own Onshape file among them, and an assembly, every one agreeing, the scene document as the shader computes it too; each STL giving back its STEP's surfaces; the user's Onshape part, 44 shapes in 29 groups, now 7 in 2; `import.gpu.mjs`: each part marched on Dawn against its formula); compiled by check-shaders with naga; **not seen on hardware**, no render time measured | `import/`, `bench/imported.js`, `roadmap/IMPORT.md` section 11 |
+| Mesh import (OBJ, PLY, 3MF, glTF) or CAD import (IGES), freeform faces and scans | **not there**; the routes in `roadmap/IMPORT.md` (sections 2-5, 2026-10-02) and what is next (section 11.5) | |
 | Ellipsoid, polar repeat, smoother blend profiles | planned | `roadmap/BUILDER.md` |
 
 ---
@@ -374,6 +376,7 @@ steps*. The examples before 0.54.0 are test fixtures (`test/fixtures/scenes/`).
 |---|---|
 | Scenes, projects, workspaces (`.json`, every version) | Scenes, projects, workspaces (`.json`) |
 | Zemax ray files (`.DAT`) | **PNG** pictures; **MP4** or PNG-ZIP video |
+| **STEP** and **STL** solids, as shapes (`import/`) | |
 | Library files, timeline files (`.json`) | **3MF with colour**, **STL** |
 | | **CSV**: measure readings, intensity table, illuminance map, detector hits; chart PNGs |
 | | Library files, timeline files (`.json`) |
@@ -381,8 +384,8 @@ steps*. The examples before 0.54.0 are test fixtures (`test/fixtures/scenes/`).
 Since 0.1.0 every scene, project, workspace and library file written records the application's version
 and git revision that wrote it, as `app` (`version.js`, `CHANGELOG.md`); reading ignores it.
 
-Not read: meshes, CAD, IES, EULUMDAT, HDRI (meshes and CAD: what each format would take is in
-`roadmap/IMPORT.md`). Not written: IES, EULUMDAT, EXR, reports.
+Not read: meshes other than STL, CAD other than STEP (IGES, native formats), IES, EULUMDAT, HDRI (what each mesh
+and CAD format would take is in `roadmap/IMPORT.md`). Not written: IES, EULUMDAT, EXR, reports.
 
 ---
 

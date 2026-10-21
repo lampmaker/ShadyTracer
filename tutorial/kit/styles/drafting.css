@@ -1,0 +1,72 @@
+/* DRAFTING SHEET -- a patent drawing on vellum: crisp black ink, its lines told apart by their dashes (a camera ray
+   solid, a shadow ray dashed, a blocked one dotted) and a normal in grey, FIG. numbers, leader lines and hatching, a
+   book serif with small-capital headings, typewritten labels, and one spot colour (vermilion) for light and for the
+   handles. Dark: white ink on charcoal. A style: tokens, texture and frame (kit/styles.js names it); kit.css holds the layout. */
+:root[data-style="drafting"], [data-style="drafting"] {
+    --paper: #f4f3ee; --paper-deep: #dad8cf; --paper-raised: #fbfaf6;
+    --ink: #151515; --ink-soft: #454545; --ink-faint: #8b8a85; --grid: rgba(0, 0, 0, .05); --rule: #151515;
+    --accent: #d2401c; --accent-soft: rgba(210, 64, 28, .085);
+    --c-cam: #151515; --c-light: #d2401c; --c-shadow: #151515; --c-blocked: #151515; --c-solid: #151515;
+    --c-fill: rgba(21, 21, 21, .62); --c-glass: #151515; --c-normal: #6e6e6e; --c-hit: #151515; --c-step: rgba(21, 21, 21, .28);
+    --code-bg: rgba(0, 0, 0, .035); --code-ink: #151515; --code-comment: #6d6c66; --code-kw: #151515; --code-num: #d2401c;
+    --stamp-measured: #151515; --stamp-code: #151515; --stamp-inferred: #d2401c;
+    --f-display: 'Spectral SC', 'Spectral', Georgia, serif; --f-body: 'Spectral', Georgia, 'Times New Roman', serif;
+    --f-hand: 'Courier Prime', 'Courier New', monospace; --f-mono: 'Courier Prime', 'Courier New', ui-monospace, monospace;
+    --pen-rough: 0; --pen-double: 0; --pen-width: 1.25; --pen-misreg: 0; --pen-fill: hatch;
+    --say-cam: "black"; --say-light: "orange-red"; --say-shadow: "black"; --say-blocked: "black"; --say-accent: "orange-red"; --say-soft: "grey"; --say-normal: "grey"; --say-glass: "black";
+    --radius: 0;
+    --tex: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.6' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .045 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"])[data-style="drafting"], :root:not([data-theme="light"]) [data-style="drafting"] {
+        --paper: #1b1c1e; --paper-deep: #0f1011; --paper-raised: #232427;
+        --ink: #ecebe6; --ink-soft: #b9b8b2; --ink-faint: #7d7c78; --grid: rgba(255, 255, 255, .05); --rule: #ecebe6;
+        --accent: #ff6a3d; --accent-soft: rgba(255, 106, 61, .12);
+        --c-cam: #ecebe6; --c-light: #ff6a3d; --c-shadow: #ecebe6; --c-blocked: #ecebe6; --c-solid: #ecebe6;
+        --c-fill: rgba(236, 235, 230, .55); --c-glass: #ecebe6; --c-normal: #a3a19a; --c-hit: #ecebe6; --c-step: rgba(236, 235, 230, .28);
+        --code-bg: rgba(255, 255, 255, .04); --code-ink: #ecebe6; --code-comment: #9b9a94; --code-kw: #ecebe6; --code-num: #ff6a3d;
+        --stamp-measured: #ecebe6; --stamp-code: #ecebe6; --stamp-inferred: #ff6a3d;
+        --tex: none;
+        --say-cam: "white"; --say-light: "orange-red"; --say-shadow: "white"; --say-blocked: "white"; --say-accent: "orange-red"; --say-soft: "grey"; --say-normal: "grey"; --say-glass: "white";
+        color-scheme: dark;
+    }
+}
+:root[data-theme="dark"][data-style="drafting"], :root[data-theme="dark"] [data-style="drafting"] {
+    --paper: #1b1c1e; --paper-deep: #0f1011; --paper-raised: #232427;
+    --ink: #ecebe6; --ink-soft: #b9b8b2; --ink-faint: #7d7c78; --grid: rgba(255, 255, 255, .05); --rule: #ecebe6;
+    --accent: #ff6a3d; --accent-soft: rgba(255, 106, 61, .12);
+    --c-cam: #ecebe6; --c-light: #ff6a3d; --c-shadow: #ecebe6; --c-blocked: #ecebe6; --c-solid: #ecebe6;
+    --c-fill: rgba(236, 235, 230, .55); --c-glass: #ecebe6; --c-normal: #a3a19a; --c-hit: #ecebe6; --c-step: rgba(236, 235, 230, .28);
+    --code-bg: rgba(255, 255, 255, .04); --code-ink: #ecebe6; --code-comment: #9b9a94; --code-kw: #ecebe6; --code-num: #ff6a3d;
+    --stamp-measured: #ecebe6; --stamp-code: #ecebe6; --stamp-inferred: #ff6a3d;
+    --tex: none;
+    --say-cam: "white"; --say-light: "orange-red"; --say-shadow: "white"; --say-blocked: "white"; --say-accent: "orange-red"; --say-soft: "grey"; --say-normal: "grey"; --say-glass: "white";
+    color-scheme: dark;
+}
+
+/* the frame: a ruled border with zone marks down each side, as on an engineering drawing */
+[data-style="drafting"] .sheet::before {
+    inset: 14px; border: 1.5px solid var(--rule); opacity: 1;
+    box-shadow: inset 0 0 0 9px var(--paper), inset 0 0 0 9.8px var(--rule);
+}
+[data-style="drafting"] .sheet::after {
+    content: ""; position: absolute; inset: 14px; pointer-events: none;
+    background:
+        linear-gradient(90deg, var(--rule) 1px, transparent 1px) 0 0 / 12.5% 9px repeat-x,
+        linear-gradient(90deg, var(--rule) 1px, transparent 1px) 0 100% / 12.5% 9px repeat-x,
+        linear-gradient(var(--rule) 1px, transparent 1px) 0 0 / 9px 25% repeat-y,
+        linear-gradient(var(--rule) 1px, transparent 1px) 100% 0 / 9px 25% repeat-y;
+}
+@media (max-width: 640px) { [data-style="drafting"] .sheet::before, [data-style="drafting"] .sheet::after { inset: 6px; } }
+[data-style="drafting"] h1 { font-weight: 600; letter-spacing: .02em; line-height: 1; }
+[data-style="drafting"] h2 { font-weight: 600; letter-spacing: .02em; }
+[data-style="drafting"] h2 .n { color: var(--ink); font-family: var(--f-body); font-weight: 600; font-size: .85em; vertical-align: 0; }
+[data-style="drafting"] h2 .n::after { content: "."; }
+[data-style="drafting"] .eyebrow { font-family: var(--f-mono); letter-spacing: .2em; }
+[data-style="drafting"] .lede { font-style: italic; }
+[data-style="drafting"] .titleblock { border-width: 1.5px; font-size: .74rem; letter-spacing: .08em; }
+[data-style="drafting"] .fig figcaption { font-style: italic; }
+[data-style="drafting"] .fig figcaption::before { content: "FIG. " counter(fig) ". "; font-style: normal; font-family: var(--f-body); font-weight: 600; letter-spacing: .12em; font-size: .9rem; }
+[data-style="drafting"] .note { border-left: 1.5px solid var(--accent); background: none; font-style: italic; }
+[data-style="drafting"] a { text-decoration-color: var(--ink); }
+[data-style="drafting"] [data-claim] { border-width: 1px; }

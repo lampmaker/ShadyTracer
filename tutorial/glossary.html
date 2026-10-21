@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Glossary · ShadyTracer, inside out</title>
+<link rel="stylesheet" href="kit/kit.css">
+<style>
+  .filter { display: flex; gap: .6rem; align-items: center; margin: 0 0 2rem; font: 600 .82rem/1 var(--f-mono); }
+  .filter input { font: 400 1rem/1.3 var(--f-body); color: var(--ink); background: var(--paper-raised); border: 1.5px solid var(--rule); border-radius: var(--radius); padding: .5rem .7rem; width: min(24rem, 100%); }
+  #terms { margin: 0; columns: 2 22rem; column-gap: 3.5rem; }
+  #terms .letter { break-after: avoid; margin: 1.6rem 0 .4rem; font: 700 1.6rem/1 var(--f-display); color: var(--accent); }
+  #terms .letter:first-child { margin-top: 0; }
+  .entry { break-inside: avoid; padding: .55rem .7rem .6rem; margin: 0 0 .4rem -.7rem; display: block; border-radius: var(--radius); scroll-margin-top: 5rem; }
+  .entry.on { background: var(--accent-soft); outline: 1.5px solid var(--accent); }
+  .entry dt { font: 700 1.05rem/1.3 var(--f-display); }
+  .entry dd { margin: .2rem 0 0; }
+  .entry dd p { margin: 0 0 .3rem; }
+  .entry .where, .entry .see, .entry .read { display: block; font: 500 .78rem/1.45 var(--f-mono); color: var(--ink-soft); }
+  .entry .where.planned { text-decoration-style: dashed; }
+</style>
+<script type="module" src="glossary.js"></script>
+</head>
+<body data-chapter="">
+<p class="kit-offline">This page runs from a web server, not from a file: in the repository run <code>python3 -m http.server 8000</code> and open http://localhost:8000/tutorial/.</p>
+<main class="sheet">
+
+<header class="sheet-head">
+  <div>
+    <p class="eyebrow">ShadyTracer, inside out</p>
+    <h1>Glossary</h1>
+    <p class="lede">Every word the chapters use that you might not know yet, in a sentence or two, with the chapter that
+      explains it properly. In the chapters these words have a dotted underline: hover or tap one to see its entry
+      without leaving the page.</p>
+  </div>
+  <div class="titleblock" data-auto></div>
+</header>
+
+<section class="plain wide">
+  <div class="prose">
+    <label class="filter" for="filter">Find <input id="filter" type="search" placeholder="a word, or part of one" autocomplete="off"></label>
+    <div id="terms"></div>
+  </div>
+</section>
+
+</main>
+</body>
+</html>

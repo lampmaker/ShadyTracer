@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Open problems · ShadyTracer, inside out</title>
+<link rel="stylesheet" href="../kit/kit.css">
+<script type="module" src="open.js"></script>
+</head>
+<body data-chapter="open">
+<p class="kit-offline">This page runs from a web server, not from a file: in the repository run <code>python3 -m http.server 8000</code> and open http://localhost:8000/tutorial/.</p>
+<main class="sheet">
+
+<header class="sheet-head">
+  <div>
+    <p class="eyebrow">Part IX · Build your own · Chapter 33</p>
+    <h1>Open problems</h1>
+    <p class="lede">The last chapter is what nobody knows yet. ShadyTracer's own documents keep a careful account of
+      it: checks built and never run on a graphics card, one run once and still open, numbers measured on a card that
+      nobody has explained, fixes designed and not built, and limits the renderer has and says so. And writing this
+      tutorial found comments in the code that said something the code, or their own numbers, did not: those are
+      corrected now, and one thing in the code itself is left. Each is a place to start. The board below holds them
+      all, every card quoting its document, and the tutorial's test checks each quote against today's files, so the
+      board must change when a check is run or a comment fixed.</p>
+  </div>
+  <div class="titleblock" data-auto></div>
+</header>
+
+<section class="scene" id="board">
+  <div class="prose">
+    <h2><span class="n">1</span>The board</h2>
+    <p data-step="board:all">Every open item, a card each, in columns by kind; point at a card for its source, its
+      words and the chapter that teaches what it is about. The largest group is the first, and the reason is where the
+      code is written. Much of ShadyTracer is written by an AI assistant working in a container: a computer hired for
+      the job, reached over the internet, whose graphics card is a software imitation that cannot run the page (the
+      repository's notes for the assistant say so). The numbers need a real card (chapter 0). A check of the picture is
+      a row of the <a data-g="benchmark">bench</a> (<code>lib/pathtracer/tests.js</code>, listed in docs/TESTING.md):
+      it tells something only once someone with a real card presses it and pastes the numbers back. Until then it is
+      code that has never run.</p>
+    <p data-step="board:never">The rows built and never pressed (run, from the bench's menu, on a real graphics
+      card). Take the first: <em>is each error bar the real noise?</em> Every pixel reports an
+      <a data-g="error-bar">error bar</a> (chapter 12); the row renders a floor whose every pixel should read the same,
+      and compares how far neighbouring pixels really differ with what their error bars claim. A pass reads 1; a failure
+      says every error bar in the program is too wide or too narrow. Chapter 29's figures show what it would see, but
+      nobody has pressed it. Among the others: whether the illuminance view reads the lux a surface really gets
+      (chapter 5); whether the surface tolerance, the small distance at which a ray counts as touching a surface,
+      follows a scene's size (chapter 30); whether the far field gives a known source's curve (chapter 31); whether the
+      photon map adds exactly its share (chapter 19). Four ask only what something costs, not whether it is right.</p>
+    <p data-step="board:once">One row has been pressed once and is still open. Light sampling, aiming shadow rays at
+      the lights (chapter 14), once read 76% too bright with a sun twenty times the real one, in a scene with a glowing
+      object of its own that light sampling does not aim at, so the cause was unclear. This row was built to tell whether
+      the sun's disc or the sky is wrong; it was pressed once, and its answer was never written down.</p>
+    <p data-step="board:unexplained">Measured on a real graphics card, and nobody yet knows why. Take the first: on the
+      Ampere graphics card, the furnace's rough glass reads 0.9440 in every run since one set that read 0.9872, where on
+      the Pascal it read 0.9587 and that was explained. (Pascal and Ampere are the two NVIDIA graphics cards the user
+      measures on.) The furnace (chapter 29) is an object in a white sky of brightness 1, which a surface losing no
+      light must read as exactly 1. Rough glass loses a little, because light that would bounce between the tiny
+      facets of its rough surface is not followed; on the Pascal a separate program, with the same model of the surface
+      and no code shared with the renderer, found the same loss (5.3% on the sphere, which fills 0.78 of the picture:
+      4.1% over the whole, so 0.9587). Between the Ampere's two sets of runs the glass's sampling read nothing the code's changes
+      touched, and the narrower picture of the later runs (946 pixels across, not 1092) can account for at most a
+      quarter of the drop from 0.9872: "Not explained yet." Among the others: the Noise library's compile, about 4 s in one profile and 21 to 23 s in the benchmark on
+      the same graphics card (chapter 27); the same kernels reading 184.7 to 255.5 ms from run to run, 38% between the
+      fastest and the slowest, which is why the document calls a comparison across runs "good to about ±20%", the
+      <a data-g="drift">drift</a> (chapter 25); one scene, re-authored in metres, 10% faster than its neighbours on
+      the very same kernel text. Each is a number that should be one thing and is another: an unexplained number may
+      turn out to be a bug or a limit, and until someone finds out, nobody knows which.</p>
+    <p data-step="board:designed">Designed and agreed, never built. Take the first: a tolerance for each pixel. Today
+      one surface tolerance serves a whole scene (chapter 30), so in a large scene a small object close to the camera
+      gets one too coarse for it; the user asked for "different eps for different pixels" (eps is the tolerance's name
+      in the code), it was agreed, and the engine was first moved to work in metres, so that one tolerance means the
+      same in every scene. The others: a probe for the thin air gap two slabs of glass leave; a compensation for the
+      light rough glass loses; shadow rays weighed through frosted glass; a light's face that reflects; a photon map for
+      dust; and picking the optics trace's light sources evenly instead of at random. Each design is written down where
+      the card's source says.</p>
+    <p data-step="board:limit">Limits the documents state plainly. A <em>bug</em>, as this chapter uses the word, is
+      the program doing what nobody meant, unknown until someone finds it: section 6 of chapter 32 tells two. A
+      <em>limit</em> is known, measured or bounded, and says where the picture cannot be trusted: the surface tolerance
+      making a small lamp too bright is one (chapter 30 measures it). The others: a light reached only through glass,
+      left to chance (chapter 18); the <a data-g="bias">biases</a> the wavefront keeps (chapter 22); light's
+      polarisation, which no face keeps track of (chapter 10); and shapes joined only by union, which a cut or an
+      intersection takes as one shape and the shader folds by the nearest boundary instead of combining (chapter 3).</p>
+    <p data-step="board:found">What writing these chapters found saying what the code, or its own numbers, does not. A
+      wrong comment is neither a bug nor a limit, but it can hide either from the next person who trusts it. These
+      chapters found thirteen. Twelve were comments and document lines, and version 0.67.3 corrected them, so their cards
+      have gone. The first: the comment on aiming at the sun said it was "a cone of about 0.03 steradian" (a steradian is
+      a share of the whole sky, which is 4π of them); that was an old sun, its disc once made 21 times as wide as the real
+      one, so covering 21 × 21 = 441 times the sky the real one does, 0.000067 steradian (chapter 14). Among the others: a
+      comment's arithmetic that its own constants did not give; a speed-up claimed "on every scene" from a run in which
+      one pair was within its noise; line numbers the code had moved past; the plan calling the camera's depth of field
+      "not built" while further down it said the lens was built in 0.43.0. Where a chapter told of one, it now says what
+      the comment said and that it was corrected. The one card left is code, not a comment. To find a surface the renderer
+      walks along a ray in steps, each as long as the distance to the nearest surface, which is safe because nothing is
+      nearer (chapter 2). A twist (chapter 3) turns a shape a little more at every height, and that bends space: the
+      distance is measured to the untwisted shape, and a short move in the twisted picture can be a longer one through it,
+      so the twist divides the distance by how much a move can be stretched. The code divides by √(1 + c²), where c is the
+      twist's turn per unit of height times how far the shape reaches from its axis; but a move at a slant can be
+      stretched up to 15% more than that. Every step is also cut to 0.9 of what it may be, which takes up most of the gap:
+      in the case the tutorial's test tried, a thin plate at a slant, a step can still run about 3% past the surface (0.9
+      × 1.14 is about 1.03). Dividing by the largest stretch instead would make a twist's steps up to 13% shorter, so it
+      would take more of them: whether that is worth it is the code's owner's call.</p>
+  </div>
+  <figure class="fig" data-fig="board">
+    <figcaption>Every open item from ShadyTracer's documents, and what this tutorial found that is still open, as cards
+      by kind (<code>tutorial/kit/open.js</code>, every card's words checked against its file by the test). Choose a kind to
+      see its cards' words; point at a card for its source and the chapter that teaches it.</figcaption>
+  </figure>
+</section>
+
+<section class="plain wide" id="how">
+  <div class="prose">
+    <h2><span class="n">2</span>How one gets closed</h2>
+    <p>The way every number that decided anything here was made (chapter 25): a row of the bench, run on a real card by
+      the person who has one, its result pasted back with the version line that names the build. Then the row's status
+      in docs/TESTING.md changes, and this board with it. A row is closed when its answer is known, whether it passes or
+      not: a check that fails has told something, and a check never run has told nothing.</p>
+    <p>The chain from there to the board: the result is pasted back; someone updates the row's status in
+      docs/TESTING.md; the card's quote no longer matches its file, so the tutorial's test fails; and since the
+      repository runs that test on every proposed change (its CI), that change cannot pass until the card changes
+      kind or goes. A fixed comment breaks its card's quote the same way. The one link the test cannot make for anyone
+      is the second: a result nobody writes into docs/TESTING.md never reaches the board, which is the run-once card's
+      whole story.</p>
+    <p>And the rules for writing the answer down are the ones this tutorial has stamped on every claim: say whether a
+      number was <a data-g="claim-measured">measured</a> (by whom, on what card), <a data-g="claim-code">read in the
+      code</a> (where), or <a data-g="claim-inferred">inferred</a> (and what would test it). The drift card shows two of the
+      stamps at once: its times were measured; their cause, the graphics card's clock speed, is only inferred, since
+      nobody has measured the clocks.</p>
+    <aside class="refs"><span class="tag">Read more</span><ul>
+      <li data-ref="kulla2017">The albedo tables docs/TESTING.md names for rough glass's lost light ("Kulla-Conty's
+        albedo tables, with transmission"): where that "designed, not built" card would start.</li>
+      <li data-ref="turquin2019">The compensation ShadyTracer already uses for metals (<code>materials_pbr.js</code>,
+        <code>microfacet.js</code>); doing the same for glass is the open card.</li>
+    </ul></aside>
+  </div>
+</section>
+
+<section class="plain" id="try">
+  <div class="prose">
+    <h2><span class="n">3</span>Try it</h2>
+    <ul>
+      <li>Pick a card of the first kind and read its row in docs/TESTING.md: what would a pass look like, and what a
+        failure?</li>
+      <li>Take the card of the last kind, read chapter 3's section on the twist, and find the card's quoted words in
+        its file (on GitHub, or in a copy of the repository: search the file for them). Would you make every twisted
+        shape up to 13% slower to step through, to close a gap of about 3%?</li>
+      <li>Which of the chapters you have read has the most cards? What does that say about it?</li>
+    </ul>
+    <h3>Words from this chapter</h3>
+    <ul class="words" data-words="benchmark error-bar drift bias claim-measured claim-code claim-inferred"></ul>
+  </div>
+</section>
+
+<nav class="tabs" data-auto></nav>
+</main>
+</body>
+</html>
