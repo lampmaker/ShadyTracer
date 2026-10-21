@@ -80,7 +80,8 @@
       3 keeps only 46% (the same number as before, for a different cap), 8 keeps 76%. A cap makes the picture darker than it should be, and darkest where light bounces
       most (a white room, a corner, a light shining into a box). That is a <a data-g="bias">bias</a>: no number of
       samples brings it back. ShadyTracer's cap is 10 bounces by default, and its Render settings take it up to 40
-      (<em>Max Bounces</em>).</p>
+      (<em>Max Bounces</em>). A second cap, <em>Max Diffuse Bounces</em>, counts only the bounces off matte and glossy
+      surfaces (section 4).</p>
   </div>
   <figure class="fig" data-fig="cap">
     <figcaption>The room's average light, in units of the lamp's brightness, with a cap of 0, 1, 2, 3, 4, 6, 8, 12, 20
@@ -163,8 +164,18 @@
     <pre data-src="lib/pathtracer/core/materials_pbr.js" data-sym="/* THE BOUNCE: one lobe, drawn by lobesSample" data-to="res.r.beta *= smp.w;"
          data-why="beta is the throughput, three numbers (red, green, blue). lobesSample picks one of the surface's parts (a matte part, a shiny one: its lobes, chapter 9) and a direction from it, using PRNG(), four fresh random numbers in [0, 1) (chapter 12); smp.w is the weight of the direction drawn. For a plain matte surface that weight is its colour, as in this chapter's figures, because the matte draw picks directions in proportion to cos θ. The comment's F G2/G1 is chapter 9's; marching a ray is following it to the next surface (chapter 2)." data-hash="f9c19e32"></pre>
     <p>Then the cap and the roulette, at the end of every bounce:</p>
-    <pre data-src="lib/pathtracer/core/tracebasics.js" data-sym="// the hard bounce cap" data-to="res.r.beta /= p;" data-max="55"
-         data-why="res.r.bounces counts the surfaces the path has hit; UB. is a setting handed to the GPU, so UB.maxbounce is Max Bounces. max3rgb is the largest of the three channels: p follows the brightest colour the path still carries. PRNG().x is one random number in [0, 1). uRRStart is 3, RR_MIN_P 0.1 and RR_MAX_P 0.95. UB.rr is the setting, off by default. The comment's 'energy conservation' is this chapter's 'on average nothing is lost'. In the long comment: RR is Russian roulette; the wavefront is the rounds of section 5; the adaptive iteration budget, the number of rounds as it used to adapt, and the worst case, the rounds every trace has run since 0.10.0 (section 5); trimmedLuma, the picture's average brightness with its brightest and darkest pixels left out; a dispatch, one kernel's launch; rays flushed, rays still going when the last round ended them." data-hash="0b125f93"></pre>
+    <pre data-src="lib/pathtracer/core/tracebasics.js" data-sym="// the hard bounce cap" data-to="res.r.beta /= p;" data-max="75"
+         data-why="res.r.bounces counts the surfaces the path has hit; UB. is a setting handed to the GPU, so UB.maxbounce is Max Bounces. max3rgb is the largest of the three channels: p follows the brightest colour the path still carries. PRNG().x is one random number in [0, 1). uRRStart is 3, RR_MIN_P 0.1 and RR_MAX_P 0.95. UB.rr is the setting, off by default. The comment's 'energy conservation' is this chapter's 'on average nothing is lost'. In the long comment: RR is Russian roulette; the wavefront is the rounds of section 5; the adaptive iteration budget, the number of rounds as it used to adapt, and the worst case, the rounds every trace has run since 0.10.0 (section 5); trimmedLuma, the picture's average brightness with its brightest and darkest pixels left out; a dispatch, one kernel's launch; rays flushed, rays still going when the last round ended them. The block between the cap and the roulette is the second cap, below." data-hash="885af73a"></pre>
+    <p>Between them sits a second cap, <em>Max Diffuse Bounces</em> (version 0.75.0), which counts only the bounces
+      that scatter light about, off a matte surface, rough gloss or a point in dust (the code's <code>EV_EVAL</code>
+      events: a surface a light's connection can evaluate, chapters 18 and 19), and lets mirrors and clear glass pass, which only Max Bounces caps. At 0 a picture is the direct light alone,
+      but still through lenses, mirrors and glass; each step up adds one bounce off a wall. Its count rides in the
+      upper half of a word the ray already had (<code>Ray.counts</code>; the lower half counts the march's steps),
+      since the ray had no room for another field. The comment is long because a picture's light also comes from the
+      light's side, its photons and the photon map (chapters 18 and 19), and the cap must cut the same paths from
+      every side, or light would be counted twice or lost. At 40, the default, or anywhere at or above Max Bounces,
+      it cannot bind, and the kernels are told 0, no cap
+      (<cite data-src="lib/pathtracer/core/photometry.js" data-sym="export const diffuseCapOf"></cite>).</p>
   </div>
 </section>
 

@@ -184,7 +184,9 @@
       where it stops. The bounce from there is never traced, so a path without NEE could never find what that shadow ray
       would; aiming there would count light one bounce further, and the two pictures would head for different answers.
       Before the flat world followed this rule, the room allowed one bounce read 0.0870 aiming against 0.0556 without
-      (44,800 paths each, computed). pbrt stops the same way.</p>
+      (44,800 paths each, computed). pbrt stops the same way. ShadyTracer's second cap, Max Diffuse Bounces (chapter
+      13), keeps the rule for its own count: a path that arrives with no diffuse bounce left aims at no light there
+      (<cite data-src="lib/pathtracer/core/materials_pbr.js" data-sym="fn diffuseLeft(r: Ray)"></cite>).</p>
     <aside class="refs"><span class="tag">Read more</span><ul>
       <li data-ref="veach1997">The thesis that gave path tracing its careful maths, and multiple importance sampling:
         the better way not to count a light twice. Long, thorough, and where the next chapter comes from.</li>
@@ -278,7 +280,7 @@
       handed to a shadow ray. The shadow ray carries it: if
       nothing blocks it, it adds exactly that to the pixel.</p>
     <pre data-src="lib/pathtracer/core/materials_pbr.js" data-sym="let contrib = res.r.beta * f * NoL * le * (w / dS);" data-to="NEE_RAY.state = RAY_ACTIVE;"
-         data-why="beta is the path's throughput, f the surface's response, NoL the cosine law, w the MIS weight (the next chapter: 1 for now), dS the chance it divides by. max3 is the largest of the three colour channels: a contribution too small to matter sends no shadow ray. The ray starts a little off the surface (offsetTol) so it does not hit the surface it starts on." data-hash="69a09c53"></pre>
+         data-why="beta is the path's throughput, f the surface's response, NoL the cosine law, w the MIS weight (the next chapter: 1 for now), dS the chance it divides by. max3 is the largest of the three colour channels: a contribution too small to matter sends no shadow ray. The ray starts a little off the surface (offsetTol) so it does not hit the surface it starts on." data-hash="679694c2"></pre>
     <p>Shadow rays then get their own <a data-g="kernel">kernel</a>, because they need so little:</p>
     <pre data-src="lib/pathtracer/core/wavefront.js" data-sym="THE OCCLUSION PASS -- the other half of next-event estimation." data-to="kernel's machinery would cost the machinery and use none of it."
          data-why="Occlusion means being in the way. A shadow ray never shades or bounces. Giving it the full shading machinery would cost compile time and GPU time for nothing. (Written when the sky was the only light: a shadow ray to a light's face stops just short of the point it aims at, and deposits if nothing was in the way; one aimed at a glowing surface counts the glow of whatever it hits first.)" data-hash="25230c7d"></pre>

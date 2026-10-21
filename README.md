@@ -171,6 +171,9 @@ for the help.
   the lights' rays through lenses and mirrors to the first diffuse surface, where its floor reads the
   closed form to within 0.6 % **✓**. *Lamps only* lights the view by the scene's own lights and
   glowing objects, the sun and sky off. Sketch and Draft *preview*.
+- **Max Diffuse Bounces**, beside Max Bounces: a cap on the bounces off matte and glossy surfaces
+  and dust only, so mirrors and glass are still followed; at 0 the picture is the direct light,
+  through lenses and mirrors too. And a **Dispersion** switch, for the picture only *preview*.
 - **⚡ Fast while moving**: Draft or Sketch while the camera, a handle or a value moves, the full
   picture again when it stops *preview*.
 - **The bake**: once your edits stand still, the scene is compiled again with its values as
@@ -562,7 +565,7 @@ Built and waiting for their first run: `error-bar`, `illuminance`, `cosine-law`,
 `optics-farfield`, `optics-absorption`, `optics-coating`, `optics-dispersion`.
 
 Without a GPU, **`check-shaders`** builds every kernel against every scene (6358 builds) and checks
-each one, and 135 test files -- 104 in Node, 17 in headless Chromium, 14 on a WebGPU in Node over a
+each one, and 136 test files -- 104 in Node, 17 in headless Chromium, 15 on a WebGPU in Node over a
 software adapter -- cover the light units, the error bars, the colour science, the noise, the photon
 map, the haze, the lens, dispersion and coatings, the optics statistics and charts, the Zemax
 reader, the builder, the mesher and 3MF writer, the library, the projects kept in the browser, the

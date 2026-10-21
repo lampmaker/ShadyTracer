@@ -240,6 +240,12 @@
         (<code>docs/TESTING.md</code>). Each particle met is a bounce, so the bench allows 40.</p>
     </div>
     <div data-claim="code">
+      <p><strong>A particle is a diffuse bounce.</strong> Max Diffuse Bounces (chapter 13) counts a point in the dust as
+        it counts a matte wall, so at 0 the dust scatters light towards the eye once and no more, single scattering: a
+        camera path that meets a particle with no diffuse bounce left ends there
+        (<cite data-src="lib/pathtracer/core/haze.js" data-sym="if (!isPhoton &amp;&amp; !diffuseLeft(r)) { r.state = RAY_TERMINATED; return r; }"></cite>).</p>
+    </div>
+    <div data-claim="code">
       <p><strong>Only air.</strong> A ray in glass or water inside the box never meets a particle (its medium's index is
         not 1): the user asked for dust that "does not add scattering in transparent materials" (haze.js's header). In
         Sketch and the Optics view the dust is off; in Draft a path ends at its first point in the dust, so only light

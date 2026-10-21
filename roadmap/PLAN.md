@@ -290,7 +290,7 @@ reflections, and illuminance measured on surfaces.
 and `emitters` and `lt` held their means through it -- `lib/pathtracer/README.md` § *Units*,
 TESTING.md); the **display**, looked at on hardware (tone curves, GPU auto-exposure, compensation,
 meter / lock; README § *Units*); the **material review**, verified (below); and along the way `spp`
-removed, `moveAverages` (a window kept through a reset), and a reset that replaces the picture
+removed, `moveAverages` (a window kept through a reset; itself removed in 0.74.0), and a reset that replaces the picture
 instead of averaging into it.
 
 **Next, in this order** (agreed with the user; pick up from 1):

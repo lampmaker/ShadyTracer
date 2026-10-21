@@ -165,7 +165,7 @@
          data-why="p is the point in the sphere's own frame, where its centre is the origin, so the normal is p made one unit long: the circle's arrow, in 3D. The VEC4 holds the normal, then the distance; every N... function returns this pair." data-hash="0360058f"></pre>
     <p>The renderer uses the shape's own normal when there is one, and differences when not:</p>
     <pre data-src="lib/pathtracer/core/tracebasics.js" data-sym="// calculate normals." data-to="return calcNormals_fast(hit.r, hit);"
-         data-why="SDFd asks the whole scene for its distance at a point moved by dif. A Hit's s holds the normal in .xyz and the distance in .w. VEC3(f32(k == 1u), f32(k == 2u), f32(k == 3u)) is (1, 0, 0) when k is 1, (0, 1, 0) when 2, (0, 0, 1) when 3 (1u is 1 as a whole number without a sign), and (0, 0, 0) when 0: a look at the hit itself. select(a, b, c) is b when c is true and a when not, so the loop starts at 0 only where NORMAL_AT_HIT is true (section 6, a line round a cut); everywhere else it starts at 1, and the hit's own distance, res.s.w, is the base. r.pos is the hit point. NORMAL_LOOK tells the scene these looks are for a normal; section 6 says why it needs to know. normalTol is the step of section 3. hitNormal prefers the shape's own normal when it is not zero and fastnormals is on." data-hash="f96cadfe"></pre>
+         data-why="SDFd asks the whole scene for its distance at a point moved by dif. A Hit's s holds the normal in .xyz and the distance in .w. VEC3(f32(k == 1u), f32(k == 2u), f32(k == 3u)) is (1, 0, 0) when k is 1, (0, 1, 0) when 2, (0, 0, 1) when 3 (1u is 1 as a whole number without a sign), and (0, 0, 0) when 0: a look at the hit itself. select(a, b, c) is b when c is true and a when not, so the loop starts at 0 only where NORMAL_AT_HIT is true (section 6, a line round a cut); everywhere else it starts at 1, and the hit's own distance, res.s.w, is the base. r.pos is the hit point. NORMAL_LOOK tells the scene these looks are for a normal; section 6 says why it needs to know. normalTol is the step of section 3. hitNormal takes the shape's own normal whenever it is not zero (until 0.74.0 only while a developer setting, fastnormals, was on; section 5)." data-hash="74871723"></pre>
     <p>The loop is there for the shader's size, not its speed. The whole scene's distance is one long function, and a
       loop the compiler is not allowed to unroll keeps one copy of it in the kernel instead of three
       (<code>noUnroll</code>). The shade kernel's own copy of this does the same, one look per pass of a loop it shares
@@ -181,17 +181,19 @@
     <p>Each is stamped with how it is known; point at a stamp to see what it means.</p>
     <div data-claim="measured">
       <p><strong>A shape's own normal is worth a lot.</strong> With the shapes' own normals switched off
-        (<code>fastnormals 0</code>, a developer setting), every hit takes its normal by differences, and a sample took
-        4.3 times as long: 63.6 ms against 14.8, on the user's card, an NVIDIA of the Pascal family (<code>docs/TESTING.md</code>, "Where
-        the render time goes"; the setting's own comment in <code>uniforms.schema.js</code>). The setting's label says
-        so: <em>off = 4.3x slower</em>.</p>
+        (<code>fastnormals 0</code>, a developer setting until 0.74.0), every hit took its normal by differences, and a
+        sample took 4.3 times as long: 63.6 ms against 14.8, on the user's card, an NVIDIA of the Pascal family
+        (<code>docs/TESTING.md</code>, "Where the render time goes"). The setting's label said so: <em>off = 4.3x
+        slower</em>. A switch with one sane value is no setting, so it went: the shape's own normal is now always taken
+        where there is one (the comment where it was, in <code>uniforms.schema.js</code>).</p>
     </div>
     <div data-claim="inferred">
       <p><strong>Why that much is not known.</strong> Three more looks per hit, against a march of dozens of looks to find
         it, would suggest a few percent, not four times. That count is a guess about what costs what; the 4.3 is the
         measurement. The renderer can time each of its kernels on
-        the GPU (<code>core/kerneltime.js</code>, used by the Tests bench); timed with the setting on and off, it would
-        show which kernel grows, and that would say why.</p>
+        the GPU (<code>core/kerneltime.js</code>, used by the Tests bench); timed with the normal by differences forced
+        on and off, it would show which kernel grows, and that would say why. With the setting gone, that now takes a
+        build changed by hand for the purpose.</p>
     </div>
     <div data-claim="code">
       <p><strong>A normal left out on purpose.</strong> The cone's exact distance comes from Quilez's list, but its
