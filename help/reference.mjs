@@ -96,7 +96,9 @@ function modifiers() {
     for (const M of Object.values(MODIFIERS)) {
         s += `\n## ${M.label}\n\n${firstComment(M.code)}\n\n`
         const ps = Object.entries(M.params || {})
-        if (ps.length) s += `| parameter | starts at | a length |\n|---|---|---|\n${ps.map(([k, v]) => `| ${k} | ${cell(value(v))} | ${M.lengths?.includes(k) ? 'yes, in the scene\'s unit' : ''} |`).join('\n')}\n`
+        // a rate or a frequency is per a length (modifiers.js perLength): no length, but a unit's change converts it too
+        const len = k => M.lengths?.includes(k) ? 'yes, in the scene\'s unit' : M.perLength?.[k] ? 'no: per the scene\'s unit' : ''
+        if (ps.length) s += `| parameter | starts at | a length |\n|---|---|---|\n${ps.map(([k, v]) => `| ${k} | ${cell(value(v))} | ${len(k)} |`).join('\n')}\n`
     }
     return s
 }

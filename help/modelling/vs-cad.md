@@ -45,6 +45,18 @@ in that group, and nothing outside it. To cut only one part, put that part and t
 ## Numbers are in the scene's unit
 
 Every length in a scene is in its unit: metres, centimetres or millimetres, chosen in the scene's
-Properties. Changing the unit does not convert anything: a radius of 1 becomes 1 of the new unit, so the whole
-scene grows or shrinks. A material's own lengths (a pattern's size, a relief's height) are real millimetres
+Properties. A new scene starts in centimetres. Changing the unit asks what should happen:
+
+- **Scale the objects**: everything keeps its real size. Each object at the top of the tree gets its position and
+  scale multiplied (from cm to mm, by 10); the numbers inside it stay as they are. It works for any code, your own
+  included.
+- **Convert the dimensions**: everything keeps its real size, and the numbers change instead: every position and
+  every length is multiplied, so a box of 1 cm reads 10 mm. Before you choose, it lists what it cannot convert: a
+  number written in your own code, a parameter not marked as a length, a point that adds a plain number to a length,
+  a binding that does.
+- **Keep the numbers**: a radius of 1 becomes 1 of the new unit, so the whole scene grows or shrinks, the camera
+  with it, and the picture looks the same. Use it when the numbers were meant in the new unit all along.
+
+The first two convert the camera, the scene's radius and tolerance, and the timeline's keys too, and an undo puts
+all of it back. A material's own lengths (a pattern's size, a relief's height) are real millimetres
 whatever the unit, so a wood grain stays a wood grain on a 1 m table and on a 10 mm cube.

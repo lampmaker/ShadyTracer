@@ -92,7 +92,13 @@
         "finHeight": 25,
         "base": 4,
         "depth": 40
-      }
+      },
+      "lengths": [
+        "pitch",
+        "finHeight",
+        "base",
+        "depth"
+      ]
     },
     {
       "id": "b8",

@@ -59,6 +59,9 @@ Nothing to install and no server. The page runs on your own graphics card.
   **✓**; far field in candela with beam and field angles, illuminance maps in lux, CCT and Duv
   *preview*
 - **Zemax ray files** as light sources *preview*
+- **STEP and STL parts imported as shapes**: each solid in the file becomes boxes, cylinders, cones,
+  spheres, tori and rounded prisms joined by union and subtract, exact, with analytic normals; a
+  spherical lens from STEP is its two spheres *preview*
 - **3MF with colour** for multi-colour 3D printing, straight from the scene *preview*
 - **A docking workspace**: pop-out windows for a second monitor, a command palette, every setting by
   name
@@ -263,6 +266,13 @@ for the help.
   Projects…) lists them (open, new, rename, duplicate, download, delete), this project's scenes and
   the examples. **File** is five rows: New project, Projects…, Import from file…, Export ▸ (a scene,
   the project, a 3D print), Save picture…. A second tab on a project works on its own copy.
+- **Import STEP and STL** (File › Import from file…, or drop the file on the page): each solid in
+  the file becomes a group of the builder's own shapes -- boxes, cylinders, cones, spheres, tori and
+  rounded prisms joined by union, intersect and subtract -- converted exactly from the faces'
+  surfaces, an STL's fitted back from its facets first; editable like anything built by hand. It
+  stands on the floor, its axes the file's. A freeform (B-spline)
+  face, a mesh that is not closed or a scan is refused by name, with why
+  ([`roadmap/IMPORT.md`](roadmap/IMPORT.md) section 11) *preview*
 - **Twenty-six shapes in three groups**, each an editable piece of code from the start:
   - *Primitives:* sphere, box, cylinder, capsule, torus, cone, round cone, **pyramid** (a rectangular
     base and top: an apex or a frustum), **prism** (its number of sides a live slider), octahedron,
@@ -444,6 +454,7 @@ number carries its standard error**.
 | **Modifiers** | Shapes | mm | Twist, bend, repeat, mirror, round, shell, displace and relief, each on a plain shape |
 | **From points** | Shapes | mm | An extruded star, a turned wine glass, a pipe along a path, a swept bar |
 | **Parametric part** | Shapes | mm | A heatsink whose fin count, pitch and height are its parameters |
+| **Imported parts** | Shapes | mm | STEP and STL parts imported as boxes, cylinders, cones, spheres, tori and rounded prisms |
 | **Infinite detail** | Shapes | m | A Menger sponge four levels deep, and columns repeated to the horizon |
 | **Material board** | Materials | mm | The library's materials on 40 mm spheres |
 | **Relief and texture** | Materials | mm | Plaster, stucco, render, stone, hammered metal, leather: reliefs in a raking light |
@@ -550,8 +561,8 @@ Built and waiting for their first run: `error-bar`, `illuminance`, `cosine-law`,
 `scale`, `render-modes`, `draft-lamps`, `small-caustic`, `small-emitter`, `sppm`, `optics-balance`,
 `optics-farfield`, `optics-absorption`, `optics-coating`, `optics-dispersion`.
 
-Without a GPU, **`check-shaders`** builds every kernel against every scene (6274 builds) and checks
-each one, and 128 test files -- 98 in Node, 17 in headless Chromium, 13 on a WebGPU in Node over a
+Without a GPU, **`check-shaders`** builds every kernel against every scene (6358 builds) and checks
+each one, and 135 test files -- 104 in Node, 17 in headless Chromium, 14 on a WebGPU in Node over a
 software adapter -- cover the light units, the error bars, the colour science, the noise, the photon
 map, the haze, the lens, dispersion and coatings, the optics statistics and charts, the Zemax
 reader, the builder, the mesher and 3MF writer, the library, the projects kept in the browser, the
@@ -583,6 +594,7 @@ timeline, the shell, the help and the tutorial. The list is in
 |---|---|
 | scenes, projects and workspaces (`.json`, every past version; scenes are at version 22) | scenes, projects and workspaces (`.json`) |
 | Zemax ray files (`.DAT`) | pictures (**PNG**); video (**MP4**, **GIF**, or a ZIP of PNG frames) |
+| **STEP** (`.step`, `.stp`) and **STL**: solids, converted into shapes | |
 | library files (`.json`) and timeline files (`.timeline.json`) | **3MF with colour**, **STL** |
 | | **CSV**: measurements, intensity table, illuminance map, detector hits; charts as PNG |
 | | library files (`.json`) and timeline files (`.timeline.json`) |
@@ -614,9 +626,11 @@ Planned, in the order the plans give, with more in [`FEATURES.md`](FEATURES.md) 
   sheen, a clear coat over anything, interference films (tarnish, anodised titanium), hair.
 - A guided tour in the help; a study panel with parameter sweeps and an optimiser.
 
-And not planned yet, but asked of a tool like this: **importing meshes or CAD** (investigated: the
-routes per format are in [`roadmap/IMPORT.md`](roadmap/IMPORT.md)), UGR and other glare metrics, CRI
-and TM-30.
+- **More of import**: freeform (B-spline) faces and scans, through a distance grid; recognising the
+  patterns CAD makes most (a rounded box, a tube, a lens) as one shape; colours from STEP; OBJ, PLY
+  and 3MF ([`roadmap/IMPORT.md`](roadmap/IMPORT.md) section 11.5).
+
+And not planned yet, but asked of a tool like this: UGR and other glare metrics, CRI and TM-30.
 
 ---
 

@@ -462,8 +462,29 @@ ok('typing 2.5', await set('environment radius (m)', 2.5) === 'set')
 const er1 = await state()
 ok('...sets the scene\'s radius, pushed live, one undo step, nothing compiled', await p.evaluate(() => CHECK.doc.envRadius) === 2.5
     && er1.live.at(-1) === 'root.envRadius' && er1.commits.at(-1) === 'root.envRadius' && er1.structure === er0.structure, JSON.stringify(er1))
-ok('the unit changed to cm', await set('unit', 'cm') === 'set')
+/* THE UNIT ASKS HOW (0.72.0, unitdialog.js): scale the objects, convert the dimensions, keep the numbers -- and Cancel,
+   which leaves the scene as it was and the row at its unit */
+const unitDialog = () => p.evaluate(() => { const d = document.querySelector('.unit-dialog')
+    return d && { text: d.textContent, ways: [...d.querySelectorAll('button')].map(b => b.dataset.how) } })
+const unitRow = () => p.evaluate(() => [...document.querySelectorAll('.tp-lblv')].find(r => r.querySelector('.tp-lblv_l')?.textContent.trim() === 'unit')
+    ?.querySelector('select')?.selectedOptions[0]?.textContent.trim())
+const answer = how => p.evaluate(how => document.querySelector(`.unit-dialog button[data-how=${how}]`).click(), how)
+const u0 = await state()
+ok('the unit chosen: cm', await set('unit', 'cm') === 'set')
+const dlg = await unitDialog()
+ok('...asks how: scale, dimensions, keep, and Cancel, the factor said', dlg?.ways.join() === 'scale,dimensions,keep,cancel'
+    && /m \u2192 cm/.test(dlg.text) && /\u00d7100/.test(dlg.text), JSON.stringify(dlg))
+ok('...converting the dimensions says first what it cannot: the plate\'s and the pipe\'s own code', /plate: its own code/.test(dlg?.text) && /pipe: its own code/.test(dlg?.text), dlg?.text)
+await answer('cancel')
 await p.waitForTimeout(50)
+ok('Cancel: the scene in m, nothing committed or compiled, the row back at m, the question gone', await p.evaluate(() => CHECK.doc.unit ?? 'm') === 'm'
+    && (await state()).commits.length === u0.commits.length && (await state()).structure === u0.structure && await unitRow() === 'm' && !(await unitDialog()),
+    JSON.stringify([await unitRow(), await state()]))
+ok('the unit chosen again: cm', await set('unit', 'cm') === 'set')
+await answer('keep')
+await p.waitForTimeout(50)
+ok('keep the numbers: the unit cm, one undo step, a compile, the question gone', await p.evaluate(() => CHECK.doc.unit) === 'cm'
+    && (await state()).commits.length === u0.commits.length + 1 && (await state()).structure === u0.structure + 1 && !(await unitDialog()))
 ok('...and the radius row says so by itself (the panel redrawn), the number kept: the scene reinterpreted, as its shapes',
     (await readRows()).includes('environment radius (cm)') && await p.evaluate(() => CHECK.doc.envRadius) === 2.5, JSON.stringify(await readRows()))
 /* THE SCENE'S SURFACE TOLERANCE (0.66.0, model.js setTolerance): after the radius, in its unit, 0 the automatic one; live,
@@ -857,6 +878,26 @@ ok('...and the visibility beside it follows: 3.912 x 4 m, 15.6 m', /^visibility 
     cf = await folderOf('camera')
     ok('a scene still compiling: the folder says so, and binds nothing', cf && cf.rows.length === 1 && !cf.rows.includes('distance'), JSON.stringify(cf))
     await p.evaluate(() => { CHECK.T.showing = true; CHECK.viewPanel.show(null) })
+}
+
+/* ...AND A WAY THAT KEEPS THE REAL SIZE, through the question (0.72.0): the scene's numbers converted by the model's
+   own (unitchange.js), one undo step and a compile */
+{
+    await rowsOf('root')
+    const before = await p.evaluate(() => ({ unit: CHECK.doc.unit, r: CHECK.M.find(CHECK.doc, 'top').node.params.radius, env: CHECK.doc.envRadius,
+                                              pos: CHECK.M.find(CHECK.doc, 'top').node.transform.pos.x }))
+    const to = before.unit === 'mm' ? 'm' : 'mm', k = before.unit === 'cm' ? 10 : before.unit === 'm' ? 1000 : 0.001
+    const s0 = await state()
+    ok(`the unit chosen: ${to}`, await set('unit', to) === 'set')
+    await answer('dimensions')
+    await p.waitForTimeout(50)
+    const after = await p.evaluate(() => ({ unit: CHECK.doc.unit, r: CHECK.M.find(CHECK.doc, 'top').node.params.radius, env: CHECK.doc.envRadius,
+                                             pos: CHECK.M.find(CHECK.doc, 'top').node.transform.pos.x }))
+    const near = (a, b) => Math.abs(a - b) <= 1e-9 * Math.max(1, Math.abs(b))
+    ok('convert the dimensions: a sphere\'s radius and the scene\'s radius times the factor, one undo step, a compile',
+        after.unit === to && near(after.r, before.r * k) && near(after.env, before.env * k) && (await state()).commits.length === s0.commits.length + 1
+        && (await state()).structure === s0.structure + 1, JSON.stringify([before, after]))
+    ok('...the row says the new unit', await unitRow() === to && (await readRows()).some(r => r === `environment radius (${to})`), JSON.stringify(await readRows()))
 }
 
 ok('no page errors', !errs.length, errs.join('\n'))

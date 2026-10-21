@@ -97,6 +97,8 @@ export const ITEMS = [
         note: 'Shadow rays past their cap dropped (dark), the last pass\'s shadow rays unblocked (bright), the bounce cap: each a bias the plan lists.' },
     { id: 'polarisation', kind: 'limit', src: 'roadmap/PLAN.md', quote: 'unpolarised Fresnel per interface is -0.3% on a slab\'s transmission at 45', ch: 'glass', title: 'no polarisation',
         note: 'Each face averages light\'s two polarisations: 0.3% off at 45 degrees, 3% at 70, as measured.' },
+    { id: 'union-operand', kind: 'limit', src: 'roadmap/PLAN.md', quote: '**Found on the way, not fixed**: a union group built by hand inside a subtraction or an intersection is folded by', ch: 'shapes', title: 'a union cut as one',
+        note: 'Shapes joined only by union, in a group a cut or an intersection takes as one shape, are folded by the nearest boundary, not combined: near them the cut goes wrong. The import makes no such group.' },
 
     /* FOUND BY THIS TUTORIAL: each a comment's own words, still there today, and the chapter that checks them. The
        twelve comments and document lines found with it were corrected in 0.67.3 (CHANGELOG.md); this one is code, the

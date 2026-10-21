@@ -38,7 +38,7 @@ export const CHAPTERS = [
     C('rays', 'distances', 'Shapes as distances', 'How a ray finds the first surface in its way, using nothing but distances.', 'draft',
         ['help/widgets.js', `${K}shapes.js`, `${K}tolerances.js`]),
     C('rays', 'shapes', 'Building and bending shapes', 'Joining, melting, twisting and roughening shapes, and keeping them safe to trace.', 'draft',
-        [`${K}scene_api.js`, `${K}shapes.js`, `${K}noise.js`, 'builder/modifiers.js', 'builder/codegen.js', 'help/widgets.js']),
+        [`${K}scene_api.js`, `${K}shapes.js`, `${K}noise.js`, 'builder/modifiers.js', 'builder/codegen.js', 'help/widgets.js', 'import/']),
     C('rays', 'normals', 'Which way is up', 'Which way a surface faces, and what it costs to find out.', 'draft',
         [`${K}pick.js`, `${K}tracebasics.js`, `${K}tolerances.js`, `${K}sdf.js`, 'lib/pathtracer/PRECISION.md', `${K}test/floor.test.mjs`]),
 
@@ -99,7 +99,7 @@ export const CHAPTERS = [
     C('right', 'checking', 'Noise, bias and checking', 'How to tell a renderer is right: answers known in advance, and tests.', 'draft',
         ['docs/TESTING.md', `${K}measure.js`, `${P}tests.js`, `${K}check-shaders.mjs`, 'tutorial/kit/checking.js']),
     C('right', 'precision', 'Numbers have grain', 'Why a computer\'s numbers have grain, and how the renderer lives with it.', 'draft',
-        [`${K}tolerances.js`, `${P}PRECISION.md`, `${K}units.js`, `${K}unitlint.js`, `${K}scene_api.js`, `${K}photometry.js`, 'tutorial/kit/grain.js']),
+        [`${K}tolerances.js`, `${P}PRECISION.md`, `${K}units.js`, `${K}unitlint.js`, `${K}scene_api.js`, `${K}photometry.js`, 'builder/unitchange.js', 'tutorial/kit/grain.js']),
     C('right', 'optics', 'The optics bench', 'Measuring light like a lab bench: beams, maps of light on a wall, ray files.', 'draft',
         [`${P}optics/`, 'tutorial/kit/optics.js']),
 

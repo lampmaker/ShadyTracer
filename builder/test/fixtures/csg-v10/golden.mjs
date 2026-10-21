@@ -126,6 +126,14 @@
 // uniforms and tags did not move. scenes/lighting-room.json and scenes/office-lighting.json moved, the render, pick and
 // optics texts of each, off and live; the other 46 documents, cases.*.wgsl among them (its relief under a blend is the
 // version 10 modifier's code, which names no XF_RL), did not.
+//
+// TWO DOCUMENTS ADDED (2026-10-21, 0.73.0): scenes/imported-parts.json, the STEP and STL import's example (scenes/make.mjs,
+// made by import/), and bench/scenes/imported.json, its frozen copy for Tests > imported (bench/imported.js). No codegen
+// change: the freeze added their two entries and moved no other document's (compared key by key before and after).
+// Frozen again the same day for the import's second round (the user's Onshape part): the example remade, with the cup
+// added, rounded prisms, cut shapes reaching past the part, every group one fold codegen combines (no plain union as a
+// shape of an intersection) and every part standing on the floor. Those two documents' entries moved, every key of both
+// modes; no other document's did (key by key).
 //======================================================================================================================
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
