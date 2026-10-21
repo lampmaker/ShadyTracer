@@ -10,7 +10,7 @@ Twist about z: "rate" radians per unit of height. Costs a sin and a cos per step
 
 | parameter | starts at | a length |
 |---|---|---|
-| rate | 1 |  |
+| rate | 1 | no: per the scene's unit |
 | extent | 1 | yes, in the scene's unit |
 
 ## bend
@@ -19,7 +19,7 @@ Bend along x, curling toward z: "amount" radians per unit of x. A cheap bend, no
 
 | parameter | starts at | a length |
 |---|---|---|
-| amount | 0.3 |  |
+| amount | 0.3 | no: per the scene's unit |
 | extent | 2 | yes, in the scene's unit |
 
 ## repeat
@@ -59,7 +59,7 @@ Displace: a ripple "amount" high, "frequency" waves per unit, on the children's 
 | parameter | starts at | a length |
 |---|---|---|
 | amount | 0.05 | yes, in the scene's unit |
-| frequency | 2 |  |
+| frequency | 2 | no: per the scene's unit |
 
 ## noise relief
 

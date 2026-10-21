@@ -40,6 +40,11 @@
 // run backwards; the shapes from points, whose points are their sizes (the Points mode). The lights and the export
 // box, which are not presets, say theirs beside their parameters (lights.js, exportbox.js).
 //
+// LENGTHS AND WHAT IS PER ONE: `lengths` lists the parameters in the scene's unit (every one when it is left out), and
+// `perLength` those that are per a length to a power -- the aspheric lens's coefficients; a modifier's rate or frequency
+// (modifiers.js) -- so a unit's change that keeps the real size converts every built-in exactly (unitchange.js
+// `dimensions`). A parameter in neither is a pure number: a count, an angle, a conic constant.
+//
 // SIZES: EVERY SHAPE FITS A 1-UNIT CUBE (the user, 2026-10-02: "sphere is now larger than cube ... ideally 1x1 so they
 // are comparable in size"): its largest extent 1 in the scene's unit, centred where its code centres it -- the box,
 // cylinder, tube, pyramid and lens always were; the sphere was 2 across, the torus 2, the cone 1.2, the octahedron
@@ -256,6 +261,9 @@ export const PRIMITIVES = {
                   r1: { min: -10000, max: 10000, step: 0.0001 }, k1: { min: -100, max: 100, step: 0.000001 },
                   r2: { min: -10000, max: 10000, step: 0.0001 }, k2: { min: -100, max: 100, step: 0.000001 } },
         lengths: ['diameter', 'thickness', 'r1', 'r2'],
+        // a4..a10 are the scene's unit to the power 1 - 2i (shapes.js Nasphere): a unit's change divides them by the
+        // factor to these powers (unitchange.js); k1 and k2 have none
+        perLength: { a4_1: 3, a6_1: 5, a8_1: 7, a10_1: 9, a4_2: 3, a6_2: 5, a8_2: 7, a10_2: 9 },
         code: [
             '// An aspheric lens along z (shapes.js Nasphere): r1, k1, a4_1..a10_1 the +z face, r2, k2, a4_2..a10_2 the -z',
             '// face, each face\'s sag z(r) = c r^2 / (1 + sqrt(1 - (1 + k) c^2 r^2)) + a4 r^4 + a6 r^6 + a8 r^8 + a10 r^10,',

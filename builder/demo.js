@@ -17,6 +17,9 @@
 //                     'blend', or setting k of the scene's environment (id model.ENVIRONMENT_ID),
 //                     or the scene's radius (the root's id, 'envRadius') -- to the renderer; no recompile
 //   BUILDER.commit(key)  record an undo step after an edit (same key within a moment = one step)
+//   BUILDER.setUnit(to, how)  the current scene's unit changed one of unitchange.js's three ways, one undo step,
+//                     its camera and timeline converted with it -- to the renderer once the scene is (and back across
+//                     an undo)
 //   BUILDER.editPoints(id, k)  path or profile k of node id is being edited in the picture: compiled live
 //                     until editPoints(null), so a dragged point compiles nothing
 //   BUILDER.undo() / redo()  step through them; return what the renderer then needs
@@ -58,6 +61,7 @@ import { hazeOf } from './hazebox.js'
 import { stamp } from '../version.js'
 import { baked } from './bake.js'
 import { animatedKeys, keptUniforms, liveUniformsOf } from './animate.js'
+import { changeUnit, outsideAcross, unitFactor, cameraTimes } from './unitchange.js'
 
 /* THE DEMO SCENE IS A FILE, scenes/demo.json, loaded with the other bundled scenes. It was built
    here in code once, the one scene that was not a file -- so it could not be opened, saved over
@@ -127,6 +131,7 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
             if (!swapData(scene)) return 'structural'
             pushEnvironment()
             RT.updateScene?.(sceneSelf(scene))
+            flushUnit()
             return 'live'
         }
         const values = {}
@@ -144,6 +149,7 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
            an undone unit change, a move that changes the scene's size -- each the same shader. The unit and the extent
            were left out until 0.36.0, so an undone unit change left the engine in the old one. */
         RT.updateScene?.(sceneSelf(scene))
+        flushUnit()                   // a unit changed back or on by an undo: the camera with it, in the same moment
         return 'live'
     }
     let shown = current           // the scene RT is showing, whatever is current
@@ -175,11 +181,19 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
     /* The camera and the exposure each on its own: one the model refuses (an EV a script set past its range) does not
        stop the other being kept. Said once a reason, not at every step of an orbit. */
     let viewRefused = null
+    /* A UNIT CHANGE NOT SHOWN YET (setUnit, and its undo and redo in restore): { key, k }. The scene's document has its
+       view in the new unit already; the renderer still shows the scene in the old one, its camera's numbers k times
+       smaller, until the scene in the new unit is swapped in -- then the document's view goes to it (flushUnit), in the
+       same moment, so the picture does not jump. Handed over at once, the old scene would be seen from 10 times as far
+       for the whole compile (inferred from this order, never seen: it did not ship). Until then a camera kept from the renderer is converted on its way in: an orbit made during the
+       compile is kept, and the meter's changes of the exposure write no camera in the old numbers over the new. */
+    let unitPending = null
     const keepView = () => {
         const d = shown != null ? P.scene(project, shown)?.doc : null
         const v = d && RT.view?.()
         if (!v) return
-        for (const part of [{ camera: v.camera ?? undefined }, { exposure: v.exposure }]) {
+        const camera = v.camera && unitPending?.key === shown ? cameraTimes(v.camera, unitPending.k) : v.camera
+        for (const part of [{ camera: camera ?? undefined }, { exposure: v.exposure }]) {
             try { M.setView(d, part) }
             catch (e) {
                 const why = `[builder] the view of '${d.title}' not kept: ${e.message}`
@@ -204,8 +218,9 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
      *  0.66.0, a scene an undo brought back) is seen from the camera there is, said in its unit: 330 mm from a mm scene
      *  is 0.33 m in a metre scene, not 330 m. The meter starts again: another picture (RT.applyView fresh). */
     const markShown = () => {
-        if (shown === current) return
-        keepView()                    // the scene left, as it is now
+        if (shown === current) { flushUnit(); return }      // the scene again, compiled: in its new unit if it changed
+        keepView()                    // the scene left, as it is now (in its new unit, if one waits: unitPending)
+        unitPending = null            // what is shown now is a document's view, whole, in its own unit
         shown = current
         const d = doc(), v = M.sceneViewOf(d)
         const live = RT.view?.()?.camera
@@ -232,6 +247,25 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
         timelineKept++
         return true
     }
+    /* THE VIEW AND THE TIMELINE OF A UNIT CHANGE, into the renderer and the Timeline panel, once the scene in its new
+       unit is the one shown (unitPending above): from markShown after its setScene, and from sync and a swap of data,
+       which change the unit without one */
+    const flushUnit = () => {
+        if (!unitPending || unitPending.key !== shown) return
+        unitPending = null
+        const d = P.scene(project, shown)?.doc
+        if (!d) return
+        cameraUnit = d.unit ?? 'm'
+        const v = M.sceneViewOf(d)
+        if (v.camera) RT.applyView?.({ camera: v.camera })
+        try { BUILDER.onTimeline?.(M.sceneTimelineOf(d)) } catch (e) { console.warn('[builder] onTimeline', e) }
+    }
+    /* ...waiting for it: the renderer's numbers times k are the document's (a second change before the first is shown
+       multiplies; a factor of 1 again, an undo before the swap, waits for nothing) */
+    const unitWaits = (key, k) => {
+        const was = unitPending?.key === key ? unitPending.k : 1
+        unitPending = Math.abs(was * k - 1) < 1e-12 ? null : { key, k: was * k }
+    }
     /* a scene's text as the history holds it: without its view or its timeline, which a snapshot does not have
        (historyText) */
     const editText = d => M.serialize(P.withoutOutside(d))
@@ -243,6 +277,15 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
         // each scene's view is the one it has now, or had when it was taken out: an undo is no move of the camera
         project = P.carryOutside(P.parse(text).project, project, outsideMemory)
         revision++
+        /* ...BUT A UNIT CHANGE MOVED IT (unitchange.js): the camera and the timeline were converted with the scene, and
+           are no part of the snapshot -- so they go back to the old unit across its undo, and on again across its redo,
+           as they are now (a look around since kept). Into the renderer below, if the scene is the one it shows. */
+        const unitScene = step?.unit ? P.scene(project, step.current)?.doc : null
+        if (unitScene && outsideAcross(unitScene, step.unit, { undo: dir === 'undo' })) {
+            memorize(step.current, unitScene)
+            const k = unitFactor(step.unit.from, step.unit.to)
+            if (step.current === shown) unitWaits(step.current, dir === 'undo' ? 1 / k : k)
+        }
         const differs = s => before.get(s.key) !== editText(s.doc)
         const here = P.scene(project, current)
         const before1 = () => project.scenes[Math.max(0, Math.min(at - 1, project.scenes.length - 1))].key
@@ -479,6 +522,7 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
             const scene = build()
             if (swapData(scene)) {
                 missed.clear()                // nothing waited: no compile ran
+                flushUnit()                   // its unit with it, if that changed (the scene's own, swapped in as data)
                 pushEnvironment()
                 onScene(RT.scene, 0)
                 console.log(`[builder] scene applied as data: no compile, ${(performance.now() - t0).toFixed(0)} ms`)
@@ -835,6 +879,22 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
             remember()
             if (recorded) revision++
             return recorded
+        },
+        /** THE CURRENT SCENE'S UNIT SET TO `to`, `how` one of unitchange.js's UNIT_CHANGES: keep the numbers, or keep the
+         *  real size by a scale or by the numbers. One undo step -- the step says what it was, so the camera and the
+         *  timeline, which no snapshot holds, are converted back across its undo (restore). Returns the report
+         *  ({ from, to, how, factor, skipped }), or null for the unit it has; a refusal throws and changes nothing.
+         *  The caller compiles (the unit is the scene's own: codegen `unit`). */
+        setUnit(to, how = 'keep') {
+            const d = doc()
+            if (current === shown) keepView()         // the camera as it is this moment, which is what is converted
+            const r = changeUnit(d, to, how)
+            if (!r) return null
+            BUILDER.commit(null, { unit: { from: r.from, to: r.to, how: r.how } })
+            memorize(current, d)
+            // the camera and the keys go to the renderer and the panel with the scene in its new unit (flushUnit)
+            if (current === shown) { if (how !== 'keep') unitWaits(current, r.factor); else if (!unitPending) cameraUnit = r.to }
+            return r
         },
         /** A source's settings changed (the panel): derive and push its luminance, no compile. */
         syncSources() { if (current === shown && RT.scene?.id === 'built') pushSources() },
