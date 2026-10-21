@@ -533,10 +533,11 @@ code, a look each.
   traces; a new size, mode or scene at once), and not run without photons. Checked: `sppm.test.mjs` (0.9969 and 1.0032 of
   the camera's own sum through a slab with air under it and one lying on the floor, blocks within 3.3 %; a collimated beam
   under a slab 1.0002 of its closed form), `sppm.gpu.mjs` (the whole renderer on lavapipe: the floor through a slab by the
-  camera's own paths, the map, through a lens, Draft -- each within its error bar; the idle skip), `build.test.mjs` (the
-  idle skip's every rule). Bench `sppm`. Open: what it costs a sample on a card (a second wavefront chain) and its memory;
-  the learned photon map credited by gathers; an orthographic camera and the illuminance view; dispersive glass, whose
-  camera wavelength and photon wavelength are drawn apart (inferred).
+  camera's own paths, the map, through a lens -- each within its error bar; Draft 0.948 of the full picture, the rest
+  its bounce light (0.73.2: measured, halving with the floor's albedo); the keep's planned fill and its rare overflow;
+  the idle skip), `build.test.mjs` (the idle skip's every rule). Bench `sppm`. Open: what it costs a sample on a card (a
+  second wavefront chain) and its memory; the learned photon map credited by gathers; an orthographic camera and the
+  illuminance view; dispersive glass, whose camera wavelength and photon wavelength are drawn apart (inferred).
 - **Polarisation** -- unpolarised Fresnel per interface is -0.3% on a slab's transmission at 45
   degrees and -3% at 70 (optics-refraction's `vs polar.`). Matters for beam splitters and near
   Brewster. Stokes vector + frame: +28 bytes a ray (112 -> 144), the one item here that costs memory.

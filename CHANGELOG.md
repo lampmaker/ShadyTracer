@@ -15,6 +15,66 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.73.2 — 2026-10-21
+
+**The photon map's GPU test now runs the same way every time it is given the same seed, and each tolerance is the error
+bar of what it compares.** The user ran `lib/pathtracer/core/test/sppm.gpu.mjs` four times on lavapipe (2026-10-21).
+The renderer code was the same in the last three, and a different check failed in two of them: the overflow, then the
+idle skip. Here a third one also failed once: Draft. None of the three was a fault in the renderer. No renderer code
+changed. The comments in `core/sppm.js` now say what the keep promises.
+- **Where the randomness came from** (measured here, on lavapipe):
+  - Every sample's seed is drawn from `Math.random` (`utilities.js` `seed_vec4u32`), and the test passed none.
+  - Rays take their places in the queues by `atomicAdd` and seed their random numbers by that place. lavapipe's
+    threads change that order from run to run.
+
+  With `Math.random` seeded alike, two runs differed from the first sample. With lavapipe single-threaded as well
+  (`LP_NUM_THREADS` 0 or 1), they were identical bit for bit. The test now fixes both: `SPPM_GPU_SEED` (1 unless set,
+  printed with the result) and `LP_NUM_THREADS=0` unless set. Seed 1, run four times, gave the same numbers to the
+  last digit. Single-threaded, a run takes about 58 s here instead of 111. That is lavapipe's time only, and says
+  nothing about a card.
+- **The overflow check bet on the last sample.** The stores' keep plans a sample to fill 85 % of the map's room, from
+  what the sample before asked. `raytrace_main.js` says so where it is chosen: "a sample asking more than the one
+  before can still overfill it, and is counted". It is a plan, not a guarantee. With room for 200 records, a sample's
+  kept count has an sd of 18 about a mean of 171 (measured, 2 × 200 samples). The headroom is about 1.6 sd, so one
+  sample in twenty overflowed, dropping 0.25 % of the stores. The check required the last sample to overflow by
+  nothing. It lost in the user's run 2 (219 kept) and in one of five runs here (206). It now reads every one of that
+  render's 384 samples and holds what the keep promises:
+  - each sample past the first keeps under 0.9;
+  - on average they keep the planned share, to 3 %;
+  - the stores dropped past the room are under 1 % of those kept;
+  - and, as before, the picture is the camera's own.
+- **Draft was held to the full picture, and it is 5 % under it.** Its camera paths end at the floor, so light that
+  reaches the floor under the slab by way of a second diffuse surface never enters it. The test's comment called the
+  gap "inferred: not separated", and the check, centred on 1 with a 5 % minimum, failed whenever the noise added to
+  the gap (0.9163 ± 0.0239 here). Measured: Draft is 0.9476 ± 0.0052 of the full map. With the floor's albedo halved
+  it is 0.9772 ± 0.0045: Draft halves (21198 → 10620 cd/m²) and so does the gap, as light that met two diffuse
+  surfaces does. So the gap is the bounce light, not an error in Draft. Draft is now held to that share of the full
+  map, within 3 sd: ±3 to 4 % around 0.948 in the runs here, where it was ±7 to 9 % around 1.
+- **The idle skip's check rested on a race.** R.trace reads the map's header back without awaiting it, and the trace
+  that had to be idle ran on that reading only if Dawn had delivered it before that trace began. Two 50 ms pauses were
+  there to give it time. Each trace now waits for its own reading. The check holds the exact sequence: the first trace
+  looking away runs the map, the next does not. The race is inferred, not shown: 32 instrumented rounds here, alone and
+  two at once, and every full run passed. What failed in the user's run 4 was not recorded. The detail line now names
+  every part.
+- **The error bars come from batch means:** the region's mean over each 16 samples, independent from one 16 to the
+  next. The pixels' spread used before was right for the camera's own paths, and 1.5 times too small for Draft and the
+  200-record map, whose pixels share photons.
+- **Checked here:** seeds 1 to 6 single-threaded and seed 7 twice with 4 threads, 19 of 19 checks each time. The
+  largest excursion in any comparison was 1.85 sd, against a tolerance of 3. Kept on average: 0.47 to 0.65 % over the
+  plan. Dropped: 0.23 to 0.47 % of the stores.
+
+**What to look at:** nothing on screen: no renderer code changed. `prog_sppm` differs by a comment, so it compiles
+once more. On a run of `node lib/pathtracer/core/test/sppm.gpu.mjs`:
+- The last line names the seed. A failure is repeated with `SPPM_GPU_SEED=<it>`.
+- The keep's line: about 171 kept against 170 planned, and a few tenths of a percent dropped.
+
+**The tutorial:** `tutorial/review/affected.mjs` lists ch. 19 (photon mapping, about `sppm.js`) and ch. 33 (open
+problems, about `roadmap/PLAN.md`), and ch. 26 for a line of this file that only moved. In ch. 19, the keep's
+excerpt, section 5 and section 6's "a buffer that filled" were read: none says the keep guarantees room. Its excerpt
+of `fn sppmStore` takes in the comment above it, which now says the keep makes a full map "rare, not impossible". The
+words beside the excerpt describe the code alone, so it was re-read and stamped, and nothing else changed. Ch. 33
+does not quote the line of PLAN.md that changed.
+
 ## 0.73.1 — 2026-10-21
 
 **The README brought up to date, with its pictures, and the site at shadytracer.com.** The user believed the README
