@@ -16,6 +16,86 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.76.0 — 2026-10-21
+
+**A group can give one material to everything in it.** Shapes that make one part are mostly the same stuff, and a
+material dropped on a child changed only that child: a part of twelve shapes was twelve drops. Now a group has a
+**material** in its Properties, and a material dropped on a group's row in the tree is the group's. Every object in the
+group wears it instead of its own, also in groups inside it. The nearest group with a material wins, as a nested
+group's blend is its own. **Exceptions work like a child's own blend.** An object with **own material** checked keeps
+its own, and a material dropped on an object under such a group checks it. Each object keeps its own material
+underneath, so choosing *(each its own)* for the group gives every object back what it had.
+- **A material row of the tree can be dragged onto an object's or a group's row** too, and lands as a Library material
+  dropped there does. The tree's widget keeps a material row among Materials, so the tree lets that one drop through
+  itself (`tree.js` wear). Dragging materials to reorder them is unchanged.
+- **Before, a material dropped on a group's row was put on every object in it**, replacing what each had. Now it is the
+  group's, and what was there stays underneath.
+- **Copied, pasted, dragged to another scene or kept in the library**, a node takes what it wears with it. An object
+  copied out of such a group takes the group's material as its own, and a group inside takes it as its group material.
+- **Scene format 23** (`builder/model.js` VERSION): a group's `material` and an object's `ownMaterial`. Version 22 files
+  have neither and read unchanged. A builder of 22 refuses a file of 23, rather than show each object in its own
+  material and save the scene without the group's. The examples and fixtures are re-stamped 23, nothing else changed.
+- **Nothing new in the shader.** The group's material is put on each object in `model.js toTree`, before codegen, the
+  scene as data and the bake. A scene with a group material compiles to exactly the text of the same scene with each
+  object given that material itself (`model.test.mjs`). As data it is another record and the same text, no compile,
+  checked on the five examples and fixtures that have a top-level plain group (`scenedata.test.mjs`). A scene with none
+  is the text it was: the golden shaders are unchanged.
+- **The tree** shows a group's material on its row, each object the material it wears, and `(own)` on one that keeps
+  its own under a group's.
+
+**What to look at:** in the Combining shapes example, select the group **die (16 mm)** and pick a **material** in its
+Properties: the die and its dots should all change, and their rows in the tree should name it. Drag a different
+material from the Library onto one dot: only that dot should change, its row reading `(own)`, and its Properties
+showing **own material** checked. Uncheck it: it should wear the group's again. Choose
+*(each its own)* on the group: every object should be back as it was. Then drag a material from the Library onto the
+group's row in the tree, and one of the scene's own materials from the tree's Materials onto an object's row.
+
+**A group used as one shape of a join is one shape: its children are a union.** A group whose children all join by
+union is a plain group, and its children went into the scene one by one (`scene_api.js fold`). That keeps the nearest
+surface by size, inside or out. It is what the march needs of separate objects, but it is not a union's signed
+distance: at a point 0.6 inside one shape and 0.004 outside another that overlaps it, fold says +0.004, "outside".
+When such a group is one of a CSG group's shapes (subtracted, intersected, or the base of a cut), the CSG group reads
+that value as its operand, so wherever the group's children overlap it cut or kept the wrong part. The STEP/STL
+import's GPU check found it (0.73.0, IMPORT.md 11.3), and the import stopped making such groups; groups built by hand
+still had it. Measured on Dawn over lavapipe (`builder/test/csgshape.gpu.mjs`, new; arithmetic, not speed): a box less
+a group of two overlapping spheres was wrong at 94 of 4096 points, by up to 0.59, 64 of them on the wrong side of the
+surface, and every case the test makes was wrong the same way in codegen and as data. Now none is.
+- **Such a group's children are combined first** (`codegen.js combinedGroups`), each child on its own and joined by a
+  hard union (`csgUnion` at the group's blend, which is 0), exactly as a union group with a blend of 0 is. Plain groups
+  inside it are combined the same way. **An array** that is one of the shapes combines its copies too: one combine
+  around its loop, where each copy had been folded on its own and the copies' overlaps were wrong as well.
+- **The scene as data** (`scenedata.js`) does the same: a CSG record, a union JOIN after each child, an END. An array
+  gets a CSG record around it.
+- **Fixed alongside, in the scene as data** (the editing build by default since 0.74.0, on a card with a ninth storage
+  binding: `builder/demo.js` dataMode): a twist, mirror, round or shell whose own children join (a mirror of a box less
+  a sphere) was walked as records that folded its children in one by one. Codegen combined them; the records drew the
+  box and the sphere. Such a group is now compiled as before.
+- **Not changed:** group code that is one of a CSG group's shapes (a mirror or a shell, say) is still handed its
+  children as they fold. The top level, and a plain group outside any CSG group, still fold each child into the scene
+  on its own, which keeps each child's material and the medium inside exact. The import still makes every group one
+  fold of joins (`import/shapes.js` addPart: a part's own group is not a CSG group's shape unless it is pasted into one).
+- **The import's mirror** (`import/test/docsdf.mjs`) combines such a group as codegen now does, so it still mirrors it.
+- **The golden shaders moved for four documents**: test/fixtures/scenes/OpticsBench.json and OpticsBench2.json and
+  their bench copies. Each pillar's cylinder and shell, and OpticsBench2's laser rig under its lens holder, are such
+  groups. Checked against `dev`'s codegen before refreezing: no line left any text (whitespace aside), and the only
+  lines added are those groups' combines and a blend uniform at 0 each. The tags did not move, nor did the other 46
+  documents, the imported parts among them.
+- **Its cost is not measured.** Each child of such a group now has an empty Hit of its own and a `csgUnion`, as in any
+  CSG group (read in code). How much that adds per step on a card is a question for Tests on hardware.
+
+**The tutorial:** chapter 3 (Building and bending shapes) says why a group that is one shape of a join is joined by a
+hard union before it is folded; chapter 24 (From scene tree to shader) lists the bug among those its codegen has had.
+Chapter 33 (Open problems) loses the limit 0.73.0 gave it, its card and its clause, and `roadmap/PLAN.md` and
+IMPORT.md 11.3 say it is fixed. Chapter 29 (Noise, bias and checking) counted twelve `*.gpu.mjs` tests; there were
+fifteen before this change and are sixteen with it, and it says sixteen. Chapters 0, 25 and 26 are tied to files this
+change touches in lines they do not show, and needed nothing. No excerpt's code changed, so nothing was stamped.
+
+**What to look at:** a group of two overlapping cylinders, set to subtract from a box: the cut follows both cylinders,
+overlap and all, with no stray surface inside it, in the editing build and once it is baked. The same group
+intersected with the box keeps exactly the cylinders' union. OpticsBench and OpticsBench2 should look as they did:
+their groups are joined by union, and fold and a union differ only at points inside the shapes, so every surface seen
+from outside is where it was. If either renders noticeably slower, the extra Hits are the place to look.
+
 ## 0.75.2 — 2026-10-21
 
 **Pull requests merge into `dev`; a release you run moves `main`.** Every PR used to raise `VERSION` and add the

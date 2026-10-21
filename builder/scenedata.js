@@ -23,7 +23,7 @@
 //                             composed here, on the CPU, so a child's record carries its whole frame to the world
 //   a CSG group               a record that opens a private Hit, a JOIN record after each of its shapes (its op and its
 //                             blend), and an END record that folds the combined shape in -- codegen children(), as data.
-//                             A plain group that is one of its shapes too (codegen combinedGroups, 0.next): its children
+//                             A plain group that is one of its shapes too (codegen combinedGroups, 0.76.0): its children
 //                             a union, every JOIN a union at its blend -- folded, they were no union's signed distance
 //   an array                  a record, its children's records in a copy's frame, an ARRAY_END that goes back for the next;
 //                             as one of a CSG group's shapes, inside a CSG record and its END, a JOIN after each shape of
@@ -151,7 +151,7 @@ function compiledOf(tree, reliefMaterials, wantLocal = false) {
     const reliefObject = n => n.kind === 'object' && reliefMaterials.has(n.material) && NODE_TYPES[n.type] && n.type !== 'light' && n.type !== 'export' && n.type !== 'haze'
     /* A BEFORE OR AN AFTER GROUP WHOSE OWN CHILDREN JOIN (isCsg: a subtraction, an intersection, a blend among them) is
        compiled: codegen's children function combines them, and the records of a BEFORE or an AFTER fold its children's in
-       one by one -- until 0.next a mirror of a box less a sphere was the box and the sphere as data. */
+       one by one -- until 0.76.0 a mirror of a box less a sphere was the box and the sphere as data. */
     const coded = n => hasCode(n) && (!native(n, wantLocal, reliefMaterials) || isCsg(n))
     const combined = combinedGroups(tree)
     const special = new Set()          // groups with code or a relief object somewhere below

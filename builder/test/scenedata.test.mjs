@@ -420,7 +420,7 @@ const framesAtEnds = w => {
     }
 }
 
-/* ---- A PLAIN GROUP AS ONE OF A CSG GROUP'S SHAPES (0.next, codegen.js combinedGroups), as codegen emits it: a CSG record
+/* ---- A PLAIN GROUP AS ONE OF A CSG GROUP'S SHAPES (0.76.0, codegen.js combinedGroups), as codegen emits it: a CSG record
    of its own, each child a JOIN of a union, an END -- not a GROUP whose children's records fold one by one. An array's
    copies one combine: a CSG record around the ARRAY, a JOIN after every shape (the base's a union at the group's blend,
    whatever join it keeps dormant: at the copies after the first it is taken), the END after the ARRAY_END. And GROUP

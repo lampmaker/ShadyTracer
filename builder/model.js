@@ -2469,7 +2469,7 @@ export function wornMaterial(doc, id) {
  * from the shader while params.js, which reads the document, still wrote it live. A version 10 group
  * was CSG by its own op, which pruning never changed; this keeps that. It is the group's OWN joins: a
  * plain group that is one of a CSG group's shapes keeps `csg` false and is combined all the same, as a
- * union (codegen combinedGroups, 0.next), which its parent decides -- the tree's, not this flag.
+ * union (codegen combinedGroups, 0.76.0), which its parent decides -- the tree's, not this flag.
  *
  * `keepDisabled` (for codegen's liveVisibility, the document's setting): disabled nodes stay, marked
  * `enabled: false`, so the shader has them and a uniform decides -- hiding one then compiles nothing.

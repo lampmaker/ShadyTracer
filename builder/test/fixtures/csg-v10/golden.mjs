@@ -135,7 +135,7 @@
 // shape of an intersection) and every part standing on the floor. Those two documents' entries moved, every key of both
 // modes; no other document's did (key by key).
 //
-// REFROZEN FOR FOUR DOCUMENTS (2026-10-21, 0.next), for a fix the user agreed (a plain group that is one of a CSG group's
+// REFROZEN FOR FOUR DOCUMENTS (2026-10-21, 0.76.0), for a fix the user agreed (a plain group that is one of a CSG group's
 // shapes combines its children as a union, an array's copies too: codegen.js combinedGroups). Folded, its children were
 // no union's signed distance, and the CSG group above read a wrong operand where they overlap (csgshape.gpu.mjs). Checked
 // before freezing, dev's codegen (bbe475c's codegen.js and scenedata.js) against new, both modes, all four texts: with
