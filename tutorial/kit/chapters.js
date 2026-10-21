@@ -99,7 +99,7 @@ export const CHAPTERS = [
     C('right', 'checking', 'Noise, bias and checking', 'How to tell a renderer is right: answers known in advance, and tests.', 'draft',
         ['docs/TESTING.md', `${K}measure.js`, `${P}tests.js`, `${K}check-shaders.mjs`, 'tutorial/kit/checking.js']),
     C('right', 'precision', 'Numbers have grain', 'Why a computer\'s numbers have grain, and how the renderer lives with it.', 'draft',
-        [`${K}tolerances.js`, `${P}PRECISION.md`, `${K}units.js`, `${K}unitlint.js`, `${K}scene_api.js`, `${K}photometry.js`, 'tutorial/kit/grain.js']),
+        [`${K}tolerances.js`, `${P}PRECISION.md`, `${K}units.js`, `${K}unitlint.js`, `${K}scene_api.js`, `${K}photometry.js`, 'builder/unitchange.js', 'tutorial/kit/grain.js']),
     C('right', 'optics', 'The optics bench', 'Measuring light like a lab bench: beams, maps of light on a wall, ray files.', 'draft',
         [`${P}optics/`, 'tutorial/kit/optics.js']),
 
