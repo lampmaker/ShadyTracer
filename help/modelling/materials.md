@@ -9,13 +9,14 @@ Select one to edit it; every object wearing it changes.
 - **The Library** has many with real values: plastics, metals (gold, copper, brushed, turned and anodised
   aluminium, chrome, galvanised steel), glasses (soda-lime, flint, tinted, frosted), PMMA and polycarbonate, stone,
   wood, cork, concrete, leather, plaster and more. Drag one onto an object in the picture or in the tree.
+- **The tree's Materials**: drag one of the scene's own materials onto an object's or a group's row.
 - **+ on the Materials row** makes one from a starting point: diffuse, plastic, metal, mirror, glass or glowing.
 - An object's Properties choose which of the scene's materials it wears.
 
 ## A group's material
 
-A group can give one material to everything in it. Drag a material onto the group's row, or choose it as the
-group's **material** in its Properties. Every object in the group wears it instead of its own, also inside groups
+A group can give one material to everything in it. Drag a material onto the group's row, from the Library or from
+the tree's Materials, or choose it as the group's **material** in its Properties. Every object in the group wears it instead of its own, also inside groups
 in the group.
 
 To make one object an exception, drag another material onto it, or check its **own material** in Properties. A

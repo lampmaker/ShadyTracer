@@ -489,10 +489,22 @@ export function installBuilderTree(container, BUILDER, { onStatus = () => { }, o
        moved with Shift). TreeView tells its start and end and carries only the row's index path in the drag's data,
        so the row is kept here and asked for (draggedRow). Only a row Copy to would take; cleared at the end, and by
        the taker (its drop runs before a dragend, which a rebuild may leave without its source). */
-    let dragging = null
-    const onDrop = (from, to, action, draggedRow) => {
-        if (action === 'dragstart') { dragging = copyable(draggedRow) && draggedRow.scene === BUILDER.current ? draggedRow : null; return }
-        if (action === 'dragend') { dragging = null; return }
+    let dragging = null, materialDrag = null
+    const onDrop = (from, to, action, draggedRow, targetRow) => {
+        if (action === 'dragstart') {
+            dragging = copyable(draggedRow) && draggedRow.scene === BUILDER.current ? draggedRow : null
+            materialDrag = draggedRow?.type === 'material' && draggedRow.scene === BUILDER.current ? draggedRow : null
+            return
+        }
+        if (action === 'dragend') { dragging = null; materialDrag = null; markMaterial(null); return }
+        /* A MATERIAL ROW ON A SHAPE OR A GROUP (the user, 2026-10-21: "drag a material from the tree onto a group or
+           object would be nice to have"): worn by it, as a Library material dropped there is (wear). TreeView refuses
+           the drop -- a material row only ever goes among Materials -- once the tree has let it happen (the dragover
+           below), and says so here. */
+        if (action === 'drop_failed' && draggedRow?.type === 'material' && wearsMaterial(targetRow)) {
+            markMaterial(null)
+            return edit('material dropped', () => wear(BUILDER.doc, targetRow.mid, draggedRow.mid), { scene: targetRow.scene, select: targetRow.mid })
+        }
         if (action === 'drop_failed') return onStatus('cannot drop there')
         if (action !== 'drop' || !draggedRow?.id) return
         const place = placeOf(tree.options.data, draggedRow.id)
@@ -779,6 +791,7 @@ export function installBuilderTree(container, BUILDER, { onStatus = () => { }, o
        undo step, selecting what it made or changed.
          a material on an object       used by it -- kept as its own under a group that gives its objects one
                                        (model.js version 23), or the drop would change nothing to see
+         (the tree's own material rows the same: onDrop, wear)
          a material on a group         given to every object in it, over their own (version 23): the user, 2026-10-21,
                                        "a material setting for groups that override the materials of the children";
                                        what keeps its own, and a group inside with one of its own, keep theirs
@@ -804,8 +817,7 @@ export function installBuilderTree(container, BUILDER, { onStatus = () => { }, o
                     throw new Error('a light or a box takes no material (a light has its own)')
                 // the one already there if it is the same: a material dropped twice is one material
                 const m = doc.materials.find(d => M.sameMaterial(d, asset.material)) ?? M.insertAsset(doc, asset)
-                M.setMaterial(doc, node.id, m.id)
-                if (node.kind === 'object' && M.materialGroupAbove(doc, node.id)) M.setOwnMaterial(doc, node.id, true)
+                wear(doc, node.id, m.id)
                 return m
             }, { scene, select: row.mid })
         }
@@ -828,6 +840,29 @@ export function installBuilderTree(container, BUILDER, { onStatus = () => { }, o
             return n
         }, { scene, select: n => n.id })
     }
+    /* A MATERIAL PUT ON A ROW, from the Library or from the tree's own Materials: a group's (model.js version 23),
+       worn by everything in it; a shape's own -- kept as its own under a group that gives its objects one, or the drop
+       would change nothing to see */
+    const wear = (doc, id, materialId) => {
+        M.setMaterial(doc, id, materialId)
+        const node = M.find(doc, id).node
+        if (node.kind === 'object' && M.materialGroupAbove(doc, id)) M.setOwnMaterial(doc, id, true)
+    }
+    // a row that takes a material: a group of the scene, or a shape (not a light or a box)
+    const wearsMaterial = row => !!row && row.scene === BUILDER.current && (row.type === 'group' || row.type === 'code') && row.mid != null
+    /* ...AND LET THROUGH where TreeView would not: over such a row, while a material row of this scene is dragged, the
+       drop is allowed (TreeView then refuses it, and onDrop above takes it) and the row marked as the Library's are */
+    let materialMarked = null
+    const markMaterial = e => { if (materialMarked !== e) { materialMarked?.classList.remove('shell-drop-target'); materialMarked = e; e?.classList.add('shell-drop-target') } }
+    container.addEventListener('dragover', e => {
+        if (!materialDrag || !tree) return
+        const el = e.target.closest?.('[data-path]') ?? null
+        if (!wearsMaterial(el ? rowAt(tree.options.data, el.dataset.path) : null)) return markMaterial(null)
+        e.preventDefault(); e.dataTransfer.dropEffect = 'move'
+        markMaterial(el)
+    })
+    container.addEventListener('dragleave', e => { if (!container.contains(e.relatedTarget)) markMaterial(null) })
+
     /* THE TREE AS A DROP TARGET for the library: `dragged()` is what is being dragged, null for anything
        else -- the widget's own drags of its rows go on as they were (it ignores what it did not start) */
     const acceptLibrary = dragged => {

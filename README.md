@@ -338,7 +338,7 @@ for the help.
 - **Every item is a rendered picture**, made by a second, hidden path tracer while the main view is
   idle, and kept; rest the pointer on one to see it rendered live *preview*.
 - **Drag items onto the tree or into the picture**: a material onto the object under the pointer
-  (or onto a group's row, for the whole group), a shape standing on the surface where you drop it, units converted *preview*.
+  (or onto a group's row, for the whole group; the tree's own materials too), a shape standing on the surface where you drop it, units converted *preview*.
 - **Keep your own**: the selection becomes an item; rename, remove, export and import them as a file
   *preview*.
 - Search by name, category, tag or help text; filter by kind, built-in or your own, and tag; grid or

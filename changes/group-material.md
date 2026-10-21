@@ -7,6 +7,9 @@ group wears it instead of its own, also in groups inside it. The nearest group w
 group's blend is its own. **Exceptions work like a child's own blend.** An object with **own material** checked keeps
 its own, and a material dropped on an object under such a group checks it. Each object keeps its own material
 underneath, so choosing *(each its own)* for the group gives every object back what it had.
+- **A material row of the tree can be dragged onto an object's or a group's row** too, and lands as a Library material
+  dropped there does. The tree's widget keeps a material row among Materials, so the tree lets that one drop through
+  itself (`tree.js` wear). Dragging materials to reorder them is unchanged.
 - **Before, a material dropped on a group's row was put on every object in it**, replacing what each had. Now it is the
   group's, and what was there stays underneath.
 - **Copied, pasted, dragged to another scene or kept in the library**, a node takes what it wears with it. An object
@@ -27,4 +30,4 @@ Properties: the die and its dots should all change, and their rows in the tree s
 material from the Library onto one dot: only that dot should change, its row reading `(own)`, and its Properties
 showing **own material** checked. Uncheck it: it should wear the group's again. Choose
 *(each its own)* on the group: every object should be back as it was. Then drag a material from the Library onto the
-group's row in the tree.
+group's row in the tree, and one of the scene's own materials from the tree's Materials onto an object's row.

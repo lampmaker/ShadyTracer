@@ -19,7 +19,7 @@ Whatever is selected, the tree row, [Properties](show:properties) and the handle
 light, a material, or something from the [Library](show:library). You can also drag Library items into the tree
 or onto the picture: a shape lands on the surface where you drop it, and a material lands on the object under the
 pointer. A material dropped on a group's row is [the group's](materials.md#a-groups-material), worn by everything
-in it.
+in it. A material from the tree's own **Materials** can be dragged onto an object's or a group's row the same way.
 
 ## Moving, turning, sizing
 

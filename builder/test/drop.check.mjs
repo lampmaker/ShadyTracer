@@ -139,6 +139,37 @@ ok('a drag the library did not start is left to the widget', r.ignored, JSON.str
 ok('a library drag over a row is accepted and the row marked', r.accepted && r.marked, JSON.stringify(r))
 ok('dropped on the row: the material is on that object, and the mark gone', r.b === 'gold' && r.cleared, JSON.stringify(r))
 
+/* A MATERIAL ROW OF THE TREE ITSELF dragged onto a shape's or a group's row (`0.next`, tree.js wear): TreeView keeps a
+   material row among Materials, so the tree lets the drop through and takes it -- as a Library material dropped there */
+const rowDrag = (from, to) => p.evaluate(([from, to]) => {
+    const { M, BUILDER } = CHECK
+    const rowOf = text => [...document.querySelectorAll('[data-path]')].find(e => e.textContent.trim().startsWith(text))
+    const fire = (type, target, dt) => { const e = new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer: dt }); target.dispatchEvent(e); return e }
+    const dt = new DataTransfer(), src = rowOf(from), dst = rowOf(to)
+    if (!src || !dst) return { error: `no row '${src ? to : from}'` }
+    fire('dragstart', src, dt)
+    const over = fire('dragover', dst, dt)
+    const marked = dst.classList.contains('shell-drop-target')
+    fire('drop', dst, dt)
+    fire('dragend', src, dt)
+    const d = BUILDER.doc, lab = id => M.material(d, M.wornMaterial(d, id).material)?.label ?? null
+    return { accepted: over.defaultPrevented, marked, cleared: !document.querySelector('.shell-drop-target'), materials: d.materials.length,
+             b: lab('b'), g: M.material(d, M.find(d, 'g').node.material)?.label ?? null, g2: lab('g2'), status: CHECK.T.status.at(-1) }
+}, [from, to])
+const n0 = await p.evaluate(() => CHECK.BUILDER.doc.materials.length)
+r = await rowDrag('red', 'bee')
+ok('a material row of the tree dragged over a shape\'s row: let through, the row marked', r.accepted && r.marked, JSON.stringify(r))
+ok('...dropped: worn by it, no material added, the mark gone', r.b === 'red' && r.materials === n0 && r.cleared && r.status !== 'cannot drop there', JSON.stringify(r))
+r = await rowDrag('red', 'group')
+ok('...on a group\'s row: the group\'s, worn by what is in it', r.g === 'red' && r.g2 === 'red', JSON.stringify(r))
+r = await p.evaluate(() => {
+    const row = [...document.querySelectorAll('[data-path]')].find(e => e.textContent.trim().startsWith('red'))
+    const e = new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: new DataTransfer() })
+    row.dispatchEvent(e)
+    return { marked: row.classList.contains('shell-drop-target') }
+})
+ok('...and with nothing dragged, a row is left alone', !r.marked, JSON.stringify(r))
+
 if (errs.length) failed++
 console.log(errs.join('\n') || 'no page errors'); await b.close(); server.close()
 console.log(failed ? `${failed} failed` : 'all passed')
