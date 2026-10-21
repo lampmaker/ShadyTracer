@@ -178,7 +178,7 @@ function combining() {
 
 /* MODIFIERS: a group that changes the space its children are drawn in (twist, bend, repeat, mirror, circular array) or
    the shape they make (round, shell, displace, relief) -- each on the plainest shape that shows it, 80 mm apart. The
-   circular array twice, in a front row (`0.next`): a sphere off its axis drawn as eight, and a block across its axis
+   circular array twice, in a front row (0.77.0): a sphere off its axis drawn as eight, and a block across its axis
    merged with its eleven turned copies into one rosette. */
 function modifiers() {
     const doc = scene('Modifiers', { radius: 3000, env: SUN(40) })
@@ -383,7 +383,7 @@ function glassLiquid() {
    the table -- daylight and a lamp together, each in real units: the sun through the window, the lamp's 1500 lm. */
 function lighting() {
     const doc = scene('Lighting a room', { unit: 'm', radius: 200, env: SUN(30, 20) })   // on the window's side, +y
-    /* THE FLOOR'S GRAIN ALONG x (model.js setPattern, `0.next`; the user, 2026-10-21: "yes, turn the floor too"), as the
+    /* THE FLOOR'S GRAIN ALONG x (model.js setPattern, 0.77.0; the user, 2026-10-21: "yes, turn the floor too"), as the
        table top's below: unturned, the floor was one log's end grain 4 m across, rings round a point beside the origin */
     const boards = floor(doc, lib(doc, 'wood'))
     M.setPattern(doc, boards.id, { pos: { x: 0, y: 0, z: 0 }, rot: { x: 0, y: 90, z: 0 } })
@@ -393,7 +393,7 @@ function lighting() {
     shape(doc, room.id, 'box', { label: 'window', params: { size: V(0.8, 0.2, 0.6), rounding: 0 }, at: [0, 1.55, 1.5], material: lib(doc, 'white plaster'), join: 'subtract' })
     // a table 1.6 x 0.9 m, 0.75 high; a bowl on it
     const t = group(doc, 'root', 'table', { at: [0, -0.2, 0] })
-    /* THE TOP'S GRAIN ALONG ITS LENGTH (model.js setPattern, `0.next`): wood's log runs along its object's z, which is the
+    /* THE TOP'S GRAIN ALONG ITS LENGTH (model.js setPattern, 0.77.0): wood's log runs along its object's z, which is the
        legs' length and the top's thickness -- so the top showed end grain, rings round a point (the user, 2026-10-21).
        Turned 90 degrees about y, the log's axis is the top's x; its heart, 15 cm along the log's x, is above the board */
     const top = shape(doc, t.id, 'box', { label: 'top', params: { size: V(0.8, 0.45, 0.02), rounding: 0.005 }, at: [0, 0, 0.73], material: lib(doc, 'wood') })

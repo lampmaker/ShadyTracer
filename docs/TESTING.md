@@ -414,7 +414,7 @@ That one holds the two paths to each other, so a mistake both make passes it. `n
 evaluated on Dawn at 4096 points around each, codegen with visibility off and live and as data, against the exact CSG
 value worked out in JS from the shapes' own distances (spheres and boxes, and a mirror's and a round's code). It is
 how a folded group was found to be no union where its children overlap, and it failed on that code (29 of its 36 rows)
-before it passed. `node builder/test/circular.gpu.mjs` (`0.next`) does the same for the circular array: its copies'
+before it passed. `node builder/test/circular.gpu.mjs` (0.77.0) does the same for the circular array: its copies'
 union worked out in JS, every copy asked and with `reach` (a bound, checked as one), its normals and what a capture
 records; each check was seen to fail on a copy of the modifier broken that way.
 

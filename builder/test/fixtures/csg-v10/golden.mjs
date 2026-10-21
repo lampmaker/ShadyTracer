@@ -148,7 +148,7 @@
 // the laser rig under its lens holder: six live, three off, the others hidden and pruned) moved, and their bench copies
 // exactly as they did; the other 46 documents, cases.*.wgsl and the imported parts among them, did not (key by key).
 //
-// ONE SCENE REFROZEN (2026-10-21, 0.next): scenes/modifiers.json, the Modifiers example, with the circular array the user
+// ONE SCENE REFROZEN (2026-10-21, 0.77.0): scenes/modifiers.json, the Modifiers example, with the circular array the user
 // asked for (modifiers.js `circular`) added in a front row (scenes/make.mjs). No codegen change. Checked before freezing,
 // its texts old against new, both modes, each line trimmed and counted: in the render and optics texts no line left and
 // the lines that came are the two rings' -- their groups, children functions, uniforms and box tests; in the pick texts
@@ -156,7 +156,7 @@
 // before SDF, take tags first). Uniforms: none left; the rings' count, reach, transforms and boxes and their children's
 // came. Every key of both modes of that document moved; no other document's did (key by key).
 //
-// REFROZEN FOR ONE SCENE (2026-10-21, `0.next`), for a feature the user asked for (a pattern frame per object: model.js
+// REFROZEN FOR ONE SCENE (2026-10-21, 0.77.0), for a feature the user asked for (a pattern frame per object: model.js
 // setPattern, codegen patIn): scenes/lighting-room.json's table top and floor have one, their wood's grain along x. Checked
 // before freezing, merged with dev at 8e1137f, the scene with its pattern frames against the same document without them,
 // both modes, all four texts: each one's comment gained ", in its pattern frame", and its block the capture's five lines

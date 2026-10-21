@@ -1,5 +1,5 @@
 //======================================================================================================================
-// THE CIRCULAR ARRAY (modifiers.js `circular`, `0.next`), on a WebGPU in node (Dawn). Run:
+// THE CIRCULAR ARRAY (modifiers.js `circular`, 0.77.0), on a WebGPU in node (Dawn). Run:
 //   node builder/test/circular.gpu.mjs     (optional: npm i -g webgpu, and lavapipe; says so and passes without)
 //
 // The modifier is group code: copies of its children turned about its z axis, combined by the least distance in a

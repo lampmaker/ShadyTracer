@@ -131,7 +131,7 @@ export const FORMAT = 'raytracer-scene'
    codegen, the scene as data and the bake see each object's worn material and nothing else, so a scene without a
    group material compiles to the text it did. Version 22 files have none: nothing to change. A builder of 22 refuses
    a file of 23, rather than show every object in its own material and save the scene without the group's. */
-/* 24: A PATTERN FRAME (`0.next`; codegen.js THE PATTERN FRAME): an object, or a group that makes its children one shape (a
+/* 24: A PATTERN FRAME (0.77.0; codegen.js THE PATTERN FRAME): an object, or a group that makes its children one shape (a
    CSG group, a round, a shell: patternOwner), may hold `pattern` -- { pos, rot }, a place and a turn in its own frame, as
    a child's transform would be, without a scale -- where its material's
    pattern is laid out: a material's p_local and R_local (wood's rings, brushed metal's strokes, a checker's squares)

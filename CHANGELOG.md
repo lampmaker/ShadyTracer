@@ -16,6 +16,131 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.77.0 — 2026-10-21
+
+**A ninth modifier, the circular array: copies of a group's children round its z axis.** In the group's + menu under
+Modifiers (and the Library), with two numbers: `count` (1 to 64) and `reach`. The copies are 360 / count degrees
+apart, the first where the children are; turn the group for another axis. A child off the axis is drawn `count`
+times. A child across the axis, or copies that overlap, become one merged shape: the copies are combined by the
+smallest distance in a Hit of their own, a true union, so a ring of overlapping glass is one piece of glass with no
+faces inside it.
+- **Why every copy is evaluated, and not the point folded into one slice** (polar domain repetition, which
+  `roadmap/BUILDER.md` had planned): a fold asks one copy, and a slice narrows to nothing at the axis. A shape across
+  the centre came out as a wedge of itself, and a copy crossing a slice's edge lost its tip. So each step asks every
+  copy, and costs `count` evaluations of the children (read in the code's loop; not timed on hardware).
+- **`reach` buys the speed back** for copies that stay near their own slice: within `reach` slices either side (0:
+  inside its own, like a bolt circle's bolts or a gear's teeth; the first slice is centred on the group's +x). Then
+  only the nearest copy and `reach` + 1 either side are asked, and the rest get a bound: at least a slice away in angle,
+  and no nearer than the farthest copy asked, less twice the distance from the axis. That second term keeps a ray
+  through the centre from crawling. A copy reaching farther than `reach` says is drawn wrong. At 32 (the start) every
+  copy is asked, whatever the count.
+- **Normals stay analytic**: each copy's frame is turned with it. A material's local point and frame (`p_local`, a
+  grain) and the pick's tag are the winning copy's own: while those are recorded, the winning copy is asked once more
+  outside the copies' own Hit, where a surface is recorded as the scene's.
+- **Checked on Dawn over lavapipe** (`builder/test/circular.gpu.mjs`, new; arithmetic, not speed), at 4096 points
+  around each case, in codegen, with visibility live, as data and baked. Every copy asked: the distance is the exact
+  union everywhere (within 1e-4), for a ring of spheres, a box across the axis, a turned and scaled group with an odd
+  count, one copy, and a plate less a bolt circle. With `reach`: never above the union, the union itself within 0.1 of a
+  surface, on its side everywhere, and never under sin(slice) / (2 + sin(slice)) of it. The normal is the nearest
+  copy's own. Capturing gives the same distance, the local point and frame the copy's, and the sphere's tag. Each of
+  those checks was seen to fail against a copy of the code broken that way: one copy asked, normals not turned, no
+  bound, no far term, no capture.
+- **The Modifiers example** has a front row: eight spheres apart, and a block across the axis merged into a rosette
+  of twelve. Its camera moved back to take the row in (a first guess).
+- **Not changed:** several children in one copy still fold as a plain group's do, by the nearest surface, so two that
+  overlap inside one copy keep their faces there. For one shape, put them in a group of their own with a blend above 0
+  or a cut (a CSG group, `codegen.js isCsg`). A light in the group is not drawn, as in any group with code.
+
+**What to look at:** the Modifiers example's front row. On the left, eight separate spheres. On the right, one
+rosette with no seams or wedge edges where the copies cross. Made glass, it should be one piece with no faces inside.
+Then set the spheres' `reach` to 0: the picture should not change. That it renders faster (3 copies asked of 8, not
+8) is inferred from the code, not timed: only a card can say by how much.
+
+**A triangular prism in the library, any triangle.** Library › Optics › *Triangular prism 25 mm, N-BK7*: a prism whose
+triangle stands up in the xz plane, its base `width` along x and its `height` up z, run `depth` along y and centred.
+`apex` is where the top stands along the base, as a fraction of it: 0 over the base's -x end (a right-angle prism,
+the right angle there), 0.5 over its middle (isosceles), 1 over its +x end; past 0 or 1 it leans out over the base
+(obtuse) and is still a triangle. All four are live (no compile while dragging). It starts as a 25 × 25 × 25 mm
+right-angle prism in N-BK7 (n_d 1.5168, Abbe number 64.17, Schott's catalogue, the values `spectral.test.mjs` holds
+BK7 to), so it disperses.
+- **The shape is new, `Ntriprism`** in `lib/pathtracer/core/shapes.js`, on a new 2D piece `g2Triangle` (any
+  counter-clockwise triangle, with its gradient), extruded along y with `g2Extrude`. It is exact on both sides, and its
+  normal is the distance's analytic gradient, as the file's other shapes are. Width and height are taken as their
+  size and never below 1e-6, so any value a slider or typed number gives is finite.
+- **Tested without a GPU** (`core/test/shapes.test.mjs`, 35 new checks): five triangles (right-angled, isosceles,
+  the right angle at +x, leaning out past the base, a sliver 0.05 high) checked against a reference polygon that shares
+  no code with the shape: exact inside and out, the normal the gradient and unit length. Any parameters, zero and
+  negative included, give a finite, 1-Lipschitz shape, and its corners are where the parameters put them. Moving the
+  top to the wrong place in the JS failed 20 of them.
+- **Not in the + menu.** It is a library item, a code node like the PMMA lens, and so not one of `plainshape.js`'s
+  plain shapes: codegen gives it a bounding box.
+
+**What to look at:** put the prism from the Library (Optics) into a scene in the sun or under a beam. It should be an
+upright right triangle seen along y, the right angle at the left (-x) and the hypotenuse facing up and right. Drag
+`apex` to 0.5 for an isosceles prism and to 1 to mirror it. White light through it should fan into colours, less than
+the flint prism of *Dispersion in a prism* does. Its picture in the Library is rendered the first time the panel shows
+it.
+
+**Each object has a pattern frame: a material's pattern moved and turned on it, the shape left where it is.** A
+patterned material is laid out in its object's own frame. Wood's log runs along the object's z, brushed metal's strokes
+along its x, so one material on several objects ran the same way on each. *Lighting a room* showed it: one wood on the
+table's legs and top, the grain along each leg's length and through the top's thickness, so the top showed end grain.
+Turning the object to turn its grain turned the shape with it.
+- **The pattern frame** (`model.js setPattern`, the scene format's version 24): a place and a turn, `{ pos, rot }` (no
+  scale: every library material reads its point in real millimetres, `p_local * S_local`, and a scale would cancel
+  there), on an object or a CSG group, in its own frame as a child's transform would be. A material's `p_local`,
+  `R_local` (a grain's direction) and its relief are read in it. `S_local` is as it was. A version 23 file is read as 24
+  with nothing changed. A builder of 23 refuses a file of 24 rather than lose every frame on its first save. A
+  parameter may no longer be called `pat` (`pat_<id>` is the frame's uniform).
+- **Whose frame:** a CSG group's material is read in the group's frame, so a CSG group has a frame of its own, and so
+  does group code on its children's result (a round, a shell), whose code makes the one fold. A frame on one of their
+  shapes moves only that shape's relief. The panel says so on that shape (`model.js patternOwner`). A plain group, or a
+  twist or a bend, folds nothing of its own, so it has none to offer.
+- **In the shader** (`codegen.js patterned, patIn`): only while a hit records its point (`LOCAL_CAPTURE`), around the
+  object's block, a CSG group's own fold or a round's or shell's code, the frame moves `XF_P` and turns `XF_QM`, through the straight-material
+  frame `fold` already records (`XF_STRAIGHT`). So the march itself pays one branch per patterned node. A relief
+  reads its point through the frame directly. A node gets these lines only where they change something: some material
+  in the scene reads its point, or the node's own material has a relief. Every other scene's text is byte for byte
+  what it was, and so are the golden shaders of every document but *Lighting a room*.
+- **The scene as data** (`scenedata.js`): a node in its pattern frame is compiled as before, as an object wearing a
+  relief is. The records carry one frame a node, the shape's. Giving a node a frame is a compile; moving it after
+  that is a uniform, live.
+- **The properties panel**: a *pattern frame* box under the placement of each object, CSG group, round and shell,
+  folded until it has one. *pattern at* and *pattern turn* edit it (the first value moved gives it one), and *Take it away* removes it.
+- **A unit change** by the numbers converts the frame's place as it converts a position. By a scale, or a paste from
+  another unit, the place stays, inside the frame the scale reaches.
+- ***Lighting a room*** turns its table top's and its floor's frames 90° about y: the log along x, the top's length,
+  where both showed end grain (the floor one log's rings, 4 m across).
+- **Help:** Materials › *Turning a pattern: the pattern frame*. The wood library item's description points to it.
+- Checked: `builder/test/pattern.test.mjs` (new: the model, the text, live through the builder over a stand-in, in
+  codegen and as data); `builder/test/pattern.gpu.mjs` (new, Dawn over lavapipe: on 2048 points over every surface, the
+  pick's capture in a frame is R^T (p - t) with frame F R, codegen's and as data, and the capture without one bit for
+  bit everywhere else, a CSG shape's and a shelled shape's own frames included; a relief of q.z in a frame turned 90° about y is a relief of
+  q.x without one, and without the frame another field); `check-shaders.mjs` with naga, the frames at the top level, on
+  a CSG group and inside a straight group; `panel.check.mjs`.
+
+**What to look at:** *Lighting a room*. The table top and the floor should show long stripes and arches along x, not
+rings around a point, and the legs as before. Then any object wearing wood, brushed aluminium or a checker: select it
+and open *pattern frame*. The first change compiles, taking about as long as giving it another material. After
+that, dragging *pattern turn* should turn the grain live while the shape stays put, and *pattern at* should slide it.
+On a part of a subtraction (a cut box), the box says to turn the group's frame instead.
+
+**0.76.0 left its own version unwritten in seven files, and the release now writes it there.** The group material's
+branch named its version as CLAUDE.md shows the placeholder, in backticks, and the release kept every placeholder in
+backticks as the placeholder's own name. So FEATURES.md, `builder/model.js` (format 23's comment), three tests, two
+headless checks and `tutorial/PLAN.md` still held the placeholder after the release; the run's list of files replaced was the same
+sixteen for 0.75.3 as for 0.76.0, which was the sign. They say 0.76.0 now.
+- **In backticks, the placeholder is its name only where something is said about it**: CLAUDE.md, CHANGELOG.md and a
+  change note (`release.mjs` NAMES). Anywhere else the release makes it the version, backticks and all, and counts it
+  as one, so a branch that writes it there and no note is refused as before.
+- **CLAUDE.md** says so where it tells a PR to write the placeholder.
+
+**The tutorial:** chapter 25 (Measure first) shows lines of CLAUDE.md this change does not touch, and needed nothing;
+no chapter is about the release. `tutorial/PLAN.md` changed only in the version it names.
+
+**What to look at:** nothing in the page. The next `node release.mjs --dry-run` lists every file that names its
+version, whichever way it was written.
+
 ## 0.76.0 — 2026-10-21
 
 **A group can give one material to everything in it.** Shapes that make one part are mostly the same stuff, and a

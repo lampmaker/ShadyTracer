@@ -73,7 +73,7 @@ for (const { name: file } of EVERY_SCENE) {
     }
 
     /* ---- edits that are data alone, to an object that is a record: one compiled as before -- a relief's, or one in its
-       pattern frame (model.js setPattern, `0.next`: Lighting a room's floor, its first top-level object) -- is text, and
+       pattern frame (model.js setPattern, 0.77.0: Lighting a room's floor, its first top-level object) -- is text, and
        copying it is a compile, as a new block is */
     const record = n => !s.compiledIds?.has(n.id)
     const o = [topObject(doc), ...doc.root.children, ...objects(doc)].find(n => n?.kind === 'object' && n.type === 'code' && record(n))
