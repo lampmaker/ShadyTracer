@@ -133,7 +133,8 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
 4. **Which way is up** (draft): the normal as the field's gradient; a shape's own against forward differences (the
    shade kernel's 3 looks) and central ones (the pick's 6), their errors as h and h², a crease; the same differences
    in an f32 emulation, the grain below the floor of 128 spacings and the step's own error above it; fastnormals off
-   at 4.3× (measured, Pascal) and why that much is not known → tracebasics.js hitNormal, tolerances.js, sdf.js
+   at 4.3× (measured, Pascal) and why that much is not known, the setting gone in 0.74.0 (the shape's own normal
+   always taken) → tracebasics.js hitNormal, tolerances.js, sdf.js
    Nsphere, PRECISION.md. *Read:* iq-normals.
 
 **II. What light is**
@@ -182,7 +183,8 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
 11. **Rainbows** (draft): white light through a prism, 31 wavelengths each at its own index (spectral.js cauchyN,
    optics/fresnel.js refract), the flint against BK7 at least deviation; n(lambda) through n_d and V_d with BK7's
    catalogue against it; the wavelength draw and its weights averaging exactly 1, drawn live; a dichroic coat's edge
-   moving with the tilt and each channel's reflectance (edgeAt, edgeRGB); the shading kernel's dispersion block; the
+   moving with the tilt and each channel's reflectance (edgeAt, edgeRGB); the shading kernel's dispersion block and
+   its off switch (UB.dispersionOff, 0.74.0: every Abbe number read as 0, the picture only); the
    comments' stale bit count, softplus count, red's range and BK7 accuracy; the green reflections of 0.44.1 ->
    spectral.js, materials_pbr.js. *Read:* wiki-dispersion, wiki-abbe, wiki-cauchy, pbr-spectra.
 
@@ -195,8 +197,10 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
 13. **Following a path** (draft): one path's throughput β bounce by bounce, the rendering equation in a fold-out; the
     bounce cap's lost light (46/72/95% at caps 1/3/8 for walls of 0.8, less for white ones), a bias; Russian roulette as
     tracebasics.js plays it, off against on (the same average, 4.7 rays a path for 10.0), measured unbiased on Pascal
-    and still off, and why; the removed [0, 10] clamp → materials_pbr.js THE BOUNCE, tracebasics.js's cap and roulette,
-    flatland.js tracePath (rr, info). *Read:* rtiow, pbr-efficiency, pbr-pathtracer, kajiya1986.
+    and still off, and why; the removed [0, 10] clamp; Max Diffuse Bounces (0.75.0), the second cap, counting only
+    EV_EVAL bounces in Ray.counts' high half and cutting camera paths, photons and the map alike, 0 to the kernels
+    where it cannot bind → materials_pbr.js THE BOUNCE, tracebasics.js's cap, diffuse cap and roulette, photometry.js
+    diffuseCapOf, flatland.js tracePath (rr, info). *Read:* rtiow, pbr-efficiency, pbr-pathtracer, kajiya1986.
 14. **Aim at the light** (draft): next event estimation, shadow rays, choosing among lights, where it cannot help.
     *Read:* rtrest, pbr-lights, pbr-spheres, pbr-pathtracer, veach1997.
 15. **Two ways to the light** (draft): Veach's plates in the flat world (four glossy plates, four lamps of equal light,
@@ -267,14 +271,15 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
     n(n − 1)/2 failed swaps in the model; the old u32 fixed point against an f32 on a line of light values (a sunlit
     wall clamped from 25,000 to 10,000, under 1/65536 cut to 0); a sample in batches by `photons.js`'s own
     `planBatches` (1, 5, and 2 with the photon map). -> wavefront.js (DEPOSIT, addF32, resolve, nonfinite),
-    raytrace_main.js (the reset's window, maxaverages), photons.js (planBatches). Measured: tests.js frame-cost's first
+    raytrace_main.js (the reset's window, maxaverages; moveAverages gone in 0.74.0), photons.js (planBatches). Measured: tests.js frame-cost's first
     run (70 ms against 9, Pascal). *Read:* wgsl-spec, wiki-cas, finch2009.
 24. **From scene tree to shader** (draft): a flat scene of one group as text three ways (`kit/scenegen.js`): code
     with uniforms (a drag a uniform write, a ball added a compile), baked by the engine's own `bake.js` (every change a
     compile), as data (one text, a record a shape); a kernel's inlined size by `wgslgraph.js` and its compile time by
     `compileprogress.js`'s fitted model, call sites multiplying the copies. -> the frozen fixture csg-v10 (a box minus a
     sphere as codegen writes it), bake.js (baked), scenedata.js (why), compileprogress.js (what predicts it), codegen.js
-    (six copies, the carved walls, sdfResult). Measured: ARCHITECTURE.md's bake run and data/codegen ratios,
+    (six copies, the carved walls, sdfResult); the data build the editing default since 0.74.0, the bake still the
+    still picture's. Measured: ARCHITECTURE.md's bake run and data/codegen ratios,
     PERFORMANCE.md's structural edit. *Read:* iq-distfunctions, wgsl-spec.
 
 **VII. Speed** (every number stamped; the review's ±20% drift between runs stated)

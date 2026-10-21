@@ -168,12 +168,16 @@
       a pick for one that does not, used only if it refracts; then, if it does, the line that multiplies the ray's
       three channels by the weights and gives it its wavelength
       (<cite data-src="lib/pathtracer/core/materials_pbr.js" data-sym="if (draw) { res.r.beta *= spec.w; res.r = withLambda(res.r, spec.lambda); }"></cite>):</p>
-    <pre data-src="lib/pathtracer/core/materials_pbr.js" data-sym="/* DISPERSION (0.40.0; spectral.js). A ray that has a wavelength meets every medium at n(its wavelength)" data-to="nT = cauchyN(_n1, _v1, spec.lambda);"
-         data-why="WGSL, the graphics card's language (chapter 21). _n1 is the glass's n_d, _v1 its Abbe number (0: no dispersion). lam0 is the wavelength the ray already has, 0 for none. select(a, b, c) is WGSL's way of writing c ? b : a, so n1 is n(λ) for a ray with a wavelength and n_d otherwise. PRNG() gives four random numbers between 0 and 1, .x the first. lambdaCoded rounds the picked wavelength to what the ray can store, so every later index is worked out from exactly the same number. 'A photon started inside one': a ray started by a light (chapter 18) that sits inside the glass." data-hash="7b5cecbc"></pre>
+    <pre data-src="lib/pathtracer/core/materials_pbr.js" data-sym="/* DISPERSION (0.40.0; spectral.js). A ray that has a wavelength meets every medium at n(its wavelength)" data-to="nT = cauchyN(_n1, v1, spec.lambda);"
+         data-why="WGSL, the graphics card's language (chapter 21). _n1 is the glass's n_d, _v1 its Abbe number (0: no dispersion). v1 is the one used: _v1, or 0 for every glass when the Dispersion setting is off (UB.dispersionOff, a render setting since 0.74.0; stored as 1 for off, so a setting left unwritten, which reads 0, leaves dispersion on). lam0 is the wavelength the ray already has, 0 for none. select(a, b, c) is WGSL's way of writing c ? b : a, so n1 is n(λ) for a ray with a wavelength and n_d otherwise. PRNG() gives four random numbers between 0 and 1, .x the first. lambdaCoded rounds the picked wavelength to what the ray can store, so every later index is worked out from exactly the same number. 'A photon started inside one': a ray started by a light (chapter 18) that sits inside the glass." data-hash="1ee29fb5"></pre>
     <p>The wavelength rides in the ray's tag, a 32-bit word of flags, in its top 15 bits: 0 for none, otherwise 380 nm
       plus (the code − 1) × 400/32,766 nm (codes 1 to 32,767: 32,766 steps between them), steps of 0.012 nm
       (<cite data-src="lib/pathtracer/core/spectral.js" data-sym="export const lambdaCode = l =>"></cite>), so a ray
       grows no larger.</p>
+    <p>One switch turns it all off: Render settings' <em>Dispersion</em>, off, reads every Abbe number as 0 in that one
+      place, so no ray picks a wavelength and every glass bends all colours alike, at its n<sub>d</sub>, with none of
+      the colour noise. Camera paths and a light's photons pass through the same line, so both lose it together. The
+      Optics page always traces it (<cite data-src="lib/pathtracer/core/uniforms.schema.js" data-sym="dispersionOff: { type: 'u32'"></cite>).</p>
     <div data-claim="code">
       <p><strong>Numbers in the comments, checked.</strong> <code>spectral.js</code>'s header says the wavelength rides
         in the tag's "upper 16 bits … in bits 17-31": that is 15 bits, as its own later comment and

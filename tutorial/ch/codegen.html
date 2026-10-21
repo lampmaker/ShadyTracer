@@ -152,8 +152,11 @@
         steps a ray either way, and the data walk visits 11.4 records a step. Inferred in <code>scenedata.js</code>, not
         measured: a record's cost is its reads from memory, each waiting for the last, since where the next record is,
         is in this one (the engine's records nest: a group skipped jumps past its children, so the walk learns its next
-        step from the record it is reading; figure 1's flat loop just counts on). So the scene as data is a developer switch, off by default, and the builder edits with code and
-        renders baked.</p>
+        step from the record it is reading; figure 1's flat loop just counts on). So the scene as data was a developer switch, off by default, and the builder edited with code. Since 0.74.0
+        it is on by default (still a developer setting): the editing build is data and pays this step, so that an edit
+        that adds no code compiles nothing, and a still picture is the bake's either way, codegen's text with its values
+        made constants, swapped in once the edits stop
+        (<cite data-src="lib/pathtracer/core/uniforms.schema.js" data-sym="sceneData: { type: 'u32'"></cite>).</p>
     </div>
     <div data-claim="measured">
       <p><strong>A structural edit.</strong> A whole compile: 3.7 to 23 s uncached on the user's Ampere card for the

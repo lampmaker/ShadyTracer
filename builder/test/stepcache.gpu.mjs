@@ -100,7 +100,7 @@ async function measure(doc, scene) {
 }
 
 /* THE RAYS as the engine's struct (tracebasics.js Ray; units.gpu.mjs has the layout): pos, dir, radiance, beta, then
-   steps, n, ltot, bounces, state, pix, sunmis, tag, tmax, prevPdf, vtxLtot, ltMis */
+   counts (the march steps), n, ltot, bounces, state, pix, sunmis, tag, tmax, prevPdf, vtxLtot, ltMis */
 const RAY_F = RAY_BYTES / 4, HIT_F = SHADE_ITEM_BYTES / 4
 function raysOf(pts, dirs, radiance = 0) {
     const n = pts.length / 3, f = new Float32Array(RAY_F * n), u = new Uint32Array(f.buffer)

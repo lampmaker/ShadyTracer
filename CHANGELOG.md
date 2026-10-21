@@ -15,7 +15,7 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
-## 0.73.2 — 2026-10-21
+## 0.75.1 — 2026-10-21
 
 **The photon map's GPU test now runs the same way every time it is given the same seed, and each tolerance is the error
 bar of what it compares.** The user ran `lib/pathtracer/core/test/sppm.gpu.mjs` four times on lavapipe (2026-10-21).
@@ -75,6 +75,134 @@ of `fn sppmStore` takes in the comment above it, which now says the keep makes a
 words beside the excerpt describe the code alone, so it was re-read and stamped, and nothing else changed. Ch. 33
 does not quote the line of PLAN.md that changed.
 
+## 0.75.0 — 2026-10-21
+
+**(Built as 0.69.0; renumbered when merged with main, which took 0.69.0 to 0.73.1.)**
+
+**Max Diffuse Bounces** (you: "different # of bounces for diffuse and optical (mirror, transparent) materials"; the
+design you approved). It is a row in Render settings › Paths and noise, beside Max Bounces, 40 (all) by default.
+
+**What it counts.** Bounces between matte or glossy surfaces on light's way to the camera, counted as Max Bounces and
+Cycles count them: N bounces of indirect light, the last scatter into a light not one of them.
+- **0** is the direct light alone, but through lenses, mirrors and glass, caustics included: what Draft shows, done
+  exactly. **1** adds one bounce off a wall, and so on.
+- **A diffuse bounce** is Draft's own split: the diffuse base, gloss rough enough for a photon to connect through, and a
+  point in the dust.
+- **Not counted** (Max Bounces still caps them): mirrors, clear glass, dichroics, near-mirror gloss and frosted glass.
+- **Fewer reads Custom,** "Max Diffuse Bounces 2 (Standard: 40)". Standard and High put all of them back.
+- **At or above Max Bounces it is not sent to the kernels at all** (photometry.js `diffuseCapOf`: the cap is 0, none). So
+  the default traces exactly what it did. Every random stream and march cut-off reads as before.
+
+**How it stays exact.** The picture's light comes from the camera's paths, the photons and the photon map, each owning a
+part. A limit has to cut the same paths on every side, or light is counted twice or lost. Read in code
+(`tracebasics.js` pathEnd, THE DIFFUSE CAP):
+- **A camera path with none left** takes no light sample. A matte draw then ends it; past a mirror or glass it goes on,
+  and what it meets there counts in full.
+- **A light's photon** connects only with one left, and ends once it has none. The surface it lands on is the camera's
+  first, a diffuse bounce on that side.
+- **The photon map** stores only what a gather can count. The sun's photons, the map's own class and every camera-side
+  hand-over are unchanged.
+- **The Optics page** traces without it.
+
+**Where the count lives.** The ray had no room left (112 bytes). The march-step counter's upper half holds it, and the
+field is renamed `counts`, so any old read fails to compile (naga and Dawn found none left).
+
+**Tested on the software GPU** (lavapipe, in the container; no picture looked at):
+- **A new test,** `diffuse.gpu.mjs`, 63 checks:
+  - a hit through the shade kernel's own stages at every cap: the light sample, the cut-off, the light's photon's
+    connection and its end, the Optics page's rays never cut, the march steps kept;
+  - **on a floor and a wall under the sun:** 0 bounces Draft's picture (1.0053 ± 0.0024). Light sampling off as on
+    (1.0005 ± 0.0035 at 0, 0.9987 ± 0.0034 at 1), so a capped vertex counts nothing twice. 1 bounce 1.18 of 0, no limit
+    1.04 of 1.
+- **The dust test:** 0 diffuse bounces at Max Bounces 10 is single scattering, 0.9932 ± 0.0079 of the integral it already
+  computes. (Max Bounces 1 is not single scattering; this is.)
+- **The photon-map test,** the floor seen and lit through the slab: the sun's photons with the map against the camera's
+  own paths, 0.971 ± 0.026 at 0 bounces and 1.026 ± 0.030 at 1. Its WGSL store rule is held to the JS one with caps.
+
+**Also, a fix to 0.74.0:** Tests › image rows start from your own settings. They now force every diffuse bounce, and
+dispersion as each glass sets it, as they force full path tracing and the scene's environment. A switch you left off no
+longer changes a closed-form row.
+
+**Tests › render-modes-cost:** two rows more, Standard at 0 and at 2 diffuse bounces. The same iterations a sample, so
+what they save is shader time.
+
+**What to look at:**
+- **An LED-and-lens scene at 0 against Draft:** floors and walls lit directly, the lens's light on the floor, no light
+  between walls. Draft makes its own approximations, so small differences are expected.
+- **A room at 0, 1, 2 and 40:** brighter at each step. 40 is today's picture.
+- **Tests › render-modes-cost:** what 0 and 2 cost against Standard and Draft. Paste the report.
+
+**The tutorial**, reviewed against both versions (`affected.mjs`; 8 excerpts re-read, then stamped): ch. 2 and 26 the
+march's `ray.counts`; ch. 3 `fold`'s bound now 1; ch. 4 the fastnormals measurement kept as history, the setting gone;
+ch. 11 the Dispersion switch; ch. 13 Max Diffuse Bounces beside Max Bounces; ch. 14, 19 and 20 the cap's rule in light
+sampling, the photon map's store and the dust; ch. 23 no Keep on move; ch. 24 the scene as data on by default; and
+tutorial/PLAN.md's lines for those chapters. `tutorial.test.mjs` passes.
+
+## 0.74.0 — 2026-10-21
+
+**(Built as 0.65.0, then 0.68.0; renumbered when merged with main, which took 0.65.0 to 0.67.1 and then 0.68.0 to
+0.73.1.)**
+
+**A dispersion switch, three developer settings gone, the scene as data on by default, and the presets side by side**
+(you: "an overview/table of the differences between the render quality settings", "dispersion on/off", "the keep on
+move may be removed", "Fast normals ... just remove it", "Normal limit: same", "Scene as data -> normally on").
+
+**Dispersion**, a row of its own in Render settings › Paths and noise, ticked by default.
+- **Unticked:** every glass refracts at its index for the d line, as if its Abbe number were 0. No ray draws a
+  wavelength, so there are no colour fringes, and none of the colour noise they carry.
+- **Where it applies:** the camera's paths, every photon, and so the photon map, all from one place in the shade kernel
+  (`materials_pbr.js` `processMaterial_advanced`).
+- **A uniform, not a kernel option:** switching it compiles nothing.
+- **The picture only, as you chose:** the Optics page's trace always traces dispersion as each material sets it
+  (`optics/index.js`). A number measured there never depends on a render setting.
+- **Presets:** off is less than the full picture, so it reads **Custom** ("Dispersion off (every glass at n_d)
+  (Standard: as each glass sets it)"), and Standard or High ticks it again. Draft, Sketch and Optics leave it as set.
+- **Stored the other way round,** as `dispersionOff` with 0 meaning on. A uniform a bag leaves out reads 0
+  (tinywebgpu writes only what it is given into a zeroed buffer), so a GPU test naming only what it checks still
+  traces dispersion.
+- **Tested on the software GPU** (`dispersion.gpu.mjs`, lavapipe in the container), with a second pass switched off:
+  - a fresh ray on Abbe-28 glass draws no wavelength, reflects white and refracts along Snell at n_d;
+  - a ray already holding a wavelength keeps its tag and meets the glass at n_d.
+  - 48 checks pass. No picture was looked at.
+
+**Gone, with their rows** (a saved workspace that has them opens with a console line naming them ignored, once):
+- **Keep on move** (`moveAverages`): a reset always restarts the picture. 0, the restart, was already its default.
+- **Fast Normals** (`fastnormals`): the SDF's own normal is always used where it gives one, and the normal by
+  differences (three more looks at the scene) only where it gives none.
+  - On was the default. Off cost 4.3 times the frame (cost-sweep's first run, Pascal).
+  - What it diagnosed, a primitive's own normal, `shapes.test.mjs` checks against the gradient.
+  - The `fastnormals 0` row left cost-sweep.
+- **Normal Limit** (`normallimit`): add_new's backface test keeps its default of 1 as a constant. At 1 no unit or zero
+  normal fails it, only a NaN one, as before. Read in code: no picture changes.
+
+**The scene as data is on by default** (`sceneData` 1): an edit that adds no code writes a buffer instead of compiling.
+- **What it costs is the editing build's.** Measured on your Pascal (Tests › overhead, 0.22.19), the march as data was
+  1.4 to 8.6 times codegen's on those rows.
+- **A still picture is the bake's either way:** the bake compiles codegen's text with its values constants, and swaps it
+  in once the edits stop.
+- **On a device with 8 storage bindings a stage it stays codegen,** as before.
+- **Your own workspace keeps the 0 it saved,** as with the bake in 0.35.0. Tick it once, or use Developer › Reset.
+
+**The presets, side by side,** in the help (Render settings and saving pictures, *Quality*): what each traces, and why
+Draft can be little faster than Standard. Read in code, not measured:
+- Draft leaves out only the camera's bounce light. It keeps the sun's and the lights' photons, the photon map's second
+  chain of iterations, and Standard's 24 wavefront iterations a sample (`raytrace_main.js`; the mode is never read there).
+- What those cost was measured once elsewhere. On dichroics (Ampere, 0.61.2), the lights' rays alone were 65.7 % of a
+  sample.
+
+**Tests › render-modes-cost** (never run yet):
+- Two more rows: Draft without the photon map, and Draft without the lights' rays.
+- Every row now with the photon map on, as the page traces. Every other bench row still starts with it off.
+
+**What to look at:**
+- **A prism or dichroic scene,** Dispersion unticked: refracted light white, no fringes, the colour noise in glass gone.
+  The Quality line reads Custom. Ticked, or Standard chosen: as before.
+- **Render settings:** no Keep on move in Paths and noise. With Developer on, no Fast Normals or Normal Limit in Ray
+  marching.
+- **The console on the first load:** the removed settings named as ignored, if your workspace had them.
+- **The scene as data:** on in a new workspace (Developer › Performance); a structural edit shows without a compile.
+- **Tests › render-modes-cost,** on a scene where Draft feels no faster than Standard. Paste the report: its rows say
+  how much of a Draft sample is the photons'.
 ## 0.73.1 — 2026-10-21
 
 **The README brought up to date, with its pictures, and the site at shadytracer.com.** The user believed the README

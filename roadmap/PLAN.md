@@ -290,7 +290,7 @@ reflections, and illuminance measured on surfaces.
 and `emitters` and `lt` held their means through it -- `lib/pathtracer/README.md` § *Units*,
 TESTING.md); the **display**, looked at on hardware (tone curves, GPU auto-exposure, compensation,
 meter / lock; README § *Units*); the **material review**, verified (below); and along the way `spp`
-removed, `moveAverages` (a window kept through a reset), and a reset that replaces the picture
+removed, `moveAverages` (a window kept through a reset; itself removed in 0.74.0), and a reset that replaces the picture
 instead of averaging into it.
 
 **Next, in this order** (agreed with the user; pick up from 1):
@@ -534,7 +534,7 @@ code, a look each.
   the camera's own sum through a slab with air under it and one lying on the floor, blocks within 3.3 %; a collimated beam
   under a slab 1.0002 of its closed form), `sppm.gpu.mjs` (the whole renderer on lavapipe: the floor through a slab by the
   camera's own paths, the map, through a lens -- each within its error bar; Draft 0.948 of the full picture, the rest
-  its bounce light (0.73.2: measured, halving with the floor's albedo); the keep's planned fill and its rare overflow;
+  its bounce light (0.75.1: measured, halving with the floor's albedo); the keep's planned fill and its rare overflow;
   the idle skip), `build.test.mjs` (the idle skip's every rule). Bench `sppm`. Open: what it costs a sample on a card (a
   second wavefront chain) and its memory; the learned photon map credited by gathers; an orthographic camera and the
   illuminance view; dispersive glass, whose camera wavelength and photon wavelength are drawn apart (inferred).
