@@ -282,7 +282,7 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
     (six copies, the carved walls, the group cut as one shape, sdfResult); the data build the editing default since
     0.74.0, the bake still the still picture's; and what the document settles before any of the three sees it
     (model.js toTree): a hidden node pruned, a group's material put on each object under it that keeps none of its own
-    (`0.next`), so no build has a word for a group's material. Measured: ARCHITECTURE.md's bake run and data/codegen ratios,
+    (0.76.0), so no build has a word for a group's material. Measured: ARCHITECTURE.md's bake run and data/codegen ratios,
     PERFORMANCE.md's structural edit. *Read:* iq-distfunctions, wgsl-spec.
 
 **VII. Speed** (every number stamped; the review's ±20% drift between runs stated)

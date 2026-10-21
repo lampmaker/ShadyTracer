@@ -292,7 +292,8 @@ bump: minor
 - Below the bump line, the entry exactly as it will sit under `## x.y.z — date`: what changed and **what to look
   at**. No `## ` heading in it.
 - Wherever you would name your own version -- a comment, a test's description, a line in this file, the tutorial,
-  the note itself -- write the placeholder `0.next`. Written in backticks like that, it is only its name and stays.
+  the note itself -- write the placeholder `0.next`. The release makes it the version in backticks or not, but in this
+  file and in a note: there, in backticks, it is only its name and stays, so name your version without them.
 - Do not edit `VERSION` or `CHANGELOG.md`.
 
 The user releases when they choose, from VS Code (Terminal › Run Task › *Release dev → main*, or *Release: dry run*

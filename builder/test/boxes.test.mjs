@@ -214,7 +214,7 @@ await run()
     ok('...and a group above laying its material out straight (straightMaterial)', geometryKey(doc, inTw.id) !== k2)
     M.setStraightMaterial(doc, tw.id, false)
     ok('...back again, the key it had', geometryKey(doc, inTw.id) === k2)
-    /* A GROUP'S MATERIAL (model.js version 23, `0.next`) is what its objects wear: its relief their shape -- for the
+    /* A GROUP'S MATERIAL (model.js version 23, 0.76.0) is what its objects wear: its relief their shape -- for the
        object's key and the group's, which holds its subtree -- and not one keeping its own */
     M.addMaterial(doc, { id: 'paint' })
     const g = M.addGroup(doc, 'root', { id: 'g' })

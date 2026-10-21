@@ -2,7 +2,7 @@
 //
 // A LIBRARY ITEM DROPPED ON THE TREE (builder/tree.js dropAsset, acceptLibrary), headless, over the real
 // tree, model and project with a stand-in builder: a material dropped on an object is used by it, on a
-// group the group's, worn by every object in it but its light (`0.next`), and one then dropped on an object in it that
+// group the group's, worn by every object in it but its light (0.76.0), and one then dropped on an object in it that
 // object's own; a node dropped on an object goes in after it, on a group into
 // it; a node dropped on the picture stands on the point hit (the host picks it; given here); a drop through
 // the DOM -- dragover, drop on a row -- takes the same path; and a drag the tree did not start from the
@@ -52,7 +52,7 @@ let r = await p.evaluate(() => {
 })
 ok('a material dropped on an object is used by it', r.label === 'gold' && r.metallic > 0.5, JSON.stringify(r))
 ok('...and by nothing else', r.b == null, JSON.stringify(r))
-/* ON A GROUP (`0.next`, model.js version 23): the group's material, which every object in it wears over its own --
+/* ON A GROUP (0.76.0, model.js version 23): the group's material, which every object in it wears over its own --
    their own kept underneath -- and one dropped on an object in it then that object's own, the others still the group's */
 r = await p.evaluate(() => {
     const { M, tree, BUILDER, material } = CHECK
@@ -139,7 +139,7 @@ ok('a drag the library did not start is left to the widget', r.ignored, JSON.str
 ok('a library drag over a row is accepted and the row marked', r.accepted && r.marked, JSON.stringify(r))
 ok('dropped on the row: the material is on that object, and the mark gone', r.b === 'gold' && r.cleared, JSON.stringify(r))
 
-/* A MATERIAL ROW OF THE TREE ITSELF dragged onto a shape's or a group's row (`0.next`, tree.js wear): TreeView keeps a
+/* A MATERIAL ROW OF THE TREE ITSELF dragged onto a shape's or a group's row (0.76.0, tree.js wear): TreeView keeps a
    material row among Materials, so the tree lets the drop through and takes it -- as a Library material dropped there */
 const rowDrag = (from, to) => p.evaluate(([from, to]) => {
     const { M, BUILDER } = CHECK

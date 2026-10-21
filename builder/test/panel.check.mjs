@@ -107,7 +107,7 @@ ok('setting the group\'s blend', await set('blend', 0.2) === 'set')
 s = await state()
 ok('...is live (the group combines: one child subtracts)', s.g === 0.2 && s.live.at(-1) === 'g.blend' && s.structure === before.structure, JSON.stringify(s))
 
-/* A GROUP'S MATERIAL (model.js version 23, `0.next`): chosen in the group's panel, a compile and an undo step; an object
+/* A GROUP'S MATERIAL (model.js version 23, 0.76.0): chosen in the group's panel, a compile and an undo step; an object
    in it then shows the group's, read-only, and "own material" -- checked, its own choice again; (each its own) back */
 const mat = () => p.evaluate(() => {
     const n = id => CHECK.M.find(CHECK.doc, id).node
