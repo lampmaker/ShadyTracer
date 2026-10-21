@@ -2,7 +2,7 @@
   "format": "raytracer-scene",
   "version": 23,
   "title": "Modifiers",
-  "nextId": 37,
+  "nextId": 42,
   "unit": "mm",
   "materials": [
     {
@@ -451,6 +451,29 @@
         "size"
       ],
       "builtin": "relief@1"
+    },
+    {
+      "id": "b38",
+      "label": "circular array",
+      "kind": "group",
+      "code": "// Circular array: \"count\" copies of the children around this group's z axis, 360 / count\n// degrees apart, the first where they are (turn the group for another axis). A child off the\n// axis is drawn count times; one across it, or copies that overlap, make one merged shape --\n// a true union, the least distance of the copies, so a ring of overlapping glass is one\n// glass with no faces inside it. Normals stay analytic, each turned with its copy.\n// COST: every copy is evaluated, count times the children per step, which is right whatever\n// they are. \"reach\" makes it cheaper when each copy stays within that many slices either side\n// of its own (a slice is 360 / count degrees, the first centred on this group's +x; 0: inside\n// its own slice, as a bolt circle's bolts or a gear's teeth -- so put the children on +x, off\n// the axis): then only the copy nearest the point and reach + 1 either side are evaluated,\n// 2 reach + 3 of them, and the rest bounded -- a slice away at least, and no nearer than the\n// farthest evaluated less 2 x the distance from the axis, the farthest a turn moves a point.\n// A copy reaching farther than \"reach\" says is drawn wrong. With 2 reach + 3 count or more,\n// every copy is evaluated: so at 32, always.\nlet n = u32(clamp(round(count), 1.0, 64.0));\nlet slice = 6.2831853 / f32(n);\nlet side = u32(clamp(round(reach), 0.0, 32.0)) + 1u;      // evaluated either side of the nearest\nlet every = 2u * side + 1u >= n;\nlet rho = length(p.xy);\nlet ang = select(atan2(p.y, p.x), 0.0, rho == 0.0);         // the point's angle (atan2(0, 0) is no number)\nlet first = select(i32(round(ang / slice)) - i32(side), 0, every);   // the nearest less side, or copy 0\nlet xfm = XF_M;\nXF_SUB += 1u;                        // the copies' own Hits: no local point recorded in them\nvar U = emptyHit(r);\nvar far = -1.0e30;                   // the farthest copy evaluated\nvar won = 0.0;                       // ...and the nearest's angle\nfor (var i = 0u; i < select(2u * side + 1u, n, every); i = i + 1u) {\n    let t = f32(first + i32(i)) * slice;\n    let c = cos(t); let s = sin(t);\n    XF_M = xfm * mat3x3<f32>(c, s, 0.0, -s, c, 0.0, 0.0, 0.0, 1.0);    // the copy's frame, turned by t\n    let H = children(emptyHit(r), VEC3(c * p.x + s * p.y, c * p.y - s * p.x, p.z));\n    far = max(far, H.s.w);\n    if (H.s.w < U.s.w) { U = H; won = t; }                             // the union: the least\n}\nXF_M = xfm;\nXF_SUB -= 1u;\nif (!every) {                        // the rest, bounded (their field no steeper than 1, as a shape's)\n    let d = rho * XF_S;              // the distance from the axis in world units, as the Hit's\n    U.s.w = min(U.s.w, max(d * sin(slice), far - 2.0 * d));\n}\nif (LOCAL_CAPTURE) {                 // a material's local point or the pick: the copy that won once more,\n    let c = cos(won); let s = sin(won);                                // straight into a copy of C, so\n    XF_M = xfm * mat3x3<f32>(c, s, 0.0, -s, c, 0.0, 0.0, 0.0, 1.0);    // what is recorded is its own\n    _ = children(C, VEC3(c * p.x + s * p.y, c * p.y - s * p.x, p.z));\n    XF_M = xfm;\n    XF_SUB += 1u;                    // ...and the Hit folded as always, recording nothing more\n}\nC = fold(C, U.s, U.m);\nif (LOCAL_CAPTURE) { XF_SUB -= 1u; }",
+      "params": {
+        "count": 6,
+        "reach": 32
+      },
+      "ranges": {
+        "count": {
+          "min": 1,
+          "max": 64,
+          "step": 1
+        },
+        "reach": {
+          "min": 0,
+          "max": 32,
+          "step": 1
+        }
+      },
+      "builtin": "circular@1"
     }
   ],
   "root": {
@@ -970,6 +993,115 @@
           "size": 8
         },
         "block": "b35"
+      },
+      {
+        "id": "n37",
+        "kind": "group",
+        "label": "circular array",
+        "enabled": true,
+        "blend": 0,
+        "transform": {
+          "pos": {
+            "x": -45,
+            "y": -150,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "children": [
+          {
+            "id": "n39",
+            "kind": "object",
+            "type": "code",
+            "label": "sphere",
+            "enabled": true,
+            "transform": {
+              "pos": {
+                "x": 24,
+                "y": 0,
+                "z": 7
+              },
+              "rot": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "scale": 1
+            },
+            "material": "m5",
+            "params": {
+              "radius": 7
+            },
+            "block": "b18"
+          }
+        ],
+        "params": {
+          "count": 8,
+          "reach": 32
+        },
+        "block": "b38"
+      },
+      {
+        "id": "n40",
+        "kind": "group",
+        "label": "circular array, merged",
+        "enabled": true,
+        "blend": 0,
+        "transform": {
+          "pos": {
+            "x": 45,
+            "y": -150,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "children": [
+          {
+            "id": "n41",
+            "kind": "object",
+            "type": "code",
+            "label": "box",
+            "enabled": true,
+            "transform": {
+              "pos": {
+                "x": 6,
+                "y": 0,
+                "z": 8
+              },
+              "rot": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "scale": 1
+            },
+            "material": "m7",
+            "params": {
+              "size": {
+                "x": 18,
+                "y": 6,
+                "z": 8
+              },
+              "rounding": 1
+            },
+            "block": "b11"
+          }
+        ],
+        "params": {
+          "count": 12,
+          "reach": 32
+        },
+        "block": "b38"
       }
     ]
   },
@@ -996,15 +1128,15 @@
       "mode": "orbit",
       "camtype": 0,
       "fov": 40,
-      "dimensions": 520,
+      "dimensions": 620,
       "target": [
         0,
-        0,
+        -50,
         20
       ],
       "azimuth": -75,
       "elevation": 55,
-      "distance": 520,
+      "distance": 620,
       "up": [
         0,
         0,

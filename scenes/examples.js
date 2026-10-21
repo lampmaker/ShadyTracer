@@ -28,7 +28,7 @@ export const EXAMPLES = [
   "title": "Modifiers",
   "audience": "Modelling and rendering",
   "group": "Shapes",
-  "description": "Twist, bend, repeat, mirror, round, shell, displace and relief, each on a plain shape"
+  "description": "Twist, bend, repeat, mirror, circular array, round, shell, displace and relief, each on a plain shape"
  },
  {
   "file": "from-points.json",
