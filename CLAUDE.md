@@ -90,6 +90,7 @@ node lib/pathtracer/core/test/sppm.gpu.mjs        # ...on Dawn: the gates' WGSL 
 node lib/pathtracer/core/test/haze.test.mjs       # dust in the air (0.62.0, a haze box), no GPU: a leg's stretch in a turned box and the radius, the collision ("move back YY": 1 - exp(-sigma L), the truncated exponential), Henyey-Greenstein, the uniforms in metres and off in Sketch and Optics, a photon's connection from the air against a beam's closed form and a pinhole's own integral (dist / z^3), light sampling from the air by MIS, an albedo-1 slab walked through
 node lib/pathtracer/core/test/haze.gpu.mjs        # ...on Dawn: the WGSL against the JS, the rays a collision leaves alone, a shadow ray's haze; the whole renderer: a furnace (albedo 1 reads 1, 0.5 does not), sunlit dust in Draft against the integral, light sampling off against on, a box inside glass changing nothing, dust under a slab with the sun's photons and the photon map on and off, a mirror's photons connecting from the air, the illuminance view's first leg clear (optional: webgpu + lavapipe)
 node lib/pathtracer/core/test/coating.gpu.mjs     # a coating through the shade kernel's own BSDF on Dawn: its R per channel the JS mirror's, reflected R and passed 1 - R per channel whatever the pick, a one-channel ray's weight 1; AR, bare, every face, TIR, an opaque base (optional: webgpu + lavapipe)
+node lib/pathtracer/core/test/diffuse.gpu.mjs    # Max Diffuse Bounces (0.75.0) on Dawn: a hit through prog_shade's phases at every cap -- a camera path with one left sampling light and going on, one with none (capped) sampling none, ended by an EV_EVAL draw and going on past a mirror or a near-mirror unshared by MIS; a light's photon connecting only with one left and ending without; the Optics page's rays never cut; the march steps kept; the whole renderer on a floor and a wall: 0 bounces Draft's picture, light sampling off as on at 0 and 1, each bounce more brighter (optional: webgpu + lavapipe)
 node lib/pathtracer/test/runwatch.test.mjs         # a test run that ends on a lost GPU or a sample that never returns: the rows kept, the row it stopped in with its samples, why, nothing on the GPU put back after a loss; a row predicted to compile for minutes not run; the in-flight stretch pinned only under the engine's split; every test camera, and every row's, naming its target (0.62.1: one without orbits the view's own)
 node lib/pathtracer/test/develop.test.mjs          # a save's picture kept as light: where a develop starts (the view's exposure, metered or manual), its uniforms, the preview's box, the meter, the darkroom on a stand-in device
 node lib/pathtracer/test/samples.test.mjs          # the offscreen sample loop: one in flight as it always was, two never more, one sample the same either way, nothing left running however it ends
@@ -114,6 +115,7 @@ node test/diagnose.check.mjs    # stale cached files found and reloaded fresh, h
 node test/filename.test.mjs     # a saved picture's or video's name: the time it was saved, local, sortable, no `:`; twice in a second told apart
 node test/funding.test.mjs      # where a tip goes: .github/FUNDING.yml's account, the page's Help row and its Sponsor link at the bar's right end, and the README, one Sponsors page
 node test/version.test.mjs      # VERSION and CHANGELOG.md agree; the revision read from .git, or the REVISION file a Pages deploy writes, every failure null; a file's `app` stamp never read into a document
+node test/release.test.mjs      # the release (release.mjs): a change note read or refused naming its file, the largest bump, one entry above the newest, `0.next` replaced as a version and nowhere else, a tutorial excerpt re-stamped only when the release alone moved it; this repository's notes parse and a `0.next` has a note; through real git: main merged into dev, dev and main pushed together, a refused push or a conflict moving neither, the checkout run from untouched
 node test/start.test.mjs        # the page's start when its scene will not compile: the empty scene instead, why, and the safe start (?safe, or a start that never finished), no GPU
 node library/test/panel.check.mjs # the Library panel: search, filters, tags, put in, keep, rename, remove, duplicate, edit, export, import, drag out (optional: playwright)
 node builder/test/drop.check.mjs # a library item dropped on the tree or the picture: materials onto objects, nodes placed (optional: playwright)
@@ -154,12 +156,17 @@ node builder/test/mesh.test.mjs
 node builder/test/print.test.mjs
 node builder/test/exportbox.test.mjs
 node builder/test/hazebox.test.mjs  # the haze box (version 22): one a scene, its settings checked, saved and loaded, an old file read; emitted as a comment, the scene's `haze` in the world through turned, scaled and arrayed groups, hidden with live visibility off not on; its outline, focus, stretch and registry rows
+node import/test/step.test.mjs      # the STEP reader against OpenCascade's own parts and the user's Onshape file in metres (import/test/fixtures, facts by make.py): Part 21 (a ';' in a string, comments, complex entities, escapes), every face's surface type, inside() at every point its classifier put in or out, the units (inches, metres, an angle in degrees), an assembly's placements, a torus face whose loop runs against ISO's rule settled by its neighbour; a file of surfaces and a B-spline face refused by name
+node import/test/stl.test.mjs       # binary and ASCII STL, welded, closed, turned to face out, a hole said; the fitters on surfaces given exactly; each fixture's mesh giving back the surfaces of OpenCascade's solid (holes as cylinders, fillets as tori, a chamfer a cone, the cup's circle of four faces one) and converting to its side of the surface off the mesh's band; a scan-like mesh found to fit nothing and refused by its size
+node import/test/csg.test.mjs       # a solid as a formula over its surfaces' half-spaces, as the builder's shapes and as the scene document codegen combines (docsdf.mjs, a plain group combined as one of a CSG group's shapes and else folded by the nearest boundary, as codegen does): on OpenCascade's side at every point, never more than its distance to the surface (a bound, safe to march), nowhere far from it near zero (no seam inside, no skin over an opening), as small as a hand would write (the plate a box, four holes and a pocket; the lens two spheres and a cylinder); the user's Onshape part and the cup made like it: its circle of four faces with no separator, its rounded squares one prism each, no plane at an angle the part has none; the same every time; Euler angles through the builder's own matrix
+node import/test/import.gpu.mjs     # the import's own WGSL run: each fixture part marched on Dawn, codegen, as data and baked (the build the page shows once edits stop), against the conversion's formula -- where the rays hit, the normal there, into the solid OpenCascade's B-rep is; plain union groups put back caught (optional: webgpu + lavapipe)
+node import/test/import.test.mjs    # File > Import end to end through the real builder: an asset in mm pasted into mm and metre scenes the same size, its shapes the presets' blocks (the chamfer the cone with its own normal), the scene generating, an assembly one group of its parts, standing on the floor centred over the origin by its faces (an assembly whole) or where the file has it, the user's Onshape part 7 shapes in 2 groups on its circle, every group it makes one shape codegen combines (two unions intersected, a union as the part, a union cut away, written by hand), the STL the STEP's shapes, a B-spline solid and an open mesh refused by name
 node builder/test/params.test.mjs   # every scene's parameters: each live one writes a uniform the scene declares; a material field only in the shader while in use (the colour depth) not declared at 0, its first use a compile through the real builder, then live
 node builder/test/scenedata.test.mjs # the scene as data: an edit that adds no code is the same text and other records, every scene; what is compiled as before; a twist's or a shell's children as data; the records' skips; the records read through their uniform copy in the plain walk, one text whatever their number; the data's revision a write
 node builder/test/dataapply.test.mjs # the builder with the scene as data: what compiles and what is written, live values, undo, the boxes -- over a stand-in renderer; every write followed by the records' uniform copy's
 node builder/test/plainshape.test.mjs # one plain shape, which codegen gives no box: every built-in closed-form shape recognised from its own code, anything more than that one call not, an outline not
 node builder/test/scenedata.gpu.mjs  # ...the loop computes what codegen computed, every modifier as data too, an array what its copies written out do, on a WebGPU in node (optional: npm i -g webgpu, and lavapipe; says so)
-node builder/test/csgshape.gpu.mjs   # a plain group as one of a CSG group's shapes (0.72.1): its children a union, not folded -- subtracted, intersected, the base, nested, an array's overlapping copies, turned and scaled, a hidden child, a light in it -- codegen and as data against the exact CSG value in JS; group code whose own children join, as data (optional: webgpu + lavapipe)
+node builder/test/csgshape.gpu.mjs   # a plain group as one of a CSG group's shapes (0.next): its children a union, not folded -- subtracted, intersected, the base, nested, an array's overlapping copies, turned and scaled, a hidden child, a light in it -- codegen and as data against the exact CSG value in JS; group code whose own children join, as data (optional: webgpu + lavapipe)
 node builder/test/units.gpu.mjs      # the engine in metres on a WebGPU in node: scenes in mm against the same re-authored in m, plainly and as data; march, occlusion and shadow rays end the same (optional: webgpu + lavapipe)
 node builder/test/boxes.test.mjs    # the measured bounding boxes, against a sampler of exact shapes -- and the culling's: every shape inside its padded box, a copy moved off its original too; a part only the first coarse lattice finds kept, a part none finds leaving its group no culling box -- through the bench's view of the copies' boxes too (boxesFor `same`), and a store that cannot say what is missing refused
 node builder/test/relief.test.mjs   # the relief in a shell: its code mirrored, a lower bound on the real noise, the step bound in the band, what group code is told per parent; a material's relief and the modifier through a smooth blend; the normal across a band's edge (0.71.1): the library's stucco cut from its plaster, the line as it was, none now
@@ -188,6 +195,7 @@ node builder/test/bake.gpu.mjs    # ...on Dawn (Tint): every bench scene's baked
 node bench/test/builds.test.mjs   # which build renders fastest: each bench scene as codegen, baked, baked with the step cache filled once (own cell), as data, and that with the cache; the Menger cubes without the cache rows; one camera and boxes a scene, each row compiled
 node bench/test/boxcost.test.mjs  # what the box tests cost: four scenes with boxes off (no box test in the text), boxes that never cull (every box declared written known and holding everything, never culled through cullDist in f32), and measured -- one scene object for the last two; boxes on the dear nodes only, a box test for exactly those, the others one plain shape -- the builder's text, the two before it every box's; the drift row
 node bench/test/dichroics.test.mjs # a glass-and-light scene's time (Tests > dichroics): the frozen dichroics baked under its studio light, its own light's photons on every row, one change a row (the map off, NEE off, the lights' rays off, two sizes, the step cache, the editing build), the batches its note reads them by, the camera on the plates and the prism
+node bench/test/imported.test.mjs  # what an imported part costs (Tests > imported): the Imported parts example frozen, row 2 its rounded boxes and lens one preset each (the same solid, at points through them) and nothing else changed, row 3 the floor alone
 node tools/test/timeline.check.mjs  # the Timeline panel over a stand-in renderer: + track, the frame guide, RECORD's verbs, a GIF recorded and read back by Chromium; each scene its own timeline (0.67.0): kept, another shown whole, the encoder's settings the browser's, one shown while recording, a file loaded, a reload, the old timeline taken once (optional: playwright)
 node lib/timeline/test/gif.test.mjs                # the GIF writer (lib/timeline, CODE_WOOD's): read back exactly by its own decoder, Pillow and ffmpeg where installed, the centisecond clock
 node help/test/markdown.test.mjs                  # the help's markdown and links: each construct, nothing in a page put into the panel as HTML or a link it would not follow, anchors, a widget's block
@@ -237,8 +245,10 @@ someone set `guide != 0`. If you add a mode, find a way to execute it.
 
 - Comments explain **why**, including what went wrong before. Match the density around you.
 - Commit messages are prose that says what was wrong and what the fix rests on.
-- Work on a branch, never commit to `main` directly, and only open a PR if asked.
-- `main` is what GitHub Pages serves (`.github/workflows/pages.yml`): a merge is a release.
+- Work on a branch, never commit to `main` or `dev` directly, and only open a PR if asked. A PR targets `dev`.
+- `main` is what GitHub Pages serves (`.github/workflows/pages.yml`), and only a release moves it: the user runs
+  `node release.mjs`, which makes `dev`'s change notes a version and pushes `dev` to `main` (*Versions*). A merge into
+  `dev` is not deployed.
 - CI (`.github/workflows/test.yml`) runs `check-shaders.mjs` and every `*.test.mjs` above on each
   push and PR. It is no substitute for running them yourself before a push.
 
@@ -265,15 +275,36 @@ tutorial, in the same PR**:
 ## Versions
 
 The application has a version: `VERSION` in `version.js`, semver 0.x, with one entry
-per version in `CHANGELOG.md`, newest first. **Every PR that changes the application
-raises it, in the same PR, with its entry.**
-- **MINOR** for a feature, or for any change to a file format's `version` (scene, project, workspace,
-  library).
-- **PATCH** for a fix, a document or a test.
-- If `main` took that number first, take the next one when merging `main` in.
+per version in `CHANGELOG.md`, newest first. **A PR never picks the number**: two branches in parallel both took the
+next one, and the one merged second renumbered everything by hand. Instead, **every PR that changes the application
+adds a change note**, `changes/<slug>.md` (a slug saying what the change is, so no two branches share one):
 
-The entry says what changed and **what to look at**. `version.test.mjs` fails when the code and the
-changelog disagree.
+```
+bump: minor
+
+**What changed, in a sentence.** The rest of the entry...
+
+**What to look at:** ...
+```
+
+- `bump: minor` for a feature, or for any change to a file format's `version` (scene, project, workspace,
+  library). `bump: patch` for a fix, a document or a test.
+- Below the bump line, the entry exactly as it will sit under `## x.y.z — date`: what changed and **what to look
+  at**. No `## ` heading in it.
+- Wherever you would name your own version -- a comment, a test's description, a line in this file, the tutorial,
+  the note itself -- write the placeholder `0.next`. Written in backticks like that, it is only its name and stays.
+- Do not edit `VERSION` or `CHANGELOG.md`.
+
+The user releases when they choose, from VS Code (Terminal › Run Task › *Release dev → main*, or *Release: dry run*
+first), or `node release.mjs`. It takes `origin`'s `dev` and merges `main` into it if `main` has commits `dev`
+lacks. The largest bump among the notes sets the version. The notes become one entry and `0.next` becomes the
+number. A tutorial excerpt that only the number moved is re-stamped. The notes are deleted, and the result is
+pushed to `dev` and `main` together. Several PRs merged between releases share one version. `release.mjs`'s header
+has the details; `release.test.mjs` fails a PR whose note does not parse, or that writes `0.next` with no note, and
+`version.test.mjs` fails when the code and the changelog disagree.
+
+A branch written before this rule converts once: its CHANGELOG entry into a note, `version.js` and `CHANGELOG.md`
+taken from `dev`, and `0.next` for its own number.
 
 The exact code is the git revision, which the page reads from `.git` (on GitHub Pages, from the `REVISION`
 file the deploy writes) and shows beside the version. So a

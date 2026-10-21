@@ -141,7 +141,7 @@ window never held steady state, so the number is not one. Raise `secs`.
 | `haze` | image | Whether dust in the air (0.62.0, a haze box: `core/haze.js`) conserves energy: the furnace's white sphere inside a box of albedo-1 dust, mean free path 1.5 m, ratio 1 at g 0.6, 0 and -0.5 and with NEE off; no box and a hidden box (density 0, the same kernels) 1 too, their `secs` against the dusty rows what the haze costs. Two controls, each well below 1: a black sphere without a box (the picture holds the furnace) and dust of albedo 0.5 (the dust does something). On Dawn over lavapipe its own furnace read 0.997-1.002 (`haze.gpu.mjs`); this is the card's compiler on the same arithmetic. | **answered** by the third press (0.62.2 · 565fdcb, Pascal, 819x1031, 32 samples): against no box (999.768) the hidden box +0.0002 %, the dust with NEE off +0.002 % (its paths bring back the sky or nothing, so this one is nearly noise-free), with NEE on +0.024 % at g 0.6, +0.015 % at 0, −0.010 % at −0.5 — about 3, 2 and 1 of relSE/√pixels (0.008 %), an estimate that takes the pixels as independent; the controls 0.152 and 0.4315. Wall clock: the haze's code alone 1.2 s as no box, the dust 1.5–1.6 s, NEE off 0.7 s. Before it: the first press (2026-10-16, 0.62.0) measured sky: every row 1.0000, noise 0, its camera orbiting the view's own target (fixed in 0.62.1: every test camera names its target). The second (0.62.1, Pascal, 819x1031): controls 0.152 and 0.431; no box 0.9998, hidden 0.9998, the dust 0.9990-0.9994 — 4e-4 of the light lost even with NEE off, a collision placed inside the sphere on a leg that had escaped to the 400 m radius (fixed in 0.62.2: drawn as the leg starts; `haze.gpu.mjs` holds it). |
 | `bsdf-parity` | image | Whether eval, pdf and sampling are one BSDF: each material seen obliquely with NEE on and off must agree. | **answered — they agree** (below). |
 | `frame-cost` | cost | What the f32 compare-and-swap frame buffer costs. | open — needs a real card. |
-| `render-modes-cost` | cost | What the Quality presets cost on the scene and view you have: Standard, High quality, Draft, Sketch, Optics, and Draft without its seek rays. | open — built 2026-10-01, never pressed. |
+| `render-modes-cost` | cost | What the Quality presets cost on the scene and view you have: Standard, High quality, Draft, Sketch, Optics, and Draft without its seek rays; since 0.74.0 Draft without the photon map and without the lights' rays too (Draft keeps both, and Standard's iterations a sample), all with the photon map on, as the page traces. | open — built 2026-10-01, never pressed. |
 | `rr-bias` | image | Whether Russian roulette is biased. | **answered — it is not.** Kept as a regression check. |
 | `nee` | image | Whether next-event estimation is unbiased and cuts noise. | **partly answered.** Clean and 3.8x quieter with sun and sky; the +76% at 20x sun was read in a scene carrying its own emissive light, which light sampling does not cover. |
 | `nee-split` | image | Which half of light sampling is wrong, disc or sky. | open — one press. |
@@ -410,7 +410,7 @@ driver there is -- lavapipe on the CPU in a container. It says what it computes,
 predicts nothing about a card. Without the package or a device it says so and passes.
 
 That one holds the two paths to each other, so a mistake both make passes it. `node builder/test/csgshape.gpu.mjs`
-(0.72.1) holds both to the answer: documents with a plain group as one of a CSG group's shapes, the scene's SDF
+(0.next) holds both to the answer: documents with a plain group as one of a CSG group's shapes, the scene's SDF
 evaluated on Dawn at 4096 points around each, codegen with visibility off and live and as data, against the exact CSG
 value worked out in JS from the shapes' own distances (spheres and boxes, and a mirror's and a round's code). It is
 how a folded group was found to be no union where its children overlap, and it failed on that code (29 of its 36 rows)
@@ -720,7 +720,8 @@ justified by (24→14 iterations, ~95→~170 samples/s), which was taken by lowe
 and so could not separate the two. `budget-cost` is the case that settles it, and it has not
 been run yet. The mechanism stays on meanwhile — `budget-image` says it is at worst harmless.
 
-**`fastnormals` is not optional.** Turning it off costs 4.3× the entire frame.
+**`fastnormals` is not optional.** Turning it off costs 4.3× the entire frame. (So it went, in 0.74.0: the SDF's
+own normal is always used where it gives one, and the row is no longer in `cost-sweep`.)
 
 **Do not read the `autobudget off` row.** It ran immediately after `spp 2`, and
 `R.ensureBuffers` never shrinks (deliberately — so dragging a window smaller does not churn

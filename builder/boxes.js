@@ -148,7 +148,7 @@ export function geometryKey(doc, id) {
     return JSON.stringify([self, ...chain.slice(1).filter(n => n !== doc.root).map(above), doc.functions])
 }
 /** Does a group fold a shape of its own -- group code, or a CSG combine -- and so tag points of its own? NOT a plain
- *  group that is one of a CSG group's shapes, which codegen combines too since 0.72.1 (combinedGroups): its union at
+ *  group that is one of a CSG group's shapes, which codegen combines too since 0.next (combinedGroups): its union at
  *  blend 0 is exactly one of its children's values (csgUnion's select), and fold tags a point only for a STRICTLY
  *  nearer surface (scene_api.js, HIT_TAG_D), so the tag stays that child's -- read in code, not measured: its points
  *  are its children's, its box their boxes (get). With a blend it is a CSG group, and measured. */

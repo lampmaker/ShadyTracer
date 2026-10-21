@@ -63,7 +63,7 @@ function uniformBag(scene) {
 }
 const RAY_F = RAY_BYTES / 4, HIT_F = SHADE_ITEM_BYTES / 4
 /* THE RAYS as the engine's struct (tracebasics.js Ray, RAY_BYTES): pos, dir, radiance, beta -- vec3s, 16 bytes apart --
-   then steps, n, ltot, bounces, state, pix, sunmis, tag, tmax, prevPdf, vtxLtot, ltMis from byte 60, where beta's twelve
+   then counts (the march steps; the diffuse bounces above them, 0.75.0), n, ltot, bounces, state, pix, sunmis, tag, tmax, prevPdf, vtxLtot, ltMis from byte 60, where beta's twelve
    bytes end (a u32's alignment is 4: WGSL puts it there, not at 64). THE HITS as the shade queue holds them (scene_api.js
    ShadeItem, SHADE_ITEM_BYTES): the Hit first, the surface kernel's answers after it. (This layout note lived in
    exact.gpu.mjs until exact hits went, 0.41.0; the other GPU checks cite it here.) */

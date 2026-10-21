@@ -3,11 +3,12 @@
 One entry per version, newest first. The version is `VERSION` in `version.js` beside this file, and
 `test/version.test.mjs` holds the two to each other: the top entry is the version the code says it is.
 
-**How a version is raised** (CLAUDE.md, *Versions*): every PR that changes the application raises it in
-`version.js` and adds its entry here, in the same PR.
+**How a version is raised** (CLAUDE.md, *Versions*): a PR never edits this file or `version.js`. It merges into
+`dev` with a change note, `changes/<slug>.md`: a `bump:` line, then its entry. The user's release
+(`node release.mjs`) turns the notes on `dev` into one entry here, sets the version, and pushes `dev` to `main`.
 - **Semver 0.x.** MINOR (0.**2**.0) for a feature, or for any change to a file format (a scene, project,
-  workspace or library file's `version`). PATCH (0.1.**1**) for a fix, a document, or a test.
-- **If `main` took the number first**, take the next one when merging `main` in.
+  workspace or library file's `version`). PATCH (0.1.**1**) for a fix, a document, or a test. The largest bump
+  among a release's notes wins.
 
 The exact code is the git revision. The page reads it live from `.git` and shows it beside the version,
 for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
@@ -15,42 +16,366 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
-## 0.72.1 — 2026-10-21
+## 0.75.2 — 2026-10-21
 
-**A group used as one shape of a join is one shape: its children are a union.** A group whose children all join by
-union is a plain group, and its children went into the scene one by one (`scene_api.js fold`). That keeps the nearest
-surface by size, inside or out. It is what the march needs of separate objects, but it is not a union's signed
-distance: at a point 0.6 inside one shape and 0.004 outside another that overlaps it, fold says +0.004, "outside".
-When such a group is one of a CSG group's shapes (subtracted, intersected, or the base of a cut), the CSG group reads
-that value as its operand, so wherever the group's children overlap it cut or kept the wrong part. Found by the STEP/STL
-import's GPU check (2026-10-21): its rounded box let rays run through its own edges, 47 of 256 hits millimetres off.
-Measured here on Dawn over lavapipe (`builder/test/csgshape.gpu.mjs`, new; arithmetic, not speed): a box less a group of
-two overlapping spheres was wrong at 94 of 4096 points, by up to 0.59, 64 of them on the wrong side of the surface,
-and every case the test makes was wrong the same way in codegen and as data. Now none is.
-- **Such a group's children are combined first** (`codegen.js combinedGroups`), each child on its own and joined by a
-  hard union (`csgUnion` at the group's blend, which is 0), exactly as a union group with a blend of 0 is. Plain groups
-  inside it are combined the same way. **An array** that is one of the shapes combines its copies too: one combine
-  around its loop, where each copy had been folded on its own and the copies' overlaps were wrong as well.
-- **The scene as data** (`scenedata.js`) does the same: a CSG record, a union JOIN after each child, an END. An array
-  gets a CSG record around it.
-- **Fixed alongside, in the scene as data only** (a developer setting, off by default): a twist, mirror, round or shell
-  whose own children join (a mirror of a box less a sphere) was walked as records that folded its children in one by
-  one. Codegen combined them; the records drew the box and the sphere. Such a group is now compiled as before.
-- **Not changed:** group code that is one of a CSG group's shapes (a mirror or a shell, say) is still handed its
-  children as they fold. The top level, and a plain group outside any CSG group, still fold each child into the scene
-  on its own, which keeps each child's material and the medium inside exact.
-- **The golden shaders moved for four documents**: test/fixtures/scenes/OpticsBench.json and OpticsBench2.json and
-  their bench copies. Each pillar's cylinder and shell, and OpticsBench2's laser rig under its lens holder, are such
-  groups. Checked against the old codegen before refreezing: no line left any text (whitespace aside), and the only
-  lines added are those groups' combines and a blend uniform at 0 each. The tags did not move.
-- **Its cost is not measured.** Each child of such a group now has an empty Hit of its own and a `csgUnion`, as in any
-  CSG group (read in code). How much that adds per step on a card is a question for Tests on hardware.
+**Pull requests merge into `dev`; a release you run moves `main`.** Every PR used to raise `VERSION` and add the
+changelog's top entry itself, and name its version in comments, tests and the tutorial. Two branches in parallel
+both took the next number, and the one merged second renumbered all of that by hand (5e068dc, eecc5ce). Now a PR
+never picks the number: it adds a change note, `changes/<slug>.md` (a `bump: minor` or `bump: patch` line, then its
+entry), and writes the placeholder `0.next` wherever it would name its version. Notes have names of their own and
+the placeholder is the same on every branch, so branches no longer conflict over the version.
+- **`release.mjs`** (VS Code: Terminal › Run Task › *Release dev → main*, or *Release: dry run*). It works in a
+  temporary worktree of `origin`'s `dev`, so the checkout it is run from is never touched:
+  - it merges `main` in when `main` has commits `dev` lacks, and stops on a conflict, naming the files;
+  - the largest bump among the notes gives the version, and the notes become one changelog entry;
+  - the placeholder becomes the number, except in backticks, where it is only its name;
+  - a tutorial excerpt is re-stamped only when its stamp held before the number moved it;
+  - the notes are deleted, the result is checked as `version.test.mjs` checks it, and it asks before anything is
+    pushed;
+  - `dev` and `main` are pushed in one atomic push, so both move or neither does.
+- **`test/release.test.mjs`** (new): a note that does not parse, or a placeholder with no note, fails the PR that
+  brings it, not the release after the merge. It also runs the whole release through real git against a bare
+  repository: an upload on main merged in, two notes released as one version, a refused push and a conflict each
+  moving nothing.
+- **CLAUDE.md**, *Versions* and *Conventions*: the rule. `main` is what Pages serves, and only a release moves it, so
+  a merge into `dev` is not deployed.
+- **The tutorial:** `tutorial/stamp.mjs`'s `stampPage` takes an optional `should(attrs)`, so the release stamps only
+  the excerpts it moved. Its own command stamps as before.
 
-**What to look at:** a group of two overlapping cylinders, set to subtract from a box: the cut follows both cylinders,
-overlap and all, with no stray surface inside it. The same group intersected with the box keeps exactly the
-cylinders' union. OpticsBench and OpticsBench2 should look as they did: their groups are joined by union, and fold and
-a union differ only at points inside the shapes, so every surface seen from outside is where it was. If either renders
-noticeably slower, the extra Hits are the place to look.
+**What to look at:**
+- Once `dev` exists (made from `main`) and is the default branch, Terminal › Run Task › *Release: dry run* shows
+  the version now and the next patch, with this note and the entry it would write. Nothing is pushed.
+- *Release dev → main* asks, then pushes. The Actions tab shows the `pages` run on `main`, and the page's title shows
+  ShadyTracer 0.75.2 with main's hash: this note's own version, written as the placeholder.
+- If `main`'s protection refuses your push, the release prints GitHub's words, and neither branch has moved.
+
+## 0.75.1 — 2026-10-21
+
+**The photon map's GPU test now runs the same way every time it is given the same seed, and each tolerance is the error
+bar of what it compares.** The user ran `lib/pathtracer/core/test/sppm.gpu.mjs` four times on lavapipe (2026-10-21).
+The renderer code was the same in the last three, and a different check failed in two of them: the overflow, then the
+idle skip. Here a third one also failed once: Draft. None of the three was a fault in the renderer. No renderer code
+changed. The comments in `core/sppm.js` now say what the keep promises.
+- **Where the randomness came from** (measured here, on lavapipe):
+  - Every sample's seed is drawn from `Math.random` (`utilities.js` `seed_vec4u32`), and the test passed none.
+  - Rays take their places in the queues by `atomicAdd` and seed their random numbers by that place. lavapipe's
+    threads change that order from run to run.
+
+  With `Math.random` seeded alike, two runs differed from the first sample. With lavapipe single-threaded as well
+  (`LP_NUM_THREADS` 0 or 1), they were identical bit for bit. The test now fixes both: `SPPM_GPU_SEED` (1 unless set,
+  printed with the result) and `LP_NUM_THREADS=0` unless set. Seed 1, run four times, gave the same numbers to the
+  last digit. Single-threaded, a run takes about 58 s here instead of 111. That is lavapipe's time only, and says
+  nothing about a card.
+- **The overflow check bet on the last sample.** The stores' keep plans a sample to fill 85 % of the map's room, from
+  what the sample before asked. `raytrace_main.js` says so where it is chosen: "a sample asking more than the one
+  before can still overfill it, and is counted". It is a plan, not a guarantee. With room for 200 records, a sample's
+  kept count has an sd of 18 about a mean of 171 (measured, 2 × 200 samples). The headroom is about 1.6 sd, so one
+  sample in twenty overflowed, dropping 0.25 % of the stores. The check required the last sample to overflow by
+  nothing. It lost in the user's run 2 (219 kept) and in one of five runs here (206). It now reads every one of that
+  render's 384 samples and holds what the keep promises:
+  - each sample past the first keeps under 0.9;
+  - on average they keep the planned share, to 3 %;
+  - the stores dropped past the room are under 1 % of those kept;
+  - and, as before, the picture is the camera's own.
+- **Draft was held to the full picture, and it is 5 % under it.** Its camera paths end at the floor, so light that
+  reaches the floor under the slab by way of a second diffuse surface never enters it. The test's comment called the
+  gap "inferred: not separated", and the check, centred on 1 with a 5 % minimum, failed whenever the noise added to
+  the gap (0.9163 ± 0.0239 here). Measured: Draft is 0.9476 ± 0.0052 of the full map. With the floor's albedo halved
+  it is 0.9772 ± 0.0045: Draft halves (21198 → 10620 cd/m²) and so does the gap, as light that met two diffuse
+  surfaces does. So the gap is the bounce light, not an error in Draft. Draft is now held to that share of the full
+  map, within 3 sd: ±3 to 4 % around 0.948 in the runs here, where it was ±7 to 9 % around 1.
+- **The idle skip's check rested on a race.** R.trace reads the map's header back without awaiting it, and the trace
+  that had to be idle ran on that reading only if Dawn had delivered it before that trace began. Two 50 ms pauses were
+  there to give it time. Each trace now waits for its own reading. The check holds the exact sequence: the first trace
+  looking away runs the map, the next does not. The race is inferred, not shown: 32 instrumented rounds here, alone and
+  two at once, and every full run passed. What failed in the user's run 4 was not recorded. The detail line now names
+  every part.
+- **Max Diffuse Bounces' new check (0.75.0) made the same kind of bet.** It required the camera's own picture under
+  the cap to be below 1.04 of the full one. That fixed slack is about one standard error of the difference (two camera
+  renders of about 3 % each), and at one diffuse bounce nearly all the light is kept (0.9890 ± 0.040, seed 1). So
+  about one run in seven would fail (inferred from those errors). The check now allows three of their standard errors,
+  and its line prints the batch-means error.
+- **The error bars come from batch means:** the region's mean over each 16 samples, independent from one 16 to the
+  next. The pixels' spread used before was right for the camera's own paths, and 1.5 times too small for Draft and the
+  200-record map, whose pixels share photons.
+- **Checked here,** on 0.73.1: seeds 1 to 6 single-threaded and seed 7 twice with 4 threads, 19 of 19 checks each
+  time. On 0.75.0, whose Max Diffuse Bounces block adds four checks: seeds 1 to 4 single-threaded (the first six
+  renders the same as before, to the last digit) and seed 7 with 4 threads, 23 of 23 each time. The largest excursion
+  in any comparison was 2.39 sd (the threaded run's lens), against a tolerance of 3. Kept on average: 0.47 to 0.65 %
+  over the plan. Dropped: 0.23 to 0.47 % of the stores. At one diffuse bounce the camera's own picture read 0.9890 to
+  1.0213 of the full one.
+
+**What to look at:** nothing on screen: no renderer code changed. `prog_sppm` differs by a comment, so it compiles
+once more. On a run of `node lib/pathtracer/core/test/sppm.gpu.mjs`:
+- The last line names the seed. A failure is repeated with `SPPM_GPU_SEED=<it>`.
+- The keep's line: about 171 kept against 170 planned, and a few tenths of a percent dropped.
+
+**The tutorial:** `tutorial/review/affected.mjs` lists ch. 19 (photon mapping, about `sppm.js`) and ch. 33 (open
+problems, about `roadmap/PLAN.md`), and ch. 26 for a line of this file that only moved. In ch. 19, the keep's
+excerpt, section 5 and section 6's "a buffer that filled" were read: none says the keep guarantees room. Its excerpt
+of `fn sppmStore` takes in the comment above it, which now says the keep makes a full map "rare, not impossible". The
+words beside the excerpt describe the code alone, so it was re-read and stamped, and nothing else changed. Ch. 33
+does not quote the line of PLAN.md that changed.
+
+## 0.75.0 — 2026-10-21
+
+**(Built as 0.69.0; renumbered when merged with main, which took 0.69.0 to 0.73.1.)**
+
+**Max Diffuse Bounces** (you: "different # of bounces for diffuse and optical (mirror, transparent) materials"; the
+design you approved). It is a row in Render settings › Paths and noise, beside Max Bounces, 40 (all) by default.
+
+**What it counts.** Bounces between matte or glossy surfaces on light's way to the camera, counted as Max Bounces and
+Cycles count them: N bounces of indirect light, the last scatter into a light not one of them.
+- **0** is the direct light alone, but through lenses, mirrors and glass, caustics included: what Draft shows, done
+  exactly. **1** adds one bounce off a wall, and so on.
+- **A diffuse bounce** is Draft's own split: the diffuse base, gloss rough enough for a photon to connect through, and a
+  point in the dust.
+- **Not counted** (Max Bounces still caps them): mirrors, clear glass, dichroics, near-mirror gloss and frosted glass.
+- **Fewer reads Custom,** "Max Diffuse Bounces 2 (Standard: 40)". Standard and High put all of them back.
+- **At or above Max Bounces it is not sent to the kernels at all** (photometry.js `diffuseCapOf`: the cap is 0, none). So
+  the default traces exactly what it did. Every random stream and march cut-off reads as before.
+
+**How it stays exact.** The picture's light comes from the camera's paths, the photons and the photon map, each owning a
+part. A limit has to cut the same paths on every side, or light is counted twice or lost. Read in code
+(`tracebasics.js` pathEnd, THE DIFFUSE CAP):
+- **A camera path with none left** takes no light sample. A matte draw then ends it; past a mirror or glass it goes on,
+  and what it meets there counts in full.
+- **A light's photon** connects only with one left, and ends once it has none. The surface it lands on is the camera's
+  first, a diffuse bounce on that side.
+- **The photon map** stores only what a gather can count. The sun's photons, the map's own class and every camera-side
+  hand-over are unchanged.
+- **The Optics page** traces without it.
+
+**Where the count lives.** The ray had no room left (112 bytes). The march-step counter's upper half holds it, and the
+field is renamed `counts`, so any old read fails to compile (naga and Dawn found none left).
+
+**Tested on the software GPU** (lavapipe, in the container; no picture looked at):
+- **A new test,** `diffuse.gpu.mjs`, 63 checks:
+  - a hit through the shade kernel's own stages at every cap: the light sample, the cut-off, the light's photon's
+    connection and its end, the Optics page's rays never cut, the march steps kept;
+  - **on a floor and a wall under the sun:** 0 bounces Draft's picture (1.0053 ± 0.0024). Light sampling off as on
+    (1.0005 ± 0.0035 at 0, 0.9987 ± 0.0034 at 1), so a capped vertex counts nothing twice. 1 bounce 1.18 of 0, no limit
+    1.04 of 1.
+- **The dust test:** 0 diffuse bounces at Max Bounces 10 is single scattering, 0.9932 ± 0.0079 of the integral it already
+  computes. (Max Bounces 1 is not single scattering; this is.)
+- **The photon-map test,** the floor seen and lit through the slab: the sun's photons with the map against the camera's
+  own paths, 0.971 ± 0.026 at 0 bounces and 1.026 ± 0.030 at 1. Its WGSL store rule is held to the JS one with caps.
+
+**Also, a fix to 0.74.0:** Tests › image rows start from your own settings. They now force every diffuse bounce, and
+dispersion as each glass sets it, as they force full path tracing and the scene's environment. A switch you left off no
+longer changes a closed-form row.
+
+**Tests › render-modes-cost:** two rows more, Standard at 0 and at 2 diffuse bounces. The same iterations a sample, so
+what they save is shader time.
+
+**What to look at:**
+- **An LED-and-lens scene at 0 against Draft:** floors and walls lit directly, the lens's light on the floor, no light
+  between walls. Draft makes its own approximations, so small differences are expected.
+- **A room at 0, 1, 2 and 40:** brighter at each step. 40 is today's picture.
+- **Tests › render-modes-cost:** what 0 and 2 cost against Standard and Draft. Paste the report.
+
+**The tutorial**, reviewed against both versions (`affected.mjs`; 8 excerpts re-read, then stamped): ch. 2 and 26 the
+march's `ray.counts`; ch. 3 `fold`'s bound now 1; ch. 4 the fastnormals measurement kept as history, the setting gone;
+ch. 11 the Dispersion switch; ch. 13 Max Diffuse Bounces beside Max Bounces; ch. 14, 19 and 20 the cap's rule in light
+sampling, the photon map's store and the dust; ch. 23 no Keep on move; ch. 24 the scene as data on by default; and
+tutorial/PLAN.md's lines for those chapters. `tutorial.test.mjs` passes.
+
+## 0.74.0 — 2026-10-21
+
+**(Built as 0.65.0, then 0.68.0; renumbered when merged with main, which took 0.65.0 to 0.67.1 and then 0.68.0 to
+0.73.1.)**
+
+**A dispersion switch, three developer settings gone, the scene as data on by default, and the presets side by side**
+(you: "an overview/table of the differences between the render quality settings", "dispersion on/off", "the keep on
+move may be removed", "Fast normals ... just remove it", "Normal limit: same", "Scene as data -> normally on").
+
+**Dispersion**, a row of its own in Render settings › Paths and noise, ticked by default.
+- **Unticked:** every glass refracts at its index for the d line, as if its Abbe number were 0. No ray draws a
+  wavelength, so there are no colour fringes, and none of the colour noise they carry.
+- **Where it applies:** the camera's paths, every photon, and so the photon map, all from one place in the shade kernel
+  (`materials_pbr.js` `processMaterial_advanced`).
+- **A uniform, not a kernel option:** switching it compiles nothing.
+- **The picture only, as you chose:** the Optics page's trace always traces dispersion as each material sets it
+  (`optics/index.js`). A number measured there never depends on a render setting.
+- **Presets:** off is less than the full picture, so it reads **Custom** ("Dispersion off (every glass at n_d)
+  (Standard: as each glass sets it)"), and Standard or High ticks it again. Draft, Sketch and Optics leave it as set.
+- **Stored the other way round,** as `dispersionOff` with 0 meaning on. A uniform a bag leaves out reads 0
+  (tinywebgpu writes only what it is given into a zeroed buffer), so a GPU test naming only what it checks still
+  traces dispersion.
+- **Tested on the software GPU** (`dispersion.gpu.mjs`, lavapipe in the container), with a second pass switched off:
+  - a fresh ray on Abbe-28 glass draws no wavelength, reflects white and refracts along Snell at n_d;
+  - a ray already holding a wavelength keeps its tag and meets the glass at n_d.
+  - 48 checks pass. No picture was looked at.
+
+**Gone, with their rows** (a saved workspace that has them opens with a console line naming them ignored, once):
+- **Keep on move** (`moveAverages`): a reset always restarts the picture. 0, the restart, was already its default.
+- **Fast Normals** (`fastnormals`): the SDF's own normal is always used where it gives one, and the normal by
+  differences (three more looks at the scene) only where it gives none.
+  - On was the default. Off cost 4.3 times the frame (cost-sweep's first run, Pascal).
+  - What it diagnosed, a primitive's own normal, `shapes.test.mjs` checks against the gradient.
+  - The `fastnormals 0` row left cost-sweep.
+- **Normal Limit** (`normallimit`): add_new's backface test keeps its default of 1 as a constant. At 1 no unit or zero
+  normal fails it, only a NaN one, as before. Read in code: no picture changes.
+
+**The scene as data is on by default** (`sceneData` 1): an edit that adds no code writes a buffer instead of compiling.
+- **What it costs is the editing build's.** Measured on your Pascal (Tests › overhead, 0.22.19), the march as data was
+  1.4 to 8.6 times codegen's on those rows.
+- **A still picture is the bake's either way:** the bake compiles codegen's text with its values constants, and swaps it
+  in once the edits stop.
+- **On a device with 8 storage bindings a stage it stays codegen,** as before.
+- **Your own workspace keeps the 0 it saved,** as with the bake in 0.35.0. Tick it once, or use Developer › Reset.
+
+**The presets, side by side,** in the help (Render settings and saving pictures, *Quality*): what each traces, and why
+Draft can be little faster than Standard. Read in code, not measured:
+- Draft leaves out only the camera's bounce light. It keeps the sun's and the lights' photons, the photon map's second
+  chain of iterations, and Standard's 24 wavefront iterations a sample (`raytrace_main.js`; the mode is never read there).
+- What those cost was measured once elsewhere. On dichroics (Ampere, 0.61.2), the lights' rays alone were 65.7 % of a
+  sample.
+
+**Tests › render-modes-cost** (never run yet):
+- Two more rows: Draft without the photon map, and Draft without the lights' rays.
+- Every row now with the photon map on, as the page traces. Every other bench row still starts with it off.
+
+**What to look at:**
+- **A prism or dichroic scene,** Dispersion unticked: refracted light white, no fringes, the colour noise in glass gone.
+  The Quality line reads Custom. Ticked, or Standard chosen: as before.
+- **Render settings:** no Keep on move in Paths and noise. With Developer on, no Fast Normals or Normal Limit in Ray
+  marching.
+- **The console on the first load:** the removed settings named as ignored, if your workspace had them.
+- **The scene as data:** on in a new workspace (Developer › Performance); a structural edit shows without a compile.
+- **Tests › render-modes-cost,** on a scene where Draft feels no faster than Standard. Paste the report: its rows say
+  how much of a Draft sample is the photons'.
+## 0.73.1 — 2026-10-21
+
+**The README brought up to date, with its pictures, and the site at shadytracer.com.** The user believed the README
+was outdated, and added nine screenshots. It was: written mostly around 0.46 to 0.63, it said nothing of the photon map,
+the haze box, the camera's lens, dispersion and coatings, the Quality presets, the bake, the ruler, the Points mode,
+component bindings, the Help panel or GIF export. Its counts were old: 17 panels, 24 shapes, 49 built-in items and 18
+materials, 1269 kernel builds, about forty test files, where there are 14 panels (plus a chart panel each), 26 shapes,
+43 items and 42 materials, 6358 builds and 135 test files. Its *Not there yet* listed autosave, depth of field,
+dispersion, the help's tracks and a light seen through its own lens, all built. The Files bullet described the File
+menu as it was before 0.63.0. And it still claimed an adaptive per-sample budget, which went in 0.10.0. Every fact was
+checked against the code, CHANGELOG, FEATURES.md, docs/TESTING.md and roadmap/PLAN.md before it was written.
+- **README.md**: every section above; the three answered tests it lacked (`light-vs-emitter`, `haze`, `optics-mode`)
+  and the full list waiting for a first press; the *Beam in dusty air* example; the missing keys (F1, the Points
+  mode's, the timeline's, Ctrl's grid); the layout's `help/` and `ui-mockups/`; *Not there yet* in the plans' order,
+  with the next steps they name. Each picture's caption now says what the picture shows: the old ones named scenes
+  from before 0.54.0.
+- **docs/screenshots/README.md**: the nine files taken, what each shows, and the three not taken.
+- **FEATURES.md**: the same facts, nothing else (the haze box row, GIF, the counts, the help's tracks, the Files row,
+  the scene format's version 22, the own-lens item done).
+- **shadytracer.com** in the README, `docs/README.md` and the tutorial's chapter 0 (*How to read this*), for
+  lampmaker.github.io.
+
+**What to look at:** the README on GitHub once merged. Each caption against its picture; the ✓ and *preview* marks
+against what you have seen on your card (✓ only where docs/TESTING.md records a closed-form answer on real hardware);
+and the shadytracer.com links.
+
+**Tests:** none changed: no code did. `version.test.mjs`, `funding.test.mjs` (the README still links the Sponsors
+page) and `check-shaders.mjs` (6358 builds) pass, and every relative link and image in README.md, FEATURES.md and
+docs/screenshots/README.md exists. **The tutorial:** chapter 0's one change is the link itself, read in place.
+`affected.mjs` ties chapter 26 to a CHANGELOG line this entry moved down; the chapter cites it by its text, which is
+unchanged, and `tutorial.test.mjs` passes. Nothing else in the tutorial needed to change. Written as 0.71.1; `main`
+took that number first (the relief normal), then 0.72.0 (the unit change) and 0.73.0 (STEP and STL import), so this
+is 0.73.1, its counts taken again after each merge; the import's own README and FEATURES lines kept beside these.
+
+## 0.73.0 — 2026-10-21
+
+**STEP and STL files import as the builder's own shapes.** The user asked to start on STL and STEP import and to see
+whether converting a part into primitives with boolean operations would make it fast to trace. It does, for CAD
+parts. File › Import from file… and a file dropped on the page take `.step`, `.stp` and `.stl`. Each solid in the
+file becomes a group of boxes, cylinders, cones, spheres, tori and rounded prisms joined by union, intersect and
+subtract: the solid exactly, its normals analytic, nothing on the GPU but the shader any scene is (roadmap/IMPORT.md
+section 11).
+- **STEP is read by our own reader** (`import/step.js`), not OpenCascade:
+  - the faces' surfaces, their loops and edges, the units (inches, metres, an angle in degrees);
+  - an assembly's placements, each part where it sits, named by its product.
+- **STL from CAD is fitted back to the surfaces it was tessellated from** (`import/fit.js`): a 24-sided hole is a
+  cylinder again, a fillet a torus, a chamfer a cone. For each test part, the STL gives back exactly the surfaces the
+  STEP has.
+- **The conversion** (`import/csg.js`, `shapes.js`):
+  - a formula over the faces' half-spaces, each surface once, with separating surfaces where a curved surface's faces
+    end;
+  - four corner cylinders of one radius and the planes between them are one rounded rectangle's prism;
+  - minimised so a plate is one box less four holes and a pocket, and a spherical lens two spheres and a cylinder;
+  - no seam inside the solid, and a lower bound on the distance everywhere, so it marches safely;
+  - turned into the builder's presets, cut to the part's size, and what is cut away reaching past it. The chamfer's
+    cone and the rounded prism are written here, with their own normals (the preset cone has none);
+  - every group it pastes one shape codegen combines: a union inside an intersection starts its fold, a union cut away
+    is cut shape by shape, any other is closed with the part's box.
+- **Into the scene being worked on as one undo step**, standing on z = 0 centred over the origin (the floor, pasted at
+  the top of the scene; a selected group's own frame, pasted into it), in mm converted to the scene's unit, made of the scene's default material, converted in a Worker so the picture keeps going. Its axes
+  are the file's: STEP does not say which way is up.
+- **Refused by name, with why**, and the rest of the file still imported: a solid with a freeform (B-spline) face, a
+  mesh that is not closed, a mesh whose curves fit no such surface (a scan: over 400 faces). Those need the distance
+  grid of IMPORT.md sections 3-5, which is not built.
+- **A new example, Imported parts** (Shapes): six parts made in OpenCascade, imported from their STEP files, and one
+  again from its STL.
+- **A new bench, Tests › imported** (`bench/imported.js`). It times the example as imported against the same with its
+  rounded boxes (14 shapes each) and lens (3) as one preset each, and against the floor alone. That says what an
+  imported part costs on the card, and what recognising such patterns would save. Nothing about render speed is
+  measured yet.
+
+**The user's Onshape part ("this file did not convert/import too well").** A 56 mm cup: a lid with a rounded square
+whose corners stand out of its circle, hollowed from below by a smaller rounded square, two holes through the lid. In
+Node, three things were wrong:
+- **It was 44 shapes in 29 groups**, some boxes turned 52 degrees. Its circle is four faces, cut apart by the square's
+  corners, and each face's separating planes stood at angles no face of the part has. Separators are now drawn per
+  surface, across all its faces (these four need none), and the rounded squares are one prism each: **7 shapes in 2
+  groups.**
+- **It stood half under the floor**, at its file's coordinates. Every import now stands on z = 0 of where it is
+  pasted: the floor, at the top of the scene.
+- **Under its opening the value a march steps by fell to 0.38 mm where the walls were 2 to 20 mm away**: the cylinder
+  and the pocket cut from it shared a cap just under the part, so a ray crept there. What is cut away now reaches a
+  quarter of the part's size past it.
+
+- **And the renderer cut holes in it**, as in the bracket, the boss and the rounded box, in this version as it first
+  stood. A group of shapes joined only by union is a plain group to codegen, folded by the nearest boundary either way,
+  not combined; as a shape of an intersection it reads "outside" inside one shape near another. Found by running the
+  import's own WGSL on Dawn (`import/test/import.gpu.mjs`): the rounded box's rays went through its own rounded edges.
+  The import now makes no such group. (The same holds for a union group built by hand inside a subtraction or an
+  intersection: read in code, not changed here.)
+
+The part now agrees with OpenCascade at all 3000 of its points, as the formula, the shapes and the scene document as
+codegen combines it; on Dawn, rays through each test part end where the formula has its surface, with its normal. At the
+user's word the file itself is a test part now (`import/test/fixtures/onshape.step`, as it came, its header holding no
+name), beside a cup made like it (`cup.step` and `.stl`), which is in the example. Making its OpenCascade facts found
+one thing in the fixture maker: OpenCascade's distance to a solid read from a STEP file is 0 inside it, so `make.py`
+measures to the solid's shells, which gives every committed part's distances again to their 1e-6.
+
+**What to look at:**
+- Open the **Imported parts** example. On a white board: a plate with four holes and a pocket, an L bracket rounded
+  inside and out with a hole in each leg, a round base with a boss (rounded where they meet, chamfered on top, a hole
+  through it), a glass lens, two blue and red rounded boxes, and the cup, lid up. Does each look like that part, with
+  no gap, sliver or stray surface, standing on the board rather than in it? The lens should refract like a lens.
+- **Import your Onshape part again** (File › Import from file…). The status line should say 7 shapes, and the tree
+  shows 2 groups. It stands on
+  the floor lying on its side, its axis along y as in the file; turning it upright is a quarter turn about x.
+- Then **import a STEP or STL file of your own** (File › Import from file…, or drop it on the page). Check the status
+  line (parts, shapes, seconds; what was not converted and why), the tree (a group per part: its first shape the
+  base, then what is subtracted), and the console's `[import]` line for each part.
+- **Tests › imported**: paste the table back.
+
+**Tests:**
+- `import/test/step.test.mjs`, `stl.test.mjs`, `csg.test.mjs`, `import.test.mjs` against OpenCascade's own answers on
+  its own parts and the user's file (`import/test/fixtures`, made by `make.py` with CadQuery: 21,000 classified points
+  and an assembly).
+  csg.test holds the formula, the shapes and the scene document as the shader computes it (`import/test/docsdf.mjs`)
+  to the sign, the bound, and no value near zero far from the surface, a plain group folded as codegen folds it.
+  import.test holds where the part stands, and that every group it makes combines into one shape.
+- `import/test/import.gpu.mjs` (optional, webgpu and lavapipe): each test part marched on Dawn, codegen, as data and baked,
+  against the formula: where the rays hit, their normals, and that they enter the solid.
+- `bench/test/imported.test.mjs`.
+- check-shaders, naga included, compiles the new example through every kernel.
+
+**The tutorial:** `affected.mjs` ties chapter 25 to lines of CLAUDE.md and `bench/index.js` this change does not touch
+(the benchmark's fixed stage and cameras), and chapter 26 to a line of this file it does not touch: nothing there needed
+to change. Chapter 3 (Building and bending shapes) now names `import/` among what it is about, and its plan line the
+conversion it will teach: the joins read backwards, separators per surface, cuts reaching past what they cut, the
+rounded prism. Chapter 33 (Open problems), about `roadmap/PLAN.md`, gains a card and a clause among its limits: shapes
+joined only by union, cut or intersected as one, folded instead of combined (the builder's, left open). No excerpt's
+code changed, so nothing was stamped.
+
 ## 0.72.0 — 2026-10-21
 
 **A change of the scene's unit asks how: keep the real size, by a scale or by the numbers, or keep the numbers.** The
@@ -150,6 +475,7 @@ normal needs only the field's direction, which the division does not change. The
 the plaster. Elsewhere the surfaces look as they did. lighting-room and office-lighting are the two examples that take
 the extra look: they should look as before, and if either renders noticeably slower than it did, that is where it
 comes from.
+
 ## 0.71.0 — 2026-10-20
 
 **A tip for the work: a ♥ Sponsor link at the menu bar's right end, a Help row, and the repository's Sponsor

@@ -1,7 +1,7 @@
 # The documents
 
 ShadyTracer is the LED and luminaire tool built on `lib/pathtracer`, at the root of this repository: open
-`index.html` through a local server, or at <https://lampmaker.github.io/ShadyTracer/>. What the
+`index.html` through a local server, or at <https://shadytracer.com>. What the
 program does is the repository's `README.md`; what is built, feature by feature, with its evidence, is
 `FEATURES.md` at the root.
 
@@ -35,7 +35,8 @@ number, so a section that is cut leaves a stub rather than renumbering the rest.
 | | |
 |---|---|
 | `index.html` | the application: the shell, the view, the menus, every panel |
-| `version.js`, `CHANGELOG.md` | the version (semver 0.x, raised in every PR that changes the application) and the git revision the page reads from `.git`; one changelog entry per version, with what to look at |
+| `version.js`, `CHANGELOG.md` | the version (semver 0.x, set by the release from the PRs' change notes) and the git revision the page reads from `.git`; one changelog entry per version, with what to look at |
+| `release.mjs`, `changes/` | the release: the change notes merged into `dev` made one version, and `dev` pushed to `main` (CLAUDE.md, *Versions*; VS Code's *Release dev → main* task) |
 | `builder/` | the scene builder: the document model, codegen to WGSL, the tree, the properties panel, the gizmo, export for 3D printing |
 | `library/` | objects and materials kept in the browser: the store, the panel, the thumbnail studio, editing an item |
 | `workspace/` | the projects kept in the browser: the store, which tab has which project, the autosave, the session (which project a page starts on, opening another), the Projects list |

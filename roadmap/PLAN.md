@@ -15,6 +15,32 @@ order of that work): `ARCHITECTURE.md`, beside this file (2026-10-04). **Media**
 photon map, scattering inside materials, an Optics-view beam view -- has its own: `MEDIA.md`, beside this file
 (2026-10-16).
 
+## STEP and STL import as shapes — built 2026-10-21 (0.73.0), NOT yet seen
+
+The user (2026-10-21): "Start working on stl and step import. Investigate possibilities to optimize these for
+sdf/pathtracing. Eg conversion to primitives with boolean operations if that helps." Built that way. A solid whose faces
+lie on planes, cylinders, cones, spheres and tori becomes a group of the builder's presets joined by union, intersect and
+subtract; an STL from CAD is fitted back to those surfaces first (`import/`; the whole account, with what was measured
+and what is only inferred, is `IMPORT.md` section 11).
+- **Proved without a GPU**: on OpenCascade's own parts and its own classification, every point on the right side, the
+  formula, its shapes and the scene document never more than the true distance, no seam inside and no skin outside,
+  the STL giving back the STEP's surfaces (`import/test/`). check-shaders with naga compiles the Imported parts
+  example through every kernel.
+- **The user's first file** (an Onshape part, 2026-10-21): "did not convert/import too well". It was 44 shapes in 29
+  groups, half under the floor, with the value under its opening falling to 0.38 mm, and holes in it in the picture
+  (a plain union group intersected: IMPORT.md 11.3). Now 7 shapes in 2 groups, standing on the floor, agreeing with
+  OpenCascade at all 3000 points, and on Dawn with the formula: what the user saw wrong is asked, not yet answered.
+- **Found on the way, fixed in 0.next**: a union group built by hand inside a subtraction or an intersection was
+  folded by codegen, not combined (IMPORT.md 11.3). Such a group is now combined as a union, an array's copies too
+  (codegen.js combinedGroups), in codegen and as data; `builder/test/csgshape.gpu.mjs` holds both to the exact CSG
+  value on Dawn.
+- **Not seen**: the Imported parts example's picture, the user's part re-imported, and what an imported part costs a
+  march step. **Tests › imported** times the example against its rounded boxes and lens as one preset
+  each (what recognising those patterns would save) and against the floor alone.
+- **Next** (IMPORT.md 11.5): that measurement; then pattern recognition or culling inside a part, whichever it points
+  to; B-spline faces that are really planes or cylinders; STEP colours. Freeform faces and scans still need the
+  distance grid (IMPORT.md sections 3-5, P0), not built.
+
 ## Each scene its own camera, exposure and tolerance — built 2026-10-17 (0.66.0), NOT yet seen
 
 The user (2026-10-17): camera settings and exposure "can vary per scene ... the information should belong to the
@@ -266,7 +292,7 @@ reflections, and illuminance measured on surfaces.
 and `emitters` and `lt` held their means through it -- `lib/pathtracer/README.md` § *Units*,
 TESTING.md); the **display**, looked at on hardware (tone curves, GPU auto-exposure, compensation,
 meter / lock; README § *Units*); the **material review**, verified (below); and along the way `spp`
-removed, `moveAverages` (a window kept through a reset), and a reset that replaces the picture
+removed, `moveAverages` (a window kept through a reset; itself removed in 0.74.0), and a reset that replaces the picture
 instead of averaging into it.
 
 **Next, in this order** (agreed with the user; pick up from 1):
@@ -509,10 +535,11 @@ code, a look each.
   traces; a new size, mode or scene at once), and not run without photons. Checked: `sppm.test.mjs` (0.9969 and 1.0032 of
   the camera's own sum through a slab with air under it and one lying on the floor, blocks within 3.3 %; a collimated beam
   under a slab 1.0002 of its closed form), `sppm.gpu.mjs` (the whole renderer on lavapipe: the floor through a slab by the
-  camera's own paths, the map, through a lens, Draft -- each within its error bar; the idle skip), `build.test.mjs` (the
-  idle skip's every rule). Bench `sppm`. Open: what it costs a sample on a card (a second wavefront chain) and its memory;
-  the learned photon map credited by gathers; an orthographic camera and the illuminance view; dispersive glass, whose
-  camera wavelength and photon wavelength are drawn apart (inferred).
+  camera's own paths, the map, through a lens -- each within its error bar; Draft 0.948 of the full picture, the rest
+  its bounce light (0.75.1: measured, halving with the floor's albedo); the keep's planned fill and its rare overflow;
+  the idle skip), `build.test.mjs` (the idle skip's every rule). Bench `sppm`. Open: what it costs a sample on a card (a
+  second wavefront chain) and its memory; the learned photon map credited by gathers; an orthographic camera and the
+  illuminance view; dispersive glass, whose camera wavelength and photon wavelength are drawn apart (inferred).
 - **Polarisation** -- unpolarised Fresnel per interface is -0.3% on a slab's transmission at 45
   degrees and -3% at 70 (optics-refraction's `vs polar.`). Matters for beam splitters and near
   Brewster. Stokes vector + frame: +28 bytes a ray (112 -> 144), the one item here that costs memory.

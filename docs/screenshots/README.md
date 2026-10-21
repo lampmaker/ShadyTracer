@@ -1,40 +1,45 @@
 # The README's pictures, and how each one is taken
 
-The top-level README shows these twelve files. A file that is not here yet shows as a broken
-image with its caption, so the README can be read before every picture exists, and each one
-appears the moment its file is added under the name below. No edit to the README is needed.
+The top-level README shows these nine files. They were taken on the user's card on 2026-10-21, with
+ShadyTracer 0.71.0, as whole-window screenshots. To retake one, keep its name: the README shows it
+the moment the new file is in, with no edit. A picture added under a new name needs a line in the
+README.
 
 They have to be taken on a real graphics card: the software adapter this repository's automated
 checks run on cannot start the raytracer.
 
 ## Two ways to take one
 
-- **A render**: File › **Save picture…** in the raytracer, **1280 × 720**, the samples given
-  below. It renders offscreen and downloads a PNG named with the time it was saved
-  (`render-2026-10-19_14-03-22.png`): rename it to the file name below.
 - **A screenshot** of the window or part of it: Win + Shift + S on Windows (Cmd + Shift + 4 on a
-  Mac), saved as PNG. A browser window of about 1600 × 900 gives pictures that read well at README
-  width. Crop to what the caption talks about.
+  Mac), saved as PNG. A browser window of about 1920 × 1030 is what the nine were taken at. Crop
+  to what the caption talks about if it is cramped.
+- **A render**: File › **Save picture…** in the raytracer, **1280 × 720**. It renders offscreen and
+  downloads a PNG named with the time it was saved (`render-2026-10-19_14-03-22.png`): rename it to
+  the file name below.
 
-Keep each file under about 2 MB: a 1280 × 720 render is enough, and git keeps every version of a
-picture forever.
+Keep each file under about 2 MB where you can: git keeps every version of a picture forever. Five of
+the nine are over it (builder 3.0 MB, surfaces 2.6, hero 2.4, animate 2.2, showcase 2.1); they stay
+as they are, since replacing them would add to the history, not shrink it.
 
 ## The shot list
 
-| file | kind | how |
-|---|---|---|
-| `hero.png` | screenshot, whole window | View › Layout › **Design**. *Material showcase* in the tree, converged, one object selected in the picture so its handles show. |
-| `showcase.png` | render, 512 samples | *Material showcase*, from a camera you like. |
-| `surfaces.png` | render, 512 samples | *Surface materials*. |
-| `noise.png` | render, 256 samples | *Noise library* (the slowest scene). |
-| `lux-view.png` | screenshot of the picture | *Optics test: LED, lens, screen*. The view icon **lux on surfaces**; with the measure tool, two pins on the screen and one area over the spot. Include the colour legend. |
-| `builder.png` | screenshot, whole window | *Builder demo*, Design layout. Select the twisted column in the picture so its handles show, and scroll Properties to its code. |
-| `library.png` | screenshot of the Library panel | Grid view, after its pictures have been made. Float the panel larger (⧉ on its group's header) if it is cramped. |
-| `optics-rays.png` | screenshot of the picture | *Optics test: LED, lens, screen*. The rays icon on, a few hundred rays, coloured by the light's colour or by the flux left. |
-| `optics-analyse.png` | screenshot, whole window | View › Layout › **Analyse**, after ▶ Run on the optics test (a million rays or more): the map with isolux lines, the polar diagram, intensity against angle and the result cards. |
-| `colour.png` | screenshot | *RGBW mixer* after a Run: the map showing CCT (or Δu′v′), with Tools › **Colour mixing** open beside it. |
-| `print.png` | screenshot of the slicer | Optional. Put an export box around part of a scene, Export 3MF, open it in Bambu Studio, and show the coloured part. |
-| `timeline.png` | screenshot, whole window | View › Layout › **Animate**, with two or three tracks keyed (the camera, the sun's elevation) and the export frame visible over the picture. |
+Each is a screenshot of the whole window. The scene is named as it was in the picture: an example
+from the Project panel, or the user's own.
+
+| file | what it shows |
+|---|---|
+| `hero.png` | View › Layout › **Design**. The user's own scene *Lichtsculptuur* (blue and amber light bars, a mirror ball, plaster walls) with the photon map on; the scene cards over the tree; Render settings (Quality, Light sources) and Render stats on the right. |
+| `showcase.png` | The *Material board* example, its materials listed in the tree; Render settings and Render stats. |
+| `surfaces.png` | A copy of the *Relief and texture* example in a raking sun; the scene row selected, so Properties shows its unit, radius, tolerance and environment. |
+| `lux-view.png` | The *LED, lens and screen* example in High quality with the rays on; with the measure tool, an area over the spot and a pin beside it, each read in cd/m² with its error, CCT, Duv and Δu′v′. The drawer at the picture's bottom right shows. |
+| `builder.png` | The user's own scene *Dichroics* (coated glass plates, flint spheres, a light, a haze box); one plate selected, with the Transform gizmo's handles, the numbers panel at the top right, and its Properties down to its code. |
+| `library.png` | The **Library** panel in its grid, beside the *Product shot* example with the bottle selected. |
+| `optics-rays.png` | The user's own scene *LED* (a chip, a silicone dome, gold leads) with the rays icon on, the rays coloured by the light. |
+| `optics-analyse.png` | View › Layout › **Analyse** on the *RGBW colour mixing* example after a Run of 10 million rays: the map with isolux lines, the profiles, the polar diagram and the result cards; the screen material's properties on the left. |
+| `animate.png` | View › Layout › **Animate** on the *Glass and liquid* example: three camera tracks keyed in the Timeline, the video's 1920 × 1080 frame over the picture. |
+
+Proposed and not taken (the README does not show them): a render of the noise library, the RGBW map
+showing CCT beside the Colour mixing tool, and a 3MF export in the slicer.
 
 ## Adding them
 

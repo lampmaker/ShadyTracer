@@ -219,6 +219,26 @@
    "roles": "643d5437104296e21d906ecb15b2c96ad278f20cfc4af53b12bb6069bd853726"
   }
  },
+ "scenes/imported-parts.json": {
+  "off": {
+   "wgsl": "5029dc64eaf387dd003d2dc1bc2618d8123ab57f638f0149a32886a04cae135c",
+   "pickWgsl": "78ca34bc06eb0d198b522604fad04eafc02cf6af9a469631cdf285a2f9d58eda",
+   "opticsWgsl": "5029dc64eaf387dd003d2dc1bc2618d8123ab57f638f0149a32886a04cae135c",
+   "opticsPickWgsl": "78ca34bc06eb0d198b522604fad04eafc02cf6af9a469631cdf285a2f9d58eda",
+   "uniforms": "1121ddee6cf0e3fb26a8f4bd279e11895297c650d8159520d2a05d8c9c333a13",
+   "tags": "a62909ccfa0d4b1c77dfe404a0689d26dad121a6f8661f9c018d8197fe4d5354",
+   "roles": "643d5437104296e21d906ecb15b2c96ad278f20cfc4af53b12bb6069bd853726"
+  },
+  "live": {
+   "wgsl": "0dfcab7c7cce5a3da86c4c8e568e199081654890b9eeb8f7b79ca96dbd2b3538",
+   "pickWgsl": "50d697847f0ed2a67df2ec7052b6b00b161780a4af2b97cc26ef2a957241f155",
+   "opticsWgsl": "0dfcab7c7cce5a3da86c4c8e568e199081654890b9eeb8f7b79ca96dbd2b3538",
+   "opticsPickWgsl": "50d697847f0ed2a67df2ec7052b6b00b161780a4af2b97cc26ef2a957241f155",
+   "uniforms": "02baa7e97d6a1e6bc0791ee782bbe22ab6fc2eb524397247275ba02f432d3cfb",
+   "tags": "a62909ccfa0d4b1c77dfe404a0689d26dad121a6f8661f9c018d8197fe4d5354",
+   "roles": "643d5437104296e21d906ecb15b2c96ad278f20cfc4af53b12bb6069bd853726"
+  }
+ },
  "scenes/infinite-detail.json": {
   "off": {
    "wgsl": "e7091c73825b7cb822b9f8e58ffd2fa42f7d040efb416a6d46084d3dd560e893",
@@ -876,6 +896,26 @@
    "opticsPickWgsl": "39cd36cedcef2bb59eb34aee5d5d5c5156684e212f42c5124f29d0eb043fa437",
    "uniforms": "fb0503fe13b8e2ec7c366ae5955a2c7ad9b8a55676151cf0db6c72fcd3dff590",
    "tags": "7119c5f80630a4b1791b451db53f7d783c59a7d06b6288ece2e5b26a23af6ff3",
+   "roles": "643d5437104296e21d906ecb15b2c96ad278f20cfc4af53b12bb6069bd853726"
+  }
+ },
+ "bench/scenes/imported.json": {
+  "off": {
+   "wgsl": "5029dc64eaf387dd003d2dc1bc2618d8123ab57f638f0149a32886a04cae135c",
+   "pickWgsl": "78ca34bc06eb0d198b522604fad04eafc02cf6af9a469631cdf285a2f9d58eda",
+   "opticsWgsl": "5029dc64eaf387dd003d2dc1bc2618d8123ab57f638f0149a32886a04cae135c",
+   "opticsPickWgsl": "78ca34bc06eb0d198b522604fad04eafc02cf6af9a469631cdf285a2f9d58eda",
+   "uniforms": "1121ddee6cf0e3fb26a8f4bd279e11895297c650d8159520d2a05d8c9c333a13",
+   "tags": "a62909ccfa0d4b1c77dfe404a0689d26dad121a6f8661f9c018d8197fe4d5354",
+   "roles": "643d5437104296e21d906ecb15b2c96ad278f20cfc4af53b12bb6069bd853726"
+  },
+  "live": {
+   "wgsl": "0dfcab7c7cce5a3da86c4c8e568e199081654890b9eeb8f7b79ca96dbd2b3538",
+   "pickWgsl": "50d697847f0ed2a67df2ec7052b6b00b161780a4af2b97cc26ef2a957241f155",
+   "opticsWgsl": "0dfcab7c7cce5a3da86c4c8e568e199081654890b9eeb8f7b79ca96dbd2b3538",
+   "opticsPickWgsl": "50d697847f0ed2a67df2ec7052b6b00b161780a4af2b97cc26ef2a957241f155",
+   "uniforms": "02baa7e97d6a1e6bc0791ee782bbe22ab6fc2eb524397247275ba02f432d3cfb",
+   "tags": "a62909ccfa0d4b1c77dfe404a0689d26dad121a6f8661f9c018d8197fe4d5354",
    "roles": "643d5437104296e21d906ecb15b2c96ad278f20cfc4af53b12bb6069bd853726"
   }
  },

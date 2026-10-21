@@ -397,7 +397,7 @@ export const isCsg = g => g.csg ?? (g.blend > 0 || shapesOf(g).some((c, i) => i 
 /** THE GROUPS WHOSE CHILDREN ARE COMBINED INTO ONE SHAPE (children() below, and the scene as data's CSG records): every
  *  CSG group, and every group without code that is one of such a group's SHAPES -- a plain group or an array, and plain
  *  groups inside that one, at any depth. A Set of ids, decided on the whole tree, since it is the parent that decides.
- *    WHY A PLAIN GROUP THAT IS A SHAPE TOO (0.72.1). A plain group's children fold into the Hit in scope one by one
+ *    WHY A PLAIN GROUP THAT IS A SHAPE TOO (0.next). A plain group's children fold into the Hit in scope one by one
  *  (scene_api.js fold), which keeps the surface as argmin |d|: the nearest boundary in either direction. That is what
  *  the march needs of separate objects, and NOT a union's signed distance -- at a point 0.6 inside one shape and 0.004
  *  outside another that overlaps it, fold says +0.004, "outside". A CSG group reads its shapes' signed distances, so a

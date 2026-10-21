@@ -856,7 +856,7 @@ eq('uniformName', uniformName('n7', 'radius'), 'radius_n7')
         sourceTable(cm).sources.length === 1 && /\/\/ node lamp \(light, disc\)/.test(generate(Model.toTree(cm)).wgsl))
 }
 {
-    /* A PLAIN GROUP AS ONE OF A CSG GROUP'S SHAPES (0.72.1, codegen.js combinedGroups): its children combined as a union
+    /* A PLAIN GROUP AS ONE OF A CSG GROUP'S SHAPES (0.next, codegen.js combinedGroups): its children combined as a union
        (csgUnion at its blend, 0), not folded -- a fold keeps the nearest boundary by |d|, which is no union's signed
        distance where they overlap, and the CSG group above read it as its operand (csgshape.gpu.mjs says so in numbers:
        this is the text). Plain groups inside one too, and an array's copies, into ONE combine. Not group code, not the top
