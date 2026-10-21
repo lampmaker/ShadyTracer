@@ -301,20 +301,20 @@
  },
  "scenes/lighting-room.json": {
   "off": {
-   "wgsl": "0d2ddc6f2326f1d032a3a35f26ecd9bf83bf4da50a8ac28d6ccbcf8e2185d85a",
-   "pickWgsl": "3a752a387900c13c0568a284c824478cc6b5bd14f7f832ec87db28b09939ea7f",
-   "opticsWgsl": "0d2ddc6f2326f1d032a3a35f26ecd9bf83bf4da50a8ac28d6ccbcf8e2185d85a",
-   "opticsPickWgsl": "3a752a387900c13c0568a284c824478cc6b5bd14f7f832ec87db28b09939ea7f",
-   "uniforms": "3652d524d8de17e908f9ceb5585dfdd0189e08f36c648443ba46c62d1fd4fb99",
+   "wgsl": "d386f64eac4466fe7beac9e9b8c543aa92dbf656b51789a6ba25b5d76d48cbdb",
+   "pickWgsl": "ce927d8dd0226a18954a9a2cb5e59a3434927b592284cc1952296475bc8b7aff",
+   "opticsWgsl": "d386f64eac4466fe7beac9e9b8c543aa92dbf656b51789a6ba25b5d76d48cbdb",
+   "opticsPickWgsl": "ce927d8dd0226a18954a9a2cb5e59a3434927b592284cc1952296475bc8b7aff",
+   "uniforms": "694bad830cfbcbdaeacb1a3f46ef010697b3bec0a63a7d77a829c5417b55bab1",
    "tags": "5a27dba0a9e6c7b2b3bc62ebb98d09cf700d40751c091fab4fa64f522b19a82c",
    "roles": "643d5437104296e21d906ecb15b2c96ad278f20cfc4af53b12bb6069bd853726"
   },
   "live": {
-   "wgsl": "92fa5ced94480c5b3e1098c8fd498aad79945039858e4404323455269f52149d",
-   "pickWgsl": "f333acb4566a12ed05b1eda8b368acb97fd39e44241070f63e51c4474fb35978",
-   "opticsWgsl": "92fa5ced94480c5b3e1098c8fd498aad79945039858e4404323455269f52149d",
-   "opticsPickWgsl": "f333acb4566a12ed05b1eda8b368acb97fd39e44241070f63e51c4474fb35978",
-   "uniforms": "78906ca8627e43b8b2b0edd9e1dba7ebdd9f6128bd3af0b380dc64fbdc84f77c",
+   "wgsl": "ae1af9f36a4d28a681b9d5057406d3cff2668704dca4f2df49cf35fdde55959a",
+   "pickWgsl": "79185fc03eee836dc2afb8f11c99eaf1f02e880c2c6bfb1a1a70865d23e6bb5a",
+   "opticsWgsl": "ae1af9f36a4d28a681b9d5057406d3cff2668704dca4f2df49cf35fdde55959a",
+   "opticsPickWgsl": "79185fc03eee836dc2afb8f11c99eaf1f02e880c2c6bfb1a1a70865d23e6bb5a",
+   "uniforms": "ad79cff84ce81f0888d959a34ea1022801e09a2e843c62c7aa165d996539ef18",
    "tags": "5a27dba0a9e6c7b2b3bc62ebb98d09cf700d40751c091fab4fa64f522b19a82c",
    "roles": "643d5437104296e21d906ecb15b2c96ad278f20cfc4af53b12bb6069bd853726"
   }

@@ -48,7 +48,7 @@
 // `error at line 431 of a file you never saw`.
 //======================================================================================================================
 
-import { generate, uniformName, xfName, blendName, joinBlendName, visName, paramUniform, livePointsUpdate, copyName } from './codegen.js'
+import { generate, uniformName, xfName, patName, patterned, isCsg, readsLocal, blendName, joinBlendName, visName, paramUniform, livePointsUpdate, copyName } from './codegen.js'
 import { validate } from './validate.js'
 import { computeUniformTypes } from '../lib/pathtracer/core/uniforms.schema.js'
 import * as M from './model.js'
@@ -573,6 +573,16 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
         }
         if (k === 'transform' && f.node.transform)
             return RT.set({ [xfName(id)]: M.matrixOf(f.node.transform) }).length === 0
+        /* ITS PATTERN FRAME (model.js setPattern, version 23): a uniform where it changes something (codegen patterned),
+           and nothing to do where it does not -- a material that reads no point, no relief: no uniform, and no compile
+           would make one. Whether it has one at all is the shader's text, which the panel compiles for. */
+        if (k === 'pattern') {
+            if (!f.node.pattern) return false
+            const name = patName(id)
+            if (!(name in (RT.scene?.uniforms || {}))) return !patterned(f.node.kind === 'group' ? { ...f.node, csg: isCsg(f.node) } : f.node,
+                { wantLocal: doc.materials.some(m => readsLocal(m.code)), relief: !!M.material(doc, f.node.material)?.relief })
+            return RT.set({ [name]: M.matrixOf({ ...f.node.pattern, scale: 1 }) }).length === 0
+        }
         // AN ARRAY'S COPIES (model.js version 17): a uniform each -- refused when the count is not the one compiled
         if (k === 'copies') return !!f.node.copies && RT.set(Object.fromEntries(f.node.copies.map((t, i) => [copyName(id, i), M.matrixOf(t)]))).length === 0
             && !(copyName(id, f.node.copies.length) in (RT.scene?.uniforms || {}))

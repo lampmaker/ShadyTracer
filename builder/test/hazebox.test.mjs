@@ -87,10 +87,10 @@ const T = (pos = [0, 0, 0], rot = [0, 0, 0], scale = 1) => ({ pos: { x: pos[0], 
     const copy = M.duplicate(structuredClone(d), 'ball')
     ok('another object duplicated: no second box', copy.type !== 'haze')
 
-    // an old file: version 21 reads as 22 with nothing changed
+    // an old file: version 21 reads as 22 (and on to the current version: 23 since `0.next`) with nothing changed
     const old = structuredClone(d); old.version = 21; old.root.children = old.root.children.filter(n => n.type !== 'haze')
     const up = M.parse(JSON.stringify(old))
-    ok('a version 21 file is read as 22, nothing changed', up.version === M.VERSION && M.VERSION === 22 && M.validate(up).length === 0
+    ok('a version 21 file is read as 22 and on, nothing changed', up.version === M.VERSION && M.VERSION >= 22 && M.validate(up).length === 0
         && JSON.stringify(up.root) === JSON.stringify(old.root))
 }
 

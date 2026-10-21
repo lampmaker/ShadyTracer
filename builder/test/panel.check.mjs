@@ -430,6 +430,40 @@ await set('lock position'); await settle(); await set('lock parameters'); await 
 rs = await rowState()
 ok('both unticked: every row as it was', !rs['position (m)'].disabled && !rs.scale.disabled && !radiusOf(rs).disabled && rs['position (m)'].plus
     && JSON.stringify(await topLock()) === JSON.stringify({ position: false, params: false }), JSON.stringify(rs))
+// THE PATTERN FRAME (model.js setPattern, version 23): a box under the placement; the first value moved gives the node one
+// (a compile), the next is its uniform (live), "Take it away" a compile again; on a CSG group's shape it says whose it is
+{
+    const pat = () => p.evaluate(() => CHECK.M.find(CHECK.doc, 'top').node.pattern ?? null)
+    rows = await rowsOf('top')
+    ok('an object: its pattern frame\'s rows after its placement, labelled apart from it', rows.includes('pattern at (m)') && rows.includes('pattern turn °')
+        && rows.indexOf('pattern at (m)') > rows.indexOf('scale') && rows.filter(r => r === 'position (m)').length === 1, JSON.stringify(rows))
+    // one component of a vector row typed in (its label carries the row's + for its sliders)
+    const setVec = (label, i, value) => p.evaluate(([label, i, value]) => {
+        const row = [...document.querySelectorAll('.tp-lblv')].find(r => r.querySelector('.tp-lblv_l')?.textContent.trim().replace(/[✎×+]/g, '') === label)
+        const input = row?.querySelectorAll('input.tp-txtv_i')[i]
+        if (!input) return `no component ${i} in '${label}'`
+        input.value = String(value); input.dispatchEvent(new Event('change', { bubbles: true }))
+        return 'set'
+    }, [label, i, value])
+    let b4 = await state()
+    ok('a pattern value moved', await setVec('pattern at (m)', 0, 0.25) === 'set')
+    let st = await state()
+    ok('...gives it one: in the document, an undo step and a compile', (await pat())?.pos.x === 0.25 && st.structure === b4.structure + 1 && st.commits.at(-1) === null,
+        JSON.stringify([await pat(), st]))
+    await settle(); await rowsOf('top'); await settle()
+    b4 = await state()
+    ok('another', await setVec('pattern turn °', 0, 90) === 'set')
+    st = await state()
+    ok('...is live: its uniform pushed, an undo step keyed for a drag, no compile', (await pat())?.rot.x === 90 && st.live.at(-1) === 'top.pattern'
+        && st.commits.at(-1) === 'top.pattern' && st.structure === b4.structure, JSON.stringify([await pat(), st]))
+    const clicked = await p.evaluate(() => { const b = [...document.querySelectorAll('button')].find(b => b.textContent.includes('Take it away')); b?.click(); return !!b })
+    st = await state()
+    ok('"Take it away": none again, a compile', clicked && (await pat()) === null && st.structure === b4.structure + 1, JSON.stringify(st))
+    await settle()
+    await rowsOf('b')
+    const said = await p.evaluate(() => document.querySelector('.builder-pattern-said')?.textContent ?? '')
+    ok('a CSG group\'s shape: its box says the material is laid out in the group\'s frame', /^A shape of '.+', which folds its shapes/.test(said), said)
+}
 // A PATH'S POINTS are parameters: read-only, Apply disabled and Ctrl+Enter refused
 await p.evaluate(() => CHECK.M.setLock(CHECK.doc, 'pa', 'params', true))
 await rowsOf('pa'); await settle()

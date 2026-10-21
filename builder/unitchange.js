@@ -275,6 +275,8 @@ function dimensions(d, k, skipped) {
         if (n === d.root) return
         if (n.transform) for (const a of AXES) n.transform.pos[a] = round(n.transform.pos[a] * k)
         for (const c of n.copies || []) for (const a of AXES) c.pos[a] = round(c.pos[a] * k)
+        // a pattern frame's place too (model.js setPattern): a position in the node's own frame, as a child's is
+        if (n.pattern) for (const a of AXES) n.pattern.pos[a] = round(n.pattern.pos[a] * k)
         blends(n, k)
         rayBox(n, k)
     })

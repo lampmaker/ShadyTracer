@@ -147,6 +147,13 @@
 // test/fixtures/scenes/OpticsBench.json (the pillars' cylinder and shell, four groups) and OpticsBench2.json (those, and
 // the laser rig under its lens holder: six live, three off, the others hidden and pruned) moved, and their bench copies
 // exactly as they did; the other 46 documents, cases.*.wgsl and the imported parts among them, did not (key by key).
+//
+// REFROZEN FOR ONE SCENE (2026-10-21, `0.next`), for a feature the user asked for (a pattern frame per object: model.js
+// setPattern, codegen patIn): scenes/lighting-room.json's table top has one, its wood's grain along its length. Checked
+// before freezing, the scene with its pattern frame against the same document without it, both modes, all four texts:
+// the top's comment gained ", in its pattern frame", and its block the capture's five lines after its enter and the one
+// that puts them back before its leave -- nothing else; the uniforms gained pat_n11 alone; the tags did not move. The
+// other 49 documents did not (key by key), and no document without a pattern frame can: the lines are emitted only for one.
 //======================================================================================================================
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'

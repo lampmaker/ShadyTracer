@@ -47,6 +47,26 @@ marble's veins, a checker, brushed metal's grain. The library's patterned materi
 box to see it. A pattern's sizes are its own parameters, in **real millimetres** whatever the scene's unit, so a wood
 grain is a wood grain on a 2 m table and on a 20 mm block.
 
+## Turning a pattern: the pattern frame
+
+A pattern is laid out in its **object's own frame**, so it moves and turns with the object. Wood's log runs along the
+object's z, brushed metal's strokes along its x. One material on several objects then runs the same way on each:
+along a table leg's length, but through its top's thickness, so the top shows end grain.
+
+Each object has a **pattern frame** under its placement in the properties: *pattern at* moves the pattern and
+*pattern turn* turns it (degrees about x, then y, then z, like the rotation), in the object's own frame. The shape
+stays where it is. Turning the table top 90° about y lays the log along its length, as in
+[Lighting a room](example:lighting-room.json). The first value you change gives the object a pattern frame, which
+takes a moment to compile. After that it updates as you drag. *Take it away* puts the pattern back in the object's
+own frame.
+
+It moves everything the material lays out from the hit point: the pattern in its code, a grain's direction, and its
+**relief**. Only a material that reads the point (`p_local`, `R_local`) or has a relief changes. A plain colour looks
+the same however it is turned. In a group that makes its children into one shape (a subtraction, an
+intersection, a blend, a round, a shell), the material is laid out in the **group's** frame, so give the group its
+pattern frame. The
+box on one of its shapes says so, and there it moves only that shape's relief.
+
 ## Relief
 
 A material can have a **relief**: a height on the surface of everything that wears it, in real millimetres. Plaster,

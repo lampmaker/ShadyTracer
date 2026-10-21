@@ -381,7 +381,11 @@ function lighting() {
     shape(doc, room.id, 'box', { label: 'window', params: { size: V(0.8, 0.2, 0.6), rounding: 0 }, at: [0, 1.55, 1.5], material: lib(doc, 'white plaster'), join: 'subtract' })
     // a table 1.6 x 0.9 m, 0.75 high; a bowl on it
     const t = group(doc, 'root', 'table', { at: [0, -0.2, 0] })
-    shape(doc, t.id, 'box', { label: 'top', params: { size: V(0.8, 0.45, 0.02), rounding: 0.005 }, at: [0, 0, 0.73], material: lib(doc, 'wood') })
+    /* THE TOP'S GRAIN ALONG ITS LENGTH (model.js setPattern, `0.next`): wood's log runs along its object's z, which is the
+       legs' length and the top's thickness -- so the top showed end grain, rings round a point (the user, 2026-10-21).
+       Turned 90 degrees about y, the log's axis is the top's x; its heart, 15 cm along the log's x, is above the board */
+    const top = shape(doc, t.id, 'box', { label: 'top', params: { size: V(0.8, 0.45, 0.02), rounding: 0.005 }, at: [0, 0, 0.73], material: lib(doc, 'wood') })
+    M.setPattern(doc, top.id, { pos: { x: 0, y: 0, z: 0 }, rot: { x: 0, y: 90, z: 0 } })
     for (const [x, y] of [[-0.72, -0.38], [0.72, -0.38], [-0.72, 0.38], [0.72, 0.38]])
         shape(doc, t.id, 'box', { label: 'leg', params: { size: V(0.03, 0.03, 0.355), rounding: 0.003 }, at: [x, y, 0.355], material: lib(doc, 'wood') })
     shape(doc, 'root', 'sphere', { label: 'ball', params: { radius: 0.12 }, at: [0.3, -0.2, 0.87], material: lib(doc, 'glossy red plastic') })
