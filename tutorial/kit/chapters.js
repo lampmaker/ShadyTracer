@@ -38,7 +38,7 @@ export const CHAPTERS = [
     C('rays', 'distances', 'Shapes as distances', 'How a ray finds the first surface in its way, using nothing but distances.', 'draft',
         ['help/widgets.js', `${K}shapes.js`, `${K}tolerances.js`]),
     C('rays', 'shapes', 'Building and bending shapes', 'Joining, melting, twisting and roughening shapes, and keeping them safe to trace.', 'draft',
-        [`${K}scene_api.js`, `${K}shapes.js`, `${K}noise.js`, 'builder/modifiers.js', 'builder/codegen.js', 'help/widgets.js']),
+        [`${K}scene_api.js`, `${K}shapes.js`, `${K}noise.js`, 'builder/modifiers.js', 'builder/codegen.js', 'help/widgets.js', 'import/']),
     C('rays', 'normals', 'Which way is up', 'Which way a surface faces, and what it costs to find out.', 'draft',
         [`${K}pick.js`, `${K}tracebasics.js`, `${K}tolerances.js`, `${K}sdf.js`, 'lib/pathtracer/PRECISION.md', `${K}test/floor.test.mjs`]),
 

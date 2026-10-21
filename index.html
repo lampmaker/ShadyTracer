@@ -55,6 +55,7 @@
         import { animatedTest } from './bench/animated.js'
         import { boxCostTest } from './bench/boxcost.js'
         import { dichroicsTest } from './bench/dichroics.js'
+        import { importedTest } from './bench/imported.js'
         import { installBuilder } from './builder/demo.js'
         import { createBaker } from './builder/baker.js'
         import { modeLine } from './builder/modeline.js'
@@ -645,6 +646,23 @@
                 },
             };
         }
+        /* WHAT AN IMPORTED PART COSTS (bench/imported.js, 0.71.0): the Imported parts example as imported, against its rounded
+           boxes and its lens as one shape each, and the floor alone. BENCH.imported.view(n) / .run(...rows) */
+        {
+            let imported = null;
+            const prepareImported = () => imported ??= importedTest(async url => { const r = await fetch(url); if (!r.ok) throw new Error(`${url}: ${r.status}`); return r.text() })
+                .catch(e => { imported = null; throw e; });
+            window.RTTESTS?.addTest?.({ id: 'imported', title: 'What an imported part costs (STEP and STL parts as shapes, against one shape each)', prepare: prepareImported });
+            window.BENCH.imported = {
+                view: async n => window.RTTESTS.view(await prepareImported(), n),
+                run: async (...rows) => {
+                    const t = await prepareImported();
+                    const missing = rows.filter(n => !t.cases[n - 1]);
+                    if (missing.length) throw new Error(`BENCH.imported.run: no row ${missing.join(', ')} (rows 1-${t.cases.length})`);
+                    return window.RTTESTS.run(rows.length ? { ...t, cases: rows.map(n => t.cases[n - 1]) } : t);
+                },
+            };
+        }
         /* THE LIGHT BENCH (builder/lightbench.js, light-vs-emitter): a light against the same surface made an
            emissive object. Its scene too is a builder document, so the page hands it in the same way. */
         window.RTTESTS?.addTest?.({ id: 'light-vs-emitter', title: 'A light against the same emissive object', prepare: async () => lightBench() });
@@ -1045,9 +1063,15 @@
                 Object.assign(document.createElement('a'), { href: url, download: name }).click();
                 setTimeout(() => URL.revokeObjectURL(url), 0);
             };
+            /* a STEP or STL file is read as bytes (an STL is binary, usually); anything else as text */
+            const CAD = /\.(step|stp|p21|stl)$/i;
             const pickFile = () => new Promise(res => {
-                const input = Object.assign(document.createElement('input'), { type: 'file', accept: '.json,application/json' });
-                input.onchange = async () => { const f = input.files?.[0]; res(f ? { name: f.name, text: await f.text() } : null); };
+                const input = Object.assign(document.createElement('input'), { type: 'file', accept: '.json,application/json,.step,.stp,.stl' });
+                input.onchange = async () => {
+                    const f = input.files?.[0];
+                    if (!f) return res(null);
+                    res(CAD.test(f.name) ? { name: f.name, bytes: await f.arrayBuffer() } : { name: f.name, text: await f.text() });
+                };
                 input.oncancel = () => res(null);
                 input.click();
             });
@@ -1151,7 +1175,52 @@
                     status('IMPORT FAILED: ' + (e.problems ? e.problems[0] + (e.problems.length > 1 ? ` (+${e.problems.length - 1} more, see console)` : '') : e.message));
                 }
             };
-            const importFile = async () => { const f = await pickFile(); if (f) await openText(f.text, f.name); };
+            /* A STEP OR STL FILE (import/, roadmap/IMPORT.md section 11): each solid in it converted into the builder's own shapes
+               -- boxes, cylinders, cones, spheres, tori and rounded prisms joined by union, intersect and subtract -- in a
+               Worker, and pasted into the scene being worked on as one undo step, in mm converted to the scene's unit
+               (model.js insertAsset), made of the scene's default material, standing on z = 0 of where it is pasted. What cannot be converted is said by name, with why: a face on a
+               B-spline, a mesh that is not closed or whose curves fit no such surface. */
+            const convertCAD = (name, bytes, material) => new Promise((resolve, reject) => {
+                let w;
+                try { w = new Worker(new URL('./import/worker.js', import.meta.url), { type: 'module' }); }
+                catch (e) {
+                    // no module workers: on this thread, the page waiting
+                    return import('./import/index.js').then(I => {
+                        const r = I.convert(Model, name, new Uint8Array(bytes), { material });
+                        resolve({ ok: true, kind: r.kind, asset: r.asset, parts: r.parts.map(p => ({ name: p.name, report: p.report })), refused: r.refused, warnings: r.warnings });
+                    }).catch(reject);
+                }
+                w.onmessage = e => { w.terminate(); resolve(e.data); };
+                w.onerror = e => { w.terminate(); reject(new Error(e.message || 'the import worker failed')); };
+                w.postMessage({ name, bytes, material }, [bytes]);
+            });
+            const importCAD = async (name, bytes) => {
+                const t0 = performance.now();
+                status(`importing ${name}…`);
+                try {
+                    const mat = Model.defaultMaterial(BUILDER.doc);
+                    const r = await convertCAD(name, bytes, mat ? structuredClone(mat) : null);
+                    if (!r.ok) throw new Error(r.error);
+                    const why = r.refused.map(x => `${x.name}: ${x.why}`).join('; ');
+                    if (!r.asset) return status(`IMPORT FAILED: ${name}: ${why || 'nothing in it to convert'}`);
+                    // the tree's paste: one undo step, selected; a refusal it says itself (model.js insertAsset is all or nothing)
+                    if (!builderTree.insertAsset(r.asset)) return;
+                    const shapes = r.parts.reduce((a, p) => a + p.report.shapes, 0);
+                    const s = performance.now() - t0;
+                    status(`${name}: ${r.parts.length} part${r.parts.length === 1 ? '' : 's'} as ${shapes} shapes in ${(s / 1000).toFixed(1)} s`
+                        + (why ? `; NOT CONVERTED: ${why}` : '') + (r.warnings.length ? `; ${r.warnings.join('; ')}` : ''));
+                    for (const p of r.parts) console.info(`[import] ${name} › ${p.name}:`, p.report);
+                } catch (e) {
+                    console.error('[import]', e);
+                    status(`IMPORT FAILED: ${name}: ${e.message}`);
+                }
+            };
+            const importFile = async () => {
+                const f = await pickFile();
+                if (!f) return;
+                if (f.bytes) await importCAD(f.name, f.bytes);
+                else await openText(f.text, f.name);
+            };
             /* DROPPED FILES only -- the tree's own drags are rows, not files, and must reach it
                untouched, so anything without 'Files' in it is left alone. */
             const isFile = e => [...(e.dataTransfer?.types || [])].includes('Files');
@@ -1159,8 +1228,10 @@
             window.addEventListener('drop', e => {
                 if (!isFile(e)) return;
                 e.preventDefault();
-                for (const f of e.dataTransfer.files) if (/\.json$/i.test(f.name) || f.type === 'application/json')
-                    f.text().then(t => openText(t, f.name));
+                for (const f of e.dataTransfer.files) {
+                    if (CAD.test(f.name)) { if (editing()) status('close the library item first (over the view)'); else f.arrayBuffer().then(b => importCAD(f.name, b)); }
+                    else if (/\.json$/i.test(f.name) || f.type === 'application/json') f.text().then(t => openText(t, f.name));
+                }
             });
             /* the same actions for the toolbar and the menu bar: the toolbar keeps its keys (Ctrl Z, Ctrl S, Ctrl O), the menus
                only show them. WHILE A LIBRARY ITEM IS EDITED (library/edit.js) Ctrl+S saves it -- what the user is working on
