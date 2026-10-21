@@ -53,6 +53,9 @@ Nothing to install and no server. The page runs on your own graphics card.
   **✓**; far field in candela with beam and field angles, illuminance maps in lux, CCT and Duv
   *preview*
 - **Zemax ray files** as light sources *preview*
+- **STEP and STL parts imported as shapes**: each solid in the file becomes boxes, cylinders, cones,
+  spheres and tori joined by union and subtract, exact, with analytic normals; a spherical lens from
+  STEP is its two spheres *preview*
 - **3MF with colour** for multi-colour 3D printing, straight from the scene *preview*
 - **A docking workspace**: pop-out windows for a second monitor, a command palette, every setting by
   name
@@ -213,6 +216,12 @@ the picture; press **Ctrl K** and type what you are looking for.
   Projects…) lists them (open, new, rename, duplicate, download, delete), this project's scenes and
   the examples. **File** is five rows: New project, Projects…, Import from file…, Export ▸ (a scene,
   the project, a 3D print), Save picture…. A second tab on a project works on its own copy.
+- **Import STEP and STL** (File › Import from file…, or drop the file on the page): each solid in
+  the file becomes a group of the builder's own shapes -- boxes, cylinders, cones, spheres and tori
+  joined by union, intersect and subtract -- converted exactly from the faces' surfaces, an STL's
+  fitted back from its facets first; editable like anything built by hand. A freeform (B-spline)
+  face, a mesh that is not closed or a scan is refused by name, with why
+  ([`roadmap/IMPORT.md`](roadmap/IMPORT.md) section 11) *preview*
 - **Twenty-four shapes in three groups**, each an editable piece of code from the start:
   - *Primitives:* sphere, box, cylinder, capsule, torus, cone, round cone, **pyramid** (a rectangular
     base and top: an apex or a frustum), **prism** (its number of sides a live slider), octahedron,
@@ -373,6 +382,7 @@ number carries its standard error**.
 | **Modifiers** | Shapes | mm | Twist, bend, repeat, mirror, round, shell, displace and relief, each on a plain shape |
 | **From points** | Shapes | mm | An extruded star, a turned wine glass, a pipe along a path, a swept bar |
 | **Parametric part** | Shapes | mm | A heatsink whose fin count, pitch and height are its parameters |
+| **Imported parts** | Shapes | mm | STEP and STL parts imported as boxes, cylinders, cones, spheres and tori |
 | **Infinite detail** | Shapes | m | A Menger sponge four levels deep, and columns repeated to the horizon |
 | **Material board** | Materials | mm | The library's materials on 40 mm spheres |
 | **Relief and texture** | Materials | mm | Plaster, stucco, render, stone, hammered metal, leather: reliefs in a raking light |
@@ -499,6 +509,7 @@ mesher and 3MF writer, the library, the timeline and the shell. The list is in
 |---|---|
 | scenes, projects and workspaces (`.json`, every past version) | scenes, projects and workspaces (`.json`) |
 | Zemax ray files (`.DAT`) | pictures (**PNG**); video (**MP4**, or a ZIP of PNG frames) |
+| **STEP** (`.step`, `.stp`) and **STL**: solids, converted into shapes | |
 | library and timeline files (`.json`) | **3MF with colour**, **STL** |
 | | **CSV**: measurements, intensity table, illuminance map, detector hits; charts as PNG |
 | | library and timeline files (`.json`) |
@@ -521,9 +532,11 @@ Planned, in the order the plans give, with more in [`FEATURES.md`](FEATURES.md) 
 - **More surfaces**: rust, dust, wear, sheen, clear coat, thin film, hair.
 - **The help's pages**: the panel is there (Help › Contents, F1), with a welcome, the SDF explainer and the reference; the two tracks are being written. A study panel with parameter sweeps and an optimiser.
 
-And not planned yet, but asked of a tool like this: **importing meshes or CAD** (investigated: the
-routes per format are in [`roadmap/IMPORT.md`](roadmap/IMPORT.md)),
-**autosave**, UGR and other glare metrics, CRI and TM-30.
+- **More of import**: freeform (B-spline) faces and scans, through a distance grid; recognising the
+  patterns CAD makes most (a rounded box, a tube, a lens) as one shape; colours from STEP; OBJ, PLY
+  and 3MF ([`roadmap/IMPORT.md`](roadmap/IMPORT.md) section 11.5).
+
+And not planned yet, but asked of a tool like this: **autosave**, UGR and other glare metrics, CRI and TM-30.
 
 ---
 

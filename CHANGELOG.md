@@ -15,6 +15,58 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.71.0 — 2026-10-21
+
+**STEP and STL files import as the builder's own shapes.** The user asked to start on STL and STEP import and to see
+whether converting a part into primitives with boolean operations would make it fast to trace. It does, for CAD
+parts. File › Import from file… and a file dropped on the page take `.step`, `.stp` and `.stl`. Each solid in the
+file becomes a group of boxes, cylinders, cones, spheres and tori joined by union, intersect and subtract: the solid
+exactly, its normals analytic, nothing on the GPU but the shader any scene is (roadmap/IMPORT.md section 11).
+- **STEP is read by our own reader** (`import/step.js`), not OpenCascade:
+  - the faces' surfaces, their loops and edges, the units (inches, metres, an angle in degrees);
+  - an assembly's placements, each part where it sits, named by its product.
+- **STL from CAD is fitted back to the surfaces it was tessellated from** (`import/fit.js`): a 24-sided hole is a
+  cylinder again, a fillet a torus, a chamfer a cone. For each test part, the STL gives back exactly the faces the
+  STEP has.
+- **The conversion** (`import/csg.js`, `shapes.js`):
+  - a formula over the faces' half-spaces, with separating surfaces where a curved face ends;
+  - minimised so a plate is one box less four holes and a pocket, and a spherical lens two spheres and a cylinder;
+  - no seam inside the solid, and a lower bound on the distance everywhere, so it marches safely;
+  - turned into the builder's presets, cut to the part's size. The chamfer's cone is written here, with its own
+    normal (the preset cone has none).
+- **Into the scene being worked on as one undo step**, in mm converted to the scene's unit, made of the scene's default
+  material, converted in a Worker so the picture keeps going.
+- **Refused by name, with why**, and the rest of the file still imported: a solid with a freeform (B-spline) face, a
+  mesh that is not closed, a mesh whose curves fit no such surface (a scan: over 400 faces). Those need the distance
+  grid of IMPORT.md sections 3-5, which is not built.
+- **A new example, Imported parts** (Shapes): five parts made in OpenCascade, imported from their STEP files, and one
+  again from its STL.
+- **A new bench, Tests › imported** (`bench/imported.js`). It times the example as imported against the same with its
+  rounded boxes (27 shapes each) and lens (3) as one preset each, and against the floor alone. That says what an
+  imported part costs on the card, and what recognising such patterns would save. Nothing about render speed is
+  measured yet.
+
+**What to look at:**
+- Open the **Imported parts** example. On a white board: a plate with four holes and a pocket, an L bracket rounded
+  inside and out with a hole in each leg, a round base with a boss (rounded where they meet, chamfered on top, a hole
+  through it), a glass lens, and two blue and red rounded boxes. Does each look like that part, with no gap, sliver
+  or stray surface? The lens should refract like a lens.
+- Then **import a STEP or STL file of your own** (File › Import from file…, or drop it on the page). Check the status
+  line (parts, shapes, seconds; what was not converted and why), the tree (a group per part: its first shape the
+  base, then what is subtracted), and the console's `[import]` line for each part.
+- **Tests › imported**: paste the table back.
+
+**Tests:**
+- `import/test/step.test.mjs`, `stl.test.mjs`, `csg.test.mjs`, `import.test.mjs` against OpenCascade's own answers on
+  its own parts (`import/test/fixtures`, made by `make.py` with CadQuery: 15,000 classified points and an assembly).
+- `bench/test/imported.test.mjs`.
+- check-shaders, naga included, compiles the new example through every kernel.
+
+**The tutorial:** `affected.mjs` ties chapter 25 to lines of CLAUDE.md and `bench/index.js` this change does not touch
+(the benchmark's fixed stage and cameras), and nothing there needed to change. Chapter 3 (Building and bending shapes)
+now names `import/` among what it is about, and its plan line the conversion it will teach: the joins read
+backwards.
+
 ## 0.70.0 — 2026-10-19
 
 **Every picture and video saved is a file of its own, named with the time it was saved.** The user asked for it. A

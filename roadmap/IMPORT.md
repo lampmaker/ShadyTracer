@@ -2,9 +2,16 @@
 
 Written 2026-10-02 against `main` at `8611305`, because the user asked: *"Investigate possibilities for cad
 import. Stl, step, solidworks, obj and whatever exists. Ideally, converted into as fast as possible sdf. So may
-mean different operations or tools for different file types. Optics?"* **Nothing here is built.** It is the
+mean different operations or tools for different file types. Optics?"* Sections 0-10 are that investigation: the
 ground a plan would stand on: what the formats hold, what the renderer can take, what each route costs, and
 what has to be measured before choosing.
+
+> **Update 2026-10-21 (0.71.0): STEP and STL import is built, by a route sections 0-10 did not have.** A CAD part's
+> faces lie on planes, cylinders, cones, spheres and tori, and the part is a boolean formula over those surfaces'
+> half-spaces. The formula becomes the builder's own shapes joined by union, intersect and subtract. That needs none of
+> P0's plumbing (no GPU assets, no 3D textures) and no OpenCascade. It is exact, the lens included, and the normals
+> are analytic. **Section 11** is what was built, what it was checked against, what its cost per march step is
+> believed to be, and what is still the grid's: freeform faces and scans.
 
 The parts in question (the user, 2026-10-02): supplier optics (STEP lenses), mechanical context (housings,
 holders), and the user's own optical parts. The files: STEP and other CAD, mesh files, and Zemax lens files.
@@ -495,6 +502,166 @@ reaches:
 
 ---
 
+## 11. Primitives and booleans: built (2026-10-21, 0.71.0)
+
+The user, 2026-10-21: *"Start working on stl and step import. Investigate possibilities to optimize these for
+sdf/pathtracing. Eg conversion to primitives with boolean operations if that helps to simplify the model/optimize for
+fast tracing."* It helps. For the parts this tool imports (mechanical context, holders, housings, spherical lenses), it
+also beats every route sections 2-8 weighed, on everything that can be checked without a GPU.
+
+**How sure each line is:** as at the top. Everything **measured** here was measured in Node, in the container (Intel
+Xeon, 2.1 GHz, 4 cores), against OpenCascade 7.9's own answers (CadQuery 2.8, `import/test/fixtures/make.py`). **No
+render time is measured.** A conversion time is the JavaScript's on that CPU, not the user's browser.
+
+### 11.1 The answer on one screen
+
+- **A solid whose faces lie on planes, cylinders, cones, spheres and tori is a boolean formula over its surfaces'
+  half-spaces** (Shapiro and Vossler, 1991). Min and max of exact half-space distances is 1-Lipschitz and zero
+  exactly on the surface, so it is a lower bound on the distance, safe to march. Held, `import/test/csg.test.mjs`: at
+  every OpenCascade point of every fixture, |f| <= OpenCascade's distance to the surface, and the sign is right.
+- **The formula becomes the builder's own presets**: box, cylinder, sphere, torus, and a cone written for the import
+  with its own normal. Each is a code node sharing its preset's block, in groups joined by union, intersect and
+  subtract. So an imported part is something the user can see, select, edit and move. The renderer compiles it like any
+  scene (check-shaders: all four passes, naga included, over the new Imported parts example). Its normals are analytic.
+  The renderer's culling boxes are measured for it as for any top-level node.
+- **The same route takes an STL from CAD.** Its vertices lie on the surfaces it was tessellated from, so those
+  surfaces can be fitted back (`import/fit.js`). Each fixture's STL gives back exactly the faces OpenCascade's B-rep
+  has, and the same shapes as its STEP (measured, table below): a 24-sided hole is a cylinder again.
+- **Optics comes for free.** A STEP lens with spherical faces is two spheres and a capped cylinder, exactly: section
+  6's route 3, without OpenCascade and without a profile.
+- **What it cannot do goes to the grid route of sections 3-5, which is still not built.** That is freeform (B-spline)
+  faces and meshes that are not CAD tessellations (scans, sculpts). Both are refused by name, with why.
+
+### 11.2 What was built (read in code)
+
+- **`import/step.js`: our own STEP reader, not OpenCascade's.** Section 2 recommended occt-wasm, a 4.5 MB LGPL
+  WebAssembly build, for the surface types only it reported. But the file says each face's type in plain text, and
+  reading the topology and the analytic geometry is about 450 lines with no dependency. It reads:
+  - entities lazily, units (an SI prefix or the inch; the angle unit, since a cone's semi-angle is in it);
+  - faces, loops and edges, each edge sampled along its curve (line, circle, ellipse, B-spline, or one inside a
+    SURFACE_CURVE or SEAM_CURVE);
+  - an assembly's placements, by REPRESENTATION_RELATIONSHIP_WITH_TRANSFORMATION and by MAPPED_ITEM.
+
+  A face on a B-spline, a surface of revolution or extrusion, or an offset surface is kept and typed, and the solid is
+  refused.
+- **`import/brep.js`: inside the solid, exactly.** Rays meet the exact surfaces, and each hit is counted where its
+  face's loops say, in the surface's (u, v). Plane, cylinder and cone faces use parity along their axis. Sphere and
+  torus faces use the nearest boundary point. Seam edges are dropped. On 15,000 OpenCascade points over five parts,
+  and 2,000 more on an assembly, it disagrees nowhere (measured).
+  - **Found on the way: OpenCascade 7.9's own STEP export breaks ISO 10303-42 for a torus whose axis it flipped.**
+    The boss's inner fillet has its face on the wrong side of its loop. Read by the rule, the fillet was the other
+    three quarters of the tube. So a sphere's or torus's face takes its side from a neighbouring face across a shared
+    edge; the file's rule is only a fallback, and is counted (`guessed`).
+- **`import/fit.js`: an STL's surfaces found again.** Flat patches first, then curved regions grown from the smallest
+  patches. A region's type is decided from 12, 8, 5 or 3 neighbouring patches, simplest first. Cones and tori need 8
+  or more patches, and every fit three vertices more than it has parameters. A region grows only by patches whose
+  vertices are on the surface and whose facets stray from it by less than a tenth of their edge. It is refitted
+  whole, and merged into a bigger neighbour it lies on. A chamfer one facet wide fits a sphere as well as its cone,
+  through the same two circles; the facets' sag tells them apart. A cone's axis comes from its normals' plane,
+  because the line-complex axis is ill-posed on a narrow band.
+- **`import/csg.js`: the formula.**
+  - Half-spaces from the faces, plus SEPARATORS where a curved face ends: planes through its axis at the angles it
+    spans, planes across it, a torus's cones.
+  - Cells sampled on both sides of every face, around every edge and through the box, and classified by
+    `brep.js`/`fit.js`.
+  - GLOBAL literals taken out first (the outer planes, the through-holes).
+  - A cover of the remaining cells inside by prime implicants (Espresso's EXPAND, by coverage gain). Every pair of
+    inside cells across one surface is covered by one product, so no union of two touching products leaves a zero
+    inside the solid (a SEAM, which a ray inside glass would stop at).
+  - Factored, intersected with its sampled box, then checked against the solid at points it was not built from.
+- **`import/shapes.js`: bounded shapes.** Planes become oriented boxes (a pocket's five sides are one box standing
+  out of the top). A cylinder takes a box's caps when the box holds its circle. Anything infinite is cut to the
+  part's box, which is safe because the whole formula is inside it. De Morgan turns a union of complements into a
+  subtracted shape.
+- **The page**: File › Import from file… and a dropped file take `.step`, `.stp` and `.stl`. The conversion runs in a
+  module Worker (`import/worker.js`). The part is pasted into the scene being worked on as one undo step, in mm
+  converted to the scene's unit (model.js insertAsset), and made of the scene's default material.
+- **What is checked without a GPU:** `import/test/step.test.mjs`, `stl.test.mjs`, `csg.test.mjs`, `import.test.mjs`,
+  `bench/test/imported.test.mjs`, and check-shaders over the Imported parts example (`scenes/make.mjs` makes it from
+  the fixtures).
+
+### 11.3 What it gives, part by part (measured, Node, the container, 2026-10-21)
+
+Times are two runs on an idle CPU, as a range.
+
+| part | faces (OpenCascade) | half-spaces (separators) | literals | shapes / groups | STEP: read + convert | STL: triangles | STL: fit | STL: convert |
+|---|---|---|---|---|---|---|---|---|
+| plate | 15 (11 plane, 4 cylinder) | 15 (0) | 16 | 6 / 1 | 0.4-0.5 s | 1052 | 0.1 s | 0.1 s |
+| bracket | 12 (8 plane, 4 cylinder) | 16 (4) | 17 | 9 / 4 | 0.3 s | 660 | 0.07 s | 0.08-0.09 s |
+| boss | 9 (3 cylinder, 1 cone, 2 torus, 3 plane) | 13 (4) | 14 | 9 / 3 | 1.2-1.3 s | 4978 | 2.7-3.2 s | 0.1 s |
+| lens | 3 (2 sphere, 1 cylinder) | 3 (0) | 4 | 3 / 1 | 0.5 s | 534 | 0.05-0.06 s | 0.04 s |
+| rounded box | 26 (6 plane, 12 cylinder, 8 sphere) | 32 (6) | 39 | 27 / 8 | 0.8-0.9 s | 2796 | 0.3-0.4 s | 0.2 s |
+
+In headless Chromium, the page's own Worker (`import/worker.js`) took the whole of each file in 0.5 s (plate.step),
+1.8 s (boss.stl), 1.7 s (assembly.step) and 0.2 s (lens.stl): measured once, in the container.
+
+- **Every point agrees.** For the STEP of all five, the formula and the shapes are on OpenCascade's side of the
+  surface at all 3000 points each, and never more than its distance (`csg.test.mjs`). For the STL, they agree at
+  every point farther from the surface than 2.5 times the mesh's band, the distance its facets stray from the fitted
+  surfaces (0.002 to 0.04 mm here; the files were exported at 0.02 mm and 0.2 rad).
+- **The plate is what a hand writes:** a 40 x 30 x 5 box, four 4 mm holes, a 12 x 8 pocket.
+- **The lens is its two spheres (R 20 and R 30) and its edge.**
+- **The rounded box is not.** It is 27 shapes where one rounded box would do (11.5).
+- **Where the conversion's time goes** (inferred from what each step does, not profiled):
+  - for STEP, mostly the cell sampling's ray tests, every face's surface against every ray; a torus is stepped
+    along each ray (geom.js);
+  - for STL, the fits, refitted as a region grows and checked against every facet's probes. The boss's tori are
+    4978 triangles.
+
+### 11.4 What a march step costs (inferred: Tests › imported measures it)
+
+- **Per step, every shape in the part is evaluated** while the ray is within its top-level box. codegen culls only at
+  the root (ONLY AT THE ROOT, `builder/codegen.js`). Far from the part it is one box test. Near it, it is the
+  sum of its shapes: 6 closed-form shapes for the plate, 27 for the rounded box. Against section 3's
+  alternatives: a grid is one filtered read or eight loads per step, plus its normal. A triangle BVH is tens of
+  node and triangle tests. Neither is measured; nor is this.
+- **The step is a bound, not the distance.** Beyond a right-angled edge, max of the two planes' distances is never
+  less than 0.707 of the true distance (derived: max(a, b) >= sqrt(a^2 + b^2) / sqrt(2)); it is less beyond a sharper
+  edge. So a ray grazing an edge takes more steps than with an exact distance. How many more is unmeasured. The
+  recognised shapes (a box, a capped cylinder) are exact where their planes were a max.
+- **The normal is the nearest shape's, analytic.** None of the three extra scene evaluations a hit costs without one
+  (section 1, measured +328% when every shape lacked one).
+- **What would make it slow:** a part of hundreds of faces (a filleted housing) as hundreds of shapes in one top-level
+  group, all evaluated at every step near it. Three remedies, none built: boxes per group inside a part (codegen culls
+  only at the root today); recognising patterns (11.5); one code node evaluating each half-space once and combining
+  them by min and max (a shape used by two products is evaluated twice now).
+- **Tests › imported** (`bench/imported.js`) measures the first question on the card:
+  - the Imported parts example as imported;
+  - the same with its two rounded boxes (27 shapes each) and its lens (3) one preset each;
+  - the floor alone.
+
+  Row 1 less row 3 is what the parts cost; row 1 against row 2 is what recognition would save.
+
+### 11.5 Next, in this order (a recommendation)
+
+1. **The user runs Tests › imported**, opens the Imported parts example and judges the picture. Both have to come
+   first: nothing here has been seen.
+2. **Recognition of the patterns CAD makes most**, if row 1 is clearly slower than row 2:
+   - a box rounded on every edge (12 cylinders and 8 spheres of one radius: one `box` with `rounding`);
+   - a tube (a cylinder less a coaxial one);
+   - a spherical lens (`lens`);
+   - a cylinder with a chamfer or a fillet at its end.
+3. **Culling inside a part**: a box per group under the part, tested before the group's shapes, if a big part's step
+   cost is what row 1 shows.
+4. **B-spline faces that are really planes or cylinders.** Some exporters write every face as a B-spline. Sample the
+   face, run fit.js's fitters on it, and keep the analytic surface if it fits to the tolerance. A face that is truly
+   freeform is the grid's (sections 3-5, P0), or the asphere's (BUILDER.md section 6) if it is a lens.
+5. **Colours and names from STEP** (STYLED_ITEM's COLOUR_RGB) as materials; OBJ, PLY and 3MF through the same fitter.
+6. **Speed of the conversion**, only if a real part is slow: face boxes for the ray tests, and the cover's bit sets.
+
+### 11.6 Limits, said
+
+- **Sampled cells.** A cell of the arrangement smaller than the sampling can be missed. It is then decided by the
+  cover, possibly wrongly. The conversion checks itself at 3000 fresh points and reports `mismatches`; on these five
+  parts it is 0. Five parts are not every part.
+- **STL is taken as millimetres**, as every slicer and CAD exporter writes it.
+- **One material per import**, the scene's default; an assembly's parts are separate groups and can be given others.
+- **MAX_FACES = 400** a solid (csg.js). The rounded box's STL as 2598 facets, before fitting found its surfaces,
+  took 144 s to convert in Node.
+- **Not read:** IGES, B-spline faces, open shells (a STEP surface model), meshes that are not closed.
+
+---
+
 ## Sources (read 2026-10-02)
 
 - occt-import-js: https://github.com/kovacsv/occt-import-js (README: formats, `params`, output, LGPL-2.1)
@@ -512,3 +679,9 @@ reaches:
 - Barill, Dickson, Schmidt, Levin, Jacobson, *Fast Winding Numbers for Soups and Clouds*, SIGGRAPH 2018:
   https://www.dgp.toronto.edu/projects/fast-winding-numbers/
 - Unity mesh-to-sdf: https://github.com/Unity-Technologies/com.unity.demoteam.mesh-to-sdf
+- (2026-10-21, section 11; from memory, not fetched) Shapiro and Vossler, *Construction and optimization of CSG
+  representations*, Computer-Aided Design 23(1), 1991, and *Separation for boundary to CSG conversion*, ACM TOG 12(1),
+  1993: half-spaces of a B-rep's faces, separators where they do not suffice, a union of products. Brayton et al.,
+  *Logic Minimization Algorithms for VLSI Synthesis* (Espresso), 1984: EXPAND and IRREDUNDANT. Pottmann and Randrup,
+  *Rotational and helical surface approximation for reverse engineering*, Computing 60, 1998: the axis of a surface of
+  revolution as the line its normal lines meet. ISO 10303-42 for the surfaces' parametrisations and a face's loops.

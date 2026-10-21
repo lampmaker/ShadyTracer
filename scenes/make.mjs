@@ -30,6 +30,7 @@ import * as M from '../builder/model.js'
 import { modifierGroup } from '../builder/modifiers.js'
 import { rotationTowards } from '../builder/lights.js'
 import { COAT_PRESETS } from '../builder/materials.js'
+import { convert } from '../import/index.js'
 
 const here = new URL('./', import.meta.url)
 const LIB = JSON.parse(readFileSync(new URL('../library/items/materials.json', import.meta.url), 'utf8')).items
@@ -237,6 +238,32 @@ function fromPoints() {
         params: { route: { path: [[-60, 0, 6], [20, 0, 6, 25, 1, 1, 'turn'], [20, 50, 30, 0, 0.6, 0.6, 'turn']], live: true }, turn: 90,
                   section: [[-12, -4, 2], [12, -4, 2], [12, 4, 2], [-12, 4, 2]] } })
     return { doc, camera: orbit([10, 0, 60], -80, 25, 600) }
+}
+
+/* IMPORTED PARTS (0.71.0, import/): five parts made in OpenCascade (import/test/fixtures/make.py), read from their STEP
+   files -- and the rounded box again from its STL -- by File › Import from file…'s own conversion, each a group of the
+   builder's shapes: the plate a box less four holes and a pocket, the lens two spheres and a cylinder. What the
+   import makes is what is here; nothing was placed by hand but where each stands on the table. A part keeps its own
+   sizes in mm. Daylight from the left, on a white board. */
+function imported() {
+    const doc = scene('Imported parts', { radius: 3000, env: SUN(40) })
+    floor(doc, lib(doc, 'white'))
+    const parts = [
+        ['plate.step', 'brushed aluminium', [-110, 30]], ['bracket.step', 'anodised aluminium', [-45, 30]], ['boss.step', 'turned aluminium', [20, 30]],
+        ['lens.step', 'clear glass', [75, 30]], ['roundbox.step', 'glossy blue plastic', [-60, -40]], ['roundbox.stl', 'glossy red plastic', [0, -40]],
+    ]
+    for (const [file, mat, [x, y]] of parts) {
+        const bytes = readFileSync(new URL(`../import/test/fixtures/${file}`, import.meta.url))
+        const material = structuredClone(M.material(doc, lib(doc, mat)))
+        const r = convert(M, file, bytes, { material })
+        if (!r.asset || r.refused.length) throw new Error(`${file}: ${JSON.stringify(r.refused)}`)
+        const g = M.insertAsset(doc, r.asset, 'root')
+        g.label = file
+        // standing on the board: the part's box is centred on its group (shapes.js addPart), so its half height up
+        const box = r.parts[0].ir.box
+        g.transform.pos = V(x, y, Math.round(100 * 0.5 * (box.hi[2] - box.lo[2])) / 100)
+    }
+    return { doc, camera: orbit([-20, 0, 8], -70, 35, 330) }
 }
 
 /* A PARAMETRIC PART: a heatsink whose fin count, pitch and height are the group's parameters (component parameters,
@@ -596,6 +623,7 @@ export const EXAMPLES = [
         ['modifiers.json', modifiers, 'Twist, bend, repeat, mirror, round, shell, displace and relief, each on a plain shape'],
         ['from-points.json', fromPoints, 'An extruded star, a turned wine glass, a pipe along a path, a swept bar'],
         ['parametric-part.json', parametric, 'A heatsink whose fin count, pitch and height are its parameters'],
+        ['imported-parts.json', imported, 'STEP and STL parts imported as boxes, cylinders, cones, spheres and tori'],
         ['infinite-detail.json', infinite, 'A Menger sponge four levels deep, and columns repeated to the horizon'],
     ] },
     { audience: 'Modelling and rendering', group: 'Materials', items: [

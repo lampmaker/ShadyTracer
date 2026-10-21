@@ -15,6 +15,23 @@ order of that work): `ARCHITECTURE.md`, beside this file (2026-10-04). **Media**
 photon map, scattering inside materials, an Optics-view beam view -- has its own: `MEDIA.md`, beside this file
 (2026-10-16).
 
+## STEP and STL import as shapes — built 2026-10-21 (0.71.0), NOT yet seen
+
+The user (2026-10-21): "Start working on stl and step import. Investigate possibilities to optimize these for
+sdf/pathtracing. Eg conversion to primitives with boolean operations if that helps." Built that way. A solid whose faces
+lie on planes, cylinders, cones, spheres and tori becomes a group of the builder's presets joined by union, intersect and
+subtract; an STL from CAD is fitted back to those surfaces first (`import/`; the whole account, with what was measured
+and what is only inferred, is `IMPORT.md` section 11).
+- **Proved without a GPU**: on OpenCascade's own parts and its own classification, every point on the right side, the
+  formula never more than the true distance, no seam, the STL giving back the STEP's faces (`import/test/`).
+  check-shaders with naga compiles the Imported parts example through every kernel.
+- **Not seen**: the Imported parts example's picture, an import of one of the user's own files, and what an imported
+  part costs a march step. **Tests › imported** times the example against its rounded boxes and lens as one preset
+  each (what recognising those patterns would save) and against the floor alone.
+- **Next** (IMPORT.md 11.5): that measurement; then pattern recognition or culling inside a part, whichever it points
+  to; B-spline faces that are really planes or cylinders; STEP colours. Freeform faces and scans still need the
+  distance grid (IMPORT.md sections 3-5, P0), not built.
+
 ## Each scene its own camera, exposure and tolerance — built 2026-10-17 (0.66.0), NOT yet seen
 
 The user (2026-10-17): camera settings and exposure "can vary per scene ... the information should belong to the

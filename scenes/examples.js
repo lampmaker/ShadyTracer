@@ -45,6 +45,13 @@ export const EXAMPLES = [
   "description": "A heatsink whose fin count, pitch and height are its parameters"
  },
  {
+  "file": "imported-parts.json",
+  "title": "Imported parts",
+  "audience": "Modelling and rendering",
+  "group": "Shapes",
+  "description": "STEP and STL parts imported as boxes, cylinders, cones, spheres and tori"
+ },
+ {
   "file": "infinite-detail.json",
   "title": "Infinite detail",
   "audience": "Modelling and rendering",
