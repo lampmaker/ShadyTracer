@@ -30,6 +30,7 @@ import { sourceTable, faceSource } from './sources.js'
 import { lightOf, beamOf, beamShape } from './lights.js'
 import { sensorAt, cylinderE } from '../lib/pathtracer/tests.js'
 import { fresnel } from '../lib/pathtracer/optics/fresnel.js'
+import * as V from '../lib/pathtracer/verdict.js'
 
 /* THE LAMP: a disc of radius R, H up, its faces level, luminance L straight out of both (cd/m^2). Metres. */
 const L = 10000, R = 0.3, H = 1
@@ -212,6 +213,26 @@ export function lightBench() {
         id: 'light-vs-emitter',
         kind: 'image',
         title: 'A light against the same surface made an emissive object: the same picture?',
+        /* THE VERDICT (lib/pathtracer/verdict.js; the floors are choices, from the note): each pair's meanLuma, light
+           over emitter, 1 within the error bars or 1% -- the big disc's pairs read a hair under, 0.995 -- except the
+           pair kept at the automatic tolerance, the known limit (about 0.82); emitter discovery listing the disc on an
+           emitter row and nothing on a light row; the sensors 1 within seMax or 1%; a face its distribution's L
+           within 2% of it and 0.2% of the lamp's (the cone's face wants 0). */
+        verdict: (r, i, rows, c) => {
+            if (!c) return V.info('no case')
+            const out = []
+            if (c.as === 'emitter') {
+                const light = rows.find(x => x.case === `${c.pair} -- light`)
+                out.push(!light ? V.info('its light row has not run')
+                    : c.pair.includes('the automatic eps') ? V.between(light.meanLuma / r.meanLuma, 0.75, 0.9, 'light/emitter, the known limit')
+                    : V.agree(light.meanLuma, r.meanLuma, { seA: V.meanSe(light), seB: V.meanSe(r), floor: 0.01, what: 'light/emitter' }))
+            }
+            if (c.as && Number.isFinite(r.emitters))
+                out.push(c.as === 'emitter' ? V.above(r.emitters, 0, 'emitters listed') : V.exactly(r.emitters, 0, 'emitters listed'))
+            if (r.discRatio) out.push(V.sensors(r.discRatio, r.discSe, 0.01, RADII.map(x => `rho ${x}`)))
+            if (c.faceWant != null) out.push(V.near(r.faceL, c.faceWant, { floor: 0.02 * c.faceWant + 0.002 * L, what: 'face L' }))
+            return out.length ? V.worst(out) : V.info('nothing to judge on this row')
+        },
         note: 'PLAN.md, Lights, L0. One two-sided Lambertian disc of 10 000 cd/m^2, 1 m over the floor, once a LIGHT'
             + ' (light-traced: its photons light the picture) and once an EMISSIVE OBJECT (an emitter material:'
             + ' every camera path counts it), sun and sky off. Every pair must agree: `light/emitter` (on the emitter row)'

@@ -46,10 +46,13 @@
       (chapter 5); whether the surface tolerance, the small distance at which a ray counts as touching a surface,
       follows a scene's size (chapter 30); whether the far field gives a known source's curve (chapter 31); whether the
       photon map adds exactly its share (chapter 19). Four ask only what something costs, not whether it is right.</p>
-    <p data-step="board:once">One row has been pressed once and is still open. Light sampling, aiming shadow rays at
+    <p data-step="board:once">Two rows have been pressed once and are still open. Light sampling, aiming shadow rays at
       the lights (chapter 14), once read 76% too bright with a sun twenty times the real one, in a scene with a glowing
-      object of its own that light sampling does not aim at, so the cause was unclear. This row was built to tell whether
-      the sun's disc or the sky is wrong; it was pressed once, and its answer was never written down.</p>
+      object of its own that light sampling does not aim at, so the cause was unclear. One row was built to tell whether
+      the sun's disc or the sky is wrong; it was pressed once, and its answer was never written down. The other is the
+      optics trace's energy balance (chapter 31): its first press passed every row but the integrating sphere's, and
+      those read 0 because the test had put its light inside a solid ball, where no ray meets a wall. The test was wrong,
+      not the renderer; the ball is a hollow shell now, not yet pressed.</p>
     <p data-step="board:unexplained">Measured on a real graphics card, and nobody yet knows why. Take the first: on the
       Ampere graphics card, the furnace's rough glass reads 0.9440 in every run since one set that read 0.9872, where on
       the Pascal it read 0.9587 and that was explained. (Pascal and Ampere are the two NVIDIA graphics cards the user

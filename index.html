@@ -664,8 +664,9 @@
             };
         }
         /* THE LIGHT BENCH (builder/lightbench.js, light-vs-emitter): a light against the same surface made an
-           emissive object. Its scene too is a builder document, so the page hands it in the same way. */
-        window.RTTESTS?.addTest?.({ id: 'light-vs-emitter', title: 'A light against the same emissive object', prepare: async () => lightBench() });
+           emissive object. Its scene too is a builder document, so the page hands it in the same way -- in the Lights &
+           emitters folder, not the benchmarks'. */
+        window.RTTESTS?.addTest?.({ id: 'light-vs-emitter', title: 'A light against the same emissive object', group: 'lights', prepare: async () => lightBench() });
         // the environment's entries are the scene's now (builder/params.js), not the renderer's
         /* ...and the view's values a scene flags animated (builder model.js setAnimated, 0.66.0) are offered as animated: the
            camera's and the exposure's are the renderer's entries, at its paths, which a saved track names. Unmarked, they

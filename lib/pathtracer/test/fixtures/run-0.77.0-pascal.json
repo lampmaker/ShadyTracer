@@ -1,0 +1,296 @@
+{
+ "about": "The user's run of every test, 0.77.0 (dec4843, main), nvidia pascal, 563x754, pasted 2026-10-22: each row cut to the fields a verdict reads (lib/pathtracer/tests.js `verdict`). `pixels` and `covered` are the test's, given once. optics-balance's integrating sphere rows are the SOLID sphere's, before 0.next made it a shell: they read 0.",
+ "tests": {
+  "photometry": { "pixels": 425256, "rows": [
+   { "case": "sun + sky", "meanLuma": 21824.50184291701, "trimmedLuma": 21814.55903365409, "relSE": 0.1385428108447134, "expected": 21826.044957347607 },
+   { "case": "sun only", "meanLuma": 18009.69421100187, "trimmedLuma": 17999.112089575305, "relSE": 0.17673851502359575, "expected": 18006.326323142122 },
+   { "case": "sky only", "meanLuma": 3818.3143965780105, "trimmedLuma": 3817.098421929636, "relSE": 0.08125119022450897, "expected": 3819.7186342054883 },
+   { "case": "sun only, elevation 20", "meanLuma": 8708.0141132362, "trimmedLuma": 8702.915443896607, "relSE": 0.17680367286531487, "expected": 8709.47143156459 },
+   { "case": "sun only, 10-degree disc", "meanLuma": 18003.989135230142, "trimmedLuma": 17993.58273269279, "relSE": 0.1761767964447369, "expected": 18006.326323142122 },
+   { "case": "sky only, turbidity 4", "meanLuma": 3820.1074294265964, "trimmedLuma": 3817.837221172156, "relSE": 0.1469098251359423, "expected": 3819.7186342054883 },
+   { "case": "sun + sky, NEE off, 10-degree disc", "meanLuma": 21762.537816687643, "trimmedLuma": 21496.75262404792, "relSE": 1.9946728698520049, "expected": 21826.044957347607 },
+   { "case": "sun + sky, light tracing on", "meanLuma": 21821.837944227806, "trimmedLuma": 21811.756400959424, "relSE": 0.1407140632683317, "expected": 21826.044957347607 },
+   { "case": "sun + sky, mm scene", "meanLuma": 21812.830507612623, "trimmedLuma": 21802.771835107975, "relSE": 0.13862727882346554, "expected": 21826.044957347607 },
+   { "case": "sky only, mm scene", "meanLuma": 3813.1680930584334, "trimmedLuma": 3811.957460857544, "relSE": 0.08140847616808951, "expected": 3819.7186342054883 },
+   { "case": "sun + sky, firefly clamp 4x white", "meanLuma": 21823.523251738516, "trimmedLuma": 21813.379871415884, "relSE": 0.14071413917858377, "expected": 21826.044957347607 },
+   { "case": "sun + sky, NEE off, 10-degree disc, clamp 4x", "meanLuma": 4652.597405163967, "trimmedLuma": 4639.082795148928, "relSE": 0.4770265354022633, "expected": 21826.044957347607 }
+  ] },
+  "error-bar": { "pixels": 424502, "rows": [
+   { "case": "sun + sky, 32 samples", "meanLuma": 21814.668423056144, "relSE": 0.1386288012189026, "seRatio": 0.9988184270983314 },
+   { "case": "sun + sky, 128 samples", "meanLuma": 21820.429454170095, "relSE": 0.07036233542250214, "seRatio": 1.0005966414465077 },
+   { "case": "sky only", "meanLuma": 3816.7076801789954, "relSE": 0.08121014334048002, "seRatio": 1.0001085058315011 },
+   { "case": "sun + sky, NEE off, 10-degree disc", "meanLuma": 21783.404642266712, "relSE": 1.9943419848332125, "seRatio": 0.9998189734300217 },
+   { "case": "sun + sky, light tracing on", "meanLuma": 21828.25049596369, "relSE": 0.14066861101314646, "seRatio": 1.003171018154569 },
+   { "case": "sun + sky, EMA window 10", "meanLuma": 21819.201774721834, "relSE": 0.17515116621146465, "seRatio": 1.000545510172967 },
+   { "case": "sun + sky, mm scene", "meanLuma": 21818.771296937986, "relSE": 0.138601253770407, "seRatio": 1.0000019582890716 }
+  ] },
+  "illuminance": { "pixels": 424502, "rows": [
+   { "case": "white floor, sun + sky", "meanLuma": 27270.795118002512, "relSE": 0.13860156995851428, "expected": 85710.67811865475, "areaRatio": 0.9989158095347902, "areaRel": 0.00042405478138344155 },
+   { "case": "dark floor (albedo 0.05)", "meanLuma": 27273.787275095256, "relSE": 0.14074459984093138, "expected": 85710.67811865475, "areaRatio": 0.9989395635990018, "areaRel": 0.000430683616039318 },
+   { "case": "mirror floor", "meanLuma": 27280.526120658746, "relSE": 0.14070314674522197, "expected": 85710.67811865475, "areaRatio": 1.0001092471211754, "areaRel": 0.00043012354722580154 },
+   { "case": "glass floor", "meanLuma": 27280.927992376506, "relSE": 0.14070159249330702, "expected": 85710.67811865475, "areaRatio": 0.9999780163375979, "areaRel": 0.00043017127561916147 },
+   { "case": "sun only, elevation 20", "meanLuma": 10891.152360458022, "relSE": 0.17671705190580628, "expected": 34202.01433256687, "areaRatio": 1.0009564241894617, "areaRel": 0.0005400181163890318 },
+   { "case": "sky only", "meanLuma": 4772.735474804015, "relSE": 0.0812628164274184, "expected": 15000, "areaRatio": 0.9996213074456395, "areaRel": 0.00024839528735173946 },
+   { "case": "NEE off, 10-degree disc", "meanLuma": 27332.738557439116, "relSE": 1.99113456034767, "expected": 85710.67811865475, "areaRatio": 0.9990853148510779, "areaRel": 0.006094433734681618 },
+   { "case": "light tracing on, mirror floor", "meanLuma": 27287.96075355332, "relSE": 0.14066795238519852, "expected": 85710.67811865475, "areaRatio": 0.9999098065471905, "areaRel": 0.00043018123849360824 },
+   { "case": "mm scene", "meanLuma": 27263.957817100134, "relSE": 0.13863627250311533, "expected": 85710.67811865475, "areaRatio": 0.9996944579395947, "areaRel": 0.00042375559747450807 },
+   { "case": "LUMINANCE VIEW (mode 2): ratio reads the albedo, area 1", "meanLuma": 21824.96676449929, "relSE": 0.1407052355449662, "expected": 85710.67811865475, "areaRatio": 0.9997751813808504, "areaRel": 0.00043032518351465064 },
+   { "case": "STUDIO light, 2000 lx, top 0.5", "meanLuma": 636.4736841022066, "relSE": 0.011262840497053648, "expected": 2000, "areaRatio": 0.99974695925455, "areaRel": 0.000034452806180600855 },
+   { "case": "STUDIO light, 2000 lx, flat, tinted", "meanLuma": 636.4120589100206, "relSE": 0.0022588783495799776, "expected": 2000, "areaRatio": 0.9996793084529852, "areaRel": 0.00000684660311622226 }
+  ] },
+  "cosine-law": { "pixels": 424502, "rows": [
+   { "case": "level (tilt 0)", "meanLuma": 22501.29917931887, "relSE": 0.17414253897442009, "expected": 70710.67811865475 },
+   { "case": "tilt 30 towards the sun", "meanLuma": 30742.53105803091, "relSE": 0.17680092330009442, "expected": 96592.58262890684 },
+   { "case": "tilt 45: facing the sun", "meanLuma": 31818.060465559647, "relSE": 0.17684198498773532, "expected": 100000 },
+   { "case": "tilt -15: sun at 30 degrees", "meanLuma": 15911.371507420654, "relSE": 0.17682170468800426, "expected": 49999.99999999999 },
+   { "case": "tilt -30: sun at 15 degrees", "meanLuma": 8237.993836083158, "relSE": 0.1767959256536296, "expected": 25881.904510252072 },
+   { "case": "tilt -50: back to the sun (0 lx)", "meanLuma": 0, "relSE": null, "expected": 0 },
+   { "case": "tilt 30, NEE off, 10-degree disc", "meanLuma": 30629.621627876575, "relSE": 2.0600250111996306, "expected": 96592.58262890684 }
+  ] },
+  "scale": { "pixels": 424502, "rows": [
+   { "case": "glass sphere, m", "meanLuma": 13079.628831098224, "trimmedLuma": 10528.192358067568, "relSE": 25.74143779606923 },
+   { "case": "glass sphere, cm", "meanLuma": 13597.025554249598, "trimmedLuma": 10527.751310913021, "relSE": 27.315148408497368 },
+   { "case": "glass sphere, mm", "meanLuma": 13377.497963744241, "trimmedLuma": 10527.342388468689, "relSE": 26.88820535562095 },
+   { "case": "mm, the OLD fixed 1 mm (must differ)", "meanLuma": 11464.11015353119, "trimmedLuma": 11463.138440328277, "relSE": 0.000017142417171630153 }
+  ] },
+  "disc-light": { "pixels": 424502, "rows": [
+   { "case": "NEE on", "meanLuma": 132.3136018872667, "relSE": 0.4873219419150039, "discRatio": [1.0482365431766372, 1.003807457439207, 1.0182166857855597, 0.9587972157577687], "discSe": 0.0518375430203211 },
+   { "case": "NEE off (BSDF sampling alone)", "meanLuma": 132.07326622161506, "relSE": 1.041126106043934, "discRatio": [1.0336248628074591, 0.9838464382864488, 1.0328122826588475, 0.9366461961840311], "discSe": 0.14119322407683374 },
+   { "case": "light tracing on", "meanLuma": 132.49939458152946, "relSE": 0.462418816440678, "discRatio": [1.1175170963637835, 0.9578509498466244, 1.0118474002682114, 1.0064228702903069], "discSe": 0.052411926937869814 },
+   { "case": "NEE emitter share 0.9", "meanLuma": 132.40707126054244, "relSE": 0.3243941020968204, "discRatio": [1.0631203775531246, 0.9889691661961123, 1.0053987929583583, 0.9821861304519958], "discSe": 0.03523713150374524 },
+   { "case": "the picture, not the view (pi L / albedo)", "meanLuma": 151.2970135986658, "relSE": 0.3380614599102803, "discRatio": [0.9120681463623144, 1.0122618936758658, 0.9885564689720017, 0.9198903969971195], "discSe": 0.05132020860825752 }
+  ] },
+  "small-emitter": { "pixels": 424502, "rows": [
+   { "case": "radius 6 cm: NEE", "meanLuma": 132.32490773169587, "relSE": 0.48673252829185976, "discRatio": [1.0678563311139126, 0.995852796438584, 0.9728497769693341, 1.033756885672485], "discSe": 0.05415204778137999 },
+   { "case": "radius 6 cm: BSDF sampling alone", "meanLuma": 131.84749045170875, "relSE": 1.0421736569272804, "discRatio": [0.948201299136982, 0.9867745027199979, 1.0521775757207645, 0.914863649184298], "discSe": 0.13961079651000952 },
+   { "case": "radius 6 cm: light tracing on", "meanLuma": 132.32644065638874, "relSE": 0.4631715919309581, "discRatio": [1.0541881735843464, 1.0356858052208258, 0.9329415037878624, 0.964120461732179], "discSe": 0.049453930753437236 },
+   { "case": "radius 6 cm, the OLD 2 cm margin (must match, noisier)", "meanLuma": 131.9524001627115, "relSE": 0.9988159243182401, "discRatio": [1.1722275197175411, 1.0585100785579902, 0.888752382259463, 0.9212860121315932], "discSe": 0.13921836195110876 },
+   { "case": "radius 400 m (grid 15 m): NEE", "meanLuma": 132.52339319599687, "relSE": 0.48922655016720434, "discRatio": [1.02223572480374, 1.0074040067800676, 0.9186101779885825, 1.063155732272494], "discSe": 0.06160108806232154 },
+   { "case": "radius 400 m and the old margin: as before", "meanLuma": 132.4982500904948, "relSE": 0.9905958078383972, "discRatio": [0.9434141114831553, 1.0372907626276566, 1.0238728101917438, 1.0641932379911572], "discSe": 0.14729111263044758 }
+  ] },
+  "emitters": { "pixels": 424502, "rows": [
+   { "case": "NEE on, light tracing on", "meanLuma": 0, "relSE": null, "emitters": 0 },
+   { "case": "NEE on, light tracing off", "meanLuma": 0, "relSE": null, "emitters": 0 },
+   { "case": "NEE off, light tracing off (few % scatter)", "meanLuma": 0, "relSE": null, "emitters": 0 },
+   { "case": "NEE off, light tracing on (few % scatter)", "meanLuma": 0, "relSE": null, "emitters": 0 },
+   { "case": "NEE emitter share 0.2", "meanLuma": 0, "relSE": null, "emitters": 0 },
+   { "case": "NEE emitter share 0.9", "meanLuma": 0, "relSE": null, "emitters": 0 }
+  ] },
+  "furnace": { "pixels": 424502, "rows": [
+   { "case": "Lambertian", "meanLuma": 1000.0001831684446, "relSE": 2.612768548052767e-8 },
+   { "case": "Lambertian, NEE off", "meanLuma": 1000.0002441406249, "relSE": 2.526134961330398e-8 },
+   { "case": "plastic, rough 0.5", "meanLuma": 999.9813000505189, "relSE": 0.017487922735448323 },
+   { "case": "plastic, rough 0.5, NEE off", "meanLuma": 1000.0096997253144, "relSE": 0.030390663476160134 },
+   { "case": "plastic, rough 1.0", "meanLuma": 999.9640904653941, "relSE": 0.022285457339806067 },
+   { "case": "plastic, smooth", "meanLuma": 999.7989085926807, "relSE": 0.02766330075125363 },
+   { "case": "plastic, ior 2.4, rough 0.2", "meanLuma": 1000.001853399591, "relSE": 0.03941429824480211 },
+   { "case": "metal, rough 0.5", "meanLuma": 1000.4967980736932, "relSE": 0.06907297174468152 },
+   { "case": "metal, rough 1.0", "meanLuma": 1000.2791018711107, "relSE": 0.04443340327209648 },
+   { "case": "metal, rough 1.0, NEE off", "meanLuma": 1000.1060996413594, "relSE": 0.1641931540769081 },
+   { "case": "metal, rough 0.3", "meanLuma": 1000.1406657784813, "relSE": 0.05312651842668552 },
+   { "case": "metal, rough 0.15", "meanLuma": 1000.2534420512832, "relSE": 0.02956487202812035 },
+   { "case": "metal, mirror", "meanLuma": 1000.0030385780191, "relSE": 0.00000775886794735471 },
+   { "case": "glass, smooth, ior 1.5", "meanLuma": 999.8817938379623, "relSE": 0.0018933301916509869 },
+   { "case": "glass, smooth, ior 2.4", "meanLuma": 999.8927531499984, "relSE": 0.0018047644722443594 },
+   { "case": "glass, rough 0.3 (single-scatter: a little under 1)", "meanLuma": 947.2095661003464, "relSE": 0.04592896232272785 },
+   { "case": "metal, rough 0.5, anisotropic 0.8, turned", "meanLuma": 1000.8952218309987, "relSE": 0.07524329895905921 },
+   { "case": "metal, rough 0.5, anisotropic 0.8, turned, NEE off", "meanLuma": 1001.0112870792018, "relSE": 0.06316270428978477 },
+   { "case": "metal, rough 0.5, anisotropic -0.8, turned", "meanLuma": 1000.8654368136408, "relSE": 0.07513754050994341 },
+   { "case": "metal, rough 0.7, anisotropic 0.95, brushed", "meanLuma": 1000.4630622172573, "relSE": 0.09930282988873049 },
+   { "case": "metal, rough 0.3, anisotropic 0.5, no grain", "meanLuma": 1000.3165879037159, "relSE": 0.053348472859226975 },
+   { "case": "plastic, rough 0.5, anisotropic 0.8, turned", "meanLuma": 1000.0387452808582, "relSE": 0.01911394242758899 },
+   { "case": "plastic, rough 0.5, anisotropic 0.8, turned, NEE off", "meanLuma": 1000.1030305948452, "relSE": 0.03291008050983018 },
+   { "case": "plastic, ior 2.4, rough 0.3, anisotropic 0.9, brushed", "meanLuma": 1000.0347874495737, "relSE": 0.035117132145111474 },
+   { "case": "glass, smooth, beam splitter 50/50 on every face", "meanLuma": 999.2453402471557, "relSE": 0.004506414953724837 },
+   { "case": "glass, smooth, dichroic (> 600 nm), AR inside", "meanLuma": 999.9776004161965, "relSE": 0.03543600793348044 },
+   { "case": "glass, smooth, dichroic (> 600 nm), every face", "meanLuma": 997.1328700499748, "relSE": 0.061503134114347775 },
+   { "case": "glass, smooth, dichroic (> 600 nm), every face, NEE off", "meanLuma": 997.2200674977862, "relSE": 0.06149754494911889 },
+   { "case": "plastic, smooth, dichroic coat (< 500 nm) over the white base", "meanLuma": 1000.0042688758392, "relSE": 0.011541722180364295 },
+   { "case": "plastic, smooth, dichroic coat (< 500 nm), NEE off", "meanLuma": 1000.1822450801267, "relSE": 0.06586277825159387 },
+   { "case": "glass, smooth, Abbe 20 (dispersive)", "meanLuma": 1000.0089048846878, "relSE": 0.11235974880007546 },
+   { "case": "glass, smooth, Abbe 20, NEE off", "meanLuma": 999.634119281749, "relSE": 0.11241071313994419 },
+   { "case": "glass, rough 0.3, Abbe 20 (single-scatter: as rough glass)", "meanLuma": 946.5355300921756, "relSE": 0.12372955399164454 },
+   { "case": "CONTROL: black sphere -- must read well below 1", "meanLuma": 134.9075885192029, "relSE": 0.029203308183947604 }
+  ] },
+  "haze": { "pixels": 424502, "rows": [
+   { "case": "no haze box (the furnace's Lambertian row)", "meanLuma": 1000.0001831668629, "relSE": 2.6131100768414198e-8 },
+   { "case": "CONTROL: no box, a black sphere -- must read well below 1", "meanLuma": 134.92519218211933, "relSE": 0.029407737725711213 },
+   { "case": "a haze box, hidden (density 0: the haze's code, no dust)", "meanLuma": 1000.0002441406249, "relSE": 2.581254734393984e-8 },
+   { "case": "dust, g 0.6", "meanLuma": 999.9133405097363, "relSE": 0.07528208235054633 },
+   { "case": "dust, g 0.6, NEE off", "meanLuma": 999.9999496767866, "relSE": 0.00008314897837557691 },
+   { "case": "dust, g 0 (even)", "meanLuma": 999.9525541658398, "relSE": 0.07083615337936798 },
+   { "case": "dust, g -0.5 (back)", "meanLuma": 999.9688128523675, "relSE": 0.07471869616792944 },
+   { "case": "CONTROL: dust of albedo 0.5 -- must read well below 1", "meanLuma": 433.1664687148623, "relSE": 0.09641104322504569 }
+  ] },
+  "bsdf-parity": { "pixels": 424502, "rows": [
+   { "case": "Lambertian, NEE on", "meanLuma": 21172.345251802355, "relSE": 0.1406048961250207 },
+   { "case": "Lambertian, NEE off", "meanLuma": 21012.03627505725, "relSE": 4.04879798198729 },
+   { "case": "plastic 0.3, NEE on", "meanLuma": 18600.012135118548, "relSE": 0.13695287390074232 },
+   { "case": "plastic 0.3, NEE off", "meanLuma": 18533.11419314157, "relSE": 4.70563187193906 },
+   { "case": "metal 0.3, NEE on", "meanLuma": 3421.3681521304575, "relSE": 0.06853572035055785 },
+   { "case": "metal 0.3, NEE off", "meanLuma": 3400.0825024405185, "relSE": 3.882698990040615 },
+   { "case": "metal 0.6, NEE on", "meanLuma": 7195.47919899907, "relSE": 0.09522651096630687 },
+   { "case": "metal 0.6, NEE off", "meanLuma": 7143.369603976422, "relSE": 6.395275430470457 },
+   { "case": "metal 0.3 brushed, NEE on", "meanLuma": 3058.6316917499726, "relSE": 0.07093342395426348 },
+   { "case": "metal 0.3 brushed, NEE off", "meanLuma": 3055.5516532857646, "relSE": 1.8449483676438945 },
+   { "case": "metal 0.3 turned, NEE on", "meanLuma": 4869.396576662676, "relSE": 0.10942538906856329 },
+   { "case": "metal 0.3 turned, NEE off", "meanLuma": 4887.328876767626, "relSE": 6.179129831795329 },
+   { "case": "plastic 0.3 brushed, NEE on", "meanLuma": 18554.555683543866, "relSE": 0.1367865827707363 },
+   { "case": "plastic 0.3 brushed, NEE off", "meanLuma": 18212.107239728983, "relSE": 4.67410300094166 }
+  ] },
+  "nee": { "pixels": 424502, "rows": [
+   { "case": "NEE off (BSDF sampling only)", "meanLuma": 16814.072306245675, "relSE": 41.084056132050144 },
+   { "case": "NEE on", "meanLuma": 15676.49387607981, "relSE": 1.827771425677487 },
+   { "case": "NEE off, 5-degree sun", "meanLuma": 15617.966182118547, "relSE": 4.492475116046253 },
+   { "case": "NEE on,  5-degree sun", "meanLuma": 15698.823718059943, "relSE": 0.4667751053127583 }
+  ] },
+  "nee-split": { "pixels": 424502, "rows": [
+   { "case": "NEE off (reference)", "meanLuma": 15003.735247014554, "relSE": 42.47798035858841 },
+   { "case": "NEE, sky only  (pick 0.0)", "meanLuma": 15516.648870378482, "relSE": 30.309257153122815 },
+   { "case": "NEE, disc only (pick 1.0)", "meanLuma": 15817.18735988322, "relSE": 4.964310565502701 },
+   { "case": "NEE, mixture   (pick 0.5)", "meanLuma": 15727.386006753808, "relSE": 3.765174790978347 }
+  ] },
+  "lt": { "pixels": 424502, "rows": [
+   { "case": "on, learned map (warmed by the mask pass)", "meanLuma": 15816.116429534777, "relSE": 1.382295906031079 },
+   { "case": "on, learned, 0.1 photons/px", "meanLuma": 15819.9694863599, "relSE": 1.432002776120451 },
+   { "case": "light tracing off (must match row 1)", "meanLuma": 15827.229531332136, "relSE": 2.5993104053304745 },
+   { "case": "on, uniform map (must match)", "meanLuma": 15750.893669458806, "relSE": 2.409215527522758 },
+   { "case": "on, uniform, 0.1 photons/px", "meanLuma": 15829.93240891871, "relSE": 6.899907286490873 },
+   { "case": "on, uniform, square 0.5 (must match)", "meanLuma": 15821.66007459832, "relSE": 1.4875365834796896 },
+   { "case": "NEE off, light tracing off (+-0.5%)", "meanLuma": 15808.171796011658, "relSE": 6.924087286692611 },
+   { "case": "NEE off, light tracing on, uniform (+-0.5%)", "meanLuma": 15983.831300984888, "relSE": 6.832377289917993 },
+   { "case": "light tracing off (repeat; must match row 3)", "meanLuma": 15818.960152263502, "relSE": 2.6332460177121346 }
+  ] },
+  "small-caustic": { "pixels": 424502, "rows": [
+   { "case": "radius 5 cm: square 5 cm, learned (warmed)", "meanLuma": 21751.083297988123, "relSE": 3.7181248597234497 },
+   { "case": "radius 5 cm: square 5 cm, uniform map", "meanLuma": 21659.990239056395, "relSE": 2.6504574538192163 },
+   { "case": "radius 400 m: square 15 m, uniform map (as before)", "meanLuma": 19777.53934084011, "relSE": 3.614899530363533 },
+   { "case": "radius 400 m: square 15 m, learned from cold", "meanLuma": 22735.0648867237, "relSE": 66.18570046835644 },
+   { "case": "radius 5 cm, light tracing off (must match)", "meanLuma": 21254.577759392225, "relSE": 11.428838562780225 },
+   { "case": "radius 400 m, light tracing off (must match)", "meanLuma": 21884.25875944245, "relSE": 13.203507678128062 }
+  ] },
+  "sppm": { "pixels": 424502, "rows": [
+   { "case": "photon map off (the camera's rays find it by chance)", "meanLuma": 15077.860146085812, "relSE": null },
+   { "case": "photon map on (must match row 1)", "meanLuma": 14664.719710422483, "relSE": 0.22874715119896522 },
+   { "case": "photon map on, light tracing off (must match row 1: no photons, the camera keeps it)", "meanLuma": 14630.76952060246, "relSE": 1.8628792988835317 },
+   { "case": "lens 5 cm, photon map off (the camera's rays: another picture, its depth of field)", "meanLuma": 14933.101964647016, "relSE": null },
+   { "case": "lens 5 cm, photon map on (must match row 4)", "meanLuma": 14633.50763935979, "relSE": null }
+  ] },
+  "rr-bias": { "pixels": 424502, "rows": [
+   { "case": "RR off, maxbounce 10", "meanLuma": 15650.343572516378, "relSE": 0.787208107853708 },
+   { "case": "RR on,  maxbounce 10", "meanLuma": 15622.568935976486, "relSE": 0.18803022283425547 },
+   { "case": "RR off, maxbounce 40", "meanLuma": 15908.110513085663, "relSE": 9.333029822506033 },
+   { "case": "RR on,  maxbounce 40", "meanLuma": 16129.368976055472, "relSE": 13.979139275680783 }
+  ] },
+  "render-modes": { "pixels": 424502, "rows": [
+   { "case": "Lambertian, full", "meanLuma": 21822.05306540776, "relSE": 0.13857219767788675, "lambert": true, "expected": 21826.044957347607 },
+   { "case": "Lambertian, draft", "meanLuma": 21830.01451374742, "relSE": 0.11833311151698445, "lambert": true, "expected": 21826.044957347607 },
+   { "case": "Lambertian, sketch (a fixed light: reported only)", "meanLuma": 21282.702120233494, "relSE": 0.000007910525379805513, "lambert": true, "expected": 21826.044957347607 },
+   { "case": "sun only, full", "meanLuma": 18002.48824901869, "relSE": 0.1768147993883293, "lambert": true, "expected": 18006.326323142122 },
+   { "case": "sun only, draft", "meanLuma": 18004.647441248908, "relSE": 0.17678088930811187, "lambert": true, "expected": 18006.326323142122 },
+   { "case": "sky only, draft", "meanLuma": 3819.252984965816, "relSE": 0.11473140317538154, "lambert": true, "expected": 3819.7186342054883 },
+   { "case": "studio light, draft", "meanLuma": 254.65490248510935, "relSE": 0.01562575047523176, "lambert": true, "expected": 254.64790894703253 },
+   { "case": "glossy coat (roughness 0.5), full", "meanLuma": 21778.001158443312, "relSE": 0.14055439503698253, "lambert": false, "expected": 21826.044957347607, "vsFull": 1 },
+   { "case": "glossy coat (roughness 0.5), draft", "meanLuma": 21776.618713235708, "relSE": 0.11815952478848385, "lambert": false, "expected": 21826.044957347607, "vsFull": 0.9999365210242416 },
+   { "case": "near-mirror coat (roughness 0.15), full", "meanLuma": 21802.100917161108, "relSE": 0.14096375884349124, "lambert": false, "expected": 21826.044957347607, "vsFull": 1 },
+   { "case": "near-mirror coat (roughness 0.15), draft", "meanLuma": 21789.800879938743, "relSE": 0.12015082030305585, "lambert": false, "expected": 21826.044957347607, "vsFull": 0.9994358324792139 },
+   { "case": "mirror metal, full", "meanLuma": 2983.2969736442546, "relSE": 0.00005035286715100186, "lambert": false, "expected": 21826.044957347607, "vsFull": 1 },
+   { "case": "mirror metal, draft", "meanLuma": 2983.297429587272, "relSE": 0.0000503527912162925, "lambert": false, "expected": 21826.044957347607, "vsFull": 1.0000001528319242 },
+   { "case": "lamps only, draft (sun and sky still set): 0", "meanLuma": 0, "relSE": null, "lambert": true, "expected": 21826.044957347607 },
+   { "case": "lamps only, full: 0", "meanLuma": 0, "relSE": null, "lambert": true, "expected": 21826.044957347607 }
+  ] },
+  "draft-lamps": { "pixels": 424502, "rows": [
+   { "case": "full", "meanLuma": 256.074550540911, "relSE": 0.2758211782710896, "discRatio": [1.0191435767408707, 1.0265944091214654], "discSe": 0.08017838722625094 },
+   { "case": "draft", "meanLuma": 255.5163453228715, "relSE": 0.27978995547025165, "discRatio": [1.0365980840215072, 0.8792319588107158], "discSe": 0.07892467645331451 },
+   { "case": "draft, seek rays off: the disc is never found", "meanLuma": 0, "relSE": null, "discRatio": [0, 0], "discSe": 0 },
+   { "case": "draft, lamps only, sun and sky set", "meanLuma": 247.78788488947828, "relSE": 0.18087325075909086, "discRatio": [0.9229229997654614, 0.8998130489942807], "discSe": 0.049551607814656125 }
+  ] },
+  "optics-mode": { "pixels": 424502, "rows": [
+   { "case": "full: the direct light and what the disc sends back (above 1)", "meanLuma": 4.797600570516217, "relSE": 0.14208067876380065, "lightRatio": [0.991444794637376, 0.9766032648403031, 1.1023624950594313], "lightSe": 0.03280485766536848 },
+   { "case": "Optics, flat light off: the direct light alone", "meanLuma": 4.475600869323182, "relSE": 0.14842063818110635, "lightRatio": [0.9921325123333373, 0.9272370902660633, 0.9991265058550052], "lightSe": 0.032166253487292316 },
+   { "case": "Optics, flat light 2 stops down: and a quarter of Sketch's", "meanLuma": 30.010675219076642, "relSE": 0.022289271769655384, "lightRatio": [0.9872461849158516, 0.9504253305682734, 1.000769349819897], "lightSe": 0.00913066002094047 },
+   { "case": "Optics, flat light off, MM SCENE", "meanLuma": 4476524.105696036, "relSE": 0.1484658065239543, "lightRatio": [0.987317321911603, 0.947126212299692, 0.9932348697596298], "lightSe": 0.031585778374757026 },
+   { "case": "Optics, the illuminance view: traced in full (as the full row)", "meanLuma": 6.145191531462057, "relSE": 0.14075770547602648, "lightRatio": [1.014614859596833, 0.9938166412267159, 1.123713265921648], "lightSe": 0.03431872283844515 }
+  ] },
+  "optics-light": { "pixels": 424502, "rows": [
+   { "case": "Lambertian point, illuminance view", "meanLuma": 23.81290964963856, "relSE": 0.1427839872841104, "lightRatio": [1.0296618686075683, 1.0192027590108619, 0.9393375959174641], "lightSe": 0.046409935424286855, "hueErr": 0 },
+   { "case": "Lambertian point, the picture (pi L / albedo)", "meanLuma": 19.05273906410928, "relSE": 0.14390399801689124, "lightRatio": [1.0186470882134704, 0.9782652464479707, 1.1204473796955894], "lightSe": 0.050499515730946194, "hueErr": 0 },
+   { "case": "Lambertian point, MM SCENE (1 mm up: 318 Mlx)", "meanLuma": 23818133.549396295, "relSE": 0.14386590637782729, "lightRatio": [0.9982186408248773, 1.0339951296511465, 1.013986654189362], "lightSe": 0.04803311615614483, "hueErr": 2.220446049250313e-16 },
+   { "case": "RED Lambertian point, the picture", "meanLuma": 19.05418809955646, "relSE": 0.14386494170902966, "lightRatio": [1.0127143289251275, 0.9538694057458263, 0.974637432518135], "lightSe": 0.04786220545623472, "hueErr": 6.876046310111406e-8 },
+   { "case": "BLUE Lambertian point, illuminance view", "meanLuma": 23.818192827516633, "relSE": 0.14381176807605783, "lightRatio": [1.00627177549847, 0.9817491249175601, 0.9607228683475413], "lightSe": 0.050295614540635386, "hueErr": 3.3631523521648887e-7 },
+   { "case": "R+G+B mixed to 4000 K, illuminance view", "meanLuma": 23.81720695876831, "relSE": 0.14385483279190941, "lightRatio": [1.0008717985236866, 0.9939502616366642, 0.9561093086501672], "lightSe": 0.04633629817807825, "hueErr": null, "cct": 4001.726396855294, "dupvp": 0.00010789725329221583 },
+   { "case": "collimated disc r 0.5, illuminance view", "meanLuma": 31.877027044480776, "relSE": 0.12411915490895253, "lightRatio": [0.9996771622679305, null, null], "lightSe": 0.011128862548090472, "hueErr": 0 }
+  ] },
+  "optics-balance": { "rows": [
+   { "case": "black floor", "measured": 1, "expected": 1, "rays": 400000, "balance": 0 },
+   { "case": "floor albedo 0.5", "measured": 0.5, "expected": 0.5, "rays": 400000, "balance": -9.0951551845464e-18 },
+   { "case": "floor albedo 0.8", "measured": 0.19999980926513672, "expected": 0.2, "rays": 400000, "balance": -3.63806207381856e-17 },
+   { "case": "mirror floor", "measured": 1, "expected": 1, "rays": 400000, "balance": 0 },
+   { "case": "albedo 0.5, Lambertian source", "measured": 0.49999374999999996, "expected": 0.5, "rays": 400000, "balance": 1.81903103690928e-17 },
+   { "case": "albedo 0.5, ONE STEP: half the flux in flight", "measured": 0.5, "expected": 0.5, "rays": 100000, "balance": 0.5 },
+   { "case": "albedo 0.5, TRACE 1 step: half still going", "measured": 0.5, "expected": 0.5, "rays": 100000, "balance": 0 },
+   { "case": "MAX DISTANCE 0.5 m, floor 1 m away: none arrive", "measured": 1, "expected": 1, "rays": 400000, "balance": 0 },
+   { "case": "the floor a DETECTOR: every ray caught", "measured": 1, "expected": 1, "rays": 400000, "balance": 0 },
+   { "case": "integrating sphere, albedo 0.8", "measured": 0, "expected": 5, "rays": 400000, "balance": 0 },
+   { "case": "integrating sphere, albedo 0.5", "measured": 0, "expected": 2, "rays": 400000, "balance": 0 }
+  ] },
+  "optics-refraction": { "rows": [
+   { "case": "slab, 0 deg", "measured": 0.9239125, "expected": 0.923076923076923, "rays": 400000, "balance": 0 },
+   { "case": "slab, 45 deg", "measured": 0.90407, "expected": 0.9043267914588885, "rays": 400000, "balance": 0 },
+   { "case": "slab, 70 deg", "measured": 0.7079624999999999, "expected": 0.7078798929984338, "rays": 400000, "balance": 1.1368683772161603e-16 },
+   { "case": "inside the slab, 40 deg: escapes up", "measured": 0.8039925000000001, "expected": 0.8030250246348032, "rays": 400000, "balance": -8.526512829121202e-17 },
+   { "case": "inside the slab, 44 deg: TIR, all lost", "measured": 1, "expected": 1, "rays": 400000, "balance": 0 },
+   { "case": "glass ball, source at its centre", "measured": 1.04196, "expected": 1.0416666666666667, "rays": 400000, "balance": 0 },
+   { "case": "wedge 20 deg: exit angle", "measured": -10.260401947683475, "expected": -10.260400102923118, "rays": 400000, "balance": 0 },
+   { "case": "two slabs, 50 mm gap", "measured": 0.8573075, "expected": 0.8571428571428571, "rays": 400000, "balance": 0 },
+   { "case": "two slabs, 0.5 mm gap, auto eps (LIMIT: expected to fail)", "measured": 0.922965, "expected": 0.8571428571428571, "rays": 400000, "balance": 0 },
+   { "case": "two slabs, 0.5 mm gap, eps 10 um", "measured": 0.8570774999999999, "expected": 0.8571428571428571, "rays": 400000, "balance": 0 }
+  ] },
+  "optics-absorption": { "rows": [
+   { "case": "200 mm thick, colour depth 200 mm", "measured": 0.4611101533889771, "expected": 0.46098439375750294, "rays": 400000, "balance": 0 },
+   { "case": "400 mm thick, colour depth 200 mm", "measured": 0.23057667842388152, "expected": 0.2304230423042304, "rays": 400000, "balance": -2.842170943040401e-17 },
+   { "case": "200 mm thick, 45 deg", "measured": 0.4113391741490365, "expected": 0.411262943716943, "rays": 400000, "balance": -1.7367839814141915e-7 },
+   { "case": "400 mm thick, MM SCENE", "measured": 0.23049396456956864, "expected": 0.2304230423042304, "rays": 400000, "balance": 1.4543532245170353e-9 },
+   { "case": "depth 0 (the old rule), 200 mm thick", "measured": 0.23055, "expected": 0.23076923076923078, "rays": 400000, "balance": -5.684341886080802e-17 },
+   { "case": "depth 0 (the old rule), 400 mm thick", "measured": 0.23083875, "expected": 0.23076923076923078, "rays": 400000, "balance": -1.1368683772161603e-16 }
+  ] },
+  "optics-coating": { "rows": [
+   { "case": "no coating (the bare slab, as optics-refraction)", "measured": 0.9227000000000001, "expected": 0.923076923076923, "rays": 400000, "balance": 0 },
+   { "case": "beam splitter 50/50, AR back, 0 deg", "measured": 0.49945000000000006, "expected": 0.5, "rays": 400000, "balance": -5.684341886080802e-17 },
+   { "case": "beam splitter 50/50, AR back, 45 deg", "measured": 0.499445, "expected": 0.5, "rays": 400000, "balance": 0 },
+   { "case": "beam splitter 50/50, bare back, 0 deg", "measured": 0.48094000000000003, "expected": 0.4807692307692308, "rays": 400000, "balance": 0 },
+   { "case": "beam splitter 50/50, every face, 0 deg", "measured": 0.333615, "expected": 0.3333333333333333, "rays": 400000, "balance": 0 },
+   { "case": "anti-reflective (R 0), 45 deg", "measured": 1, "expected": 1, "rays": 400000, "balance": 0 },
+   { "case": "dichroic, reflects > 600 nm, AR back, white, 0 deg", "measured": 0.8663899004602433, "expected": 0.8656296122702174, "rays": 400000, "balance": 0, "dupvp": 9.214868935695859e-9 },
+   { "case": "dichroic, reflects > 600 nm, AR back, white, 45 deg", "measured": 0.5385302207016944, "expected": 0.5389750939258459, "rays": 400000, "balance": 0, "dupvp": 2.1102932087069192e-8 },
+   { "case": "dichroic, every face, white, 0 deg", "measured": 0.824071806061268, "expected": 0.8230580177938069, "rays": 400000, "balance": -1.1368683772161603e-16, "dupvp": 0.00025046113333950366 },
+   { "case": "dichroic, AR back, a RED light, 0 deg", "measured": 0.4178675, "expected": 0.41616352413152397, "rays": 400000, "balance": -5.684341886080802e-17, "dupvp": 1.437728693719237e-8 }
+  ] },
+  "optics-dispersion": { "rows": [
+   { "case": "Abbe 0 (the control): every channel at the one angle", "measured": -23.9232704696764, "expected": -23.923265169475492, "rays": 400000, "balance": 0 },
+   { "case": "Abbe 28: the red channel's mean exit angle", "measured": -23.89047972310609, "expected": -23.891486685829356, "rays": 400000, "balance": -1.1368683772161603e-16 },
+   { "case": "Abbe 28: the green channel's mean exit angle", "measured": -24.176876246217688, "expected": -24.176808199159872, "rays": 400000, "balance": 0 },
+   { "case": "Abbe 28: the blue channel's mean exit angle", "measured": -24.861765252659627, "expected": -24.85961321097593, "rays": 400000, "balance": 1.1368683772161603e-16 }
+  ] },
+  "optics-colour": { "rows": [
+   { "case": "3000 K onto the detector", "rays": 400000, "balance": 0, "cct": 2999.9999977943735, "dupvp": 8.810324278464782e-11 },
+   { "case": "6500 K Duv +0.005 through glass", "rays": 400000, "balance": 0, "cct": 6499.999606206602, "dupvp": 5.128212587259542e-9 },
+   { "case": "royal blue (out of gamut)", "rays": 400000, "balance": 0, "cct": null, "dupvp": 8.371751251738939e-9 },
+   { "case": "R+G+B mixed to 4000 K (310.5 / 673.0 / 16.5 lm)", "rays": 400000, "balance": 0, "cct": 4014.0807349226484, "dupvp": 0.0008766479153036689 },
+   { "case": "the same mix through glass", "rays": 400000, "balance": -1.13686837721616e-16, "cct": 4013.86958983564, "dupvp": 0.0003369789687784682 }
+  ] },
+  "optics-farfield": { "rows": [
+   { "case": "Lambertian: everything reaches the far field", "measured": 0.9999999999999999, "expected": 1, "rays": 2000000, "balance": 0 },
+   { "case": "Lambertian: I(0) = flux / pi", "measured": 0.9986068160670833, "expected": 1, "rays": 2000000, "balance": 0 },
+   { "case": "Lambertian: beam angle 120 deg", "measured": 120.07342924806963, "expected": 120, "rays": 2000000, "balance": 0 },
+   { "case": "cos^5: beam angle", "measured": 58.245774474493075, "expected": 58.9546, "rays": 2000000, "balance": 0 },
+   { "case": "uniform 30-deg cone: beam angle 60 deg", "measured": 59.623080980379356, "expected": 60, "rays": 2000000, "balance": 0 },
+   { "case": "fed by a DETECTOR (the floor, lit from above): I(0) = flux / pi", "measured": 0.9989103937398348, "expected": 1, "rays": 2000000, "balance": 1.1368683772161603e-16 }
+  ] },
+  "cost-sweep": { "rows": [
+   { "case": "BASELINE", "msPerSample": 27.898 }, { "case": "rr on", "msPerSample": 27.314 },
+   { "case": "maxbounce 4", "msPerSample": 27.49 }, { "case": "maxiter 128", "msPerSample": 15.381 }
+  ] },
+  "nee-cost": { "rows": [ { "case": "NEE off", "msPerSample": 25.79 }, { "case": "NEE on", "msPerSample": 19.56 } ] }
+ }
+}

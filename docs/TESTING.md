@@ -36,11 +36,45 @@ instrument for comparing two unbiased estimators at a low sample count — path 
 distribution is heavy-tailed, and Russian roulette's `1/p` compensation is *precisely* a
 rare-large-value mechanism. A difference that survives trimming is a real difference.
 
+## Groups and verdicts
+
+The panel is a folder per group (`GROUPS` in `tests.js`), each with its own **Run all** first and then its tests in
+the group's order: *Light & units*, *Lights & emitters*, *Materials & energy*, *Estimators agree*, *Render modes*,
+*Optics trace*, *Speed* and *Benchmarks*. The **Run all** at the top runs the first six, every group with a known
+answer. *Speed* runs from its own folder only: it needs the loop running on your scene, and no row in it has an answer
+to pass. The benchmarks (the page's, `RTTESTS.addTest`) are minutes each and in no Run all. A test that loads no
+scene of its own says **(your scene)** on its button: it measures whatever is loaded (`emitters` needs an emissive
+object, `lt` glass in view).
+
+Every row gets a **verdict** (`lib/pathtracer/verdict.js`), from the rule its test carries (`verdict(row, i, rows,
+case)` beside its note):
+
+| | |
+|---|---|
+| **PASS** | within 3σ of its answer (its own error bar) or the floor its note allows, whichever is wider |
+| **CHECK** | out to 5σ or twice the floor: rerun it first, one row in a few hundred lands there by chance |
+| **FAIL** | past that |
+| **INFO** | no known answer: a speed, Sketch's fixed light, the reference row others are judged against |
+| **VOID** | nothing was measured: `emitters` on a scene with no emitter. Never a pass |
+
+A report says the test's verdict under its header (`verdict: FAIL · 9 pass · 1 fail`) and each row's in its last
+column, with the reason when it is not a pass. The JSON carries both. A Run all opens with a summary, one line a test
+and every row that did not pass. With no error bar, a miss past the floor is a CHECK at best (sppm's map-off rows).
+
+**The floors are choices**, read from each note and from the user's run of 0.77.0 (Pascal, 2026-10-22): 0.5% for a
+floor's lux, 0.2% for the furnace, 3e-3 for the optics trace, 1% for a 3x3-pixel sensor. **The error bar of a picture's
+mean** is worked out from the pixels' own (`meanSe`: relSE x mean / sqrt(pixels)), which assumes their errors are
+independent. Where pixels share light (light tracing's photons, the photon map, an emitter found partway through) it
+is too small, and the floor is what keeps such a row honest. `lib/pathtracer/test/verdict.test.mjs` replays that run
+through every rule (`test/fixtures/run-0.77.0-pascal.json`), so a rule changed is a verdict changed on a known run.
+
 ## Writing a test
 
 ```js
 {
     id: 'my-question', kind: 'image', title: 'What I want to know',
+    // what passes (verdict.js): here, row 2 must agree with row 1 on meanLuma within its error bars or 0.5%
+    verdict: (r, i, rows) => i === 0 ? V.info('the reference') : V.agreeMean(r, rows[0], 0.005),
     samples: 32,                                  // or `secs: 5` for a cost test
     pin: { maxaverages: 0, maxiter: 400 },        // applied to EVERY case
     rt:  { budgetOverride: 16 },                  // renderer properties, not uniforms
@@ -55,6 +89,9 @@ rare-large-value mechanism. A difference that survives trimming is a real differ
 `core/uniforms.schema.js` works and an unknown one is warned about rather than silently
 dropped. `rt` assigns onto the renderer object, for the things that are not uniforms
 (`budgetOverride`, `submitEvery`).
+
+**Put it in a group**: its id in one of `GROUPS`' lists, where it belongs. `verdict.test.mjs` fails a test in none, or
+in two.
 
 **A row whose scene only the host can make** -- a builder document through codegen, which `lib/`
 may not import -- is written in the host and handed in with `RT.installUI(..., { tests })`, after
@@ -130,7 +167,7 @@ window never held steady state, so the number is not one. Raise `secs`.
 | `optics-light` | image | Whether the optics source lights the picture with its real brightness: a 1000 lm Lambertian point 1 m over the floor must give Φh²/(πd⁴) lux at 0, 0.5, 1 m (illuminance view, and the picture as πL/ρ); a collimated disc Φ/(πr²) inside it. A red and a blue source: the same lux (the hue is normalised to luminance 1) and `hue err` 0 — the floor takes the light's colour. **R+G+B mixed to 4000 K** (the royal blue has a negative channel): the same lux, and the floor must read 4000 K, `du'v'` ≈ 0 — only true if the picture adds exact colours and clips once at the display. | colour rows passed (Pascal, 2026-09-27). The mix row's first press read the lux right and the colour 4247 K, du'v' 0.013 -- from a 3 x 3 sensor holding ~17 blue photon hits, where one sigma is 250 K. It now reads the whole frame's colour (~1e6 hits). **Second press: passes** -- 3999.9 K, du'v' 0.00006, lux 0.99 / 0.96 / 1.05 within seMax: the picture adds exact colours, the royal blue's negative channel included. |
 | `optics-mode` | image | Whether the **Optics view** (Quality › Optics) lights a floor as arithmetic says and stops its rays at the first diffuse surface: a 1000 lm Lambertian point 0.5 m over the floor, a grey disc above it. With the flat light off the floor must read the direct light Φh²/(πd⁴) exactly (x columns 1); full reads more (the light the disc sends back down: reported, above 1). The flat light 2 stops down adds a quarter of Sketch's 1000 lx (in the expected value: 1 again); mm; the illuminance view traces in full. | **answered** (Ampere, 2026-10-02): the Optics view 1 on every column, full above 1 -- *The Optics view* (Results). |
 | `light-vs-emitter` | image | Whether a **light** (light-traced) puts the same light in the picture as the same surface made an **emissive object** (PLAN.md, *Lights*, L0): one two-sided Lambertian disc of 10 000 cd/m², 1 m up, in pairs of rows, over a diffuse floor, the same in the illuminance view (sensors against the closed form, `cylinderE` without a rim), a mirror floor, a metal floor at roughness 0.22 and 0.23 (either side of `LT_MIN_ALPHA`), seen through a clear pane, and under a diffuser. `light/emitter` (on each emitter row) must be 1. `emitters`: what discovery listed, 0 on every light row (L1). Three rows read the light's face 56° off its axis against its distribution: Lambertian L, cos⁴ L cos³, a 30° cone 0 (L3); two more read it in the glass it emits into, through a block's top (L T / n², L4), and transparent with an emissive disc behind it (2 L: it lets the path through). Two more pairs put a 1 cm lamp of the same flux (9e6 cd/m²) over a metal floor at roughness 0.20 and 0.25, its top face shaded from the camera (L4b: its direct reflection shared between photons and camera paths by MIS); two more turn it on edge to light a white wall 1.5 m away, which the metal floor reflects at 0.20 and 0.25 -- the user's reflector (L7: the camera's paths aim at a light's face past their first surface). The 1 cm lamp's pairs run at a march tolerance of 10 um (`eps`), and one more at the automatic one, 0.91 mm here: a ray that close to a surface hits it, which makes the 1 cm emissive disc 1.2x too bright (PLAN.md, finding 7). Two more pairs (2026-10-02) on the diffuse floor: the light and the emitter in Draft, and the light in the Optics view (flat light off) against the emitter in Draft -- both 1, a hair over from Draft's emitter finding the disc a sample late; the light read low in Draft before (inferred from the code: its photons kept only their MIS share of the floor's direct light). The first bench whose scene is a builder document through codegen: the page builds it (`builder/lightbench.js`) and hands it in through `RTTESTS.addTest`, main's route for its benchmark: a button of its own in the Tests panel, not in Run all. Start it from the orbit camera: it names its whole orbit pose, but a bench started from the free camera keeps the user's view (main's runner; the fix for that left with this branch's merge, 2026-10-01). | L1, L3, L4, L4b and L7 hold (five presses, Ampere, 2026-09-29 to 10-02): every pair 1, the 1 cm lamp's too at eps 10 um; at the automatic tolerance 0.82 -- finding 7; Draft and Optics 0.995 as full. Every number: *Light against emitter: the presses* (Results). |
-| `optics-balance` | optics | Whether the optics trace ends every ray where arithmetic says: a collimated beam onto a floor of albedo 0 / 0.5 / 0.8 (absorbed 1 − ρ), a mirror floor (all escapes), one step (half the flux in flight), an integrating sphere (arrived = 1/(1 − ρ)); a 1-step trace (half still going); the floor as a detector (all detected); balance 0. The first `kind: 'optics'` test: it runs `lib/pathtracer/optics`, not the picture. | open — first press. |
+| `optics-balance` | optics | Whether the optics trace ends every ray where arithmetic says: a collimated beam onto a floor of albedo 0 / 0.5 / 0.8 (absorbed 1 − ρ), a mirror floor (all escapes), one step (half the flux in flight), an integrating sphere (arrived = 1/(1 − ρ)); a 1-step trace (half still going); the floor as a detector (all detected); balance 0. The first `kind: 'optics'` test: it runs `lib/pathtracer/optics`, not the picture. | open — the shell not yet pressed. **The integrating sphere was the test's own fault** (Pascal, 0.77.0, 2026-10-22): every other row passed, and the sphere's two read arrived 0, escaped 1. Its scene was the furnace's *solid* ball, so the source sat inside an opaque solid and no ray met a wall. 0.next makes it a hollow shell (`testScene('m', 'shell')`): material 1 between r = 1 and 1.1 round a cavity of air. The shell's rows must read arrived 5.000 and 2.000, escaped 0. |
 | `optics-farfield` | optics | Whether the far-field grid (the Intensity tab) gives a source's known curve: a disc shining up into nothing puts all its flux in the far field; Lambertian I0 = Φ/π (fitted as I0 cos γ over 0–20°) and beam angle 120°; cos⁵ 58.95° (2 acos(0.5^(1/5)), as the row expects; this said 58.98° until 0.67.3); a uniform 30° cone 60°; and the grid fed by a detector (the floor, lit from above) gives the same I0. The first run of `optFarAdd` on a GPU. | open — first press. |
 | `optics-refraction` | optics | Whether the trace refracts and reflects glass as the textbook says (`optics-balance` has only opaque surfaces). A slab at 0 / 45 / 70° against (1 − R)/(1 + R), and `vs polar.` against the polarised answer — the unpolarised model's own error (0, −0.3%, −3%). A source inside the slab at 40° (escapes 1/(1 + R)) and 44° (total internal reflection: all lost to the bounce cap). A source at the centre of a glass ball: interactions per ray 1/(1 − R) = 1.0417. A 20° wedge: exit angle −10.26° (Snell). Two slabs with a gap: 50 mm passes; 0.5 mm at the automatic tolerance is **expected to fail** (reads one slab, 0.923 against 0.857: the gap is thinner than the surface offset), and passes at eps 10 µm. Known answers in `optics/fresnel.js`, checked by the Node test. | **answered — passes** (Pascal, 2026-09-27, 400k rays a row): every ratio within 2 standard errors of 1 (slab 0.9991 / 0.9999 / 1.0007, inside 0.9990, ball 0.9997, gap 1.0003 / 1.0001); TIR exactly 1; the wedge's exit angle to 2e-6 degrees; balance 0 throughout. `vs polar.` 0.9991 / 0.9966 / 0.9721, as predicted. The 0.5 mm gap at auto eps read 0.9228, one slab's value: the limit is real and is what the note says. |
 | `optics-absorption` | optics | Whether glass absorbs with its thickness (Beer-Lambert, 0.37.0: a material's colour depth). The `optics-refraction` slab, colour 0.5, over the detector floor: T = (1 − R)² t / (1 − R² t²), t = 0.5^(L/d) one pass (`optics/fresnel.js absorbingSlabT`) — 200 mm thick at depth 200 mm 0.4610, 400 mm 0.2304, 45° the longer path; the 400 mm slab in an mm scene the same (the depth is a length the scene boundary converts). Depth 0 is the old rule, tinted at each face whatever the thickness: 0.2308 at 200 and at 400 mm. Balance 0 on every row (what the volume absorbs is its own tally, `O_VOL`). | open — first press. |
