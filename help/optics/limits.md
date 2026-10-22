@@ -56,6 +56,10 @@ result into a luminaire and see where the light goes.
   picture, but sends no rays into the optics trace and has no lumens.
 - **A ray file has no face**: the camera cannot see it glow, and with the lights' rays off it lights nothing in the
   picture.
+- **A light inside group code is not a source**. That includes the *circular array* modifier, which is group code. A
+  light inside an array (a group's *copies*) is a source at every copy, each with the light's flux. A ring of copies
+  makes a ring of lights.
+- **Each copy's colour and brightness are the light's.** No copy can be given its own colour or brightness yet.
 - **No IES or EULUMDAT files**, in or out. Export of the intensity table as IES and EULUMDAT is planned first, then
   import as a source. The intensity table saves as CSV meanwhile.
 

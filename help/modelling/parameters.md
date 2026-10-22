@@ -67,9 +67,20 @@ Some things cannot be bound:
 
 ## Arrays
 
-A plain group can have **copies**: a list of places where everything in it is drawn again. A row of copies is
-made in its Properties; bound to parameters as above, the count and spacing follow them. A copy is a place to draw
-the same shapes again, not a new shape: its position is a live value.
+A plain group can have **copies**: a list of places where everything in it is drawn again. A row or a ring of
+copies is made in its Properties; bound to parameters as above, a row's count and spacing follow them. A copy is a
+place to draw the same shapes again, not a new shape: its position is a live value.
+
+**A light inside an array** is a light at every copy: a strip of LEDs is one LED in a row of copies, a ring of them
+one in a ring. Each copy is a whole light, with the light's own settings and its own flux: a 10 lm light in 12
+copies is 120 lm. Two rules:
+- The copies of an array with a light in it share **one scale**. A copy may move and turn freely.
+- An array with a light in it is not put **inside a group whose children join** (a subtraction, an intersection, a
+  blend). Such a light is not drawn, and the Optics page lists it as skipped, with the reason. Put the array outside
+  the joining group.
+
+The *circular array* modifier is group code, and draws no light. Use a ring of copies instead. With a ring radius
+of 0, the copies turn about the group's axis as the circular array's do.
 
 ## Writing code
 

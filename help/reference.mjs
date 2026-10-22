@@ -120,7 +120,8 @@ function materials() {
 
 function lights() {
     let s = HEAD('Light settings', 'A light object is a flat rectangle or disc that emits from its front (+z), or a ray file\'s rays. Its size '
-        + 'is its parameters; the rest is here. ' + Object.values(LIGHT_SHAPES).map(v => `*${v.label}*`).join(', ') + '.')
+        + 'is its parameters; the rest is here. ' + Object.values(LIGHT_SHAPES).map(v => `*${v.label}*`).join(', ') + '. Inside an array '
+        + '(a group\'s copies), it is a light at every copy, each with these settings: see [Arrays](../modelling/parameters.md#arrays).')
     s += '\n| setting | starts at | does |\n|---|---|---|\n'
     for (const [k, v] of Object.entries(LIGHT_DEFAULTS)) s += `| ${k} | ${cell(v == null ? '(not set)' : value(v))} | ${cell(LIGHT_HELP[k] ?? '')} |\n`
     return s

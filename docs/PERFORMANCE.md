@@ -1082,7 +1082,8 @@ the scene:** WebGPU takes WGSL source only, and there is no compiled shader form
    children once in the text, walked once a copy -- in codegen a loop over a mat4 uniform a copy (uniforms are not
    arrays), as data an ARRAY record, the children's frames relative to the copy, and an ARRAY_END that goes back for
    the next (the evaluator keeps a base frame only in a scene that has arrays). Checked on a CPU's WebGPU: the field and
-   the picks of the copies written out as groups. No light inside an array yet (light sampling's one face a light);
+   the picks of the copies written out as groups. No light inside an array yet (light sampling's one face a light; a
+   light at every copy since `0.next`, roadmap/LIGHT_CONTROL.md);
    no group with code or joins as one (put it inside). Each copy is still a walk of its children at every step near
    it: the BVH is what would tell which copies are near.
    **Before and after groups are data (2026-10-04, 0.14.0), with no file format change:** the kind is read off the
