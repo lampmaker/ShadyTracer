@@ -1075,7 +1075,7 @@
             "id": "n68",
             "kind": "object",
             "type": "code",
-            "label": "630 nm [6,0]",
+            "label": "680 nm [6,0]",
             "enabled": true,
             "transform": {
               "pos": {
@@ -1135,7 +1135,7 @@
             "id": "n70",
             "kind": "object",
             "type": "code",
-            "label": "650 nm [6,2]",
+            "label": "470 nm [6,2]",
             "enabled": true,
             "transform": {
               "pos": {
@@ -1165,7 +1165,7 @@
             "id": "n71",
             "kind": "object",
             "type": "code",
-            "label": "660 nm [6,3]",
+            "label": "520 nm [6,3]",
             "enabled": true,
             "transform": {
               "pos": {
@@ -1195,7 +1195,7 @@
             "id": "n72",
             "kind": "object",
             "type": "code",
-            "label": "670 nm [6,4]",
+            "label": "480 nm [6,4]",
             "enabled": true,
             "transform": {
               "pos": {
@@ -1225,7 +1225,7 @@
             "id": "n73",
             "kind": "object",
             "type": "code",
-            "label": "680 nm [6,5]",
+            "label": "620 nm [6,5]",
             "enabled": true,
             "transform": {
               "pos": {
