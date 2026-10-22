@@ -1,7 +1,7 @@
 {
   "format": "raytracer-scene",
   "version": 24,
-  "app": "0.77.0+dec4843",
+  "app": "0.77.0+97c3e1f",
   "title": "Dichroics",
   "nextId": 84,
   "unit": "mm",
@@ -96,72 +96,6 @@
       "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
     },
     {
-      "id": "m3",
-      "label": "silver mirror",
-      "params": {
-        "baseColor": {
-          "r": 0.96,
-          "g": 0.96,
-          "b": 0.97
-        },
-        "metallic": 1,
-        "roughness": 0.02,
-        "anisotropy": 0,
-        "specular": 0.5,
-        "specularTint": 0,
-        "transmission": 0,
-        "ior": 1.5,
-        "abbe": 0,
-        "attenuationDistance": 0,
-        "coating": 0,
-        "coatLow": 0,
-        "coatHigh": 1,
-        "coatEdge": 600,
-        "coatWidth": 20,
-        "coatIndex": 1.8,
-        "emissive": {
-          "r": 1,
-          "g": 1,
-          "b": 1
-        },
-        "emissiveLuminance": 0
-      },
-      "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
-    },
-    {
-      "id": "m4",
-      "label": "dichroic 430 nm (reflects shorter)",
-      "params": {
-        "baseColor": {
-          "r": 1,
-          "g": 1,
-          "b": 1
-        },
-        "metallic": 0,
-        "roughness": 0,
-        "anisotropy": 0,
-        "specular": 0.5,
-        "specularTint": 0,
-        "transmission": 1,
-        "ior": 1.52,
-        "abbe": 0,
-        "attenuationDistance": 0,
-        "coating": 1,
-        "coatLow": 1,
-        "coatHigh": 0,
-        "coatEdge": 430,
-        "coatWidth": 25,
-        "coatIndex": 1.8,
-        "emissive": {
-          "r": 1,
-          "g": 1,
-          "b": 1
-        },
-        "emissiveLuminance": 0
-      },
-      "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
-    },
-    {
       "id": "m5",
       "label": "dichroic 470 nm (reflects shorter)",
       "params": {
@@ -228,39 +162,6 @@
       "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
     },
     {
-      "id": "m7",
-      "label": "dichroic 510 nm (reflects shorter)",
-      "params": {
-        "baseColor": {
-          "r": 1,
-          "g": 1,
-          "b": 1
-        },
-        "metallic": 0,
-        "roughness": 0,
-        "anisotropy": 0,
-        "specular": 0.5,
-        "specularTint": 0,
-        "transmission": 1,
-        "ior": 1.52,
-        "abbe": 0,
-        "attenuationDistance": 0,
-        "coating": 1,
-        "coatLow": 1,
-        "coatHigh": 0,
-        "coatEdge": 510,
-        "coatWidth": 25,
-        "coatIndex": 1.8,
-        "emissive": {
-          "r": 1,
-          "g": 1,
-          "b": 1
-        },
-        "emissiveLuminance": 0
-      },
-      "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
-    },
-    {
       "id": "m8",
       "label": "dichroic 520 nm (reflects shorter)",
       "params": {
@@ -282,270 +183,6 @@
         "coatLow": 1,
         "coatHigh": 0,
         "coatEdge": 520,
-        "coatWidth": 25,
-        "coatIndex": 1.8,
-        "emissive": {
-          "r": 1,
-          "g": 1,
-          "b": 1
-        },
-        "emissiveLuminance": 0
-      },
-      "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
-    },
-    {
-      "id": "m9",
-      "label": "dichroic 530 nm (reflects shorter)",
-      "params": {
-        "baseColor": {
-          "r": 1,
-          "g": 1,
-          "b": 1
-        },
-        "metallic": 0,
-        "roughness": 0,
-        "anisotropy": 0,
-        "specular": 0.5,
-        "specularTint": 0,
-        "transmission": 1,
-        "ior": 1.52,
-        "abbe": 0,
-        "attenuationDistance": 0,
-        "coating": 1,
-        "coatLow": 1,
-        "coatHigh": 0,
-        "coatEdge": 530,
-        "coatWidth": 25,
-        "coatIndex": 1.8,
-        "emissive": {
-          "r": 1,
-          "g": 1,
-          "b": 1
-        },
-        "emissiveLuminance": 0
-      },
-      "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
-    },
-    {
-      "id": "m10",
-      "label": "dichroic 550 nm (reflects shorter)",
-      "params": {
-        "baseColor": {
-          "r": 1,
-          "g": 1,
-          "b": 1
-        },
-        "metallic": 0,
-        "roughness": 0,
-        "anisotropy": 0,
-        "specular": 0.5,
-        "specularTint": 0,
-        "transmission": 1,
-        "ior": 1.52,
-        "abbe": 0,
-        "attenuationDistance": 0,
-        "coating": 1,
-        "coatLow": 1,
-        "coatHigh": 0,
-        "coatEdge": 550,
-        "coatWidth": 25,
-        "coatIndex": 1.8,
-        "emissive": {
-          "r": 1,
-          "g": 1,
-          "b": 1
-        },
-        "emissiveLuminance": 0
-      },
-      "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
-    },
-    {
-      "id": "m11",
-      "label": "dichroic 560 nm (reflects shorter)",
-      "params": {
-        "baseColor": {
-          "r": 1,
-          "g": 1,
-          "b": 1
-        },
-        "metallic": 0,
-        "roughness": 0,
-        "anisotropy": 0,
-        "specular": 0.5,
-        "specularTint": 0,
-        "transmission": 1,
-        "ior": 1.52,
-        "abbe": 0,
-        "attenuationDistance": 0,
-        "coating": 1,
-        "coatLow": 1,
-        "coatHigh": 0,
-        "coatEdge": 560,
-        "coatWidth": 25,
-        "coatIndex": 1.8,
-        "emissive": {
-          "r": 1,
-          "g": 1,
-          "b": 1
-        },
-        "emissiveLuminance": 0
-      },
-      "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
-    },
-    {
-      "id": "m12",
-      "label": "dichroic 570 nm (reflects shorter)",
-      "params": {
-        "baseColor": {
-          "r": 1,
-          "g": 1,
-          "b": 1
-        },
-        "metallic": 0,
-        "roughness": 0,
-        "anisotropy": 0,
-        "specular": 0.5,
-        "specularTint": 0,
-        "transmission": 1,
-        "ior": 1.52,
-        "abbe": 0,
-        "attenuationDistance": 0,
-        "coating": 1,
-        "coatLow": 1,
-        "coatHigh": 0,
-        "coatEdge": 570,
-        "coatWidth": 25,
-        "coatIndex": 1.8,
-        "emissive": {
-          "r": 1,
-          "g": 1,
-          "b": 1
-        },
-        "emissiveLuminance": 0
-      },
-      "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
-    },
-    {
-      "id": "m13",
-      "label": "dichroic 580 nm (reflects shorter)",
-      "params": {
-        "baseColor": {
-          "r": 1,
-          "g": 1,
-          "b": 1
-        },
-        "metallic": 0,
-        "roughness": 0,
-        "anisotropy": 0,
-        "specular": 0.5,
-        "specularTint": 0,
-        "transmission": 1,
-        "ior": 1.52,
-        "abbe": 0,
-        "attenuationDistance": 0,
-        "coating": 1,
-        "coatLow": 1,
-        "coatHigh": 0,
-        "coatEdge": 580,
-        "coatWidth": 25,
-        "coatIndex": 1.8,
-        "emissive": {
-          "r": 1,
-          "g": 1,
-          "b": 1
-        },
-        "emissiveLuminance": 0
-      },
-      "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
-    },
-    {
-      "id": "m14",
-      "label": "dichroic 590 nm (reflects shorter)",
-      "params": {
-        "baseColor": {
-          "r": 1,
-          "g": 1,
-          "b": 1
-        },
-        "metallic": 0,
-        "roughness": 0,
-        "anisotropy": 0,
-        "specular": 0.5,
-        "specularTint": 0,
-        "transmission": 1,
-        "ior": 1.52,
-        "abbe": 0,
-        "attenuationDistance": 0,
-        "coating": 1,
-        "coatLow": 1,
-        "coatHigh": 0,
-        "coatEdge": 590,
-        "coatWidth": 25,
-        "coatIndex": 1.8,
-        "emissive": {
-          "r": 1,
-          "g": 1,
-          "b": 1
-        },
-        "emissiveLuminance": 0
-      },
-      "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
-    },
-    {
-      "id": "m15",
-      "label": "dichroic 600 nm (reflects shorter)",
-      "params": {
-        "baseColor": {
-          "r": 1,
-          "g": 1,
-          "b": 1
-        },
-        "metallic": 0,
-        "roughness": 0,
-        "anisotropy": 0,
-        "specular": 0.5,
-        "specularTint": 0,
-        "transmission": 1,
-        "ior": 1.52,
-        "abbe": 0,
-        "attenuationDistance": 0,
-        "coating": 1,
-        "coatLow": 1,
-        "coatHigh": 0,
-        "coatEdge": 600,
-        "coatWidth": 25,
-        "coatIndex": 1.8,
-        "emissive": {
-          "r": 1,
-          "g": 1,
-          "b": 1
-        },
-        "emissiveLuminance": 0
-      },
-      "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
-    },
-    {
-      "id": "m16",
-      "label": "dichroic 610 nm (reflects shorter)",
-      "params": {
-        "baseColor": {
-          "r": 1,
-          "g": 1,
-          "b": 1
-        },
-        "metallic": 0,
-        "roughness": 0,
-        "anisotropy": 0,
-        "specular": 0.5,
-        "specularTint": 0,
-        "transmission": 1,
-        "ior": 1.52,
-        "abbe": 0,
-        "attenuationDistance": 0,
-        "coating": 1,
-        "coatLow": 1,
-        "coatHigh": 0,
-        "coatEdge": 610,
         "coatWidth": 25,
         "coatIndex": 1.8,
         "emissive": {
@@ -591,39 +228,6 @@
       "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
     },
     {
-      "id": "m18",
-      "label": "dichroic 630 nm (reflects shorter)",
-      "params": {
-        "baseColor": {
-          "r": 1,
-          "g": 1,
-          "b": 1
-        },
-        "metallic": 0,
-        "roughness": 0,
-        "anisotropy": 0,
-        "specular": 0.5,
-        "specularTint": 0,
-        "transmission": 1,
-        "ior": 1.52,
-        "abbe": 0,
-        "attenuationDistance": 0,
-        "coating": 1,
-        "coatLow": 1,
-        "coatHigh": 0,
-        "coatEdge": 630,
-        "coatWidth": 25,
-        "coatIndex": 1.8,
-        "emissive": {
-          "r": 1,
-          "g": 1,
-          "b": 1
-        },
-        "emissiveLuminance": 0
-      },
-      "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
-    },
-    {
       "id": "m19",
       "label": "dichroic 640 nm (reflects shorter)",
       "params": {
@@ -645,105 +249,6 @@
         "coatLow": 1,
         "coatHigh": 0,
         "coatEdge": 640,
-        "coatWidth": 25,
-        "coatIndex": 1.8,
-        "emissive": {
-          "r": 1,
-          "g": 1,
-          "b": 1
-        },
-        "emissiveLuminance": 0
-      },
-      "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
-    },
-    {
-      "id": "m20",
-      "label": "dichroic 650 nm (reflects shorter)",
-      "params": {
-        "baseColor": {
-          "r": 1,
-          "g": 1,
-          "b": 1
-        },
-        "metallic": 0,
-        "roughness": 0,
-        "anisotropy": 0,
-        "specular": 0.5,
-        "specularTint": 0,
-        "transmission": 1,
-        "ior": 1.52,
-        "abbe": 0,
-        "attenuationDistance": 0,
-        "coating": 1,
-        "coatLow": 1,
-        "coatHigh": 0,
-        "coatEdge": 650,
-        "coatWidth": 25,
-        "coatIndex": 1.8,
-        "emissive": {
-          "r": 1,
-          "g": 1,
-          "b": 1
-        },
-        "emissiveLuminance": 0
-      },
-      "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
-    },
-    {
-      "id": "m21",
-      "label": "dichroic 660 nm (reflects shorter)",
-      "params": {
-        "baseColor": {
-          "r": 1,
-          "g": 1,
-          "b": 1
-        },
-        "metallic": 0,
-        "roughness": 0,
-        "anisotropy": 0,
-        "specular": 0.5,
-        "specularTint": 0,
-        "transmission": 1,
-        "ior": 1.52,
-        "abbe": 0,
-        "attenuationDistance": 0,
-        "coating": 1,
-        "coatLow": 1,
-        "coatHigh": 0,
-        "coatEdge": 660,
-        "coatWidth": 25,
-        "coatIndex": 1.8,
-        "emissive": {
-          "r": 1,
-          "g": 1,
-          "b": 1
-        },
-        "emissiveLuminance": 0
-      },
-      "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
-    },
-    {
-      "id": "m22",
-      "label": "dichroic 670 nm (reflects shorter)",
-      "params": {
-        "baseColor": {
-          "r": 1,
-          "g": 1,
-          "b": 1
-        },
-        "metallic": 0,
-        "roughness": 0,
-        "anisotropy": 0,
-        "specular": 0.5,
-        "specularTint": 0,
-        "transmission": 1,
-        "ior": 1.52,
-        "abbe": 0,
-        "attenuationDistance": 0,
-        "coating": 1,
-        "coatLow": 1,
-        "coatHigh": 0,
-        "coatEdge": 670,
         "coatWidth": 25,
         "coatIndex": 1.8,
         "emissive": {
@@ -955,43 +460,10 @@
         "lockParams": true
       },
       {
-        "id": "n79",
-        "kind": "object",
-        "type": "light",
-        "label": "white sheet from the left",
-        "enabled": true,
-        "transform": {
-          "pos": {
-            "x": -150,
-            "y": 0,
-            "z": 27
-          },
-          "rot": {
-            "x": 0,
-            "y": 92,
-            "z": 0
-          },
-          "scale": 1
-        },
-        "material": null,
-        "params": {
-          "width": 50,
-          "height": 1.5
-        },
-        "light": {
-          "shape": "rectangle",
-          "flux": 20,
-          "colourBy": "cct",
-          "cct": 6500,
-          "distribution": "collimated",
-          "luminance": 84882.63631567753
-        }
-      },
-      {
         "id": "n80",
         "kind": "object",
         "type": "light",
-        "label": "white sheet from the front",
+        "label": "white light",
         "enabled": true,
         "transform": {
           "pos": {
@@ -1022,293 +494,214 @@
         }
       },
       {
-        "id": "n75",
-        "kind": "group",
-        "label": "mirror grid 7x7",
+        "id": "n67",
+        "kind": "object",
+        "type": "code",
+        "label": "680 nm [5,6]",
         "enabled": true,
-        "blend": 0,
         "transform": {
           "pos": {
-            "x": 0,
-            "y": 0,
-            "z": 0
+            "x": 44.981687027408796,
+            "y": 170.12525864334384,
+            "z": 30
           },
           "rot": {
-            "x": 0,
-            "y": 0,
+            "x": -45,
+            "y": -90,
+            "z": 93.48075193919294
+          },
+          "scale": 1
+        },
+        "material": "m23",
+        "params": {
+          "size": {
+            "x": 30,
+            "y": 17,
+            "z": 1
+          },
+          "rounding": 0
+        },
+        "block": "b24"
+      },
+      {
+        "id": "n68",
+        "kind": "object",
+        "type": "code",
+        "label": "630 nm [6,0]",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 6.207039930138869,
+            "y": 240,
+            "z": 30
+          },
+          "rot": {
+            "x": -45,
+            "y": -90,
             "z": 0
           },
           "scale": 1
         },
-        "children": [
-          {
-            "id": "n67",
-            "kind": "object",
-            "type": "code",
-            "label": "680 nm [5,6]",
-            "enabled": true,
-            "transform": {
-              "pos": {
-                "x": 44.981687027408796,
-                "y": 170.12525864334384,
-                "z": 30
-              },
-              "rot": {
-                "x": -45,
-                "y": -90,
-                "z": 93.48075193919294
-              },
-              "scale": 1
-            },
-            "material": "m23",
-            "params": {
-              "size": {
-                "x": 30,
-                "y": 17,
-                "z": 1
-              },
-              "rounding": 0
-            },
-            "block": "b24"
+        "material": "m23",
+        "params": {
+          "size": {
+            "x": 30,
+            "y": 17,
+            "z": 1
           },
-          {
-            "id": "n68",
-            "kind": "object",
-            "type": "code",
-            "label": "630 nm [6,0]",
-            "enabled": true,
-            "transform": {
-              "pos": {
-                "x": 6.207039930138869,
-                "y": 240,
-                "z": 30
-              },
-              "rot": {
-                "x": -45,
-                "y": -90,
-                "z": 0
-              },
-              "scale": 1
-            },
-            "material": "m23",
-            "params": {
-              "size": {
-                "x": 30,
-                "y": 17,
-                "z": 1
-              },
-              "rounding": 0
-            },
-            "block": "b24"
-          },
-          {
-            "id": "n69",
-            "kind": "object",
-            "type": "code",
-            "label": "640 nm [6,1]",
-            "enabled": true,
-            "transform": {
-              "pos": {
-                "x": 40,
-                "y": 240,
-                "z": 30
-              },
-              "rot": {
-                "x": -45,
-                "y": -90,
-                "z": 6.92455336768337
-              },
-              "scale": 1.3290102592391684
-            },
-            "material": "m19",
-            "params": {
-              "size": {
-                "x": 30,
-                "y": 17,
-                "z": 1
-              },
-              "rounding": 0
-            },
-            "block": "b24"
-          },
-          {
-            "id": "n70",
-            "kind": "object",
-            "type": "code",
-            "label": "650 nm [6,2]",
-            "enabled": true,
-            "transform": {
-              "pos": {
-                "x": 80,
-                "y": 240,
-                "z": 30
-              },
-              "rot": {
-                "x": -45,
-                "y": -90,
-                "z": -10.576411622515627
-              },
-              "scale": 1
-            },
-            "material": "m5",
-            "params": {
-              "size": {
-                "x": 30,
-                "y": 17,
-                "z": 1
-              },
-              "rounding": 0
-            },
-            "block": "b24"
-          },
-          {
-            "id": "n71",
-            "kind": "object",
-            "type": "code",
-            "label": "660 nm [6,3]",
-            "enabled": true,
-            "transform": {
-              "pos": {
-                "x": 120,
-                "y": 240,
-                "z": 30
-              },
-              "rot": {
-                "x": -45,
-                "y": -90,
-                "z": 60.19454346222952
-              },
-              "scale": 1
-            },
-            "material": "m8",
-            "params": {
-              "size": {
-                "x": 30,
-                "y": 17,
-                "z": 1
-              },
-              "rounding": 0
-            },
-            "block": "b24"
-          },
-          {
-            "id": "n72",
-            "kind": "object",
-            "type": "code",
-            "label": "670 nm [6,4]",
-            "enabled": true,
-            "transform": {
-              "pos": {
-                "x": 56.085144132803606,
-                "y": 305.9221538028056,
-                "z": 30
-              },
-              "rot": {
-                "x": -45,
-                "y": -90,
-                "z": 0.32837370062006865
-              },
-              "scale": 1
-            },
-            "material": "m6",
-            "params": {
-              "size": {
-                "x": 30,
-                "y": 17,
-                "z": 1
-              },
-              "rounding": 0
-            },
-            "block": "b24"
-          },
-          {
-            "id": "n73",
-            "kind": "object",
-            "type": "code",
-            "label": "680 nm [6,5]",
-            "enabled": true,
-            "transform": {
-              "pos": {
-                "x": 7.668572927208176,
-                "y": 314.5646001982402,
-                "z": 30
-              },
-              "rot": {
-                "x": -45,
-                "y": -90,
-                "z": 167.44718450908465
-              },
-              "scale": 1
-            },
-            "material": "m17",
-            "params": {
-              "size": {
-                "x": 30,
-                "y": 17,
-                "z": 1
-              },
-              "rounding": 0
-            },
-            "block": "b24"
-          },
-          {
-            "id": "n74",
-            "kind": "object",
-            "type": "code",
-            "label": "silver [6,6]",
-            "enabled": false,
-            "transform": {
-              "pos": {
-                "x": -69.87278079075878,
-                "y": 319.6376809548955,
-                "z": 30
-              },
-              "rot": {
-                "x": -45,
-                "y": -90,
-                "z": 27.91262640312295
-              },
-              "scale": 1
-            },
-            "material": "m3",
-            "params": {
-              "size": {
-                "x": 30,
-                "y": 17,
-                "z": 1
-              },
-              "rounding": 0
-            },
-            "block": "b24"
-          }
-        ]
+          "rounding": 0
+        },
+        "block": "b24"
       },
       {
-        "id": "n82",
+        "id": "n69",
         "kind": "object",
         "type": "code",
-        "label": "prism",
-        "enabled": false,
+        "label": "640 nm [6,1]",
+        "enabled": true,
         "transform": {
           "pos": {
-            "x": 107.85755723594723,
-            "y": 127.72263925983202,
-            "z": 26.039879979556247
+            "x": 40,
+            "y": 240,
+            "z": 30
           },
           "rot": {
-            "x": 0,
-            "y": 0,
-            "z": 0
+            "x": -45,
+            "y": -90,
+            "z": 6.92455336768337
           },
-          "scale": 50.16974014698751
+          "scale": 1.3290102592391684
         },
-        "material": "m4",
+        "material": "m19",
         "params": {
-          "sides": 5,
-          "radius": 0.521513909,
-          "height": 1.027182747
+          "size": {
+            "x": 30,
+            "y": 17,
+            "z": 1
+          },
+          "rounding": 0
         },
-        "block": "b83"
+        "block": "b24"
+      },
+      {
+        "id": "n70",
+        "kind": "object",
+        "type": "code",
+        "label": "650 nm [6,2]",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 80,
+            "y": 240,
+            "z": 30
+          },
+          "rot": {
+            "x": -45,
+            "y": -90,
+            "z": -10.576411622515627
+          },
+          "scale": 1
+        },
+        "material": "m5",
+        "params": {
+          "size": {
+            "x": 30,
+            "y": 17,
+            "z": 1
+          },
+          "rounding": 0
+        },
+        "block": "b24"
+      },
+      {
+        "id": "n71",
+        "kind": "object",
+        "type": "code",
+        "label": "660 nm [6,3]",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 120,
+            "y": 240,
+            "z": 30
+          },
+          "rot": {
+            "x": -45,
+            "y": -90,
+            "z": 60.19454346222952
+          },
+          "scale": 1
+        },
+        "material": "m8",
+        "params": {
+          "size": {
+            "x": 30,
+            "y": 17,
+            "z": 1
+          },
+          "rounding": 0
+        },
+        "block": "b24"
+      },
+      {
+        "id": "n72",
+        "kind": "object",
+        "type": "code",
+        "label": "670 nm [6,4]",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 56.085144132803606,
+            "y": 305.9221538028056,
+            "z": 30
+          },
+          "rot": {
+            "x": -45,
+            "y": -90,
+            "z": 0.32837370062006865
+          },
+          "scale": 1
+        },
+        "material": "m6",
+        "params": {
+          "size": {
+            "x": 30,
+            "y": 17,
+            "z": 1
+          },
+          "rounding": 0
+        },
+        "block": "b24"
+      },
+      {
+        "id": "n73",
+        "kind": "object",
+        "type": "code",
+        "label": "680 nm [6,5]",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 7.668572927208176,
+            "y": 314.5646001982402,
+            "z": 30
+          },
+          "rot": {
+            "x": -45,
+            "y": -90,
+            "z": 167.44718450908465
+          },
+          "scale": 1
+        },
+        "material": "m17",
+        "params": {
+          "size": {
+            "x": 30,
+            "y": 17,
+            "z": 1
+          },
+          "rounding": 0
+        },
+        "block": "b24"
       }
     ]
   },
@@ -1345,12 +738,12 @@
         80.85348178548651
       ],
       "azimuth": 257.4,
-      "elevation": 65.20000000000006,
-      "distance": 803.4869753822956,
+      "elevation": 64.2,
+      "distance": 803.4869753822957,
       "pos": [
-        -89.46983884897759,
-        -615.5833219257823,
-        417.8777668279699
+        -88.1625120678745,
+        -609.7346781133863,
+        430.55600141246924
       ],
       "up": [
         0,
