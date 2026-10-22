@@ -213,6 +213,14 @@
         the formula; the furnace 1 for every white material, a little under for rough glass (<code>lib/pathtracer/tests.js</code>).</p>
     </div>
     <div data-claim="code">
+      <p><strong>A verdict on every row.</strong> Each test carries a rule, and each row reads PASS within three of its
+        own error bars or the allowance its test's note gives, whichever is wider; CHECK out to five, or twice the
+        allowance, where a rerun comes first; FAIL past that. A row with no answer to hold it to reads INFO, and a test
+        that measured nothing (the emitter test on a scene with no emitter) VOID, never a pass. The allowances are
+        choices, not measurements, and the error bar of a picture's mean assumes its pixels' errors independent, which
+        they are not where pixels share light (<code>lib/pathtracer/verdict.js</code>, <code>docs/TESTING.md</code>).</p>
+    </div>
+    <div data-claim="code">
       <p><strong>A trimmed mean for comparing two builds.</strong> Two renderers converging to the same picture can
         differ by percent in a plain mean at a few samples: a handful of fireflies move it. So the bench also reports the
         mean without the brightest 0.1% of pixels; a difference that survives that is real. The NEE test compares plain

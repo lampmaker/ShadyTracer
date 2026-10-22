@@ -173,7 +173,9 @@
       builds it and measures it on their own graphics cards. There are two, both made by NVIDIA, of the generations it
       calls Pascal (older) and Ampere (newer). They
       open ShadyTracer, choose <strong>View › Tests</strong> and press a test's button; a table of results appears
-      with a <strong>Copy</strong> button, and that table is pasted back into the project's notes. Its first line names
+      with a <strong>Copy</strong> button, and that table is pasted back into the project's notes. The tests sit in
+      folders by what they check, each with a <strong>Run all</strong>, and every row of a table ends in a verdict:
+      PASS, CHECK or FAIL against the answer it knows in advance (chapter 29). Its first line names
       the exact code it ran, then the picture's size and the graphics card
       (<cite data-src="lib/pathtracer/tests.js" data-sym="/* WHICH BUILD, when the host says"></cite>). The code is named
       by its version and its <em>revision</em>, the exact saved state of the files, as the program's version file

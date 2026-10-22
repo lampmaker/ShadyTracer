@@ -36,7 +36,7 @@ export const ITEMS = [
     row('render-modes', 'never', 'open — built 2026-10-01, never pressed.', 'Whether Draft keeps the direct light exactly', 'feel', 'does Draft keep the direct light?'),
     row('draft-lamps', 'never', 'open — built 2026-10-01, never pressed.', 'Whether Draft finds a lamp the camera cannot see', 'feel', 'does Draft find a lamp out of view?'),
     row('scale', 'never', 'open — first press.', "Whether the surface tolerance follows the scene's size", 'precision', 'does the tolerance follow the size?'),
-    row('optics-balance', 'never', 'open — first press.', 'Whether the optics trace ends every ray where arithmetic says', 'optics', 'does every optics ray end right?'),
+    row('optics-balance', 'once', 'open — the shell not yet pressed.', 'Whether the optics trace ends every ray where arithmetic says', 'optics', 'does every optics ray end right?'),
     row('optics-farfield', 'never', 'open — first press.', "Whether the far-field grid (the Intensity tab) gives a source's known curve", 'optics', 'does the far field give known curves?'),
     row('optics-absorption', 'never', 'open — first press.', 'Whether glass absorbs with its thickness', 'glass', 'does glass absorb with thickness?'),
     row('optics-coating', 'never', 'open — first press.', 'reflects and passes what it says', 'dispersion', 'does a coating do what it says?'),
