@@ -677,7 +677,7 @@ export const EXAMPLES = [
 ]
 
 /* WRITTEN: each scene, and examples.js -- what scenes/index.js lists, read by the page without running this.
-   AN EXAMPLE MADE IN THE PAGE (its function null: Dichroics, the user's own scene, 0.next) is the file as the user saved
+   AN EXAMPLE MADE IN THE PAGE (its function null: Dichroics, the user's own scene, 0.78.0) is the file as the user saved
    it: read for its title and checked, never written -- `made: false` in examples.js says so. */
 if (import.meta.url === `file://${process.argv[1]}`) {
     const list = []

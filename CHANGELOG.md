@@ -16,6 +16,49 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.78.0 — 2026-10-22
+
+**Dichroics is an example** (File › Examples › Optical design): the user's own scene as they saved it -- two collimated
+white light sheets, one 6500 K from the left and one 2830 K from the front, split into their colours by seven dichroic
+plates (edges 470 to 680 nm) on a slate floor between two gallery walls, in a dim studio light, seen through an open lens.
+It is the first example not made by `scenes/make.mjs`: the script lists it with no function and `made: false`, reads it
+for its title and checks it, and never writes it. Its environment was made whole (the sun and sky settings it did not
+name, at their defaults, so the scene shown before it leaves nothing in it); nothing else in the file was changed.
+
+**What to look at:** File › Examples › Dichroics opens with the picture the scene was saved with -- the coloured beams on
+the floor, the plates out of focus in front -- and opening another example after it leaves no blur behind.
+
+**The Tests panel in groups, a verdict on every row, and the integrating sphere fixed.** The panel was some forty
+buttons in the order they were written, and every report was read by eye. Now it is eight folders, each with its own
+Run all first: *Light & units*, *Lights & emitters*, *Materials & energy*, *Estimators agree*, *Render modes*, *Optics
+trace*, *Speed* and *Benchmarks*. The top Run all runs the first six, every test with a known answer. A test that
+measures the scene you have loaded says **(your scene)** on its button.
+
+Every row now reads **PASS**, **CHECK**, **FAIL**, **INFO** or **VOID** (`lib/pathtracer/verdict.js`).
+- PASS: within 3σ of its answer (its own error bar) or the allowance its note gives, whichever is wider.
+- CHECK: out to 5σ or twice the allowance. Rerun it first.
+- FAIL: past that.
+- INFO: no answer to hold it to (a speed, a reference row).
+- VOID: nothing was measured. `emitters` on a scene with no emitter reads VOID, where it used to show a table of zeros.
+
+The verdict is in the report's last column with the reason, in a line under the header, and in the JSON. A Run all
+opens with a summary: one line a test, and every row that did not pass. The allowances are choices, read from each
+test's note and from the 0.77.0 run on Pascal, and are tuned from the next run. Replayed through the rules, that run
+would have read FAIL on the integrating sphere, on `draft-lamps`' lamps-only row (3% under Draft) and on `optics-mode`'s
+x 0.5 sensor two stops down (5σ). It would have read CHECK on the furnace's dichroic coated on every face (0.997) and
+on `sppm`'s map rows, whose reference has no error bar.
+
+The integrating sphere in `optics-balance` read 0 because its scene was the furnace's *solid* ball: the source at its
+centre sat inside an opaque solid, and no ray met a wall. It is now a hollow shell, material 1 between r = 1 and 1.1
+round a cavity of air. The report's columns also widen to their widest number, which a millimetre scene's had run past.
+
+**What to look at:**
+- The Tests panel: the eight folders, each Run all, the "(your scene)" marks.
+- Optics trace › `optics-balance`: the two integrating-sphere rows should read arrived 5.000 and 2.000, escaped 0, and
+  PASS.
+- Run all: the summary at the top. Do its FAILs and CHECKs match what you would judge from the numbers? An allowance
+  too tight or too loose is the next thing to tune.
+
 ## 0.77.0 — 2026-10-21
 
 **A ninth modifier, the circular array: copies of a group's children round its z axis.** In the group's + menu under

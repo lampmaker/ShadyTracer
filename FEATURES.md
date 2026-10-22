@@ -212,7 +212,7 @@ into batches, so **every number carries a standard error**. Target: LED and lumi
 | **Detector** and **ray limiter** material types (a limiter is invisible in the picture: a cross-section of a beam) | built | `builder/model.js` `MATERIAL_TYPES` |
 | **Totals**: emitted, escaped, absorbed, on detectors, lost; per object and per material: arriving, absorbed, hits — each ± standard error | built | `optics/page.js` |
 | **Refraction, Fresnel, total internal reflection** | **verified** (`optics-refraction`, Pascal, 400 k rays a row): slab at 0/45/70° within 2 SE, TIR exact, glass ball 0.9997, wedge exit angle to 2e-6°, balance 0 | TESTING.md |
-| Energy balance, absorbing and reflecting floors, integrating sphere | `optics-balance` pressed (0.77.0): all but the integrating sphere pass, whose scene was a solid ball; the hollow shell (0.next) not yet pressed | TESTING.md |
+| Energy balance, absorbing and reflecting floors, integrating sphere | `optics-balance` pressed (0.77.0): all but the integrating sphere pass, whose scene was a solid ball; the hollow shell (0.78.0) not yet pressed | TESTING.md |
 | **Rays drawn over the picture**, live while objects move: up to 20 000 rays, coloured by remaining flux, step, plain or the light's colour; an **optical-path-length slider** that sweeps the light through the system | built | `optics/paths.js` |
 | **Live analysis**: the analysis again and again, every chart, card and total following each edit; with **Σ** the rounds adding up while nothing changes (starting over when the picture does), without it each round on its own, to compare; one readback a round; the ray count a number times × 1 … × 10M | built 2026-10-04 (0.11.0, 0.12.0, Σ 0.14.0); **confirmed working by the user** (tracing and analysis, 2026-10-04); headless-checked over a stand-in (`page.check.mjs`), the readback and what is drawn Node-tested on recording devices (`readback.test.mjs`, `drawn.test.mjs`); a round was 1.4 s with the picture running and 0.2 s without it before 0.12.0 (measured by the user); since, **not measured** | `optics/page.js`, `optics/index.js` (publish) |
 | Ray filters (by source position, direction, fate) | planned | PLAN.md |
@@ -335,7 +335,7 @@ closed-form answers on real hardware, and every number carries its error bar.
 ## 9. Bundled scenes
 
 **The Project panel's examples** (`scenes/index.js`), each opened as a copy into the project with a camera of its own: 25 scenes
-made in code (`scenes/make.mjs`) in real sizes, and one the user made in the page (Dichroics, 0.next), by audience -- **Modelling and rendering** (Start; Shapes: the gallery,
+made in code (`scenes/make.mjs`) in real sizes, and one the user made in the page (Dichroics, 0.78.0), by audience -- **Modelling and rendering** (Start; Shapes: the gallery,
 combining, modifiers, from points, a parametric part, infinite detail; Materials: the board, relief and texture,
 glass and liquid; Light and camera: a room, depth of field, animation, a product shot) and **Optical design** (an
 LED and lens, a beam in dusty air (0.62.0), an aspheric condenser, Fresnel against plano-convex, a parabolic

@@ -164,7 +164,7 @@
 // pat_n11 alone; the tags did not move. Against dev's expected.json (8e1137f) the other documents did not move (key by key), and
 // no document without a pattern frame can: the lines are emitted only for one.
 //
-// A DOCUMENT ADDED (2026-10-22, 0.next): scenes/dichroics.json, the user's Dichroics scene made an example as they saved it
+// A DOCUMENT ADDED (2026-10-22, 0.78.0): scenes/dichroics.json, the user's Dichroics scene made an example as they saved it
 // (scenes/make.mjs lists it, `made: false`). No codegen change: the freeze added its entry and moved no other document's
 // (key by key, against the expected.json before).
 //======================================================================================================================
