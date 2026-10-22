@@ -60,8 +60,9 @@
 // THE HEADER, one vec4: where the records end, where the light table starts, how many lights, 0.
 //======================================================================================================================
 
-import { hasCode, isBefore, isAfter, isCsg, combinedGroups, shapesOf, joinOf, isCompiledIn, isProfile, isPath, NODE_TYPES, patterned } from './codegen.js'
-import { hasFace } from './lights.js'
+import { hasCode, isBefore, isAfter, isCsg, combinedGroups, shapesOf, joinOf, isCompiledIn, isProfile, isPath, NODE_TYPES, patterned,
+         faceCount, faceTotalLine, facePickLine, faceCases } from './codegen.js'
+import { hasFace, arrayedLightProblem, copyCount, copyIndices } from './lights.js'
 import { matrixOf } from './transform.js'
 
 export const HEADER = 1
@@ -180,15 +181,22 @@ function tagsOf(tree, compiled) {
     walk(tree)
     return tags
 }
-/* the faces light sampling sees, as codegen collectLights finds them: not under group code (there a light is not drawn) */
+/* the faces light sampling sees, as codegen collectLights finds them: not under group code (there a light is not drawn),
+   nor inside an array it cannot be drawn once a copy in (lights.js arrayedLightProblem); each light with its number of
+   faces, one a copy, and the first of them */
 function lightsOf(tree) {
     const lights = []
-    const find = (n, warped) => {
-        if (n.kind === 'object' && n.type === 'light' && hasFace(n.light) && !warped) lights.push(n)
+    let first = 0
+    const find = (n, warped, above) => {
+        if (n.kind === 'object' && n.type === 'light' && hasFace(n.light) && !warped && !arrayedLightProblem(above, isCsg)) {
+            lights.push({ id: n.id, node: n, faces: copyCount(above), first })
+            first += copyCount(above)
+        }
         const w = warped || (n !== tree && hasCode(n))
-        for (const c of n.children || []) find(c, w)
+        const up = n !== tree && n.kind === 'group' ? [...above, n] : above
+        for (const c of n.children || []) find(c, w, up)
     }
-    find(tree, false)
+    find(tree, false, [])
     return lights
 }
 /* the handles of profiles and paths, as codegen numbers them (collectProfiles, collectPaths): each kind from 0, in tree
@@ -291,6 +299,11 @@ export function planOf(tree, { reliefMaterials = new Set(), wantLocal = false, c
    (M R_T, S s_T, t + M S t_T) -- codegen emitLightFaces, the inverse of a chain of xfPoint */
 const IDENTITY = { M: [[1, 0, 0], [0, 1, 0], [0, 0, 1]], t: [0, 0, 0], S: 1 }
 const mulMv = (M, v) => [0, 1, 2].map(i => M[0][i] * v[0] + M[1][i] * v[1] + M[2][i] * v[2])
+/* frame B, given in frame A, as A's parent sees it: descend's step for a whole frame (a copy's light, face above) */
+function compose(A, B) {
+    const step = mulMv(A.M, B.t.map(v => v * A.S))
+    return { M: B.M.map(col => mulMv(A.M, col)), t: A.t.map((v, i) => v + step[i]), S: A.S * B.S }
+}
 function descend(F, transform) {
     if (!transform) return F
     const m = matrixOf(transform)
@@ -323,7 +336,8 @@ export function recordsOf(tree, plan, { boxes = null, materialIndex, lightMateri
     const findRoots = n => { if (n !== tree && compiled(n)) { roots.push(n.id); return } for (const c of n.children || []) findRoots(c) }
     findRoots(tree)
     if (!same(roots.slice().sort(), plan.subs.map(n => n.id))) return null
-    if (!same(lightsOf(tree).map(L => L.id), plan.lights.map(L => L.id))) return null
+    // ...and as many faces each: a copy more or less is another text (LIGHT_FACES, the cases), as in codegen
+    if (!same(lightsOf(tree).map(L => `${L.id}:${L.faces}`), plan.lights.map(L => `${L.id}:${L.faces}`))) return null
     if (JSON.stringify(handlesOf(tree)) !== JSON.stringify(plan.handles)) return null
     if (stackFor(depthOf(tree, compiled)) !== plan.stack) return null
     if (stackFor(arrayDepthOf(tree, compiled)) !== (plan.arrays ?? 0)) return null
@@ -331,7 +345,7 @@ export function recordsOf(tree, plan, { boxes = null, materialIndex, lightMateri
     const tags = tagsOf(tree, compiled)
     const tagOf = new Map(tags.map((id, i) => [id, i + 1]))
     const lightIndex = new Map(plan.lights.map((L, i) => [L.id, i]))
-    const faces = plan.lights.map(() => null)
+    const faces = new Array(plan.lights.reduce((k, L) => k + L.faces, 0)).fill(null)
     const push = () => { const r = new Array(REC * 4).fill(0); recs.push(r); return r }
     const u = n => { const b = new Uint32Array(1); b[0] = n >>> 0; return new Float32Array(b.buffer)[0] }
     const frameInto = (r, F) => {
@@ -350,15 +364,27 @@ export function recordsOf(tree, plan, { boxes = null, materialIndex, lightMateri
         }
         return at
     }
-    /* A FACE IN THE LIGHT TABLE, wherever it is drawn: its frame is the same composition the records carry */
-    const face = (n, F, shown) => {
+    /* A FACE IN THE LIGHT TABLE, wherever it is drawn: its frame is the same composition the records carry. Inside an
+       ARRAY a record's frame is the copy's -- the evaluator enters each copy at run time -- so a light there is a face a
+       copy (lights.js A LIGHT INSIDE ARRAYS), each F carried out through `arrays`: the arrays it is in, outermost first,
+       each { F: the array's frame, where its copies are entered, copies }. Innermost copy fastest, as codegen numbers
+       them. */
+    const face = (n, F, shown, arrays = inArrays) => {
         const i = lightIndex.get(n.id)
         if (i === undefined) return
+        const L = plan.lights[i]
         const P = n.params || {}, rect = n.light?.shape === 'rectangle'
-        const half = rect ? [(P.width ?? 1) * 0.5 * F.S, (P.height ?? 1) * 0.5 * F.S] : [(P.radius ?? 0.5) * F.S, (P.radius ?? 0.5) * F.S]
         const flags = (rect ? 2 : 1) | (n.light?.twoSided ? 4 : 0)
-        faces[i] = [[F.t[0], F.t[1], F.t[2], u(flags)], [...F.M[0], half[0]], [...F.M[1], half[1]], [...F.M[2], shown ? 1 : 0]]
+        const counts = arrays.map(a => a.copies.length)
+        for (let j = 0; j < L.faces; j++) {
+            const c = copyIndices(j, counts)
+            let G = F
+            for (let k = arrays.length - 1; k >= 0; k--) G = compose(descend(arrays[k].F, arrays[k].copies[c[k]]), G)
+            const half = rect ? [(P.width ?? 1) * 0.5 * G.S, (P.height ?? 1) * 0.5 * G.S] : [(P.radius ?? 0.5) * G.S, (P.radius ?? 0.5) * G.S]
+            faces[L.first + j] = [[G.t[0], G.t[1], G.t[2], u(flags)], [...G.M[0], half[0]], [...G.M[1], half[1]], [...G.M[2], shown ? 1 : 0]]
+        }
     }
+    let inArrays = []
     const visible = n => n.enabled !== false
     const node = (n, F, shown, plainAbove, csgDepth) => {
         const here = descend(F, n.transform)
@@ -375,7 +401,14 @@ export function recordsOf(tree, plan, { boxes = null, materialIndex, lightMateri
             each(n, x => {
                 if (x.kind !== 'object' || x.type !== 'light') return
                 const path = pathTo(n, x)
-                face(x, path.reduce((G, y) => descend(G, y.transform), F), shown && path.every(visible))
+                // an array on the way (the subtree's code draws it): its copies entered after its frame, as the walk does
+                let G = F
+                const arrays = [...inArrays]
+                for (const y of path) {
+                    G = descend(G, y.transform)
+                    if (y !== x && y.kind === 'group' && y.copies?.length) { arrays.push({ F: G, copies: y.copies }); G = IDENTITY }
+                }
+                face(x, G, shown && path.every(visible), arrays)
             })
             r[4] = u(recs.length)
             return
@@ -468,6 +501,7 @@ export function recordsOf(tree, plan, { boxes = null, materialIndex, lightMateri
                 params.push([m[0], m[1], m[2], m[12]], [m[4], m[5], m[6], m[13]], [m[8], m[9], m[10], m[14]], [m[15], 0, 0, 0])
             }
             r[5] = u(at)
+            inArrays = [...inArrays, { F: here, copies: n.copies }]
             if (!together) for (const c of n.children || []) node(c, IDENTITY, on, plainAbove, csgDepth)
             else {
                 const shape = shapesOf(n)
@@ -483,6 +517,7 @@ export function recordsOf(tree, plan, { boxes = null, materialIndex, lightMateri
                     if (recs.length - 1 > start && !visible(c)) recs[start][4] = u(recs.length)
                 }
             }
+            inArrays = inArrays.slice(0, -1)
             const e = push()
             head(e, KIND.ARRAY_END, 0, 0, FLAG.VISIBLE)
             e[4] = u(recs.indexOf(r))
@@ -914,18 +949,19 @@ function worldBoxOf(data, i) {
 export function lightFacesWGSL(lights, ub) {
     const L = []
     const w = s => L.push(s)
-    const weight = (L, i) => `select(0.0, 1.0, sceneData[scnLight(${i}u) + 3u].w > 0.5 && u32(UB.${ub(L, 'beam')}.x + 0.5) != 0u)`
-    w(`const LIGHT_FACES: u32 = ${lights.length}u;`)
+    // its shown flag is its first face's: every copy's is the light's (face, below)
+    const weight = L => `select(0.0, 1.0, sceneData[scnLight(${L.first ?? 0}u) + 3u].w > 0.5 && u32(UB.${ub(L, 'beam')}.x + 0.5) != 0u)`
+    w(`const LIGHT_FACES: u32 = ${faceCount(lights)}u;`)
     w('fn scnLight(i: u32) -> u32 { return bitcast<u32>(sceneData[0].y) + ' + LIGHT_VEC4S + 'u * i; }')
     w('fn lightFaceTotal() -> f32 {')
     w('    var t = 0.0;')
-    lights.forEach((L, i) => w(`    t += ${weight(L, i)};     // light ${L.id}`))
+    lights.forEach(L => w(faceTotalLine(L, weight(L))))
     w('    return t;')
     w('}')
     w('fn lightFacePick(u: f32) -> u32 {')
     w('    var acc = 0.0;')
     w('    var last = 0u;')
-    lights.forEach((L, i) => w(`    { let w = ${weight(L, i)}; if (w > 0.0) { last = ${i}u; acc += w; if (u < acc) { return ${i}u; } } }     // light ${L.id}`))
+    lights.forEach(L => w(facePickLine(L, weight(L))))
     w('    return last;')
     w('}')
     w('fn lightFace(i: u32) -> LightFace {')
@@ -936,9 +972,9 @@ export function lightFacesWGSL(lights, ub) {
     w('    let fl = bitcast<u32>(a0.w);')
     w('    f.shape = fl & 3u; f.twoSided = (fl >> 2u) & 1u;')
     w('    switch (i) {')
-    lights.forEach((L, i) => {
+    lights.forEach(L => {
         const c = ub(L, 'emissive'), l = ub(L, 'emissiveLuminance'), b = ub(L, 'beam')
-        w(`        case ${i}u: { f.le = UB.${c} / max(dot(UB.${c}, LUMA_709), 1e-6) * UB.${l}; f.beam = UB.${b}; }     // light ${L.id}`)
+        w(`        case ${faceCases(L)}: { f.le = UB.${c} / max(dot(UB.${c}, LUMA_709), 1e-6) * UB.${l}; f.beam = UB.${b}; }     // light ${L.id}`)
     })
     w('        default: { }')
     w('    }')
