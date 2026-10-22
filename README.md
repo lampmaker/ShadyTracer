@@ -484,6 +484,7 @@ number carries its standard error**.
 | **RGBW colour mixing** | Optical design | mm | Four LEDs and a mixing rod: the colour map |
 | **Dispersion in a prism** | Optical design | mm | White light split by a flint prism at minimum deviation |
 | **Dichroic combiner** | Optical design | mm | Red and blue beams joined by a coated plate |
+| **Dichroics** | Optical design | mm | Two white light sheets split into their colours by seven dichroic plates |
 | **Office lighting** | Optical design | m | Four LED panels and the work plane's illuminance |
 
 ### Keyboard and mouse

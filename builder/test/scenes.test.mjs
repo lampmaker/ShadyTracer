@@ -91,9 +91,12 @@ ok('the examples\' titles are unique -- they are what the menu and the tree tell
         ok('Office lighting is seen from inside the room, not from behind its wall',
             Math.abs(p[0] - mid.x) < half.x && Math.abs(p[1] - mid.y) < half.y && Math.abs(p[2] - mid.z) < half.z, JSON.stringify(p))
     }
-    ok('Depth of field opens with its lens, focused on its target; no other example has one',
+    /* A LENS ONLY WHERE THE EXAMPLE WANTS ONE: Depth of field's, and Dichroics' (0.next, the user's own scene, saved with
+       its lens open: aperture 45.7 at a focus of 968.5 mm, and its picture blurred by it) */
+    const LENSED = ['depth-of-field.json', 'dichroics.json']
+    ok('Depth of field opens with its lens, focused on its target; no other example but Dichroics has one',
         docs['depth-of-field.json'].view.camera.aperture === 8 && docs['depth-of-field.json'].view.camera.focus === 0
-        && EXAMPLES.filter(e => e.file !== 'depth-of-field.json').every(e => docs[e.file].view.camera.aperture === 0))
+        && EXAMPLES.filter(e => !LENSED.includes(e.file)).every(e => docs[e.file].view.camera.aperture === 0))
     {
         const d = docs['glass-liquid.json']
         const water = M.find(d, 'root').node.children.find(n => n.label === 'water'), tumbler = M.find(d, 'root').node.children.find(n => n.label === 'tumbler')

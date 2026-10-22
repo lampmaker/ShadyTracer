@@ -45,7 +45,8 @@ A **coating** replaces a surface's own reflectance with a thin-film stack's:
 - a **stack index** that sets how the edge moves to shorter wavelengths at an angle.
 
 Presets: dichroic reflecting red, dichroic reflecting blue, a 50/50 beam splitter, anti-reflective.
-[Dichroic combiner](example:dichroic-combiner.json) joins a red and a blue beam with one.
+[Dichroic combiner](example:dichroic-combiner.json) joins a red and a blue beam with one;
+[Dichroics](example:dichroics.json) splits two white sheets of light with seven.
 
 A beam splitter's and an AR layer's reflectance is the same at every wavelength, so the trace is exact for them. A
 dichroic's edge is averaged over each colour channel's wavelengths, which approximates the spectrum

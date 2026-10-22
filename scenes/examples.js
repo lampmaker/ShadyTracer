@@ -171,6 +171,14 @@ export const EXAMPLES = [
   "description": "Red and blue beams joined by a coated plate"
  },
  {
+  "file": "dichroics.json",
+  "title": "Dichroics",
+  "audience": "Optical design",
+  "group": "Optical design",
+  "description": "Two white light sheets split into their colours by seven dichroic plates",
+  "made": false
+ },
+ {
   "file": "office-lighting.json",
   "title": "Office lighting",
   "audience": "Optical design",

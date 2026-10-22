@@ -671,14 +671,25 @@ export const EXAMPLES = [
         ['rgbw-mixing.json', rgbw, 'Four LEDs and a mixing rod: the colour map'],
         ['prism-dispersion.json', prism, 'White light split by a flint prism at minimum deviation'],
         ['dichroic-combiner.json', dichroic, 'Red and blue beams joined by a coated plate'],
+        ['dichroics.json', null, 'Two white light sheets split into their colours by seven dichroic plates'],
         ['office-lighting.json', office, 'Four LED panels and the work plane\'s illuminance'],
     ] },
 ]
 
-/* WRITTEN: each scene, and examples.js -- what scenes/index.js lists, read by the page without running this */
+/* WRITTEN: each scene, and examples.js -- what scenes/index.js lists, read by the page without running this.
+   AN EXAMPLE MADE IN THE PAGE (its function null: Dichroics, the user's own scene, 0.next) is the file as the user saved
+   it: read for its title and checked, never written -- `made: false` in examples.js says so. */
 if (import.meta.url === `file://${process.argv[1]}`) {
     const list = []
     for (const { audience, group: g, items } of EXAMPLES) for (const [file, make, description] of items) {
+        if (!make) {
+            const doc = M.parse(readFileSync(new URL(file, here), 'utf8'))
+            const bad = M.validate(doc)
+            if (bad.length) throw new Error(`${file}: ${bad.join('; ')}`)
+            list.push({ file, title: doc.title, audience, group: g, description, made: false })
+            console.log(`${file}: ${doc.title} (kept as saved)`)
+            continue
+        }
         const { doc, camera, exposure } = make()
         delete doc.$mats
         // the view in the file, whole (viewOf above): what the example is seen with whatever was shown before it
