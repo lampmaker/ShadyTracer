@@ -334,12 +334,12 @@ closed-form answers on real hardware, and every number carries its error bar.
 
 ## 9. Bundled scenes
 
-**The Project panel's examples** (`scenes/index.js`), each opened as a copy into the project with a camera of its own: 24 scenes
-made in code (`scenes/make.mjs`) in real sizes, by audience -- **Modelling and rendering** (Start; Shapes: the gallery,
+**The Project panel's examples** (`scenes/index.js`), each opened as a copy into the project with a camera of its own: 25 scenes
+made in code (`scenes/make.mjs`) in real sizes, and one the user made in the page (Dichroics, 0.next), by audience -- **Modelling and rendering** (Start; Shapes: the gallery,
 combining, modifiers, from points, a parametric part, infinite detail; Materials: the board, relief and texture,
 glass and liquid; Light and camera: a room, depth of field, animation, a product shot) and **Optical design** (an
 LED and lens, a beam in dusty air (0.62.0), an aspheric condenser, Fresnel against plano-convex, a parabolic
-reflector, a light guide, RGBW mixing, a prism's dispersion, a dichroic combiner, office lighting). **Built (0.54.0)**;
+reflector, a light guide, RGBW mixing, a prism's dispersion, a dichroic combiner, dichroics, office lighting). **Built (0.54.0)**;
 the geometry and cameras were reasoned, not looked at, when they were made. The README's screenshots (2026-10-21)
 show Material board, Relief and texture, LED lens and screen, Product shot, RGBW colour mixing and Glass and liquid
 rendered on the user's card. A first visit starts on *First
