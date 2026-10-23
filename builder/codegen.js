@@ -353,6 +353,7 @@ export const OBJECT_CODE_TEMPLATE = [
     '// e.g. a rounded box:     C = add_new(C, sdRoundedBox(p, VEC3(0.5), 0.05), MATERIAL);',
     '// e.g. a plane, z up:     C = add_new(C, VEC4(0.0, 0.0, 1.0, p.z), MATERIAL);',
     '// e.g. two shapes merged: C = add_new(C, csgUnion(Nsphere(p, 0.5), sdBox(p - VEC3(0.6, 0.0, 0.0), VEC3(0.3)), 0.2), MATERIAL);',
+    '// every shape, join, noise and helper there is to call: Help > Reference > Functions for code',
     'C = add_new(C, sdBox(p, VEC3(0.5)), MATERIAL);',
 ].join('\n')
 
@@ -601,6 +602,7 @@ export const GROUP_CODE_TEMPLATE = [
     '//   var H = children(emptyHit(r), p);',
     '//   H.s.w -= 0.1 * XF_S;           // XF_S: this frame\'s units in world units',
     '//   C = fold(C, H.s, H.m);',
+    '// every function there is to call: Help > Reference > Functions for code',
     '',
 ].join('\n')
 
