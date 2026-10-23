@@ -719,7 +719,7 @@ C = add_new(C, Ncapsule(p, height * 0.5, radius), MATERIAL);
                             let xfp_ltlamp = XF_P; XF_P = p;
                             {
                                 let radius = UB.radius_ltlamp;
-                                let MATERIAL = select(MATID_BLACK, matid_ltlamp, p.z >= 0.0);
+                                let MATERIAL = select(MATID_BLACK, matid_ltlamp, p.z >= 0.0 && dot(p.xy, p.xy) <= radius * radius);
                                 C = add_new(C, Ndisc(p, radius), MATERIAL);
                             }
                             XF_M = xfm_ltlamp; XF_S = xfs_ltlamp;

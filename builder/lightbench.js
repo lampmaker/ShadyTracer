@@ -135,13 +135,19 @@ const SMALL_LIGHT = { vis_benchlamp: 0, vis_benchdisc: 0, vis_benchsmall: 1, vis
 const SMALL_EMITTER = { vis_benchlamp: 0, vis_benchdisc: 0, vis_benchsmall: 0, vis_benchsmalldisc: 1, vis_benchtopshade: 1 }
 const SIDE_LIGHT = { vis_benchlamp: 0, vis_benchdisc: 0, vis_benchside: 1, vis_benchsidedisc: 0, vis_benchsideshade: 1, vis_benchwall: 1 }
 const SIDE_EMITTER = { vis_benchlamp: 0, vis_benchdisc: 0, vis_benchside: 0, vis_benchsidedisc: 1, vis_benchsideshade: 1, vis_benchwall: 1 }
-/* THE SMALL LAMP'S PAIRS AT A FINE MARCH TOLERANCE. At the automatic one -- 1e-4 of the scene's size,
+/* EVERY PAIR BUT ONE AT A FINE MARCH TOLERANCE. At the automatic one -- 1e-4 of the scene's size,
    0.91 mm here (photometry.js autoEps) -- a ray that passes that close to a surface hits it, so every
    surface is that much fatter to a camera path. For a 1 cm disc that is 1.2x its area: the emissive
    disc, which the camera paths count where they meet it, put 1.2x the light out, while the light's
    photons start on the disc itself -- light/emitter 0.80-0.84 on all four pairs of the fourth press,
    against 0.82 predicted, and 0.99 for the 30 cm disc (0.6% of its area). At 10 um the difference is
-   0.2%, and the pairs measure the estimators again. One pair keeps the automatic tolerance, to show it. */
+   0.2%, and the pairs measure the estimators again. One pair keeps the automatic tolerance, to show it.
+   THE 30 CM DISC'S PAIRS TOO (0.next). They stayed at the automatic tolerance while the light's face, seen by the
+   camera, was as fat as the emitter's: that glowed on the same rim, so the disc in the picture cancelled and the pairs
+   read 0.995-1.000. Since a light's face glows on the face alone (codegen.js ONLY ON THE FACE ITSELF), the light is
+   exact wherever it is seen and the emitter is not, and at the automatic tolerance those pairs read 0.990-0.994, the
+   emitter's excess (Ampere, 2026-10-23, docs/TESTING.md seventh press). That passed only 0.1% inside the 1% floor, and
+   it measured the tolerance, which the marker pair already shows. */
 const FINE = { eps: 1e-5 }
 const LAMBERT = { metallic_benchfloor: 0, specular_benchfloor: 0, roughness_benchfloor: 1 }
 const metal = r => ({ metallic_benchfloor: 1, specular_benchfloor: 1, roughness_benchfloor: r })
@@ -214,7 +220,7 @@ export function lightBench() {
         kind: 'image',
         title: 'A light against the same surface made an emissive object: the same picture?',
         /* THE VERDICT (lib/pathtracer/verdict.js; the floors are choices, from the note): each pair's meanLuma, light
-           over emitter, 1 within the error bars or 1% -- the big disc's pairs read a hair under, 0.995 -- except the
+           over emitter, 1 within the error bars or 1% -- every pair at 10 um since 0.next (FINE, above) -- except the
            pair kept at the automatic tolerance, the known limit (about 0.82); emitter discovery listing the disc on an
            emitter row and nothing on a light row; the sensors 1 within seMax or 1%; a face its distribution's L
            within 2% of it and 0.2% of the lamp's (the cone's face wants 0). */
@@ -248,8 +254,11 @@ export function lightBench() {
             + ' about as quiet as its emitter\'s. The 1 cm lamp\'s pairs run at a MARCH TOLERANCE of 10 um (eps): at the'
             + ' automatic one, 0.91 mm here, a ray passing that close to a surface hits it, and the emissive disc -- the'
             + ' reference -- puts out 1.2x the light of the disc the light\'s photons start from. One pair keeps the'
-            + ' automatic tolerance to show it: light/emitter about 0.82 (0.80-0.84 on all four pairs before the pin; 0.99'
-            + ' for the 30 cm disc, which is why every big pair reads a hair under 1). The illuminance rows read sensors on the floor against'
+            + ' automatic tolerance to show it: light/emitter about 0.82 (0.80-0.84 on all four pairs before the pin). The'
+            + ' 30 cm disc\'s pairs run at 10 um too since 0.next: at the automatic tolerance they read 0.990-0.994, the'
+            + ' emissive disc 0.6% fatter, once a light\'s face glowed on the face alone (codegen.js ONLY ON THE FACE'
+            + ' ITSELF; before it the light\'s face, seen by the camera, was as fat, and they read 0.995-1.000).'
+            + ' The illuminance rows read sensors on the floor against'
             + ' the closed form for the disc (tests.js cylinderE, no rim): rho columns 1 within seMax. `emitters` is'
             + ' what emitter discovery listed after the row: at least 1 on an emitter row, 0 on a light row since L1'
             + ' (a light\'s face is not an emitter to look for). The face rows read the'
@@ -313,8 +322,8 @@ export function lightBench() {
             },
         },
         cases: [
-            ...pair('diffuse floor', LAMBERT),
-            ...pair('diffuse floor, illuminance view', { ...LAMBERT, measureMode: 1 }, { sensors: true }),
+            ...pair('diffuse floor', { ...LAMBERT, ...FINE }),
+            ...pair('diffuse floor, illuminance view', { ...LAMBERT, ...FINE, measureMode: 1 }, { sensors: true }),
             /* THE FAST MODES (materials_pbr.js FAST MODES). Draft: the emitter by its light sample at weight 1,
                the light by its photons, which keep the WHOLE of the direct light on the floor -- they kept
                R / (1 + R) of it, the MIS share of a camera path Draft never continues (read in code, not
@@ -322,14 +331,14 @@ export function lightBench() {
                off, against the emitter in Draft: the same floor light and the same face, nothing else on an
                open floor (the light's black back takes what the floor sends up). Both 0.995 on the first
                press (Ampere, 2026-10-02), as the full pair. */
-            ...pair('diffuse floor, Draft', { ...LAMBERT, renderMode: 1 }),
-            ...pairOf('diffuse floor: the light in Optics (flat light off), the emitter in Draft', LAMBERT,
+            ...pair('diffuse floor, Draft', { ...LAMBERT, ...FINE, renderMode: 1 }),
+            ...pairOf('diffuse floor: the light in Optics (flat light off), the emitter in Draft', { ...LAMBERT, ...FINE },
                       { ...LIGHT, renderMode: 3, opticsFlat: -12 }, { ...EMITTER, renderMode: 1 }, lamp.source),
-            ...pair('mirror floor', metal(0)),
-            ...pair('metal floor, roughness 0.22', metal(0.22)),
-            ...pair('metal floor, roughness 0.23', metal(0.23)),
-            ...pair('through a clear pane', { ...LAMBERT, vis_benchpane: 1 }),
-            ...pair('a diffuser over the disc', { ...LAMBERT, vis_benchdiffuser: 1 }),
+            ...pair('mirror floor', { ...metal(0), ...FINE }),
+            ...pair('metal floor, roughness 0.22', { ...metal(0.22), ...FINE }),
+            ...pair('metal floor, roughness 0.23', { ...metal(0.23), ...FINE }),
+            ...pair('through a clear pane', { ...LAMBERT, ...FINE, vis_benchpane: 1 }),
+            ...pair('a diffuser over the disc', { ...LAMBERT, ...FINE, vis_benchdiffuser: 1 }),
             ...pairSmall('a 1 cm lamp of the same flux, metal floor, roughness 0.20, eps 10 um', { ...metal(0.20), ...FINE }),
             ...pairSmall('a 1 cm lamp of the same flux, metal floor, roughness 0.25, eps 10 um', { ...metal(0.25), ...FINE }),
             ...pairSmall('a 1 cm lamp of the same flux, metal floor, roughness 0.25, the automatic eps', metal(0.25)),

@@ -855,7 +855,10 @@ export function evaluatorWGSL({ blocks, befores = 0, afters = 0, subs, stack, ar
     w(`            let back = select(MATID_BLACK, MATID_CLEAR, (flags & ${FLAG.TRANSPARENT}u) != 0u);`)
     w(`            let lm = select(select(back, mid, q.z >= 0.0), mid, (flags & ${FLAG.TWO_SIDED}u) != 0u);`)
     w('            let P = sceneData[o];')
-    w('            if (which == 2u) { C = add_new(C, Nrectangle(q, P.xy * 0.5), lm); } else { C = add_new(C, Ndisc(q, P.x), lm); }')
+    w('            // ...and the back\'s beyond the face\'s edge, the rim the surface tolerance grows it by (codegen ONLY ON THE FACE)')
+    w('            let onFace = select(dot(q.xy, q.xy) <= P.x * P.x, all(abs(q.xy) <= P.xy * 0.5), which == 2u);')
+    w('            let lf = select(back, lm, onFace);')
+    w('            if (which == 2u) { C = add_new(C, Nrectangle(q, P.xy * 0.5), lf); } else { C = add_new(C, Ndisc(q, P.x), lf); }')
     w(`        } else if (kind == ${KIND.SUB}u) {`)
     if (subs > 0) {
         if (pick) w('            SCN_TAGBASE = scnU(v1.z);')
