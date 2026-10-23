@@ -1,5 +1,5 @@
 {
- "about": "The user's run of every test, 0.77.0 (dec4843, main), nvidia pascal, 563x754, pasted 2026-10-22: each row cut to the fields a verdict reads (lib/pathtracer/tests.js `verdict`). `pixels` and `covered` are the test's, given once. optics-balance's integrating sphere rows are the SOLID sphere's, before 0.next made it a shell: they read 0.",
+ "about": "The user's run of every test, 0.77.0 (dec4843, main), nvidia pascal, 563x754, pasted 2026-10-22: each row cut to the fields a verdict reads (lib/pathtracer/tests.js `verdict`). `pixels` and `covered` are the test's, given once. optics-balance's integrating sphere rows are the SOLID sphere's, before 0.78.0 made it a shell: they read 0.",
  "tests": {
   "photometry": { "pixels": 425256, "rows": [
    { "case": "sun + sky", "meanLuma": 21824.50184291701, "trimmedLuma": 21814.55903365409, "relSE": 0.1385428108447134, "expected": 21826.044957347607 },
