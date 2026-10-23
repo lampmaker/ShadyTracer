@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Save size · check</title>
+<!-- THE SAVE'S SIZE ROWS, for lib/pathtracer/test/savesize.check.mjs: savesize.js over a real PropertyTable, with
+     the page's refresh -- one a frame (index.html `refresh`), so a value fix() writes comes back to its row a frame
+     later, as on the page. The view's size is set by the check (VIEW), odd to begin with: an odd window is common. -->
+<link rel="stylesheet" href="../../shell/shell.css">
+<style>html, body { margin: 0; background: var(--sh-panel); } #p { width: 330px; }</style>
+</head>
+<body>
+<div id="p" class="shell-panel"></div>
+<script type="module">
+import { PropertyTable } from '../../guistuff/propertytable/propertytable.js'
+import { addSaveSize } from '../savesize.js'
+
+const VIEW = { w: 1279, h: 721 }
+const table = new PropertyTable({ container: document.getElementById('p') })
+// the page's refresh, debounced to a frame (index.html)
+let pending = 0, fixes = 0
+const refresh = () => { if (pending) return; pending = 1; requestAnimationFrame(() => { pending = 0; table.refresh() }) }
+const SV = { matchView: true }
+const f = table.addFolder({ title: 'Save an image' })
+const { fix, useLive } = addSaveSize(f, SV, { view: () => [VIEW.w, VIEW.h], after: () => { fixes++; refresh() } })
+fix()
+window.CHECK = { SV, VIEW, fix, useLive, table, fixes: () => fixes }
+</script>
+</body>
+</html>
