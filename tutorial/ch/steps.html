@@ -216,6 +216,15 @@
     <p class="cite-line">The line, at the end of the scene's function: <code>if (CULL &lt; abs(C.s.w)) { C.s.w = CULL; }</code>
       (<cite data-src="builder/codegen.js" data-sym="if (culling) e.raw('    if (CULL &lt; abs(C.s.w)) { C.s.w = CULL; }')"></cite>):
       C.s.w is the scene's answer, the nearest distance found.</p>
+    <p>The same contract works inside an array, a group whose children are drawn again at a list of places, its
+      copies. Every copy used to be asked at every step. On the user's card, a floor under 256 copies of one small light
+      took 465 ms of marching a sample, against 12 ms for one light. Light sampling's choice among the 256 faces cost
+      nothing measurable; asking every face at every step cost all of it. Now a row of copies, or a ring of them, is
+      asked only near the copy closest to the point. Every copy farther out is no nearer than the sphere round its
+      content's box, and the nearest such sphere's distance stands in for all of them, as a skipped box does
+      (<cite data-src="builder/arrays.js" data-sym="THE BOUND (one rule for both)"></cite>). Along a row the distance to
+      the copies' centres only grows away from the closest one, and round a ring it grows with the angle. So the copies
+      can be asked from the closest outwards, stopping on each side at the first one beyond the margin.</p>
     <p>A relief in its shell (the WGSL the relief group starts with, as text in JavaScript):</p>
     <pre data-src="builder/modifiers.js" data-in="const reliefCode = (lip, note = []) => [" data-sym="'var H = children(emptyHit(r), p);'," data-to="'}',"
          data-why="children(...) is the plain shape, its distance H.s.w. peak is 1 + 1/2 + 1/4 + 1/8; lip is 17.2 for the modifier, 11.2 for the benchmark's copy. XF_S is the group's scale. READ_REACH is 0 unless a smooth blend above reads the relief (then the band widens by as far as it reads). marchEps() is the surface tolerance. foldRelief divides by the slope." data-hash="733a2aff"></pre>

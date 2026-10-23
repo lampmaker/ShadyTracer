@@ -1085,7 +1085,10 @@ the scene:** WebGPU takes WGSL source only, and there is no compiled shader form
    the picks of the copies written out as groups. No light inside an array yet (light sampling's one face a light; a
    light at every copy since `0.next`, roadmap/LIGHT_CONTROL.md);
    no group with code or joins as one (put it inside). Each copy is still a walk of its children at every step near
-   it: the BVH is what would tell which copies are near.
+   it: the BVH is what would tell which copies are near. **A row's or a ring's copies have a window since `0.next`**
+   (builder/arrays.js): the copies near the point walked, the rest a bound in CULL -- measured before it on the user's
+   Ampere (Tests > lightarray, 213642c): 256 copies of one light at 465 ms of march a sample against one light's 12;
+   after it, not yet.
    **Before and after groups are data (2026-10-04, 0.14.0), with no file format change:** the kind is read off the
    code (codegen.js `isBefore`, `isAfter`), so a customer's code of either shape is one too, and an old file needs no
    upgrade. A before group (twist, bend, repeat, mirror) is a record whose code is a function `bef_<k>` returning the

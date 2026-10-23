@@ -172,6 +172,15 @@
 // example") and dev's codegen.test failed on its two entries. The document moved, not codegen: f002d0b changed that file
 // alone, and the freeze moved both modes of its entry and no other document's (key by key, against the expected.json
 // before). The user asked for the refreeze.
+//
+// REFROZEN FOR ONE SCENE (2026-10-23, 0.next), for a feature the user chose ("faster large arrays", after Tests >
+// lightarray measured 256 copies of a light at 465 ms of march a sample): a row's or a ring's copies evaluated in a
+// window around the point (builder/arrays.js). Checked before freezing: generated with arrayWindow false, every one of the
+// 51 documents' fingerprints was the one frozen, both modes; with the window, only scenes/parametric-part.json moved (its
+// heatsink's fins are a row of 9 copies) -- the one line that left its text was its copies loop's head, every line that
+// came the window's (the arrWindow functions, the window's uniforms' reads, the loop over the window), and its uniforms
+// gained exactly its content box's two (bxlo_n9_cbx, bxhi_n9_cbx). Its pick texts and tags did not move: the window is
+// the render copy's alone.
 //======================================================================================================================
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'

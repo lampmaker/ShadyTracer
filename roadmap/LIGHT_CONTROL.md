@@ -115,19 +115,39 @@ over six such pairs.
 
 ### Speed
 
-**Not measured yet: the user's to run.**
+**Measured** (the user, NVIDIA Ampere, Tests › Benchmarks › lightarray, `ShadyTracer 0.77.0 · 213642c
+(claude/youthful-brahmagupta-hu4yii)`, 1280×720, 2026-10-23): a floor under 1000 lm in every row, times in ms.
 
-What can be read:
-- the SDF draws an arrayed light in the copy loop, as any arrayed object;
-- shade's pick (`tracebasics.js` FACE_TABLE `lightFacePick`) and `optSourceRay`'s source pick are linear scans over
-  the faces and the sources.
+| row | a sample | GPU | march | occlude | shade | opt_photons |
+|---|---|---|---|---|---|---|
+| one light | 61.4 | 48.9 | 12.3 | 7.6 | 21.2 | 0.59 |
+| 16 in an array | 67.5 | 55.6 | 19.0 | 8.7 | 20.9 | 0.33 |
+| 16 placed by hand | 83.6 | 50.1 | 14.9 | 8.1 | 20.5 | 0.33 |
+| 16 × 16 in a ring of rows | 684.2 | 657.3 | 465.0 | 160.0 | 20.0 | 1.57 |
+| one light, again | 60.8 | 49.0 | 12.3 | 7.8 | 21.3 | 0.59 |
 
-Inferred:
-- at tens of faces the scans are noise against a march;
-- at the 1024 faces the table allows (`FACE_MAX`), they may not be.
+What it settles:
+- **Picking a face costs nothing measurable.** Shade, where light sampling picks a face, stays at 20–21 ms from 1 face
+  to 256. The photons' pick of a source grows by about 1 ms. The binary search proposed here before is not needed.
+- **The SDF is where the time goes.** At 256 faces, march goes from 12 to 465 ms and occlusion from 8 to 160 ms.
+  - Read in code: every copy of an array was evaluated at every step. That is codegen's copies loop and the data
+    evaluator's ARRAY records; data mode culls each child record inside a copy, but still visits every copy.
+  - So the cost is the copies, not the lights. It is the same for any arrayed object.
+- **Unexplained:** the 16-by-hand row's wall clock is 33 ms over its GPU time, where the other rows are about 12 over.
+  The user will rerun it (`BENCH.lightarray.run(2, 3, 2, 3)`) to see whether it reproduces before anyone looks for a
+  cause.
 
-What would decide it is one light against 16 copies against 16×16 copies, at the same total flux, on the user's card.
-If the scans show, a cumulative weight in the table and a binary search fix both.
+**The fix: a window of the copies** (`builder/arrays.js`, `0.next`).
+- A row or a ring of copies, recognised from the copies' own matrices, evaluates only the copies near the point.
+- Every other copy is bounded by the sphere round its content's measured box (`boxes.js` cullBoxes, `contentKey`).
+  The bound is folded into `CULL` under the top-level culling's contract: a lower bound beyond `cullMargin()`.
+- Near a surface the field is exact. `builder/test/arraywindow.gpu.mjs` holds that on Dawn, in codegen, as data and
+  baked. It also holds that the field all round is never above the field without the window.
+- Bench rows 5 and 6 are rows 2 and 4 with the window off. **How much the window saves is not measured**: the user's
+  rerun of Tests › Benchmarks › lightarray will say.
+  - Inferred: the 16 × 16 row's march falls towards the single row's, since about three copies of each array lie
+    within a copy's reach of any point.
+  - What would refute it: row 4 near row 6.
 
 ## 4. Later phases: what is possible, and what it would cost
 
@@ -203,6 +223,6 @@ fn emission(uv: vec2<f32>, dir: vec3<f32>, i: u32) -> vec3<f32>
 ## 5. Order
 
 1. Arrays of lights (done in `0.next`).
-2. The speed rows on the user's card (§3, *Speed*).
+2. The speed rows on the user's card (§3, *Speed*): measured, and the array window built from them.
 3. Phase 3, starting with an angular map alone, which IES import shares.
 4. Phase 2, as the copy-recovery loop.

@@ -43,6 +43,7 @@ import { find, walk, groupHasCode, codeOf, blockOf } from './model.js'
 import { lineage, toParent, estimateBox, framesTo } from './bounds.js'
 import { isCsg, shapesOf, joinOf } from './codegen.js'
 import { fieldInput, FIELD_GRID, FIELD_MAX_POINTS } from '../lib/pathtracer/core/field.js'
+import { copyPattern, contentKey } from './arrays.js'
 
 export const COARSE = 64          // points along the scene's longest side
 export const FINE = 40            // ...and along each object's
@@ -533,7 +534,37 @@ export function cullBoxes(doc, B, { nested = false } = {}) {
         if (nested && c.kind === 'group' && !isCsg(c) && !groupHasCode(doc, c)) for (const k of c.children || []) visit(k, inner)
     }
     for (const c of doc?.root?.children || []) visit(c, 1)
+    /* AND EACH ARRAY'S CONTENT (arrays.js THE WINDOW, 0.next): the box its children take up in a copy's frame, under
+       contentKey(id) -- from their own padded boxes as the nested ones above are, carried by each child's transform, so
+       the codegen of a row or a ring of copies can leave out the copies far from a point. Only for an array a window is
+       made for: reached from the root through plain groups and arrays alone (a lower bound on a shape is no bound on
+       what it is joined into, or on what code does with it), with a pattern. Null when a child that draws has no box:
+       then every copy is evaluated, as before. */
+    const all = nested ? out : cullBoxes(doc, B, { nested: true })
+    const arrays = (n, top) => {
+        if (n.kind !== 'group' || n.enabled === false || (!top && (isCsg(n) || groupHasCode(doc, n)))) return
+        if (!top && n.copies?.length && copyPattern(n.copies)) out.set(contentKey(n.id), contentOf(n, all))
+        for (const c of n.children || []) arrays(c, false)
+    }
+    arrays(doc.root, true)
     return out
+}
+/* an array's children's boxes in a copy's frame: each child's corners through its own transform. A child that draws
+   nothing (an export or a haze box, a ray file) takes up nothing. A hidden one makes it unknown, as its own box is
+   (above): emitted with live visibility, it can be shown again by a uniform, before anything measures it. */
+function contentOf(g, all) {
+    const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity]
+    for (const c of g.children || []) {
+        if (c.type === 'export' || c.type === 'haze' || (c.type === 'light' && c.light?.shape === 'rayfile')) continue
+        const b = c.enabled === false ? null : all.get(c.id)
+        if (!b) return null
+        for (let k = 0; k < 8; k++) {
+            const q = [k & 1 ? b.hi[0] : b.lo[0], k & 2 ? b.hi[1] : b.lo[1], k & 4 ? b.hi[2] : b.lo[2]]
+            const w = c.transform ? toParent(c.transform, q) : q
+            for (let i = 0; i < 3; i++) { lo[i] = Math.min(lo[i], w[i]); hi[i] = Math.max(hi[i], w[i]) }
+        }
+    }
+    return lo.every(Number.isFinite) ? { lo, hi } : null
 }
 /**
  * WHY a top-level node has no culling box -- for the report, since a node never culled costs only speed and so

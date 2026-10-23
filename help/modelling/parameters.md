@@ -71,6 +71,11 @@ A plain group can have **copies**: a list of places where everything in it is dr
 copies is made in its Properties; bound to parameters as above, a row's count and spacing follow them. A copy is a
 place to draw the same shapes again, not a new shape: its position is a live value.
 
+A **row** (copies evenly spaced, each turned and scaled alike) or a **ring** (copies evenly turned about the group's
+x, y or z axis) is drawn by looking only at the copies near each point, once its copies' extent has been measured.
+Any other list draws every copy at every step, so a long irregular list costs more. Move one copy off its row and
+the row becomes such a list; the scene recompiles to draw it that way.
+
 **A light inside an array** is a light at every copy: a strip of LEDs is one LED in a row of copies, a ring of them
 one in a ring. Each copy is a whole light, with the light's own settings and its own flux: a 10 lm light in 12
 copies is 120 lm. Two rules:

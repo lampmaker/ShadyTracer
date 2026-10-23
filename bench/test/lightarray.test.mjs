@@ -15,12 +15,16 @@ const ok = (name, cond, extra = '') => { if (cond) { pass++; return } fail++; co
 
 const T = await lightArrayTest()
 ok('a bench-kind test at 1280 x 720, the benchmark\'s timing', T.kind === 'bench' && T.size === BENCH.size && T.timed === BENCH.timed && T.warmup === BENCH.warmup)
-ok('five rows, labels unique', T.cases.length === 5 && new Set(T.cases.map(c => c.label)).size === 5)
+ok('seven rows, labels unique', T.cases.length === 7 && new Set(T.cases.map(c => c.label)).size === 7)
+// rows 5 and 6 rows 2 and 4 with the window off (builder/arrays.js): the same document, the window's text the difference
+ok('rows 2 and 4 walk a window of the copies, rows 5 and 6 every copy', [1, 3].every(i => /fn arrWindow/.test(T.cases[i].scene.wgsl))
+    && [4, 5].every(i => !/fn arrWindow/.test(T.cases[i].scene.wgsl)) && T.cases[4].kind === 'row' && T.cases[5].kind === 'ring'
+    && T.cases[4].scene.wgsl.replace(/lightarray-row-all/g, '') !== T.cases[1].scene.wgsl)
 ok('every row the one camera and environment, no setting changed', T.cases.every(c => c.camera === CAMERA && JSON.stringify(c.environment) === JSON.stringify(T.cases[0].environment) && !Object.keys(c.set).length))
-ok('rows 1-4 baked and compiled, row 5 row 1 again', T.cases.slice(0, 4).every(c => c.baked && c.compile) && T.cases[4].scene === T.cases[0].scene && T.cases[4].sameTextAs === 0)
+ok('rows 1-6 baked and compiled, row 7 row 1 again', T.cases.slice(0, 6).every(c => c.baked && c.compile) && T.cases[6].scene === T.cases[0].scene && T.cases[6].sameTextAs === 0)
 
 const faces = { one: 1, row: 16, hand: 16, ring: 256 }
-for (const c of T.cases.slice(0, 4)) {
+for (const c of T.cases.slice(0, 6)) {
     const doc = lightArrayDoc(c.kind)
     const src = sourceTable(doc)
     ok(`${c.kind}: a sound scene`, Model.validate(doc).length === 0, JSON.stringify(Model.validate(doc)))

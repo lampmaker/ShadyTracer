@@ -52,7 +52,8 @@
 //   v5  box lo (its own frame), 1 when known     -- culling; cullDist, scene_api.js
 //   v6  box hi
 // A JOIN is one record (v0: op; v1.w: its blend); an END, an ARRAY_END, a BEFORE_END or an AFTER_END is one record (v1.x:
-// the record it closes). An ARRAY's v0.y is its number of copies; a BEFORE's or an AFTER's its code's function, its
+// the record it closes). An ARRAY's v0.y is its number of copies, its v0.z its window's pattern (arrays.js codeOf; 0 none), and
+// after its copies among the parameters come its content's box, lo and hi (lo.w 1 when known); a BEFORE's or an AFTER's its code's function, its
 // parameters a slot each. After the
 // records, the PARAMETERS (one vec4 a parameter, in the node's own order) and the LIGHT TABLE (4 vec4 a face: centre and
 // flags, u and half width, v and half height, n and whether it is shown -- lightFace, codegen emitLightFacesData).
@@ -64,6 +65,7 @@ import { hasCode, isBefore, isAfter, isCsg, combinedGroups, shapesOf, joinOf, is
          faceCount, faceTotalLine, facePickLine, faceCases } from './codegen.js'
 import { hasFace, arrayedLightProblem, copyCount, copyIndices } from './lights.js'
 import { matrixOf } from './transform.js'
+import { copyPattern, codeOf, contentKey, PATTERN_ROW, SLACK } from './arrays.js'
 
 export const HEADER = 1
 export const REC = 7
@@ -321,8 +323,9 @@ function descend(F, transform) {
  *   materialIndex(id) -> the material's id as getMaterial2 numbers it (codegen: 1 the default, the document's from 2)
  *   lightMaterial(i)  -> light i's material id (codegen: after the document's materials, MATID_BLACK and CLEAR)
  *   limiters          Set of material ids whose objects only the optics trace draws
+ *   arrayWindow       false: no array has a window (arrays.js), every copy walked -- the bench's and the tests' comparison
  */
-export function recordsOf(tree, plan, { boxes = null, materialIndex, lightMaterial, limiters = new Set() }) {
+export function recordsOf(tree, plan, { boxes = null, materialIndex, lightMaterial, limiters = new Set(), arrayWindow = true }) {
     const recs = [], params = [], hoisted = []
     let ok = true
     /* THE TREE MUST FOLLOW THE PLAN: whatever is text the same -- each compiled subtree there by its root, the lights
@@ -491,7 +494,12 @@ export function recordsOf(tree, plan, { boxes = null, materialIndex, lightMateri
                 g[6] = u(tagOf.get(n.id) ?? 0)
             }
             const r = push()
-            head(r, KIND.ARRAY, n.copies.length, 0, (visible(n) ? FLAG.VISIBLE : 0) | (plainAbove && csgDepth === 0 ? FLAG.CULLABLE : 0))
+            /* ITS WINDOW (arrays.js THE WINDOW): a row's or a ring's pattern code in v0.z, where it may cull -- only plain
+               groups and arrays above it, as for any record culled -- and its content's box after its copies, known (w 1)
+               once measured (boxes.js cullBoxes, contentKey). Data, not text: a copy dragged off its row is a write. */
+            const mayCull = plainAbove && csgDepth === 0 && !together
+            const pattern = mayCull && arrayWindow ? copyPattern(n.copies) : null
+            head(r, KIND.ARRAY, n.copies.length, codeOf(pattern), (visible(n) ? FLAG.VISIBLE : 0) | (plainAbove && csgDepth === 0 ? FLAG.CULLABLE : 0))
             frameInto(r, here)
             r[6] = u(tagOf.get(n.id) ?? 0)
             setBox(r, n, plainAbove && csgDepth === 0)
@@ -500,6 +508,8 @@ export function recordsOf(tree, plan, { boxes = null, materialIndex, lightMateri
                 const m = matrixOf(t)
                 params.push([m[0], m[1], m[2], m[12]], [m[4], m[5], m[6], m[13]], [m[8], m[9], m[10], m[14]], [m[15], 0, 0, 0])
             }
+            const cb = pattern ? boxes?.get(contentKey(n.id)) : null
+            params.push(cb ? [...cb.lo, 1] : [0, 0, 0, 0], cb ? [...cb.hi, 0] : [0, 0, 0, 0])
             r[5] = u(at)
             inArrays = [...inArrays, { F: here, copies: n.copies }]
             if (!together) for (const c of n.children || []) node(c, IDENTITY, on, plainAbove, csgDepth)
@@ -650,7 +660,7 @@ function pathTo(root, target) {
 // that folds -- every one sets the frame it folds in -- and XF_M, XF_S are put back to the identity at the end, as the
 // last block's leave() left them.
 //======================================================================================================================
-export function evaluatorWGSL({ blocks, befores = 0, afters = 0, subs, stack, arrays = 0, wantLocal = false, keepK = false, straight = false, pick = false, optics = false, cull = true, count = false, recs = 'sceneData' }) {
+export function evaluatorWGSL({ blocks, befores = 0, afters = 0, subs, stack, arrays = 0, wantLocal = false, keepK = false, straight = false, pick = false, optics = false, cull = true, count = false, recs = 'sceneData', arrayWindow = true }) {
     const L = []
     const w = s => L.push(s)
     const culling = cull && !pick && !optics
@@ -664,7 +674,9 @@ export function evaluatorWGSL({ blocks, befores = 0, afters = 0, subs, stack, ar
     /* a before group's warp() multiplies XF_K, which is put back after its children where something reads it (keepK:
        codegen saves and restores it around group code then, and only then) -- kept with the base frame */
     const withK = arrays > 0 && befores > 0 && keepK
-    const entry = (bp, bM, bS, at, n) => `ScnArray(${bp}, ${bM}, ${bS}, ${at}, ${n}${withK ? ', XF_K' : ''})`
+    const entry = (bp, bM, bS, at, n, wf = '0', wn = '0u') => `ScnArray(${bp}, ${bM}, ${bS}, ${at}, ${n}, ${wf}, ${wn}${withK ? ', XF_K' : ''})`
+    // ARRAYS WITH A WINDOW (arrays.js): where the walk culls, the copies near the point and the rest a bound in CULL
+    const windows = arrays > 0 && culling && arrayWindow
     const XM = m => arrays > 0 ? `bM * ${m}` : m, XS = v => arrays > 0 ? `bS * ${v}` : v
     w(`const SCN_PICK: bool = ${pick};`)
     w(`const SCN_OPTICS: bool = ${optics};`)
@@ -679,14 +691,18 @@ export function evaluatorWGSL({ blocks, befores = 0, afters = 0, subs, stack, ar
     if (arrays > 0) {
         w('/* An array or a before group open on the way down: the base frame it was entered in, its record, and which copy')
         w('   is being walked (an array\'s)' + (withK ? ', and XF_K as it was (a before group\'s warp changes it) */' : ' */'))
-        w(`struct ScnArray { bp: VEC3, bM: mat3x3<f32>, bS: f32, at: u32, n: u32${withK ? ', k: f32' : ''} }`)
-        w('/* the base frame of copy n of the array at record g: q, M and S the array\'s own point and frame in the base before */')
-        w('fn scnCopy(g: u32, n: u32, q: VEC3, M: mat3x3<f32>, S: f32, bM0: mat3x3<f32>, bS0: f32) -> ScnArray {')
-        w(`    let o = scnU(scnRec(g + 1u).y) + ${COPY_VEC4S}u * n;`)
+        w('/* ...and an array\'s window: the copies walked are wn from wf on (modulo their number), n the place in it */')
+        w(`struct ScnArray { bp: VEC3, bM: mat3x3<f32>, bS: f32, at: u32, n: u32, wf: i32, wn: u32${withK ? ', k: f32' : ''} }`)
+        w('/* the base frame of copy k of the array at record g, the n-th of its window wf, wn: q, M and S the array\'s own point and')
+        w('   frame in the base before */')
+        w('fn scnCopy(g: u32, k: u32, n: u32, wf: i32, wn: u32, q: VEC3, M: mat3x3<f32>, S: f32, bM0: mat3x3<f32>, bS0: f32) -> ScnArray {')
+        w(`    let o = scnU(scnRec(g + 1u).y) + ${COPY_VEC4S}u * k;`)
         w('    let c0 = sceneData[o]; let c1 = sceneData[o + 1u]; let c2 = sceneData[o + 2u]; let s = sceneData[o + 3u].x;')
         w('    let R = mat3x3<f32>(c0.xyz, c1.xyz, c2.xyz);')
-        w(`    return ${entry('(transpose(R) * (q - VEC3(c0.w, c1.w, c2.w))) / s', 'bM0 * M * R', 'bS0 * S * s', 'g', 'n')};`)
+        w(`    return ${entry('(transpose(R) * (q - VEC3(c0.w, c1.w, c2.w))) / s', 'bM0 * M * R', 'bS0 * S * s', 'g', 'n', 'wf', 'wn')};`)
         w('}')
+        w('/* copy n of a window, modulo the array\'s count */')
+        w('fn scnWrap(wf: i32, n: u32, count: u32) -> u32 { let c = i32(count); return u32(((wf + i32(n)) % c + c) % c); }')
     }
     w('fn scnU(v: f32) -> u32 { return bitcast<u32>(v); }')
     /* A RECORD'S VEC4, wherever the walk reads one (RECORDS_IN_UNIFORM): from the records' uniform copy (scnRecs) where
@@ -797,11 +813,11 @@ export function evaluatorWGSL({ blocks, befores = 0, afters = 0, subs, stack, ar
         w('            // the next copy of the array, from the top of its children -- or, after the last, its base frame back')
         w('            let g = scnU(v1.x);')
         w('            let n = atop.n + 1u;')
-        w('            if (n < scnU(scnRec(g).y)) {')
+        w('            if (n < atop.wn) {')
         w('                let ga = scnRec(g + 2u); let gb = scnRec(g + 3u); let gc = scnRec(g + 4u);')
         w('                let gM = mat3x3<f32>(ga.xyz, gb.xyz, gc.xyz); let gS = scnRec(g + 1u).w;')
         w('                let gq = (transpose(gM) * (atop.bp - VEC3(ga.w, gb.w, gc.w))) / gS;')
-        w('                let nx = scnCopy(g, n, gq, gM, gS, atop.bM, atop.bS);')
+        w('                let nx = scnCopy(g, scnWrap(atop.wf, n, scnU(scnRec(g).y)), n, atop.wf, atop.wn, gq, gM, gS, atop.bM, atop.bS);')
         w('                bp = nx.bp; bM = nx.bM; bS = nx.bS; atop.n = n;')
         w(`                i = g + ${REC}u;`)
         w('                continue;')
@@ -832,11 +848,37 @@ export function evaluatorWGSL({ blocks, befores = 0, afters = 0, subs, stack, ar
     w(`        if (kind == ${KIND.GROUP}u) { i = i + ${REC}u; continue; }`)
     if (arrays > 0) {
         w(`        if (kind == ${KIND.ARRAY}u) {`)
+        w('            var wf = 0;')
+        w('            var wn = scnU(v0.y);')
+        if (windows) {
+            /* ITS WINDOW (arrays.js): a row's or a ring's, once its content's box is known -- the copies near the point,
+               the rest a bound in CULL, as codegen's copies loop has it; none near, the array is skipped whole */
+            w(`            if (scnU(v0.z) != 0u && (flags & ${FLAG.CULLABLE}u) != 0u) {`)
+            w(`                let cb = scnU(v1.y) + ${COPY_VEC4S}u * wn;`)
+            w('                let wl = sceneData[cb]; let wh = sceneData[cb + 1u];')
+            w('                if (wl.w != 0.0) {')
+            w('                    let wc = 0.5 * (wl.xyz + wh.xyz);')
+            w('                    let o0 = scnU(v1.y);')
+            w('                    let a0 = sceneData[o0]; let a1 = sceneData[o0 + 1u]; let a2 = sceneData[o0 + 2u]; let s0 = sceneData[o0 + 3u].x;')
+            w('                    let c0 = VEC3(a0.w, a1.w, a2.w) + s0 * (mat3x3<f32>(a0.xyz, a1.xyz, a2.xyz) * wc);')
+            w('                    var wd = VEC3(0.0);')
+            w(`                    if (scnU(v0.z) == ${PATTERN_ROW}u) {`)
+            w(`                        let o1 = o0 + ${COPY_VEC4S}u;`)
+            w('                        let e0 = sceneData[o1]; let e1 = sceneData[o1 + 1u]; let e2 = sceneData[o1 + 2u]; let s1 = sceneData[o1 + 3u].x;')
+            w('                        wd = VEC3(e0.w, e1.w, e2.w) + s1 * (mat3x3<f32>(e0.xyz, e1.xyz, e2.xyz) * wc) - c0;')
+            w('                    }')
+            w('                    let wr = 0.5 * length(wh.xyz - wl.xyz) * s0;')
+            w(`                    let aw = arrWindow(scnU(v0.z), wn, q, c0, wd, wr + ${SLACK} * (length(c0) + wr), ${XS('S')});`)
+            w('                    CULL = min(CULL, aw.bound); wf = aw.first; wn = aw.count;')
+            w('                    if (wn == 0u) { i = scnU(v1.x); continue; }')
+            w('                }')
+            w('            }')
+        }
         w('            // its first copy: the base frame it is entered in kept, the copy\'s made the base')
         w('            if (ad > 0u) { astack[ad - 1u] = atop; }   // the one it is in, out of the way')
-        w(`            atop = ${entry('bp', 'bM', 'bS', 'i', '0u')};`)
+        w(`            atop = ${entry('bp', 'bM', 'bS', 'i', '0u', 'wf', 'wn')};`)
         w('            ad = ad + 1u;')
-        w('            let nx = scnCopy(i, 0u, q, M, S, bM, bS);')
+        w('            let nx = scnCopy(i, scnWrap(wf, 0u, scnU(v0.y)), 0u, wf, wn, q, M, S, bM, bS);')
         w('            bp = nx.bp; bM = nx.bM; bS = nx.bS;')
         w(`            i = i + ${REC}u;`)
         w('            continue;')

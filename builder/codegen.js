@@ -43,6 +43,7 @@
 
 import { FIELDS as MATERIAL_FIELDS, FIELDS_OF, COAT_FIELDS, hasCoating, reliefMaterialId, reliefOwner } from './materials.js'
 import { hasFace, lightOf, lightRGBObject, beamOf, arraysOf, copyCount, arrayedLightProblem } from './lights.js'
+import { copyPattern, codeOf, contentKey, ARRAY_WINDOW_WGSL, SLACK } from './arrays.js'
 import { sceneExtent } from './bounds.js'
 import { SCENE_PRELUDE } from '../lib/pathtracer/core/scene_api.js'
 import { NO_LIGHT_FACES } from '../lib/pathtracer/core/uniforms.schema.js'
@@ -958,7 +959,7 @@ export function generate(tree, opts = {}) {
     /* HOW BIG IT IS, in scene units: the renderer sizes its surface tolerance from this
        (bounds.js sceneExtent, an estimate since objects are code; photometry.js derive) */
     const extent = Array.isArray(tree) ? null : sceneExtent(tree)
-    const { lights: _l, _data, ...out } = scene
+    const { lights: _l, _data, _windows, ...out } = scene
     /* carryUniforms false: every uniform here is the document's own value, and its default IS that value.
        The renderer carries a value across setScene by NAME, and ids repeat between documents (o3 is in
        every scene), so the scene shown before put its o3's transform on this one's: the material test's
@@ -983,6 +984,9 @@ export function generate(tree, opts = {}) {
         Object.defineProperty(result, 'compiledIds', { enumerable: false, value: _data.compiledIds })
     }
     if (dataRefused) Object.defineProperty(result, 'dataRefused', { enumerable: false, value: dataRefused })
+    /* WHICH ARRAYS' COPIES HAVE A WINDOW, AND HOW (arrays.js): id -> the pattern's code, as the render copy's text compiles
+       it in -- a copies edit that makes another pattern of one needs that text again (demo.js nodeLive) */
+    Object.defineProperty(result, 'arrayWindows', { enumerable: false, value: new Map([..._windows].map(([id, p]) => [id, codeOf(p)])) })
     /* MADE WITHOUT ITS BOUNDING BOXES (opts.cull false: a generation option the bench alone sets since 0.34.0, the
        renderer's setting `cull` before): no box test anywhere in its text, codegen's or the records' walk -- a mode of
        its own to the page's mode watcher (index.html), never the one it wants */
@@ -1012,7 +1016,7 @@ export function generate(tree, opts = {}) {
    IN A CSG GROUP a hidden child is ABSENT, not an empty shape: its block and its combine are skipped, and a
    runtime flag makes the first VISIBLE child the base -- an empty shape as the base of a subtraction, or
    one side of an intersection, would have emptied the whole group. */
-function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, optics = false, liveVisibility = false, cull = 'dear', editing = null, data = false, carry = null, count = false } = {}) {
+function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, optics = false, liveVisibility = false, cull = 'dear', editing = null, data = false, carry = null, count = false, arrayWindow = true } = {}) {
     /* `cull` (ONLY THE DEAR ONES below): 'dear', the builder's way since 0.34.0; 'all' and false the bench's alone. `true`
        meant every box until then, and the builder passed it -- refused rather than read as one or the other */
     if (cull !== 'dear' && cull !== 'all' && cull !== false)
@@ -1115,6 +1119,7 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
     }
     collectLights(tree, false)
     const lightOfId = new Map(lights.map(L => [L.id, L]))
+    const windowed = new Map()          // array id -> its pattern, where its copies have a window (below, before SDF)
     const e = new Emit()
 
     /* THE ENGINE PRELUDE, the same SCENE_PRELUDE string prog_march compiles the scene after:
@@ -1760,7 +1765,31 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
                copy combined and folded on its own, as before (scenedata.js the same) */
             const together = combined.has(g.id) && !isCsg(g)
             if (together) combineOpen(d + 1, g, true)
-            line(d + 1, `for (var ${c} = 0u; ${c} < ${K}u; ${c} = ${c} + 1u) {`)
+            const win = windowed.get(g.id)
+            if (win) {
+                /* ...A WINDOW OF THEM (arrays.js THE WINDOW): a row's or a ring's copies near the point, from its content's
+                   box (cullBoxes, contentKey: unknown until measured, and then every copy as before), the rest a bound in
+                   CULL -- here, in the group's frame, at its scale to the world */
+                const lo = boxLoName(contentKey(g.id)), hi = boxHiName(contentKey(g.id))
+                uniforms[lo] = { type: 'vec4<f32>', def: [0, 0, 0, 0] }
+                uniforms[hi] = { type: 'vec4<f32>', def: [0, 0, 0, 0] }
+                const i = g.id
+                line(d + 1, `var wf_${i} = 0; var wn_${i} = ${K}u;     // the window: its first copy, how many (all, until the box is known)`)
+                line(d + 1, `{ let wl = UB.${lo}; let wh = UB.${hi};`)
+                line(d + 2, 'if (wl.w != 0.0) {')
+                line(d + 3, `let wc = 0.5 * (wl.xyz + wh.xyz); let w0 = UB.${copyName(i, 0)};`)
+                line(d + 3, 'let c0 = w0[3].xyz + w0[3].w * (xfRot(w0) * wc); let wr = 0.5 * length(wh.xyz - wl.xyz) * w0[3].w;')
+                line(d + 3, win.kind === 'row' ? `let w1 = UB.${copyName(i, 1)}; let wd = w1[3].xyz + w1[3].w * (xfRot(w1) * wc) - c0;`
+                                               : 'let wd = VEC3(0.0);')
+                // (aw, not W: the page's shorthand makes W a vec3, wgsl_shorthand.js SHORT_TOKENS)
+                line(d + 3, `let aw = arrWindow(${codeOf(win)}u, ${K}u, p, c0, wd, wr + ${SLACK} * (length(c0) + wr), XF_S);`)
+                line(d + 3, `CULL = min(CULL, aw.bound); wf_${i} = aw.first; wn_${i} = aw.count;`)
+                line(d + 2, '}')
+                line(d + 1, '}')
+                line(d + 1, `for (var cm_${i} = 0u; cm_${i} < wn_${i}; cm_${i} = cm_${i} + 1u) {`)
+                line(d + 2, `let ${c} = u32(((wf_${i} + i32(cm_${i})) % ${K} + ${K}) % ${K});`)
+            }
+            else line(d + 1, `for (var ${c} = 0u; ${c} < ${K}u; ${c} = ${c} + 1u) {`)
             line(d + 2, `var T_${g.id}: mat4x4<f32>;`)
             line(d + 2, `switch ${c} {`)
             g.copies.forEach((_, i) => line(d + 3, `case ${i}u: { T_${g.id} = UB.${copyName(g.id, i)}; }`))
@@ -2023,21 +2052,36 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
         if (plan.lights.map(L => L.id).join() !== lights.map(L => L.id).join())
             throw new Error(`[codegen] the data plan's lights (${plan.lights.map(L => L.id)}) are not codegen's (${lights.map(L => L.id)})`)
         const how = { materialIndex: mid => mid != null && matIdOf.has(mid) ? matIdOf.get(mid) : 1,
-                      lightMaterial: i => lights[i].matId, limiters }
+                      lightMaterial: i => lights[i].matId, limiters, arrayWindow: arrayWindow !== false }
         const rec = recordsOf(tree, plan, how)
         if (!rec) throw new Error('[codegen] the data plan does not cover its own tree')
         /* ...READ FROM A UNIFORM COPY, where every ray walks them in step (scenedata.js RECORDS_IN_UNIFORM) -- in every
            copy alike: they share the scene's buffers. (Not with the candidate grid or exact hits until 0.41.0, which
            walked different records in neighbouring rays.) */
         const uniformRecs = true
+        /* the arrays' window (arrays.js), wherever the walk culls and the scene has an array: which arrays are rows or rings
+           is in their records, so a copy dragged off its row is a write, not a compile */
+        if (plan.arrays > 0 && cull !== false && !pick && !optics && arrayWindow !== false) e.raw(ARRAY_WINDOW_WGSL)
         for (const l of evaluatorWGSL({ blocks: plan.blocks.length, befores: plan.befores.length, afters: plan.afters.length, subs: plan.subs.length, stack: plan.stack, arrays: plan.arrays, wantLocal, keepK, straight, pick, optics, cull,
-            count, recs: 'scnRecs' })) e.raw(l)
+            count, recs: 'scnRecs', arrayWindow: arrayWindow !== false })) e.raw(l)
         // the nodes inside compiled subtrees: their values are those subtrees' uniforms, never records (demo.js liveValue)
         const compiledIds = new Set()
         const into = n => { compiledIds.add(n.id); (n.children || []).forEach(into) }
         plan.subs.forEach(into)
         dataOut = { records: rec.data, blocks: [...plan.blocks, ...plan.befores, ...plan.afters], compiledIds, uniformRecs, dataOf: (t, boxes = null) => recordsOf(t, plan, { ...how, boxes }) }
     } else {
+    /* THE ARRAYS THAT HAVE A WINDOW (arrays.js): where culling is, reached from the root through plain groups and arrays
+       alone, with a row's or a ring's copies -- the arrays cullBoxes measures a content box for */
+    if (culling && arrayWindow !== false) {
+        const visit = (n, top) => {
+            if (n.kind !== 'group' || (!top && (isCsg(n) || hasCode(n) || combined.has(n.id)))) return
+            const pat = !top && n.copies?.length ? copyPattern(n.copies) : null
+            if (pat) windowed.set(n.id, pat)
+            for (const c of n.children || []) visit(c, false)
+        }
+        visit(tree, true)
+        if (windowed.size) e.raw(ARRAY_WINDOW_WGSL)
+    }
     e.raw('fn SDF(r: Ray) -> Hit {')
     e.raw('    let p = r.pos;')
     e.raw('    var C = emptyHit(r);')   // the renderer's starting Hit, core/scene_api.js
@@ -2082,6 +2126,7 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
         map: e.map,
         tags: plan ? plan.tags : tags,
         lights,
+        _windows: windowed,
         // the scene as data: its records, and how to make them again for the same plan (generate attaches them)
         ...(dataOut ? { _data: dataOut } : {}),
         /* the paths and profiles a live change can reach (livePointsUpdate): live ones, and compiled ones that name a
