@@ -167,6 +167,14 @@
 // A DOCUMENT ADDED (2026-10-22, 0.78.0): scenes/dichroics.json, the user's Dichroics scene made an example as they saved it
 // (scenes/make.mjs lists it, `made: false`). No codegen change: the freeze added its entry and moved no other document's
 // (key by key, against the expected.json before).
+//
+// REFROZEN FOR EVERY DOCUMENT WITH A LIGHT (2026-10-23, 0.next), for a fix the user asked for (light sampling off read a
+// small face brighter than on: codegen.js ONLY ON THE FACE ITSELF, builder/test/lightface.gpu.mjs). Each light's
+// `let MATERIAL = select(<back>, matid_<id>, p.z >= 0.0);` (two-sided: `let MATERIAL = matid_<id>;`) gained the face's
+// own extent -- `&& all(abs(p.xy) <= VEC2(width, height) * 0.5)` for a rectangle, `&& dot(p.xy, p.xy) <= radius * radius`
+// for a disc -- so the rim past its edge takes the back's material. Checked before freezing, every document in both modes
+// against a worktree of the code before (89a8731): 200 texts (render, pick and the optics trace's two) moved, by 340 lines,
+// every one a light's MATERIAL line as above; no line count, uniform or tag moved. cases.*.wgsl moved by that line alone.
 //======================================================================================================================
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'

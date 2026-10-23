@@ -1400,10 +1400,19 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
         /* A LIGHT'S FACE (lights.js): a sheet with the light's own material -- black behind unless
            two-sided, chosen by the side of the sheet the point is on (p is the node's own frame
            here), and a transparent one's back clear. A material per face, rather than a test in the
-           shader's emitter code, because every place that meets a surface already asks the material. */
+           shader's emitter code, because every place that meets a surface already asks the material.
+           ONLY ON THE FACE ITSELF, and the same back material beyond its edge (0.next). The march calls a point within
+           the surface tolerance a hit, so what a ray can meet of a sheet is the face grown by the tolerance all round:
+           a rim, its normal turned, that glowed. Light sampling aims at the face alone (lightFaceArea) and the photons
+           start on it alone, so a camera path finding the light by its glow saw a larger light than they did. With light
+           sampling off, a 0.1 x 0.05 m face read 1.0504 +- 0.0157 of the closed form at the automatic tolerance (0.5 mm)
+           and 1.2456 +- 0.0160 at ten times it. With light sampling on it read the closed form either way: MIS gives a small
+           face's glow almost no weight (builder/test/lightface.gpu.mjs, the numbers there). The test is made here, in the
+           light's own frame, so every copy of it tests its own face. */
         if (L) {
             const back = L.transparent ? 'MATID_CLEAR' : 'MATID_BLACK'
-            const matExpr = L.twoSided ? `matid_${L.id}` : `select(${back}, matid_${L.id}, p.z >= 0.0)`
+            const onFace = L.shape === 'rectangle' ? 'all(abs(p.xy) <= VEC2(width, height) * 0.5)' : 'dot(p.xy, p.xy) <= radius * radius'
+            const matExpr = L.twoSided ? `select(${back}, matid_${L.id}, ${onFace})` : `select(${back}, matid_${L.id}, p.z >= 0.0 && ${onFace})`
             const shape = L.shape === 'rectangle' ? 'Nrectangle(p, VEC2(width, height) * 0.5)' : 'Ndisc(p, radius)'
             line(d, `// node ${node.id} (light, ${L.shape})`)
             line(d, '{')

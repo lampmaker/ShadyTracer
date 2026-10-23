@@ -537,6 +537,16 @@ the first surface while photons run -- those paths are the photons', or shared w
 a third strategy there needs a three-way weight -- and not through glass: a shadow ray stops at any
 surface, so a die inside its dome is still found from outside by chance.
 
+**And the face glows on the face alone (0.next).** The face is a sheet of no thickness, and the march
+calls a point within the surface tolerance a hit, so a ray can meet a rim around it, as wide as the
+tolerance, that is not on the face. That rim glowed: what hits found was a larger light than the one
+light sampling aims at and the photons start on. MIS gives a small face's glow almost no weight, so
+with light sampling on the rim hardly counted; with it off it counted in full. A 0.1 x 0.05 m face at
+the automatic 0.5 mm tolerance read 5 % too bright, and at ten times that 25 %
+(`builder/test/lightface.gpu.mjs`, measured on lavapipe). Now the SDF gives the rim the back's material
+(codegen `ONLY ON THE FACE ITSELF`, the same test in the scene as data). It is a test in the light's
+own frame, so every copy of a light tests its own face.
+
 **The camera's lens (0.43.0; `core/lens.js`).** With an aperture the camera is a thin lens -- a disc at camPos, square
 to the axis, focused at a distance -- and its rays start on the disc and pass the pinhole's ray at the focus plane:
 depth of field. Connections (`ltConnect`) go to a point of the disc, the footprint measured from there. From 0.43.0 to

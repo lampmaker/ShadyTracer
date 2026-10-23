@@ -1139,6 +1139,26 @@ first.
 | The excerpt: `select(1u, 0u, NORMAL_AT_HIT)` read backwards; why the scene cares about NORMAL_LOOK; r.pos never said to be the hit. | **Fixed** in the excerpt's note: select's order, r.pos the hit point, section 6 for why the scene needs to know. |
 | Kernel, shader, unroll, sample never explained; "Why 128" long and the "can stall" comment against the emulation; figure 2's ticks, its f32 bump past 128, a label collision, units; figure 1's labels and the crease from the other side; try-it 2's "smaller"; why a normal is one unit long. | **Answered, not changed here**: sections this change did not touch; the next round's. First to check: try-it 2's "smaller", which the reader read as wrong (central is 0.6° off at a step of 0.3, so its step for 1° would be larger). |
 
+## Round 12, 2026-10-23 (0.next: chapter 14, a lamp's rim)
+
+Reports: [nee](reports/2026-10-23-round12/nee.md), then [nee, the new item read again](reports/2026-10-23-round12/nee-second.md).
+
+**Why this round.** A light's face had glowed on a rim as wide as the surface tolerance beyond its edge, which light
+sampling never aimed at, so light sampling off read a small face brighter than on (codegen.js ONLY ON THE FACE ITSELF,
+builder/test/lightface.gpu.mjs). Chapter 14's "What went wrong before" gained an item for it, "Two sizes for one lamp",
+beside "Two edges for one sun". The first reader read the whole page with a question on the new item. The item was
+rewritten for its findings, and a second, fresh reader read the page up to it and reported on the item alone. The item
+was rewritten again for the second reader's findings. That version has not been read; the next round's reader of this
+chapter reads it first.
+
+### Chapter 14, Aim at the light
+
+| Finding | |
+|---|---|
+| First reader: "the march" and "tolerance" never met on this page; "a lamp here" read as the flat world's (a capsule); a lamp's back never mentioned; "(section 8)" for weights wrong (section 4 and the next chapter); why black rather than aiming at the rim missing, and section 3's fold-out ("aim at exactly the light the bounces can find") seeming to say the opposite. | **Fixed**: "In ShadyTracer", front and dark back said; stepping and the tolerance in one sentence each, linked to their chapters; the weight's pointer is section 4 and the next chapter; the item now says the two could agree from either side and why they agree on the lamp's size (the ring is the tolerance's, and the brightness is set from the size), and why the flat world's capsule went the other way (its outline is the lamp). |
+| Second reader: why rays step; why a small lamp's weight is small and whether "almost nothing" is "right"; "the lamp's own rays" never taught; the brightness reason's consequence left unsaid; "that thick" unclear; what a ray meeting the black rim does; 5 % against a plain area sum of 3 %; "the two halves of the estimate" though NEE off has no shadow rays; a formula though section 2 says a real scene has none. | **Fixed**: stepping linked to *Shapes as distances*; "a random bounce rarely finds a small lamp, so what it finds counts for almost nothing, and the shadow rays, aimed at the true lamp, gave nearly all the light"; the lamp's own rays cut; "a larger lamp glowing as brightly sends out more light than it was given"; "0.02 thick, so its outline is the lamp"; a ray meeting the ring stops, as at the back; the ring adds 3 % face on, and the floor sees the lamp at a slant, which narrows the lamp but not the ring; "the two ways of finding the lamp"; "which a scene this simple has". |
+| First reader, on the rest of the page: section 3's ± 0.001 / ± 0.009 against fig 3's screenshot (± 0.003 / ± 0.025 at size 0.20); "a fifth" (section 4) against "a sixth" (section 8); section 4's "Not at the last bounce" and section 8's "Not on the last round" read as one rule twice; section 7's margin note on the stale sun comment long; march, tolerance, BSDF, f32 without cards. | **Answered, not changed here**: sections this change did not touch; the next round's. First to check: section 3's numbers against the figure's size. |
+
 ## Next round
 
 The pages stay drafts. Every written chapter has now had two readers (chapters 5 to 11 in rounds 5 and 6); the

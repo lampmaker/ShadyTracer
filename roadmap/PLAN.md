@@ -659,6 +659,13 @@ light's face by (L1). A scene without lights compiles to main's text exactly.
    - A LIGHT is right where it lights things -- its photons and light sampling (L7) start on the
      exact face -- and fat only where a camera path meets its face: a 1 cm die glows over 1.2x its
      area in the picture. An EMISSIVE OBJECT is fat for everything it lights.
+     **0.next: a light no longer is.** Its rim takes the back's material in the SDF (codegen `ONLY ON THE FACE
+     ITSELF`), so a camera path meets a glowing face exactly where light sampling and the photons have it. The
+     tolerance itself stays as it is: the rim is a black (or clear) edge `eps` wide, as fat as every surface
+     is. It showed as light sampling off reading a small face brighter than on, since MIS gives a small face's glow
+     almost no weight: 1.05 of the closed form for a 0.1 x 0.05 m face at the automatic 0.5 mm, 1.25 at ten
+     times it, light sampling on 1.00 at both (lavapipe, 2026-10-23; `builder/test/lightface.gpu.mjs`). The
+     marker pair below compares a light to an emissive object, so it is now the emitter's fatness alone.
    - A 1 mm die in a room-sized scene has eps as big as itself: as an emissive object it puts out
      several times its light.
    - Ways out: (a) cap the automatic tolerance by a share of the smallest light or emitter, which

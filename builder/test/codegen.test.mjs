@@ -701,8 +701,9 @@ eq('uniformName', uniformName('n7', 'radius'), 'radius_n7')
     const L = generate(Model.toTree(d))
     ok('MATID_BLACK and MATID_CLEAR follow the three materials', /const MATID_BLACK: u32 = 5u;/.test(L.wgsl) && /const MATID_CLEAR: u32 = 6u;/.test(L.wgsl))
     ok('each light has its own material id after them', /const matid_die: u32 = 7u;/.test(L.wgsl) && /const matid_win: u32 = 8u;/.test(L.wgsl))
-    ok('a one-sided light is black behind, a transparent one clear',
-        L.body.includes('let MATERIAL = select(MATID_BLACK, matid_die, p.z >= 0.0);') && L.body.includes('let MATERIAL = select(MATID_CLEAR, matid_win, p.z >= 0.0);'))
+    ok('a one-sided light is black behind and past its edge (0.next: the rim the surface tolerance grows it by), a transparent one clear',
+        L.body.includes('let MATERIAL = select(MATID_BLACK, matid_die, p.z >= 0.0 && all(abs(p.xy) <= VEC2(width, height) * 0.5));')
+        && L.body.includes('let MATERIAL = select(MATID_CLEAR, matid_win, p.z >= 0.0 && dot(p.xy, p.xy) <= radius * radius);'))
     /* PLAN.md L4: a camera path sees the face glow at its first hit, and at a later one when its first
        surface was not one the light's photons connect from (CLS_LIGHTS); no photon, shadow ray or probe
        ever does, nor a ray that is no path (bounces 0: the field kernel's) */
@@ -748,7 +749,7 @@ eq('uniformName', uniformName('n7', 'radius'), 'radius_n7')
     eq('the optics trace passes through a transparent light, front and back', L.passes, [8, 6])
     ok('a ray file draws nothing, and its transform is still declared', /node file \(light\): a ray file: no geometry/.test(L.body) && 'xf_file' in L.uniforms)
     Model.setLight(d, 'die', { twoSided: true })
-    ok('two-sided: both faces are the light', generate(Model.toTree(d)).body.includes('let MATERIAL = matid_die;'))
+    ok('two-sided: both faces are the light, and past its edge black', generate(Model.toTree(d)).body.includes('let MATERIAL = select(MATID_BLACK, matid_die, all(abs(p.xy) <= VEC2(width, height) * 0.5));'))
     // a CSG group: a box, and a sphere cut from it
     Model.addGroup(d, 'root', { id: 'cutter' })
     Model.addObject(d, 'cutter', { primitive: 'box' }); Model.addObject(d, 'cutter', { primitive: 'sphere', join: 'subtract' })
