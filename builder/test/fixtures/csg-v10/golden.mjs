@@ -168,6 +168,11 @@
 // (scenes/make.mjs lists it, `made: false`). No codegen change: the freeze added its entry and moved no other document's
 // (key by key, against the expected.json before).
 //
+// THE SAME DOCUMENT REFROZEN (2026-10-23, 0.next): the user saved scenes/dichroics.json again (f002d0b, "updated dichroics
+// example") and dev's codegen.test failed on its two entries. The document moved, not codegen: f002d0b changed that file
+// alone, and the freeze moved both modes of its entry and no other document's (key by key, against the expected.json
+// before). The user asked for the refreeze.
+//
 // REFROZEN FOR EVERY DOCUMENT WITH A LIGHT (2026-10-23, 0.next), for a fix the user asked for (light sampling off read a
 // small face brighter than on: codegen.js ONLY ON THE FACE ITSELF, builder/test/lightface.gpu.mjs). Each light's
 // `let MATERIAL = select(<back>, matid_<id>, p.z >= 0.0);` (two-sided: `let MATERIAL = matid_<id>;`) gained the face's
