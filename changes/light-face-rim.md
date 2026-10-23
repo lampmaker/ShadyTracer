@@ -14,5 +14,9 @@ used, so each copy of a light tests its own face, codegen and the scene as data 
 **What to look at:** a small rectangle or disc light over a floor, with light sampling on and off (Developer settings):
 the pool of light should be equally bright, where before off was brighter by about the tolerance over the face's size.
 The face seen directly loses an edge as wide as the tolerance, which should not be visible. In the
-`light-vs-emitter` bench, the pair at the automatic tolerance (finding 7, about 0.82) now measures the emissive
-object's own fatness alone.
+`light-vs-emitter` bench, every pair should read 1 and the one pair at the automatic tolerance about 0.82
+(finding 7, now the emissive object's own fatness alone).
+
+**The `light-vs-emitter` bench's 30 cm disc pairs run at a 10 um march tolerance**, as its 1 cm pairs did. With the
+light exact where the camera sees it, they read 0.990-0.994 at the automatic tolerance (Ampere, 2026-10-23), against
+0.995-1.000 before. That was the emissive disc's own excess, passing 0.1 % inside the bench's 1 % floor.

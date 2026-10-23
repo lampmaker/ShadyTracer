@@ -666,6 +666,10 @@ light's face by (L1). A scene without lights compiles to main's text exactly.
      almost no weight: 1.05 of the closed form for a 0.1 x 0.05 m face at the automatic 0.5 mm, 1.25 at ten
      times it, light sampling on 1.00 at both (lavapipe, 2026-10-23; `builder/test/lightface.gpu.mjs`). The
      marker pair below compares a light to an emissive object, so it is now the emitter's fatness alone.
+     Pressed (Ampere, 2026-10-23, TESTING.md sixth and seventh presses): the 30 cm disc's pairs went from 0.995-1.000
+     to 0.990-0.994 at the automatic tolerance, the emitter's 0.6 % showing once the light seen was exact (the mirror
+     0.9935, 0.993 predicted). Those pairs now run at 10 um as the 1 cm ones do. The 1 cm pair kept at the automatic
+     tolerance (0.83) is the one place the bench shows this finding.
    - A 1 mm die in a room-sized scene has eps as big as itself: as an emissive object it puts out
      several times its light.
    - Ways out: (a) cap the automatic tolerance by a share of the smallest light or emitter, which
