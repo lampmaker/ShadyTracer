@@ -8,6 +8,9 @@
 //   - the reference pages are what help/reference.mjs writes now -- so a shape, modifier, material field or light
 //     setting added to the program changes them, and they are made again with it -- and every material field and
 //     light setting has its words (reference.mjs FIELD_HELP, LIGHT_HELP).
+//   - every function the code reference has words for is one the scene prelude defines, every prelude function named
+//     like a shape or a join has words (or a reason it is not listed), and what a scene makes for its outlines and
+//     paths is what codegen writes -- so a shape added to the library without words fails here (reference.mjs CODE_HELP).
 // The commands and panels are read from the page's source (index.html and the modules that register them), as
 // check-shaders reads the page's inline script: there is no running page here.
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs'
@@ -17,7 +20,7 @@ import { HELP, PAGES, HOME } from '../index.js'
 import { renderMarkdown } from '../markdown.js'
 import { kindOf, linksIn } from '../links.js'
 import { WIDGETS } from '../widgets.js'
-import { referencePages, FIELD_HELP, LIGHT_HELP, HAZE_HELP } from '../reference.mjs'
+import { referencePages, FIELD_HELP, LIGHT_HELP, HAZE_HELP, CODE_HELP, CODE_SHAPED, CODE_UNLISTED, CODE_MADE, preludeSignatures } from '../reference.mjs'
 import { HAZE_DEFAULTS } from '../../builder/hazebox.js'
 import { EXAMPLES } from '../../scenes/index.js'
 import { FIELDS } from '../../builder/materials.js'
@@ -83,6 +86,17 @@ ok('every light setting has its words', Object.keys(LIGHT_DEFAULTS).every(k => L
 ok('...and no words for a setting there is not', Object.keys(LIGHT_HELP).every(k => k in LIGHT_DEFAULTS))
 ok('every haze box setting has its words', Object.keys(HAZE_DEFAULTS).every(k => HAZE_HELP[k]), Object.keys(HAZE_DEFAULTS).filter(k => !HAZE_HELP[k]).join(', '))
 ok('...and no words for a haze setting there is not', Object.keys(HAZE_HELP).every(k => k in HAZE_DEFAULTS))
+const sigs = preludeSignatures(), documented = CODE_HELP.flatMap(sec => Object.keys(sec.fns))
+ok('the scene prelude\'s functions were found to check against', sigs.has('add_new') && sigs.has('Nsphere') && sigs.has('fbm3'), `${sigs.size} found`)
+ok('every function the code reference has words for is the prelude\'s', documented.every(k => sigs.has(k)), documented.filter(k => !sigs.has(k)).join(', '))
+ok('...and each has words once', new Set(documented).size === documented.length && CODE_HELP.every(sec => Object.values(sec.fns).every(w => w.trim())))
+const shaped = [...sigs.keys()].filter(k => CODE_SHAPED.test(k))
+ok('every prelude function named like a shape or a join has words, or a reason it has none (reference.mjs CODE_UNLISTED)',
+    shaped.every(k => documented.includes(k) || CODE_UNLISTED[k]), shaped.filter(k => !documented.includes(k) && !CODE_UNLISTED[k]).join(', '))
+ok('...and no reason for a function there is not, or one with words', Object.keys(CODE_UNLISTED).every(k => sigs.has(k) && !documented.includes(k)))
+const codegen = readFileSync(join(repo, 'builder/codegen.js'), 'utf8')
+ok('what a scene makes for its outlines and paths is what codegen writes', Object.keys(CODE_MADE).every(sig => codegen.includes(`'fn ${sig} {'`)),
+    Object.keys(CODE_MADE).filter(sig => !codegen.includes(`'fn ${sig} {'`)).join('; '))
 ok('every shape and modifier\'s reference entry has text (its code\'s first comment)', !/###? [^\n]+\n\n\n/.test(read('reference/shapes.md') + read('reference/modifiers.md')))
 
 console.log(`help coverage: ${pass} passed, ${fail} failed`)

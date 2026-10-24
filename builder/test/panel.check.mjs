@@ -964,6 +964,29 @@ ok('...and the visibility beside it follows: 3.912 x 4 m, 15.6 m', /^visibility 
     ok('...the row says the new unit', await unitRow() === to && (await readRows()).some(r => r === `environment radius (${to})`), JSON.stringify(await readRows()))
 }
 
+// A CODE BOX'S "Functions you can call…" (0.next): the host's help hook asked for the code reference, at a material's helpers
+// for a material's code, at its top for an object's -- each anchor a heading the page has. A panel given no hook has none.
+{
+    const { renderMarkdown } = await import(pathToFileURL(join(repo, 'help/markdown.js')).href)
+    const headings = renderMarkdown(await readFile(join(repo, 'help/reference/code.md'), 'utf8')).headings.map(h => h.id)
+    const click = (id, sel) => p.evaluate(([id, sel]) => {
+        CHECK.panel.show(id); CHECK.flagPanel.show(id)
+        const bs = [...document.querySelectorAll(`${sel} button`)].filter(b => b.textContent.includes('Functions you can call'))
+        bs[0]?.click()
+        return { count: bs.length, asked: CHECK.T.help.slice() }
+    }, [id, sel])
+    const obj = await click('top', '#t')
+    ok('an object\'s code box: the button asks the host for the code reference, at its top', obj.count === 1
+        && JSON.stringify(obj.asked.at(-1)) === '["ref-code",null]', JSON.stringify(obj))
+    const mat = await click('gl', '#t')
+    ok('...a material\'s, at its helpers', mat.count === 1 && JSON.stringify(mat.asked.at(-1)) === '["ref-code","materials"]', JSON.stringify(mat))
+    const src = await readFile(join(repo, 'builder/panel.js'), 'utf8')
+    const at = Object.values(JSON.parse(/CODE_HELP_AT = (\{[^}]*\})/.exec(src)[1].replace(/(\w+):/g, '"$1":').replace(/'/g, '"')))
+    ok('...every anchor it opens at is a heading of help/reference/code.md', at.length && at.every(a => headings.includes(a)), JSON.stringify(at))
+    ok('...a panel given no hook shows none', (await click('top', '#t2')).count === 0)
+    await p.evaluate(() => { CHECK.panel.show(null); CHECK.flagPanel.show(null) })
+}
+
 ok('no page errors', !errs.length, errs.join('\n'))
 await b.close(); server.close()
 console.log(failed ? `${failed} FAILED` : 'builder panel: all passed')

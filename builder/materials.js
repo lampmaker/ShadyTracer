@@ -98,6 +98,7 @@ export const MATERIAL_CODE_TEMPLATE = [
     '//   m.tangent = grainAlong(R_local, VEC3(1.0, 0.0, 0.0));',
     '// e.g. with a length width (mm) and a colour stripe added with +, and q as above:',
     '//   m.baseColor = mix(m.baseColor, stripe, step(fract(q.x / width), 0.5));',
+    '// every function there is to call -- noise, grains, streaks: Help > Reference > Functions for code',
     '',
 ].join('\n')
 

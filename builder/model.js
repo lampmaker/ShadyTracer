@@ -205,6 +205,7 @@ export const FUNCTIONS_TEMPLATE = [
     '//       let q = p * s;',
     '//       return abs(dot(sin(q), cos(q.zxy))) / s - 0.03;',
     '//   }',
+    '// what is already there to call: Help > Reference > Functions for code',
     '',
 ].join('\n')
 
