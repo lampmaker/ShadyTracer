@@ -346,6 +346,27 @@
          data-why="The fix: one test for the disc's edge, inSunDisc, used by both, and the old angle constant deleted so a second test cannot come back." data-hash="44157c68"></pre>
     <p>The result was a floor 142 times too bright <em>on average</em>, while its typical (median) pixel looked right: a
       few pixels were enormous. It was found because a test compared the floor with a number known in advance.</p>
+    <p><strong>Two sizes for one lamp.</strong> In ShadyTracer a lamp is a flat rectangle or disc with no thickness,
+      glowing from its front, its back dark. A ray finds a surface by stepping towards it
+      (<a data-ch="distances">Shapes as distances</a>) and never lands exactly on it, so it calls it a hit once it is
+      closer than a small length, the tolerance (half a millimetre in a room-sized scene;
+      <a data-ch="precision">Numbers have grain</a>). So a ray passing just beyond the lamp's edge hit it too: to a
+      bouncing ray the lamp was a glowing ring of that width larger all round, a ring that is not really there. A shadow
+      ray only ever aims at points on the lamp itself. The two ways of finding the lamp disagreed about how big it was,
+      as the two tests of the sun's edge had. With NEE on, ShadyTracer does not ignore a bounce that hits the lamp but
+      weighs it (section 4, and the next chapter): a random bounce rarely finds a small lamp, so what it finds counts for
+      almost nothing, and the shadow rays, aimed at the true lamp, gave nearly all the light. The picture was right.
+      With NEE off, the ring counted in full: a lamp 10 by 5 cm lit the floor 5 % too brightly, and 25 % with a
+      tolerance ten times larger. (The ring adds 3 % to the lamp's area seen face on; the floor sees the lamp at a slant,
+      which narrows the lamp but not the ring.) Section 3's rule says aim at exactly the light the bounces can find, and
+      here the two could be made to agree from either side. They were made to agree on the lamp's own size: the ring is
+      no part of the lamp but a side effect of the tolerance, and the lamp's brightness is set from its size, so a
+      larger lamp glowing as brightly sends out more light than it was given. (The flat world's capsule really is 0.02
+      thick, so its outline is the lamp, and there the aim had to grow.) So the ring now takes the material of the
+      lamp's back: black, and a ray that meets it stops there, as at the back
+      (<cite data-src="builder/codegen.js" data-sym="ONLY ON THE FACE ITSELF" data-doc="no"></cite>). This one was also
+      found by a number known in advance, which a scene this simple has: the floor's brightness under a lamp of that size,
+      worked out from a formula.</p>
     <p><strong>A comparison that did not compare.</strong> When NEE was first written, it could only aim at the sun and
       the sky. A lamp made of glowing geometry was invisible to it, found only by bouncing. So an NEE-on against NEE-off
       comparison run in a scene lit by such a lamp measured nothing about NEE at all

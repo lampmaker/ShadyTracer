@@ -173,6 +173,14 @@
 // alone, and the freeze moved both modes of its entry and no other document's (key by key, against the expected.json
 // before). The user asked for the refreeze.
 //
+// REFROZEN FOR EVERY DOCUMENT WITH A LIGHT (2026-10-23, 0.next), for a fix the user asked for (light sampling off read a
+// small face brighter than on: codegen.js ONLY ON THE FACE ITSELF, builder/test/lightface.gpu.mjs). Each light's
+// `let MATERIAL = select(<back>, matid_<id>, p.z >= 0.0);` (two-sided: `let MATERIAL = matid_<id>;`) gained the face's
+// own extent -- `&& all(abs(p.xy) <= VEC2(width, height) * 0.5)` for a rectangle, `&& dot(p.xy, p.xy) <= radius * radius`
+// for a disc -- so the rim past its edge takes the back's material. Checked before freezing, every document in both modes
+// against a worktree of the code before (89a8731): 200 texts (render, pick and the optics trace's two) moved, by 340 lines,
+// every one a light's MATERIAL line as above; no line count, uniform or tag moved. cases.*.wgsl moved by that line alone.
+//
 // REFROZEN FOR ONE SCENE (2026-10-23, 0.next), for a feature the user chose ("faster large arrays", after Tests >
 // lightarray measured 256 copies of a light at 465 ms of march a sample): a row's or a ring's copies evaluated in a
 // window around the point (builder/arrays.js). Checked before freezing: generated with arrayWindow false, every one of the
@@ -181,6 +189,11 @@
 // came the window's (the arrWindow functions, the window's uniforms' reads, the loop over the window), and its uniforms
 // gained exactly its content box's two (bxlo_n9_cbx, bxhi_n9_cbx). Its pick texts and tags did not move: the window is
 // the render copy's alone.
+//
+// BOTH, MERGED (2026-10-24): dev's refreeze for the light's face above came into this branch's window; expected.json was
+// taken as git merged the two and frozen again. Checked before freezing: generated with arrayWindow false, every document's
+// fingerprints were dev's frozen ones, both modes; with the window, scenes/parametric-part.json alone moved from dev's, by
+// the window's lines as above.
 //======================================================================================================================
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
