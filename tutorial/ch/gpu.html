@@ -86,8 +86,8 @@
       tinywebgpu, its small WebGPU library, works them out from the field types (the second excerpt), and the tutorial's
       own test holds this figure's arithmetic to it. (A ray's size it does write by hand, 112 bytes, and a test holds that to the WGSL
       compiler's own.)</p>
-    <p data-step="packing:engine">ShadyTracer's own uniform block, UB, before a scene adds its fields: 108 fields in
-      752 bytes, 36 of them padding. Its rows are drawn in eight columns to fit: read down the first column, then the
+    <p data-step="packing:engine">ShadyTracer's own uniform block, UB, before a scene adds its fields: 109 fields in
+      768 bytes, 48 of them padding. Its rows are drawn in eight columns to fit: read down the first column, then the
       next. Point at a box for its field. The scene's own values go on top of these, and the
       scene's records, when the scene is sent as data, have a uniform buffer of their own: 4096 vec4s, exactly the 64 KiB
       every WebGPU device allows (chapter 24).</p>

@@ -223,7 +223,7 @@
     <pre data-src="lib/pathtracer/core/wavefront.js" data-sym="fn scStep(pos: VEC3, dir: VEC3) -> FLOAT {"
          data-why="SC_LOOKS is 1 (the own cell) or 3 (and the two ahead), fixed when the kernel is built. UB.scLo is the grid's low corner, its w the cell's size; UB.scDims its cells along x, y and z; k a cell's number, counted row by row. A cell holds the f32 bits of its distance (bitcast). oc runs from the ball's centre to the ray; c2 is its length squared less the radius squared, below 0 inside. b is oc's length along the ray (a dot product), and -b + sqrt(b² - c2) is where the ray, a unit direction, leaves the ball: the larger root of |oc + t dir|² = r². select gives best if it is at least a cell, else -1." data-hash="5d3ecdf6"></pre>
     <pre data-src="lib/pathtracer/core/wavefront.js" data-sym="${stepCache ? /*wgsl*/`/* THE STEP CACHE (stepCacheWGSL, filled before the trace): a ball that holds the ray far" data-to="}` : ''}"
-         data-why="Inside the march's loop (chapter 22), before the scene is asked. ${stepCache ? ... : ''}: the text is in the kernel only when the cache is on, so with it off the kernel is what it was before the cache existed. moveBy moves the ray; ray.counts += 1u adds a step to the low half of a word whose high half counts the path's diffuse bounces (chapter 13), towards the 400 steps a ray may take in all (chapter 22)." data-hash="8b49aebe"></pre>
+         data-why="Inside the march's loop (chapter 22), before the scene is asked. ${stepCache ? ... : ''}: the text is in the kernel only when the cache is on, so with it off the kernel is what it was before the cache existed. moveBy moves the ray; ray.counts += 1u adds a step to the low half of a word whose high half counts the path's diffuse bounces (chapter 13), towards the 400 steps a ray may take in all (chapter 22). With the relaxed steps on (section 6), lastStep = 0.0 says a ball's step is safe, so the next one has nothing to check." data-hash="366c7f72"></pre>
   </div>
 </section>
 
@@ -272,6 +272,23 @@
         ON, 0.29.0). The user asked for exactly that: "make sure that all these different options, even when turned off,
         dont impose an overhead".</p>
     </div>
+    <div data-claim="code">
+      <p><strong>Relaxed steps: longer than safe, checked at the next.</strong> With the developer setting relax above 1
+        (0.next), a step goes that many times the distance known empty, past the ball it starts in. At the next point the
+        two balls must still overlap along the ray, the old radius and the new adding up to at least the step; then they
+        cover the whole stretch and no surface is in it. If they do not, the ray goes back to where a plain step would
+        have ended and steps plainly for the rest of that pass. Nothing is tested at a point not yet checked, and a step
+        nothing would check is plain: the last of a pass, one that would reach where a shadow ray ends or pass the haze's
+        collision. Off by default, and then not in the kernels at all (<code>wavefront.js</code>, RELAXED STEPS).</p>
+    </div>
+    <div data-claim="inferred">
+      <p><strong>Relaxed steps: fewer steps, a speed not yet measured.</strong> The GPU test counts them on a software GPU,
+        64 × 36 camera rays a scene, every ray ending where it ends without: at 1.3, the demo 26.0 steps a ray against
+        33.4, the optics bench 19.9 against 21.9, a grazed thin plate 74.9 against 97.4; at 1.6 the plate 60.6, but the
+        bench scenes from 13% fewer to 6% more than plain, the failed checks costing what the long steps saved
+        (<code>builder/test/relax.gpu.mjs</code>). Whether fewer steps are less time, and at which factor, is the card's to
+        say: Tests &gt; relax, each bench scene at 1, 1.3 and 1.6.</p>
+    </div>
     <div data-claim="inferred">
       <p><strong>Boxes on shelled reliefs.</strong> In this page's model, a relief in its shell costs about its box test
         when the ray is far, so its box saves nothing and shortens steps. Not measured on a card: the culling rows all
@@ -285,8 +302,8 @@
         objects come in, and a step may be shorter.</li>
       <li data-ref="hart1996">Where the division by a slope bound comes from: a function that never changes faster than
         a known rate can be sphere-traced, by dividing by that rate.</li>
-      <li data-ref="keinert2014">Steps longer than the distance, with a check that steps back when one went too far: a
-        different way to fewer steps from the one taken here, where every step is 0.9 of a safe one.</li>
+      <li data-ref="keinert2014">Steps longer than the distance, with a check that steps back when one went too far: what
+        the developer setting relax does (above), where by default every step is 0.9 of a safe one.</li>
     </ul></aside>
   </div>
 </section>
