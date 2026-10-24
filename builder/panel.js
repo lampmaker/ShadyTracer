@@ -37,6 +37,8 @@
  * @param params    the parameter registry (lib/shell/params.js), optional: told of each edit made here
  * @param environment () => the renderer's settings now (RT.get) -- what a scene without an environment of
  *                  its own shows, and takes with it when first edited (model.js ENVIRONMENT)
+ * @param help      (page id, anchor) => void, optional -- open the Help at that page: a code box's "Functions you can
+ *                  call…" (help/reference/code.md). Without it, no such button.
  */
 import { openParamDialog } from './paramdialog.js'
 import { sourceTable } from './sources.js'
@@ -101,7 +103,7 @@ export const EXPOSURE_HELP = {
 }
 
 export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStructure = () => { }, onApply = () => { }, params = null,
-                                                      environment = () => ({}), itemSample = null, view = null } = {}) {
+                                                      environment = () => ({}), itemSample = null, view = null, help = null } = {}) {
     const M = BUILDER.model
     // the selection's own box, and the boxes of its categories after it (show says why they are apart)
     let folder = null, boxes = [], shownId = null
@@ -1720,6 +1722,7 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
        the names in scope are the header's tooltip (a title is one line and would be cut). */
     /* `same`: the other nodes whose errors are this code's -- a block's other users (model.js version 16): the scene as
        data compiles a block once, its errors reported against the first node that uses it */
+    const CODE_HELP_AT = { material: 'materials', relief: 'noise' }
     function codeEditor(folder, node, { kind = 'object', title = 'code', names = '', owner = node.id, same = () => [] } = {}) {
         const lines = s => String(s || '').split('\n').length
         if (typeof node.code !== 'string') node.code = ''
@@ -1744,6 +1747,11 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
         })
         b.element.after(box)
         cf.addButton({ title: 'Apply code  (Ctrl+Enter)' }).on('click', () => onApply())
+        /* WHAT THERE IS TO CALL (the user, 2026-10-24, of the reference of the functions code can call: "add that
+           button"): Help at that page, at the part a block of this kind reaches for first -- a material's helpers, a
+           relief's noise -- and at its top for the rest. `help(page, anchor)` is the host's (index.html opens its Help
+           panel there); a host that gives none, as a test page, gets no button rather than one that does nothing. */
+        if (help) cf.addButton({ title: 'Functions you can call…' }).on('click', () => help('ref-code', CODE_HELP_AT[kind] ?? null))
 
         let seq = 0, timer = 0
         const say = (text, color) => { box.textContent = text; box.style.color = color }

@@ -46,7 +46,7 @@ M.addObject(doc, 'root', { id: 'pa', label: 'pipe', params: { route: { path: [[0
 M.addMaterial(doc, { id: 'gl', label: 'glass', preset: 'glass' })
 // and a haze box, for its dust (0.62.0)
 M.addHazeBox(doc, 'root', { id: 'hz', label: 'dust' })
-const T = { live: [], commits: [], structure: 0, labels: 0, pushed: [], showing: true }
+const T = { live: [], commits: [], structure: 0, labels: 0, pushed: [], showing: true, help: [] }
 const BUILDER = {
     model: M, get doc() { return doc },
     // whether the renderer shows this scene (demo.js): its camera is the scene's only then
@@ -58,7 +58,8 @@ const BUILDER = {
     check: async () => ({ messages: [] }),
 }
 const table = new PropertyTable({ container: document.getElementById('t'), boxes: true })        // in boxes, as the page's
-const panel = installBuilderPanel(table, BUILDER, { onLabel: () => T.labels++, onStructure: () => T.structure++ })
+const panel = installBuilderPanel(table, BUILDER, { onLabel: () => T.labels++, onStructure: () => T.structure++,
+    help: (page, anchor) => T.help.push([page, anchor ?? null]) })
 const P = makeParams()
 P.provide('scene', () => sceneParams(doc, { live: (id, k) => BUILDER.live(id, k), commit: k => BUILDER.commit(k) }))
 const flagPanel = installBuilderPanel(new PropertyTable({ container: document.getElementById('t2'), boxes: true }), BUILDER,

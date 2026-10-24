@@ -11,9 +11,10 @@ What the code of an object, a group, a material or the scene's functions can cal
 | an object's | at every march step | `p` the point in the node's own frame, `C` the Hit to fold into, `MATERIAL` its material |
 | a group's | at every march step, around its children | `p` (which it may change), `C`, `r` the ray, `children(C, p)`, `XF_S` this frame's units in world units, `SURFACE_ONLY`, `READ_REACH`, `DIVIDED_ABOVE` |
 | a material's | once where a ray hits | `m` the material to change, `p` and `n` the hit and its normal in the world, `C`, and `p_local`, `R_local`, `S_local` the hit in the object's frame, its turn and its scale |
+| a material's relief | at every march step near an object wearing it | `q` the point in mm in that object's frame, `world` the same in the scene's; it sets `h`, the height in mm outward, and `slope`, a bound on how steep `h` is |
 | the scene's functions | -- | its functions are called from any of the others |
 
-The comments a new block starts with say the same, with examples.
+The comments a new block starts with say the same, with examples; **Functions you can call…** under a block opens this page.
 
 ## Words the page rewrites
 

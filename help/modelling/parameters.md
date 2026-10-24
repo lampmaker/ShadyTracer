@@ -75,7 +75,7 @@ the same shapes again, not a new shape: its position is a live value.
 
 Any object, group or material can be rewritten in **WGSL**, the graphics card's language. Open its *code* box in
 Properties. A probe compile runs half a second after you stop typing and shows any error **at your own line**.
-**Ctrl Enter** applies.
+**Ctrl Enter** applies. **Functions you can call…** under the box opens [Functions for code](../reference/code.md).
 
 - **An object's code** adds a shape: `C = add_new(C, Nsphere(p, radius), MATERIAL);` where `p` is the point in the
   object's own frame and your parameters are names.

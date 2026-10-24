@@ -1039,6 +1039,8 @@
                 onLabel: () => builderTree.rebuild(),
                 onStructure: reapply,
                 onApply: () => builderTree.apply(),
+                // a code box's "Functions you can call…": the Help panel opened at that page (help/reference/code.md)
+                help: (page, anchor) => { openHelp(); window.HELP?.open(page, anchor); },
                 params: PARAMS, environment: () => RT.get(),
                 // the scene row's camera and exposure (builder/panel.js cameraFolder, exposureFolder): the renderer's own fields
                 view: { cameraBindings: () => RT.cameraBindings(), cameraShown: () => RT.cameraShown(), exposure: () => RT.view().exposure,
