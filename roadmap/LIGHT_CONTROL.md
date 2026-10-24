@@ -105,13 +105,15 @@ These are correctness numbers, not speed.
 12 lights placed by hand through plain groups. Seeds 1 to 3, 256 samples, light sampling on: the array reads
 0.9929 ± 0.0070, 0.9933 ± 0.0088 and 0.9998 ± 0.0084 of the lights placed by hand.
 
-Found on the way, and **not the arrays'**: with light tracing off, light sampling on reads 0.94 to 0.98 of off, for
-the array and for the lights placed by hand alike (seed 1: 0.9397 ± 0.0189 and 0.9527 ± 0.0173). That is about 4 %,
+Found on the way, and **not the arrays'**: with light tracing off, light sampling on read 0.94 to 0.98 of off, for
+the array and for the lights placed by hand alike (seed 1: 0.9397 ± 0.0189 and 0.9527 ± 0.0173). That was about 4 %,
 over six such pairs.
-- **Not established why.** Inferred: something in face light sampling for small faces, or in its MIS with the face's
-  glow, independent of the arrays.
-- **What would test it:** the same scene with one light, light tracing off, many more samples, and the faces made
-  larger step by step, to see whether the gap follows the face's size.
+- **Found and fixed on `dev`** (4026e9a, PR #53): a face glowed on the rim the surface tolerance grows it by, which
+  only the paths without light sampling counted. With light sampling off it read too bright, against the closed form.
+  Now the rim takes the back's material, in the light's own frame, so each copy of an array tests its own face.
+- **Measured after the merge** (lavapipe, 2026-10-24, seeds 1–3): on reads 0.9630 ± 0.0193, 1.0021 ± 0.0181 and
+  0.9941 ± 0.0193 of off for the array, and 0.9780 ± 0.0178, 0.9759 ± 0.0208 and 0.9901 ± 0.0187 by hand. Each is
+  within two standard errors of 1, and `lightarray.gpu.mjs` holds it again, along with the rim of every copy.
 
 ### Speed
 

@@ -17,8 +17,9 @@
 //     L7): the same at every copy, and the number the power heuristic gives with the first face's area and the light's
 //     share of the total -- what a hit on any copy is weighed by, which is exact only because every copy's face has the
 //     first's area (the rule lights.js states, and the model holds);
+//   - the SDF just past each copy's edge: the back's material, the rim not glowing (dev's 4026e9a), in each copy's frame;
 //   - the whole renderer on a floor under the array, against the same lights placed by hand: one picture, with light
-//     sampling on and off.
+//     sampling on and off, and light sampling on reading what off reads.
 // WHAT IT CANNOT SHOW: the picture, or speed. Those are the user's (CLAUDE.md).
 //======================================================================================================================
 import { execSync } from 'node:child_process'
@@ -157,6 +158,22 @@ for (const [how, data] of [['codegen', false], ['as data', true]]) {
     ok(`${how}: the SDF draws each of the 12 copies where lightFace has it, its front the light's (material ${matid})`,
         leds.every((_, k) => h[16 * k] === matid && Math.abs(h[16 * k + 1]) < 2e-3),
         JSON.stringify(leds.map((_, k) => [h[16 * k], h[16 * k + 1]])))
+    /* ...and JUST PAST EACH COPY'S EDGE, in front of it, the back's material: the rim the surface tolerance grows a face by
+       does not glow (codegen.js ONLY ON THE FACE ITSELF, dev's 4026e9a) -- tested in the light's own frame, so in each
+       copy's, not the first's */
+    const black = +scene.wgsl.match(/const MATID_BLACK: u32 = (\d+)u;/)[1]
+    const rim = []
+    for (const [x] of leds) {
+        const out = x.half[0] + 2e-4
+        rim.push(...x.origin.map((v, k) => v + x.u[k] * out + x.normal[k] * 1e-4), 0, ...x.normal.map(v => -v), 0)
+    }
+    const hr = await run(scene, `
+        let r = newRay(evalIn[2u * i].xyz, evalIn[2u * i + 1u].xyz, VEC4(1.0), 1.0);
+        let c = SDF(r);
+        evalOut[16u * i] = f32(c.m); evalOut[16u * i + 1u] = c.s.w;`, rim, leds.length)
+    ok(`${how}: just past each copy's edge, the back's material (${black}), not the light's`,
+        leds.every((_, k) => hr[16 * k] === black && Math.abs(hr[16 * k + 1]) < 2e-3),
+        JSON.stringify(leds.map((_, k) => [hr[16 * k], hr[16 * k + 1]])))
 
     /* ---- getMaterial2 on each copy's face, at the third vertex of a camera path (bounces 2: light sampling ran at the
        one before, prevPdf 1), from 0.5 along its normal at 40 degrees: the glow times the power heuristic against light
@@ -290,11 +307,14 @@ for (const [how, data] of [['codegen', false], ['as data', true]]) {
             + ` lights placed by hand; light sampling off ${pm(p0)}; light sampling on ${pm(s)} of off for the array, ${pm(sB)} by hand`)
         ok(`the array's picture is the hand-placed lights', ${pm(p)}`, region.length > 200 && Math.abs(p.mean - 1) < Math.max(0.02, 3.5 * p.se), pm(p))
         ok(`...with light sampling off too, ${pm(p0)}`, Math.abs(p0.mean - 1) < Math.max(0.02, 3.5 * p0.se), pm(p0))
-        /* LIGHT SAMPLING ON AGAINST OFF IS NOT HELD HERE. Measured on lavapipe (2026-10-22, this scene, seeds 1-3): on reads
-           0.94-0.98 of off for the array AND for the lights placed by hand alike (0.9397 +- 0.0189 and 0.9527 +- 0.0173 on
-           seed 1), a gap of about 4 % that is the renderer's with these small faces, not the arrays'. Not established why:
-           logged above, for whoever looks into it. What is the arrays' -- a hit on any copy weighed by the first face's
-           MIS -- is held exactly above (getMaterial2). */
+        /* LIGHT SAMPLING ON AGAINST OFF. Held since dev's 4026e9a: before it on read 0.94-0.98 of off for the array AND for
+           the lights placed by hand alike (lavapipe, 2026-10-22, seeds 1-3: 0.9397 +- 0.0189 and 0.9527 +- 0.0173 on seed 1),
+           because a face glowed on the rim the surface tolerance grows it by, which only the paths without light sampling
+           counted (codegen.js ONLY ON THE FACE ITSELF). After it (lavapipe, 2026-10-24, seeds 1-3): 0.9630 +- 0.0193,
+           1.0021 +- 0.0181 and 0.9941 +- 0.0193 for the array; 0.9780 +- 0.0178, 0.9759 +- 0.0208 and 0.9901 +- 0.0187 by
+           hand -- each within two of its errors of 1. */
+        ok(`...and light sampling on reads what off reads, the array ${pm(s)} and the lights by hand ${pm(sB)}`,
+            [s, sB].every(q => Math.abs(q.mean - 1) < Math.max(0.03, 3.5 * q.se)), `${pm(s)} ${pm(sB)}`)
     }
 }
 
