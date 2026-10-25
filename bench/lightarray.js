@@ -22,8 +22,9 @@
 // MEASURED (the user's Ampere, 213642c, 2026-10-23, before the window): rows 1-4 at 61.4, 67.5, 83.6 and 684.2 ms a sample;
 // shade -- the face pick -- 21.2, 20.9, 20.5 and 20.0 ms, flat; march 12.3, 19.0, 14.9 and 465.0 ms, occlusion 7.6, 8.7, 8.1
 // and 160.0: every copy evaluated at every step, not the pick. So the window (arrays.js), and these rows to time it by.
-// Row 3's wall clock was 33 ms over its GPU time where the others' were about 12: not established why (a rerun of rows
-// 2 and 3, BENCH.lightarray.run(2, 3, 2, 3), would say whether it is the row's own).
+// Row 3's wall clock was 33 ms over its GPU time where the others' were about 12. Not reproduced: two runs of c9577ae on
+// the user's Pascal read it at 67.1 then 46.7 ms over a steady 31.9 and 32.2 of GPU time -- the machine's wander, which
+// between those two runs was 23% on row 6 (406.0, 501.3) and 17% between rows 1 and 8 of one run.
 // MEASURED (the user's Pascal, a81cac9, 2026-10-25, the first window): the window made it slower -- row 4 1385.1 ms a
 // sample (march 1007.5, occlusion 382.7) against row 6's 398.9 (281.0, 87.7); row 2 68.1 (march 15.2, a noisy 50-108)
 // against row 5's 50.3 (11.9). COUNTED, not timed (builder/test/arraywindow.gpu.mjs, lavapipe, these documents and camera):

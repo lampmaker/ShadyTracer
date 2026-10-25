@@ -135,9 +135,9 @@ What it settles:
   - Read in code: every copy of an array was evaluated at every step. That is codegen's copies loop and the data
     evaluator's ARRAY records; data mode culls each child record inside a copy, but still visits every copy.
   - So the cost is the copies, not the lights. It is the same for any arrayed object.
-- **Unexplained:** the 16-by-hand row's wall clock is 33 ms over its GPU time, where the other rows are about 12 over.
-  The user will rerun it (`BENCH.lightarray.run(2, 3, 2, 3)`) to see whether it reproduces before anyone looks for a
-  cause.
+- **Not reproduced:** the 16-by-hand row's wall clock was 33 ms over its GPU time, where the other rows were about 12
+  over. On the user's Pascal card, two runs of c9577ae read it at 67.1 then 46.7 ms against a steady 31.9 and 32.2 of GPU
+  time, the second the fastest of the 16-light rows. Its wall clock wanders with the machine's, not with the row.
 
 **The fix: a window of the copies** (`builder/arrays.js`, `0.next`).
 - A row or a ring of copies, recognised from the copies' own matrices, evaluates only the copies near the point.
@@ -208,6 +208,10 @@ What it settles:
 - **Left (inferred, not measured):** the sphere round a ring's copy inside the lights' own plane, where the annulus says
   nothing. A bound by the angle about the axis (the copies' angular sectors) would be the next step, if the next run
   says the window is still not worth it.
+- **The spread between two runs of one build** (the user's Pascal, c9577ae twice, 2026-10-25): row 6 read 406.0 then
+  501.3 ms a sample, and the second run's drift row was 17% over its row 1. So a difference under about 20% between two
+  runs says nothing on this machine; the ratios within a run held (row 4 / row 6 2.6 and 2.3, row 7 / row 6's march 1.43
+  and 1.44).
 - **Seen on the way (read in the sources):** the bench's ring puts each row's end onto the next row's start. Faces 79 and
   112 are 2.3 mm apart, as are 191 and 224, so the 256 faces hold two pairs that overlap.
 
