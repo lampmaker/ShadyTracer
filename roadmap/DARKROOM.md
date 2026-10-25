@@ -128,12 +128,12 @@ Box **Export**: format, options, file name (the stamped name as today, `lib/file
 
 ## 4. Phases (one PR each, each with its change note, help page and tutorial review)
 
-1. **Darkroom tab + viewer** (*built 2026-10-25, 0.next; not yet seen in the page*) — the panel within the viewport group, the column of boxes (today's controls moved in,
+1. **Darkroom tab + viewer** (*built 2026-10-25; seen by the user the same day: "looks great"*) — the panel within the viewport group, the column of boxes (today's controls moved in,
    Render box included), pan/zoom/nearest at > 100 %, before/after and split, pixel readout, histogram, clipping
    warnings, live view held while in front. *No new colour tools yet* — so the user can judge the viewer alone.
    Left out of it, said here so nobody assumes them: the navigator rectangle, the readout's output RGB (it needs
    phase 3's JS mirror of the pipeline), Space-drag (a plain drag pans), clipping per channel (any channel, for now).
-2. **Export** — EXR, HDR, PFM, PNG-16, JPEG/WebP, recipe embedded + sidecar, strip-wise readback.
+2. **Export** (*built 2026-10-25, 0.next; not yet seen in the page*; the recipe is embedded, loading a sidecar waits for phase 4's presets) — EXR, HDR, PFM, PNG-16, JPEG/WebP, recipe embedded + sidecar, strip-wise readback.
 3. **Light-stage tools** — `displayPixel` split; white balance + eyedropper, spot meter, channel gains, tone
    equaliser, Oklab saturation / vibrance / hue, parametric tone curve.
 4. **Display-stage tools** — output transfer, Levels (gamma), Curves editor, CDL wheels, vignette, grain, dither;
