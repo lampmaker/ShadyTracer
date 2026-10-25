@@ -17,8 +17,8 @@
 //   - THE WHOLE RENDERER (R.trace): a few samples of each scene as built, and from the same seeds with a full march put
 //     in its place, with lavapipe on one thread so the queues' order is the same both times (sppm.gpu.mjs says why both
 //     are needed). The pictures compared pixel by pixel -- how many bit for bit, the largest difference -- and,
-//     whatever that count, the two means within their paired error bar. The scenes: the showcase, the material test and
-//     dichroics, baked as the page shows them once the edits stop; Dusty beam's haze box (the march's haze build with
+//     whatever that count, the two means within their paired error bar. The scenes: the showcase, the material test,
+//     dichroics, the Noise library and the Menger cubes, baked as the page shows them once the edits stop; Dusty beam's haze box (the march's haze build with
 //     it); and spheres and a smooth blend by hand, whose shapes give the normals the march no longer asks for.
 // COUNTS AND PICTURES, NOT TIMES (CLAUDE.md): what it saved was measured on the user's card (docs/PERFORMANCE.md).
 //======================================================================================================================
@@ -221,6 +221,9 @@ const BENCH_SCENES = [
     ['the showcase', benchUrl(BENCH_FILES.showcase), CAMERAS.showcase],
     ['the material test', benchUrl(BENCH_FILES.materials), CAMERAS.materials],
     ['dichroics', benchUrl(BENCH_FILES.dichroics), CAMERAS.dichroics],
+    // the reliefs and the warps: two bench scenes this test did not have until shadow rays went distance-only (0.next)
+    ['the Noise library', benchUrl(BENCH_FILES.noise), CAMERAS.noise],
+    ['the Menger cubes', benchUrl(BENCH_FILES.Menger_cubes), CAMERAS.Menger_cubes],
 ]
 for (const [label, url, cam] of BENCH_SCENES) {
     const doc = docOf(url)

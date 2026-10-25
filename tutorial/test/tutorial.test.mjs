@@ -1022,8 +1022,8 @@ for (const [name, { mod }] of modules) {
     ok('ch.21: kit/gpu.js lays out a struct as tinywebgpu does: the small one in both orders, every type, and ShadyTracer\'s UB', agree(Gc.SMALL) && agree(Gc.SMALL_BAD) && agree(Gc.ENGINE_UB)
         && agree([['a', 'f32'], ['m3', 'mat3x3<f32>'], ['b', 'u32'], ['v2', 'vec2<i32>'], ['m2', 'mat2x2<f32>'], ['c', 'f32'], ['m4', 'mat4x4<f32>'], ['v3', 'vec3<u32>'], ['d', 'i32']]))
     const L1 = K.layoutStruct(Gc.SMALL), L2 = K.layoutStruct(Gc.SMALL_BAD), L3 = K.layoutStruct(Gc.ENGINE_UB)
-    ok('ch.21: the page\'s structs: 64 bytes (8 padding), 80 (24), and UB 109 fields in 768 bytes (48)', L1.bytes === 64 && 4 * L1.padWords === 8 && L2.bytes === 80 && 4 * L2.padWords === 24
-        && L3.fields.length === 109 && L3.bytes === 768 && 4 * L3.padWords === 48, `${L3.fields.length} ${L3.bytes} ${4 * L3.padWords}`)
+    ok('ch.21: the page\'s structs: 64 bytes (8 padding), 80 (24), and UB 108 fields in 752 bytes (36)', L1.bytes === 64 && 4 * L1.padWords === 8 && L2.bytes === 80 && 4 * L2.padWords === 24
+        && L3.fields.length === 108 && L3.bytes === 752 && 4 * L3.padWords === 36, `${L3.fields.length} ${L3.bytes} ${4 * L3.padWords}`)
     // lock-step: a group is as long as its slowest lane
     const ls = K.lockstep([1, 5, 2, 2, 3, 3], 2)
     ok('ch.21: lockstep: groups as long as their slowest lane', ls.time === 2 * (5 + 2 + 3) && ls.work === 16 && Math.abs(ls.use - 0.8) < 1e-12)
@@ -1296,21 +1296,21 @@ for (const [name, { mod }] of modules) {
     const L1 = CK.layout(CK.BUILDS[0], 'blocking'), L3 = CK.layout(CK.BUILDS[0], 'once')
     ok('ch.27: blocking, the page frozen for the 13.4 s; all at once, every kernel from 0 and the build ready at the measured 11.2', L1.frozen === 13.4 && L1.bars.at(-1).to.toFixed(1) === '13.4' && L3.frozen === 0 && L3.ready === 11.2 && L3.bars.every(b => b.from === 0))
     ok('ch.27: 0.10.0\'s shade 11.4 to 5.9 s and the revisits 4.2 and 3.0 to 2.0 and 0.56 are the review\'s', rv.includes('| Noise library | 11.4 s | 5.9 s | −48% |') && rv.includes('| Noise library: show it again, hide it again (texts seen before) | 4.2 s, 3.0 s | 2.0 s, 0.56 s |'))
-    // the kernels: the model's sixteen are the engine's table today (the step cache and shadow rays on distance only off, the
-    // photon map on), and exactly the march, surface and occlusion kernels (and the step cache's fill, and the emitter rays'
-    // resolve) declare the scene's uniforms
-    const table = [...rm.slice(rm.indexOf('const wavefrontKernels = '), rm.indexOf('PER-KERNEL GPU TIME')).matchAll(/\['(\w+)', 'prog_/g)].map(m => m[1]).filter(n => n !== 'stepcache_fill' && n !== 'occlude_emit')
+    // the kernels: the model's seventeen are the engine's table today (the step cache off, the photon map on), and exactly
+    // the march, surface, occlusion and emitter-resolve kernels (and the step cache's fill) declare the scene's uniforms
+    const table = [...rm.slice(rm.indexOf('const wavefrontKernels = '), rm.indexOf('PER-KERNEL GPU TIME')).matchAll(/\['(\w+)', 'prog_/g)].map(m => m[1]).filter(n => n !== 'stepcache_fill')
     const mine = Object.keys({ ...CK.FREE, ...CK.sceneKernels(0) })
     const kernelText = name => { const i = wf.indexOf(`export let prog_${name} =`); return i < 0 ? '' : wf.slice(i, wf.indexOf('\nexport ', i + 10)) }
     const sceneful = ['march', 'surface', 'occlude', 'stepcache_fill', 'occlude_emit'].every(n => kernelText(n).includes('computeUniformTypes(scene.uniforms)'))
     const free = ['shade', 'sppm', 'resolve', 'genphotons', 'emit_collect'].every(n => !kernelText(n).includes('computeUniformTypes(scene.uniforms)'))
-    ok('ch.27: the session\'s sixteen kernels are the engine\'s table; march, surface and occlusion hold the scene, shade and the others declare the base uniforms only', table.length === 16 && mine.length === 16 && table.every(n => mine.includes(n)) && sceneful && free
+    ok('ch.27: the session\'s seventeen kernels are the engine\'s table; march, surface, occlusion and its resolve hold the scene, shade and the others declare the base uniforms only', table.length === 17 && mine.length === 17 && table.every(n => mine.includes(n)) && sceneful && free
+        && JSON.stringify(CK.HOLDS) === JSON.stringify(['march', 'surface', 'occlude', 'occlude_emit'])
         && (wf.match(/computeUniformTypes\(scene\.uniforms\)/g) || []).length === 5, `${table.join(' ')} | ${mine.join(' ')}`)
     const P = CK.playSession(), off = CK.playSession(CK.SESSION, { cache: false }), nofree = CK.playSession(CK.SESSION, { free: false })
     const sizesOf = st => Object.entries({ ...CK.FREE, ...CK.sceneKernels(st.size) }).map(([name, size]) => ({ name, size }))
-    ok('ch.27: the session: open 16 compiled; a value nothing; a shape 3 compiled, 13 cached; scene B 3; back and undo all cached; each build predictCompile\'s', P.map(p => `${p.compiled.length}/${p.cached.length}`).join(' ') === '16/0 0/0 3/13 3/13 0/16 0/16'
+    ok('ch.27: the session: open 17 compiled; a value nothing; a shape 4 compiled, 13 cached; scene B 4; back and undo all cached; each build predictCompile\'s', P.map(p => `${p.compiled.length}/${p.cached.length}`).join(' ') === '17/0 0/0 4/13 4/13 0/17 0/17'
         && P.filter(p => p.compiled.length).every(p => p.ms === CP.predictCompile(sizesOf(p).map(k => ({ ...k, cached: !p.compiled.includes(k.name) }))).expectMs), P.map(p => `${p.compiled.length}/${p.cached.length}`).join(' '))
-    ok('ch.27: without the cache every text change compiles all sixteen; with the four declaring the scene\'s uniforms a shape or a scene compiles seven, a revisit still cached', off.map(p => p.compiled.length).join(' ') === '16 0 16 16 16 16' && nofree.map(p => p.compiled.length).join(' ') === '16 0 7 7 0 0')
+    ok('ch.27: without the cache every text change compiles all seventeen; with the four declaring the scene\'s uniforms a shape or a scene compiles eight, a revisit still cached', off.map(p => p.compiled.length).join(' ') === '17 0 17 17 17 17' && nofree.map(p => p.compiled.length).join(' ') === '17 0 8 8 0 0')
     // the four are the ones 0.10.0 changed, and today's base-uniform kernels include them; every kernel has a job written
     const g7 = readFileSync(join(REPO, 'lib/pathtracer/core/genrays.js'), 'utf8'), cl = readFileSync(join(REPO, 'CHANGELOG.md'), 'utf8')
     ok('ch.27: the four kernels are those genrays.js and the 0.10.0 entry name; every kernel of the table has a job', g7.includes('Ray generation has no interest in geometry, and nor\n   have resolve, genphotons and emit_collect') && cl.includes('Ray generation, resolve, the light tracer\'s photons and\n  the emitter list\'s collect pass declared the scene\'s own uniforms')

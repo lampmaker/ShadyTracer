@@ -37,13 +37,14 @@ export function layout(b, how) {
     return { bars, ready: b.seq, frozen: how === 'blocking' ? b.seq : 0 }
 }
 
-/* A SESSION'S KERNELS: a model's inlined sizes, characters, of a build today (16 kernels: the photon map on, the step
-   cache off). The three that hold the scene -- march, surface, occlude: their text is the scene's -- take the scene's
-   size; the rest are the same text for every scene. Sizes chosen near the documents' (shade 113,000 and the optics
+/* A SESSION'S KERNELS: a model's inlined sizes, characters, of a build today (17 kernels: the photon map on, the step
+   cache off). The four that hold the scene -- march, surface, occlude and occlude_emit, the resolve of the emitter rays
+   the occlusion kernel hands on (0.next): their text is the scene's -- take the scene's size; the rest are the same text
+   for every scene. Sizes chosen near the documents' (shade 113,000 and the optics
    bench's surface 252,000 after 0.20.8, roadmap/ARCHITECTURE.md); not measured for these scenes. */
 export const FREE = { genrays: 12000, shade: 113000, flip: 900, prep_march: 900, prep_shade: 900, prep_occlude: 900, shadow_flip: 900,
     resolve: 8000, genphotons: 40000, lt_build: 6000, emit_collect: 10000, emit_publish: 1500, sppm: 30000 }
-export const HOLDS = ['march', 'surface', 'occlude']
+export const HOLDS = ['march', 'surface', 'occlude', 'occlude_emit']
 /* THE FOUR THAT ONCE DECLARED THE SCENE'S UNIFORMS, though none reads one: before 0.10.0 their text changed with the
    scene's uniform list (CHANGELOG 0.10.0, genrays.js THE BASE UNIFORMS ONLY). The other scene-free kernels never did. */
 export const ONCE_SCENE = ['genrays', 'resolve', 'genphotons', 'emit_collect']
@@ -52,12 +53,13 @@ export const JOBS = {
     genrays: 'the camera\'s rays, one a pixel', march: 'steps each ray to the surface it hits', surface: 'what was hit: its normal, its material, the medium beyond',
     shade: 'the bounce and the light at each hit', flip: 'swaps the ray queues for the next iteration', prep_march: 'sizes the next march from the queue',
     prep_shade: 'sizes the next shade', occlude: 'marches the shadow rays: blocked or not', prep_occlude: 'sizes the next occlusion',
+    occlude_emit: 'the glow a shadow ray aimed at a glowing surface met, where it was blocked',
     shadow_flip: 'swaps the shadow-ray queues', resolve: 'adds the sample into the picture', genphotons: 'the light tracer\'s photons, from the lights',
     lt_build: 'the light tracer\'s map of where to aim', emit_collect: 'finds the glowing surfaces', emit_publish: 'lists them for aiming at',
     sppm: 'the photon map: stores and gathers',
 }
 /** a scene's own kernels' sizes at a scene size `s` (its SDF, in characters, inlined once) */
-export const sceneKernels = s => ({ march: 20000 + s, surface: 40000 + 2 * s, occlude: 18000 + s })
+export const sceneKernels = s => ({ march: 20000 + s, surface: 40000 + 2 * s, occlude: 18000 + s, occlude_emit: 16000 + s })
 
 /* THE STEPS OF A SESSION: what each does to the scene's text. `scene` names the scene, `size` its SDF's size, `rev`
    its structure (a shape added is another text; undone, the text it had). */

@@ -39,7 +39,7 @@
       ShadyTracer's developer, who runs its tests on their own cards and pastes the numbers back: here an NVIDIA GTX
       1080 Ti, of the generation NVIDIA calls Pascal; elsewhere a newer card, an Ampere. ShadyTracer's versions are
       numbered like 0.9.2 and 0.10.0, and the middle number counts up: 0.10 comes after 0.9.) That version, 0.9.2, had
-      13 kernels; today there are 16. 13.4 seconds in all, one after another, and the page frozen for every one of them. The Menger cubes showed what that
+      13 kernels; today there are 17. 13.4 seconds in all, one after another, and the page frozen for every one of them. The Menger cubes showed what that
       looks like: raising their iteration count froze the tab with no error, and the "recompiling…" line meant to say
       so never reached the screen, because the compile began before the page could draw it.</p>
     <p data-step="build:turn">The other way, <code>createComputePipelineAsync</code>, does the same work on another
@@ -77,7 +77,7 @@
   <div class="prose">
     <h2><span class="n">2</span>Compile only what changed</h2>
     <p data-step="session:open">A session in the <a data-g="builder">builder</a>, ShadyTracer's scene editor, step by step. Opening a scene
-      compiles every kernel, today sixteen; the table below says what each does, and pointing at a row says it too.
+      compiles every kernel, today seventeen; the table below says what each does, and pointing at a row says it too.
       Each build's time is predicted the engine's way (section 3), as its slowest kernel's, from kernel sizes that are
       a model's, not measured. Moving a shape compiles nothing (chapter 24: a value is written into the uniform buffer,
       the memory of numbers the kernels read).</p>
@@ -88,6 +88,8 @@
         rays to see whether they are blocked: <strong>they hold the scene</strong> (chapters 2, 14)</td></tr>
       <tr><td><code>surface</code></td><td>what was hit: its normal, its material, the medium beyond: <strong>holds the
         scene</strong></td></tr>
+      <tr><td><code>occlude_emit</code></td><td>the glow a shadow ray aimed at a glowing surface met, where it was blocked
+        (the occlusion kernel asks only distances, chapter 26): <strong>holds the scene</strong></td></tr>
       <tr><td><code>shade</code></td><td>the bounce and the light at each hit (chapters 13, 14)</td></tr>
       <tr><td><code>flip</code>, <code>shadow_flip</code>, <code>prep_march</code>, <code>prep_shade</code>,
         <code>prep_occlude</code></td><td>the wavefront's bookkeeping: swap the queues of rays for the next iteration,
@@ -99,9 +101,9 @@
         at (chapter 16)</td></tr>
       <tr><td><code>sppm</code></td><td>the photon map: stores the photons and gathers them (chapter 19)</td></tr>
     </table>
-    <p data-step="session:add">Adding a shape changes the scene's text. Only three kernels hold the scene, the march,
-      the surface kernel and occlusion (and the step cache's fill, chapter 26, when that is on), so only they compile
-      again; the other thirteen are asked for with text the
+    <p data-step="session:add">Adding a shape changes the scene's text. Only four kernels hold the scene, the march,
+      the surface kernel, occlusion and its emitter rays' resolve (and the step cache's fill, chapter 26, when that is
+      on), so only they compile again; the other thirteen are asked for with text the
       device has compiled before, and come from the <a data-g="pipeline-cache">pipeline cache</a>. The build still takes
       as long as its slowest kernel, the surface one, which holds the scene: what the cache saves here is the other
       kernels' work alongside it, not the wait.</p>
@@ -119,13 +121,13 @@
       top, the <a data-g="uniform">uniforms</a> it is handed, and tinywebgpu, ShadyTracer's WebGPU library, refuses a
       value no declaration names. The renderer handed every kernel the scene's whole list, so these four declared it,
       and another scene, or an edit that changed the list, was new text for them, compiled again for values none of
-      them reads. Here, cache on: opening scene B compiles seven kernels, not three (the build no longer, since the surface kernel is
+      them reads. Here, cache on: opening scene B compiles eight kernels, not four (the build no longer, since the surface kernel is
       still its slowest: the four cost work beside it, not the wait). Since 0.10.0 those four declare
       only the renderer's own uniforms and are handed only those (shade and the photon map's kernel are made the same
       way), so their text is the same for every scene.</p>
   </div>
   <figure class="fig" data-fig="session">
-    <figcaption>Six steps of a session (columns) and today's sixteen kernels (rows): a kernel
+    <figcaption>Six steps of a session (columns) and today's seventeen kernels (rows): a kernel
       <span data-say="blocked">red</span>: compiled, and it holds the scene; <span data-say="light">orange</span>:
       compiled; <span data-say="cam">blue</span>: from the cache; faint: nothing to do, or a step not reached yet. Below each step, the build's time as the
       engine's <code>compileprogress.js</code> predicts it from the kernels' sizes (a model's sizes, chosen near the
@@ -205,7 +207,7 @@
          data-why="A pipeline is a compiled kernel ready to run (a render pipeline draws, a compute pipeline computes). The driver is the card maker's software that does the compiling. A promise is JavaScript's value that arrives later; await waits for it." data-hash="4dd333b7"></pre>
     <p>Building all at once, in the renderer:</p>
     <pre data-src="lib/pathtracer/core/raytrace_main.js" data-sym="/* BUILT IN PARALLEL, AND THE BIG FOUR OFF-THREAD." data-to="that is still compiling parks the values and replays them when it arrives. */"
-         data-why="'The four kernels that inline the scene' is out of date: three hold it now (march, surface, occlusion), and shade none. The table has sixteen kernels by default, not nine. Promise.all waits for a whole list of promises together. rebind() hands every kernel its buffers through tinywebgpu's setResources, which a kernel still compiling keeps until it is ready." data-hash="5453a288"></pre>
+         data-why="'The four kernels that inline the scene' is out of date: four hold it now, but not those four (march, surface, occlusion and the resolve of its emitter rays), and shade none. The table has seventeen kernels by default, not nine. Promise.all waits for a whole list of promises together. rebind() hands every kernel its buffers through tinywebgpu's setResources, which a kernel still compiling keeps until it is ready." data-hash="5453a288"></pre>
     <p>The kernels that hold no scene:</p>
     <pre data-src="lib/pathtracer/core/genrays.js" data-sym="/* THE BASE UNIFORMS ONLY, not the scene's." data-to="forCompute). `scene` stays a parameter so that no caller changes. */"
          data-why="Section 2's four. computeUniformTypes(scene.uniforms) writes the scene's declarations, ComputeUniformTypes alone the base ones. R.trace is the renderer's call that traces a frame and hands the kernels their values; forCompute picks the base names for these four. Shade joined them in 0.20.8. check-shaders is the repository's shader check, run before every commit; its second pass builds every kernel against every scene." data-hash="2107fced"></pre>

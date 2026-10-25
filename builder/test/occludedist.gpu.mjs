@@ -1,23 +1,26 @@
 //======================================================================================================================
 // SHADOW RAYS ON DISTANCE ONLY ON A REAL WEBGPU (lib/pathtracer/core/wavefront.js prog_occlude's distOnly, prog_occlude_emit
-// and prog_prep_occlude_indirect's `emit`; the developer setting occludeDist, 0.next). Run:
+// and prog_prep_occlude_indirect's `emit`; 0.next, the renderer's always). Run:
 //   node builder/test/occludedist.gpu.mjs
 //
 // OPTIONAL, AND LOUD ABOUT IT, as marchdist.gpu.mjs is: the `webgpu` package and a Vulkan driver (lavapipe), or it says
 // so and passes.
 //
-// No change to the picture, the user's requirement for the march (2026-10-25) and so for this. What is compared:
+// No change to the picture, the user's requirement for the march (2026-10-25) and so for this. It was the developer setting
+// occludeDist for one run of Tests > occludedist, and is always on since; the full kernel is still prog_occlude with no
+// option. What is compared:
 //   - THE KERNELS, SHADOW RAYS AS THE SCENES MAKE THEM: from where the bench scenes' camera rays end (as code, the optics
 //     bench as data, a haze box), towards the sun, through the full occlusion kernel and the distance-only one, round
-//     after round as R.trace chains them. Every ray's deposit the same, bit for bit.
+//     after round as R.trace chains them. Every ray's deposit the same, bit for bit, and every round's queue: a ray that
+//     took more steps would leave it later, and at a sample's last round be cut and counted unoccluded.
 //   - THE EMITTER RAYS, the one shadow ray that asks a material: a scene by hand with glowing panels -- one whose glow asks
 //     for its own point (the capture trip) -- an occluder and a floor, emitter shadow rays from the floor towards the
 //     panels, some blocked by the occluder, with and without a haze box. Through the full kernel, and through the
 //     distance-only kernel with the prep and the resolve between its rounds and after the last. The frame buffer the
 //     same, bit for bit; rays marked and resolved (the mode ran); none dropped past the queue's cap.
-//   - THE WHOLE RENDERER (R.trace): a few samples with the setting off and on, from the same seeds, lavapipe on one
-//     thread (sppm.gpu.mjs says why both). Every pixel bit for bit -- the bench scenes baked, Dusty beam, and the glowing
-//     panels by hand, whose emitters discovery finds, so emitter shadow rays run.
+//   - THE WHOLE RENDERER (R.trace): a few samples as built, and from the same seeds with the full occlusion kernel put in
+//     its place, lavapipe on one thread (sppm.gpu.mjs says why both). Every pixel bit for bit -- the bench scenes baked,
+//     Dusty beam, and the glowing panels by hand, whose emitters discovery finds, so emitter shadow rays run.
 // COUNTS AND PICTURES, NOT TIMES (CLAUDE.md): what it saves is the card's to say (Tests > occludedist).
 //======================================================================================================================
 import { readFileSync } from 'node:fs'
@@ -187,8 +190,8 @@ async function shadowRounds(K, bag, rays0, buffers, rounds = 300) {
     K.flip.resources = { counters: counters.b }
     if (dist) K.emit.resources = { shadowBuffer0: sb0.b, shadowBuffer1: sb1.b, frame_u32: frame.b, counters: counters.b, ...buffers }
     counters.w(counterWords({ 6: n, 3: 0, 8: n }))       // the read side (0) holds the rays, the cap one a ray
-    let marked = 0, resolvedRounds = 0, over = 0
-    const side = c => [c[6], c[7]]
+    let marked = 0, resolvedRounds = 0, over = 0, cut = 0
+    const side = c => [c[6], c[7]], queue = []
     for (let p = 0; p < rounds; p++) {
         K.occl.uniforms = { ...bag, lastpass: 0 }
         if (dist) K.emit.uniforms = { ...bag, lastpass: 0 }
@@ -197,7 +200,7 @@ async function shadowRounds(K, bag, rays0, buffers, rounds = 300) {
         K.occl.dispatchIndirect(indirect.b, 0)
         const c = await counters.r(Uint32Array)
         const readfrom = c[3], next = side(c)[1 - readfrom]
-        over = Math.max(over, next - n)
+        over = Math.max(over, next - n); queue.push(next); cut = c[10]
         if (dist) { const a = await readEmit(); if (a[3]) marked++ }
         if (next === 0) break
         K.flip.dispatch(1, 1, 1)
@@ -208,7 +211,7 @@ async function shadowRounds(K, bag, rays0, buffers, rounds = 300) {
     }
     const f = await frame.r(Uint32Array)
     for (const b of [sb0, sb1, frame, splat, counters, indirect, emitArgs, probe]) b.b.destroy()
-    return { bits: Array.from(f), marked, resolvedRounds, over }
+    return { bits: Array.from(f), marked, resolvedRounds, over, queue, cut }
 }
 async function kernelsFor(S, haze) {
     const K0 = { occl: await prog_occlude(WG, S, 64, { haze }), prep: await prog_prep_occlude_indirect(WG, 64), flip: await prog_shadow_flip(WG) }
@@ -233,8 +236,13 @@ async function sceneShadows(label, S, buffers, extra, cam) {
     const { K0, K1 } = await kernelsFor(S, haze)
     const a = await shadowRounds(K0, bag, raysOf(sp, sd, 1), buffers), b = await shadowRounds(K1, bag, raysOf(sp, sd, 1), buffers)
     const differ = sameBits(a.bits, b.bits), lit = a.bits.filter((v, i) => i % 4 === 0 && v !== 0).length
-    say(`  ${label}: ${sp.length / 3} shadow rays, ${lit} lit; on distance only, ${differ} frame words differ`)
+    say(`  ${label}: ${sp.length / 3} shadow rays, ${lit} lit, ${a.queue.length} rounds; on distance only, ${differ} frame words differ`)
     ok(`${label}: every shadow ray's deposit on distance only bit for bit the full kernel's`, sp.length > 0 && differ === 0, `${differ} words`)
+    /* ...AND EVERY RAY ENDING IN THE SAME ROUND, none cut: a ray that took more steps on distance only would leave the
+       queue later, and at the renderer's last round be cut and counted unoccluded -- the user's Pascal log (64535ad) had
+       the queue draining later on the Menger cubes and the Noise library, two scenes this test did not have then */
+    ok(`${label}: ...each round's queue the same both ways, and as many cut by maxiter`, a.queue.join() === b.queue.join() && a.cut === b.cut,
+        `full ${a.queue.join(' ')} cut ${a.cut}; distance only ${b.queue.join(' ')} cut ${b.cut}`)
     ok(`${label}: ...and no emitter ray among them marked (none was sent)`, b.marked === 0 && b.resolvedRounds === 0)
 }
 const docOf = url => M.parse(readFileSync(fileURLToPath(url), 'utf8'))
@@ -243,6 +251,9 @@ const BENCH_SCENES = [
     ['the showcase', benchUrl(BENCH_FILES.showcase), CAMERAS.showcase],
     ['the material test', benchUrl(BENCH_FILES.materials), CAMERAS.materials],
     ['dichroics', benchUrl(BENCH_FILES.dichroics), CAMERAS.dichroics],
+    // the two whose queues drained later in the user's log (above, sceneShadows)
+    ['the Noise library', benchUrl(BENCH_FILES.noise), CAMERAS.noise],
+    ['the Menger cubes', benchUrl(BENCH_FILES.Menger_cubes), CAMERAS.Menger_cubes],
 ]
 for (const [label, url, cam] of BENCH_SCENES) {
     const doc = docOf(url)
@@ -310,7 +321,7 @@ await emitterRays('glowing panels by hand', panels('od-panels'))
 await emitterRays('glowing panels by hand, in a haze box', panels('od-panels-haze', box([0, 0, 0.6], [1.2, 1.2, 0.6], 2.0, [0.8, 0.8, 0.8], 0.3)))
 
 /*----------------------------------------------------------------------------------------------------------------------
-  THE WHOLE RENDERER: the picture with the setting off and on, from the same seeds
+  THE WHOLE RENDERER: the picture as built and with the full occlusion kernel put in, from the same seeds
 ----------------------------------------------------------------------------------------------------------------------*/
 const W = 32, H = 24, SAMPLES = 6
 const target = WG.device.createTexture({ size: [W, H], format: WG.format, usage: GPUTextureUsage.RENDER_ATTACHMENT }).createView()
@@ -326,7 +337,14 @@ const bagFor = (scene, cam, over) => {
         ...derived, invView: EC.invView, invProjection: EC.invProjection, camPos: EC.camPos, camLens: EC.camLens, camtype: 0 })
         .filter(([k]) => k in U.ComputeUniformTypes || k in U.UniformSpec || k in (scene.uniforms || {})))
 }
-const picture = async (scene, cam, over, seed) => {
+/* `full`: the full occlusion kernel put in the renderer's place, as it was before. It declares no emitArgs, which the
+   renderer binds to its own (raytrace_main.js rebind) -- tinywebgpu refuses a name a pipeline does not declare, so that
+   one binding is left out on the way in. The prep and the resolve stay: no ray is marked, so the resolve is zero groups. */
+const fullOcclusion = async (R, scene) => {
+    const k = await prog_occlude(WG, scene, R.wvf_wg, { haze: scene.haze ? 1 : 0 }); await k.ready
+    return new Proxy(k, { set(t, key, v) { if (key === 'resources') { const { emitArgs, ...rest } = v; t.resources = rest } else t[key] = v; return true } })
+}
+const picture = async (scene, cam, over, seed, full = false) => {
     const Q = { w: W, h: H, resetframecount: 1 }
     const R = RAYTRACER(WG, null, Q, scene)
     R.hud = () => { }
@@ -335,7 +353,8 @@ const picture = async (scene, cam, over, seed) => {
     const bag = bagFor(scene, cam, over)
     R.kernelOptions = R.kernelOptionsOf(bag)
     await quietly(() => R.applyKernelOptions())
-    const built = { ...R.builtOptions, emit: !!R.prog_occlude_emit }
+    if (full) { R.prog_wvfocclude = await fullOcclusion(R, scene); R.rebind() }
+    const occludeText = R.prog_wvfocclude.wgsl, emit = !!R.prog_occlude_emit
     reseed(seed)
     try {
         Q.resetframecount = 1
@@ -346,7 +365,7 @@ const picture = async (scene, cam, over, seed) => {
     } catch (e) { err = e?.message ?? String(e) }
     const a = await R.accumulation_u32.r(W * H * 16, 0, Uint32Array)
     const f = new Float32Array(a.buffer, a.byteOffset, a.length)
-    return { err, built, emitters: R.emitCount, bits: Array.from(a), img: Array.from({ length: W * H }, (_, i) => LUMA[0] * f[i * 4] + LUMA[1] * f[i * 4 + 1] + LUMA[2] * f[i * 4 + 2]) }
+    return { err, occludeText, emit, emitters: R.emitCount, bits: Array.from(a), img: Array.from({ length: W * H }, (_, i) => LUMA[0] * f[i * 4] + LUMA[1] * f[i * 4 + 1] + LUMA[2] * f[i * 4 + 2]) }
 }
 const camOf = (orbit, aspect) => {
     const cam = CAMERA({ aspect, fov: orbit.fov ?? 40, up: [0, 0, 1] })
@@ -355,9 +374,9 @@ const camOf = (orbit, aspect) => {
 }
 async function compare(label, scene, orbit, over = {}, emitters = false) {
     const cam = camOf(orbit, W / H)
-    const off = await picture(scene, cam, { ...over, occludeDist: 0 }, 7), on = await picture(scene, cam, { ...over, occludeDist: 1 }, 7)
-    ok(`${label}: both pictures traced, built as asked (off, then on with the resolve)`, !off.err && !on.err && off.built.occludeDist === 0 && !off.built.emit
-        && on.built.occludeDist === 1 && on.built.emit, `${off.err ?? ''} ${on.err ?? ''}`)
+    const off = await picture(scene, cam, over, 7, true), on = await picture(scene, cam, over, 7)
+    ok(`${label}: both pictures traced, the renderer's occlusion on distance only with its resolve and the full one put in its place`,
+        !off.err && !on.err && on.emit && /RAY_HIT_TARGET;/.test(on.occludeText) && !/RAY_HIT_TARGET;/.test(off.occludeText), `${off.err ?? ''} ${on.err ?? ''}`)
     if (off.err || on.err) return
     const px = W * H
     let same = 0, worst = 0, where = ''
@@ -373,7 +392,7 @@ async function compare(label, scene, orbit, over = {}, emitters = false) {
        resolve runs before the next round), and the frame adds its floats atomically in the order they come -- so with
        emitters about, a pixel can be the same terms summed in another order, a few units of f32's last place apart
        (the showcase, 2026-10-25: 2 of 768 pixels, 1.5e-7). Without emitters, nothing comes later: bit for bit. */
-    ok(`${label}: every pixel bit for bit as off${on.emitters > 0 ? ', or the same sum in another order (within 1e-6)' : ''}`,
+    ok(`${label}: every pixel bit for bit as with the full kernel${on.emitters > 0 ? ', or the same sum in another order (within 1e-6)' : ''}`,
         same === px || (on.emitters > 0 && worst <= 1e-6), `${same} of ${px}, ${worst}`)
     if (emitters) ok(`${label}: ...emitters found, so emitter shadow rays ran`, on.emitters > 0 && off.emitters > 0, `${off.emitters} ${on.emitters}`)
 }

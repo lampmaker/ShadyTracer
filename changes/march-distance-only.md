@@ -31,7 +31,7 @@ into the world frame, the material, the solid the point is in -- and read one nu
   - the hit the surface kernel writes back is the full march's, field by field;
   - the whole renderer's pictures, with this march and with the full one put in its place, are the same pixel for pixel.
 - **What stays the same:** the Optics page's trace keeps the full march, because its shading reads the march's hit
-  directly. Shadow rays are unchanged.
+  directly. Shadow rays have an entry of their own.
 
 **What to look at:** your scenes, as ever: nothing in the picture should differ from before, and a heavy scene should
 be quicker. The Performance box has one row fewer.
