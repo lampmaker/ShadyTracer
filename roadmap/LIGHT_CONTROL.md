@@ -212,6 +212,23 @@ What it settles:
   501.3 ms a sample, and the second run's drift row was 17% over its row 1. So a difference under about 20% between two
   runs says nothing on this machine; the ratios within a run held (row 4 / row 6 2.6 and 2.3, row 7 / row 6's march 1.43
   and 1.44).
+**Third round: the window pays.** Measured on the user's Pascal card, f4a2a57, 2026-10-25, with each copy measured as one
+and bounded by its box:
+
+| row | a sample | march | occlusion | done in pass 1 |
+|---|---|---|---|---|
+| 4: ring, window | 119.8 ms | 51.4 | 19.8 | 58% |
+| 6: ring, window off | 389.4 ms | 269.7 | 79.2 | 79% |
+| 7: ring, every copy by the switch | 471.5 ms | 321.7 | 105.5 | 79% |
+| 2: row, window | 52.1 ms | 8.7 | 5.3 | 88% |
+| 5: row, window off | 73.7 ms | 12.6 | 5.3 | 89% |
+| 3: the 16 placed by hand | 47.8 ms | 9.2 | 5.8 | 92% |
+| 1: one light | 55.7 ms | 7.5 | 5.9 | 95% |
+
+- **The ring:** 3.3 times faster than with every copy walked, its march 5.2 times. At c9577ae it was 2.6 times slower.
+- **The row of 16:** it marches as the 16 placed by hand do (8.7 against 9.2 ms).
+- **Still open:** the ring finishes fewer rays in the first pass than without the window (58% against 79%), the extra
+  steps the angle bound above would go after. Not pursued: the user stopped here (2026-10-25).
 - **Seen on the way (read in the sources):** the bench's ring puts each row's end onto the next row's start. Faces 79 and
   112 are 2.3 mm apart, as are 191 and 224, so the 256 faces hold two pairs that overlap.
 

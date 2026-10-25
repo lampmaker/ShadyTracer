@@ -1095,7 +1095,9 @@ the scene:** WebGPU takes WGSL source only, and there is no compiled shader form
    the rest steps (34% of row 4's rays done in the first 32-step pass against 77%). Their cause, counted: a node in an
    array was measured as all its copies (boxes.js toOwnLocalOf now measures it as one), and the window bounded each copy
    by a sphere round that box (now by the box). Counted with both put right, 29.6 steps a camera ray against 21.4; its
-   speed not yet measured (roadmap/LIGHT_CONTROL.md, second round).
+   measured at f4a2a57 (the user's Pascal): row 4 119.8 ms a sample against row 6's 389.4, march 51.4 against 269.7 --
+   the window 3.3 times faster on 256 copies; the row of 16 marching as the 16 by hand (roadmap/LIGHT_CONTROL.md, third
+   round).
    **Before and after groups are data (2026-10-04, 0.14.0), with no file format change:** the kind is read off the
    code (codegen.js `isBefore`, `isAfter`), so a customer's code of either shape is one too, and an old file needs no
    upgrade. A before group (twist, bend, repeat, mirror) is a record whose code is a function `bef_<k>` returning the

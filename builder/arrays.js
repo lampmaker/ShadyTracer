@@ -33,6 +33,7 @@
 // user's Pascal card marched the bench's ring of 256 lights in 1007.5 ms a sample with the window, 281.0 without. A
 // sphere is far from a flat or a long content, and the march took its distance for a surface's: counted on lavapipe, 47
 // steps a camera ray against 22 with the bench's measured boxes, 30 against 21 with both put right (arraywindow.gpu.mjs).
+// With both put right, measured on the same card (f4a2a57): 119.8 ms a sample with the window, 389.4 without.
 //
 // WHERE: only where culling is -- the render copy (never the pick, which the boxes are measured by, nor a limiter's optics
 // copies), an array with only plain groups and arrays above it (a lower bound on a shape is not one on what it is joined

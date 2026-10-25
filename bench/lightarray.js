@@ -37,6 +37,8 @@
 // boxes, and these rows measure theirs -- which held every copy of a node in an array (boxes.js toOwnLocalOf). Counted
 // with the bench's measured boxes, 47.1 steps a camera ray against 21.9; measured as one copy and bounded by its box
 // (arrays.js), 29.6 against 21.4.
+// MEASURED (the user's Pascal, f4a2a57, 2026-10-25), those two in: row 4 119.8 ms a sample (march 51.4) against row 6's
+// 389.4 (269.7) -- the window 3.3 times faster; row 2's march 8.7 against row 5's 12.6, and the 16 by hand's 9.2.
 // The picture is the same light spread differently: what it looks like is the user's to judge (BENCH.lightarray.view(n)).
 //======================================================================================================================
 

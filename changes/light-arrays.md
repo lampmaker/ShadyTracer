@@ -34,5 +34,7 @@ lumens, and 16 copies against the same 16 lights placed by hand.
   circular array's do.
 - The Optics page: each copy is a source ("… (copy 3 of 12)"), and the flux in the analysis is the copies' sum.
 - Give two copies different scales: the panel refuses it and names the light.
-- Run **Tests › Benchmarks › lightarray** and paste the report. It says whether picking among 256 faces costs anything
-  on your card (`roadmap/LIGHT_CONTROL.md`, *Speed*).
+- **Tests › Benchmarks › lightarray:** picking among 256 faces costs nothing measurable. Measured: shade, which holds
+  light sampling's pick, read 11.6 ms a sample for one face and for 256 on Pascal (f4a2a57), and 20-21 ms for both on
+  Ampere (213642c). What the copies did cost was evaluating every one at every step, which the window of an array
+  addresses (`changes/array-window.md`).

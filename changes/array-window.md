@@ -1,7 +1,9 @@
 bump: minor
 
-**A row or a ring of copies costs about what its nearest copies cost.** Every copy of an array used to be evaluated at
-every step of every ray. Measured on the user's Ampere card (Tests › Benchmarks › lightarray, 213642c): a floor under
+**A row or a ring of copies costs about what its nearest copies cost.** Measured on the user's Pascal card (Tests ›
+Benchmarks › lightarray, f4a2a57): 256 copies of a small light in a ring of rows took 119.8 ms a sample, against 389.4
+with every copy walked, and a row of 16 marched as 16 lights placed by hand do. Every copy of an array used to be
+evaluated at every step of every ray. Measured on the user's Ampere card (Tests › Benchmarks › lightarray, 213642c): a floor under
 256 copies of one small light took 465 ms of march and 160 ms of occlusion a sample, against 12 and 8 ms for one light.
 Light sampling's pick of a face stayed flat at 20 ms, so the copies were the whole cost.
 
@@ -16,7 +18,7 @@ the group's x, y or z axis) are evaluated only near the copy closest to the poin
   whose box is not measured yet.
 - A copies edit that turns a row or a ring into another shape compiles again. One that keeps it is live, as before.
 
-**The first version of the window was slower, for two reasons, both now addressed (whether enough is the next run's to say):**
+**The first version of the window was slower, for two reasons, both fixed before the measurement above:**
 - **Measured on the user's Pascal card (a81cac9):** the ring of 256 marched in 1007.5 ms a sample with the window,
   against 281.0 with it off.
 - **Each step cost more.** The loop fetched each copy through a switch on a number that differs from pixel to pixel, and
@@ -43,11 +45,9 @@ row of 9.
 
 **What to look at:**
 - **Tests › Benchmarks › lightarray:**
-  - Row 4 (16 × 16 in a ring of rows) against row 6 (the same, window off) says what the window saves on your card.
-    At c9577ae on Pascal they read 1063.7 and 406.0 ms a sample.
-  - Row 4's first march pass: the share of its rays shaded there against row 6's (34% against 77% at c9577ae) says
-    whether the extra steps have gone.
-  - Row 7 against row 6 is what the switch cost the first version (399.6 against 279.3 ms of march at c9577ae).
+  - Row 4 (16 × 16 in a ring of rows) against row 6 (the same, window off) says what the window saves on your card:
+    119.8 against 389.4 ms a sample on Pascal at f4a2a57.
+  - Row 7 against row 6 is what the switch cost the first version (321.7 against 269.7 ms of march at f4a2a57).
 - **The pictures:** any arrayed scene should look as it did, its copies never clipped or missing. Look at the
   Parametric part example's fins, the LED ring, and a row of lights seen close.
 - **A copy moved off a row:** in the group's copies box, change one copy's place by hand. The scene recompiles and every
