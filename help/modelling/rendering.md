@@ -120,10 +120,19 @@ goes straight back to the editable build.
 
 ## Saving a picture
 
-**File › Save picture…** renders offscreen at its own size, up to 16 384 pixels on a side, with its own
-number of samples. You can stop it early. The render is kept as light, so you can choose its exposure, tone curve
-and grading on a preview afterwards, and save it as often as you like. Each save is a file of its own: the name you
-give, with the date and time it was saved after it (`render-2026-10-19_14-03-22.png`).
+**File › Save picture…** opens the **Darkroom**, a tab beside the picture. Its boxes on the right: **Render** renders
+offscreen at its own size, up to 16 384 pixels on a side, with its own number of samples (you can stop it early);
+**Develop** chooses the exposure, tone curve and grading, with a histogram of what will be saved on top; **Save** writes
+the PNG. The render is kept as light, so you can develop it and save it as often as you like. Each save is a file of its
+own: the name you give, with the date and time it was saved after it (`render-2026-10-19_14-03-22.png`).
+
+The render fills the rest of the tab. Turn the mouse wheel to zoom where the cursor is, drag to move, double-click for
+100 % (one pixel of the picture on one pixel of the screen) and again for the whole picture. The keys, with the picture
+clicked: **0** the whole picture, **1** 100 %, **2** 200 %, **+** and **−**, the arrows to move. Under the cursor: the
+pixel's place and its light in cd/m². **Before** (or holding the `\` key) shows the picture as the view showed it;
+**Split** shows that on the left and yours on the right, with a line to drag. **Clipping** stripes what is white in red
+and what is black in blue. While the Darkroom covers the picture, the picture stops rendering, and goes on when you
+come back to it.
 
 ## Animation and video
 
