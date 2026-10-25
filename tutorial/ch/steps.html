@@ -272,6 +272,21 @@
         ON, 0.29.0). The user asked for exactly that: "make sure that all these different options, even when turned off,
         dont impose an overhead".</p>
     </div>
+    <div data-claim="code">
+      <p><strong>A step that asks only the distance.</strong> Every step of the march asked the scene for its whole answer
+        (each shape's normal, turned into the world, the material, the solid the point is in) and read one number of it.
+        With the developer setting marchDist on (0.next), the march is built against a second <code>add_new</code> and
+        <code>fold</code> that keep the nearest surface's distance and nothing else, and the surface kernel asks for the
+        whole answer once, at the ray the march stopped, on a trip of the loop it already had (<code>scene_api.js</code>,
+        FOLD_DIST; <code>wavefront.js</code>, THE HIT ITSELF). The distance is the same expression, so the steps are the
+        same: on a software GPU every camera ray ended in the same place, bit for bit, and every pixel of five scenes'
+        pictures was the same (<code>builder/test/marchdist.gpu.mjs</code>). Off by default, and then not in the kernels.</p>
+    </div>
+    <div data-claim="inferred">
+      <p><strong>A step that asks only the distance: how much it saves.</strong> What a step no longer computes is the
+        shapes' normal work, so a scene of spheres, lenses and smooth blends should gain more than one of plain boxes, whose
+        distance comes with no normal at all. Not measured: Tests &gt; marchdist, each bench scene off and on, says.</p>
+    </div>
     <div data-claim="inferred">
       <p><strong>Boxes on shelled reliefs.</strong> In this page's model, a relief in its shell costs about its box test
         when the ray is far, so its box saves nothing and shortens steps. Not measured on a card: the culling rows all

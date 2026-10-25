@@ -13,6 +13,26 @@ true?"). A plan built on inferences written as facts was reverted (commit fdc333
 it had called one scene's slow render "this architecture's full-resolution cost", which the user's
 own numbers contradict.
 
+## STATUS (2026-10-25) — the march on distance only, built, NOT measured on a card
+
+The user asked (2026-10-24) which techniques could make rendering faster.
+- **Over-relaxation, the list's first step, is gone.** The user saw the picture change with it (below, under
+  Rejected).
+- **The march on distance only, built (0.next)** as the developer setting `marchDist`, off by default. It is review
+  #7 of `PERFORMANCE_REVIEW.md`, without the occlusion half.
+  - Every march step asked the scene for its whole answer and read one number of it (read in code: `wavefront.js`
+    prog_march, `abs(hit.s.w)`).
+  - With it on, the march is compiled against a distance-only `add_new` and `fold` (`scene_api.js` FOLD_DIST), and
+    the surface kernel asks for the whole hit once, at the ray the march stopped (`prog_surface`, THE HIT ITSELF).
+- **The picture does not change.** On lavapipe (`builder/test/marchdist.gpu.mjs`) every camera ray ends in the same
+  state, in the same steps and at the same place, bit for bit. The whole renderer's pictures off and on from the same
+  seeds are the same pixel for pixel.
+- **What it saves is inferred:** each shape's normal work and its turn into the world frame, the material, medium and
+  capture bookkeeping at every step. A box from `sd()` has no normal to save.
+- **The instrument: Tests › marchdist**, each bench scene off and on. Its march and surface columns decide the default.
+- **Not yet: the occlusion kernel.** An emitter shadow ray needs the material where it is blocked. If the march
+  gains, a distance-only occlusion with that answer made once is the next step.
+
 ## STATUS (2026-10-16) — a glass-and-light scene: what it runs, what went (0.61.2), what to measure next
 
 The user asked (2026-10-16) whether render speed can be improved without losing anything of the picture, on
@@ -142,6 +162,10 @@ reading left over from another trace: the map ran no photons there (batches 1). 
 - an allow-list step-cache key;
 - dropping stepscale;
 - thinning the stored photons as a fix for the cut, which keeps the brightest first landings capped.
+- over-relaxed sphere tracing (Keinert et al. 2014, steps of 1.3-1.6 times the safe distance, checked and taken back):
+  built 2026-10-24, removed 2026-10-25 because the user's picture changed with it on. A lavapipe test of every camera and
+  shadow ray's end on six scenes and a grazed thin plate had passed it, so it is not to be built again without a test
+  that reproduces what the user saw (the commit that removed it says what it was).
 
 ## STATUS (2026-10-02) — measure first
 
