@@ -91,7 +91,7 @@ of 0, the copies turn about the group's axis as the circular array's do.
 
 Any object, group or material can be rewritten in **WGSL**, the graphics card's language. Open its *code* box in
 Properties. A probe compile runs half a second after you stop typing and shows any error **at your own line**.
-**Ctrl Enter** applies.
+**Ctrl Enter** applies. **Functions you can call…** under the box opens [Functions for code](../reference/code.md).
 
 - **An object's code** adds a shape: `C = add_new(C, Nsphere(p, radius), MATERIAL);` where `p` is the point in the
   object's own frame and your parameters are names.
@@ -102,7 +102,9 @@ Properties. A probe compile runs half a second after you stop typing and shows a
 - **The scene's functions** (in the scene's Properties) are helpers any code in the scene can call.
 
 The [Shapes](../reference/shapes.md) and [Modifiers](../reference/modifiers.md) references show what each built-in
-one does. Their code is the place to start.
+one does. Their code is the place to start. [Functions for code](../reference/code.md) lists every function a block
+can call -- the shapes with their normals, the joins, the 2D pieces, noise, units and the material helpers -- and the
+words the page rewrites before it compiles.
 
 > A shape's code runs at every step of every ray -- hundreds of times per ray -- so keep it short. A material's code
 > runs about once per bounce, where the ray hits, and costs far less.

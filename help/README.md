@@ -6,8 +6,8 @@ Help › Contents or **F1** opens it. The pages are markdown, readable here on G
 |---|---|
 | `index.js` | the contents: every page, by track (Start, Modelling and rendering, Optical design, Reference), with its title |
 | `start/`, `modelling/`, `optics/` | the pages |
-| `reference/` | **made, not written**: `node help/reference.mjs` makes them from the program's lists of shapes, modifiers, material fields, reliefs, coatings and light settings |
-| `markdown.js` | the renderer: headings, paragraphs, bold, italic, code, lists, tables, links, images, notes, widgets -- everything escaped first |
+| `reference/` | **made, not written**: `node help/reference.mjs` makes them from the program's lists of shapes, modifiers, material fields, reliefs, coatings and light settings, and from the shader library code is compiled after (the functions a code block can call) |
+| `markdown.js` | the renderer: headings, paragraphs, bold, italic, code, lists, tables, links, images, notes, widgets, and a list item `` `code` -- words `` as a card (the code reference's functions) -- everything escaped first |
 | `links.js` | what a link does |
 | `panel.js` | the panel: contents, back / forward, search, links, widgets |
 | `widgets.js` | live pictures in a page: `sdf`, a 2D distance field and a ray sphere-traced through it |
@@ -34,7 +34,8 @@ ray: on          (off: no ray)
 ````
 
 `help/test/coverage.test.mjs` fails on a link that goes nowhere, a page not listed, a title that does not match, a
-reference page not made again, and a material field or light setting with no words in `reference.mjs`.
+reference page not made again, a material field or light setting with no words in `reference.mjs`, and a shape or join
+in the shader library with none.
 
 **Why a renderer of our own**: the pages need little, and the panel must not take HTML from a page. Escaping
 everything first and then marking up a known set is about 150 lines and easy to check (`markdown.test.mjs`); a
