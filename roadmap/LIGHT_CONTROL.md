@@ -158,10 +158,10 @@ What it settles:
 | 2: row of 16, window on | 68.1 ms (50–108, noisy) | 15.2 | |
 | 5: the same, window off | 50.3 ms | 11.9 | |
 
-- **Not the steps.** Counted on lavapipe by `builder/test/arraywindow.gpu.mjs`, with the bench's own documents and
-  camera through the engine's march kernel: the ring took 22.0 steps a camera ray with the window and 19.4 without.
-  The row took 12.1 both ways. A step count is the algorithm's, the same on any card.
-  - So the first guess is ruled out: a phantom surface from the loose sphere bound would show as more steps.
+- **"Not the steps" was wrong: the count used the wrong boxes.** Counted on lavapipe by
+  `builder/test/arraywindow.gpu.mjs`, with the bench's own documents and camera through the engine's march kernel: the
+  ring took 22.0 steps a camera ray with the window and 19.4 without, the row 12.1 both ways. But the test gave the
+  window boxes from the document's estimate, and the bench measures them. See the second round below.
 - **Each step's cost, then. Inferred, not measured:**
   - The window's loop fetched each copy's matrix through a 16-way `switch` on the copy's number, and that number
     differs from pixel to pixel.
@@ -173,6 +173,43 @@ What it settles:
 - **Bench row 7 tests the inference.** It is row 6's every copy, walked from the window's own first copy and fetched by
   the switch, as the first window fetched them. Row 7 against row 6 is what the switch costs, and row 4 against row 6
   says whether the window now saves anything.
+
+**Second round: the switch was a part, the steps the rest.** Measured on the user's Pascal card, c9577ae, 2026-10-25.
+"Done in pass 1" is the share of camera rays shaded after the first march pass, which is 32 steps (read in code:
+`lib/pathtracer/core/wavefront.js`, `MAX_STEPS: u32 = 32u`):
+
+| row | a sample | march | occlusion | done in pass 1 |
+|---|---|---|---|---|
+| 4: ring, window, copy by `arrCopy` | 1063.7 ms | 740.0 | 290.0 | 34% |
+| 6: ring, window off | 406.0 ms | 279.3 | 85.0 | 77% |
+| 7: ring, every copy by the switch from the window's first | 584.6 ms | 399.6 | 140.6 | 76% |
+| 2: row, window | 67.7 ms | 13.7 | | 88% |
+| 5: row, window off | 68.8 ms | 12.0 | | 89% |
+
+- **The switch:** row 7 against row 6 is +43% of march, with the same share done in pass 1. Row 4's march fell from
+  1007.5 to 740.0 ms with `arrCopy` the only change (two runs, the same card).
+- **The steps:** row 4 finishes 34% of its rays in pass 1, against 77%.
+  - Reproduced on lavapipe once the test measured its boxes as the bench does (`createBoxes` over the tag field): 47.1
+    steps a camera ray with the window against 21.9, and 12% done within 32 steps against 87%.
+  - **The cause (read in code, then counted):**
+    - A measured point was put into its node's frame through the array's first copy (`boxes.js` `toLocalOf` →
+      `bounds.js` `framesTo`), and every copy has the same tag.
+    - So a node in an array was measured as all its copies at once: the 4 cm light 2.22 × 2.22 m.
+    - The window's "one copy's" content box was therefore the whole array, and its sphere, about 2 m across, was a
+      surface to the march.
+  - **Fixed:** the pick copies keep which copy they walk (`scene_api.js` `XF_COPY`), and `boxes.js` puts each point into
+    its own copy's frame. The light now measures 0.133 m and the ring's culling box 2.44 m, which before was 5.25 m
+    (`changes/array-boxes-per-copy.md`).
+    - Counted: 32.1 steps against 21.4.
+  - **Then the bounds follow the box** (`arrays.js` THE BOUND): a row's copy by its box's own distance, convex along
+    the row; a ring's by its sphere and the (r, z) annulus all its copies lie in.
+    - Counted: 29.6 steps against 21.4 in codegen, 32.8 against 30.4 as data; the row 1.01 and 1.00.
+    - `arrays.test.mjs` holds a row's bound to the nearest left-out copy's own box distance, by brute force.
+- **Left (inferred, not measured):** the sphere round a ring's copy inside the lights' own plane, where the annulus says
+  nothing. A bound by the angle about the axis (the copies' angular sectors) would be the next step, if the next run
+  says the window is still not worth it.
+- **Seen on the way (read in the sources):** the bench's ring puts each row's end onto the next row's start. Faces 79 and
+  112 are 2.3 mm apart, as are 191 and 224, so the 256 faces hold two pairs that overlap.
 
 ## 4. Later phases: what is possible, and what it would cost
 

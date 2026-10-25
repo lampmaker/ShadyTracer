@@ -52,7 +52,7 @@ const cases = [
 ]
 for (const [label, copies, box] of cases) {
     const pattern = copyPattern(copies), M = copies.map(t => matrixOf(t))
-    let missed = 0, above = 0, worst = 0, widths = 0
+    let missed = 0, above = 0, worst = 0, widths = 0, loose = 0
     const margin = 0.002, scale = 1.7
     for (let i = 0; i < 4000; i++) {
         const q = [0, 1, 2].map(() => (rnd() * 2 - 1) * 1.6)
@@ -68,16 +68,23 @@ for (const [label, copies, box] of cases) {
         const { window, bound } = windowOf(q, copies, pattern, box, margin, scale)
         widths += window.length
         const inWindow = new Set(window)
+        let nearest = Infinity
         for (let k = 0; k < copies.length; k++) {
             if (inWindow.has(k)) continue
             const d = boxDist(fromParent(M[k], q), box) * M[k][15] * scale
+            nearest = Math.min(nearest, Math.max(d, 0))
             if (d <= margin) missed++
             if (bound > d + 1e-12) { above++; worst = Math.max(worst, bound - d) }
         }
+        /* A ROW'S BOUND IS THE NEAREST LEFT-OUT COPY'S BOX DISTANCE (0.next), but for the slack (SLACK of the copy frame's
+           reach, here up to 1.5e-4 at a box's corner): the sphere round the box it was before put the march's steps a
+           sphere's distance from a flat or long content, a tenth of a box and more (arraywindow.gpu.mjs counts them) */
+        if (pattern.kind === 'row' && Number.isFinite(nearest) && nearest - bound > 1e-3 * (1 + nearest)) loose++
         if (window.length === 0 && bound <= margin) missed++
     }
     ok(`${label}: no copy within the margin left out of the window`, missed === 0, `${missed} missed`)
     ok(`${label}: the bound never above a left-out copy's distance`, above === 0, `${above} above, by up to ${worst}`)
+    if (pattern.kind === 'row') ok(`${label}: the bound the nearest left-out copy's own distance, but for the slack`, loose === 0, `${loose} looser`)
     ok(`${label}: a window of ${(widths / 4000).toFixed(2)} copies on average, of ${copies.length}`, label.includes('on the axis') || label.includes('overlap') || widths / 4000 < copies.length / 3)
 }
 eq('no pattern or no box: every copy, no bound', [windowOf([0, 0, 0], copiesRow(3, 1), null, { lo: [0, 0, 0], hi: [1, 1, 1] }, 0.1),

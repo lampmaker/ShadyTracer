@@ -44,7 +44,7 @@ const { generate, isCsg } = await import('../codegen.js')
 const { cullBoxes, createBoxes, toLocalOf } = await import('../boxes.js')
 const { stepCacheBox } = await import('../stepbox.js')
 const { marchTolAt } = await import('../../lib/pathtracer/core/tolerances.js')
-const { prog_tagfield, tagFieldTags } = await import('../../lib/pathtracer/core/field.js')
+const { prog_tagfield, tagSample, TAG_FIELD_WORDS } = await import('../../lib/pathtracer/core/field.js')
 const { CAMERAS, BENCH_FILES, benchUrl } = await import('../../bench/index.js')
 const { CAMERAS: SCALING_CAMERAS, SCALING_FILES } = await import('../../bench/scaling.js')
 const { WEBGPU } = await import('../../lib/tinywebgpu/src/tinywebgpu.js')
@@ -82,15 +82,13 @@ async function measure(doc, scene) {
     const prog = await prog_tagfield(WG, scene); await prog.ready
     const sample = async input => {
         const count = new Uint32Array(input.buffer, input.byteOffset, 4)[3]
-        const inB = WG.createStorageBuffer(input), outB = WG.createStorageBuffer(Math.max(8 * count, 256))
+        const inB = WG.createStorageBuffer(input), outB = WG.createStorageBuffer(Math.max(4 * TAG_FIELD_WORDS * count, 256))
         prog.resources = { fieldIn: inB.b, fieldOut: outB.b }
         prog.uniforms = { ...uniformBag(scene), res: [64, 64] }
         prog.run(count, 1, 1)
-        const out = await outB.r(8 * count, 0, Float32Array)
+        const out = await outB.r(4 * TAG_FIELD_WORDS * count, 0, Float32Array)
         inB.b.destroy(); outB.b.destroy()
-        const n = out.length / 2, d = new Float32Array(n), tag = new Uint32Array(n), bits = new Uint32Array(out.buffer, out.byteOffset, out.length)
-        for (let i = 0; i < n; i++) { d[i] = out[2 * i]; tag[i] = bits[2 * i + 1] }
-        return { d, tag, tags: tagFieldTags(scene) }
+        return tagSample(out, scene)
     }
     const B = createBoxes({ sample, doc: () => doc }); await B.update()
     return B

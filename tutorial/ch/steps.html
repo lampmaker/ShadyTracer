@@ -220,19 +220,30 @@
       copies. Every copy used to be asked at every step. On the user's card, a floor under 256 copies of one small light
       took 465 ms of marching a sample, against 12 ms for one light. Light sampling's choice among the 256 faces cost
       nothing measurable; asking every face at every step cost all of it. Now a row of copies, or a ring of them, is
-      asked only near the copy closest to the point. Every copy farther out is no nearer than the sphere round its
-      content's box, and the nearest such sphere's distance stands in for all of them, as a skipped box does
-      (<cite data-src="builder/arrays.js" data-sym="THE BOUND (one rule for both)"></cite>). Along a row the distance to
-      the copies' centres only grows away from the closest one, and round a ring it grows with the angle. So the copies
-      can be asked from the closest outwards, stopping on each side at the first one beyond the margin.</p>
-    <p>Asking fewer copies did not at first make a step cheaper. On the user's Pascal card the first window made the
-      256 lights <em>slower</em> to march, 1007 ms a sample against 281 with every copy asked. Yet a count of the steps
-      on the same scene found about as many either way (22.0 a camera ray against 19.4). So each step cost more. The
-      suspect, not yet measured: which copies the window asks differs from pixel to pixel, and the loop fetched each
-      copy's place through a <code>switch</code> on its number. A GPU runs neighbouring pixels on one instruction
-      stream, so it runs a switch's cases one after another when they disagree. With every copy asked, every pixel's
-      number was the same at once. Now a window's copy is worked out from the first copy instead: moved along the row,
-      or turned round the ring.</p>
+      asked only near the copy closest to the point. Every copy farther out is bounded by its content's box
+      (<cite data-src="builder/arrays.js" data-sym="// THE BOUND."></cite>). Along a row the copies are the same box moved
+      by a step at a time, and the distance to a box moved along a line only grows away from the nearest copy. Round a
+      ring the sphere about each copy's box grows with the angle, and every copy also lies in one ring-shaped band
+      about the axis. So the copies can be asked from the closest outwards, stopping on each side at the first one
+      beyond the margin, and that copy's bound stands in for every one past it.</p>
+    <p>The first version made the 256 lights <em>slower</em>. On the user's Pascal card they marched in 1007 ms a
+      sample with the window, against 281 ms with every copy asked. Two things were wrong, and each was found by
+      measuring rather than by reasoning:</p>
+    <ul>
+      <li><strong>Each step cost more.</strong> The loop fetched each copy's place through a <code>switch</code> on
+        its number, and that number differed from pixel to pixel. A GPU runs neighbouring pixels on one instruction
+        stream, so it runs a switch's cases one after another when they disagree. A bench row that kept the switch
+        but asked every copy marched 43% slower than the plain loop. Now a window's copy is worked out from the
+        first copy: moved along the row, or turned round the ring.</li>
+      <li><strong>The rays took more steps.</strong> The boxes are measured by asking the pick copy, at every point of a
+        grid laid over the scene, which object's surface is nearest. The points close to an object's surface are its
+        box. But every copy of an object has the same tag. So a node inside an array was measured as all its copies at
+        once: the 4 cm light came out 2.2 m across. Its "one copy's" sphere was therefore 2 m
+        wide, and the march took that sphere for a surface. A count on the same scene found 47 steps per camera ray
+        against 22. The pick copy now also records which copy each surface belongs to, and
+        each point is put into its own copy's frame. With that, and the box-shaped bounds above, it took 30 steps
+        against 21.</li>
+    </ul>
     <p>A relief in its shell (the WGSL the relief group starts with, as text in JavaScript):</p>
     <pre data-src="builder/modifiers.js" data-in="const reliefCode = (lip, note = []) => [" data-sym="'var H = children(emptyHit(r), p);'," data-to="'}',"
          data-why="children(...) is the plain shape, its distance H.s.w. peak is 1 + 1/2 + 1/4 + 1/8; lip is 17.2 for the modifier, 11.2 for the benchmark's copy. XF_S is the group's scale. READ_REACH is 0 unless a smooth blend above reads the relief (then the band widens by as far as it reads). marchEps() is the surface tolerance. foldRelief divides by the slope." data-hash="733a2aff"></pre>

@@ -40,7 +40,7 @@
 //======================================================================================================================
 
 import { find, walk, groupHasCode, codeOf, blockOf } from './model.js'
-import { lineage, toParent, estimateBox, framesTo } from './bounds.js'
+import { lineage, toParent, estimateBox, framesTo, copiesOf } from './bounds.js'
 import { isCsg, shapesOf, joinOf } from './codegen.js'
 import { fieldInput, FIELD_GRID, FIELD_MAX_POINTS } from '../lib/pathtracer/core/field.js'
 import { copyPattern, contentKey } from './arrays.js'
@@ -71,6 +71,29 @@ const cs = deg => { const r = deg * Math.PI / 180; return [Math.cos(r), Math.sin
 const framesOf = (doc, id) => framesTo(doc, id)
 export const toWorldOf = (doc, id) => { const F = framesOf(doc, id); return p => F.reduce((q, t) => toParent(t, q), p) }
 export const toLocalOf = (doc, id) => { const F = framesOf(doc, id); return p => F.reduceRight((q, t) => fromParent(t, q), p) }
+/* ...A POINT OF A SAMPLE INTO ITS OWN NODE'S FRAME THROUGH ITS OWN COPY (0.next): the pick copy says which copy each
+   point's surface is (surfaces() keeps it on the point, scene_api.js XF_COPY). Mapped through the first copy, as
+   toLocalOf maps, every copy of a node in an array landed in one box spanning the array -- a 4 cm light in the ring of
+   rows of Tests > lightarray measured 2.2 m across, its group's box (every copy again, B.get) 5.25 m where the ring is
+   2.2, and the array's window bounded each copy by a 2 m sphere that the march took for a surface (counted on lavapipe:
+   47 steps a camera ray against 22). Copies share their children's code, so the union of every copy's points, each in
+   its own frame, is the box of one. A point whose copy cannot be believed (copiesOf) goes through the first copy, as
+   before: the box of all of them there, too big and never too small. */
+const toOwnLocalOf = (doc, id) => {
+    const first = toLocalOf(doc, id), byCopy = new Map()
+    return p => {
+        if (p.copy == null) return first(p)
+        const key = `${p.copy}/${p.copies}`
+        let f = byCopy.get(key)
+        if (!f) {
+            const which = copiesOf(doc, id, p.copy, p.copies)
+            const F = which ? framesTo(doc, id, up => up.copies[which.get(up)]) : null
+            f = F ? q => F.reduceRight((r, t) => fromParent(t, r), q) : first
+            byCopy.set(key, f)
+        }
+        return f(p)
+    }
+}
 
 //----------------------------------------------------------------------------------------------------------------------
 // LATTICES AND POINTS
@@ -96,8 +119,9 @@ const onEdge = (L, i) => {
     return ix === 0 || iy === 0 || iz === 0 || ix === L.nx - 1 || iy === L.ny - 1 || iz === L.nz - 1
 }
 
-/** From a sample ({ d, tag, tags }) of lattice L: per node id, its surface points in the world and
- *  whether any of them is on the lattice's edge. Map id -> { points: [[x, y, z]...], edge } */
+/** From a sample ({ d, tag, tags }, and copy and copies where the tag field gives them) of lattice L: per node id, its
+ *  surface points in the world and whether any of them is on the lattice's edge. Map id -> { points: [[x, y, z]...],
+ *  edge }, a point inside arrays carrying which copy (p.copy, p.copies) */
 export function surfaces(S, L) {
     const r = RADIUS * L.cell, out = new Map()
     for (let i = 0; i < S.tag.length; i++) {
@@ -107,7 +131,10 @@ export function surfaces(S, L) {
         if (id == null) continue
         let e = out.get(id)
         if (!e) out.set(id, e = { points: [], edge: false })
-        e.points.push(pointOf(L, i))
+        const p = pointOf(L, i)
+        // which copy of it (a sample from a tag field that says: core/field.js tagSample), for toOwnLocalOf
+        if (S.copies && S.copies[i] > 0) { p.copy = S.copy[i]; p.copies = S.copies[i] }
+        e.points.push(p)
         if (onEdge(L, i)) e.edge = true
     }
     return out
@@ -342,7 +369,7 @@ export function createBoxes({ sample, doc, ready = () => true, wanted = () => nu
                 }
             }
             const pts = got ? got.pts : mine?.points ?? [], cell = got ? got.cell : coarseCell
-            const toLocal = toLocalOf(d, id)
+            const toLocal = toOwnLocalOf(d, id)
             // still at the edge of the grown search: an object without an end (an infinite plane)
             boxes.set(id, { key: keys.get(id), scene, box: boxOfPoints(pts, toLocal), cell, open: !!found.get(id)?.edge })
             try { onBox(id) } catch (e) { console.warn('[boxes] onBox', e) }       // one more box, as it comes

@@ -30,6 +30,12 @@
 // with the window the ring took 22.0 steps a camera ray against 19.4, the row 12.1 both ways -- so not the steps, each
 // step's cost. Inferred, row 7 to test it: the switch picking a copy whose index differs from pixel to pixel. Since then
 // a window's copy is worked out from the pattern (arrays.js arrCopy), no switch.
+// MEASURED (the user's Pascal, c9577ae, 2026-10-25): row 4 1063.7 ms a sample (march 740.0) against row 6's 406.0
+// (279.3); row 7, the switch kept, 584.6 (399.6) -- a part of it. The rest steps: 34% of row 4's camera rays done in the
+// first march pass of 32 steps, against 77%. "Not the steps" above was wrong: the count used the document's estimated
+// boxes, and these rows measure theirs -- which held every copy of a node in an array (boxes.js toOwnLocalOf). Counted
+// with the bench's measured boxes, 47.1 steps a camera ray against 21.9; measured as one copy and bounded by its box
+// (arrays.js), 29.6 against 21.4.
 // The picture is the same light spread differently: what it looks like is the user's to judge (BENCH.lightarray.view(n)).
 //======================================================================================================================
 

@@ -283,7 +283,7 @@ const framesAtEnds = w => {
     // ...a row: over its window (arrays.js), all three until its content's box is known; without the window, over all three
     const cAll = generate(...M.generateArgs(d, { id: 'built', arrayWindow: false }))
     ok('codegen: the child\'s code once, in a loop over three copies, a uniform each', (c.wgsl.match(/\/\/ node ball/g) || []).length === 1
-        && /var wf_arr = 0; var wn_arr = 3u;/.test(c.wgsl) && /for \(var cm_arr = 0u; cm_arr < wn_arr;/.test(c.wgsl) && /arrWindow\(1u, 3u, p,/.test(c.wgsl)
+        && /var wf_arr = 0; var wn_arr = 3u;/.test(c.wgsl) && /for \(var cm_arr = 0u; cm_arr < wn_arr;/.test(c.wgsl) && /arrWindowOf\(1u, 3u, p,/.test(c.wgsl) && /arrCopy\(1u, 3u,/.test(c.wgsl)
         && /for \(var ci_arr = 0u; ci_arr < 3u;/.test(cAll.wgsl) && !/arrWindow/.test(cAll.wgsl)
         && ['cp0_arr', 'cp1_arr', 'cp2_arr'].every(k => k in c.uniforms) && !('cp3_arr' in c.uniforms) && 'bxlo_arr_cbx' in c.uniforms)
 }

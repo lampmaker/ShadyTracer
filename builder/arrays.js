@@ -16,16 +16,23 @@
 //           rotation turned with it and its scale the first's -- copiesRing.
 // Anything else (a copy dragged off its row) is null: every copy evaluated, as before.
 //
-// THE BOUND (one rule for both). The copies' content -- the array's children, in a copy's frame -- has a measured box
-// (boxes.js cullBoxes, `contentKey`); its sphere, centre c and radius r, carried by copy k is centre c_k and radius
-// rho = r s (one scale for all). A copy's shape is inside its sphere, so |q - c_k| - rho is a lower bound on its
-// distance from q. Along a row |q - c_k| is convex in k, least at the copy nearest q's projection on the row; round a
-// ring it grows with the angle from the copy nearest q's angle about the axis, both ways to the opposite side. So from
-// that nearest copy the window widens a copy at a time on each side while the next copy's bound is within cullMargin();
-// every copy outside it is no nearer than the first one each side stopped at, and that bound stands in for all of them
-// in CULL -- the contract the top-level culling already rests on (codegen.js BOUNDING-BOX CULLING, scene_api.js
-// cullMargin): a lower bound, above the margin, so never taken for a surface. Near a surface every copy within the
-// margin is evaluated and the field is exact; far from them it is a bound, as for any culled node.
+// THE BOUND. The copies' content -- the array's children, in a copy's frame -- has a measured box (boxes.js cullBoxes,
+// `contentKey`); a copy's shape is inside its box, so a lower bound on the distance to the box is one on the distance to
+// the copy. From the copy nearest the point the window widens a copy at a time on each side while the next copy's bound
+// is within cullMargin(); every copy outside it is no nearer than the first one each side stopped at, and that bound
+// stands in for all of them in CULL -- the contract the top-level culling already rests on (codegen.js BOUNDING-BOX
+// CULLING, scene_api.js cullMargin): a lower bound, above the margin, so never taken for a surface. Near a surface every
+// copy within the margin is evaluated and the field is exact; far from them it is a bound, as for any culled node.
+//   A ROW   the box's own distance: every copy is turned and scaled alike, so in copy 0's frame copy k's box is copy 0's
+//           moved by k steps, and the distance to a box moved along a line is convex in how far -- least at one copy,
+//           growing each way from it, found by walking downhill from the copy at the point's projection on the row.
+//   A RING  the sphere round copy k's box, which grows with the angle from the copy at the point's angle about the axis,
+//           both ways to the opposite side -- and never below the distance to the (r, z) annulus that every copy lies in,
+//           turning about the axis keeping both: what bounds a flat ring above and below it, where its sphere does not.
+// UNTIL 2026-10-25 BOTH WERE THE SPHERE, and a node in an array measured as all its copies (boxes.js toOwnLocalOf): the
+// user's Pascal card marched the bench's ring of 256 lights in 1007.5 ms a sample with the window, 281.0 without. A
+// sphere is far from a flat or a long content, and the march took its distance for a surface's: counted on lavapipe, 47
+// steps a camera ray against 22 with the bench's measured boxes, 30 against 21 with both put right (arraywindow.gpu.mjs).
 //
 // WHERE: only where culling is -- the render copy (never the pick, which the boxes are measured by, nor a limiter's optics
 // copies), an array with only plain groups and arrays above it (a lower bound on a shape is not one on what it is joined
@@ -96,21 +103,37 @@ export function windowOf(q, copies, pattern, box, margin, scale = 1) {
     const n = copies.length
     if (!pattern || !box) return { window: copies.map((_, k) => k), bound: Infinity }
     const M = copies.map(t => matrixOf(t))
-    const c = box.lo.map((v, i) => 0.5 * (v + box.hi[i]))
-    const r = 0.5 * Math.hypot(...box.hi.map((v, i) => v - box.lo[i]))
-    const s = M[0][15]
-    const centre = m => { const R = rotOf(m), v = mulv(R, c); return posOf(m).map((p, i) => p + m[15] * v[i]) }
-    const c0 = centre(M[0])
-    const rho = r * s + slackOf(c0, r * s)
-    let ck
-    if (pattern.kind === 'row') {
-        const d = centre(M[1]).map((v, i) => v - c0[i])
-        ck = k => c0.map((v, i) => v + k * d[i])
-    } else ck = k => mulv(axisRot(pattern.axis, pattern.sign * 2 * Math.PI * k / n), c0)
-    const bound = k => (Math.hypot(...q.map((v, i) => v - ck(k)[i])) - rho) * scale
-    const i0 = nearestOf(q, pattern, n, c0, ck)
-    if (bound(i0) > margin) return { window: [], bound: bound(i0) }
+    const bc = box.lo.map((v, i) => 0.5 * (v + box.hi[i])), bh0 = box.lo.map((v, i) => 0.5 * (box.hi[i] - v))
+    const R0 = rotOf(M[0]), P0 = posOf(M[0]), s = M[0][15]
+    const Rt = [0, 1, 2].map(i => [R0[0][i], R0[1][i], R0[2][i]])
+    const len = v => Math.hypot(...v)
     const ring = pattern.kind === 'ring'
+    let bound, i0, all = 0
+    if (!ring) {
+        /* A ROW: copy k's box is copy 0's moved by k dp in copy 0's frame, its distance convex in k */
+        const q0 = mulv(Rt, q.map((v, i) => v - P0[i])).map(v => v / s)
+        const dp = mulv(Rt, posOf(M[1]).map((v, i) => v - P0[i])).map(v => v / s)
+        const e = SLACK * (len(P0) / s + len(bc) + len(bh0) + n * len(dp)), bh = bh0.map(v => v + e)
+        bound = k => len(q0.map((v, i) => Math.max(Math.abs(v - k * dp[i] - bc[i]) - bh[i], 0))) * s * scale
+        const dd = dp[0] ** 2 + dp[1] ** 2 + dp[2] ** 2
+        i0 = Math.min(n - 1, Math.max(0, Math.round(dd > 0 ? ((q0[0] - bc[0]) * dp[0] + (q0[1] - bc[1]) * dp[1] + (q0[2] - bc[2]) * dp[2]) / dd : 0)))
+        while (i0 + 1 < n && bound(i0 + 1) < bound(i0)) i0++
+        while (i0 > 0 && bound(i0 - 1) < bound(i0)) i0--
+    } else {
+        /* A RING: the sphere round copy k's box, and the (r, z) annulus every copy is in */
+        const r = len(bh0) * s
+        const c0 = P0.map((v, i) => v + s * mulv(R0, bc)[i])
+        const rho = r + slackOf(c0, r)
+        const ck = k => mulv(axisRot(pattern.axis, pattern.sign * 2 * Math.PI * k / n), c0)
+        bound = k => (len(q.map((v, i) => v - ck(k)[i])) - rho) * scale
+        i0 = nearestOf(q, pattern, n, c0, ck)
+        const ax = pattern.axis, perp = v => Math.hypot(...v.filter((_, i) => i !== ax))
+        const zh = s * [0, 1, 2].reduce((t, i) => t + Math.abs(R0[ax][i]) * bh0[i], 0) + (rho - r)
+        const rc = perp(c0), pr = perp(q)
+        const gr = Math.max(Math.max(rc - rho, 0) - pr, pr - (rc + rho), 0), gz = Math.max(Math.abs(q[ax] - c0[ax]) - zh, 0)
+        all = Math.hypot(gr, gz) * scale
+    }
+    if (Math.max(bound(i0), all) > margin) return { window: [], bound: Math.max(bound(i0), all) }
     const at = k => ring ? ((k % n) + n) % n : k
     const inside = k => ring || (k >= 0 && k < n)
     let a = 0, b = 0
@@ -120,6 +143,7 @@ export function windowOf(q, copies, pattern, box, margin, scale = 1) {
     if (a + b + 1 < n) {
         if (inside(i0 + b + 1)) rest = Math.min(rest, bound(at(i0 + b + 1)))
         if (inside(i0 - a - 1)) rest = Math.min(rest, bound(at(i0 - a - 1)))
+        rest = Math.max(rest, all)
     }
     return { window: Array.from({ length: a + b + 1 }, (_, m) => at(i0 - a + m)), bound: rest }
 }
@@ -173,44 +197,102 @@ fn arrBound(kind: u32, p: VEC3, c0: VEC3, d: VEC3, k: i32, n: u32, rho: FLOAT, s
     return (length(p - arrCentre(kind, c0, d, k, n)) - rho) * scale;
 }
 fn arrAngle(y: FLOAT, x: FLOAT) -> FLOAT { return select(atan2(y, x), 0.0, x == 0.0 && y == 0.0); }
-fn arrWindow(kind: u32, n: u32, p: VEC3, c0: VEC3, d: VEC3, rho: FLOAT, scale: FLOAT) -> ArrWin {
-    let ni = i32(n);
-    var i0 = 0;
+fn arrBox(v: VEC3, bc: VEC3, bh: VEC3) -> FLOAT { return length(max(abs(v - bc) - bh, VEC3(0.0))); }
+/* THE WINDOW from copy 0's frame (R0, P0, S0; P1 copy 1's place, a row's), the content's box lo..hi in a copy's frame and
+   the group frame's scale to the world -- what codegen's copies loop and the scene as data's ARRAY record each have */
+fn arrWindowOf(kind: u32, n: u32, p: VEC3, R0: mat3x3<f32>, P0: VEC3, S0: FLOAT, P1: VEC3, lo: VEC3, hi: VEC3, scale: FLOAT) -> ArrWin {
+    let bc = 0.5 * (lo + hi);
+    let bh0 = 0.5 * (hi - lo);
     if (kind == ${PATTERN_ROW}u) {
-        // a row: the copy at the point's projection on it
-        let t = dot(p - c0, d) / max(dot(d, d), 1e-30);
-        i0 = i32(clamp(round(t), 0.0, f32(n - 1u)));
-    } else {
-        // a ring: the copy at the point's angle about its axis, from copy 0's -- in the plane about the axis, u turned
-        // towards v as the copies turn
-        let ax = (kind - 2u) / 2u;
-        var pu = p.y; var pv = p.z; var cu = c0.y; var cv = c0.z;
-        if (ax == 1u) { pu = p.z; pv = p.x; cu = c0.z; cv = c0.x; }
-        if (ax == 2u) { pu = p.x; pv = p.y; cu = c0.x; cv = c0.y; }
-        let sg = select(1.0, -1.0, ((kind - 2u) & 1u) == 1u);
-        let k = i32(round(sg * (arrAngle(pv, pu) - arrAngle(cv, cu)) / (6.283185307179586 / f32(n))));
-        i0 = ((k % ni) + ni) % ni;
+        let q0 = (transpose(R0) * (p - P0)) / S0;
+        let dp = (transpose(R0) * (P1 - P0)) / S0;
+        let e = ${SLACK} * (length(P0) / S0 + length(bc) + length(bh0) + f32(n) * length(dp));
+        return arrWindowRow(n, q0, dp, bc, bh0 + VEC3(e), S0 * scale);
+    }
+    let r = length(bh0) * S0;
+    let c0 = P0 + S0 * (R0 * bc);
+    let rho = r + ${SLACK} * (length(c0) + r);
+    let ax = (kind - 2u) / 2u;
+    // the content along the axis, exactly: copy 0's box projected on it (R0[i][ax], column i's part along the axis)
+    let zh = S0 * dot(abs(VEC3(R0[0][ax], R0[1][ax], R0[2][ax])), bh0) + (rho - r);
+    return arrWindowRing(kind, n, p, c0, rho, zh, scale);
+}
+/* A ROW: copy k's box is copy 0's moved by k dp in copy 0's frame, so its distance is convex in k -- downhill from the
+   copy at the point's projection to the least, then out each way while within the margin; the first beyond it each
+   way bounds every copy past it */
+fn arrRowBound(q0: VEC3, dp: VEC3, k: i32, bc: VEC3, bh: VEC3, fs: FLOAT) -> FLOAT { return arrBox(q0 - f32(k) * dp, bc, bh) * fs; }
+fn arrWindowRow(n: u32, q0: VEC3, dp: VEC3, bc: VEC3, bh: VEC3, fs: FLOAT) -> ArrWin {
+    let ni = i32(n);
+    let t = dot(q0 - bc, dp) / max(dot(dp, dp), 1e-30);
+    var i0 = i32(clamp(round(t), 0.0, f32(n - 1u)));
+    var g0 = arrRowBound(q0, dp, i0, bc, bh, fs);
+    loop {
+        if (i0 + 1 >= ni) { break; }
+        let g1 = arrRowBound(q0, dp, i0 + 1, bc, bh, fs);
+        if (g1 >= g0) { break; }
+        i0 = i0 + 1; g0 = g1;
+    }
+    loop {
+        if (i0 < 1) { break; }
+        let g1 = arrRowBound(q0, dp, i0 - 1, bc, bh, fs);
+        if (g1 >= g0) { break; }
+        i0 = i0 - 1; g0 = g1;
     }
     let margin = cullMargin();
-    let b0 = arrBound(kind, p, c0, d, i0, n, rho, scale);
-    if (b0 > margin) { return ArrWin(i0, 0u, b0); }      // the nearest is beyond the margin: so is every other
-    let ring = kind != ${PATTERN_ROW}u;
+    if (g0 > margin) { return ArrWin(i0, 0u, g0); }      // the least is beyond the margin: so is every other
     var a = 0;
     var b = 0;
     loop {
-        if (a + b + 1 >= ni || (!ring && i0 + b + 1 >= ni)) { break; }
+        if (i0 + b + 1 >= ni) { break; }
+        if (arrRowBound(q0, dp, i0 + b + 1, bc, bh, fs) > margin) { break; }
+        b = b + 1;
+    }
+    loop {
+        if (i0 - a - 1 < 0) { break; }
+        if (arrRowBound(q0, dp, i0 - a - 1, bc, bh, fs) > margin) { break; }
+        a = a + 1;
+    }
+    var rest: FLOAT = 1.0e7;
+    if (i0 + b + 1 < ni) { rest = min(rest, arrRowBound(q0, dp, i0 + b + 1, bc, bh, fs)); }
+    if (i0 - a - 1 >= 0) { rest = min(rest, arrRowBound(q0, dp, i0 - a - 1, bc, bh, fs)); }
+    return ArrWin(i0 - a, u32(a + b + 1), rest);
+}
+/* A RING: the sphere round copy k's box grows with the angle from the copy at the point's angle, both ways -- and every
+   copy is in one (r, z) annulus about the axis (turning keeps both), a bound on all of them at once, which the sphere
+   is not above or below a flat ring */
+fn arrWindowRing(kind: u32, n: u32, p: VEC3, c0: VEC3, rho: FLOAT, zh: FLOAT, scale: FLOAT) -> ArrWin {
+    let ni = i32(n);
+    let ax = (kind - 2u) / 2u;
+    var pu = p.y; var pv = p.z; var cu = c0.y; var cv = c0.z;
+    if (ax == 1u) { pu = p.z; pv = p.x; cu = c0.z; cv = c0.x; }
+    if (ax == 2u) { pu = p.x; pv = p.y; cu = c0.x; cv = c0.y; }
+    let sg = select(1.0, -1.0, ((kind - 2u) & 1u) == 1u);
+    let k = i32(round(sg * (arrAngle(pv, pu) - arrAngle(cv, cu)) / (6.283185307179586 / f32(n))));
+    let i0 = ((k % ni) + ni) % ni;
+    let rc = length(VEC2(cu, cv)); let pr = length(VEC2(pu, pv));
+    let gr = max(max(max(rc - rho, 0.0) - pr, pr - (rc + rho)), 0.0);
+    let gz = max(abs(p[ax] - c0[ax]) - zh, 0.0);
+    let all = length(VEC2(gr, gz)) * scale;
+    let d = VEC3(0.0);
+    let margin = cullMargin();
+    let b0 = max(arrBound(kind, p, c0, d, i0, n, rho, scale), all);
+    if (b0 > margin) { return ArrWin(i0, 0u, b0); }       // the nearest is beyond the margin: so is every other
+    var a = 0;
+    var b = 0;
+    loop {
+        if (a + b + 1 >= ni) { break; }
         if (arrBound(kind, p, c0, d, i0 + b + 1, n, rho, scale) > margin) { break; }
         b = b + 1;
     }
     loop {
-        if (a + b + 1 >= ni || (!ring && i0 - a - 1 < 0)) { break; }
+        if (a + b + 1 >= ni) { break; }
         if (arrBound(kind, p, c0, d, i0 - a - 1, n, rho, scale) > margin) { break; }
         a = a + 1;
     }
     var rest: FLOAT = 1.0e7;
     if (a + b + 1 < ni) {
-        if (ring || i0 + b + 1 < ni) { rest = min(rest, arrBound(kind, p, c0, d, i0 + b + 1, n, rho, scale)); }
-        if (ring || i0 - a - 1 >= 0) { rest = min(rest, arrBound(kind, p, c0, d, i0 - a - 1, n, rho, scale)); }
+        rest = min(arrBound(kind, p, c0, d, i0 + b + 1, n, rho, scale), arrBound(kind, p, c0, d, i0 - a - 1, n, rho, scale));
+        rest = max(rest, all);
     }
     return ArrWin(i0 - a, u32(a + b + 1), rest);
 }

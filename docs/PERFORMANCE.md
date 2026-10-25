@@ -1090,8 +1090,12 @@ the scene:** WebGPU takes WGSL source only, and there is no compiled shader form
    Ampere (Tests > lightarray, 213642c): 256 copies of one light at 465 ms of march a sample against one light's 12.
    After it, on the user's Pascal (a81cac9): **slower**, 1007.5 ms of march against 281.0 with the window off, with
    about as many steps (counted, arraywindow.gpu.mjs: 22.0 a camera ray against 19.4). Inferred: the switch fetching a
-   copy whose number differs from pixel to pixel. A window's copy is now worked out from copy 0 (arrays.js arrCopy);
-   its speed not yet measured, bench row 7 the switch's cost (roadmap/LIGHT_CONTROL.md).
+   copy whose number differs from pixel to pixel. A window's copy is now worked out from copy 0 (arrays.js arrCopy):
+   at c9577ae row 4 marched in 740.0 ms against row 6's 279.3, and row 7 (the switch kept) 399.6 -- the switch a part,
+   the rest steps (34% of row 4's rays done in the first 32-step pass against 77%). Their cause, counted: a node in an
+   array was measured as all its copies (boxes.js toOwnLocalOf now measures it as one), and the window bounded each copy
+   by a sphere round that box (now by the box). Counted with both put right, 29.6 steps a camera ray against 21.4; its
+   speed not yet measured (roadmap/LIGHT_CONTROL.md, second round).
    **Before and after groups are data (2026-10-04, 0.14.0), with no file format change:** the kind is read off the
    code (codegen.js `isBefore`, `isAfter`), so a customer's code of either shape is one too, and an old file needs no
    upgrade. A before group (twist, bend, repeat, mirror) is a record whose code is a function `bef_<k>` returning the

@@ -65,7 +65,7 @@ import { hasCode, isBefore, isAfter, isCsg, combinedGroups, shapesOf, joinOf, is
          faceCount, faceTotalLine, facePickLine, faceCases } from './codegen.js'
 import { hasFace, arrayedLightProblem, copyCount, copyIndices } from './lights.js'
 import { matrixOf } from './transform.js'
-import { copyPattern, codeOf, contentKey, PATTERN_ROW, SLACK } from './arrays.js'
+import { copyPattern, codeOf, contentKey, PATTERN_ROW } from './arrays.js'
 
 export const HEADER = 1
 export const REC = 7
@@ -819,9 +819,11 @@ export function evaluatorWGSL({ blocks, befores = 0, afters = 0, subs, stack, ar
         w('                let gq = (transpose(gM) * (atop.bp - VEC3(ga.w, gb.w, gc.w))) / gS;')
         w('                let nx = scnCopy(g, scnWrap(atop.wf, n, scnU(scnRec(g).y)), n, atop.wf, atop.wn, gq, gM, gS, atop.bM, atop.bS);')
         w('                bp = nx.bp; bM = nx.bM; bS = nx.bS; atop.n = n;')
+        if (pick) w('                XF_COPY = XF_COPY + 1u;      // the next copy (no window in the pick: the copies in order)')
         w(`                i = g + ${REC}u;`)
         w('                continue;')
         w('            }')
+        if (pick) w('            XF_COPY = XF_COPY / scnU(scnRec(g).y); XF_COPIES = XF_COPIES - 1u;    // its digit gone')
         w('            bp = atop.bp; bM = atop.bM; bS = atop.bS; ad = ad - 1u;')
         w('            if (ad > 0u) { atop = astack[ad - 1u]; }   // the one it is in, innermost again')
         w(`            i = i + ${REC}u;`)
@@ -857,18 +859,15 @@ export function evaluatorWGSL({ blocks, befores = 0, afters = 0, subs, stack, ar
             w(`                let cb = scnU(v1.y) + ${COPY_VEC4S}u * wn;`)
             w('                let wl = sceneData[cb]; let wh = sceneData[cb + 1u];')
             w('                if (wl.w != 0.0) {')
-            w('                    let wc = 0.5 * (wl.xyz + wh.xyz);')
             w('                    let o0 = scnU(v1.y);')
             w('                    let a0 = sceneData[o0]; let a1 = sceneData[o0 + 1u]; let a2 = sceneData[o0 + 2u]; let s0 = sceneData[o0 + 3u].x;')
-            w('                    let c0 = VEC3(a0.w, a1.w, a2.w) + s0 * (mat3x3<f32>(a0.xyz, a1.xyz, a2.xyz) * wc);')
-            w('                    var wd = VEC3(0.0);')
+            w('                    let P0 = VEC3(a0.w, a1.w, a2.w);')
+            w('                    var P1 = P0;')
             w(`                    if (scnU(v0.z) == ${PATTERN_ROW}u) {`)
             w(`                        let o1 = o0 + ${COPY_VEC4S}u;`)
-            w('                        let e0 = sceneData[o1]; let e1 = sceneData[o1 + 1u]; let e2 = sceneData[o1 + 2u]; let s1 = sceneData[o1 + 3u].x;')
-            w('                        wd = VEC3(e0.w, e1.w, e2.w) + s1 * (mat3x3<f32>(e0.xyz, e1.xyz, e2.xyz) * wc) - c0;')
+            w('                        P1 = VEC3(sceneData[o1].w, sceneData[o1 + 1u].w, sceneData[o1 + 2u].w);')
             w('                    }')
-            w('                    let wr = 0.5 * length(wh.xyz - wl.xyz) * s0;')
-            w(`                    let aw = arrWindow(scnU(v0.z), wn, q, c0, wd, wr + ${SLACK} * (length(c0) + wr), ${XS('S')});`)
+            w(`                    let aw = arrWindowOf(scnU(v0.z), wn, q, mat3x3<f32>(a0.xyz, a1.xyz, a2.xyz), P0, s0, P1, wl.xyz, wh.xyz, ${XS('S')});`)
             w('                    CULL = min(CULL, aw.bound); wf = aw.first; wn = aw.count;')
             w('                    if (wn == 0u) { i = scnU(v1.x); continue; }')
             w('                }')
@@ -880,6 +879,8 @@ export function evaluatorWGSL({ blocks, befores = 0, afters = 0, subs, stack, ar
         w('            ad = ad + 1u;')
         w('            let nx = scnCopy(i, scnWrap(wf, 0u, scnU(v0.y)), 0u, wf, wn, q, M, S, bM, bS);')
         w('            bp = nx.bp; bM = nx.bM; bS = nx.bS;')
+        /* THE PICK COPY SAYS WHICH COPY (scene_api.js XF_COPY), as codegen's: a digit more for this array, copy 0 */
+        if (pick) w('            XF_COPY = XF_COPY * scnU(v0.y); XF_COPIES = XF_COPIES + 1u;')
         w(`            i = i + ${REC}u;`)
         w('            continue;')
         w('        }')

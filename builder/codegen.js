@@ -43,7 +43,7 @@
 
 import { FIELDS as MATERIAL_FIELDS, FIELDS_OF, COAT_FIELDS, hasCoating, reliefMaterialId, reliefOwner } from './materials.js'
 import { hasFace, lightOf, lightRGBObject, beamOf, arraysOf, copyCount, arrayedLightProblem } from './lights.js'
-import { copyPattern, codeOf, contentKey, ARRAY_WINDOW_WGSL, SLACK } from './arrays.js'
+import { copyPattern, codeOf, contentKey, ARRAY_WINDOW_WGSL } from './arrays.js'
 import { sceneExtent } from './bounds.js'
 import { SCENE_PRELUDE } from '../lib/pathtracer/core/scene_api.js'
 import { NO_LIGHT_FACES } from '../lib/pathtracer/core/uniforms.schema.js'
@@ -1786,12 +1786,10 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
                 line(d + 1, `var wf_${i} = 0; var wn_${i} = ${K}u;     // the window: its first copy, how many (all, until the box is known)`)
                 line(d + 1, `{ let wl = UB.${lo}; let wh = UB.${hi};`)
                 line(d + 2, 'if (wl.w != 0.0) {')
-                line(d + 3, `let wc = 0.5 * (wl.xyz + wh.xyz); let w0 = UB.${copyName(i, 0)};`)
-                line(d + 3, 'let c0 = w0[3].xyz + w0[3].w * (xfRot(w0) * wc); let wr = 0.5 * length(wh.xyz - wl.xyz) * w0[3].w;')
-                line(d + 3, win.kind === 'row' ? `let w1 = UB.${copyName(i, 1)}; let wd = w1[3].xyz + w1[3].w * (xfRot(w1) * wc) - c0;`
-                                               : 'let wd = VEC3(0.0);')
+                const row = win.kind === 'row'
+                line(d + 3, `let w0 = UB.${copyName(i, 0)};${row ? ` let w1 = UB.${copyName(i, 1)};` : ''}`)
                 // (aw, not W: the page's shorthand makes W a vec3, wgsl_shorthand.js SHORT_TOKENS)
-                line(d + 3, `let aw = arrWindow(${codeOf(win)}u, ${K}u, p, c0, wd, wr + ${SLACK} * (length(c0) + wr), XF_S);`)
+                line(d + 3, `let aw = arrWindowOf(${codeOf(win)}u, ${K}u, p, xfRot(w0), w0[3].xyz, w0[3].w, ${row ? 'w1' : 'w0'}[3].xyz, wl.xyz, wh.xyz, XF_S);`)
                 // (`every`, the bench's question only: the window's own first copy, then every copy, nothing in CULL)
                 line(d + 3, every ? `wf_${i} = aw.first;` : `CULL = min(CULL, aw.bound); wf_${i} = aw.first; wn_${i} = aw.count;`)
                 line(d + 2, '}')
@@ -1817,8 +1815,12 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
                 line(d + 2, '}')
             }
             enter(d + 2, pseudo, `T_${g.id}`)
+            /* THE PICK COPY SAYS WHICH COPY (scene_api.js XF_COPY): the copy number one digit more, the arrays one more,
+               for the bounds' lattice to put a point in its own copy's frame (boxes.js) -- the render copies keep none */
+            if (pick) line(d + 2, `let xfc_${g.id} = XF_COPY; XF_COPY = xfc_${g.id} * ${K}u + ${c}; XF_COPIES = XF_COPIES + 1u;`)
             if (together) { combineRest(d + 2, g); combineShapes(d + 2, g, true) }
             else children(d + 2, g)
+            if (pick) line(d + 2, `XF_COPY = xfc_${g.id}; XF_COPIES = XF_COPIES - 1u;`)
             leave(d + 2, pseudo, `T_${g.id}`)
             line(d + 1, '}')
             if (together) combineClose(d + 1, g)

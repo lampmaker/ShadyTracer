@@ -199,6 +199,12 @@
 // about as many steps (arraywindow.gpu.mjs counts them), so a window's copy is now worked out from copy 0 by the pattern
 // (arrays.js arrCopy) where a switch picked it. codegen.test failed scenes/parametric-part.json alone, both modes, before
 // this freeze: its fins' loop the one windowed array among the documents.
+//
+// A NODE IN AN ARRAY MEASURED AS ONE COPY (2026-10-25): the pick copies keep which copy is walked (scene_api.js
+// XF_COPY, codegen's copies loop and the data walk's ARRAY records), and the window's bounds follow its content's box
+// (arrays.js arrWindowOf). codegen.test failed scenes/parametric-part.json alone before this freeze, both modes -- its
+// wgsl and opticsWgsl by the window's functions, its pickWgsl and opticsPickWgsl by the copy number -- the one document
+// with an array.
 //======================================================================================================================
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
