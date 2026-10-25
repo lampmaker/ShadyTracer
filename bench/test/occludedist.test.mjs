@@ -1,0 +1,65 @@
+//======================================================================================================================
+// Tests for the distance-only shadow rays bench (bench/occludedist.js, Tests > occludedist). Run: node bench/test/occludedist.test.mjs
+//
+// The timing exists only on a card, run by a person. What can be checked is that every row is what its label says: a
+// scene's two rows the same document, text, camera, environment and boxes with only occludeDist moved, each compiled;
+// dichroics lit as Tests > dichroics row 1 is; the drift row row 1 again. What the picture looks like is the user's:
+// BENCH.occludedist.view(n). And its column: the resolve kernel's time, by the name the kernel table gives it.
+//======================================================================================================================
+import { readFileSync } from 'node:fs'
+import { occludeDistTest, SCENES } from '../occludedist.js'
+import { dichroicsTest } from '../dichroics.js'
+import { BENCH, CAMERAS } from '../index.js'
+import { UniformSpec } from '../../lib/pathtracer/core/uniforms.schema.js'
+
+let pass = 0, fail = 0
+const ok = (name, cond, extra = '') => { if (cond) { pass++; return } fail++; console.log(`FAIL  ${name}${extra ? '\n      ' + extra : ''}`) }
+
+const load = u => readFileSync(u, 'utf8')
+const T = await occludeDistTest(load)
+const N = 1 + SCENES.length
+
+// ---- the test as a whole
+ok('a bench-kind test at 1280 x 720, the benchmark\'s timing', T.id === 'occludedist' && T.kind === 'bench' && T.size === BENCH.size
+    && T.timed === BENCH.timed && T.warmup === BENCH.warmup && T.kernels === BENCH.kernels)
+ok('every scene found: dichroics and five more, each a file and a camera', SCENES.length === 5 && SCENES.every(s => s && s[2] && s[3]))
+ok(`two rows a scene and the drift row (${2 * N + 1}), labels unique`, T.cases.length === 2 * N + 1
+    && new Set(T.cases.map(c => c.label)).size === T.cases.length)
+ok('occludeDist is a setting, off by default', 'occludeDist' in UniformSpec && UniformSpec.occludeDist.def === 0)
+ok('a column for the resolve kernel\'s time, read from kernelMs.occlude_emit', T.extra?.columns?.length === 1 && T.extra.columns[0][0] === 'occlude_emit'
+    && T.extra.columns[0][1]({ kernelMs: { occlude_emit: 1.5 } }) === 1.5)
+
+// ---- each scene: off, then on, nothing else moved, each its own build
+for (let s = 0; s < N; s++) {
+    const rows = T.cases.slice(2 * s, 2 * s + 2), [a, b] = rows
+    const label = a.label.replace(/, as it was$/, '')
+    ok(`${label}: off, then on`, a.set.occludeDist === 0 && b.set.occludeDist === 1 && /as it was$/.test(a.label) && /shadow rays on distance only$/.test(b.label))
+    const others = r => JSON.stringify({ ...r.set, occludeDist: undefined })
+    ok(`${label}: only occludeDist moves -- the same scene, camera, environment, boxes, light and other settings`,
+        rows.every(r => r.scene === a.scene && r.camera === a.camera && JSON.stringify(r.environment) === JSON.stringify(a.environment)
+            && r.measureBoxes === a.measureBoxes && r.opticsLight === a.opticsLight && others(r) === others(a)))
+    ok(`${label}: both compiled (on, the occlusion kernel is another and the resolve is built)`, a.compile === true && b.compile === true
+        && a.sameTextAs === undefined && b.sameTextAs === undefined)
+    ok(`${label}: every setting names a uniform`, rows.every(r => Object.keys(r.set).every(k => k in UniformSpec || k in r.scene.uniforms)))
+    ok(`${label}: baked`, rows.every(r => r.baked === true && r.scene.wgsl))
+}
+
+// ---- dichroics as Tests > dichroics row 1 has it
+{
+    const D = (await dichroicsTest(load)).cases[0], [a] = T.cases
+    ok('dichroics first: its light\'s photons (one a pixel, its one sheet), the photon map on, its camera, its studio',
+        a.set.sppm === 1 && a.opticsLight.perPixel === 1 && JSON.stringify(a.opticsLight.sources) === JSON.stringify(D.opticsLight.sources)
+        && a.camera === CAMERAS.dichroics && JSON.stringify(a.environment) === JSON.stringify(D.environment)
+        && a.scene.wgsl === D.scene.wgsl)
+    ok('...and no other scene lit by a light\'s photons or with the map asked', T.cases.slice(2, -1).every(c => !c.opticsLight && !('sppm' in c.set)))
+}
+
+// ---- the drift row
+{
+    const last = T.cases.at(-1), [a] = T.cases
+    ok('the last row is row 1 again', last.scene === a.scene && JSON.stringify(last.set) === JSON.stringify(a.set)
+        && last.sameTextAs === 0 && last.compile === false && last.opticsLight === a.opticsLight)
+}
+
+console.log(`occludedist bench: ${pass} passed, ${fail} failed`)
+process.exit(fail ? 1 : 0)

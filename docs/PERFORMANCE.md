@@ -47,9 +47,16 @@ Chrome 155, 2026-10-25). Off was the setting `marchDist` 0, on was 1, each baked
     take three looks anyway.
 - **The picture is the same.** The user saw it identical; on lavapipe it is bit for bit (`builder/test/marchdist.gpu.mjs`).
 - **The user's choice:** always on, the setting removed. Tests › marchdist went with it, since there is no off to time.
-- **Next candidate: shadow rays on distance only** (occlude 6-35 ms a sample above).
-  - An emitter's shadow ray needs the material where it is blocked, so those rays need the whole answer somewhere: a
-    small kernel holding the scene, or a scene known not to emit.
+- **Next: shadow rays on distance only** (occlude 6-35 ms a sample above): built the same day behind the developer
+  switch `occludeDist`, NOT measured on a card.
+  - The occlusion kernel folds the distance alone.
+  - An emitter's shadow ray, the one that asks a material where it is blocked, is marked there, left in its slot in the
+    queue, and resolved by `prog_occlude_emit`, a small kernel holding the whole scene, before the next round.
+  - The prep sizes that kernel at zero groups when nothing was marked.
+  - On lavapipe (`builder/test/occludedist.gpu.mjs`) every deposit is bit for bit the full kernel's. The whole picture is
+    bit for bit except where emitters are about: there an emitter ray's light lands a round later, and the frame's atomic
+    float sum takes another order (the showcase: 2 of 768 pixels, 1.5e-7).
+  - **The instrument: Tests › occludedist**, with a column for `occlude_emit`'s time.
 
 ## STATUS (2026-10-16) — a glass-and-light scene: what it runs, what went (0.61.2), what to measure next
 
