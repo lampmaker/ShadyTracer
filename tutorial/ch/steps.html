@@ -275,17 +275,21 @@
     <div data-claim="code">
       <p><strong>A step that asks only the distance.</strong> Every step of the march asked the scene for its whole answer
         (each shape's normal, turned into the world, the material, the solid the point is in) and read one number of it.
-        With the developer setting marchDist on (0.next), the march is built against a second <code>add_new</code> and
-        <code>fold</code> that keep the nearest surface's distance and nothing else, and the surface kernel asks for the
-        whole answer once, at the ray the march stopped, on a trip of the loop it already had (<code>scene_api.js</code>,
-        FOLD_DIST; <code>wavefront.js</code>, THE HIT ITSELF). The distance is the same expression, so the steps are the
-        same: on a software GPU every camera ray ended in the same place, bit for bit, and every pixel of five scenes'
-        pictures was the same (<code>builder/test/marchdist.gpu.mjs</code>). Off by default, and then not in the kernels.</p>
+        Since 0.next the renderer's march is built against a second <code>add_new</code> and <code>fold</code> that keep the
+        nearest surface's distance and nothing else, and the surface kernel asks for the whole answer once, at the ray the
+        march stopped, on a trip of the loop it already had (<code>scene_api.js</code>, FOLD_DIST; <code>wavefront.js</code>,
+        THE HIT ITSELF). The distance is the same expression, so the steps are the same: on a software GPU every camera ray
+        ends in the same place, bit for bit, and so does every pixel of the whole picture
+        (<code>builder/test/marchdist.gpu.mjs</code>). The Optics page keeps the full march: its shading reads the march's
+        hit directly.</p>
     </div>
-    <div data-claim="inferred">
-      <p><strong>A step that asks only the distance: how much it saves.</strong> What a step no longer computes is the
-        shapes' normal work, so a scene of spheres, lenses and smooth blends should gain more than one of plain boxes, whose
-        distance comes with no normal at all. Not measured: Tests &gt; marchdist, each bench scene off and on, says.</p>
+    <div data-claim="measured">
+      <p><strong>A step that asks only the distance: the march 8% to 79% faster, the sample 2% to 35%.</strong> GPU time a
+        sample, before against after, on the user's Pascal card (Tests &gt; marchdist, 2026-10-25,
+        <code>docs/PERFORMANCE.md</code>): the march on the optics bench 49.3 against 10.2 ms, the showcase 17.3 against
+        8.8, dichroics 177.8 against 144.0, the Noise library 70.7 against 58.8. The surface kernel's one look more a hit
+        takes part of it back -- on dichroics 21 of the 34 ms -- so the whole sample fell 35.5% on the optics bench, 12.4% on the showcase, 2% to 4.5% on dichroics,
+        the Noise library and the Menger cubes, and not at all on the material test (+1%, within that run's drift).</p>
     </div>
     <div data-claim="inferred">
       <p><strong>Boxes on shelled reliefs.</strong> In this page's model, a relief in its shell costs about its box test

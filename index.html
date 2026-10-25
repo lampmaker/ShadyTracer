@@ -55,7 +55,6 @@
         import { animatedTest } from './bench/animated.js'
         import { boxCostTest } from './bench/boxcost.js'
         import { dichroicsTest } from './bench/dichroics.js'
-        import { marchDistTest } from './bench/marchdist.js'
         import { importedTest } from './bench/imported.js'
         import { installBuilder } from './builder/demo.js'
         import { createBaker } from './builder/baker.js'
@@ -643,21 +642,6 @@
                     const t = await prepareDichroics();
                     const missing = rows.filter(n => !t.cases[n - 1]);
                     if (missing.length) throw new Error(`BENCH.dichroics.run: no row ${missing.join(', ')} (rows 1-${t.cases.length})`);
-                    return window.RTTESTS.run(rows.length ? { ...t, cases: rows.map(n => t.cases[n - 1]) } : t);
-                },
-            };
-            /* THE MARCH ON DISTANCE ONLY (bench/marchdist.js, 0.next): each bench scene with the setting marchDist off and on,
-               dichroics with its light's photons first -- a button of its own, and BENCH.marchdist.view(n) / .run(...rows) */
-            let marchdist = null;
-            const prepareMarchDist = () => marchdist ??= marchDistTest(async url => { const r = await fetch(url); if (!r.ok) throw new Error(`${url}: ${r.status}`); return r.text() })
-                .catch(e => { marchdist = null; throw e; });
-            window.RTTESTS?.addTest?.({ id: 'marchdist', title: 'The march on distance only (off and on: dichroics with its light, the Noise library, Menger, three more)', prepare: prepareMarchDist });
-            window.BENCH.marchdist = {
-                view: async n => window.RTTESTS.view(await prepareMarchDist(), n),
-                run: async (...rows) => {
-                    const t = await prepareMarchDist();
-                    const missing = rows.filter(n => !t.cases[n - 1]);
-                    if (missing.length) throw new Error(`BENCH.marchdist.run: no row ${missing.join(', ')} (rows 1-${t.cases.length})`);
                     return window.RTTESTS.run(rows.length ? { ...t, cases: rows.map(n => t.cases[n - 1]) } : t);
                 },
             };

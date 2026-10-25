@@ -13,25 +13,43 @@ true?"). A plan built on inferences written as facts was reverted (commit fdc333
 it had called one scene's slow render "this architecture's full-resolution cost", which the user's
 own numbers contradict.
 
-## STATUS (2026-10-25) — the march on distance only, built, NOT measured on a card
+## STATUS (2026-10-25) — the march on distance only: measured, and always on
 
 The user asked (2026-10-24) which techniques could make rendering faster.
 - **Over-relaxation, the list's first step, is gone.** The user saw the picture change with it (below, under
   Rejected).
-- **The march on distance only, built (0.next)** as the developer setting `marchDist`, off by default. It is review
-  #7 of `PERFORMANCE_REVIEW.md`, without the occlusion half.
+- **The march on distance only (0.next)** is review #7 of `PERFORMANCE_REVIEW.md`, without the occlusion half.
   - Every march step asked the scene for its whole answer and read one number of it (read in code: `wavefront.js`
     prog_march, `abs(hit.s.w)`).
-  - With it on, the march is compiled against a distance-only `add_new` and `fold` (`scene_api.js` FOLD_DIST), and
+  - Now the renderer's march is compiled against a distance-only `add_new` and `fold` (`scene_api.js` FOLD_DIST), and
     the surface kernel asks for the whole hit once, at the ray the march stopped (`prog_surface`, THE HIT ITSELF).
-- **The picture does not change.** On lavapipe (`builder/test/marchdist.gpu.mjs`) every camera ray ends in the same
-  state, in the same steps and at the same place, bit for bit. The whole renderer's pictures off and on from the same
-  seeds are the same pixel for pixel.
-- **What it saves is inferred:** each shape's normal work and its turn into the world frame, the material, medium and
-  capture bookkeeping at every step. A box from `sd()` has no normal to save.
-- **The instrument: Tests › marchdist**, each bench scene off and on. Its march and surface columns decide the default.
-- **Not yet: the occlusion kernel.** An emitter shadow ray needs the material where it is blocked. If the march
-  gains, a distance-only occlusion with that answer made once is the next step.
+  - The Optics page's trace keeps the full march: its shade reads the march's hit directly.
+
+**MEASURED: Tests › marchdist** (the user's card, `ShadyTracer 0.78.0 · c3be0d6 (ccr-0f3a020a-590jz2) · nvidia pascal`,
+Chrome 155, 2026-10-25). Off was the setting `marchDist` 0, on was 1, each baked. GPU ms a sample; the drift row read
++1.5%.
+
+| scene | march off → on | surface off → on | gpu off → on |
+|---|---|---|---|
+| dichroics, its light's photons, the map on | 177.8 → 144.0 | 21.1 → 42.0 | 283.7 → 270.9 (−4.5%) |
+| the Noise library | 70.7 → 58.8 | 18.8 → 24.8 | 144.3 → 138.3 (−4.2%) |
+| the Menger cubes | 49.6 → 41.2 | 4.8 → 7.4 | 90.6 → 88.7 (−2.1%) |
+| the showcase | 17.3 → 8.8 | 3.8 → 6.0 | 50.9 → 44.6 (−12.4%) |
+| the material test | 11.3 → 10.4 | 4.7 → 6.0 | 39.8 → 40.2 (+1%) |
+| the optics bench | 49.3 → 10.2 | 5.5 → 12.5 | 91.9 → 59.3 (−35.5%) |
+
+- **The march gained on every scene, 8% to 79%.**
+- **The surface kernel takes part of it back.** It makes the one full evaluation per hit that the march's last step used
+  to make: 21 of the 34 ms the march saved on dichroics.
+  - Inferred, not tested: dichroics' plates have exact normals, so a hit on one cost the surface kernel one look (the
+    material) before, and costs two now.
+  - What would test it: the surface column on a scene of exact-normal shapes against one of `sd()` boxes, whose normals
+    take three looks anyway.
+- **The picture is the same.** The user saw it identical; on lavapipe it is bit for bit (`builder/test/marchdist.gpu.mjs`).
+- **The user's choice:** always on, the setting removed. Tests › marchdist went with it, since there is no off to time.
+- **Next candidate: shadow rays on distance only** (occlude 6-35 ms a sample above).
+  - An emitter's shadow ray needs the material where it is blocked, so those rays need the whole answer somewhere: a
+    small kernel holding the scene, or a scene known not to emit.
 
 ## STATUS (2026-10-16) — a glass-and-light scene: what it runs, what went (0.61.2), what to measure next
 
