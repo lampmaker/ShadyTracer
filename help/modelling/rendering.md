@@ -122,8 +122,8 @@ goes straight back to the editable build.
 
 **File › Save picture…** opens the **Darkroom**, a tab beside the picture. Its boxes on the right: **Render** renders
 offscreen at its own size, up to 16 384 pixels on a side, with its own number of samples (you can stop it early);
-**Develop** chooses the exposure, tone curve and grading, with a histogram of what will be saved on top; **Save** writes
-the file. The render is kept as light, so you can develop it and save it as often as you like. Each save is a file of its
+**Develop** shows a histogram of what will be saved, and the boxes under it develop the picture; **Save** writes the
+file. The render is kept as light, so you can develop it and save it as often as you like. Each save is a file of its
 own: the name you give, with the date and time it was saved after it (`render-2026-10-19_14-03-22.png`).
 
 **Save** offers the developed picture -- **PNG** at 8 or 16 bits a channel, **JPEG**, **WebP** -- or the light itself:
@@ -132,6 +132,14 @@ exposure, so 1.0 is white), with no tone curve, grading or rays drawn over it: f
 measuring. EXR keeps everything, the sun and colours no screen can show included; HDR clips into the screen's colours;
 PFM is only the numbers. The line under the format says what the file will hold and how large it can be. PNG and EXR
 files say how they were made: the version, the size, the samples, the settings.
+
+The developing boxes run in the order the picture is made. **Exposure**: the EV, Meter, and **Spot meter**:
+click the picture where middle grey should be. **White balance**: the temperature of the light that should look white,
+and a tint. **Pick a white** takes them from a surface you click. Then red, green and blue gains. **Tone**: the tone curve,
+with **Hable, adjustable** offering its white, toe and shoulder, and under it a gain for each band of light, from 7 stops
+below white up to white: raise the dark bands to open the shadows. **Colour**: saturation, vibrance (it raises dull
+colours more than vivid ones) and hue. **Grading**: contrast, saturation and brightness of the finished picture. Each
+box has a Reset. The light files (EXR, HDR, PFM) are saved without these.
 
 The render fills the rest of the tab. Turn the mouse wheel to zoom where the cursor is, drag to move, double-click for
 100 % (one pixel of the picture on one pixel of the screen) and again for the whole picture. The keys, with the picture

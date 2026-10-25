@@ -187,6 +187,14 @@
         (run with no window, on a GTX 1080 Ti, the user's Pascal card, <code>CHANGELOG.md</code> 0.27.0).</p>
     </div>
     <div data-claim="code">
+      <p><strong>Adjusted before the curve.</strong> A saved picture can also be changed on the light itself, before its
+        tone curve. A white balance, for one, says which colour of light should look white, so a room lit by an orange
+        lamp comes out neutral, as a camera makes it; and there is a version of the Hable curve whose toe, shoulder and
+        white point (the brightest light that still shows as white) you set yourself. These run in their own copy of the
+        display's code, used only once one of them is moved, so an untouched picture still goes through
+        <code>displayPixel</code> itself and matches the view (<code>lib/pathtracer/darkroom/grade.js</code>).</p>
+    </div>
+    <div data-claim="code">
       <p><strong>A cap in the exposure's own units.</strong> An optional firefly clamp caps what one path may add to a
         pixel, in multiples of display white, not in candela per square metre, and never below white
         (<code>uniforms.schema.js</code>, the setting's note). Off by default: capped, the picture is no longer a

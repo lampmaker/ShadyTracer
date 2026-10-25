@@ -134,7 +134,7 @@ Box **Export**: format, options, file name (the stamped name as today, `lib/file
    Left out of it, said here so nobody assumes them: the navigator rectangle, the readout's output RGB (it needs
    phase 3's JS mirror of the pipeline), Space-drag (a plain drag pans), clipping per channel (any channel, for now).
 2. **Export** (*built 2026-10-25, 0.next; not yet seen in the page*; the recipe is embedded, loading a sidecar waits for phase 4's presets) — EXR, HDR, PFM, PNG-16, JPEG/WebP, recipe embedded + sidecar, strip-wise readback.
-3. **Light-stage tools** — `displayPixel` split; white balance + eyedropper, spot meter, channel gains, tone
+3. **Light-stage tools** (*built 2026-10-25, 0.next; not yet seen in the page*; `displayPixel` copied as `developPixel` rather than split, so the live display and the tutorial's excerpt stay as they are; the EXR not white-balanced, a later choice) — `displayPixel` split; white balance + eyedropper, spot meter, channel gains, tone
    equaliser, Oklab saturation / vibrance / hue, parametric tone curve.
 4. **Display-stage tools** — output transfer, Levels (gamma), Curves editor, CDL wheels, vignette, grain, dither;
    undo / redo, presets, copy / paste.

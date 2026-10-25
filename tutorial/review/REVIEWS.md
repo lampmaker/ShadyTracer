@@ -1159,6 +1159,28 @@ chapter reads it first.
 | Second reader: why rays step; why a small lamp's weight is small and whether "almost nothing" is "right"; "the lamp's own rays" never taught; the brightness reason's consequence left unsaid; "that thick" unclear; what a ray meeting the black rim does; 5 % against a plain area sum of 3 %; "the two halves of the estimate" though NEE off has no shadow rays; a formula though section 2 says a real scene has none. | **Fixed**: stepping linked to *Shapes as distances*; "a random bounce rarely finds a small lamp, so what it finds counts for almost nothing, and the shadow rays, aimed at the true lamp, gave nearly all the light"; the lamp's own rays cut; "a larger lamp glowing as brightly sends out more light than it was given"; "0.02 thick, so its outline is the lamp"; a ray meeting the ring stops, as at the back; the ring adds 3 % face on, and the floor sees the lamp at a slant, which narrows the lamp but not the ring; "the two ways of finding the lamp"; "which a scene this simple has". |
 | First reader, on the rest of the page: section 3's ± 0.001 / ± 0.009 against fig 3's screenshot (± 0.003 / ± 0.025 at size 0.20); "a fifth" (section 4) against "a sixth" (section 8); section 4's "Not at the last bounce" and section 8's "Not on the last round" read as one rule twice; section 7's margin note on the stale sun comment long; march, tolerance, BSDF, f32 without cards. | **Answered, not changed here**: sections this change did not touch; the next round's. First to check: section 3's numbers against the figure's size. |
 
+## Round 13, 2026-10-25 (0.next: chapter 7, the Darkroom's light tools)
+
+Reports: [pixels](reports/2026-10-25-round13/pixels.md), then [two passages read again](reports/2026-10-25-round13/pixels-second.md).
+
+**Why this round.** The Darkroom gained tools that act on a saved picture's light before its tone curve (white balance,
+a tone equaliser, Oklab colour, an adjustable Hable curve: lib/pathtracer/darkroom/grade.js), run in a copy of
+`displayPixel` only once one is moved. Chapter 7 said a saved picture is developed "through the same function the
+display uses", true only untouched, and counted the curves. Two sentences were added for it; the first reader read the
+whole page with a question on them, and found both unclear. They were rewritten as it suggested; a second, fresh reader
+found both still interrupting the paragraphs they sat in. So section 2 went back to its text before this round, and the
+tools became a stamped item of their own after "The same picture, to the bit", "Adjusted before the curve", saying what a
+white balance does and what a white point is. That item has not been read; the next round's reader of this chapter reads
+it first.
+
+### Chapter 7, From light to pixels
+
+| Finding | |
+|---|---|
+| First reader: the sentence on the tools jargon ("a copy of that function with the tools put in"), white balance never explained; "a seventh, Hable's" confusing beside the Hable already listed, toe and shoulder far back. | **Fixed**, then fixed again for the second reader. |
+| Second reader: both still interrupt -- the curve paragraph ends on "a look, chosen for a picture", and the Hable sentence names a saved picture before section 5 says what one is; the light-kept paragraph's payoff ("cannot differ from the view") diluted; white point unexplained. | **Fixed**: section 2 as it was; a stamped item of its own after "to the bit", white balance and the white point said in plain words, ending "matches the view". |
+| First reader, on the rest of the page: the black-voting paragraph flips between "does not vote" and "voting"; the two-rule meter wants a worked example; percentile, histogram, bin, gamut without cards; figure 1's axis labels overlap and the sun's bar is not found; sRGB used in the fold-out before it is taught; the fold-out writes 2^h − H for 2^(h−H). | **Answered, not changed here**: sections this change did not touch; the next round's. First to check: the fold-out's 2^h − H. |
+
 ## Next round
 
 The pages stay drafts. Every written chapter has now had two readers (chapters 5 to 11 in rounds 5 and 6); the
