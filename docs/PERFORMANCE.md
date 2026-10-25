@@ -13,32 +13,6 @@ true?"). A plan built on inferences written as facts was reverted (commit fdc333
 it had called one scene's slow render "this architecture's full-resolution cost", which the user's
 own numbers contradict.
 
-## STATUS (2026-10-24) — over-relaxed steps, built, NOT measured on a card
-
-The user asked (2026-10-24) which techniques could be added, or swapped in, to render faster -- ReSTIR among them -- and
-chose, of the list that came back, its first step.
-
-**The list's verdict on ReSTIR** (reasoning from what is read in code, not measured):
-- It speeds up choosing among many lights. These scenes have a few: the sun or studio, the emitters discovery finds, the
-  lights' faces (`materials_pbr.js` NEE).
-- It does nothing for caustics, which no light sample can reach through a delta lobe.
-- Its reuse makes pixels and samples depend on each other, which `core/measure.js`'s error bar assumes they do not.
-- Parked; reconsider only for a scene of many lights, in a preview mode.
-
-**The first step, over-relaxed sphere tracing (0.next):**
-- Built as the developer setting `relax`, off by default (`wavefront.js` RELAXED STEPS).
-- Counted on lavapipe (`builder/test/relax.gpu.mjs`), with every ray ending as plain:
-  - at 1.3, fewer camera-ray steps on every scene: 6-23% on the bench scenes and Dusty beam, 23% on a grazed thin plate;
-  - at 1.6, the plate 38% fewer, the others from 13% fewer to 6% more than plain.
-- **The instrument: Tests › relax.** Each bench scene at 1, 1.3 and 1.6; march and occlude per row decide it.
-
-**Next on the list, each gated by a reading:**
-1. A closed-form skip to an unblended top-level plane, and to the scene's bounds (review #8). Only if Tests › relax
-   leaves dichroics' photon march where it is: the floor under the sheet is that case.
-2. A distance-only march and occlusion, the full hit once at the end (review #7).
-3. Low-discrepancy sampling for the first dimensions, judged on `effic`.
-4. A denoiser on the shown picture only, never on a measurement.
-
 ## STATUS (2026-10-16) — a glass-and-light scene: what it runs, what went (0.61.2), what to measure next
 
 The user asked (2026-10-16) whether render speed can be improved without losing anything of the picture, on

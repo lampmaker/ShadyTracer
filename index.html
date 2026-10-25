@@ -55,7 +55,6 @@
         import { animatedTest } from './bench/animated.js'
         import { boxCostTest } from './bench/boxcost.js'
         import { dichroicsTest } from './bench/dichroics.js'
-        import { relaxTest } from './bench/relax.js'
         import { importedTest } from './bench/imported.js'
         import { installBuilder } from './builder/demo.js'
         import { createBaker } from './builder/baker.js'
@@ -643,21 +642,6 @@
                     const t = await prepareDichroics();
                     const missing = rows.filter(n => !t.cases[n - 1]);
                     if (missing.length) throw new Error(`BENCH.dichroics.run: no row ${missing.join(', ')} (rows 1-${t.cases.length})`);
-                    return window.RTTESTS.run(rows.length ? { ...t, cases: rows.map(n => t.cases[n - 1]) } : t);
-                },
-            };
-            /* OVER-RELAXED STEPS (bench/relax.js, 0.next): each bench scene at relax 1, 1.3 and 1.6, dichroics with its light's
-               photons first -- a button of its own, and BENCH.relax.view(n) / .run(...rows) */
-            let relax = null;
-            const prepareRelax = () => relax ??= relaxTest(async url => { const r = await fetch(url); if (!r.ok) throw new Error(`${url}: ${r.status}`); return r.text() })
-                .catch(e => { relax = null; throw e; });
-            window.RTTESTS?.addTest?.({ id: 'relax', title: 'Over-relaxed steps (relax 1, 1.3, 1.6: dichroics with its light, the Noise library, Menger, three more)', prepare: prepareRelax });
-            window.BENCH.relax = {
-                view: async n => window.RTTESTS.view(await prepareRelax(), n),
-                run: async (...rows) => {
-                    const t = await prepareRelax();
-                    const missing = rows.filter(n => !t.cases[n - 1]);
-                    if (missing.length) throw new Error(`BENCH.relax.run: no row ${missing.join(', ')} (rows 1-${t.cases.length})`);
                     return window.RTTESTS.run(rows.length ? { ...t, cases: rows.map(n => t.cases[n - 1]) } : t);
                 },
             };
