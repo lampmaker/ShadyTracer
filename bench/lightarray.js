@@ -16,12 +16,20 @@
 //   16 placed by hand                 the same 16 as lights of their own: what the array saves in text, and costs in speed
 //   16 x 16 in a ring of rows         3.906 lm each, the row in a ring of 16: 256 faces
 //   rows 2 and 4, the window off      every copy walked at every step, as before the window (builder/arrays.js, 0.next)
+//   row 4's copies by a switch        row 6's every copy, but from the window's first and through the switch the first
+//                                     window picked a copy by (codegen.js AN ARRAY, arrayWindow 'every')
 //   one light, again                  row 1: if it differs, so may every row
 // MEASURED (the user's Ampere, 213642c, 2026-10-23, before the window): rows 1-4 at 61.4, 67.5, 83.6 and 684.2 ms a sample;
 // shade -- the face pick -- 21.2, 20.9, 20.5 and 20.0 ms, flat; march 12.3, 19.0, 14.9 and 465.0 ms, occlusion 7.6, 8.7, 8.1
 // and 160.0: every copy evaluated at every step, not the pick. So the window (arrays.js), and these rows to time it by.
 // Row 3's wall clock was 33 ms over its GPU time where the others' were about 12: not established why (a rerun of rows
 // 2 and 3, BENCH.lightarray.run(2, 3, 2, 3), would say whether it is the row's own).
+// MEASURED (the user's Pascal, a81cac9, 2026-10-25, the first window): the window made it slower -- row 4 1385.1 ms a
+// sample (march 1007.5, occlusion 382.7) against row 6's 398.9 (281.0, 87.7); row 2 68.1 (march 15.2, a noisy 50-108)
+// against row 5's 50.3 (11.9). COUNTED, not timed (builder/test/arraywindow.gpu.mjs, lavapipe, these documents and camera):
+// with the window the ring took 22.0 steps a camera ray against 19.4, the row 12.1 both ways -- so not the steps, each
+// step's cost. Inferred, row 7 to test it: the switch picking a copy whose index differs from pixel to pixel. Since then
+// a window's copy is worked out from the pattern (arrays.js arrCopy), no switch.
 // The picture is the same light spread differently: what it looks like is the user's to judge (BENCH.lightarray.view(n)).
 //======================================================================================================================
 
@@ -70,11 +78,12 @@ export const lightsOf = doc => sourceTable(doc).sources.filter(x => x.kind !== '
  * The test as a bench test. Nothing to load: the documents are made here.
  */
 export async function lightArrayTest() {
-    // `window` false: the arrays' copies all walked, as the builder made them before arrays.js
+    // `window` false: the arrays' copies all walked, as the builder made them before arrays.js; 'every': codegen.js's
+    // question only, every copy walked from the window's own first, each picked by the switch the first window used
     const row = (label, kind, extra = {}, window = true) => {
         const doc = lightArrayDoc(kind)
-        const made = window ? sceneOf(doc, `lightarray-${kind}`)
-            : generate(...Model.generateArgs(doc, { id: `lightarray-${kind}-all`, title: doc.title, arrayWindow: false }))
+        const made = window === true ? sceneOf(doc, `lightarray-${kind}`)
+            : generate(...Model.generateArgs(doc, { id: `lightarray-${kind}-${window ? 'every' : 'all'}`, title: doc.title, arrayWindow: window }))
         return { label, kind, window, scene: baked(made, { live: liveInBench }), camera: CAMERA,
                  environment: structuredClone(ENVIRONMENT), measureBoxes: boxesFor(doc), opticsLight: { perPixel: 1, sources: lightsOf(doc) },
                  baked: true, compile: true, ...extra, set: { ...(extra.set || {}) } }
@@ -86,6 +95,7 @@ export async function lightArrayTest() {
         row('16 x 16 in a ring of rows (arrays), 3.9 lm each', 'ring'),
         row('16 in a row, the window off (every copy walked)', 'row', {}, false),
         row('16 x 16 in a ring of rows, the window off', 'ring', {}, false),
+        row('16 x 16 in a ring of rows, every copy from the window\'s first, by a switch', 'ring', {}, 'every'),
     ]
     cases.push({ ...cases[0], label: 'one light, again (drift check)', compile: false, sameTextAs: 0 })
     return {
@@ -96,7 +106,9 @@ export async function lightArrayTest() {
             + ' baked, the lights\' own photons, a dim studio: row 1 one 4 cm light, row 2 sixteen in an array, row 3 the same'
             + ' sixteen as lights of their own (the array\'s text against theirs), row 4 sixteen rows in a ring, 256 faces.'
             + ' Rows 2 and 4 walk a window of each array\'s copies, those near the point (builder/arrays.js); rows 5 and 6 are'
-            + ' them with every copy walked, as before: 4 against 6 is what the window saves. Row 7'
+            + ' them with every copy walked, as before: 4 against 6 is what the window saves. Row 7 is row 6\'s copies'
+            + ' walked from the window\'s first copy, which differs from pixel to pixel, each picked by a switch as the'
+            + ' first window picked them: 7 against 6 is what that costs. Row 8'
             + ' row 1 again: if it differs from row 1, so may every row. The picture is the user\'s to judge:'
             + ' BENCH.lightarray.view(n). Save the whole text with the machine\'s name. (bench/lightarray.js.)',
         size: BENCH.size, warmup: BENCH.warmup, timed: BENCH.timed, kernels: BENCH.kernels, pipelined: BENCH.pipelined,

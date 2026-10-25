@@ -1774,7 +1774,7 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
                copy combined and folded on its own, as before (scenedata.js the same) */
             const together = combined.has(g.id) && !isCsg(g)
             if (together) combineOpen(d + 1, g, true)
-            const win = windowed.get(g.id)
+            const win = windowed.get(g.id), every = win && arrayWindow === 'every'
             if (win) {
                 /* ...A WINDOW OF THEM (arrays.js THE WINDOW): a row's or a ring's copies near the point, from its content's
                    box (cullBoxes, contentKey: unknown until measured, and then every copy as before), the rest a bound in
@@ -1792,18 +1792,30 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
                                                : 'let wd = VEC3(0.0);')
                 // (aw, not W: the page's shorthand makes W a vec3, wgsl_shorthand.js SHORT_TOKENS)
                 line(d + 3, `let aw = arrWindow(${codeOf(win)}u, ${K}u, p, c0, wd, wr + ${SLACK} * (length(c0) + wr), XF_S);`)
-                line(d + 3, `CULL = min(CULL, aw.bound); wf_${i} = aw.first; wn_${i} = aw.count;`)
+                // (`every`, the bench's question only: the window's own first copy, then every copy, nothing in CULL)
+                line(d + 3, every ? `wf_${i} = aw.first;` : `CULL = min(CULL, aw.bound); wf_${i} = aw.first; wn_${i} = aw.count;`)
                 line(d + 2, '}')
                 line(d + 1, '}')
                 line(d + 1, `for (var cm_${i} = 0u; cm_${i} < wn_${i}; cm_${i} = cm_${i} + 1u) {`)
                 line(d + 2, `let ${c} = u32(((wf_${i} + i32(cm_${i})) % ${K} + ${K}) % ${K});`)
             }
             else line(d + 1, `for (var ${c} = 0u; ${c} < ${K}u; ${c} = ${c} + 1u) {`)
-            line(d + 2, `var T_${g.id}: mat4x4<f32>;`)
-            line(d + 2, `switch ${c} {`)
-            g.copies.forEach((_, i) => line(d + 3, `case ${i}u: { T_${g.id} = UB.${copyName(g.id, i)}; }`))
-            line(d + 3, 'default: { }')
-            line(d + 2, '}')
+            if (win && !every) {
+                /* ...ITS COPY WORKED OUT FROM COPY 0 BY THE PATTERN (arrays.js arrCopy), not picked by the switch below: in a
+                   window the copy differs from pixel to pixel, and a switch on it is run case after case across the
+                   pixels that share the GPU's instructions -- inferred the first window's cost, which made the bench's
+                   ring 3.5 times slower to march on the user's Pascal card (a81cac9, 2026-10-25) with about as many steps
+                   (arraywindow.gpu.mjs counts them). Its copies' matrices are the pattern's to f32's precision: the
+                   pattern itself was matched to TOL (copyPattern), and a copies edit leaving it asks for a compile
+                   (demo.js nodeLive) */
+                line(d + 2, `let T_${g.id} = arrCopy(${codeOf(win)}u, ${K}u, UB.${copyName(g.id, 0)}, ${win.kind === 'row' ? `UB.${copyName(g.id, 1)}[3].xyz - UB.${copyName(g.id, 0)}[3].xyz` : 'VEC3(0.0)'}, i32(${c}));`)
+            } else {
+                line(d + 2, `var T_${g.id}: mat4x4<f32>;`)
+                line(d + 2, `switch ${c} {`)
+                g.copies.forEach((_, i) => line(d + 3, `case ${i}u: { T_${g.id} = UB.${copyName(g.id, i)}; }`))
+                line(d + 3, 'default: { }')
+                line(d + 2, '}')
+            }
             enter(d + 2, pseudo, `T_${g.id}`)
             if (together) { combineRest(d + 2, g); combineShapes(d + 2, g, true) }
             else children(d + 2, g)

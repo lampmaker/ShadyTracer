@@ -194,6 +194,11 @@
 // taken as git merged the two and frozen again. Checked before freezing: generated with arrayWindow false, every document's
 // fingerprints were dev's frozen ones, both modes; with the window, scenes/parametric-part.json alone moved from dev's, by
 // the window's lines as above.
+//
+// THE WINDOW'S COPY WORKED OUT (2026-10-25): the first window made the bench's ring slower on the user's Pascal card, with
+// about as many steps (arraywindow.gpu.mjs counts them), so a window's copy is now worked out from copy 0 by the pattern
+// (arrays.js arrCopy) where a switch picked it. codegen.test failed scenes/parametric-part.json alone, both modes, before
+// this freeze: its fins' loop the one windowed array among the documents.
 //======================================================================================================================
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'

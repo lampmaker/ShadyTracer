@@ -148,14 +148,26 @@ function nearestOf(q, pattern, n, c0, ck) {
    caller), how many, and the bound on every copy outside it (1e7: none). */
 export const ARRAY_WINDOW_WGSL = /*wgsl*/`
 struct ArrWin { first: i32, count: u32, bound: FLOAT }
-fn arrCentre(kind: u32, c0: VEC3, d: VEC3, k: i32, n: u32) -> VEC3 {
-    if (kind == ${PATTERN_ROW}u) { return c0 + f32(k) * d; }
+/* a ring's turn of copy k (axisRot by sign k 2 pi / n) applied to v */
+fn arrTurn(kind: u32, v: VEC3, k: i32, n: u32) -> VEC3 {
     let ax = (kind - 2u) / 2u;
     let a = select(1.0, -1.0, ((kind - 2u) & 1u) == 1u) * 6.283185307179586 * f32(k) / f32(n);
     let c = cos(a); let s = sin(a);
-    if (ax == 0u) { return VEC3(c0.x, c * c0.y - s * c0.z, s * c0.y + c * c0.z); }
-    if (ax == 1u) { return VEC3(c * c0.x + s * c0.z, c0.y, c * c0.z - s * c0.x); }
-    return VEC3(c * c0.x - s * c0.y, s * c0.x + c * c0.y, c0.z);
+    if (ax == 0u) { return VEC3(v.x, c * v.y - s * v.z, s * v.y + c * v.z); }
+    if (ax == 1u) { return VEC3(c * v.x + s * v.z, v.y, c * v.z - s * v.x); }
+    return VEC3(c * v.x - s * v.y, s * v.x + c * v.y, v.z);
+}
+fn arrCentre(kind: u32, c0: VEC3, d: VEC3, k: i32, n: u32) -> VEC3 {
+    if (kind == ${PATTERN_ROW}u) { return c0 + f32(k) * d; }
+    return arrTurn(kind, c0, k, n);
+}
+/* COPY k'S MATRIX FROM COPY 0'S (codegen's windowed loop): a row's moved by k steps d between positions, a ring's
+   turned -- its rotation's columns and its position, its scale kept. Worked out, not picked by a switch on k, which
+   differs from pixel to pixel in a window (codegen.js AN ARRAY) */
+fn arrCopy(kind: u32, n: u32, T0: mat4x4<f32>, d: VEC3, k: i32) -> mat4x4<f32> {
+    if (kind == ${PATTERN_ROW}u) { return mat4x4<f32>(T0[0], T0[1], T0[2], vec4<f32>(T0[3].xyz + f32(k) * d, T0[3].w)); }
+    return mat4x4<f32>(vec4<f32>(arrTurn(kind, T0[0].xyz, k, n), T0[0].w), vec4<f32>(arrTurn(kind, T0[1].xyz, k, n), T0[1].w),
+                       vec4<f32>(arrTurn(kind, T0[2].xyz, k, n), T0[2].w), vec4<f32>(arrTurn(kind, T0[3].xyz, k, n), T0[3].w));
 }
 fn arrBound(kind: u32, p: VEC3, c0: VEC3, d: VEC3, k: i32, n: u32, rho: FLOAT, scale: FLOAT) -> FLOAT {
     return (length(p - arrCentre(kind, c0, d, k, n)) - rho) * scale;

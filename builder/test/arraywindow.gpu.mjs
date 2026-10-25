@@ -9,11 +9,14 @@
 // cullBoxes (from boxes made by the estimate, as measured ones would be), generated with the window and without it,
 // codegen, as data and baked (the build the page shows once edits stop), the SDF run on Dawn:
 //   - at points on every surface (moved onto them by the field's own distance and normal): the same distance and the
-//     same material with the window as without -- exact, where the march decides a hit and the normal is taken;
+//     same material with the window as without -- where the march decides a hit and the normal is taken -- to f32's
+//     precision, a window's copy being worked out from copy 0 (arrCopy), and but at a face's very edge;
 //   - at points all round: never above the field without the window (a lower bound, safe to march by), and below it
 //     somewhere (the copies left out did stand in by their bound);
-//   - and with every box unknown, the text the window's and the field the one without it, everywhere.
-// WHAT IT CANNOT SHOW: speed, or the picture -- the user's (Tests > lightarray, BENCH.lightarray).
+//   - and with every box unknown, the text the window's and the field the one without it, everywhere;
+//   - the bench's own row and ring (bench/lightarray.js) through the engine's march kernel: the steps a camera ray takes
+//     with the window about those without it, and every ray ending as it did. A count, the same on any card.
+// WHAT IT CANNOT SHOW: what a step costs, the speed, or the picture -- the user's (Tests > lightarray, BENCH.lightarray).
 //======================================================================================================================
 import { execSync } from 'node:child_process'
 import { join } from 'node:path'
@@ -36,6 +39,9 @@ const { SCENE_PRELUDE } = await import('../../lib/pathtracer/core/scene_api.js')
 const { computeUniformTypes, sceneConstantsWGSL, UniformSpec } = await import('../../lib/pathtracer/core/uniforms.schema.js')
 const { derive } = await import('../../lib/pathtracer/core/photometry.js')
 const { defines, TOKENS, SHORT_TOKENS } = await import('../../lib/wgsl_shorthand.js')
+const { prog_march, counterWords, COUNTER_WORDS } = await import('../../lib/pathtracer/core/wavefront.js')
+const { RAY_BYTES, SHADE_ITEM_BYTES } = await import('../../lib/pathtracer/core/tracebasics.js')
+const { lightArrayDoc, CAMERA: BENCH_CAMERA } = await import('../../bench/lightarray.js')
 
 Object.assign(globalThis, webgpu.globals)
 let WG = null
@@ -166,6 +172,11 @@ for (const [label, make] of Object.entries(SCENES)) {
     const doc = make()
     ok(`${label}: a sound scene`, M.validate(doc).length === 0, JSON.stringify(M.validate(doc)))
     const world = estimateBox(M.toTree(doc))
+    /* A WINDOW'S COPY IS WORKED OUT FROM COPY 0 BY THE PATTERN (arrays.js arrCopy, since a81cac9's run), not read from its
+       own matrix: the same copy to f32's precision -- a few of its steps at the scene's size, and a face's edge, which a
+       copy's place in f32 decides, may fall either side (found here: a row reaching 5 m off by 1.1e-6, 16 of 2883 points
+       at a face's edge another material). So the bar: 1e-6 of the farthest the scene reaches, at least 1e-6 */
+    const F32 = 1e-6 * Math.max(1, ...world.lo.map(Math.abs), ...world.hi.map(Math.abs))
     const scatter = grow => Array.from({ length: 3 * N }, (_, i) => { const k = i % 3, c = (world.lo[k] + world.hi[k]) / 2, h = (world.hi[k] - world.lo[k]) * grow / 2 + 0.2; return c + (2 * rnd() - 1) * h })
     for (const [how, data, bake] of [['codegen', false, false], ['as data', true, false], ['baked', false, true]]) {
         const make2 = arrayWindow => {
@@ -179,16 +190,18 @@ for (const [label, make] of Object.entries(SCENES)) {
         // ON EVERY SURFACE: exact
         const S = await onSurfaces(off, scatter(1))
         const a = await field(off, S), b = await field(win, S)
-        let near = 0, differ = 0, worst = 0
+        let near = 0, differ = 0, worst = 0, flips = 0
         for (let i = 0; i < N; i++) {
             const o = 8 * i
             if (Math.abs(a[o + 3]) > 1e-3) continue
             near++
             const r = Math.abs(a[o + 3] - b[o + 3])
-            if (r > 1e-6 || a[o + 4] !== b[o + 4]) { differ++; worst = Math.max(worst, r) }
+            if (r > F32) { differ++; worst = Math.max(worst, r) }
+            if (a[o + 4] !== b[o + 4]) flips++
         }
-        ok(`${how}, ${label}: on every surface (${near} points) the same distance and material with the window`, near > 100 && differ === 0,
-            `${differ} differ, by up to ${worst}`)
+        ok(`${how}, ${label}: on every surface (${near} points) the same distance with the window, to f32's precision at the scene's size (${F32.toExponential(1)})`,
+            near > 100 && differ === 0, `${differ} differ, by up to ${worst}`)
+        ok(`${how}, ${label}: ...and the same material, but at a face's very edge (${flips} of ${near})`, flips <= 0.01 * near, `${flips} differ`)
         /* ALL ROUND: a lower bound, and a bound somewhere -- half the points scattered, half near the surfaces (within a
            fifth of a unit of them): the window works inside an array's own box, which the top-level culling leaves to it,
            and few points scattered over the scene fall in a row's thin box */
@@ -205,8 +218,83 @@ for (const [label, make] of Object.entries(SCENES)) {
         // ...AND WITH NO BOX KNOWN: every copy, the same field -- against the scene without the window and without boxes
         const z = await field(win0, F), u0 = await field(plain, F)
         let moved = 0
-        for (let i = 0; i < N; i++) if (Math.abs(z[8 * i + 3] - u0[8 * i + 3]) > 1e-6 * Math.max(1, Math.abs(u0[8 * i + 3]))) moved++
+        for (let i = 0; i < N; i++) if (Math.abs(z[8 * i + 3] - u0[8 * i + 3]) > F32 * Math.max(1, Math.abs(u0[8 * i + 3]))) moved++
         ok(`${how}, ${label}: with no box known, the field without the window`, moved === 0, `${moved} differ`)
+    }
+}
+
+/* THE STEPS IT TAKES (added after the user's Pascal run at a81cac9, 2026-10-25: the bench's ring of rows, window on, 1385
+   ms a sample against 398.9 off, march 1007.5 against 281.0 -- the first window slower, not faster). The field above
+   is exact on the surfaces and a lower bound all round, and still a march can take far more steps by it: a lower bound
+   far below the distance is a surface to the march, crossed in small steps. So the bench's own documents (the row of 16
+   lights and the ring of 16 rows of them, bench/lightarray.js), camera rays from its camera through the engine's march
+   kernel pass after pass as the renderer chains it, counting each ray's steps, window off and on. COUNTS, NOT TIMES: a
+   step is the algorithm's, the same on any card; what a step costs is the card's (Tests > lightarray). */
+const RAY_F = RAY_BYTES / 4, HIT_F = SHADE_ITEM_BYTES / 4
+function raysOf(pts, dirs) {
+    const n = pts.length / 3, f = new Float32Array(RAY_F * n), u = new Uint32Array(f.buffer)
+    for (let i = 0; i < n; i++) {
+        const o = RAY_F * i
+        f.set(pts.slice(3 * i, 3 * i + 3), o); f.set(dirs.slice(3 * i, 3 * i + 3), o + 4)
+        f[o + 12] = 1; f[o + 13] = 1; f[o + 14] = 1
+        u[o + 15] = 0; f[o + 16] = 1; f[o + 17] = 0; u[o + 18] = 0; u[o + 19] = 0; u[o + 20] = i; f[o + 21] = 1
+        u[o + 22] = 0; f[o + 23] = 0; f[o + 24] = -1; f[o + 25] = 0; f[o + 26] = 0
+    }
+    return f
+}
+const unit = v => { const l = Math.hypot(...v) || 1; return v.map(x => x / l) }
+/* the bench's orbit camera as stepcache.gpu.mjs makes its rays */
+function cameraRays(cam, W, H) {
+    const RAD = Math.PI / 180, az = cam.azimuth * RAD, el = (90 - cam.elevation) * RAD
+    const pos = [0, 1, 2].map(k => cam.target[k] + cam.distance * [Math.cos(el) * Math.cos(az), Math.cos(el) * Math.sin(az), Math.sin(el)][k])
+    const z = unit(pos.map((v, k) => v - cam.target[k])), x = unit([-z[1], z[0], 0]), y = [z[1] * x[2] - z[2] * x[1], z[2] * x[0] - z[0] * x[2], z[0] * x[1] - z[1] * x[0]]
+    const t = Math.tan(cam.fov * RAD / 2), pts = [], dirs = []
+    for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
+        const u = ((i + 0.5) / W * 2 - 1) * t * W / H, v = ((j + 0.5) / H * 2 - 1) * t
+        pts.push(...pos); dirs.push(...unit([0, 1, 2].map(k => -z[k] + u * x[k] + v * y[k])))
+    }
+    return { pts, dirs }
+}
+/* the march kernel, pass after pass (stepcache.gpu.mjs marchAll, without the cache); out per ray { state, steps } */
+async function marchSteps(scene, rays0, passes = 80) {
+    const prog = await prog_march(WG, scene, 64, { stepCache: 0 }); await prog.ready
+    const bag = { ...uniformBag(scene), res: [64, 64], seed: [1, 2, 3, 4], maxiter: 4000 }
+    const n = rays0.length / RAY_F, u = bag.sceneUnit, rays = rays0.slice()
+    for (let i = 0; i < n; i++) for (let c = 0; c < 3; c++) rays[RAY_F * i + c] *= u
+    const buffers = scene.init ? await scene.init(WG) : {}
+    const mb0 = WG.createStorageBuffer(rays), mb1 = WG.createStorageBuffer(rays.byteLength)
+    const shade = WG.createStorageBuffer(HIT_F * 4 * n), counters = WG.createStorageBuffer(4 * Math.max(COUNTER_WORDS, 4))
+    prog.resources = { marchBuffer0: mb0.b, marchBuffer1: mb1.b, shadeBuffer: shade.b, counters: counters.b, ...buffers }
+    let inCount = n, readfrom = 0, shaded = 0
+    for (let p = 0; p < passes && inCount > 0; p++) {
+        counters.w(counterWords({ [readfrom]: inCount, 2: shaded, 3: readfrom }))
+        prog.uniforms = { ...bag, lastpass: p === passes - 1 ? 1 : 0 }
+        prog.dispatch(Math.ceil(inCount / 64), 1, 1)
+        const c = await counters.r(Uint32Array)
+        shaded = c[2]; inCount = readfrom === 0 ? c[1] : c[0]; readfrom = 1 - readfrom
+    }
+    const h = await shade.r(Float32Array), hu = new Uint32Array(h.buffer)
+    const out = new Array(n).fill(null)
+    for (let k = 0; k < shaded; k++) { const o = HIT_F * k; out[hu[o + 20]] = { steps: hu[o + 15], state: hu[o + 19] } }
+    for (const b of [mb0, mb1, shade, counters]) b.b.destroy()
+    return out
+}
+{
+    const { pts, dirs } = cameraRays(BENCH_CAMERA, 96, 54)
+    const mean = r => r.reduce((s, h) => s + (h?.steps ?? 0), 0) / r.length
+    for (const kind of ['row', 'ring']) {
+        const doc = lightArrayDoc(kind)
+        for (const [how, data] of [['codegen', false], ['as data', true]]) {
+            const make2 = arrayWindow => withBoxes(generate(...M.generateArgs(doc, { id: `aws-${kind}-${data ? 'd' : 'c'}`, data, arrayWindow })), doc, { data })
+            const off = await marchSteps(make2(false), raysOf(pts, dirs)), on = await marchSteps(make2(true), raysOf(pts, dirs))
+            const ends = on.filter((h, i) => (h?.state ?? -1) !== (off[i]?.state ?? -1)).length
+            const moved = on.filter((h, i) => (h?.steps ?? 0) !== (off[i]?.steps ?? 0)).length
+            const most = Math.max(...on.map((h, i) => (h?.steps ?? 0) - (off[i]?.steps ?? 0)))
+            // the bar: counted at 1.13 and 1.06 for the ring, 1.00 for the row (2026-10-25); 1.25 says a bound gone loose
+            ok(`${how}, the bench's ${kind}: steps a camera ray with the window within 1.25 times those without, every ray ending as it did`,
+                mean(on) <= 1.25 * mean(off) && ends === 0, `${mean(on)} against ${mean(off)}, ${ends} ending otherwise`)
+            console.log(`  the bench's ${kind}, ${how}: steps a camera ray ${mean(on).toFixed(1)} with the window, ${mean(off).toFixed(1)} without (x ${(mean(on) / mean(off)).toFixed(2)}); ${moved} rays' steps changed, by up to ${most}; ${ends} of ${on.length} ending otherwise`)
+        }
     }
 }
 

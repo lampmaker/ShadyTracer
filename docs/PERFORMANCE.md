@@ -1087,8 +1087,11 @@ the scene:** WebGPU takes WGSL source only, and there is no compiled shader form
    no group with code or joins as one (put it inside). Each copy is still a walk of its children at every step near
    it: the BVH is what would tell which copies are near. **A row's or a ring's copies have a window since `0.next`**
    (builder/arrays.js): the copies near the point walked, the rest a bound in CULL -- measured before it on the user's
-   Ampere (Tests > lightarray, 213642c): 256 copies of one light at 465 ms of march a sample against one light's 12;
-   after it, not yet.
+   Ampere (Tests > lightarray, 213642c): 256 copies of one light at 465 ms of march a sample against one light's 12.
+   After it, on the user's Pascal (a81cac9): **slower**, 1007.5 ms of march against 281.0 with the window off, with
+   about as many steps (counted, arraywindow.gpu.mjs: 22.0 a camera ray against 19.4). Inferred: the switch fetching a
+   copy whose number differs from pixel to pixel. A window's copy is now worked out from copy 0 (arrays.js arrCopy);
+   its speed not yet measured, bench row 7 the switch's cost (roadmap/LIGHT_CONTROL.md).
    **Before and after groups are data (2026-10-04, 0.14.0), with no file format change:** the kind is read off the
    code (codegen.js `isBefore`, `isAfter`), so a customer's code of either shape is one too, and an old file needs no
    upgrade. A before group (twist, bend, repeat, mirror) is a record whose code is a function `bef_<k>` returning the

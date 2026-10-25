@@ -225,6 +225,14 @@
       (<cite data-src="builder/arrays.js" data-sym="THE BOUND (one rule for both)"></cite>). Along a row the distance to
       the copies' centres only grows away from the closest one, and round a ring it grows with the angle. So the copies
       can be asked from the closest outwards, stopping on each side at the first one beyond the margin.</p>
+    <p>Asking fewer copies did not at first make a step cheaper. On the user's Pascal card the first window made the
+      256 lights <em>slower</em> to march, 1007 ms a sample against 281 with every copy asked. Yet a count of the steps
+      on the same scene found about as many either way (22.0 a camera ray against 19.4). So each step cost more. The
+      suspect, not yet measured: which copies the window asks differs from pixel to pixel, and the loop fetched each
+      copy's place through a <code>switch</code> on its number. A GPU runs neighbouring pixels on one instruction
+      stream, so it runs a switch's cases one after another when they disagree. With every copy asked, every pixel's
+      number was the same at once. Now a window's copy is worked out from the first copy instead: moved along the row,
+      or turned round the ring.</p>
     <p>A relief in its shell (the WGSL the relief group starts with, as text in JavaScript):</p>
     <pre data-src="builder/modifiers.js" data-in="const reliefCode = (lip, note = []) => [" data-sym="'var H = children(emptyHit(r), p);'," data-to="'}',"
          data-why="children(...) is the plain shape, its distance H.s.w. peak is 1 + 1/2 + 1/4 + 1/8; lip is 17.2 for the modifier, 11.2 for the benchmark's copy. XF_S is the group's scale. READ_REACH is 0 unless a smooth blend above reads the relief (then the band widens by as far as it reads). marchEps() is the surface tolerance. foldRelief divides by the slope." data-hash="733a2aff"></pre>

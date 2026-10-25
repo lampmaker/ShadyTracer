@@ -145,11 +145,34 @@ What it settles:
   The bound is folded into `CULL` under the top-level culling's contract: a lower bound beyond `cullMargin()`.
 - Near a surface the field is exact. `builder/test/arraywindow.gpu.mjs` holds that on Dawn, in codegen, as data and
   baked. It also holds that the field all round is never above the field without the window.
-- Bench rows 5 and 6 are rows 2 and 4 with the window off. **How much the window saves is not measured**: the user's
-  rerun of Tests › Benchmarks › lightarray will say.
-  - Inferred: the 16 × 16 row's march falls towards the single row's, since about three copies of each array lie
-    within a copy's reach of any point.
-  - What would refute it: row 4 near row 6.
+- Bench rows 5 and 6 are rows 2 and 4 with the window off.
+  - Inferred when it was written: the 16 × 16 row's march falls towards the single row's, since about three copies of
+    each array lie within a copy's reach of any point. What would refute it: row 4 near row 6.
+
+**Refuted: the first window was slower.** Measured on the user's Pascal card, a81cac9, 2026-10-25:
+
+| row | a sample | march | occlusion |
+|---|---|---|---|
+| 4: 16 × 16 ring, window on | 1385.1 ms | 1007.5 | 382.7 |
+| 6: the same, window off | 398.9 ms | 281.0 | 87.7 |
+| 2: row of 16, window on | 68.1 ms (50–108, noisy) | 15.2 | |
+| 5: the same, window off | 50.3 ms | 11.9 | |
+
+- **Not the steps.** Counted on lavapipe by `builder/test/arraywindow.gpu.mjs`, with the bench's own documents and
+  camera through the engine's march kernel: the ring took 22.0 steps a camera ray with the window and 19.4 without.
+  The row took 12.1 both ways. A step count is the algorithm's, the same on any card.
+  - So the first guess is ruled out: a phantom surface from the loose sphere bound would show as more steps.
+- **Each step's cost, then. Inferred, not measured:**
+  - The window's loop fetched each copy's matrix through a 16-way `switch` on the copy's number, and that number
+    differs from pixel to pixel.
+  - A GPU runs a group of pixels on one instruction stream, so it runs a switch's cases one after another when they
+    disagree.
+  - With every copy walked, the number is the same for every pixel and the loop's trip count fixed.
+- **The change:** a window's copy is now worked out from copy 0 by the pattern (`arrays.js` `arrCopy`): a row's moved by
+  k steps, a ring's turned by k·360/n. Its matrix is the stored one to f32's precision.
+- **Bench row 7 tests the inference.** It is row 6's every copy, walked from the window's own first copy and fetched by
+  the switch, as the first window fetched them. Row 7 against row 6 is what the switch costs, and row 4 against row 6
+  says whether the window now saves anything.
 
 ## 4. Later phases: what is possible, and what it would cost
 
