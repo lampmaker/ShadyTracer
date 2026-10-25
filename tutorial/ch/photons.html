@@ -165,8 +165,8 @@
 <section class="scene" id="grid">
   <div class="prose">
     <h2><span class="n">3</span>Finding the photons near a point</h2>
-    <p data-step="grid:walk">A ShadyTracer sample keeps up to two million photons, and every camera ray seen through
-      glass gathers: for each of the 921,600 pixels of a 1280 × 720 picture
+    <p data-step="grid:walk">A ShadyTracer sample keeps up to two million photons (for a 1920 × 1080 picture, more for a
+      larger one: section 5), and every camera ray seen through glass gathers: for each of the 921,600 pixels of a 1280 × 720 picture
       to look at every one would be nearly two million million records a sample. So the floor is cut into cells
       2<var>r</var> wide (the ticks on it). The photons within <var>r</var> of a point can then lie only in its own cell
       or in the neighbour on the side of the cell's middle the point is on: two cells (shaded), and in 3D, two on each
@@ -301,7 +301,9 @@
       <p><strong>Memory.</strong> A record is 11 words, 44 bytes: where, the power in three colours, the photon's direction
         and its surface's normal packed into 32 bits each, the next record in its list and in its sub-list, and its
         bounces. Two million photons, the default, are 88 MB (<code>SPPM_REC</code>; the setting
-        <code>sppmCapacity</code>).</p>
+        <code>sppmCapacity</code>). That is the room for a 1920 × 1080 picture: a larger one gets room in proportion, four
+        times at 3840 × 2160, 352 MB (<code>sppmCapacityFor</code>), because a larger picture sends more photons and
+        gathers over a smaller disc (the radius is in pixels), and at a fixed room each gather found fewer of them.</p>
     </div>
   </div>
 </section>
@@ -327,6 +329,14 @@
         It is no longer stored.</li>
       <li><strong>A gather that stopped, and a buffer that filled.</strong> Section 3's budget and the keep probability:
         both lost light exactly where it was densest, which no number of samples brings back.</li>
+      <li><strong>Darker at 4K.</strong> A 3840 × 2160 save of a scene in the Optics view came out darker than the same
+        scene at 1920 × 1080, and right with the room raised to 16 million. Nothing was dropped or cut: the 4K map kept 21%
+        of its stores, the 1080p one about 85% (worked out from the 4K's demand of 8.1 million, a quarter of it at 1080p; not read), and with a disc a quarter the area each gather found far fewer photons.
+        The keep probability is right on average, so the darkening is <em>inferred</em> to be noise: bright pixels clip at
+        white and give back less than they took. A run on a software GPU agreed (the clipped mean fell as the keep fell,
+        the linear mean only wandered), but the user's picture was not measured that way. The fix gives a larger picture
+        room in proportion
+        (<cite data-src="lib/pathtracer/core/sppm.js" data-sym="THE CAPACITY GROWS WITH THE PICTURE" data-to="default, capped by what one binding may hold (raytrace_main.js sppmRoom). */"></cite>).</li>
     </ul>
   </div>
 </section>
