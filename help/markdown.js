@@ -4,6 +4,11 @@
 // a WIDGET: a fenced block whose language is `widget`, its first word the widget's name (help/widgets.js) and the rest
 // its settings -- `name: value` a line. A page reads the same on GitHub, where a widget is a code block.
 //
+// A DEFINITION: a list item that is `code` -- words, as the code reference (reference/code.md) writes a function. It is
+// a card, the code on a line of its own -- a signature, name(arg: type, ...) -> type, coloured by its parts -- the words
+// under it, and a closing "Used by ..." sentence set apart (the user, 2026-10-25: "a solid block of information, hard
+// to browse for human eyes"). A list of nothing else is marked as such, for its spacing. On GitHub it stays a list.
+//
 // ESCAPED, THEN MARKED UP: every character of the source is escaped before any tag is made, so a page cannot put HTML
 // into the panel -- what is not markdown shows as text. A link's address is kept only if it is one of the kinds the
 // panel follows (links.js kindOf): http(s), another page, an example, a command, a part of the window to show, an
@@ -41,6 +46,29 @@ function inline(t) {
     t = t.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
     t = t.replace(/(^|[^*\w])\*([^*\s][^*]*?)\*(?![*\w])/g, '$1<em>$2</em>')
     return t.replace(/\u0000(\d+)\u0000/g, (_, i) => `<code>${codes[+i]}</code>`)
+}
+
+/** A SIGNATURE, ALREADY ESCAPED, coloured by its parts: its name, each argument's name and type, what it returns.
+ *  Anything not of that shape is the code it was. Escaped text has no < or >, so nothing here can make a tag but these. */
+function signature(c) {
+    const m = /^(\w+)\((.*)\)(?:\s*-&gt;\s*(.+))?$/.exec(c)
+    if (!m) return c
+    const type = t => `<span class="help-type">${t}</span>`
+    const args = m[2].split(', ').filter(Boolean).map(a => {
+        const k = /^(\w+):\s*(.+)$/.exec(a)
+        return k ? `<span class="help-arg">${k[1]}</span>: ${type(k[2])}` : a
+    })
+    return `<span class="help-fname">${m[1]}</span>(${args.join(', ')})${m[3] ? ` -&gt; ${type(m[3])}` : ''}`
+}
+const DEF = /^`([^`]+)`\s+--\s+(.*)$/
+/** A definition's item (DEF): the code, the words, and their "Used by ..." apart. `t` is the source, not yet escaped. */
+function definition(t) {
+    const [, code, rest] = DEF.exec(t)
+    const u = /\s(Used by .*)$/.exec(rest)
+    const words = u ? rest.slice(0, u.index) : rest
+    return `<li class="help-def"><div class="help-sig"><code>${signature(escapeHtml(code))}</code></div>`
+        + `<div class="help-def-text">${inline(escapeHtml(words))}</div>`
+        + (u ? `<div class="help-def-used">${inline(escapeHtml(u[1]))}</div>` : '') + '</li>'
 }
 
 /** A widget block's settings: `name: value` lines; a number reads as a number. */
@@ -123,8 +151,8 @@ export function renderMarkdown(src) {
                 else if (items.length && /^\s{2,}\S/.test(lines[i])) items[items.length - 1] += ' ' + lines[i].trim()
                 else break
             }
-            const tag = ordered ? 'ol' : 'ul'
-            out.push(`<${tag}>${items.map(t => `<li>${inline(escapeHtml(t))}</li>`).join('')}</${tag}>`)
+            const tag = ordered ? 'ol' : 'ul', defs = items.every(t => DEF.test(t))
+            out.push(`<${tag}${defs ? ' class="help-defs"' : ''}>${items.map(t => DEF.test(t) ? definition(t) : `<li>${inline(escapeHtml(t))}</li>`).join('')}</${tag}>`)
             continue
         }
         if (!line.trim()) { flush(); i++; continue }
