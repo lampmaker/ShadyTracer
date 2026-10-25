@@ -138,8 +138,16 @@ click the picture where middle grey should be. **White balance**: the temperatur
 and a tint. **Pick a white** takes them from a surface you click. Then red, green and blue gains. **Tone**: the tone curve,
 with **Hable, adjustable** offering its white, toe and shoulder, and under it a gain for each band of light, from 7 stops
 below white up to white: raise the dark bands to open the shadows. **Colour**: saturation, vibrance (it raises dull
-colours more than vivid ones) and hue. **Grading**: contrast, saturation and brightness of the finished picture. Each
-box has a Reset. The light files (EXR, HDR, PFM) are saved without these.
+colours more than vivid ones) and hue. **Levels & curves**: the output's gamma, Levels (black, white and a gamma for
+the midtones), and the curves, drawn by hand: click to add a point, drag it, double-click or drag it off the square to
+take it away; **luminance** keeps hues. **Colour wheels**: drag a disc's dot towards a colour to tint the shadows (lift),
+midtones (gamma) or highlights (gain), with a slider each for their brightness. **Grading**: contrast, saturation and
+brightness of the finished picture. **Finish**: a vignette, grain, and dither against banding in 8-bit files. Each box
+has a Reset. The light files (EXR, HDR, PFM) are saved without these.
+
+Under the histogram: **Undo** and **Redo** (or Ctrl+Z and Ctrl+Y while the Darkroom has focus; the scene's undo is left
+alone), **Copy** and **Paste** the settings, and **From a picture…**: the settings a PNG saved here was developed with,
+read back out of it. **Presets** keep a look in this browser, to apply to another render.
 
 The render fills the rest of the tab. Turn the mouse wheel to zoom where the cursor is, drag to move, double-click for
 100 % (one pixel of the picture on one pixel of the screen) and again for the whole picture. The keys, with the picture
