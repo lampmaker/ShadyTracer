@@ -55,11 +55,16 @@ What an object's code calls once a shape, and what a group's code works with.
 
 ## Joining shapes
 
-Each takes two (normal, distance) results and gives one; `k` is the blend's width, in the frame's units. The `csg` three are what a CSG group compiles to, and the ones to use: `k = 0` is a hard join, and the result has a normal only when both shapes have one -- otherwise the renderer takes it by differences, which is right for any shapes. The older ones are kept for the code that calls them.
+Each takes two (normal, distance) results and gives one; `k` is the blend's width, in the frame's units. The `csg` three are what a CSG group compiles to, and the ones to use: `k = 0` is a hard join, and the result has a normal only when both shapes have one -- otherwise the renderer takes it by differences, which is right for any shapes. The older ones, below, are kept for the code that calls them.
 
 - `csgUnion(a: VEC4, b: VEC4, k: f32) -> VEC4` -- Both shapes; `k` above 0 melts them together where they come within `k` of each other.
 - `csgIntersect(a: VEC4, b: VEC4, k: f32) -> VEC4` -- Only where both are.
 - `csgSubtract(a: VEC4, b: VEC4, k: f32) -> VEC4` -- `a` with `b` cut out of it.
+
+## Older joins
+
+Kept for the code that calls them; new code is better off with the `csg` three above.
+
 - `Nsmin(a: VEC4, b: VEC4, k: f32) -> VEC4` -- A smooth union with the normals blended. `k` must be above 0 (it is divided by), and both shapes need a normal: an `sd` shape's zero normal can make it NaN, and a NaN normal deletes the surface. `csgUnion` has neither problem.
 - `Nsmax(a: VEC4, b: VEC4, k: f32) -> VEC4` -- A smooth intersection, as `Nsmin` with its caveats.
 - `NopSmoothUnion(a: VEC4, b: VEC4, k: f32) -> VEC4` -- `Nsmin` by another name.

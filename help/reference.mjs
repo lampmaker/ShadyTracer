@@ -87,10 +87,12 @@ export const CODE_HELP = [
         warp: 'Call after changing `p` in a way that is not a plain move or turn: every distance folded in from here on is multiplied by `k` (below 1 for a warp that stretches space, so the march does not step through), and normals are taken by differences.',
         foldRelief: 'A distance steepened by up to `slope` -- a noise added to it -- folded in: divided by `slope` here, so the march stays safe, or, passed `DIVIDED_ABOVE` in a CSG group, once after the blend.',
     } },
-    { title: 'Joining shapes', intro: 'Each takes two (normal, distance) results and gives one; `k` is the blend\'s width, in the frame\'s units. The `csg` three are what a CSG group compiles to, and the ones to use: `k = 0` is a hard join, and the result has a normal only when both shapes have one -- otherwise the renderer takes it by differences, which is right for any shapes. The older ones are kept for the code that calls them.', fns: {
+    { title: 'Joining shapes', intro: 'Each takes two (normal, distance) results and gives one; `k` is the blend\'s width, in the frame\'s units. The `csg` three are what a CSG group compiles to, and the ones to use: `k = 0` is a hard join, and the result has a normal only when both shapes have one -- otherwise the renderer takes it by differences, which is right for any shapes. The older ones, below, are kept for the code that calls them.', fns: {
         csgUnion: 'Both shapes; `k` above 0 melts them together where they come within `k` of each other.',
         csgIntersect: 'Only where both are.',
         csgSubtract: '`a` with `b` cut out of it.',
+    } },
+    { title: 'Older joins', intro: 'Kept for the code that calls them; new code is better off with the `csg` three above.', fns: {
         Nsmin: 'A smooth union with the normals blended. `k` must be above 0 (it is divided by), and both shapes need a normal: an `sd` shape\'s zero normal can make it NaN, and a NaN normal deletes the surface. `csgUnion` has neither problem.',
         Nsmax: 'A smooth intersection, as `Nsmin` with its caveats.',
         NopSmoothUnion: '`Nsmin` by another name.',
