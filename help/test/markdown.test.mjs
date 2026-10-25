@@ -26,6 +26,21 @@ ok('a note', html('> careful') === '<blockquote><p>careful</p></blockquote>')
 ok('a rule', html('---') === '<hr>')
 ok('a link', html('[the page](other.md)') === '<p><a href="other.md">the page</a></p>')
 ok('an image', html('![alt](pic.png)') === '<p><img src="pic.png" alt="alt" loading="lazy"></p>')
+// a definition (the code reference's functions): a card, the signature's parts marked, the words, its users apart
+{
+    const d = html('- `Nsphere(p: VEC3, r: f32) -> VEC4` -- A sphere of radius `r`. Used by *sphere*, *dome*.')
+    ok('a definition: a card, its signature\'s name, arguments and types marked, the words, "Used by" apart',
+        d === '<ul class="help-defs"><li class="help-def"><div class="help-sig"><code><span class="help-fname">Nsphere</span>('
+            + '<span class="help-arg">p</span>: <span class="help-type">VEC3</span>, <span class="help-arg">r</span>: <span class="help-type">f32</span>)'
+            + ' -&gt; <span class="help-type">VEC4</span></code></div><div class="help-def-text">A sphere of radius <code>r</code>.</div>'
+            + '<div class="help-def-used">Used by <em>sphere</em>, <em>dome</em>.</div></li></ul>', d)
+    ok('...code not of a signature\'s shape is the code it was, and no "Used by" none',
+        html('- `x + y` -- the sum') === '<ul class="help-defs"><li class="help-def"><div class="help-sig"><code>x + y</code></div><div class="help-def-text">the sum</div></li></ul>',
+        html('- `x + y` -- the sum'))
+    ok('...a list with any other item a plain list, its definitions cards in it', html('- a\n- `f()` -- g') === '<ul><li>a</li><li class="help-def"><div class="help-sig"><code>'
+        + '<span class="help-fname">f</span>()</code></div><div class="help-def-text">g</div></li></ul>', html('- a\n- `f()` -- g'))
+    ok('...a signature escaped: no tag of its own', !html('- `f(a: vec3<f32>) -> <b>` -- x').includes('<b>') && html('- `f(a: vec3<f32>)` -- x').includes('vec3&lt;f32&gt;'))
+}
 
 // ---- nothing gets in
 ok('HTML in a page is text', !html('<script>alert(1)</script> <img src=x onerror=1>').includes('<script') && !html('<img src=x>').includes('<img'))

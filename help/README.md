@@ -7,7 +7,7 @@ Help › Contents or **F1** opens it. The pages are markdown, readable here on G
 | `index.js` | the contents: every page, by track (Start, Modelling and rendering, Optical design, Reference), with its title |
 | `start/`, `modelling/`, `optics/` | the pages |
 | `reference/` | **made, not written**: `node help/reference.mjs` makes them from the program's lists of shapes, modifiers, material fields, reliefs, coatings and light settings, and from the shader library code is compiled after (the functions a code block can call) |
-| `markdown.js` | the renderer: headings, paragraphs, bold, italic, code, lists, tables, links, images, notes, widgets -- everything escaped first |
+| `markdown.js` | the renderer: headings, paragraphs, bold, italic, code, lists, tables, links, images, notes, widgets, and a list item `` `code` -- words `` as a card (the code reference's functions) -- everything escaped first |
 | `links.js` | what a link does |
 | `panel.js` | the panel: contents, back / forward, search, links, widgets |
 | `widgets.js` | live pictures in a page: `sdf`, a 2D distance field and a ray sphere-traced through it |
