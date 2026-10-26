@@ -6,11 +6,12 @@
 <!-- THE DARKROOM'S CURVES EDITOR AND COLOUR WHEELS, for lib/pathtracer/test/darkroomtools.check.mjs: each over a plain
      settings object, its changes counted. No GPU: these draw on 2D canvases. -->
 <link rel="stylesheet" href="../../shell/shell.css">
-<style>html, body { margin: 0; background: var(--sh-panel); } #c, #w { width: 300px; }</style>
+<style>html, body { margin: 0; background: var(--sh-panel); } #c, #w, #h { width: 300px; } #h { display: none; }</style>
 </head>
 <body>
 <div id="c"></div>
 <div id="w"></div>
+<div id="h"></div>
 <script type="module">
 import { makeCurveEditor } from '../darkroom/curveeditor.js'
 import { makeWheels } from '../darkroom/wheels.js'
@@ -25,7 +26,14 @@ const E = makeCurveEditor(document.getElementById('c'), {
 const W = makeWheels(document.getElementById('w'), {
     get: n => ({ x: DV[n + 'X'], y: DV[n + 'Y'] }), set: (n, p) => { DV[n + 'X'] = p.x; DV[n + 'Y'] = p.y }, onChange: () => counts.wheel++,
 })
-window.CHECK = { DV, counts, E, W }
+// ...and again in a host not shown, as the page makes them at its start in a Darkroom not yet opened: 0 wide, a
+// wheel's radius negative, which arc() threw on (0.next). Caught here so the rest of the check still runs.
+let hiddenError = null, HW = null
+try {
+    makeCurveEditor(document.getElementById('h'), { get: () => DV.curves, set: () => { }, getLuma: () => false, setLuma: () => { } })
+    HW = makeWheels(document.getElementById('h'), { get: n => ({ x: DV[n + 'X'], y: DV[n + 'Y'] }), set: () => { } })
+} catch (e) { hiddenError = String(e) }
+window.CHECK = { DV, counts, E, W, HW, hiddenError }
 </script>
 </body>
 </html>
