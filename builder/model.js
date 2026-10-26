@@ -1379,8 +1379,16 @@ export function move(doc, id, parentId, index) {
     let inside = false
     if (node.kind === 'group') walkNode(node, n => { if (n === target) inside = true })
     if (inside) throw new ModelError(`cannot move '${id}' into itself`)
-    parent.children.splice(parent.children.indexOf(node), 1)
+    const from = parent.children.indexOf(node)
+    parent.children.splice(from, 1)
     insert(target.children, node, index)
+    // into an array, or an array into a place: a light inside it held to the arrays' rules (copiesProblems)
+    const bad = arraysAroundProblems(doc, id)
+    if (bad.length) {
+        target.children.splice(target.children.indexOf(node), 1)
+        parent.children.splice(from, 0, node)
+        throw new ModelError(bad)
+    }
     return node
 }
 
@@ -1730,8 +1738,8 @@ const dropFlag = ([o, pre]) => key => {
  * AN ARRAY (version 17): `copies`, a list of transforms ({ pos, rot, scale }, as a node's), each a place in the group's
  * own frame where its children are drawn -- or null to make it a plain group again. A plain group only: no code (its
  * code is the walk of its children, which an array repeats) and no joins among its children (a CSG group combines them
- * into one shape; put that group inside the array). No light inside, at any depth: light sampling needs each face once,
- * where it is. Structural in codegen when the count changes (a uniform each), and live otherwise.
+ * into one shape; put that group inside the array). A light inside is drawn once a copy (0.next), and then its copies
+ * share one scale (copiesProblems). Structural in codegen when the count changes (a uniform each), and live otherwise.
  */
 export function setCopies(doc, id, copies) {
     const { node, parent } = must(doc, id)
@@ -1750,6 +1758,21 @@ export const copiesRow = (n, pitch, axis = 'x') => Array.from({ length: n }, (_,
     t.pos[axis] = +((i - (n - 1) / 2) * pitch).toPrecision(12)
     return t
 })
+/** A ring of copies: `n` turned evenly about `axis` ('x', 'y' or 'z') through the group's origin, `radius` from it -- the
+ *  first on +x about z, +y about x, +z about y, each the first turned by its angle (its rotation about that axis alone,
+ *  which the transform's x-then-y-then-z angles are exactly). A light in it faces the way the first does, turned with it:
+ *  a ring of LEDs as a list of copies (0.next), where the circular array is group code and draws no light. */
+export const copiesRing = (n, radius, axis = 'z') => Array.from({ length: n }, (_, i) => {
+    const t = identity()
+    // to 12 digits, and a cosine's 6e-17 at a right angle 0, so a quarter turn of a ring of 4 is on the axis it reads as
+    const round = v => Math.abs(v) < 1e-12 * Math.abs(radius) ? 0 : +v.toPrecision(12)
+    const a = 2 * Math.PI * i / n, c = round(radius * Math.cos(a)), s = round(radius * Math.sin(a))
+    if (axis === 'z') { t.pos.x = c; t.pos.y = s }
+    else if (axis === 'x') { t.pos.y = c; t.pos.z = s }
+    else { t.pos.z = c; t.pos.x = s }
+    t.rot[axis] = +(360 * i / n).toPrecision(12)
+    return t
+})
 /* Everything wrong with a group's copies */
 function copiesProblems(n, doc = null) {
     if (n.copies === undefined) return []
@@ -1765,9 +1788,32 @@ function copiesProblems(n, doc = null) {
     if (n.block !== undefined && (!doc || groupHasCode(doc, n)))
         p.push(`'${n.id}': a group with code has no copies (its code is how its children are drawn): put the copies in a group inside it`)
     if (isCsg(n)) p.push(`'${n.id}': a group whose children join (a subtraction, an intersection, a blend) has no copies: put that group inside one that has them`)
-    let light = null
-    walkNode(n, x => { if (!light && x !== n && x.type === 'light') light = x.id })
-    if (light) p.push(`'${n.id}': a light inside an array ('${light}') is not drawn more than once yet: light sampling needs each face where it is`)
+    /* A LIGHT INSIDE (0.next): drawn once a copy, a face and a source a copy -- if every copy has one scale, which light
+       sampling's weight of a face rests on (lights.js A LIGHT INSIDE ARRAYS says why). Refused here, so a light is never
+       left out of a picture for it. Not a light under group code below, which is not drawn anyway. The other rule
+       there, an array with a light in it inside a group whose children join, is not refused: a join or a blend changed
+       anywhere above would make a saved scene unreadable. Such a light is not drawn, and the Optics page says why
+       (sources.js skipped), as for one under group code. */
+    const s0 = n.copies[0]?.scale ?? 1
+    if (n.copies.some(t => (t?.scale ?? 1) !== s0)) {
+        let light = null
+        const look = x => {
+            if (light) return
+            if (x !== n && x.kind === 'group' && (doc ? groupHasCode(doc, x) : x.block !== undefined || hasCode(x))) return
+            if (x.type === 'light') { light = x.id; return }
+            for (const c of x.children || []) look(c)
+        }
+        look(n)
+        if (light) p.push(`'${n.id}': its copies differ in scale and a light is inside ('${light}'): an array with a light in it has one scale for all its copies (light sampling weighs every copy's face by the first's area)`)
+    }
+    return p
+}
+/* EVERY ARRAY'S PROBLEMS AROUND A NODE JUST PUT SOMEWHERE (a light added, a node moved): the arrays above it and inside
+   it, which are the ones a light coming in can break (copiesProblems) */
+function arraysAroundProblems(doc, id) {
+    const p = []
+    for (let f = find(doc, id); f?.parent; f = find(doc, f.parent.id)) if (f.parent !== doc.root && f.parent.copies) p.push(...copiesProblems(f.parent, doc))
+    walkNode(must(doc, id).node, x => { if (x.kind === 'group' && x.copies) p.push(...copiesProblems(x, doc)) })
     return p
 }
 
@@ -2018,6 +2064,9 @@ export function addLight(doc, parentId, { shape = 'rectangle', id, label, transf
     const bad = lightProblems(node)
     if (bad.length) throw new ModelError(bad)
     insert(parent.children, node, index)
+    // into an array: held to its rules (copiesProblems)
+    const around = arraysAroundProblems(doc, node.id)
+    if (around.length) { parent.children.splice(parent.children.indexOf(node), 1); throw new ModelError(around) }
     return node
 }
 /** Change a light's settings: `patch` over what it has. A setting at its default is dropped (flux

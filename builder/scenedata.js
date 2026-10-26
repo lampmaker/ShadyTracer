@@ -52,7 +52,8 @@
 //   v5  box lo (its own frame), 1 when known     -- culling; cullDist, scene_api.js
 //   v6  box hi
 // A JOIN is one record (v0: op; v1.w: its blend); an END, an ARRAY_END, a BEFORE_END or an AFTER_END is one record (v1.x:
-// the record it closes). An ARRAY's v0.y is its number of copies; a BEFORE's or an AFTER's its code's function, its
+// the record it closes). An ARRAY's v0.y is its number of copies, its v0.z its window's pattern (arrays.js codeOf; 0 none), and
+// after its copies among the parameters come its content's box, lo and hi (lo.w 1 when known); a BEFORE's or an AFTER's its code's function, its
 // parameters a slot each. After the
 // records, the PARAMETERS (one vec4 a parameter, in the node's own order) and the LIGHT TABLE (4 vec4 a face: centre and
 // flags, u and half width, v and half height, n and whether it is shown -- lightFace, codegen emitLightFacesData).
@@ -60,9 +61,11 @@
 // THE HEADER, one vec4: where the records end, where the light table starts, how many lights, 0.
 //======================================================================================================================
 
-import { hasCode, isBefore, isAfter, isCsg, combinedGroups, shapesOf, joinOf, isCompiledIn, isProfile, isPath, NODE_TYPES, patterned } from './codegen.js'
-import { hasFace } from './lights.js'
+import { hasCode, isBefore, isAfter, isCsg, combinedGroups, shapesOf, joinOf, isCompiledIn, isProfile, isPath, NODE_TYPES, patterned,
+         faceCount, faceTotalLine, facePickLine, faceCases } from './codegen.js'
+import { hasFace, arrayedLightProblem, copyCount, copyIndices } from './lights.js'
 import { matrixOf } from './transform.js'
+import { copyPattern, codeOf, contentKey, PATTERN_ROW } from './arrays.js'
 
 export const HEADER = 1
 export const REC = 7
@@ -180,15 +183,22 @@ function tagsOf(tree, compiled) {
     walk(tree)
     return tags
 }
-/* the faces light sampling sees, as codegen collectLights finds them: not under group code (there a light is not drawn) */
+/* the faces light sampling sees, as codegen collectLights finds them: not under group code (there a light is not drawn),
+   nor inside an array it cannot be drawn once a copy in (lights.js arrayedLightProblem); each light with its number of
+   faces, one a copy, and the first of them */
 function lightsOf(tree) {
     const lights = []
-    const find = (n, warped) => {
-        if (n.kind === 'object' && n.type === 'light' && hasFace(n.light) && !warped) lights.push(n)
+    let first = 0
+    const find = (n, warped, above) => {
+        if (n.kind === 'object' && n.type === 'light' && hasFace(n.light) && !warped && !arrayedLightProblem(above, isCsg)) {
+            lights.push({ id: n.id, node: n, faces: copyCount(above), first })
+            first += copyCount(above)
+        }
         const w = warped || (n !== tree && hasCode(n))
-        for (const c of n.children || []) find(c, w)
+        const up = n !== tree && n.kind === 'group' ? [...above, n] : above
+        for (const c of n.children || []) find(c, w, up)
     }
-    find(tree, false)
+    find(tree, false, [])
     return lights
 }
 /* the handles of profiles and paths, as codegen numbers them (collectProfiles, collectPaths): each kind from 0, in tree
@@ -291,6 +301,11 @@ export function planOf(tree, { reliefMaterials = new Set(), wantLocal = false, c
    (M R_T, S s_T, t + M S t_T) -- codegen emitLightFaces, the inverse of a chain of xfPoint */
 const IDENTITY = { M: [[1, 0, 0], [0, 1, 0], [0, 0, 1]], t: [0, 0, 0], S: 1 }
 const mulMv = (M, v) => [0, 1, 2].map(i => M[0][i] * v[0] + M[1][i] * v[1] + M[2][i] * v[2])
+/* frame B, given in frame A, as A's parent sees it: descend's step for a whole frame (a copy's light, face above) */
+function compose(A, B) {
+    const step = mulMv(A.M, B.t.map(v => v * A.S))
+    return { M: B.M.map(col => mulMv(A.M, col)), t: A.t.map((v, i) => v + step[i]), S: A.S * B.S }
+}
 function descend(F, transform) {
     if (!transform) return F
     const m = matrixOf(transform)
@@ -308,8 +323,9 @@ function descend(F, transform) {
  *   materialIndex(id) -> the material's id as getMaterial2 numbers it (codegen: 1 the default, the document's from 2)
  *   lightMaterial(i)  -> light i's material id (codegen: after the document's materials, MATID_BLACK and CLEAR)
  *   limiters          Set of material ids whose objects only the optics trace draws
+ *   arrayWindow       false: no array has a window (arrays.js), every copy walked -- the bench's and the tests' comparison
  */
-export function recordsOf(tree, plan, { boxes = null, materialIndex, lightMaterial, limiters = new Set() }) {
+export function recordsOf(tree, plan, { boxes = null, materialIndex, lightMaterial, limiters = new Set(), arrayWindow = true }) {
     const recs = [], params = [], hoisted = []
     let ok = true
     /* THE TREE MUST FOLLOW THE PLAN: whatever is text the same -- each compiled subtree there by its root, the lights
@@ -323,7 +339,8 @@ export function recordsOf(tree, plan, { boxes = null, materialIndex, lightMateri
     const findRoots = n => { if (n !== tree && compiled(n)) { roots.push(n.id); return } for (const c of n.children || []) findRoots(c) }
     findRoots(tree)
     if (!same(roots.slice().sort(), plan.subs.map(n => n.id))) return null
-    if (!same(lightsOf(tree).map(L => L.id), plan.lights.map(L => L.id))) return null
+    // ...and as many faces each: a copy more or less is another text (LIGHT_FACES, the cases), as in codegen
+    if (!same(lightsOf(tree).map(L => `${L.id}:${L.faces}`), plan.lights.map(L => `${L.id}:${L.faces}`))) return null
     if (JSON.stringify(handlesOf(tree)) !== JSON.stringify(plan.handles)) return null
     if (stackFor(depthOf(tree, compiled)) !== plan.stack) return null
     if (stackFor(arrayDepthOf(tree, compiled)) !== (plan.arrays ?? 0)) return null
@@ -331,7 +348,7 @@ export function recordsOf(tree, plan, { boxes = null, materialIndex, lightMateri
     const tags = tagsOf(tree, compiled)
     const tagOf = new Map(tags.map((id, i) => [id, i + 1]))
     const lightIndex = new Map(plan.lights.map((L, i) => [L.id, i]))
-    const faces = plan.lights.map(() => null)
+    const faces = new Array(plan.lights.reduce((k, L) => k + L.faces, 0)).fill(null)
     const push = () => { const r = new Array(REC * 4).fill(0); recs.push(r); return r }
     const u = n => { const b = new Uint32Array(1); b[0] = n >>> 0; return new Float32Array(b.buffer)[0] }
     const frameInto = (r, F) => {
@@ -350,15 +367,27 @@ export function recordsOf(tree, plan, { boxes = null, materialIndex, lightMateri
         }
         return at
     }
-    /* A FACE IN THE LIGHT TABLE, wherever it is drawn: its frame is the same composition the records carry */
-    const face = (n, F, shown) => {
+    /* A FACE IN THE LIGHT TABLE, wherever it is drawn: its frame is the same composition the records carry. Inside an
+       ARRAY a record's frame is the copy's -- the evaluator enters each copy at run time -- so a light there is a face a
+       copy (lights.js A LIGHT INSIDE ARRAYS), each F carried out through `arrays`: the arrays it is in, outermost first,
+       each { F: the array's frame, where its copies are entered, copies }. Innermost copy fastest, as codegen numbers
+       them. */
+    const face = (n, F, shown, arrays = inArrays) => {
         const i = lightIndex.get(n.id)
         if (i === undefined) return
+        const L = plan.lights[i]
         const P = n.params || {}, rect = n.light?.shape === 'rectangle'
-        const half = rect ? [(P.width ?? 1) * 0.5 * F.S, (P.height ?? 1) * 0.5 * F.S] : [(P.radius ?? 0.5) * F.S, (P.radius ?? 0.5) * F.S]
         const flags = (rect ? 2 : 1) | (n.light?.twoSided ? 4 : 0)
-        faces[i] = [[F.t[0], F.t[1], F.t[2], u(flags)], [...F.M[0], half[0]], [...F.M[1], half[1]], [...F.M[2], shown ? 1 : 0]]
+        const counts = arrays.map(a => a.copies.length)
+        for (let j = 0; j < L.faces; j++) {
+            const c = copyIndices(j, counts)
+            let G = F
+            for (let k = arrays.length - 1; k >= 0; k--) G = compose(descend(arrays[k].F, arrays[k].copies[c[k]]), G)
+            const half = rect ? [(P.width ?? 1) * 0.5 * G.S, (P.height ?? 1) * 0.5 * G.S] : [(P.radius ?? 0.5) * G.S, (P.radius ?? 0.5) * G.S]
+            faces[L.first + j] = [[G.t[0], G.t[1], G.t[2], u(flags)], [...G.M[0], half[0]], [...G.M[1], half[1]], [...G.M[2], shown ? 1 : 0]]
+        }
     }
+    let inArrays = []
     const visible = n => n.enabled !== false
     const node = (n, F, shown, plainAbove, csgDepth) => {
         const here = descend(F, n.transform)
@@ -375,7 +404,14 @@ export function recordsOf(tree, plan, { boxes = null, materialIndex, lightMateri
             each(n, x => {
                 if (x.kind !== 'object' || x.type !== 'light') return
                 const path = pathTo(n, x)
-                face(x, path.reduce((G, y) => descend(G, y.transform), F), shown && path.every(visible))
+                // an array on the way (the subtree's code draws it): its copies entered after its frame, as the walk does
+                let G = F
+                const arrays = [...inArrays]
+                for (const y of path) {
+                    G = descend(G, y.transform)
+                    if (y !== x && y.kind === 'group' && y.copies?.length) { arrays.push({ F: G, copies: y.copies }); G = IDENTITY }
+                }
+                face(x, G, shown && path.every(visible), arrays)
             })
             r[4] = u(recs.length)
             return
@@ -458,7 +494,12 @@ export function recordsOf(tree, plan, { boxes = null, materialIndex, lightMateri
                 g[6] = u(tagOf.get(n.id) ?? 0)
             }
             const r = push()
-            head(r, KIND.ARRAY, n.copies.length, 0, (visible(n) ? FLAG.VISIBLE : 0) | (plainAbove && csgDepth === 0 ? FLAG.CULLABLE : 0))
+            /* ITS WINDOW (arrays.js THE WINDOW): a row's or a ring's pattern code in v0.z, where it may cull -- only plain
+               groups and arrays above it, as for any record culled -- and its content's box after its copies, known (w 1)
+               once measured (boxes.js cullBoxes, contentKey). Data, not text: a copy dragged off its row is a write. */
+            const mayCull = plainAbove && csgDepth === 0 && !together
+            const pattern = mayCull && arrayWindow ? copyPattern(n.copies) : null
+            head(r, KIND.ARRAY, n.copies.length, codeOf(pattern), (visible(n) ? FLAG.VISIBLE : 0) | (plainAbove && csgDepth === 0 ? FLAG.CULLABLE : 0))
             frameInto(r, here)
             r[6] = u(tagOf.get(n.id) ?? 0)
             setBox(r, n, plainAbove && csgDepth === 0)
@@ -467,7 +508,10 @@ export function recordsOf(tree, plan, { boxes = null, materialIndex, lightMateri
                 const m = matrixOf(t)
                 params.push([m[0], m[1], m[2], m[12]], [m[4], m[5], m[6], m[13]], [m[8], m[9], m[10], m[14]], [m[15], 0, 0, 0])
             }
+            const cb = pattern ? boxes?.get(contentKey(n.id)) : null
+            params.push(cb ? [...cb.lo, 1] : [0, 0, 0, 0], cb ? [...cb.hi, 0] : [0, 0, 0, 0])
             r[5] = u(at)
+            inArrays = [...inArrays, { F: here, copies: n.copies }]
             if (!together) for (const c of n.children || []) node(c, IDENTITY, on, plainAbove, csgDepth)
             else {
                 const shape = shapesOf(n)
@@ -483,6 +527,7 @@ export function recordsOf(tree, plan, { boxes = null, materialIndex, lightMateri
                     if (recs.length - 1 > start && !visible(c)) recs[start][4] = u(recs.length)
                 }
             }
+            inArrays = inArrays.slice(0, -1)
             const e = push()
             head(e, KIND.ARRAY_END, 0, 0, FLAG.VISIBLE)
             e[4] = u(recs.indexOf(r))
@@ -615,7 +660,7 @@ function pathTo(root, target) {
 // that folds -- every one sets the frame it folds in -- and XF_M, XF_S are put back to the identity at the end, as the
 // last block's leave() left them.
 //======================================================================================================================
-export function evaluatorWGSL({ blocks, befores = 0, afters = 0, subs, stack, arrays = 0, wantLocal = false, keepK = false, straight = false, pick = false, optics = false, cull = true, count = false, recs = 'sceneData' }) {
+export function evaluatorWGSL({ blocks, befores = 0, afters = 0, subs, stack, arrays = 0, wantLocal = false, keepK = false, straight = false, pick = false, optics = false, cull = true, count = false, recs = 'sceneData', arrayWindow = true }) {
     const L = []
     const w = s => L.push(s)
     const culling = cull && !pick && !optics
@@ -629,7 +674,9 @@ export function evaluatorWGSL({ blocks, befores = 0, afters = 0, subs, stack, ar
     /* a before group's warp() multiplies XF_K, which is put back after its children where something reads it (keepK:
        codegen saves and restores it around group code then, and only then) -- kept with the base frame */
     const withK = arrays > 0 && befores > 0 && keepK
-    const entry = (bp, bM, bS, at, n) => `ScnArray(${bp}, ${bM}, ${bS}, ${at}, ${n}${withK ? ', XF_K' : ''})`
+    const entry = (bp, bM, bS, at, n, wf = '0', wn = '0u') => `ScnArray(${bp}, ${bM}, ${bS}, ${at}, ${n}, ${wf}, ${wn}${withK ? ', XF_K' : ''})`
+    // ARRAYS WITH A WINDOW (arrays.js): where the walk culls, the copies near the point and the rest a bound in CULL
+    const windows = arrays > 0 && culling && arrayWindow
     const XM = m => arrays > 0 ? `bM * ${m}` : m, XS = v => arrays > 0 ? `bS * ${v}` : v
     w(`const SCN_PICK: bool = ${pick};`)
     w(`const SCN_OPTICS: bool = ${optics};`)
@@ -644,14 +691,18 @@ export function evaluatorWGSL({ blocks, befores = 0, afters = 0, subs, stack, ar
     if (arrays > 0) {
         w('/* An array or a before group open on the way down: the base frame it was entered in, its record, and which copy')
         w('   is being walked (an array\'s)' + (withK ? ', and XF_K as it was (a before group\'s warp changes it) */' : ' */'))
-        w(`struct ScnArray { bp: VEC3, bM: mat3x3<f32>, bS: f32, at: u32, n: u32${withK ? ', k: f32' : ''} }`)
-        w('/* the base frame of copy n of the array at record g: q, M and S the array\'s own point and frame in the base before */')
-        w('fn scnCopy(g: u32, n: u32, q: VEC3, M: mat3x3<f32>, S: f32, bM0: mat3x3<f32>, bS0: f32) -> ScnArray {')
-        w(`    let o = scnU(scnRec(g + 1u).y) + ${COPY_VEC4S}u * n;`)
+        w('/* ...and an array\'s window: the copies walked are wn from wf on (modulo their number), n the place in it */')
+        w(`struct ScnArray { bp: VEC3, bM: mat3x3<f32>, bS: f32, at: u32, n: u32, wf: i32, wn: u32${withK ? ', k: f32' : ''} }`)
+        w('/* the base frame of copy k of the array at record g, the n-th of its window wf, wn: q, M and S the array\'s own point and')
+        w('   frame in the base before */')
+        w('fn scnCopy(g: u32, k: u32, n: u32, wf: i32, wn: u32, q: VEC3, M: mat3x3<f32>, S: f32, bM0: mat3x3<f32>, bS0: f32) -> ScnArray {')
+        w(`    let o = scnU(scnRec(g + 1u).y) + ${COPY_VEC4S}u * k;`)
         w('    let c0 = sceneData[o]; let c1 = sceneData[o + 1u]; let c2 = sceneData[o + 2u]; let s = sceneData[o + 3u].x;')
         w('    let R = mat3x3<f32>(c0.xyz, c1.xyz, c2.xyz);')
-        w(`    return ${entry('(transpose(R) * (q - VEC3(c0.w, c1.w, c2.w))) / s', 'bM0 * M * R', 'bS0 * S * s', 'g', 'n')};`)
+        w(`    return ${entry('(transpose(R) * (q - VEC3(c0.w, c1.w, c2.w))) / s', 'bM0 * M * R', 'bS0 * S * s', 'g', 'n', 'wf', 'wn')};`)
         w('}')
+        w('/* copy n of a window, modulo the array\'s count */')
+        w('fn scnWrap(wf: i32, n: u32, count: u32) -> u32 { let c = i32(count); return u32(((wf + i32(n)) % c + c) % c); }')
     }
     w('fn scnU(v: f32) -> u32 { return bitcast<u32>(v); }')
     /* A RECORD'S VEC4, wherever the walk reads one (RECORDS_IN_UNIFORM): from the records' uniform copy (scnRecs) where
@@ -762,15 +813,17 @@ export function evaluatorWGSL({ blocks, befores = 0, afters = 0, subs, stack, ar
         w('            // the next copy of the array, from the top of its children -- or, after the last, its base frame back')
         w('            let g = scnU(v1.x);')
         w('            let n = atop.n + 1u;')
-        w('            if (n < scnU(scnRec(g).y)) {')
+        w('            if (n < atop.wn) {')
         w('                let ga = scnRec(g + 2u); let gb = scnRec(g + 3u); let gc = scnRec(g + 4u);')
         w('                let gM = mat3x3<f32>(ga.xyz, gb.xyz, gc.xyz); let gS = scnRec(g + 1u).w;')
         w('                let gq = (transpose(gM) * (atop.bp - VEC3(ga.w, gb.w, gc.w))) / gS;')
-        w('                let nx = scnCopy(g, n, gq, gM, gS, atop.bM, atop.bS);')
+        w('                let nx = scnCopy(g, scnWrap(atop.wf, n, scnU(scnRec(g).y)), n, atop.wf, atop.wn, gq, gM, gS, atop.bM, atop.bS);')
         w('                bp = nx.bp; bM = nx.bM; bS = nx.bS; atop.n = n;')
+        if (pick) w('                XF_COPY = XF_COPY + 1u;      // the next copy (no window in the pick: the copies in order)')
         w(`                i = g + ${REC}u;`)
         w('                continue;')
         w('            }')
+        if (pick) w('            XF_COPY = XF_COPY / scnU(scnRec(g).y); XF_COPIES = XF_COPIES - 1u;    // its digit gone')
         w('            bp = atop.bp; bM = atop.bM; bS = atop.bS; ad = ad - 1u;')
         w('            if (ad > 0u) { atop = astack[ad - 1u]; }   // the one it is in, innermost again')
         w(`            i = i + ${REC}u;`)
@@ -797,12 +850,37 @@ export function evaluatorWGSL({ blocks, befores = 0, afters = 0, subs, stack, ar
     w(`        if (kind == ${KIND.GROUP}u) { i = i + ${REC}u; continue; }`)
     if (arrays > 0) {
         w(`        if (kind == ${KIND.ARRAY}u) {`)
+        w('            var wf = 0;')
+        w('            var wn = scnU(v0.y);')
+        if (windows) {
+            /* ITS WINDOW (arrays.js): a row's or a ring's, once its content's box is known -- the copies near the point,
+               the rest a bound in CULL, as codegen's copies loop has it; none near, the array is skipped whole */
+            w(`            if (scnU(v0.z) != 0u && (flags & ${FLAG.CULLABLE}u) != 0u) {`)
+            w(`                let cb = scnU(v1.y) + ${COPY_VEC4S}u * wn;`)
+            w('                let wl = sceneData[cb]; let wh = sceneData[cb + 1u];')
+            w('                if (wl.w != 0.0) {')
+            w('                    let o0 = scnU(v1.y);')
+            w('                    let a0 = sceneData[o0]; let a1 = sceneData[o0 + 1u]; let a2 = sceneData[o0 + 2u]; let s0 = sceneData[o0 + 3u].x;')
+            w('                    let P0 = VEC3(a0.w, a1.w, a2.w);')
+            w('                    var P1 = P0;')
+            w(`                    if (scnU(v0.z) == ${PATTERN_ROW}u) {`)
+            w(`                        let o1 = o0 + ${COPY_VEC4S}u;`)
+            w('                        P1 = VEC3(sceneData[o1].w, sceneData[o1 + 1u].w, sceneData[o1 + 2u].w);')
+            w('                    }')
+            w(`                    let aw = arrWindowOf(scnU(v0.z), wn, q, mat3x3<f32>(a0.xyz, a1.xyz, a2.xyz), P0, s0, P1, wl.xyz, wh.xyz, ${XS('S')});`)
+            w('                    CULL = min(CULL, aw.bound); wf = aw.first; wn = aw.count;')
+            w('                    if (wn == 0u) { i = scnU(v1.x); continue; }')
+            w('                }')
+            w('            }')
+        }
         w('            // its first copy: the base frame it is entered in kept, the copy\'s made the base')
         w('            if (ad > 0u) { astack[ad - 1u] = atop; }   // the one it is in, out of the way')
-        w(`            atop = ${entry('bp', 'bM', 'bS', 'i', '0u')};`)
+        w(`            atop = ${entry('bp', 'bM', 'bS', 'i', '0u', 'wf', 'wn')};`)
         w('            ad = ad + 1u;')
-        w('            let nx = scnCopy(i, 0u, q, M, S, bM, bS);')
+        w('            let nx = scnCopy(i, scnWrap(wf, 0u, scnU(v0.y)), 0u, wf, wn, q, M, S, bM, bS);')
         w('            bp = nx.bp; bM = nx.bM; bS = nx.bS;')
+        /* THE PICK COPY SAYS WHICH COPY (scene_api.js XF_COPY), as codegen's: a digit more for this array, copy 0 */
+        if (pick) w('            XF_COPY = XF_COPY * scnU(v0.y); XF_COPIES = XF_COPIES + 1u;')
         w(`            i = i + ${REC}u;`)
         w('            continue;')
         w('        }')
@@ -917,18 +995,19 @@ function worldBoxOf(data, i) {
 export function lightFacesWGSL(lights, ub) {
     const L = []
     const w = s => L.push(s)
-    const weight = (L, i) => `select(0.0, 1.0, sceneData[scnLight(${i}u) + 3u].w > 0.5 && u32(UB.${ub(L, 'beam')}.x + 0.5) != 0u)`
-    w(`const LIGHT_FACES: u32 = ${lights.length}u;`)
+    // its shown flag is its first face's: every copy's is the light's (face, below)
+    const weight = L => `select(0.0, 1.0, sceneData[scnLight(${L.first ?? 0}u) + 3u].w > 0.5 && u32(UB.${ub(L, 'beam')}.x + 0.5) != 0u)`
+    w(`const LIGHT_FACES: u32 = ${faceCount(lights)}u;`)
     w('fn scnLight(i: u32) -> u32 { return bitcast<u32>(sceneData[0].y) + ' + LIGHT_VEC4S + 'u * i; }')
     w('fn lightFaceTotal() -> f32 {')
     w('    var t = 0.0;')
-    lights.forEach((L, i) => w(`    t += ${weight(L, i)};     // light ${L.id}`))
+    lights.forEach(L => w(faceTotalLine(L, weight(L))))
     w('    return t;')
     w('}')
     w('fn lightFacePick(u: f32) -> u32 {')
     w('    var acc = 0.0;')
     w('    var last = 0u;')
-    lights.forEach((L, i) => w(`    { let w = ${weight(L, i)}; if (w > 0.0) { last = ${i}u; acc += w; if (u < acc) { return ${i}u; } } }     // light ${L.id}`))
+    lights.forEach(L => w(facePickLine(L, weight(L))))
     w('    return last;')
     w('}')
     w('fn lightFace(i: u32) -> LightFace {')
@@ -939,9 +1018,9 @@ export function lightFacesWGSL(lights, ub) {
     w('    let fl = bitcast<u32>(a0.w);')
     w('    f.shape = fl & 3u; f.twoSided = (fl >> 2u) & 1u;')
     w('    switch (i) {')
-    lights.forEach((L, i) => {
+    lights.forEach(L => {
         const c = ub(L, 'emissive'), l = ub(L, 'emissiveLuminance'), b = ub(L, 'beam')
-        w(`        case ${i}u: { f.le = UB.${c} / max(dot(UB.${c}, LUMA_709), 1e-6) * UB.${l}; f.beam = UB.${b}; }     // light ${L.id}`)
+        w(`        case ${faceCases(L)}: { f.le = UB.${c} / max(dot(UB.${c}, LUMA_709), 1e-6) * UB.${l}; f.beam = UB.${b}; }     // light ${L.id}`)
     })
     w('        default: { }')
     w('    }')

@@ -699,12 +699,17 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
             again()
             return true
         }
-        const R = { n: node.copies?.length ?? 3, pitch: 1, axis: 'x' }
+        const R = { n: node.copies?.length ?? 3, pitch: 1, axis: 'x', radius: 1 }
+        const count = () => Math.max(1, Math.min(M.ARRAY_MAX, R.n | 0))
         cf.addBinding(R, 'n', { label: 'count', min: 1, max: M.ARRAY_MAX, step: 1 })
         cf.addBinding(R, 'pitch', { label: `pitch (${unitName()})` })
         cf.addBinding(R, 'axis', { label: 'along', options: { x: 'x', y: 'y', z: 'z' } })
         cf.addButton({ title: node.copies ? 'Make them a row' : 'Make it an array: a row of copies' })
-            .on('click', () => put(M.copiesRow(Math.max(1, Math.min(M.ARRAY_MAX, R.n | 0)), +R.pitch || 0, R.axis)))
+            .on('click', () => put(M.copiesRow(count(), +R.pitch || 0, R.axis)))
+        // a ring as copies (model.js copiesRing): what draws a ring of lights, which the circular array (group code) does not
+        cf.addBinding(R, 'radius', { label: `ring radius (${unitName()})` })
+        cf.addButton({ title: node.copies ? 'Make them a ring (about the axis above)' : 'Make it an array: a ring of copies (about the axis above)' })
+            .on('click', () => put(M.copiesRing(count(), +R.radius || 0, R.axis)))
         if (!node.copies) { cf.element.append(box); return }
         const num = v => +(+v).toPrecision(9)
         const text = t => {

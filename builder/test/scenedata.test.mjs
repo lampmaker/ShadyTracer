@@ -280,8 +280,12 @@ const framesAtEnds = w => {
     ok('an array in an array: still four deep of room, the same text with one more record', textOf(gen(nested, s3.blocks)) === textOf(s3) || /array<ScnArray, 4>/.test(gen(nested, s3.blocks).wgsl))
     // in codegen: the children once, in a loop over a uniform a copy
     const c = generate(...M.generateArgs(d, { id: 'built' }))
+    // ...a row: over its window (arrays.js), all three until its content's box is known; without the window, over all three
+    const cAll = generate(...M.generateArgs(d, { id: 'built', arrayWindow: false }))
     ok('codegen: the child\'s code once, in a loop over three copies, a uniform each', (c.wgsl.match(/\/\/ node ball/g) || []).length === 1
-        && /for \(var ci_arr = 0u; ci_arr < 3u;/.test(c.wgsl) && ['cp0_arr', 'cp1_arr', 'cp2_arr'].every(k => k in c.uniforms) && !('cp3_arr' in c.uniforms))
+        && /var wf_arr = 0; var wn_arr = 3u;/.test(c.wgsl) && /for \(var cm_arr = 0u; cm_arr < wn_arr;/.test(c.wgsl) && /arrWindowOf\(1u, 3u, p,/.test(c.wgsl) && /arrCopy\(1u, 3u,/.test(c.wgsl)
+        && /for \(var ci_arr = 0u; ci_arr < 3u;/.test(cAll.wgsl) && !/arrWindow/.test(cAll.wgsl)
+        && ['cp0_arr', 'cp1_arr', 'cp2_arr'].every(k => k in c.uniforms) && !('cp3_arr' in c.uniforms) && 'bxlo_arr_cbx' in c.uniforms)
 }
 
 // ---- BEFORE GROUPS (codegen isBefore): code that only moves the point its children see is a record, its children too

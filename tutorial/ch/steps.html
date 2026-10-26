@@ -17,7 +17,7 @@
     <h1>Fewer and cheaper steps</h1>
     <p class="lede">A ray's time on the graphics card is its steps, and a step's time is the scene's answer at one point: the
       distance to every object, of which the nearest is kept. This chapter is three ways ShadyTracer pays less for
-      that. It skips the objects far from a ray, behind boxes. It makes a costly surface cheap away from itself, inside
+      that. It skips the objects far from a ray, behind boxes, and the copies of a row or a ring far from it. It makes a costly surface cheap away from itself, inside
       a shell. And it steps without asking the scene at all, from a grid of remembered distances. Each comes with what
       it saved on the user's cards, what it cost, and what was taken out again.</p>
   </div>
@@ -216,6 +216,34 @@
     <p class="cite-line">The line, at the end of the scene's function: <code>if (CULL &lt; abs(C.s.w)) { C.s.w = CULL; }</code>
       (<cite data-src="builder/codegen.js" data-sym="if (culling) e.raw('    if (CULL &lt; abs(C.s.w)) { C.s.w = CULL; }')"></cite>):
       C.s.w is the scene's answer, the nearest distance found.</p>
+    <p>The same skipping works inside an array: a group whose children are drawn again at a list of places, its
+      copies. The copies are joined to each other as the root's children are, nearest wins, so a copy far from the
+      point can be left out and a lower bound on its distance kept in its place, exactly as a box stands in for a
+      top-level object. Every copy used to be asked at every step. The test scene is a floor under 256 copies of one
+      small lamp: 16 rows of 16, the rows standing round a ring. On the user's Pascal card it took 281 ms of marching a
+      sample, against 7 ms for the same floor under one lamp. Choosing which of the 256 lamps to aim at (chapter 14) cost
+      nothing measurable; asking every lamp at every step cost all of it.</p>
+    <p>Now a row of copies, or a ring of them, is asked only in a <em>window</em>: the few copies around the one closest
+      to the point. The closest is found without asking any: along a row it is the copy at the point's place along the
+      row, round a ring the copy at the point's angle about the ring's axis. From there the copies are taken one at a
+      time on each side, until on each side the next copy's bound is beyond the margin, and that copy's bound stands
+      in for every copy past it (<cite data-src="builder/arrays.js" data-sym="// THE BOUND."></cite>):</p>
+    <ul>
+      <li><strong>A row:</strong> the distance to the next copy's box. The copies are one box moved the same distance at
+        a time, and the distance to a box moved along a line only grows on each side of its smallest value, so no
+        copy past the stopping one is nearer.</li>
+      <li><strong>A ring:</strong> the distance to the sphere round the next copy's box, which only grows as the copies
+        turn away from the closest one. (A ring's copies are turned as well as moved, so their boxes do not line up
+        the way a row's do; a sphere does not mind being turned.) But never less than the distance to the band every
+        copy lies in: the ring of room at the copies' distance from the axis and at their height along it. Above or
+        below a flat ring of lamps, each sphere bulges out of the lamps' thin layer and comes close, while the band is
+        as thin as the lamps; the band is the farther of the two, so its distance is the longer step. Both are lower
+        bounds on the distance to the same copies, so the larger of them is one too.</li>
+    </ul>
+    <p>On the same card the 256 lamps now take 51 ms of marching a sample, against 270 ms with every copy asked in the
+      same run (the 281 above was another run; on this card one build read up to a fifth apart from run to run). A
+      row of 16 marches as fast as the same 16 lamps placed by hand. The first version was slower, not faster: section
+      7 says why.</p>
     <p>A relief in its shell (the WGSL the relief group starts with, as text in JavaScript):</p>
     <pre data-src="builder/modifiers.js" data-in="const reliefCode = (lip, note = []) => [" data-sym="'var H = children(emptyHit(r), p);'," data-to="'}',"
          data-why="children(...) is the plain shape, its distance H.s.w. peak is 1 + 1/2 + 1/4 + 1/8; lip is 17.2 for the modifier, 11.2 for the benchmark's copy. XF_S is the group's scale. READ_REACH is 0 unless a smooth blend above reads the relief (then the band widens by as far as it reads). marchEps() is the surface tolerance. foldRelief divides by the slope." data-hash="733a2aff"></pre>
@@ -295,6 +323,28 @@
   <div class="prose">
     <h2><span class="n">7</span>What went wrong before</h2>
     <ul>
+      <li><strong>A window that made it slower.</strong> Section 5's window, as it was first built, marched the 256
+        lamps in 1007 ms a sample on the user's Pascal card, against 281 ms with every copy asked. Two things were
+        wrong, and each was found by measuring, not by reasoning:
+        <ul>
+          <li><em>Each step cost more.</em> The loop fetched each copy's place through a <code>switch</code> on its
+            number, and in a window that number differs from pixel to pixel. A graphics card runs neighbouring pixels
+            on one stream of instructions, so where their cases disagree it runs the cases one after another. A test that kept the switch but asked every copy marched 43% slower (twice, on that build) than the old loop over
+            every copy, which used the same switch but had every pixel on the same copy at the same moment.
+            Now a window's copy is worked out from the first copy: moved along the row, or turned round the ring.</li>
+          <li><em>The rays took more steps.</em> The boxes are measured by asking the scene, at every point of a grid laid
+            over it, which object's surface is nearest. Every object answers with its tag, a number naming it, and the points close to an
+            object's surface make its box. But every copy of an object has the same tag. So an object
+            inside an array was measured as all its copies at once: the 4 cm lamp came out 2.2 m across, and the sphere
+            round "one copy" over 3 m across. A ray near that sphere could step only to its edge, so rays crept
+            past it in short steps. Counted in a software copy of a graphics card: 47 steps a camera ray with the
+            window, against 22 without. Now the scene also says which copy a surface belongs to, each point is put
+            into its own copy, and the bounds are section 5's. Counted again: 30 steps against 21.
+            (Without the window the count fell too, from 22 to 21. The array's own culling box is its copies' boxes
+            put at every copy, and each of those had been all the copies already, so it came out more than twice the
+            ring's size.) The window can only add steps, since a bound standing in is never longer than the true
+            distance; it still takes more, 30 against 21, but each step asks a few copies, not 256.</li>
+        </ul></li>
       <li><strong>The orange shell.</strong> Section 4, as it happened: the step cache filled from the copy with the
         culling boxes, its balls stopping at the boxes. Safe, and slower than it needed to be; only the picture of the
         cells showed it (<cite data-src="lib/pathtracer/core/wavefront.js" data-sym="THE PICK COPY OF THE SCENE, not the render copy: the same surfaces" data-to="their boundingboxes&quot;). A scene with no pick copy (a hand-written one) is its own."></cite>).</li>

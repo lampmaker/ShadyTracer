@@ -56,6 +56,7 @@
         import { boxCostTest } from './bench/boxcost.js'
         import { dichroicsTest } from './bench/dichroics.js'
         import { importedTest } from './bench/imported.js'
+        import { lightArrayTest } from './bench/lightarray.js'
         import { installBuilder } from './builder/demo.js'
         import { createBaker } from './builder/baker.js'
         import { modeLine } from './builder/modeline.js'
@@ -686,6 +687,22 @@
                     const t = await prepareImported();
                     const missing = rows.filter(n => !t.cases[n - 1]);
                     if (missing.length) throw new Error(`BENCH.imported.run: no row ${missing.join(', ')} (rows 1-${t.cases.length})`);
+                    return window.RTTESTS.run(rows.length ? { ...t, cases: rows.map(n => t.cases[n - 1]) } : t);
+                },
+            };
+        }
+        /* WHAT LIGHTS IN AN ARRAY COST (bench/lightarray.js, 0.next): one light against 16 and 256 copies of it, the same lumens,
+           and the 16 as lights of their own. BENCH.lightarray.view(n) / .run(...rows) */
+        {
+            let lightArray = null;
+            const prepareLightArray = () => lightArray ??= lightArrayTest().catch(e => { lightArray = null; throw e; });
+            window.RTTESTS?.addTest?.({ id: 'lightarray', title: 'What lights in an array cost (one light against 16 and 256 copies, the same lumens)', prepare: prepareLightArray });
+            window.BENCH.lightarray = {
+                view: async n => window.RTTESTS.view(await prepareLightArray(), n),
+                run: async (...rows) => {
+                    const t = await prepareLightArray();
+                    const missing = rows.filter(n => !t.cases[n - 1]);
+                    if (missing.length) throw new Error(`BENCH.lightarray.run: no row ${missing.join(', ')} (rows 1-${t.cases.length})`);
                     return window.RTTESTS.run(rows.length ? { ...t, cases: rows.map(n => t.cases[n - 1]) } : t);
                 },
             };

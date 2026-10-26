@@ -43,14 +43,31 @@ export function lineage(doc, id) {
  * and has no one place; it is shown, measured and moved where its first copy is, the one the others follow. The root's
  * transform is never applied (codegen emits its children straight into SDF).
  */
-export function framesTo(doc, id) {
+export function framesTo(doc, id, copyIn = up => up.copies[0]) {
     const chain = lineage(doc, id), out = []
     chain.forEach((n, i) => {
         if (n === doc.root) return
         if (n.transform) out.push(n.transform)
         const up = chain[i + 1]
-        if (up && up !== doc.root && up.copies?.length) out.push(up.copies[0])
+        if (up && up !== doc.root && up.copies?.length) out.push(copyIn(up))
     })
+    return out
+}
+/** THE ARRAYS A NODE IS INSIDE, the outermost first: the groups with copies above it that framesTo puts a copy of
+ *  between frames (the node's own copies are its children's, not its own). */
+export const arraysAbove = (doc, id) => lineage(doc, id).slice(1).filter(n => n !== doc.root && n.copies?.length).reverse()
+/** WHICH COPY OF EACH, from the pick copy's one number (scene_api.js XF_COPY: the outermost the most significant digit,
+ *  each array's count its base) -- a Map group -> its copy, or null where the number cannot be believed: inside another
+ *  count of arrays than the node is (`copies`, XF_COPIES: something folded outside a loop, a group whose code walks no
+ *  copies), or arrays whose copies multiply past what a u32 holds, where it wrapped. */
+export function copiesOf(doc, id, copy, copies) {
+    const arrays = arraysAbove(doc, id)
+    if (copies !== arrays.length || arrays.reduce((k, g) => k * g.copies.length, 1) > 2 ** 32) return null
+    const out = new Map()
+    for (let k = arrays.length - 1; k >= 0; k--) {
+        const n = arrays[k].copies.length
+        out.set(arrays[k], copy % n); copy = Math.floor(copy / n)
+    }
     return out
 }
 

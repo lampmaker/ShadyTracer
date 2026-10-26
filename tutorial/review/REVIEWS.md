@@ -1181,6 +1181,26 @@ it first.
 | Second reader: both still interrupt -- the curve paragraph ends on "a look, chosen for a picture", and the Hable sentence names a saved picture before section 5 says what one is; the light-kept paragraph's payoff ("cannot differ from the view") diluted; white point unexplained. | **Fixed**: section 2 as it was; a stamped item of its own after "to the bit", white balance and the white point said in plain words, ending "matches the view". |
 | First reader, on the rest of the page: the black-voting paragraph flips between "does not vote" and "voting"; the two-rule meter wants a worked example; percentile, histogram, bin, gamut without cards; figure 1's axis labels overlap and the sun's bar is not found; sRGB used in the fold-out before it is taught; the fold-out writes 2^h − H for 2^(h−H). | **Answered, not changed here**: sections this change did not touch; the next round's. First to check: the fold-out's 2^h − H. |
 
+## Round 14, 2026-10-25 (0.next: chapter 26, the window of an array)
+
+Reports: [steps](reports/2026-10-25-round14/steps.md), then [steps, the arrays read again](reports/2026-10-25-round14/steps-second.md).
+
+**Why this round.** Section 5's paragraphs on arrays were rewritten twice in a day, for the window of an array
+(builder/arrays.js), its first version's slowdown and the per-copy box measurement (builder/boxes.js toOwnLocalOf). The
+first reader read the whole page with a question on the arrays. The section was rewritten for its findings and the
+story of the slowdown moved to section 7. A second, fresh reader read the page to the end of section 5, plus section
+7's new item, and reported on those two alone. They were rewritten again for that reader's findings. That version has
+not been read; the next round's reader of this chapter reads it first.
+
+### Chapter 26, Fewer and cheaper steps
+
+| Finding | |
+|---|---|
+| First reader, worst first: the arrays seemed to break section 2's "only at the root" (the copies' union never said); "the window" never defined, nor how the closest copy is found; sphere against box unclear; 465, 281 and 389 ms for "every copy asked" unlabelled; "took that sphere for a surface" against section 2; the 22/21 step baselines; jargon (light sampling, faces, tag, node, bench row, plain loop); "step" for a row's spacing; the intro's "three ways"; no entry in section 7. | **Fixed**: the copies are joined as the root's children are (nearest wins), so a lower bound stands in; the window defined, the closest copy found by place along a row or angle round a ring; one bound a case (a row's box, a ring's sphere and band); the slowdown moved to section 7 as "A window that made it slower", each number with its card and run; the rays "could step only to its edge"; the baselines explained; "lamp" and "aim at" for faces and light sampling; "the same distance at a time"; the lede names the copies. |
+| First reader: no figure for the arrays, the hardest idea on the page. | **Answered, not done here**: a row of copies with a point, the window, the stopping copy and its bound would be the figure. It is the next change this section should get, not made in this round. |
+| First reader, elsewhere on the page: "the dearer half"; "four times larger" than which bound; the shell timing sentence; the shell edge purple in fig 1 and red in fig 3; the cells "orange" in the text and red in fig 4; the measurement history long. | **Answered, not changed here**: sections this change did not touch; the next round's. First to check: the colours named against the figures. |
+| Second reader: the band sentence said the reverse ("the band is near … so the longer step"); why the larger of two lower bounds is safe; a 2 m sphere round a 2.2 m box; the array's own box "too big" unexplained; the 256 lamps' layout never said; "the plain loop"; "its least"; why spheres for a ring; 270 against 281 ms; Ampere never introduced; "its name, its tag". | **Fixed**: each sphere bulges out of the lamps' thin layer and comes close, the band stays as thin as the lamps, so the band is the farther and its step the longer; both are lower bounds on the same copies, so the larger is one; the sphere over 3 m across (the content box 2.35 m by 2.35 m); the array's box is its copies' boxes at every copy, each of them all the copies already, so more than twice the ring; 16 rows of 16 round a ring; the old loop used the same switch with every pixel on the same copy; "its smallest value"; a ring's copies are turned, a sphere does not mind; 281 is another run, a fifth apart on this card; the Ampere numbers taken out, the Pascal card's used throughout; "its tag, a number naming it". |
+
 ## Next round
 
 The pages stay drafts. Every written chapter has now had two readers (chapters 5 to 11 in rounds 5 and 6); the

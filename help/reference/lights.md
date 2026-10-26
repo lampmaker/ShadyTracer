@@ -2,7 +2,7 @@
 
 > Made by `help/reference.mjs` from the program's own lists: edit that, not this page.
 
-A light object is a flat rectangle or disc that emits from its front (+z), or a ray file's rays. Its size is its parameters; the rest is here. *rectangle light*, *disc light*, *ray file*.
+A light object is a flat rectangle or disc that emits from its front (+z), or a ray file's rays. Its size is its parameters; the rest is here. *rectangle light*, *disc light*, *ray file*. Inside an array (a group's copies), it is a light at every copy, each with these settings: see [Arrays](../modelling/parameters.md#arrays).
 
 | setting | starts at | does |
 |---|---|---|

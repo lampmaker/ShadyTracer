@@ -1499,9 +1499,34 @@ throws('another version is refused, not guessed at',
         M.addGroup(d, 'root', { id: 'cut' }); M.addObject(d, 'cut', { primitive: 'box' }); M.addObject(d, 'cut', { primitive: 'sphere', join: 'subtract' })
         M.setCopies(d, 'cut', M.copiesRow(2, 1))
     }, /join.*no copies/)
-    throws('not over a light: light sampling needs each face where it is', () => {
-        M.addGroup(d, 'root', { id: 'lamps' }); M.addLight(d, 'lamps', { id: 'lp', shape: 'disc' }); M.setCopies(d, 'lamps', M.copiesRow(2, 1))
-    }, /light inside an array/)
+    /* A LIGHT INSIDE (0.next): drawn once a copy, if the copies share one scale (lights.js A LIGHT INSIDE ARRAYS) -- held
+       on every way a light comes to be in an array: its copies set, a light added, a node moved, a scene read */
+    M.addGroup(d, 'root', { id: 'lamps' }); M.addLight(d, 'lamps', { id: 'lp', shape: 'disc' })
+    M.setCopies(d, 'lamps', M.copiesRow(2, 1))
+    ok('over a light: a row of copies, the scene sound', M.find(d, 'lamps').node.copies.length === 2 && M.validate(d).length === 0, JSON.stringify(M.validate(d)))
+    const scaled = M.copiesRow(2, 1); scaled[1].scale = 2
+    throws('over a light, copies of two scales refused', () => M.setCopies(d, 'lamps', scaled), /differ in scale and a light is inside \('lp'\)/)
+    ok('...and nothing changed', M.find(d, 'lamps').node.copies[1].scale === 1)
+    M.addGroup(d, 'root', { id: 'big' }); M.addObject(d, 'big', { id: 'bigball', primitive: 'sphere' }); M.setCopies(d, 'big', scaled)
+    ok('copies of two scales with no light inside: as before', M.validate(d).length === 0)
+    throws('a light added into them refused', () => M.addLight(d, 'big', { id: 'lq', shape: 'disc' }), /differ in scale/)
+    ok('...and not added', !M.find(d, 'lq') && M.validate(d).length === 0)
+    M.addLight(d, 'root', { id: 'lr', shape: 'disc' })
+    throws('a light moved into them refused', () => M.move(d, 'lr', 'big'), /differ in scale/)
+    ok('...and where it was', M.find(d, 'lr').parent === d.root && M.validate(d).length === 0)
+    throws('an array with a light moved... is the array\'s own rule: a group holding the light moved in', () => {
+        M.addGroup(d, 'root', { id: 'holder' }); M.move(d, 'lr', 'holder'); M.move(d, 'holder', 'big')
+    }, /differ in scale/)
+    ok('...and where it was', M.find(d, 'holder').parent === d.root && M.find(d, 'lr').parent.id === 'holder')
+    const bad = JSON.parse(M.serialize(d)); bad.root.children.find(c => c.id === 'lamps').copies = scaled
+    ok('a scene read with them: refused, by name', M.validate(bad).some(x => /'lamps': its copies differ in scale/.test(x)), JSON.stringify(M.validate(bad)))
+    M.remove(d, 'big'); M.remove(d, 'holder')
+    // a ring: each copy the first turned about the axis, a radius out
+    const ring = M.copiesRing(4, 2, 'z')
+    eq('a ring about z: on the circle, each turned with it', ring.map(t => [t.pos.x, t.pos.y, t.pos.z, t.rot.z]), [[2, 0, 0, 0], [0, 2, 0, 90], [-2, 0, 0, 180], [0, -2, 0, 270]])
+    eq('...about x and about y, the first turned', [M.copiesRing(4, 1, 'x')[1], M.copiesRing(4, 1, 'y')[1]].map(t => [t.pos.x, t.pos.y, t.pos.z, t.rot.x, t.rot.y]),
+       [[0, 0, 1, 90, 0], [1, 0, 0, 0, 90]])
+    M.setCopies(d, 'lamps', null)
     throws('the root has none', () => M.setCopies(d, 'root', M.copiesRow(2, 1)), /not a group of the scene/)
     M.setCopies(d, 'arr', null)
     ok('null: a plain group again', g.copies === undefined && M.validate(d).length === 0)
