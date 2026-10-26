@@ -210,9 +210,20 @@
         const rendererTable = tableIn(rendererEl, { boxes: true });
         const testsTable = tableIn(SHELL.panel({ id: 'tests', title: 'Tests', module: 'renderer',
             help: 'The measurement bench: one row per test with a known answer, and a report to copy.' }));
-        // no View entry: File › Save picture… opens it, floating (menu: false, lib/shell/shell.js standard)
-        const outputTable = tableIn(SHELL.panel({ id: 'output', title: 'Save picture', module: 'renderer', menu: false,
-            help: 'Render a picture at a size and sample count of its own, then develop it -- exposure, tone curve, grading, on a preview -- and save it as PNG.' }));
+        /* THE DARKROOM (0.next; the floating "Save picture" panel before it): a render at a size and sample count of its own,
+           kept as light and shown large -- panned and zoomed by darkroom/viewer.js in the left part -- beside its boxes,
+           Render, Develop and Save. A tab beside the picture, as the Project panel is: File › Save picture… opens it there
+           (below). Its id stays `output`, so a saved layout that has it finds it; the shell gives it its new title. No View
+           entry (menu: false, lib/shell/shell.js standard). */
+        const outputEl = SHELL.panel({ id: 'output', title: 'Darkroom', module: 'renderer', menu: false,
+            help: 'Render a picture at a size and sample count of its own, then look at it large -- zoom, pan, compare with the view -- develop it (exposure, tone curve, grading, with its histogram) and save it as PNG.' });
+        Object.assign(outputEl.style, { display: 'flex', overflow: 'hidden' });
+        const darkroomViewer = document.createElement('div');
+        Object.assign(darkroomViewer.style, { flex: '1 1 auto', minWidth: '0' });
+        const darkroomSide = document.createElement('div');
+        Object.assign(darkroomSide.style, { flex: '0 0 300px', overflowY: 'auto', borderLeft: '1px solid var(--sh-line, #333)' });
+        outputEl.append(darkroomViewer, darkroomSide);
+        const outputTable = tableIn(darkroomSide, { boxes: true });
         const statsEl = SHELL.panel({ id: 'stats', title: 'Render stats', module: 'renderer',
             help: 'The renderer\'s live readout: samples per second, cost per sample, the value under the cursor.' });
         /* THE BUILDER, split in two: the project's tree (with its toolbar) and the selection's properties */
@@ -480,9 +491,25 @@
             Tests: testsTable,
         },
             // a panel or popover holding one folder shows it flat: its tab or icon already names it
-            untitled: [...VIEW.untitled, 'Save an image', 'Tests'],
+            untitled: [...VIEW.untitled, 'Tests'],             // the Darkroom's boxes have titles: Render, Develop, Save
             omit: VIEW.omit,
+            darkroom: darkroomViewer,
             build: versionText });          // every test and benchmark result names the build it ran on
+        /* THE LIVE VIEW HELD WHILE THE DARKROOM COVERS IT (0.next): the viewport is kept in the page under another tab
+           (renderer: 'always', above), so its loop would go on tracing a picture nobody sees, beside the darkroom's own
+           draws on the same GPU. Held only while the darkroom is seen and the viewport is not -- a darkroom floated beside
+           the picture (a layout from before) leaves it running. RT.hold holds the live loop only: a render offscreen
+           still runs. Holds nest, and this one is let go once. */
+        {
+            const seen = { output: false, viewport: false };
+            let release = null;
+            const decide = () => {
+                const hold = seen.output && !seen.viewport;
+                if (hold && !release) release = RT.hold();
+                else if (!hold && release) { release(); release = null; }
+            };
+            for (const id of Object.keys(seen)) SHELL.onVisible(id, v => { seen[id] = !!v; decide(); });
+        }
         /* THE BENCHMARK (bench): its scenes are builder documents, which the renderer's own
            bench cannot make, so the page hands it the test -- built when the button is pressed, from the
            frozen files next to this page. */
@@ -1352,7 +1379,8 @@
         =========================================================================================*/
         {
             const C = SHELL.command, A = () => ACTIONS;
-            const savePicture = () => SHELL.open('output', undefined, undefined, { floating: { width: 420, height: 760 } });
+            // a tab beside the picture, where the picture is (0.next; a floating panel before); brought forward if open
+            const savePicture = () => SHELL.open('output', { referencePanel: 'viewport', direction: 'within' });
             const itemOpen = () => !!window.ITEM_EDITOR?.active;
             /* FILE (builder/filemenu.js), five rows: New project · Projects… | Import from file… · Export ▸ | Save picture….
                The scenes are on their cards over the tree and in the Project panel; the project is saved as it changes. */
