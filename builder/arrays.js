@@ -1,5 +1,5 @@
 //======================================================================================================================
-// THE WINDOW OF AN ARRAY (0.next): a regular row or ring of copies evaluated at the few copies near the point, the rest
+// THE WINDOW OF AN ARRAY (0.79.0): a regular row or ring of copies evaluated at the few copies near the point, the rest
 // bounded -- where every copy was evaluated at every step of every ray.
 //
 // WHY. An array's children are once in the text and walked once a copy (model.js copies; codegen.js AN ARRAY; the scene

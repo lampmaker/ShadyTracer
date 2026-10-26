@@ -71,7 +71,7 @@ const cs = deg => { const r = deg * Math.PI / 180; return [Math.cos(r), Math.sin
 const framesOf = (doc, id) => framesTo(doc, id)
 export const toWorldOf = (doc, id) => { const F = framesOf(doc, id); return p => F.reduce((q, t) => toParent(t, q), p) }
 export const toLocalOf = (doc, id) => { const F = framesOf(doc, id); return p => F.reduceRight((q, t) => fromParent(t, q), p) }
-/* ...A POINT OF A SAMPLE INTO ITS OWN NODE'S FRAME THROUGH ITS OWN COPY (0.next): the pick copy says which copy each
+/* ...A POINT OF A SAMPLE INTO ITS OWN NODE'S FRAME THROUGH ITS OWN COPY (0.79.0): the pick copy says which copy each
    point's surface is (surfaces() keeps it on the point, scene_api.js XF_COPY). Mapped through the first copy, as
    toLocalOf maps, every copy of a node in an array landed in one box spanning the array -- a 4 cm light in the ring of
    rows of Tests > lightarray measured 2.2 m across, its group's box (every copy again, B.get) 5.25 m where the ring is
@@ -561,7 +561,7 @@ export function cullBoxes(doc, B, { nested = false } = {}) {
         if (nested && c.kind === 'group' && !isCsg(c) && !groupHasCode(doc, c)) for (const k of c.children || []) visit(k, inner)
     }
     for (const c of doc?.root?.children || []) visit(c, 1)
-    /* AND EACH ARRAY'S CONTENT (arrays.js THE WINDOW, 0.next): the box its children take up in a copy's frame, under
+    /* AND EACH ARRAY'S CONTENT (arrays.js THE WINDOW, 0.79.0): the box its children take up in a copy's frame, under
        contentKey(id) -- from their own padded boxes as the nested ones above are, carried by each child's transform, so
        the codegen of a row or a ring of copies can leave out the copies far from a point. Only for an array a window is
        made for: reached from the root through plain groups and arrays alone (a lower bound on a shape is no bound on

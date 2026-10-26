@@ -1450,7 +1450,7 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
            two-sided, chosen by the side of the sheet the point is on (p is the node's own frame
            here), and a transparent one's back clear. A material per face, rather than a test in the
            shader's emitter code, because every place that meets a surface already asks the material.
-           ONLY ON THE FACE ITSELF, and the same back material beyond its edge (0.next). The march calls a point within
+           ONLY ON THE FACE ITSELF, and the same back material beyond its edge (0.79.0). The march calls a point within
            the surface tolerance a hit, so what a ray can meet of a sheet is the face grown by the tolerance all round:
            a rim, its normal turned, that glowed. Light sampling aims at the face alone (lightFaceArea) and the photons
            start on it alone, so a camera path finding the light by its glow saw a larger light than they did. With light

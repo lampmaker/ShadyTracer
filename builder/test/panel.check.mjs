@@ -964,7 +964,7 @@ ok('...and the visibility beside it follows: 3.912 x 4 m, 15.6 m', /^visibility 
     ok('...the row says the new unit', await unitRow() === to && (await readRows()).some(r => r === `environment radius (${to})`), JSON.stringify(await readRows()))
 }
 
-// A CODE BOX'S "Functions you can call…" (0.next): the host's help hook asked for the code reference, at a material's helpers
+// A CODE BOX'S "Functions you can call…" (0.79.0): the host's help hook asked for the code reference, at a material's helpers
 // for a material's code, at its top for an object's -- each anchor a heading the page has. A panel given no hook has none.
 {
     const { renderMarkdown } = await import(pathToFileURL(join(repo, 'help/markdown.js')).href)

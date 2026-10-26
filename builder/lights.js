@@ -122,7 +122,7 @@ export function lightProblems(n) {
 }
 
 /*======================================================================================================================
-  A LIGHT INSIDE ARRAYS (model.js copies, 0.next): drawn once a copy, and a FACE a copy -- light sampling, the face table and
+  A LIGHT INSIDE ARRAYS (model.js copies, 0.79.0): drawn once a copy, and a FACE a copy -- light sampling, the face table and
   the photons see each copy where the SDF draws it. Refused until then ("light sampling needs each face where it is"),
   which is what this provides: codegen (collectLights, emitLightFaces), the scene as data (scenedata.js lightsOf, the
   light table) and the optics' sources (sources.js sourceTable) each enumerate the copies by the helpers here, so the

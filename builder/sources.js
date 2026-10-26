@@ -13,7 +13,7 @@
 // luminance derived from that (syncSources) -- the luminance straight out of its face that emits
 // that flux, which is what the camera sees when it looks at the light directly.
 //
-// INSIDE AN ARRAY (a group's copies, 0.next) a light is a source a copy, each of the light's own flux (lights.js A
+// INSIDE AN ARRAY (a group's copies, 0.79.0) a light is a source a copy, each of the light's own flux (lights.js A
 // LIGHT INSIDE ARRAYS): the same entry once a copy, at that copy's frame, `copy` its index among `copies`, its label
 // saying which, and `key` an id of its own (a ray set's placed rays are kept under it; outside an array, its id).
 //======================================================================================================================

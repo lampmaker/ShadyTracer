@@ -195,7 +195,7 @@ try {
         got.arrDataLive = B.live('grp', 'copies')
         const C = standIn(); C.set({ sceneData: 0 })
         const BC = installBuilder({}, { RT: C, gpu, project: P.createProject([scene()]) })
-        /* a list that is no row: its copy moved, live. A row's copy moved off it (arrays.js, 0.next): refused, a compile --
+        /* a list that is no row: its copy moved, live. A row's copy moved off it (arrays.js, 0.79.0): refused, a compile --
            the row's window would leave copies out */
         const odd = M.copiesRow(3, 2); odd[2].pos.y = 1
         M.setCopies(BC.doc, 'grp', odd); await BC.apply()

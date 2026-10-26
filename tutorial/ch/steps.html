@@ -303,7 +303,7 @@
     <div data-claim="code">
       <p><strong>A step that asks only the distance.</strong> Every step of the march asked the scene for its whole answer
         (each shape's normal, turned into the world, the material, the solid the point is in) and read one number of it.
-        Since 0.next the renderer's march is built against a second <code>add_new</code> and <code>fold</code> that keep the
+        Since 0.79.0 the renderer's march is built against a second <code>add_new</code> and <code>fold</code> that keep the
         nearest surface's distance and nothing else, and the surface kernel asks for the whole answer once, at the ray the
         march stopped, on a trip of the loop it already had (<code>scene_api.js</code>, FOLD_DIST; <code>wavefront.js</code>,
         THE HIT ITSELF). The distance is the same expression, so the steps are the same: on a software GPU every camera ray
@@ -313,7 +313,7 @@
     </div>
     <div data-claim="code">
       <p><strong>Shadow rays ask only the distance too.</strong> A shadow ray asks whether anything is in the way, which
-        is a distance, and since 0.next the occlusion kernel is built against the same distance-only <code>fold</code>
+        is a distance, and since 0.79.0 the occlusion kernel is built against the same distance-only <code>fold</code>
         (<code>wavefront.js</code>, prog_occlude's distOnly). One shadow ray asks more: one aimed at a glowing surface
         takes the glow of whatever blocks it (chapter 16). That kernel cannot answer it, so it marks the ray where it was
         blocked and leaves it in its slot in the queue; a small kernel holding the whole scene asks the material there

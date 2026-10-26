@@ -1499,7 +1499,7 @@ throws('another version is refused, not guessed at',
         M.addGroup(d, 'root', { id: 'cut' }); M.addObject(d, 'cut', { primitive: 'box' }); M.addObject(d, 'cut', { primitive: 'sphere', join: 'subtract' })
         M.setCopies(d, 'cut', M.copiesRow(2, 1))
     }, /join.*no copies/)
-    /* A LIGHT INSIDE (0.next): drawn once a copy, if the copies share one scale (lights.js A LIGHT INSIDE ARRAYS) -- held
+    /* A LIGHT INSIDE (0.79.0): drawn once a copy, if the copies share one scale (lights.js A LIGHT INSIDE ARRAYS) -- held
        on every way a light comes to be in an array: its copies set, a light added, a node moved, a scene read */
     M.addGroup(d, 'root', { id: 'lamps' }); M.addLight(d, 'lamps', { id: 'lp', shape: 'disc' })
     M.setCopies(d, 'lamps', M.copiesRow(2, 1))

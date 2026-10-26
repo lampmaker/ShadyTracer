@@ -1,5 +1,5 @@
 //======================================================================================================================
-// THE WINDOW OF AN ARRAY (builder/arrays.js, 0.next). Run: node builder/test/arrays.test.mjs
+// THE WINDOW OF AN ARRAY (builder/arrays.js, 0.79.0). Run: node builder/test/arrays.test.mjs
 //
 // The pattern: what copiesRow and copiesRing make, about every axis and either way round, a row of turned copies, are
 // rows and rings; a copy moved, turned or scaled off them is neither. The window, by brute force at points in and around
@@ -76,7 +76,7 @@ for (const [label, copies, box] of cases) {
             if (d <= margin) missed++
             if (bound > d + 1e-12) { above++; worst = Math.max(worst, bound - d) }
         }
-        /* A ROW'S BOUND IS THE NEAREST LEFT-OUT COPY'S BOX DISTANCE (0.next), but for the slack (SLACK of the copy frame's
+        /* A ROW'S BOUND IS THE NEAREST LEFT-OUT COPY'S BOX DISTANCE (0.79.0), but for the slack (SLACK of the copy frame's
            reach, here up to 1.5e-4 at a box's corner): the sphere round the box it was before put the march's steps a
            sphere's distance from a flat or long content, a tenth of a box and more (arraywindow.gpu.mjs counts them) */
         if (pattern.kind === 'row' && Number.isFinite(nearest) && nearest - bound > 1e-3 * (1 + nearest)) loose++

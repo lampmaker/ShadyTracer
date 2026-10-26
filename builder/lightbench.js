@@ -142,7 +142,7 @@ const SIDE_EMITTER = { vis_benchlamp: 0, vis_benchdisc: 0, vis_benchside: 0, vis
    photons start on the disc itself -- light/emitter 0.80-0.84 on all four pairs of the fourth press,
    against 0.82 predicted, and 0.99 for the 30 cm disc (0.6% of its area). At 10 um the difference is
    0.2%, and the pairs measure the estimators again. One pair keeps the automatic tolerance, to show it.
-   THE 30 CM DISC'S PAIRS TOO (0.next). They stayed at the automatic tolerance while the light's face, seen by the
+   THE 30 CM DISC'S PAIRS TOO (0.79.0). They stayed at the automatic tolerance while the light's face, seen by the
    camera, was as fat as the emitter's: that glowed on the same rim, so the disc in the picture cancelled and the pairs
    read 0.995-1.000. Since a light's face glows on the face alone (codegen.js ONLY ON THE FACE ITSELF), the light is
    exact wherever it is seen and the emitter is not, and at the automatic tolerance those pairs read 0.990-0.994, the
@@ -220,7 +220,7 @@ export function lightBench() {
         kind: 'image',
         title: 'A light against the same surface made an emissive object: the same picture?',
         /* THE VERDICT (lib/pathtracer/verdict.js; the floors are choices, from the note): each pair's meanLuma, light
-           over emitter, 1 within the error bars or 1% -- every pair at 10 um since 0.next (FINE, above) -- except the
+           over emitter, 1 within the error bars or 1% -- every pair at 10 um since 0.79.0 (FINE, above) -- except the
            pair kept at the automatic tolerance, the known limit (about 0.82); emitter discovery listing the disc on an
            emitter row and nothing on a light row; the sensors 1 within seMax or 1%; a face its distribution's L
            within 2% of it and 0.2% of the lamp's (the cone's face wants 0). */
@@ -255,7 +255,7 @@ export function lightBench() {
             + ' automatic one, 0.91 mm here, a ray passing that close to a surface hits it, and the emissive disc -- the'
             + ' reference -- puts out 1.2x the light of the disc the light\'s photons start from. One pair keeps the'
             + ' automatic tolerance to show it: light/emitter about 0.82 (0.80-0.84 on all four pairs before the pin). The'
-            + ' 30 cm disc\'s pairs run at 10 um too since 0.next: at the automatic tolerance they read 0.990-0.994, the'
+            + ' 30 cm disc\'s pairs run at 10 um too since 0.79.0: at the automatic tolerance they read 0.990-0.994, the'
             + ' emissive disc 0.6% fatter, once a light\'s face glowed on the face alone (codegen.js ONLY ON THE FACE'
             + ' ITSELF; before it the light\'s face, seen by the camera, was as fat, and they read 0.995-1.000).'
             + ' The illuminance rows read sensors on the floor against'

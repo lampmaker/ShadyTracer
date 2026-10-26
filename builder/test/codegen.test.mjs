@@ -701,7 +701,7 @@ eq('uniformName', uniformName('n7', 'radius'), 'radius_n7')
     const L = generate(Model.toTree(d))
     ok('MATID_BLACK and MATID_CLEAR follow the three materials', /const MATID_BLACK: u32 = 5u;/.test(L.wgsl) && /const MATID_CLEAR: u32 = 6u;/.test(L.wgsl))
     ok('each light has its own material id after them', /const matid_die: u32 = 7u;/.test(L.wgsl) && /const matid_win: u32 = 8u;/.test(L.wgsl))
-    ok('a one-sided light is black behind and past its edge (0.next: the rim the surface tolerance grows it by), a transparent one clear',
+    ok('a one-sided light is black behind and past its edge (0.79.0: the rim the surface tolerance grows it by), a transparent one clear',
         L.body.includes('let MATERIAL = select(MATID_BLACK, matid_die, p.z >= 0.0 && all(abs(p.xy) <= VEC2(width, height) * 0.5));')
         && L.body.includes('let MATERIAL = select(MATID_CLEAR, matid_win, p.z >= 0.0 && dot(p.xy, p.xy) <= radius * radius);'))
     /* PLAN.md L4: a camera path sees the face glow at its first hit, and at a later one when its first
@@ -1051,7 +1051,7 @@ eq('uniformName', uniformName('n7', 'radius'), 'radius_n7')
 }
 
 {
-    /* A LIGHT INSIDE ARRAYS (0.next; lights.js A LIGHT INSIDE ARRAYS): a face a copy, numbered from the light's own place,
+    /* A LIGHT INSIDE ARRAYS (0.79.0; lights.js A LIGHT INSIDE ARRAYS): a face a copy, numbered from the light's own place,
        innermost copy fastest -- and the same faces, in the same order, from the three that enumerate them: codegen's
        lightFace (run here on the uniforms' defaults, line by line as emitted, as the test above runs one light's), the
        scene as data's light table (scenedata.js recordsOf), and the optics' sources (sources.js sourceTable). A light

@@ -16,6 +16,452 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.79.0 — 2026-10-26
+
+**A node inside an array is measured as one copy, not as all of them.** The boxes the culling uses are measured by
+sampling, at a grid of points, which object's surface is nearest. Every copy of an object has the same tag, and each
+point was put into the object's frame through its first copy. So a node inside an array was measured as all its copies
+at once, and its group then put that box at every copy again:
+- In Tests › Benchmarks › lightarray's ring of 16 rows of 16 lights, a 4 cm light measured 2.22 × 2.22 m. The ring's
+  culling box measured 5.25 m across, where the ring is 2.2 m.
+- Too big, never too small: nothing was cut off, but arrays were culled late.
+
+Now the pick copy of the scene keeps which copy it is walking (`XF_COPY`, in codegen's copies loop and in the data
+walk's ARRAY records), and the tag field returns it with each tag. `builder/boxes.js` puts each point into its own
+copy's frame.
+- The same light now measures 0.133 m, and the ring's box 2.44 m (2.20 m estimated).
+- Where the copy number cannot be believed, a point goes through the first copy, as before. That happens when it says
+  another count of arrays than the node is inside, or when the copies multiply past a u32.
+
+The tag field is four words a point instead of two, read by one function (`core/field.js` `tagSample`) where the page
+and five GPU tests each had their own. `builder/test/boxes.test.mjs` measures a ring of rows of beads with a sampler that
+draws every copy. `builder/test/arraywindow.gpu.mjs` checks on Dawn that the pick copy names each face of the bench's
+ring by its own copy, codegen and as data. The golden shaders: `scenes/parametric-part.json`'s pick texts, the one
+document with an array.
+
+**What to look at:**
+- **Any scene with copies:** nothing should look different. Turn on the bounds overlay and select something inside an
+  array: its box should be one copy's, not the whole array's.
+- **Tests › Benchmarks › lightarray:** rows 5 and 6 (the window off) may be a little faster, their culling boxes being
+  the array's true size now.
+
+**A row or a ring of copies costs about what its nearest copies cost.** Measured on the user's Pascal card (Tests ›
+Benchmarks › lightarray, f4a2a57): 256 copies of a small light in a ring of rows took 119.8 ms a sample, against 389.4
+with every copy walked, and a row of 16 marched as 16 lights placed by hand do. Every copy of an array used to be
+evaluated at every step of every ray. Measured on the user's Ampere card (Tests › Benchmarks › lightarray, 213642c): a floor under
+256 copies of one small light took 465 ms of march and 160 ms of occlusion a sample, against 12 and 8 ms for one light.
+Light sampling's pick of a face stayed flat at 20 ms, so the copies were the whole cost.
+
+Now a group's copies that form a **row** (evenly spaced, each turned and scaled alike) or a **ring** (evenly turned about
+the group's x, y or z axis) are evaluated only near the copy closest to the point (`builder/arrays.js`):
+- Every other copy is bounded by its content's measured box:
+  - a row's copy by the box's own distance, which grows each way from the nearest copy;
+  - a ring's by the sphere round the box, and never below the ring-shaped band about the axis that every copy lies in.
+- The nearest such bound stands in for all of them, as a skipped culling box does.
+- Near a surface the picture's distances are exact. Elsewhere they are a lower bound, safe to march by.
+- Any other list of copies is drawn as before. So is an array inside a joining group or under group code, and one
+  whose box is not measured yet.
+- A copies edit that turns a row or a ring into another shape compiles again. One that keeps it is live, as before.
+
+**The first version of the window was slower, for two reasons, both fixed before the measurement above:**
+- **Measured on the user's Pascal card (a81cac9):** the ring of 256 marched in 1007.5 ms a sample with the window,
+  against 281.0 with it off.
+- **Each step cost more.** The loop fetched each copy through a switch on a number that differs from pixel to pixel, and
+  a GPU runs such a switch's cases one after another.
+  - Measured at c9577ae: bench row 7, every copy fetched that way, marched in 399.6 ms against row 6's 279.3.
+  - Now a window's copy is worked out from the first copy by the pattern (`arrays.js` `arrCopy`): moved along the row,
+    or turned round the ring. It is the stored copy to f32's precision.
+  - Measured: row 4 went from 1007.5 ms of march to 740.0.
+- **The rays took more steps.**
+  - At c9577ae only 34% of row 4's rays finished in the first 32-step march pass, against 77% of row 6's.
+  - The cause: the bench's measured boxes held every copy of a node in an array (the change note
+    `array-boxes-per-copy.md`), and the window bounded each copy by a sphere round such a box.
+  - Counted on lavapipe with boxes measured as the bench measures them (`builder/test/arraywindow.gpu.mjs`, which now
+    holds the count): 47.1 steps a camera ray with the window against 21.9.
+  - With each copy measured as one, 32.1 against 21.4. With the box-shaped bounds above as well, 29.6 against 21.4
+    (codegen) and 32.8 against 30.4 (as data); the row about 1.0 either way.
+  - Inferred, not measured: what is left is the sphere round a ring's copy inside the lights' own plane, where the
+    band says nothing. A bound by the angle about the axis would be the next step.
+
+The bench gains three rows: rows 2 and 4 with the window off, and row 7, the ring's every copy fetched through the
+switch from the window's first copy, which says what the switch costs. The test of the window is
+`builder/test/arraywindow.gpu.mjs`. The Parametric part example's golden shader was refrozen: its heatsink fins are a
+row of 9.
+
+**What to look at:**
+- **Tests › Benchmarks › lightarray:**
+  - Row 4 (16 × 16 in a ring of rows) against row 6 (the same, window off) says what the window saves on your card:
+    119.8 against 389.4 ms a sample on Pascal at f4a2a57.
+  - Row 7 against row 6 is what the switch cost the first version (321.7 against 269.7 ms of march at f4a2a57).
+- **The pictures:** any arrayed scene should look as it did, its copies never clipped or missing. Look at the
+  Parametric part example's fins, the LED ring, and a row of lights seen close.
+- **A copy moved off a row:** in the group's copies box, change one copy's place by hand. The scene recompiles and every
+  copy is drawn.
+
+**Help › Reference › Functions for code lists every function a code block can call.** An object's, a group's or a
+material's code, and the scene's functions, are all compiled after the same library, and nothing listed what is in
+it. The new page has each function's signature and what it does: putting a shape into the scene (`add_new`, `fold`,
+`warp`, `foldRelief`), the joins (`csgUnion` and the older ones, with why `csgUnion` is the one to use), the shapes
+with an exact normal (`Nsphere`, `NboxRounded`, `Nlens`, ...) and those with a distance only (`sd...`), the 2D pieces
+the shapes of revolution are built from, noise, units, the material helpers, and what a scene with an outline or a
+path makes for it (`extrude`, `revolve`, `tube`, `sweep`). Each says which built-in shapes and modifiers use it, and
+whether it is exact or a bound where its code says. The page also has what each kind of block has in scope, and the
+words the page rewrites before compiling, so a variable called `X` (which becomes `vec4<f32>`) is no longer a
+mystery. The comments a new block starts with point to it, and every code box in Properties has a **Functions you
+can call…** button under *Apply code* that opens Help at the page: at the material helpers for a material's code, at
+the noise for a relief's, at the top for the rest.
+
+Each function is a card of its own in the Help panel: its signature on a line of its own, the name in gold and the
+types in green, what it does under it, and what uses it quieter still (`help/markdown.js`: a list item of a code span
+and ` -- ` words; on GitHub the page is still a list).
+
+The signatures are read from the shader library itself (`help/reference.mjs`), so the page cannot disagree with the
+code, and `help/test/coverage.test.mjs` fails on a function the page names that the library no longer has, and on a
+shape or join added to the library without words.
+
+**What to look at:** Help (F1) › Reference › *Functions for code*: the page reads, its links work (to *Parameters and
+code*, the Shapes and Modifiers pages, and the WGSL standard's list of built-ins). A new code node, group code,
+material code and the scene's functions each start with a comment line naming the page. In each of those code boxes,
+and a relief's, **Functions you can call…** opens the Help panel at the page, a material's at *Materials* and a
+relief's at *Noise*, the Help panel opened (floating) if it was closed. Scrolling the page, each function should be
+easy to pick out: a card, its name in gold.
+
+**The Darkroom saves the light itself: OpenEXR, Radiance HDR and PFM, and the developed picture as 16-bit PNG, JPEG or
+WebP.** The kept render is luminance in cd/m², and until now it could leave the page only through an exposure, a tone
+curve and 8 bits. The Save box has a **format**:
+- **PNG 8-bit** as before, now saying in the file how it was made (the build, the size, the samples, the develop
+  settings, as text chunks);
+- **PNG 16-bit**, the develop pass drawn at full size in float strip by strip (`develop.js` `developedRows`) and written
+  at 16 bits, so a steep curve no longer bands in the file;
+- **JPEG** and **WebP**, with a quality;
+- **OpenEXR**, the light as the renderer made it (`develop.js` `lightRows`, `lib/pathtracer/darkroom/export/exr.js`):
+  **absolute cd/m² in float32** by default, the sun and colours outside the gamut kept, or **exposed** (1.0 = white,
+  half float if you like); Rec.709 chromaticities and `whiteLuminance` in the header, so a reader that honours it gets
+  the renderer's numbers either way; ZIP-compressed;
+- **Radiance HDR**, in Radiance's own units (cd/m² ÷ 179) with its Rec.709 `PRIMARIES`, clipped into the display gamut
+  (RGBE holds no negative);
+- **PFM**, the floats and nothing else.
+
+The light formats carry no tone curve, grading or overlay, which the line under the format says, with what the file
+will hold and how large it can be. A render of the illuminance view is saved as lux (×π, as the display shows it). An
+export reads the picture back in strips of about 16 MB with its progress in the status and over the picture, so an 8K
+EXR does not hold half a gigabyte twice over. Every writer is checked against a reader written in its test from the
+format's specification (`lib/pathtracer/test/export.test.mjs`), and against ffmpeg where it is installed.
+
+**What to look at:** Save picture… → Render → Save, each format in turn. Open the EXR in your own tools (Photoshop,
+Affinity, Blender, DJV, or `exrheader`/`oiiotool`) and compare a pixel's value with the Darkroom's cd/m² readout at the
+same place. The HDR and PFM open. A smooth gradient with a steep curve: banding in the 8-bit PNG, none in the 16-bit. A 4K
+or 8K EXR finishes, its rows counting up. The file's text: the build and settings in the PNG's properties.
+
+**The Darkroom's finishing tools and its recipe: output gamma, Levels, a Curves editor, colour wheels, vignette, grain
+and dither; undo and redo, copy and paste, presets, and settings read back from a saved picture.** After the tone curve,
+the picture now goes through these, in this order:
+- an **output** transfer: sRGB as before, gamma 2.2, gamma 2.4 or linear;
+- **Levels**: input black and white, a gamma for the midtones, output black and white;
+- **Curves**: master, then red, green and blue, each drawn by hand in the side column. A click adds a point, a drag
+  moves it, a double-click or a drag out of the square takes it away. **Luminance** puts the master curve on brightness
+  alone, so colours keep their hue. The curves are monotone cubics (Fritsch–Carlson), so a curve never swings past its
+  points (`lib/pathtracer/darkroom/curves.js`, `curveeditor.js`);
+- **Colour wheels**: lift, gamma and gain (shadows, midtones, highlights). Drag a disc's dot towards a colour to tint
+  that part of the picture, and use a slider each for its brightness. They are applied as an ASC CDL
+  (`darkroom/wheels.js`, `grade.js` `cdlFromWheels`);
+- the old contrast, saturation and brightness, unchanged;
+- **Finish**: a **vignette** on the light, darkening or brightening towards the corners as a lens does (its strength
+  in stops, where it starts, how round); **grain**, fixed to the picture's pixels so it is the same in every preview and
+  save; and **dither** for the 8-bit files, against banding (off by default; never in the 16-bit PNG).
+
+**The recipe** (`darkroom/recipe.js`):
+- **Undo** and **Redo** for the look: the buttons, or Ctrl+Z and Ctrl+Y while the Darkroom has focus. The scene's own
+  undo is left alone.
+- **Copy** and **Paste** of the settings.
+- **Presets** kept in this browser: apply one, save as, delete.
+- **From a picture…**: the settings a PNG the Darkroom saved was developed with, read back out of the file.
+
+An untouched develop is still the view's picture to the bit, held on Dawn with the new code in place. Each stage is
+held to its JavaScript twin, and the grain and dither are held to the same hash as their twin's
+(`lib/pathtracer/test/develop.gpu.mjs`).
+
+**What to look at:** Levels' gamma on a flat picture. An S-curve, then Luminance, on a saturated one. A blue lift and a
+warm gain on the same picture. A vignette at −1 stop. Grain at 100 %. Dither on a smooth gradient with a steep curve, in
+an 8-bit PNG. Undo and redo after several changes; Ctrl+Z in the Darkroom does not undo the scene. A preset saved,
+another look made, the preset applied. A PNG saved, every setting changed, then From a picture… with that PNG. An
+untouched save as before.
+
+**The Darkroom's tools that work on the light: white balance with an eyedropper, a spot meter, channel gains, a tone
+equaliser, saturation, vibrance and hue, and an adjustable filmic curve.** The grading the Darkroom had acts on the
+encoded picture, after the tone curve has decided what is white. These act on the light before it, as a camera's raw
+tools do (`lib/pathtracer/darkroom/grade.js` says why, and is their JavaScript twin). The Develop box is now a column of
+boxes in the order the picture is made:
+- **Exposure**: EV, Meter, and **Spot meter**. Click the picture, and a 9 × 9 patch there becomes middle grey.
+- **White balance**: the white's temperature and tint, which a Bradford adaptation takes to D65, so a warm lamp's
+  scene is neutralised by setting the white to the lamp's temperature. **Pick a white**: click a surface that should
+  be white or grey. Red, green and blue gains.
+- **Tone**: the curve, now with a new **Hable, adjustable** (its white point, toe and shoulder; at its defaults it is
+  the Hable curve). Below it, a **tone equaliser**: a gain in stops for each band of light from 7 stops below white to
+  white, which lifts shadows or holds highlights without shifting hues.
+- **Colour**: saturation, vibrance (it raises dull colours and leaves vivid ones alone) and hue, in Oklab.
+- **Grading**: contrast, saturation and brightness as before.
+
+Each box has a Reset. An untouched develop is still the view's picture to the bit: with every tool at its identity,
+the develop pass runs the display's own per-pixel function. The new path at identity was held to it byte for byte on
+Dawn, and each stage to its JavaScript twin (`lib/pathtracer/test/develop.gpu.mjs`). The histogram counts what the
+tools make. Before and Split compare with the picture untouched. The EXR, HDR and PFM exports are still the light as
+rendered, without these tools.
+
+**What to look at:** a scene under a warm lamp. Pick a white on a wall: the cast goes, and Split shows before and after.
+The spot meter on a face or a wall. The equaliser's −5 and −6 EV raised: shadows open, highlights stay. Vibrance against
+saturation on a picture with both dull and vivid colours. The adjustable curve at its defaults against Hable, then its
+shoulder moved. An untouched save as before.
+
+**Save picture is the Darkroom: a tab beside the picture, the render shown as large as the tab.** File › Save picture…
+used to open a floating panel whose preview was at most 320 pixels high, so a 4K render's noise, a firefly or a soft
+edge could not be seen before the file was written. It now opens a tab in the viewport's place
+(`lib/pathtracer/darkroom/viewer.js`): the kept render fills it, with Fit, 100 % (one picture pixel on one screen pixel,
+drawn as a square, not blurred) and anything from 1/32 to 64 times, zoomed about the cursor by the wheel, moved by
+dragging, double-click for 100 % and back; the keys 0, 1, 2, + and − and the arrows. **Before** (held, or `\`) shows the
+picture as the view showed it, **Split** shows it left of a line you drag; **Clipping** stripes what is white in red and
+black in blue; under the cursor, the pixel's place and its light in cd/m². The develop pass is told which part of the
+picture to draw by four numbers (`rendertoscreen.js` `develop_prog`'s `view`), and a save and a scene's card still pass
+the whole picture: run on Dawn, a save is byte for byte what the pass drew before (`lib/pathtracer/test/develop.gpu.mjs`).
+Beside the picture, three boxes: **Render** (size, samples, Render, Abort), **Develop** (with a histogram of what a save
+writes on top, counted on the GPU by `develop_histogram_prog`, and how much is at white and at black) and **Save**. While
+the Darkroom covers the picture the live view is held, so the two do not share the GPU; a Darkroom floated beside the
+picture, from a layout saved before, leaves it running. The rest of the editor -- export as EXR and HDR, white balance,
+curves, levels -- is planned in `roadmap/DARKROOM.md`.
+
+**What to look at:** File › Save picture… opens a tab beside Viewport. Render a picture: it appears fitted. Wheel over a
+detail: it stays under the cursor. 400 %: the pixels are squares. Drag to move, double-click, the keys. Hold Before or `\`;
+Split and drag its line. Clipping on a picture with a blown sky. The readout's cd/m² against the view's own readout. The
+histogram moving with EV. A saved PNG as before. And whether the Develop sliders feel smoother now that the live view
+waits while the Darkroom is in front.
+
+**The page started whole again: the Darkroom's colour wheels no longer throw when made out of sight.** The page makes the
+wheels at its start, in a Darkroom not yet shown, where a disc is 0 wide; its radius came out negative and `arc()`
+threw (`IndexSizeError: The radius provided (-1.5) is negative`). The throw ended `installUI` there, so the Darkroom's
+boxes after the wheels (Grading, the recipe and presets) and everything after it (the Developer switch, the boxes' visibility, the Tests menu) were
+never made. A disc with no room is now not drawn until it has a size, which its ResizeObserver already waited for.
+`darkroomtools.check.mjs` makes the curves editor and the wheels in a host not shown, and draws them once shown.
+
+**What to look at:** no error in the console at the start; the Tests menu, the Developer switch and the Darkroom's
+Grading box there; the colour wheels drawn when the Darkroom is first opened.
+
+**A light inside an array is a light at every copy.** Until now a group's copies refused a light ("not drawn more than
+once yet"). Now a rectangle, disc or ray-file light inside a group with copies is a whole light at each copy, in the
+picture and as an Optics source. Arrays can nest.
+- Each copy keeps the light's settings and has **its own flux**: a 10 lm light in 12 copies is 120 lm.
+- A group's copies box can now make **a ring** (*Make them a ring*: count, ring radius, about the axis), as well as a
+  row. A ring of LEDs is one LED in a ring of copies. The *circular array* modifier is group code, so it still draws no
+  light.
+
+How it works:
+- Every copy is a face of its own: light sampling, the face table, the scene as data's light table and the photons'
+  sources each hold one row per copy, in one order (`builder/lights.js`, *A LIGHT INSIDE ARRAYS*).
+- The shader text stays one light's whatever the count: the pick and the total are one line per light, and `lightFace`
+  is one case per light listing every copy.
+- A hit on any copy is weighed by the light's first face. That is exact because the copies of an array with a light
+  in it **share one scale**, which the model now holds: setting copies, adding a light, moving a node and loading a
+  scene are all checked.
+- An array with a light inside a joining group (CSG) is not drawn, and the Optics page lists the light as skipped
+  with the reason. This is not refused, so that a join changed above cannot make a saved scene unreadable.
+
+Also: `roadmap/LIGHT_CONTROL.md` is the investigation of programmable lights, with what this phase does and the next
+two phases.
+- Phase 2: a colour and intensity per copy.
+- Phase 3: emission over angle and position, written as code and baked into a map.
+
+There is a new benchmark, **Tests › Benchmarks › lightarray**: one light against 16 and 256 copies of it at the same
+lumens, and 16 copies against the same 16 lights placed by hand.
+
+**What to look at:**
+- A row of LEDs: one rectangle light in a group, with *Make it an array: a row of copies* in the group's Properties.
+  Every copy should glow and light the floor under it, the same as the same lights placed by hand.
+- A ring: the same group, *Make them a ring*. With a ring radius of 0, the copies turn about the group's axis, as the
+  circular array's do.
+- The Optics page: each copy is a source ("… (copy 3 of 12)"), and the flux in the analysis is the copies' sum.
+- Give two copies different scales: the panel refuses it and names the light.
+- **Tests › Benchmarks › lightarray:** picking among 256 faces costs nothing measurable. Measured: shade, which holds
+  light sampling's pick, read 11.6 ms a sample for one face and for 256 on Pascal (f4a2a57), and 20-21 ms for both on
+  Ampere (213642c). What the copies did cost was evaluating every one at every step, which the window of an array
+  addresses (`changes/array-window.md`).
+
+**A light's face glows on the face alone, so light sampling off no longer reads a small light brighter than on.**
+The face is a sheet of no thickness, and the march calls a point within the surface tolerance a hit, so a ray could
+meet a rim around the face, as wide as the tolerance. That rim glowed. Light sampling aims at the face itself, and
+MIS gives a small face's glow almost no weight, so the picture with light sampling on was right. With it off, every
+path that met the rim counted it. Measured on lavapipe (`builder/test/lightface.gpu.mjs`), a 0.1 x 0.05 m face over a
+matte floor against the closed form: light sampling off read 1.05 at the automatic 0.5 mm tolerance and 1.25 at ten
+times it, and light sampling on read 1.00 at both. The gap shrank as the face grew (1.02, 1.007, 1.002 at two, four
+and eight times the size). That is the 4 % gap a floor under twelve small lights showed with light sampling on
+against off. Now the rim takes the back's material: black, or clear for a transparent light. The light's frame is
+used, so each copy of a light tests its own face, codegen and the scene as data alike.
+
+**What to look at:** a small rectangle or disc light over a floor, with light sampling on and off (Developer settings):
+the pool of light should be equally bright, where before off was brighter by about the tolerance over the face's size.
+The face seen directly loses an edge as wide as the tolerance, which should not be visible. In the
+`light-vs-emitter` bench, every pair should read 1 and the one pair at the automatic tolerance about 0.82
+(finding 7, now the emissive object's own fatness alone).
+
+**The `light-vs-emitter` bench's 30 cm disc pairs run at a 10 um march tolerance**, as its 1 cm pairs did. With the
+light exact where the camera sees it, they read 0.990-0.994 at the automatic tolerance (Ampere, 2026-10-23), against
+0.995-1.000 before. That was the emissive disc's own excess, passing 0.1 % inside the bench's 1 % floor.
+
+**The march asks the scene for its distance only: 2-35 % less GPU time a sample on five of six bench scenes, the same
+picture** (`lib/pathtracer/core/scene_api.js` FOLD_DIST, `wavefront.js` prog_march and prog_surface, THE HIT ITSELF). Most
+of a sample is sphere tracing, and every march step asked the scene for its whole answer -- each shape's normal turned
+into the world frame, the material, the solid the point is in -- and read one number of it, the distance.
+- **Now a step asks only that number.** The march is built against a second `add_new` and `fold` that keep the nearest
+  surface's distance and nothing else.
+- **The rest is asked once a hit.** The surface kernel asks the scene for the whole hit at the ray the march stopped.
+  - It does so on a trip of the loop it already had, so no second copy of the scene is compiled into it.
+  - It writes the hit back before the photon map and shade read it.
+- **Measured on your Pascal**, Tests › marchdist (`ShadyTracer 0.78.0 · c3be0d6 (ccr-0f3a020a-590jz2) · nvidia pascal`,
+  2026-10-25), GPU ms a sample, before → now:
+
+  | scene | march | surface | the whole sample |
+  |---|---|---|---|
+  | dichroics, its light's photons | 177.8 → 144.0 | 21.1 → 42.0 | 283.7 → 270.9 (−4.5 %) |
+  | the Noise library | 70.7 → 58.8 | 18.8 → 24.8 | 144.3 → 138.3 (−4.2 %) |
+  | the Menger cubes | 49.6 → 41.2 | 4.8 → 7.4 | 90.6 → 88.7 (−2.1 %) |
+  | the showcase | 17.3 → 8.8 | 3.8 → 6.0 | 50.9 → 44.6 (−12.4 %) |
+  | the material test | 11.3 → 10.4 | 4.7 → 6.0 | 39.8 → 40.2 (+1 %) |
+  | the optics bench | 49.3 → 10.2 | 5.5 → 12.5 | 91.9 → 59.3 (−35.5 %) |
+
+  Its drift row read +1.5 %.
+  - **The surface kernel gives back part of the march's saving:** 21 of the 34 ms on dichroics. It now makes the one
+    full evaluation the march's last step used to make.
+  - **Always on, as you asked:** it was the developer setting March on distance only for that run, and the setting is
+    gone. A workspace that saved it has it ignored.
+- **The same picture.** You saw it identical. On a software GPU (`builder/test/marchdist.gpu.mjs`):
+  - every camera ray ends at the same place in the same steps, bit for bit;
+  - the hit the surface kernel writes back is the full march's, field by field;
+  - the whole renderer's pictures, with this march and with the full one put in its place, are the same pixel for pixel.
+- **What stays the same:** the Optics page's trace keeps the full march, because its shading reads the march's hit
+  directly. Shadow rays have an entry of their own.
+
+**What to look at:** your scenes, as ever: nothing in the picture should differ from before, and a heavy scene should
+be quicker. The Performance box has one row fewer.
+
+**Shadow rays ask the scene for its distance only, as the march does: the occlusion kernel 8-83 % less GPU time on five
+of six bench scenes, the same picture** (`lib/pathtracer/core/wavefront.js` prog_occlude and prog_occlude_emit). Every
+shadow-ray step asked the scene for its whole answer and read one number of it, whether anything is in the way.
+- **Now a step asks only that number.** The occlusion kernel is built against the same distance-only `fold` the march
+  uses.
+- **The exception, handled separately.** One shadow ray asks more: one aimed at a glowing surface, when something blocks
+  it, takes the emission of what it met.
+  - The distance-only kernel cannot answer that. So it marks the ray where it was blocked and leaves it in the queue, in
+    the slot it held.
+  - A small kernel of its own, holding the whole scene (`occlude_emit`), then asks the material at that ray and adds the
+    emission, exactly as before. It runs after every round's preparation and once after the sample's last round.
+  - The preparation sizes that kernel at zero when nothing was marked, so a scene with no glowing surfaces pays only
+    for the empty dispatches.
+- **Measured on your Pascal**, Tests › occludedist (`ShadyTracer 0.78.0 · 64535ad (ccr-0f3a020a-590jz2) · nvidia
+  pascal`, 2026-10-25), GPU ms a sample, before → now:
+
+  | scene | occlude (+ occlude_emit) | the whole sample |
+  |---|---|---|
+  | dichroics, its light's photons | 34.6 → 31.5 + 0.5 | 324.3 → 327.8 |
+  | the Noise library | 40.9 → 50.1 + 2.3 | 165.4 → 196.0 |
+  | the Menger cubes | 22.6 → 17.4 + 0.3 | 96.2 → 91.0 |
+  | the showcase | 6.5 → 3.5 + 1.8 | 51.8 → 48.4 |
+  | the material test | 4.9 → 4.1 + 0.2 | 46.7 → 43.5 |
+  | the optics bench | 29.3 → 4.7 + 0.2 | 69.2 → 43.1 (−38 %) |
+
+  Its drift row read −1.2 %.
+  - **The Noise library's row is not understood.** Everything in its second row was slower, the march included (72.1
+    → 87.4), and this change does not touch the march. The likely cause is the card's state during that row, not the
+    change, but that is not shown.
+  - **The shadow queue looked slower to drain** on the Menger cubes and the Noise library, with more shadow rays cut at
+    the end of the sample. The two rows logged different samples: the shadow-ray counts already differed before any
+    occlusion ran. On a software GPU both scenes' shadow rays go through every round the same both ways (below).
+  - **Always on, as you asked:** it was the developer setting Shadow rays on distance only for that run, and the
+    setting is gone, with Tests › occludedist. A workspace that saved it has it ignored.
+- **The same picture.** You saw it identical. On a software GPU (`builder/test/occludedist.gpu.mjs`):
+  - **The scenes' own shadow rays** (the optics bench as code and as data, the showcase, the material test, dichroics,
+    the Noise library, the Menger cubes, Dusty beam), through the full kernel and this one: every deposit bit for bit,
+    and every round's queue the same, with as many cut.
+  - **Glowing-surface shadow rays at panels by hand**, one panel asking for its own point, also inside a haze box: the
+    frame bit for bit.
+  - **The whole renderer**, as built and with the full occlusion kernel put in its place: every pixel bit for bit, but 2
+    of the showcase's 768 in f32's last place (1.5e-7). That is the same light added in another order: a blocked
+    glowing-surface ray's light now lands one round later, among atomic float additions.
+  - The march's own test now has the Noise library and the Menger cubes too, bit for bit.
+- **Memory and compiling:** one more kernel a scene (16 where there were 15), and 16 bytes.
+
+**What to look at:** your scenes, a glowing surface among them and the Menger cubes: nothing in the picture should
+differ, now that there is no switch to compare with. The Performance box has one row fewer, and Tests has no
+occludedist.
+
+**The photon map's room grows with the picture, so a large save is no darker than a small one.** The map held a fixed
+number of photons (the setting *Photon map: photons*, 2 million by default) whatever the picture's size. A larger
+picture sends more photons, one a pixel by default, and the map's gather radius is in pixels, so its disc shrinks too:
+at 3840 x 2160 the map kept 21% of its stores (1,700,191 kept, nothing dropped, no gather cut) where 1920 x 1080 kept
+about 85%, and each gather found far fewer photons. A 4K save in the Optics view came out visibly darker than the same
+scene at 1080p, and right with the setting raised to 16. The keep is exact on average, so the darkening is inferred to be
+the noise it brings: bright pixels clip at white and give back less than they took. Now the setting is the room for a
+1920 x 1080 picture and a larger one gets room in proportion: 8 million at 4K by default, 352 MB, capped by what one GPU
+buffer may hold. Below 1920 x 1080 nothing changes. The room grows as a panel is dragged larger and is given back after
+a save larger than the view; Save an image's memory estimate counts it.
+
+**What to look at:** save the same scene at 1920 x 1080 and 3840 x 2160 with the photon map at its default 2 and the same
+develop settings: the two should now match in brightness, as they did with 16. Render stats' photon-map line during a 4K
+render should say a share near 1080p's rather than 0.21. A large live view (above 1920 x 1080) also gets the larger map:
+say if its memory is a problem.
+
+**The Save an image box's width and height stay as typed.** With "match view aspect" on, typing a width set both
+sizes climbing a couple of pixels a frame, for ever: each size the box wrote came back from its row a frame later as
+if typed, and the width worked out from the height was off by the rounding from the width typed. A row's echo of what
+the box last settled is no longer taken for a change. With it off, a height of 1000 became 1001 when the view was an
+odd number of pixels high: the rows snap to steps of 2 counted from the value they were made with, which was the view's
+own size; they now start even. The rows live in `lib/pathtracer/savesize.js`, driven over the real property table by
+`lib/pathtracer/test/savesize.check.mjs`.
+
+**What to look at:** Render › Save an image. With "match view aspect" on, type a width: the height follows once and
+both stay put. Turn it off and type 1000 × 1000: it stays 1000 × 1000. "Use the live size" with an odd-sized window
+gives the even size next to it.
+
+**A light's rays no longer go dimmer while the photon map runs.** With the photon map on, a sample's photons run first
+in batches of their own. Each batch capped its shadow queue at its own ray count. But the queue also carries the
+shadow rays the rounds before have not finished, and a light's photons connect to the camera at every surface they land
+on. A batch of camera rays and photons together had room to spare, from the camera rays' unused places. A batch of
+photons alone had none, and a connection past the cap was dropped with its light. Measured on Dawn over lavapipe, in
+the `optics-mode` scene (a 1000 lm point source over a floor) with the map running every sample, the floor seen
+directly read 0.94-0.97 of the picture with the map off. With the cap set to what the queue's buffers hold
+(`raytrace_main.js`, shadowcap), it reads 1.000 +- 0.005. That this was the user's `optics-mode` full row reading under
+the illuminance view at all six sensors in the 0.77.0 and 0.78.0 runs is inferred; the illuminance view is the one mode
+the map never runs in.
+
+**The optics trace no longer loses a ray on the last pass.** A ray that was going back to the march on a run's last
+pass was written to a buffer nothing read, with nothing tallied. That was a grazing reflection still inside the hit
+band of the floor it had left, declined there pass after pass. It is now counted lost, as the march's own flush counts
+its rays (`optics/kernels.js` onward). `optics-balance` row 3 read a balance of 2.0e-6 for this, one ray in 400,000. On
+Dawn 20 runs in 100 of that row did, and 0 in 100 after.
+
+**The furnace's dichroic-on-every-face rows run at maxbounce 100 and maxiter 6000.** A coating that reflects nearly all
+of a channel traps that light inside the sphere, and the furnace's caps cut those paths: maxiter 400 is the march's
+steps over a whole path. That cut is what those rows' 0.9976 was (0.9971 in 0.77.0), not the coating. On Dawn the
+sphere read 0.9960 at the old pins and 0.9999 +- 0.0006 at the new ones. The beam splitter's few 1e-4 under 1 is
+different and stays: rays entering within the surface tolerance of the sphere's rim are trapped by total internal
+reflection, and the shortfall moves with the tolerance (the furnace's note).
+
+**Three test rules that failed on noise or on the wrong comparison, from the second 0.78.0 run.**
+- **draft-lamps** warms each row up before it counts. The emitter list is found and published first, then the picture
+  is cleared (the `clearLearned` block, which no test was using). Each row starts from a fresh list, and a Draft path finds
+  the disc only by its seek rays, so the first samples of a Draft row were black. How many depended on timing: 0, 1 or
+  2 of the 64 in the user's three runs (each 1/64 = 1.6 %). The lamps-only row's 0.984 against draft was one row's
+  start-up against the other's. On Dawn a fresh Draft row read 0.971-0.981 of full and a warmed one 0.9994.
+- **optics-colour's two mix rows** trace 250,000 rays a batch instead of 100,000. Each ray picks one LED, and that
+  pick's noise alone went past their 0.002 in 7 runs of 40 on Dawn, and none of 40 at 250,000.
+- **rr-bias** judges each RR-on row against the RR-off row at its own maxbounce. It judged every row against
+  maxbounce 10, so the light past the tenth bounce counted as bias: 0.5 % on the user's scene.
+
+**What to look at:** Tests > furnace: rows 27 and 28 should read about 1.000, and take longer than before. The extra
+cost is not measured: 289 wavefront iterations a sample against 54. Tests > optics-mode: the full row should read with
+the illuminance-view row at every sensor, x 1 about 1.1 or more. Tests > optics-balance: balance 0 on every row, run as
+often as you like. Tests > draft-lamps: draft and lamps only about 1 of full, and the same as each other.
+Tests > optics-colour: du'v' under 0.002 on both mix rows nearly every run. In the picture, a scene with lamps and
+glass in view: the lamps' light on surfaces seen directly should no longer dim when the photon map wakes, which may
+show as a few percent brighter than before.
+
 ## 0.78.0 — 2026-10-22
 
 **Dichroics is an example** (File › Examples › Optical design): the user's own scene as they saved it -- two collimated

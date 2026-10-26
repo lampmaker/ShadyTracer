@@ -6,7 +6,7 @@ array of light sources. More control of colour dependency over angle, or over po
 Investigate what could be possible without a significant impact on compile time and render speed."*
 
 The user's choices, the same day:
-- **Phase 1: arrays of lights.** Built in `0.next` (below).
+- **Phase 1: arrays of lights.** Built in 0.79.0 (below).
 - **Emission over angle or position: a tabulated map**, not code run wherever a light is evaluated.
 
 This replaces the open decision *Lights as parameters and code* in `UI_PLAN.md`, investigated 2026-09-28.
@@ -59,7 +59,7 @@ per scene in those two kernels:
 - **Group code moves its children anywhere**, so a light under it is not drawn (read: codegen collectLights). That
   includes the circular array, which is group code (`builder/modifiers.js` circular).
 
-## 3. Phase 1, built in `0.next`: lights inside arrays
+## 3. Phase 1, built in 0.79.0: lights inside arrays
 
 **What it is.** A rectangle, disc or ray-file light inside a plain group with `copies` (nested arrays too) is a light at
 every copy:
@@ -139,7 +139,7 @@ What it settles:
   over. On the user's Pascal card, two runs of c9577ae read it at 67.1 then 46.7 ms against a steady 31.9 and 32.2 of GPU
   time, the second the fastest of the 16-light rows. Its wall clock wanders with the machine's, not with the row.
 
-**The fix: a window of the copies** (`builder/arrays.js`, `0.next`).
+**The fix: a window of the copies** (`builder/arrays.js`, 0.79.0).
 - A row or a ring of copies, recognised from the copies' own matrices, evaluates only the copies near the point.
 - Every other copy is bounded by the sphere round its content's measured box (`boxes.js` cullBoxes, `contentKey`).
   The bound is folded into `CULL` under the top-level culling's contract: a lower bound beyond `cullMargin()`.
@@ -305,7 +305,7 @@ fn emission(uv: vec2<f32>, dir: vec3<f32>, i: u32) -> vec3<f32>
 
 ## 5. Order
 
-1. Arrays of lights (done in `0.next`).
+1. Arrays of lights (done in 0.79.0).
 2. The speed rows on the user's card (§3, *Speed*): measured, and the array window built from them.
 3. Phase 3, starting with an angular map alone, which IES import shares.
 4. Phase 2, as the copy-recovery loop.

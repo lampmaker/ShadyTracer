@@ -1,5 +1,5 @@
 //======================================================================================================================
-// LIGHTS INSIDE ARRAYS ON A REAL WEBGPU (0.next; builder/lights.js A LIGHT INSIDE ARRAYS). Run:
+// LIGHTS INSIDE ARRAYS ON A REAL WEBGPU (0.79.0; builder/lights.js A LIGHT INSIDE ARRAYS). Run:
 //   node builder/test/lightarray.gpu.mjs
 //
 // OPTIONAL, AND LOUD ABOUT IT, as the other GPU checks: the `webgpu` package (npm i -g webgpu) and a Vulkan driver

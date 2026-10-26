@@ -1,5 +1,5 @@
 //======================================================================================================================
-// WHAT LIGHTS IN AN ARRAY COST (0.next; builder/lights.js A LIGHT INSIDE ARRAYS, roadmap/LIGHT_CONTROL.md). A bench test of
+// WHAT LIGHTS IN AN ARRAY COST (0.79.0; builder/lights.js A LIGHT INSIDE ARRAYS, roadmap/LIGHT_CONTROL.md). A bench test of
 // its own (Tests > lightarray).
 //
 // WHAT IT ANSWERS. A light inside a group's copies is a face a copy: the SDF draws it in the copies' loop, as any arrayed
@@ -15,7 +15,7 @@
 //   16 in a row                       the same light, 62.5 lm each, a row of 16 copies 8 cm apart
 //   16 placed by hand                 the same 16 as lights of their own: what the array saves in text, and costs in speed
 //   16 x 16 in a ring of rows         3.906 lm each, the row in a ring of 16: 256 faces
-//   rows 2 and 4, the window off      every copy walked at every step, as before the window (builder/arrays.js, 0.next)
+//   rows 2 and 4, the window off      every copy walked at every step, as before the window (builder/arrays.js, 0.79.0)
 //   row 4's copies by a switch        row 6's every copy, but from the window's first and through the switch the first
 //                                     window picked a copy by (codegen.js AN ARRAY, arrayWindow 'every')
 //   one light, again                  row 1: if it differs, so may every row

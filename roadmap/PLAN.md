@@ -659,7 +659,7 @@ light's face by (L1). A scene without lights compiles to main's text exactly.
    - A LIGHT is right where it lights things -- its photons and light sampling (L7) start on the
      exact face -- and fat only where a camera path meets its face: a 1 cm die glows over 1.2x its
      area in the picture. An EMISSIVE OBJECT is fat for everything it lights.
-     **0.next: a light no longer is.** Its rim takes the back's material in the SDF (codegen `ONLY ON THE FACE
+     **0.79.0: a light no longer is.** Its rim takes the back's material in the SDF (codegen `ONLY ON THE FACE
      ITSELF`), so a camera path meets a glowing face exactly where light sampling and the photons have it. The
      tolerance itself stays as it is: the rim is a black (or clear) edge `eps` wide, as fat as every surface
      is. It showed as light sampling off reading a small face brighter than on, since MIS gives a small face's glow

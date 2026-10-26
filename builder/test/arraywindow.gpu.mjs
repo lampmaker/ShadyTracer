@@ -1,5 +1,5 @@
 //======================================================================================================================
-// THE WINDOW OF AN ARRAY ON A REAL WEBGPU (0.next; builder/arrays.js). Run: node builder/test/arraywindow.gpu.mjs
+// THE WINDOW OF AN ARRAY ON A REAL WEBGPU (0.79.0; builder/arrays.js). Run: node builder/test/arraywindow.gpu.mjs
 //
 // OPTIONAL, AND LOUD ABOUT IT, as the other GPU checks: the `webgpu` package (npm i -g webgpu) and a Vulkan driver
 // (lavapipe: apt-get install mesa-vulkan-drivers), or it says so and passes. Dawn compiles with Tint.
@@ -329,7 +329,7 @@ async function marchSteps(scene, rays0, passes = 80) {
     }
 }
 
-/* WHICH COPY THE PICK COPY SAYS (scene_api.js XF_COPY, 0.next): at the centre of every face of the bench's ring of rows,
+/* WHICH COPY THE PICK COPY SAYS (scene_api.js XF_COPY, 0.79.0): at the centre of every face of the bench's ring of rows,
    the tag field names the light, copy j of 256 as the light sources number them (sources.js, innermost fastest: the
    same digits), inside 2 arrays -- codegen's copies loop and the data walk's ARRAY records each. What lets boxes.js
    measure a node in an array as one copy. */

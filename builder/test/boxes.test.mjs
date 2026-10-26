@@ -644,7 +644,7 @@ await run()
 }
 
 //----------------------------------------------------------------------------------------------------------------------
-// A NODE IN AN ARRAY MEASURED AS ONE COPY (0.next). The pick copy says which copy a surface is (scene_api.js XF_COPY:
+// A NODE IN AN ARRAY MEASURED AS ONE COPY (0.79.0). The pick copy says which copy a surface is (scene_api.js XF_COPY:
 // the outermost array the most significant digit, XF_COPIES how many arrays). Before, every copy's points went into
 // the node's frame through its first copy, and its box spanned the array: Tests > lightarray's 4 cm light measured
 // 2.2 m across in its ring of rows, its group's 5.25 m where the ring is 2.2. A sampler that draws EVERY copy here

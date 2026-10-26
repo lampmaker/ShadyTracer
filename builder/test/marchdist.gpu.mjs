@@ -1,6 +1,6 @@
 //======================================================================================================================
 // THE MARCH ON DISTANCE ONLY ON A REAL WEBGPU (lib/pathtracer/core/wavefront.js prog_march's distOnly and prog_surface's
-// THE HIT ITSELF, scene_api.js FOLD_DIST; 0.next, the renderer's march always). Run:
+// THE HIT ITSELF, scene_api.js FOLD_DIST; 0.79.0, the renderer's march always). Run:
 //   node builder/test/marchdist.gpu.mjs
 //
 // OPTIONAL, AND LOUD ABOUT IT, as stepcache.gpu.mjs is: the `webgpu` package and a Vulkan driver (lavapipe), or it says
@@ -220,7 +220,7 @@ const BENCH_SCENES = [
     ['the showcase', benchUrl(BENCH_FILES.showcase), CAMERAS.showcase],
     ['the material test', benchUrl(BENCH_FILES.materials), CAMERAS.materials],
     ['dichroics', benchUrl(BENCH_FILES.dichroics), CAMERAS.dichroics],
-    // the reliefs and the warps: two bench scenes this test did not have until shadow rays went distance-only (0.next)
+    // the reliefs and the warps: two bench scenes this test did not have until shadow rays went distance-only (0.79.0)
     ['the Noise library', benchUrl(BENCH_FILES.noise), CAMERAS.noise],
     ['the Menger cubes', benchUrl(BENCH_FILES.Menger_cubes), CAMERAS.Menger_cubes],
 ]

@@ -133,10 +133,10 @@ Box **Export**: format, options, file name (the stamped name as today, `lib/file
    warnings, live view held while in front. *No new colour tools yet* — so the user can judge the viewer alone.
    Left out of it, said here so nobody assumes them: the navigator rectangle, the readout's output RGB (it needs
    phase 3's JS mirror of the pipeline), Space-drag (a plain drag pans), clipping per channel (any channel, for now).
-2. **Export** (*built 2026-10-25, 0.next; not yet seen in the page*; the recipe is embedded, loading a sidecar waits for phase 4's presets) — EXR, HDR, PFM, PNG-16, JPEG/WebP, recipe embedded + sidecar, strip-wise readback.
-3. **Light-stage tools** (*built 2026-10-25, 0.next; not yet seen in the page*; `displayPixel` copied as `developPixel` rather than split, so the live display and the tutorial's excerpt stay as they are; the EXR not white-balanced, a later choice) — `displayPixel` split; white balance + eyedropper, spot meter, channel gains, tone
+2. **Export** (*built 2026-10-25, 0.79.0; not yet seen in the page*; the recipe is embedded, loading a sidecar waits for phase 4's presets) — EXR, HDR, PFM, PNG-16, JPEG/WebP, recipe embedded + sidecar, strip-wise readback.
+3. **Light-stage tools** (*built 2026-10-25, 0.79.0; not yet seen in the page*; `displayPixel` copied as `developPixel` rather than split, so the live display and the tutorial's excerpt stay as they are; the EXR not white-balanced, a later choice) — `displayPixel` split; white balance + eyedropper, spot meter, channel gains, tone
    equaliser, Oklab saturation / vibrance / hue, parametric tone curve.
-4. **Display-stage tools** (*built 2026-10-25, 0.next; not yet seen in the page*; Levels on all channels at once, per channel through the curves; the undo is the Darkroom's own, since the library imports nothing of the builder's; dither off by default, so an untouched save stays the view's picture) — output transfer, Levels (gamma), Curves editor, CDL wheels, vignette, grain, dither;
+4. **Display-stage tools** (*built 2026-10-25, 0.79.0; not yet seen in the page*; Levels on all channels at once, per channel through the curves; the undo is the Darkroom's own, since the library imports nothing of the builder's; dither off by default, so an untouched save stays the view's picture) — output transfer, Levels (gamma), Curves editor, CDL wheels, vignette, grain, dither;
    undo / redo, presets, copy / paste.
 5. *(optional)* **Bloom / glare, sharpen.**
 

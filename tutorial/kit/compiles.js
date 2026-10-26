@@ -39,7 +39,7 @@ export function layout(b, how) {
 
 /* A SESSION'S KERNELS: a model's inlined sizes, characters, of a build today (17 kernels: the photon map on, the step
    cache off). The four that hold the scene -- march, surface, occlude and occlude_emit, the resolve of the emitter rays
-   the occlusion kernel hands on (0.next): their text is the scene's -- take the scene's size; the rest are the same text
+   the occlusion kernel hands on (0.79.0): their text is the scene's -- take the scene's size; the rest are the same text
    for every scene. Sizes chosen near the documents' (shade 113,000 and the optics
    bench's surface 252,000 after 0.20.8, roadmap/ARCHITECTURE.md); not measured for these scenes. */
 export const FREE = { genrays: 12000, shade: 113000, flip: 900, prep_march: 900, prep_shade: 900, prep_occlude: 900, shadow_flip: 900,

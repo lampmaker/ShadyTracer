@@ -1738,7 +1738,7 @@ const dropFlag = ([o, pre]) => key => {
  * AN ARRAY (version 17): `copies`, a list of transforms ({ pos, rot, scale }, as a node's), each a place in the group's
  * own frame where its children are drawn -- or null to make it a plain group again. A plain group only: no code (its
  * code is the walk of its children, which an array repeats) and no joins among its children (a CSG group combines them
- * into one shape; put that group inside the array). A light inside is drawn once a copy (0.next), and then its copies
+ * into one shape; put that group inside the array). A light inside is drawn once a copy (0.79.0), and then its copies
  * share one scale (copiesProblems). Structural in codegen when the count changes (a uniform each), and live otherwise.
  */
 export function setCopies(doc, id, copies) {
@@ -1761,7 +1761,7 @@ export const copiesRow = (n, pitch, axis = 'x') => Array.from({ length: n }, (_,
 /** A ring of copies: `n` turned evenly about `axis` ('x', 'y' or 'z') through the group's origin, `radius` from it -- the
  *  first on +x about z, +y about x, +z about y, each the first turned by its angle (its rotation about that axis alone,
  *  which the transform's x-then-y-then-z angles are exactly). A light in it faces the way the first does, turned with it:
- *  a ring of LEDs as a list of copies (0.next), where the circular array is group code and draws no light. */
+ *  a ring of LEDs as a list of copies (0.79.0), where the circular array is group code and draws no light. */
 export const copiesRing = (n, radius, axis = 'z') => Array.from({ length: n }, (_, i) => {
     const t = identity()
     // to 12 digits, and a cosine's 6e-17 at a right angle 0, so a quarter turn of a ring of 4 is on the axis it reads as
@@ -1788,7 +1788,7 @@ function copiesProblems(n, doc = null) {
     if (n.block !== undefined && (!doc || groupHasCode(doc, n)))
         p.push(`'${n.id}': a group with code has no copies (its code is how its children are drawn): put the copies in a group inside it`)
     if (isCsg(n)) p.push(`'${n.id}': a group whose children join (a subtraction, an intersection, a blend) has no copies: put that group inside one that has them`)
-    /* A LIGHT INSIDE (0.next): drawn once a copy, a face and a source a copy -- if every copy has one scale, which light
+    /* A LIGHT INSIDE (0.79.0): drawn once a copy, a face and a source a copy -- if every copy has one scale, which light
        sampling's weight of a face rests on (lights.js A LIGHT INSIDE ARRAYS says why). Refused here, so a light is never
        left out of a picture for it. Not a light under group code below, which is not drawn anyway. The other rule
        there, an array with a light in it inside a group whose children join, is not refused: a join or a blend changed

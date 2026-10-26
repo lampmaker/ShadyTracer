@@ -27,7 +27,7 @@ const W = makeWheels(document.getElementById('w'), {
     get: n => ({ x: DV[n + 'X'], y: DV[n + 'Y'] }), set: (n, p) => { DV[n + 'X'] = p.x; DV[n + 'Y'] = p.y }, onChange: () => counts.wheel++,
 })
 // ...and again in a host not shown, as the page makes them at its start in a Darkroom not yet opened: 0 wide, a
-// wheel's radius negative, which arc() threw on (0.next). Caught here so the rest of the check still runs.
+// wheel's radius negative, which arc() threw on (0.79.0). Caught here so the rest of the check still runs.
 let hiddenError = null, HW = null
 try {
     makeCurveEditor(document.getElementById('h'), { get: () => DV.curves, set: () => { }, getLuma: () => false, setLuma: () => { } })

@@ -18,7 +18,7 @@ own numbers contradict.
 The user asked (2026-10-24) which techniques could make rendering faster.
 - **Over-relaxation, the list's first step, is gone.** The user saw the picture change with it (below, under
   Rejected).
-- **The march on distance only (0.next)** is review #7 of `PERFORMANCE_REVIEW.md`, without the occlusion half.
+- **The march on distance only (0.79.0)** is review #7 of `PERFORMANCE_REVIEW.md`, without the occlusion half.
   - Every march step asked the scene for its whole answer and read one number of it (read in code: `wavefront.js`
     prog_march, `abs(hit.s.w)`).
   - Now the renderer's march is compiled against a distance-only `add_new` and `fold` (`scene_api.js` FOLD_DIST), and
@@ -47,7 +47,7 @@ Chrome 155, 2026-10-25). Off was the setting `marchDist` 0, on was 1, each baked
     take three looks anyway.
 - **The picture is the same.** The user saw it identical; on lavapipe it is bit for bit (`builder/test/marchdist.gpu.mjs`).
 - **The user's choice:** always on, the setting removed. Tests › marchdist went with it, since there is no off to time.
-- **Then shadow rays on distance only (0.next)**, the occlusion half of review #7.
+- **Then shadow rays on distance only (0.79.0)**, the occlusion half of review #7.
   - The occlusion kernel folds the distance alone (read in code: `wavefront.js` prog_occlude's distOnly).
   - An emitter's shadow ray, the one that asks a material where it is blocked, is marked there, left in its slot in the
     queue, and resolved by `prog_occlude_emit`, a small kernel holding the whole scene, before the next round.
@@ -1157,9 +1157,9 @@ the scene:** WebGPU takes WGSL source only, and there is no compiled shader form
    arrays), as data an ARRAY record, the children's frames relative to the copy, and an ARRAY_END that goes back for
    the next (the evaluator keeps a base frame only in a scene that has arrays). Checked on a CPU's WebGPU: the field and
    the picks of the copies written out as groups. No light inside an array yet (light sampling's one face a light; a
-   light at every copy since `0.next`, roadmap/LIGHT_CONTROL.md);
+   light at every copy since 0.79.0, roadmap/LIGHT_CONTROL.md);
    no group with code or joins as one (put it inside). Each copy is still a walk of its children at every step near
-   it: the BVH is what would tell which copies are near. **A row's or a ring's copies have a window since `0.next`**
+   it: the BVH is what would tell which copies are near. **A row's or a ring's copies have a window since 0.79.0**
    (builder/arrays.js): the copies near the point walked, the rest a bound in CULL -- measured before it on the user's
    Ampere (Tests > lightarray, 213642c): 256 copies of one light at 465 ms of march a sample against one light's 12.
    After it, on the user's Pascal (a81cac9): **slower**, 1007.5 ms of march against 281.0 with the window off, with
