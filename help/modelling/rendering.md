@@ -120,10 +120,42 @@ goes straight back to the editable build.
 
 ## Saving a picture
 
-**File › Save picture…** renders offscreen at its own size, up to 16 384 pixels on a side, with its own
-number of samples. You can stop it early. The render is kept as light, so you can choose its exposure, tone curve
-and grading on a preview afterwards, and save it as often as you like. Each save is a file of its own: the name you
-give, with the date and time it was saved after it (`render-2026-10-19_14-03-22.png`).
+**File › Save picture…** opens the **Darkroom**, a tab beside the picture. Its boxes on the right: **Render** renders
+offscreen at its own size, up to 16 384 pixels on a side, with its own number of samples (you can stop it early);
+**Develop** shows a histogram of what will be saved, and the boxes under it develop the picture; **Save** writes the
+file. The render is kept as light, so you can develop it and save it as often as you like. Each save is a file of its
+own: the name you give, with the date and time it was saved after it (`render-2026-10-19_14-03-22.png`).
+
+**Save** offers the developed picture -- **PNG** at 8 or 16 bits a channel, **JPEG**, **WebP** -- or the light itself:
+**OpenEXR**, **Radiance HDR** and **PFM**. These hold the render as the renderer made it, in cd/m² (or multiplied by your
+exposure, so 1.0 is white), with no tone curve, grading or rays drawn over it: for another program to develop, or for
+measuring. EXR keeps everything, the sun and colours no screen can show included; HDR clips into the screen's colours;
+PFM is only the numbers. The line under the format says what the file will hold and how large it can be. PNG and EXR
+files say how they were made: the version, the size, the samples, the settings.
+
+The developing boxes run in the order the picture is made. **Exposure**: the EV, Meter, and **Spot meter**:
+click the picture where middle grey should be. **White balance**: the temperature of the light that should look white,
+and a tint. **Pick a white** takes them from a surface you click. Then red, green and blue gains. **Tone**: the tone curve,
+with **Hable, adjustable** offering its white, toe and shoulder, and under it a gain for each band of light, from 7 stops
+below white up to white: raise the dark bands to open the shadows. **Colour**: saturation, vibrance (it raises dull
+colours more than vivid ones) and hue. **Levels & curves**: the output's gamma, Levels (black, white and a gamma for
+the midtones), and the curves, drawn by hand: click to add a point, drag it, double-click or drag it off the square to
+take it away; **luminance** keeps hues. **Colour wheels**: drag a disc's dot towards a colour to tint the shadows (lift),
+midtones (gamma) or highlights (gain), with a slider each for their brightness. **Grading**: contrast, saturation and
+brightness of the finished picture. **Finish**: a vignette, grain, and dither against banding in 8-bit files. Each box
+has a Reset. The light files (EXR, HDR, PFM) are saved without these.
+
+Under the histogram: **Undo** and **Redo** (or Ctrl+Z and Ctrl+Y while the Darkroom has focus; the scene's undo is left
+alone), **Copy** and **Paste** the settings, and **From a picture…**: the settings a PNG saved here was developed with,
+read back out of it. **Presets** keep a look in this browser, to apply to another render.
+
+The render fills the rest of the tab. Turn the mouse wheel to zoom where the cursor is, drag to move, double-click for
+100 % (one pixel of the picture on one pixel of the screen) and again for the whole picture. The keys, with the picture
+clicked: **0** the whole picture, **1** 100 %, **2** 200 %, **+** and **−**, the arrows to move. Under the cursor: the
+pixel's place and its light in cd/m². **Before** (or holding the `\` key) shows the picture as the view showed it;
+**Split** shows that on the left and yours on the right, with a line to drag. **Clipping** stripes what is white in red
+and what is black in blue. While the Darkroom covers the picture, the picture stops rendering, and goes on when you
+come back to it.
 
 ## Animation and video
 

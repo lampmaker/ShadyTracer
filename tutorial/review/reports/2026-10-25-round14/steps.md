@@ -1,6 +1,6 @@
 # Blank-reader review: ch/steps.html ("Fewer and cheaper steps")
 
-*The first reader of round 13 (2026-10-25), on the page as section 5's arrays paragraphs stood after the window's two
+*The first reader of round 14 (2026-10-25), on the page as section 5's arrays paragraphs stood after the window's two
 fixes: the whole page, its arrays section most closely. Kept as the reader wrote it, shortened only where noted.*
 
 ## 1. Teach-back

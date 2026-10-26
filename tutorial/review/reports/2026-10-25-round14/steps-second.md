@@ -1,6 +1,6 @@
 # Second reader: ch/steps.html, section 5's arrays and section 7's "A window that made it slower"
 
-*A fresh reader of round 13 (2026-10-25), on the two passages as rewritten for the first reader. It read the page from
+*A fresh reader of round 14 (2026-10-25), on the two passages as rewritten for the first reader. It read the page from
 its start to the end of section 5, and section 7's first item. Kept as the reader wrote it.*
 
 ## 1. Teach-back
