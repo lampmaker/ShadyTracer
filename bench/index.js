@@ -73,11 +73,15 @@ export const CAMERAS = {
     dichroics: { mode: 'orbit', camtype: 0, fov: 40, azimuth: -100, elevation: 62, target: [70, 220, 25], distance: 400 },
     /* mm: the Imported parts example's own view (scenes/make.mjs imported: 35 degrees down, 330 mm off; bench/imported.js) */
     imported: { mode: 'orbit', camtype: 0, fov: 40, azimuth: -70, elevation: 55, target: [-20, 0, 8], distance: 330 },
+    /* mm: the prism scene's own view (scenes/prism-dispersion.json), 5 degrees over its table -- the camera rays graze it
+       (bench/alongray.js) */
+    prism: { mode: 'orbit', camtype: 0, fov: 40, azimuth: -90, elevation: 5, target: [30, -10, 0], distance: 260 },
 }
 
 export const BENCH_FILES = {
     noise: 'noise.json', surfaces: 'surfaces.json', showcase: 'showcase.json', demo: 'demo.json',
     Menger_cubes: 'Menger_cubes.json', materials: 'materials.json', dichroics: 'dichroics.json', imported: 'imported.json',
+    prism: 'prism.json',
 }
 /** Where a frozen scene is, relative to this module: a URL in the page, a file URL in node. */
 export const benchUrl = file => new URL(`./scenes/${file}`, import.meta.url)

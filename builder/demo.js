@@ -325,6 +325,10 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
        kernel has more than 8 (check-shaders notes none); the gate is kept until data mode is run on an adapter of 8. Off: codegen, as before. On by
        default since 0.74.0 (the user: "Scene as data -> normally on"); the bake below still compiles codegen's text. */
     const dataMode = () => (RT.get?.()?.sceneData | 0) === 1 && (gpu?.device?.limits?.maxStorageBuffersPerShaderStage ?? 8) >= 9
+    /* ANSWERS ALONG THE RAY (0.next; codegen.js `along`, core/along.js) while the renderer's developer setting alongRay says
+       so: codegen's text only -- the codegen editing build and the bake below; the scene as data has none, so with it on
+       they reach the picture once the bake is shown. Turning it makes the scene shown again (index.html). */
+    const alongMode = () => (RT.get?.()?.alongRay | 0) === 1
     /* (The candidate grid and exact hits, sceneGrid and sceneExact, went in 0.41.0: roadmap/ARCHITECTURE.md, Removed in
        0.41.0. As data, every record is walked, culled by its box.) */
     /* ...AND THE BOUNDING BOXES: codegen's own way, a box test only on the nodes dearer than their box (codegen.js, ONLY
@@ -341,7 +345,7 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
         M.resolveBindings(doc())
         syncSources(doc())
         const data = dataMode()
-        return generate(...M.generateArgs(doc(), { id: 'built', title: doc().title || 'Scene builder', editing: editedNow(), data,
+        return generate(...M.generateArgs(doc(), { id: 'built', title: doc().title || 'Scene builder', editing: editedNow(), data, along: alongMode(),
                                                    carry: data ? carried() : null }))
     }
     /* THE CULLING BOXES the records carry (scenedata.js recordsOf `boxes`), from the host (BUILDER.cullBoxes: index.html,
@@ -698,7 +702,7 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
             if (current !== shown) return null
             M.resolveBindings(doc())         // first: the luminance syncSources derives reads what they write (build above)
             syncSources(doc())
-            const S = generate(...M.generateArgs(doc(), { id: 'built', title: doc().title || 'Scene builder' }))
+            const S = generate(...M.generateArgs(doc(), { id: 'built', title: doc().title || 'Scene builder', along: alongMode() }))
             /* the culling boxes, and every value flagged animated (animate.js): those stay uniforms, written live */
             const keep = keptUniforms(doc(), S)
             animatedAtBake = animatedEdits
@@ -850,6 +854,8 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
         pushData: (opts) => pushData(opts),
         /** Whether the builder makes its scenes as data now (the renderer's sceneData, and a device that can). */
         get dataMode() { return dataMode() },
+        /** Whether codegen's scenes answer along the ray now (the renderer's alongRay): its text and the bake's. */
+        get alongMode() { return alongMode() },
         /** Set by the host: run a compile in its own queue -- a live change to a path that only a compile can make
          *  (liveValue). The tree's apply() in the page (index.html). */
         onRestructure: null,

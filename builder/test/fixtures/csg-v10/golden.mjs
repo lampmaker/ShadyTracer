@@ -205,6 +205,11 @@
 // (arrays.js arrWindowOf). codegen.test failed scenes/parametric-part.json alone before this freeze, both modes -- its
 // wgsl and opticsWgsl by the window's functions, its pickWgsl and opticsPickWgsl by the copy number -- the one document
 // with an array.
+//
+// A DOCUMENT ADDED (2026-10-26, 0.next): bench/scenes/prism.json, scenes/prism-dispersion.json frozen for Tests > alongray
+// (bench/alongray.js: its camera rays and its slit beam graze its table). No codegen change in the freeze: answers along
+// the ray are codegen's `along`, off by default, and with it off every document's text is what it was. The freeze added
+// the new document's entries, both modes, and moved no other document's (key by key, against the expected.json before).
 //======================================================================================================================
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'

@@ -55,6 +55,7 @@
         import { animatedTest } from './bench/animated.js'
         import { boxCostTest } from './bench/boxcost.js'
         import { dichroicsTest } from './bench/dichroics.js'
+        import { alongRayTest } from './bench/alongray.js'
         import { importedTest } from './bench/imported.js'
         import { lightArrayTest } from './bench/lightarray.js'
         import { installBuilder } from './builder/demo.js'
@@ -673,6 +674,22 @@
                     return window.RTTESTS.run(rows.length ? { ...t, cases: rows.map(n => t.cases[n - 1]) } : t);
                 },
             };
+            /* ANSWERS ALONG THE RAY (bench/alongray.js, 0.next): each scene with its plain shapes answering and not, dichroics
+               and the prism scene with their lights' photons first -- a button of its own, and
+               BENCH.alongray.view(n) / .run(...rows) */
+            let alongray = null;
+            const prepareAlongRay = () => alongray ??= alongRayTest(async url => { const r = await fetch(url); if (!r.ok) throw new Error(`${url}: ${r.status}`); return r.text() })
+                .catch(e => { alongray = null; throw e; });
+            window.RTTESTS?.addTest?.({ id: 'alongray', title: 'Answers along the ray (off and on: dichroics and the prism scene with their lights, a low sun, five more)', prepare: prepareAlongRay });
+            window.BENCH.alongray = {
+                view: async n => window.RTTESTS.view(await prepareAlongRay(), n),
+                run: async (...rows) => {
+                    const t = await prepareAlongRay();
+                    const missing = rows.filter(n => !t.cases[n - 1]);
+                    if (missing.length) throw new Error(`BENCH.alongray.run: no row ${missing.join(', ')} (rows 1-${t.cases.length})`);
+                    return window.RTTESTS.run(rows.length ? { ...t, cases: rows.map(n => t.cases[n - 1]) } : t);
+                },
+            };
         }
         /* WHAT AN IMPORTED PART COSTS (bench/imported.js, 0.71.0): the Imported parts example as imported, against its rounded
            boxes and its lens as one shape each, and the floor alone. BENCH.imported.view(n) / .run(...rows) */
@@ -880,6 +897,9 @@
                 const modeOf = (data, unculled = false) => (data ? 'data' : 'code') + (unculled ? '-boxes' : '');
                 const shownMode = () => modeOf(!!RT.scene?.writeData, !!RT.scene?.unculled);
                 let wantedData = shownMode();
+                /* ...AND THE DEVELOPER SWITCH `alongRay` turned (BUILDER.alongMode, 0.next): codegen's text answers along the ray
+                   or not, the bake's too -- the scene shown made again, once a change; the bake follows it (baker.js) */
+                let wantedAlong = BUILDER.alongMode;
                 paintMode = () => {
                     const m = modeLine({ scene: RT.scene, mode: shownMode(), showing: BUILDER.showing, bakeOn: (RT.get().sceneBake | 0) === 1,
                                          baker: BAKER.state, lastLeave: BUILDER.lastLeave });
@@ -893,6 +913,11 @@
                     if (want !== wantedData) {
                         wantedData = want;
                         if (BUILDER.showing && want !== shownMode()) reapply();
+                    }
+                    const wantAlong = BUILDER.alongMode;
+                    if (wantAlong !== wantedAlong) {
+                        wantedAlong = wantAlong;
+                        if (BUILDER.showing) reapply();
                     }
                     pushCull();
                     BAKER.tick();

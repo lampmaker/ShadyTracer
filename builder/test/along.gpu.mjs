@@ -1,8 +1,9 @@
 //======================================================================================================================
-// ANSWERS ALONG THE RAY, COUNTED BEFORE THEY ARE BUILT (the user, 2026-10-26: "exact (no stepping) intersection solutions
-// for basic shapes (plane, circle, etc) possibly including relief (check if there is any intersection possible at all). It
-// could improve rays traveling fairly parallel to surfaces"). Run:
-//   node builder/test/alongray.gpu.mjs
+// ANSWERS ALONG THE RAY (0.next; the user, 2026-10-26: "exact (no stepping) intersection solutions for basic shapes ...
+// possibly including relief (check if there is any intersection possible at all). It could improve rays traveling fairly
+// parallel to surfaces"), the real build: codegen's `along`, the renderer's march and occlusion with `along`
+// (lib/pathtracer/core/along.js; the developer setting alongRay). Run:
+//   node builder/test/along.gpu.mjs
 //
 // OPTIONAL, AND LOUD ABOUT IT, as the other GPU tests are: the `webgpu` package and a Vulkan driver (lavapipe), or it says
 // so and passes.
@@ -12,30 +13,28 @@
 // slit beam on the table, drawn only by the exact hits removed in 0.41.0: roadmap/ARCHITECTURE.md, Removed in 0.41.0). A
 // closed-form shape can say instead how far along the ray its boundary first is -- entering or leaving -- and the ray may
 // go that far at once. The step is the least of those answers and stepscale times every other fold's distance; the first
-// crossing of any hard union, subtraction or intersection is no nearer than the least first crossing of its shapes, so
-// that is safe wherever no blend or warp bends the surface.
+// crossing of any hard union is no nearer than the least first crossing of its shapes, so that is safe wherever no CSG,
+// blend or warp bends the surface (codegen.js ANSWERS ALONG THE RAY).
 //
-// WHAT IS BUILT HERE, AND ONLY HERE (no renderer change):
-//   - THE ANSWERS (ALONG_WGSL, and their JS twins): a plane, a rounded box (exact when sharp; with rounding the outer box
-//     from outside, else none), a sphere, a capped cylinder, a rectangle sheet, and a plane relief's band (|z| <= a: a ray
-//     that never meets the slab never meets the relief; inside it, the relief steps as now). Each against its twin and
-//     against a brute march of its own distance in JS.
-//   - THE SCENE'S TEXT WITH ANSWERS (alongText), codegen's own with one line changed an answering object: one plain
-//     shape under plain groups and arrays only, answering in its own frame (transpose(XF_M) * r.dir, a length there times
-//     XF_S). The rule is modelled by asking the scene twice: as it is, for the hit test, and, away from a surface, with
-//     the answering shapes left out -- everything else's distance -- the step the least of that (stepscale of it, the
-//     march's own rule) and the answers. (Asking twice is the test's way to the rule, not its cost: codegen knows which
-//     shapes it folds.)
-//   - RUN THROUGH THE RENDERER'S OWN MARCH (prog_march, distance only): its loop, its hit test, its escape and maxiter.
-// WHAT IS COUNTED, per bench scene (the bench's camera, 64 x 36 rays, codegen with measured boxes) and the prism scene:
-// camera rays, and shadow rays from where they end towards a sun at 50 and at 5 degrees -- steps a ray, how each ends (a
-// hit, the sky, out of steps), and how the answers' ends differ from the plain march's; and in the prism scene, rays
-// lowered onto the table at 0.1 to 0.5 degrees: how many reach it within maxiter.
-// WHAT MUST HOLD: the twins; the text with its answers off marching as the plain march does, bit for bit; and no answered
-// ray through a solid -- the plain field traced along every stretch the answers skipped past a plain hit (skippedChecker).
-// What does go on past a plain hit is a graze: the plain march stops a tolerance short of a surface, eps / sin(theta)
-// along a ray at a shallow angle, where an answer lands on it -- or brushes an edge an answer passes.
-// COUNTS, NOT TIMES (CLAUDE.md): what an answer costs beside a distance is the card's to say.
+// FIRST COUNTED, THEN BUILT. Until the build this file modelled the rule by rewriting codegen's text and asking the scene
+// twice (the count, 3dd0b5d; its numbers in docs/PERFORMANCE.md STATUS 2026-10-26). It now runs the build itself, one
+// evaluation a step: codegen's text with `along` and prog_march's `along`.
+//   1. THE TWINS: each answer (ALONG_WGSL) against its JS twin on the GPU, and the JS against a brute march of the shape's
+//      own field.
+//   2. THE RENDERER'S OWN MARCH, per bench scene (the bench's camera, 64 x 36 rays, codegen with measured boxes) and the
+//      prism scene: camera rays, and shadow rays from where they end towards a sun at 50 and at 5 degrees (the march's
+//      rule is the occlusion kernel's step), plain against answering -- steps a ray, how each ends (a hit, the sky, out of
+//      steps). And in the prism scene rays lowered onto the table at 0.1 to 0.5 degrees: how many reach it within maxiter.
+//      WHAT MUST HOLD: the text with answers, marched by a kernel that never sets AL_ON, the plain march bit for bit
+//      (add_along is add_new there: every other kernel); no answered ray through a solid -- the plain field traced along
+//      every stretch the answers skipped past a plain hit (skippedChecker); fewer steps in all; the bake with answers
+//      marching as codegen's with answers; and no more rays ending inside a solid than plainly (fieldAt: an answer once
+//      landed rays on the far side of the surface). What does go on past a plain hit is a graze: the plain march stops a
+//      tolerance short of a surface, eps / sin(theta) along a ray at a shallow angle, where an answer lands near it.
+//   3. THE WHOLE RENDERER (R.trace): a few samples of a scene as it is and with answers, from the same seeds -- shadow
+//      rays through prog_occlude's `along` too -- the pictures' means within their paired error bar; a haze box among them.
+//      Not bit for bit: an answer lands on a surface where the plain march stops a tolerance short of it.
+// COUNTS, NOT TIMES (CLAUDE.md): what an answer costs beside a distance is the card's to say (Tests > alongray).
 //======================================================================================================================
 import { readFileSync } from 'node:fs'
 import { execSync } from 'node:child_process'
@@ -46,12 +45,15 @@ let webgpu = null
 try { webgpu = await import('webgpu') } catch {
     try { webgpu = await import(pathToFileURL(join(execSync('npm root -g').toString().trim(), 'webgpu/index.js')).href) } catch { }
 }
-if (!webgpu) { console.log('(along-the-ray count SKIPPED: no webgpu package. npm i -g webgpu to get it, and a Vulkan driver: lavapipe in a container.)'); process.exit(0) }
+if (!webgpu) { console.log('(answers along the ray GPU check SKIPPED: no webgpu package. npm i -g webgpu to get it, and a Vulkan driver: lavapipe in a container.)'); process.exit(0) }
+
+/* lavapipe reads it when the device is made, below: one thread, so the queues' order is the same every run */
+process.env.LP_NUM_THREADS ??= '0'
 
 const M = await import('../model.js')
-const { generate, isCsg, boxLoName, boxHiName } = await import('../codegen.js')
-const { plainShapeOf } = await import('../plainshape.js')
-const { lineage } = await import('../bounds.js')
+const { generate, boxLoName, boxHiName } = await import('../codegen.js')
+const { baked } = await import('../bake.js')
+const { liveInBench } = await import('../../bench/bake.js')
 const { cullBoxes, createBoxes, cullUniforms } = await import('../boxes.js')
 const { prog_tagfield, tagSample, TAG_FIELD_WORDS } = await import('../../lib/pathtracer/core/field.js')
 const { CAMERAS, BENCH_FILES, benchUrl } = await import('../../bench/index.js')
@@ -63,6 +65,7 @@ const U = await import('../../lib/pathtracer/core/uniforms.schema.js')
 const { derive } = await import('../../lib/pathtracer/core/photometry.js')
 const { SCENE_PRELUDE } = await import('../../lib/pathtracer/core/scene_api.js')
 const { defines, TOKENS, SHORT_TOKENS } = await import('../../lib/wgsl_shorthand.js')
+const { ALONG_WGSL, JS, NEVER, NONE } = await import('../../lib/pathtracer/core/along.js')
 
 Object.assign(globalThis, webgpu.globals)
 let WG = null
@@ -72,7 +75,7 @@ try {
     await WG.init(0, {}, globalThis.__dawn)
     WG.defines = defines(TOKENS, SHORT_TOKENS)
 } catch (e) {
-    console.log(`(along-the-ray count SKIPPED: no WebGPU device -- ${e?.message ?? e}. In a container, apt-get install mesa-vulkan-drivers.)`)
+    console.log(`(answers along the ray GPU check SKIPPED: no WebGPU device -- ${e?.message ?? e}. In a container, apt-get install mesa-vulkan-drivers.)`)
     process.exit(0)
 }
 
@@ -81,103 +84,6 @@ const ok = (name, cond, extra = '') => { if (cond) { pass++; return } fail++; co
 const say = console.log
 const t0 = Date.now()
 
-/*----------------------------------------------------------------------------------------------------------------------
-  THE ANSWERS: how far along a unit direction ld, from p, a shape's boundary first is, in the shape's own frame.
-  A crossing t >= 0, NEVER (1e30) when the ray never meets it, NONE (-1) when this shape cannot say (its distance then).
-----------------------------------------------------------------------------------------------------------------------*/
-const NEVER = 1e30, NONE = -1
-const ALONG_WGSL = /* wgsl */ `
-const AL_NEVER: f32 = 1.0e30;
-const AL_NONE: f32 = -1.0;
-/* the ray's interval in a slab lo..hi along one axis: (t0, t1), empty as t0 > t1 */
-fn alSlab(o: f32, d: f32, lo: f32, hi: f32) -> vec2<f32> {
-    if (abs(d) < 1.0e-30) { return select(vec2<f32>(1.0, -1.0), vec2<f32>(-AL_NEVER, AL_NEVER), o >= lo && o <= hi); }
-    let a = (lo - o) / d; let b = (hi - o) / d;
-    return vec2<f32>(min(a, b), max(a, b));
-}
-/* the first crossing of a solid's interval along the ray: its entry ahead, or its exit from inside, or never */
-fn alFirst(i: vec2<f32>) -> f32 {
-    if (i.x > i.y) { return AL_NEVER; }
-    if (i.x > 0.0) { return i.x; }
-    if (i.y > 0.0) { return i.y; }
-    return AL_NEVER;
-}
-fn alBox(p: VEC3, ld: VEC3, b: VEC3) -> vec2<f32> {
-    let x = alSlab(p.x, ld.x, -b.x, b.x); let y = alSlab(p.y, ld.y, -b.y, b.y); let z = alSlab(p.z, ld.z, -b.z, b.z);
-    return vec2<f32>(max(x.x, max(y.x, z.x)), min(x.y, min(y.y, z.y)));
-}
-fn Aplane(p: VEC3, ld: VEC3) -> f32 {
-    if (abs(ld.z) < 1.0e-30) { return AL_NEVER; }
-    let t = -p.z / ld.z;
-    return select(AL_NEVER, t, t > 0.0);
-}
-fn AboxRounded(p: VEC3, ld: VEC3, b: VEC3, r: FLOAT) -> f32 {
-    if (r <= 0.0) { return alFirst(alBox(p, ld, b)); }
-    // rounded: its outer box from outside (an entry no later than the shape's), and nothing to say from inside it
-    if (all(abs(p) <= b)) { return AL_NONE; }
-    let i = alBox(p, ld, b);
-    return select(AL_NEVER, i.x, i.x <= i.y && i.x > 0.0);
-}
-fn Asphere(p: VEC3, ld: VEC3, r: FLOAT) -> f32 {
-    let b = dot(p, ld); let c = dot(p, p) - r * r; let disc = b * b - c;
-    if (disc < 0.0) { return AL_NEVER; }
-    let s = sqrt(disc);
-    return alFirst(vec2<f32>(-b - s, -b + s));
-}
-fn Acylinder(p: VEC3, ld: VEC3, h: FLOAT, r: FLOAT) -> f32 {
-    let z = alSlab(p.z, ld.z, -h, h);
-    let a = dot(ld.xy, ld.xy);
-    var c2 = vec2<f32>(-AL_NEVER, AL_NEVER);
-    if (a < 1.0e-30) {
-        if (dot(p.xy, p.xy) > r * r) { return AL_NEVER; }
-    } else {
-        let b = dot(p.xy, ld.xy); let c = dot(p.xy, p.xy) - r * r; let disc = b * b - a * c;
-        if (disc < 0.0) { return AL_NEVER; }
-        let s = sqrt(disc);
-        c2 = vec2<f32>((-b - s) / a, (-b + s) / a);
-    }
-    return alFirst(vec2<f32>(max(z.x, c2.x), min(z.y, c2.y)));
-}
-fn Arectangle(p: VEC3, ld: VEC3, h: VEC2) -> f32 {
-    if (abs(ld.z) < 1.0e-30) { return AL_NEVER; }
-    let t = -p.z / ld.z;
-    if (t <= 0.0) { return AL_NEVER; }
-    return select(AL_NEVER, t, all(abs(p.xy + t * ld.xy) <= h));
-}
-/* A PLANE RELIEF'S BAND, |z| <= a: its entry ahead; NONE inside it (the relief steps by its own bound there) */
-fn AplaneBand(p: VEC3, ld: VEC3, a: FLOAT) -> f32 {
-    if (abs(p.z) <= a) { return AL_NONE; }
-    let i = alSlab(p.z, ld.z, -a, a);
-    return select(AL_NEVER, i.x, i.x <= i.y && i.x > 0.0);
-}
-`
-/* ...their JS twins, the same arithmetic in doubles */
-const dot3 = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
-const slab = (o, d, lo, hi) => {
-    if (Math.abs(d) < 1e-30) return o >= lo && o <= hi ? [-NEVER, NEVER] : [1, -1]
-    const a = (lo - o) / d, b = (hi - o) / d
-    return [Math.min(a, b), Math.max(a, b)]
-}
-const first = ([t0, t1]) => t0 > t1 ? NEVER : t0 > 0 ? t0 : t1 > 0 ? t1 : NEVER
-const boxI = (p, d, b) => { const s = [0, 1, 2].map(k => slab(p[k], d[k], -b[k], b[k])); return [Math.max(...s.map(x => x[0])), Math.min(...s.map(x => x[1]))] }
-const JS = {
-    plane: (p, d) => { if (Math.abs(d[2]) < 1e-30) return NEVER; const t = -p[2] / d[2]; return t > 0 ? t : NEVER },
-    box: (p, d, b, r) => {
-        if (r <= 0) return first(boxI(p, d, b))
-        if ([0, 1, 2].every(k => Math.abs(p[k]) <= b[k])) return NONE
-        const i = boxI(p, d, b); return i[0] <= i[1] && i[0] > 0 ? i[0] : NEVER
-    },
-    sphere: (p, d, r) => { const b = dot3(p, d), c = dot3(p, p) - r * r, disc = b * b - c; if (disc < 0) return NEVER; const s = Math.sqrt(disc); return first([-b - s, -b + s]) },
-    cylinder: (p, d, h, r) => {
-        const z = slab(p[2], d[2], -h, h), a = d[0] ** 2 + d[1] ** 2
-        let c2 = [-NEVER, NEVER]
-        if (a < 1e-30) { if (p[0] ** 2 + p[1] ** 2 > r * r) return NEVER }
-        else { const b = p[0] * d[0] + p[1] * d[1], c = p[0] ** 2 + p[1] ** 2 - r * r, disc = b * b - a * c; if (disc < 0) return NEVER; const s = Math.sqrt(disc); c2 = [(-b - s) / a, (-b + s) / a] }
-        return first([Math.max(z[0], c2[0]), Math.min(z[1], c2[1])])
-    },
-    rectangle: (p, d, h) => { if (Math.abs(d[2]) < 1e-30) return NEVER; const t = -p[2] / d[2]; if (t <= 0) return NEVER; return Math.abs(p[0] + t * d[0]) <= h[0] && Math.abs(p[1] + t * d[1]) <= h[1] ? t : NEVER },
-    band: (p, d, a) => { if (Math.abs(p[2]) <= a) return NONE; const i = slab(p[2], d[2], -a, a); return i[0] <= i[1] && i[0] > 0 ? i[0] : NEVER },
-}
 /* ...and each shape's own distance (sdf.js's), for the brute force: signed for the solids, |z| past a sheet */
 const SDF = {
     plane: p => p[2],
@@ -259,99 +165,7 @@ const SDF = {
 }
 
 /*----------------------------------------------------------------------------------------------------------------------
-  2. THE SCENE'S TEXT WITH ANSWERS: codegen's own, the plain shapes answering along the ray
-  THE RULE, MODELLED BY ASKING TWICE: the scene as it is, for the hit test; and, away from a surface, the scene again with
-  the answering shapes left out -- what everything else's distance is -- the step the least of that (stepscale of it, the
-  march's rule) and the answers. Nothing else in the text is touched: every fold, CULL, a CSG group's or group code's own
-  hit, a warp's children, all as codegen wrote them. (A first version kept a least distance through wrappers on every
-  fold, and took a CSG child's or a shell's children's distances for the scene's -- near zero inside a skin, a false hit
-  -- and missed a warp's children, which fold into the scene's own hit one XF_SUB down: both caught by its own check.)
-  Asking twice is the test's way to the rule, not what it costs: codegen knows which shapes it folds, and would keep the
-  rest's distance beside the answers in one evaluation.
-----------------------------------------------------------------------------------------------------------------------*/
-const ANSWER_OF = { Nplane: 'Aplane', NboxRounded: 'AboxRounded', Nsphere: 'Asphere', Ncylinder: 'Acylinder', Nrectangle: 'Arectangle' }
-/* an object whose code is one plain shape with an answer, under nothing but plain groups and arrays (no CSG, no blend, no
-   group code: a warp bends the ray, a blend the surface, code anything) */
-function answerable(doc, node) {
-    if (node.kind !== 'object' || node.type !== 'code') return null
-    const ps = plainShapeOf(M.codeOf(doc, node))
-    if (!ps || !ANSWER_OF[ps.fn]) return null
-    const above = lineage(doc, node.id).slice(1)
-    if (above.some(g => g !== doc.root && (isCsg(g) || M.codeOf(doc, g) || g.blend > 0))) return null
-    if (doc.root.blend > 0) return null
-    return ps
-}
-/** The scene's text with the answerable shapes answering. `on` false: none answer, the text otherwise the same (it is
- *  then the plain march's, bit for bit: checked). Returns { wgsl, answered, reliefs }. */
-function alongText(doc, S, on = true) {
-    let w = S.wgsl.replace(/\bfn SDF\(r: Ray\) -> Hit \{/, 'fn SDF_inner(r: Ray) -> Hit {')
-    let answered = 0, reliefs = 0
-    const all = []; const walk = n => { all.push(n); (n.children || []).forEach(walk) }; walk(doc.root)
-    for (const node of all) {
-        const ps = answerable(doc, node)
-        if (!ps) continue
-        const at = w.indexOf(`// node ${node.id} (code)`)
-        if (at < 0) continue
-        const next = w.indexOf('// node ', at + 10), end = next < 0 ? w.length : next
-        let block = w.slice(at, end)
-        const rs = `rs_${node.id}`
-        if (block.includes(`var ${rs} =`)) {
-            /* A MATERIAL RELIEF: only on a plane is its band a slab with an answer (anything else as now). The far fold --
-               the base's distance less the amplitude, beyond twice it -- is what the band's answer replaces; the near one,
-               the relief's own distance, stays */
-            if (ps.fn !== 'Nplane') continue
-            const ra = `ra_${node.id}`, rm = `rm_${node.id}`
-            const far = `C = fold(C, VEC4(0.0, 0.0, 0.0, ${rs}.w - sign(${rs}.w) * ${ra}), ${rm});`
-            if (!block.includes(far)) continue
-            block = block.replace(far, `C = alFar(C, VEC4(0.0, 0.0, 0.0, ${rs}.w - sign(${rs}.w) * ${ra}), ${rm});`)
-            block = block.replace(new RegExp(`(let ${ra} = [^;]*;)`), `$1 alBand(AplaneBand(p, transpose(XF_M) * r.dir, ${ra} / XF_S));`)
-            reliefs++
-        } else {
-            const line = block.split('\n').find(l => /C = add_new\(C, \w+\(p/.test(l) && plainShapeOf(l.replace(/^\s*/, '')))
-            if (!line) continue
-            const args = ps.args.length ? ', ' + ps.args.join(', ') : ''
-            block = block.replace(line, `C = add_along(C, ${ps.fn}(p${args}), ${ANSWER_OF[ps.fn]}(p, transpose(XF_M) * r.dir${args}), MATERIAL);`)
-        }
-        answered++
-        w = w.slice(0, at) + block + w.slice(end)
-    }
-    const head = /* wgsl */ `
-${ALONG_WGSL}
-const AL_ON: bool = ${on};
-var<private> AL_REST: bool = false;    // the second asking: the answering shapes left out, their answers kept
-var<private> AL_T: f32 = 1.0e30;       // the least answer along the ray, scene units
-/* a shape that answers: folded as ever the first time; the second, its answer instead (none: folded as ever) */
-fn add_along(C: Hit, sdf: VEC4, t: f32, m: u32) -> Hit {
-    if (!AL_REST || t < 0.0) { return add_new(C, sdf, m); }
-    AL_T = min(AL_T, t * XF_S);
-    return C;
-}
-/* a plane relief: its band's answer (a local length; none inside the band), and the far fold it stands for */
-var<private> AL_BAND: bool = false;
-fn alBand(t: f32) { AL_BAND = AL_REST && t >= 0.0; if (AL_BAND) { AL_T = min(AL_T, t * XF_S); } }
-fn alFar(C: Hit, sdf: VEC4, m: u32) -> Hit { if (AL_BAND) { return C; } return fold(C, sdf, m); }
-`
-    const tail = /* wgsl */ `
-fn SDF(r: Ray) -> Hit {
-    AL_REST = false; AL_BAND = false;
-    var h = SDF_inner(r);
-    // at a surface, or with no answers: the hit as it is
-    if (!AL_ON || abs(h.s.w) < SCN_TOL) { return h; }
-    AL_REST = true; AL_T = 1.0e30;
-    let rest = SDF_inner(r);
-    AL_REST = false; AL_BAND = false;
-    /* the distance whose step (stepscale of it) is the least safe one -- never under the tolerance, which the march would
-       take for a surface (a step of stepscale of it is safe here, the true distance being no less) */
-    let reach = 2.0 * UB.envRadius * scenePerEng();
-    h.s.w = max(min(min(abs(rest.s.w), AL_T / UB.stepscale), reach), SCN_TOL);
-    return h;
-}
-`
-    return { wgsl: head + w + tail, answered, reliefs }
-}
-
-/*----------------------------------------------------------------------------------------------------------------------
-  3. THE MARCHES: the renderer's own (distance only), plain, answers off and answers on, along the same rays
+  2. THE MARCHES: the renderer's own (distance only), plain, and codegen's text with answers -- read and not -- along the same rays
 ----------------------------------------------------------------------------------------------------------------------*/
 const flat = v => v && typeof v === 'object' ? (Array.isArray(v) ? v : Object.values(v)) : v
 const sceneValues = scene => Object.fromEntries(Object.entries(scene.uniforms || {}).map(([k, u]) => [k, flat(u.def)]))
@@ -492,26 +306,67 @@ async function skippedChecker(S) {
     }
 }
 
+/* THE FULL FIELD WHERE A RAY ENDED (SDF, every shape): a hit the march calls one is under the tolerance, and the plain march
+   stops while still outside. An answer once ended a ray on the far side of the surface where f32 put it -- inside the
+   solid, 69 of 1576 camera rays' hits on the material test, 142 of 752 on the showcase -- and the whole picture read a few
+   percent dark (wavefront.js ALONG_STEP_WGSL: half the tolerance short since). */
+async function fieldAt(S) {
+    const prog = await WG.makeCompute(`${SCENE_PRELUDE}${U.sceneConstantsWGSL(S)}${S.wgsl}`, `
+        _ = UB.res;
+        let i = gid.x;
+        if (i >= arrayLength(&dOut)) { return; }
+        dOut[i] = SDF(newRay(pIn[i].xyz, VEC3(0.0, 0.0, 1.0), VEC4(1.0), 1.5)).s.w;`,
+        U.computeUniformTypes(S.uniforms), { pIn: 'array<vec4<f32>>', dOut: 'array<f32>', ...(S.resources || {}) }, { async: false, wg: [64, 1, 1] })
+    await prog.ready
+    const bag = { ...uniformBag(S), res: [64, 64] }
+    return async hits => {              // the hits' places, scene units; resolves to the field there (NaN for no hit)
+        const n = Math.max(hits.length, 1), inB = new Float32Array(4 * n)
+        hits.forEach((h, i) => inB.set(h.pos ?? [0, 0, 0], 4 * i))
+        const A = WG.createStorageBuffer(inB), O = WG.createStorageBuffer(4 * Math.max(n, 4))
+        prog.resources = { pIn: A.b, dOut: O.b }
+        prog.uniforms = bag
+        prog.dispatch(Math.ceil(n / 64), 1, 1)
+        const o = await O.r(4 * n, 0, Float32Array)
+        A.b.destroy(); O.b.destroy()
+        return hits.map((h, i) => h.state === HIT ? o[i] : NaN)
+    }
+}
+
 const SUN = elev => { const e = elev * Math.PI / 180, a = 30 * Math.PI / 180; return [Math.cos(e) * Math.cos(a), Math.cos(e) * Math.sin(a), Math.sin(e)] }
 const TOTALS = []
 async function count(label, doc, cam, extraRays = null) {
-    const S = generate(...M.generateArgs(doc, { id: `al-${label.replace(/\W+/g, '')}` }))
+    const id = `al-${label.replace(/\W+/g, '')}`
+    const S = generate(...M.generateArgs(doc, { id })), SA = generate(...M.generateArgs(doc, { id, along: true }))
+    const answered = (SA.wgsl.match(/C = add_along\(C, /g) || []).length, reliefs = (SA.wgsl.match(/alBand\(AplaneBand\(/g) || []).length
+    ok(`${label}: codegen with \`along\` says so exactly when a shape answers, its uniforms the plain text's`, !S.along && !!SA.along === answered + reliefs > 0
+        && JSON.stringify(Object.keys(SA.uniforms)) === JSON.stringify(Object.keys(S.uniforms)) && SA.pickWgsl === S.pickWgsl)
     const B = await measure(doc, S)
     const bag = { ...uniformBag(S), ...cullOf(doc, S, B), res: [64, 64], seed: [1, 2, 3, 4] }
-    const on = alongText(doc, S, true), off = alongText(doc, S, false)
     const buffers = {}
+    /* plain; with answers, the renderer's build of it (wavefront.js `along`); and the same text by a march that never sets
+       AL_ON, as every other kernel compiles it -- add_along is add_new there */
     const Kp = await prog_march(WG, S, 64, { distOnly: 1 })
-    const Ka = await prog_march(WG, { ...S, wgsl: on.wgsl }, 64, { distOnly: 1 })
-    const Ko = await prog_march(WG, { ...S, wgsl: off.wgsl }, 64, { distOnly: 1 })
-    for (const k of [Kp, Ka, Ko]) await k.ready
+    const Ka = SA.along ? await prog_march(WG, SA, 64, { distOnly: 1, along: 1 }) : Kp
+    const Ko = await prog_march(WG, SA, 64, { distOnly: 1 })
+    // ...and the bake with answers, the build the page shows once the edits stop, against codegen's with them
+    const SB = baked(SA, { live: liveInBench })
+    const Kb = SA.along ? await prog_march(WG, SB, 64, { distOnly: 1, along: 1 }) : null
+    for (const k of [Kp, Ka, Ko, Kb]) if (k) await k.ready
+    const bagB = { ...uniformBag(SB), ...cullOf(doc, S, B), res: [64, 64], seed: [1, 2, 3, 4] }
     const tol = Math.max((bag.eps > 0 ? bag.eps : bag.epsAuto) / (bag.sceneUnit || 1), 1e-7)
-    const check = await skippedChecker(S)
+    const check = await skippedChecker(S), field = await fieldAt(S)
     const run = async (pts, dirs) => {
         const rays = raysOf(pts, dirs)
         const [p, a, o] = [await marchAll(Kp, bag, rays, buffers), await marchAll(Ka, bag, rays, buffers), await marchAll(Ko, bag, rays, buffers)]
-        // THE SAFETY CHECK: answers off is the plain march with every fold through the wrappers -- never a longer step
+        // THE SAFETY CHECK: the text with answers, never read, is the plain march's -- AL_ON false, add_along is add_new
         const fewer = o.filter((h, i) => h.steps < p[i].steps && p[i].state !== -1).length
-        const offDiffer = o.filter((h, i) => h.steps !== p[i].steps || h.state !== p[i].state).length
+        const offDiffer = o.filter((h, i) => h.steps !== p[i].steps || h.state !== p[i].state || String(h.pos) !== String(p[i].pos)).length
+        // THE BAKE: every ray ending as codegen's with answers, but a share the march's tolerance decides (bake.gpu.mjs)
+        let bakeOff = 0
+        if (Kb) {
+            const b = await marchAll(Kb, bagB, rays, buffers)
+            bakeOff = b.filter((h, i) => h.state !== a[i].state || (h.state === HIT && Math.hypot(...h.pos.map((v, k) => v - a[i].pos[k])) > 10 * tol)).length
+        }
         // the rays the answers took past a surface the plain march hit: a few, to read
         const tOf = (h, i) => h.pos ? Math.hypot(...h.pos.map((v, k) => v - pts[3 * i + k])) : Infinity
         const passed = []
@@ -527,16 +382,22 @@ async function count(label, doc, cam, extraRays = null) {
         })
         const got = await check(segs)
         const tunnelled = got.filter(([least]) => least < -2 * tol).length, unfinished = got.filter(([least, done]) => least >= -2 * tol && !done).length
-        return { c: compare(pts, p, a, tol), fewer, offDiffer, passed, p, skipped: got.length, tunnelled, unfinished }
+        // where the hits end: inside a solid (the field below 0), plainly and with answers
+        const insideOf = async r => (await field(r)).filter(d => d < 0).length
+        const insideP = await insideOf(p), insideA = await insideOf(a)
+        return { c: compare(pts, p, a, tol), fewer, offDiffer, bakeOff, passed, p, skipped: got.length, tunnelled, unfinished, insideP, insideA }
     }
     const { pts, dirs } = cameraRays(cam, 64, 36)
     const cam1 = await run(pts, dirs)
-    say(`  ${label}: ${on.answered} shapes answering (${on.reliefs} a relief's band); camera rays: ${fmt(cam1.c)}`)
+    say(`  ${label}: ${answered} shapes answering, ${reliefs} a relief's band; camera rays: ${fmt(cam1.c)}`)
     const skipped = r => `${r.skipped} went on past the plain hit: ${r.skipped - r.tunnelled - r.unfinished} grazes, ${r.tunnelled} through a solid${r.unfinished ? `, ${r.unfinished} not finished checking` : ''}`
     say(`    ${skipped(cam1)}`)
-    ok(`${label}: answers off, every camera ray the plain march's bit for bit (the rewrite touches nothing else)`, cam1.offDiffer === 0, `${cam1.offDiffer} rays differ, ${cam1.fewer} in fewer steps`)
+    ok(`${label}: the text with answers, never read (AL_ON false), every camera ray the plain march's bit for bit`, cam1.offDiffer === 0, `${cam1.offDiffer} rays differ, ${cam1.fewer} in fewer steps`)
+    if (Kb) ok(`${label}: ...baked with answers, every camera ray ending as codegen's with them, but a share the tolerance decides`, cam1.bakeOff <= 0.005 * cam1.c.n, `${cam1.bakeOff} of ${cam1.c.n}`)
+    if (SA.along) ok(`${label}: ...camera rays in fewer steps in all with answers`, cam1.c.stepsA <= cam1.c.stepsP, `${cam1.c.stepsA} against ${cam1.c.stepsP}`)
+    ok(`${label}: ...no more camera rays ending inside a solid with answers than without (${cam1.insideP})`, cam1.insideA <= cam1.insideP, `${cam1.insideA} against ${cam1.insideP}`)
     ok(`${label}: ...no camera ray with answers through a solid`, cam1.tunnelled === 0, `${cam1.tunnelled}: ${cam1.passed.join('; ')}`)
-    const row = { label, answered: on.answered, cam: cam1.c }
+    const row = { label, answered, cam: cam1.c }
     // SHADOW RAYS from where the camera rays hit, backed off along them, towards a sun at 50 and at 5 degrees
     const hitPts = [], back = 10 * tol
     cam1.p.forEach((h, i) => { if (h.state !== HIT) return; hitPts.push(h.pos.map((v, k) => v - dirs[3 * i + k] * 2 * back)) })
@@ -545,7 +406,10 @@ async function count(label, doc, cam, extraRays = null) {
         const sh = await run(sp, sdirs)
         say(`    shadow rays to a sun at ${elev} degrees (${hitPts.length}): ${fmt(sh.c)}`)
         say(`      ${skipped(sh)}`)
-        ok(`${label}: ...shadow rays at ${elev} degrees: answers off the plain march's bit for bit`, sh.offDiffer === 0, `${sh.offDiffer} differ, ${sh.fewer} in fewer steps`)
+        ok(`${label}: ...shadow rays at ${elev} degrees: the text with answers, never read, the plain march's bit for bit`, sh.offDiffer === 0, `${sh.offDiffer} differ, ${sh.fewer} in fewer steps`)
+        if (SA.along) ok(`${label}: ...in fewer steps in all with answers`, sh.c.stepsA <= sh.c.stepsP, `${sh.c.stepsA} against ${sh.c.stepsP}`)
+        if (Kb) ok(`${label}: ...and baked as codegen's`, sh.bakeOff <= 0.005 * sh.c.n, `${sh.bakeOff} of ${sh.c.n}`)
+        ok(`${label}: ...none more ending inside a solid with answers (${sh.insideP} without)`, sh.insideA <= sh.insideP, `${sh.insideA} against ${sh.insideP}`)
         ok(`${label}: ...and none with answers through a solid`, sh.tunnelled === 0, `${sh.tunnelled}: ${sh.passed.join('; ')}`)
         row[`sun${elev}`] = sh.c
     }
@@ -555,6 +419,7 @@ async function count(label, doc, cam, extraRays = null) {
             say(`    ${name} (${pts2.length / 3}): ${fmt(x.c)}`)
             say(`      ${skipped(x)}`)
             ok(`${label}: ...${name}: none with answers through a solid`, x.tunnelled === 0, `${x.tunnelled}`)
+            ok(`${label}: ...${name}: none more ending inside a solid with answers (${x.insideP} without)`, x.insideA <= x.insideP, `${x.insideA} against ${x.insideP}`)
             row[name] = x.c
         }
     }
@@ -584,8 +449,103 @@ for (const [label, url, cam] of SCENES) await count(label, docOf(url), cam)
     await count('the prism scene', doc, doc.view.camera, [['rays grazing the table, 0.1 to 0.5 degrees', pts, dirs]])
     const g = TOTALS.at(-1)['rays grazing the table, 0.1 to 0.5 degrees']
     say(`    the graze: ${g.n - g.outP} of ${g.n} reach the table plainly within maxiter, ${g.n - g.outA} with the answers`)
+    ok('the prism scene: every ray grazing its table reaches it with answers', g.outA === 0, `${g.outA} of ${g.n} out of steps`)
+}
+
+/*----------------------------------------------------------------------------------------------------------------------
+  3. THE WHOLE RENDERER: a scene as it is and with answers, from the same seeds -- the march and the shadow rays both
+----------------------------------------------------------------------------------------------------------------------*/
+const { RAYTRACER } = await import('../../lib/pathtracer/core/raytrace_main.js')
+const { CAMERA } = await import('../../lib/camera.js')
+const { engineCamera } = await import('../../lib/pathtracer/core/units.js')
+const { effective } = await import('../../lib/pathtracer/quality.js')
+const { LUMA } = await import('../../lib/pathtracer/core/photometry.js')
+/* every seed the renderer draws comes from Math.random (utilities.js seed_vec4u32): reseeded before each picture */
+const reseed = seed => {
+    let a = seed >>> 0
+    Math.random = () => {
+        a = (a + 0x6D2B79F5) >>> 0
+        let t = Math.imul(a ^ (a >>> 15), a | 1)
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+    }
+}
+const quietly = async f => { const e = console.error, w = console.warn, l = console.log, i = console.info
+    console.error = console.warn = console.log = console.info = () => { }; try { return await f() } finally { console.error = e; console.warn = w; console.log = l; console.info = i } }
+const W = 32, H = 24, SAMPLES = 4
+const target = WG.device.createTexture({ size: [W, H], format: WG.format, usage: GPUTextureUsage.RENDER_ATTACHMENT }).createView()
+const bagFor = (scene, cam, { cull = {}, ...over } = {}) => {
+    const v = { ...U.defaultUniformValues(), envMode: 0, uSunElevation: 50, uSunAzimuth: 30, sunDiameter: 0.53, sunIlluminance: 100000,
+                skyIlluminance: 20000, nee: 1, lt: 1, ltPhotons: 1, ltLearn: 0, maxbounce: 8, rr: 0, fireflyClamp: 0,
+                maxaverages: 0, autoExposure: 0, sppm: 0, ...over }
+    const traced = effective(v)
+    const derived = derive(traced, { unit: scene.unit, extent: scene.extent, envRadius: scene.envRadius, haze: scene.haze })
+    const EC = engineCamera({ ...cam.getUniforms(), camLens: [0, 1, 0, 0] }, 0, derived.sceneUnit)
+    return Object.fromEntries(Object.entries({ ...sceneValues(scene),
+        ...Object.fromEntries(Object.entries(traced).map(([k, x]) => [k, U.uniformToGPU(x, U.UniformSpec[k]?.type)])),
+        ...derived, invView: EC.invView, invProjection: EC.invProjection, camPos: EC.camPos, camLens: EC.camLens, camtype: 0, ...cull })
+        .filter(([k]) => k in U.ComputeUniformTypes || k in U.UniformSpec || k in (scene.uniforms || {})))
+}
+/* a fresh renderer a picture, so the two start alike; its seeds from `seed` */
+const picture = async (scene, cam, over, seed) => {
+    const Q = { w: W, h: H, resetframecount: 1 }
+    const R = RAYTRACER(WG, null, Q, scene)
+    R.hud = () => { }
+    let err = null
+    try { await quietly(() => R.init()) } catch (e) { return { err: e?.message ?? String(e) } }
+    const bag = bagFor(scene, cam, over)
+    R.kernelOptions = R.kernelOptionsOf(bag)
+    await quietly(() => R.applyKernelOptions())
+    const texts = { march: R.prog_wvfmarch.wgsl, occlude: R.prog_wvfocclude.wgsl }
+    reseed(seed)
+    try {
+        Q.resetframecount = 1
+        await quietly(() => R.trace(Q, bag, 1, target))
+        Q.resetframecount = 0
+        if (SAMPLES > 1) await quietly(() => R.trace(Q, bag, SAMPLES - 1, target))
+        await WG.device.queue.onSubmittedWorkDone()
+    } catch (e) { err = e?.message ?? String(e) }
+    const a = await R.accumulation_u32.r(W * H * 16, 0, Uint32Array)
+    const f = new Float32Array(a.buffer, a.byteOffset, a.length)
+    return { err, texts, img: Array.from({ length: W * H }, (_, i) => LUMA[0] * f[i * 4] + LUMA[1] * f[i * 4 + 1] + LUMA[2] * f[i * 4 + 2]) }
+}
+/* the two pictures' means, a over b, with the error of the pixels' paired differences (haze.gpu.mjs paired) */
+const paired = (a, b) => {
+    const n = a.length, mb = b.reduce((s, x) => s + x, 0) / n
+    const d = a.map((x, i) => x - b[i]), md = d.reduce((s, x) => s + x, 0) / n
+    return { mean: 1 + md / mb, se: Math.sqrt(d.reduce((s, x) => s + (x - md) ** 2, 0) / Math.max(n - 1, 1) / n) / mb, of: mb }
+}
+const camOf = (orbit, aspect) => {
+    const cam = CAMERA({ aspect, fov: orbit.fov ?? 40, up: [0, 0, 1] })
+    cam.setPose({ pos: eyeOf(orbit), target: orbit.target, up: [0, 0, 1] })
+    return cam
+}
+async function whole(label, doc, orbit, over = {}) {
+    const id = `alw-${label.replace(/\W+/g, '')}`
+    const off = baked(generate(...M.generateArgs(doc, { id })), { live: liveInBench })
+    const on = baked(generate(...M.generateArgs(doc, { id, along: true })), { live: liveInBench })
+    const cam = camOf(orbit, W / H)
+    const a = await picture(off, cam, over, 7), b = await picture(on, cam, over, 7)
+    // the march and the shadow rays built to read the answers: their resets in the kernels' text, and only there
+    const reads = t => /AL_ON = true;/.test(t)
+    ok(`${label}: both pictures traced, the march and the shadow rays reading answers only with them`, !a.err && !b.err && on.along
+        && reads(b.texts.march) && reads(b.texts.occlude) && !reads(a.texts.march) && !reads(a.texts.occlude), `${a.err ?? ''} ${b.err ?? ''}`)
+    if (a.err || b.err) return
+    const p = paired(b.img, a.img), lit = a.img.filter(x => x > 0).length
+    say(`  ${label}: ${lit} of ${W * H} lit; mean with answers / without ${p.mean.toFixed(5)} +- ${p.se.toFixed(5)}`)
+    ok(`${label}: a picture to compare -- most pixels lit`, lit > W * H / 2, `${lit} of ${W * H}`)
+    ok(`${label}: the picture's mean with answers within its paired error bar of the one without`, Math.abs(p.mean - 1) <= Math.max(3.5 * p.se, 1e-6), `${p.mean} +- ${p.se}`)
+}
+await whole('the material test, baked', docOf(benchUrl(BENCH_FILES.materials)), CAMERAS.materials)
+await whole('the material test, baked, the sun at 5 degrees', docOf(benchUrl(BENCH_FILES.materials)), CAMERAS.materials, { uSunElevation: 5 })
+await whole('the showcase, baked', docOf(benchUrl(BENCH_FILES.showcase)), CAMERAS.showcase)
+await whole('dichroics, baked', docOf(benchUrl(BENCH_FILES.dichroics)), CAMERAS.dichroics)
+{
+    const doc = docOf(new URL('../../scenes/dusty-beam.json', import.meta.url))
+    ok('Dusty beam has a haze box (answers with the haze are checked on it)', !!generate(...M.generateArgs(doc, { id: 'alw-dusty-h' })).haze)
+    await whole('Dusty beam (a haze box), baked', doc, doc.view.camera)
 }
 
 say(`  ${((Date.now() - t0) / 1000).toFixed(0)} s`)
-console.log(`along the ray, counted: ${pass} passed, ${fail} failed`)
+console.log(`answers along the ray on the GPU: ${pass} passed, ${fail} failed`)
 process.exit(fail ? 1 : 0)

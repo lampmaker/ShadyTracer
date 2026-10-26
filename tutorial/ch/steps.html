@@ -321,6 +321,27 @@
         On a software GPU every shadow ray's light is the full kernel's, bit for bit, and every round's queue the same
         (<code>builder/test/occludedist.gpu.mjs</code>).</p>
     </div>
+    <div data-claim="code">
+      <p><strong>Answers along the ray, behind a switch.</strong> A ray running almost parallel to a floor closes on it
+        by a sliver of each step, and at a graze it runs out of steps before it arrives. A plain sphere, box, cylinder,
+        plane or flat rectangle can say instead how far along the ray its surface first is, and the ray may go almost
+        that far at once. Since 0.next, with the developer setting <code>alongRay</code> on, the code generator writes
+        those answers into the scene's text for every such shape that sits under plain groups and arrays only: a CSG
+        group, a blend or group code bends what "the first crossing" means, so a shape there answers by its distance as
+        before. A relief on a plane answers for its band: a ray that never meets the slab the bumps live in never meets
+        the bumps. The march and the shadow rays then step by the least of the answers and 0.9 of everything else's
+        distance (<code>core/along.js</code>; <code>codegen.js</code>, ANSWERS ALONG THE RAY; <code>wavefront.js</code>,
+        <code>along</code>). On a software GPU, shadow rays under a sun 5 degrees up took 29.5 steps a ray on the
+        dichroics scene plainly and 4.2 with answers, and rays grazing the prism scene's table at 0.1 to 0.5 degrees
+        reached it 31 times in 320 plainly and every time with answers (<code>builder/test/along.gpu.mjs</code>).
+        The switch acts on the scene compiled as code, the build the page shows once the edits stop.</p>
+    </div>
+    <div data-claim="inferred">
+      <p><strong>What an answered step costs.</strong> An answering shape works out its answer beside its distance at
+        every step, so a step costs a little more and there are fewer of them. Whether that is less time on a card is
+        not known: the counts above are steps, not milliseconds. What would test it: Tests &gt; alongray, each scene
+        with its answers and without, on the user's card.</p>
+    </div>
     <div data-claim="measured">
       <p><strong>A step that asks only the distance: the march 8% to 79% faster, the sample 2% to 35%.</strong> GPU time a
         sample, before against after, on the user's Pascal card (Tests &gt; marchdist, 2026-10-25,
@@ -359,6 +380,14 @@
   <div class="prose">
     <h2><span class="n">7</span>What went wrong before</h2>
     <ul>
+      <li><strong>An answer that landed on the far side.</strong> The first build of the answers stepped a ray exactly
+        to the surface. Rounding in 32-bit numbers put some of those hits a hair inside the solid, where the plain march
+        never stops: it ends a ray while the distance is under the tolerance, still outside. The whole picture's
+        brightness came out 0.1% to 6% lower with answers on all five scenes tried, each within its own error bar; all
+        five on one side was the reason to look. Counting where the rays ended found it: on a software GPU, 69 of the
+        material test's 1576 camera-ray hits and 142 of the showcase's 752 were inside, against none plainly. Now an
+        answer stops half the tolerance short of the surface, and never takes a shorter step than the plain march would
+        (<cite data-src="lib/pathtracer/core/wavefront.js" data-sym="HALF THE TOLERANCE SHORT, NOT ON IT"></cite>).</li>
       <li><strong>A window that made it slower.</strong> Section 5's window, as it was first built, marched the 256
         lamps in 1007 ms a sample on the user's Pascal card, against 281 ms with every copy asked. Two things were
         wrong, and each was found by measuring, not by reasoning:

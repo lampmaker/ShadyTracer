@@ -2011,5 +2011,52 @@ eq('uniformName', uniformName('n7', 'radius'), 'radius_n7')
     ok('...and validates', Model.validate(up).length === 0, Model.validate(up).join('; '))
 }
 
+//----------------------------------------------------------------------------------------------
+// ANSWERS ALONG THE RAY (codegen `along`, core/along.js; 0.next): which shapes answer -- a plain sphere, box, cylinder,
+// plane or rectangle under plain groups and arrays, and a plane's relief band -- and that none other does; off, nothing
+//----------------------------------------------------------------------------------------------
+{
+    const d = Model.createDoc({ title: 'along' })
+    Model.addMaterial(d, { id: 'bumpy' })
+    Model.setRelief(d, 'bumpy', 'noise')
+    Model.addObject(d, 'root', { id: 'ball', primitive: 'sphere' })
+    Model.addObject(d, 'root', { id: 'floor', primitive: 'plane', material: 'bumpy' })
+    Model.addObject(d, 'root', { id: 'ring', primitive: 'torus' })                       // no answer
+    Model.addObject(d, 'root', { id: 'bumpyball', primitive: 'sphere', material: 'bumpy' })   // a relief but not a plane's
+    Model.addGroup(d, 'root', { id: 'plain' })
+    Model.addObject(d, 'plain', { id: 'crate', primitive: 'box' })
+    Model.addGroup(d, 'plain', { id: 'row' })
+    Model.addObject(d, 'row', { id: 'post', primitive: 'cylinder' })
+    Model.setCopies(d, 'row', Model.copiesRow(3, 1))
+    Model.addGroup(d, 'root', { id: 'cut' })
+    Model.addObject(d, 'cut', { id: 'cutbase', primitive: 'box' })
+    Model.addObject(d, 'cut', { id: 'cuthole', primitive: 'sphere', join: 'subtract' })
+    Model.addGroup(d, 'root', { id: 'soft', blend: 0.1 })
+    Model.addObject(d, 'soft', { id: 'softball', primitive: 'sphere' })
+    Model.addGroup(d, 'root', { id: 'warp', code: 'C = children(C, p);' })
+    Model.addObject(d, 'warp', { id: 'warpball', primitive: 'sphere' })
+    const off = generate(...Model.generateArgs(d, { id: 'al' })), on = generate(...Model.generateArgs(d, { id: 'al', along: true }))
+    // a node's block: to the next node's, or the end of the function it is in (group code's children come before the support)
+    const block = (S, id) => { const w = S.wgsl, a = w.indexOf(`// node ${id} (`); if (a < 0) return ''; const ends = [w.indexOf('// node ', a + 8), w.indexOf('\nfn ', a)].filter(b => b >= 0); return w.slice(a, ends.length ? Math.min(...ends) : w.length) }
+    const answers = (S, id) => /C = add_along\(C, /.test(block(S, id))
+    ok('off: no answers anywhere, no `along` said', !off.along && !/AL_ON|add_along|alBand|alFar/.test(off.wgsl + off.pickWgsl))
+    ok('on: `along` said, the answers and their support once, before SDF', on.along === true && on.wgsl.split('fn add_along(').length === 2
+        && on.wgsl.split('fn Asphere(').length === 2 && on.wgsl.indexOf('fn add_along(') < on.wgsl.indexOf('fn SDF(r: Ray)'))
+    ok('...a sphere, a box under a plain group, a cylinder in an array under it answer, in their own frame',
+        ['ball', 'crate', 'post'].every(id => answers(on, id)) && /alt_ball = Asphere\(p, transpose\(XF_M\) \* r\.dir, radius\)/.test(block(on, 'ball')))
+    ok('...the answer asked only where AL_ON is set (the march and the shadow rays)', /if \(AL_ON\) \{ alt_crate = AboxRounded\(/.test(block(on, 'crate')))
+    ok('...a plane under a relief answers for its band, its far fold to the hit test alone',
+        /alBand\(AplaneBand\(p, transpose\(XF_M\) \* r\.dir, ra_floor \/ XF_S\)\);/.test(block(on, 'floor')) && /C = alFar\(C, /.test(block(on, 'floor'))
+        && !/alBand|alFar/.test(block(off, 'floor')))
+    ok('...and none other: a torus, a sphere under a relief, a CSG group\'s shapes, a blended group\'s, group code\'s',
+        ['ring', 'bumpyball', 'cutbase', 'cuthole', 'softball', 'warpball'].every(id => !answers(on, id) && !/alBand/.test(block(on, id))))
+    ok('the pick copy answers nothing, nor the uniforms move', on.pickWgsl === off.pickWgsl && JSON.stringify(on.uniforms) === JSON.stringify(off.uniforms))
+    ok('the scene as data: no answers (its records answer nothing)', !generate(...Model.generateArgs(d, { id: 'al', data: true, along: true })).along)
+    const none = Model.createDoc({ title: 'none' })
+    Model.addObject(none, 'root', { id: 't', primitive: 'torus' })
+    const n1 = generate(...Model.generateArgs(none, { id: 'n' })), n2 = generate(...Model.generateArgs(none, { id: 'n', along: true }))
+    ok('a scene where nothing answers: with `along`, the text byte for byte without it', !n2.along && n2.wgsl === n1.wgsl)
+}
+
 console.log(fail ? `\n${fail} failed, ${pass} passed.` : `${pass} assertions pass.`)
 process.exit(fail ? 1 : 0)

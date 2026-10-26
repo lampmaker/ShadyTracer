@@ -13,13 +13,16 @@ true?"). A plan built on inferences written as facts was reverted (commit fdc333
 it had called one scene's slow render "this architecture's full-resolution cost", which the user's
 own numbers contradict.
 
-## STATUS (2026-10-26) — answers along the ray: counted, not built
+## STATUS (2026-10-26) — answers along the ray: counted, then built behind a switch; not measured on a card
 
 The user asked (2026-10-26) about exact intersections for basic shapes, a relief's included ("check if there is any
 intersection possible at all"), for rays running nearly parallel to a surface. **Exact hits were built once (0.18 to
 0.40) and removed** (below, *Exact hits*): they lived only in the scene-as-data path, and that build was 12 to 30 times
 codegen's GPU time on two scenes. So this time the steps were **counted first**, in codegen's own text, before anything
-is built (`builder/test/alongray.gpu.mjs`).
+was built (the count, 3dd0b5d). Then, as the user asked ("yes build it behind a switch with a bench"), **built behind the
+developer setting `alongRay`**, off by default: codegen writes the answers into the scene's text (`along`), and the
+renderer's march and shadow rays read them (`wavefront.js` `along`, `core/along.js`). `builder/test/along.gpu.mjs` runs the
+build itself now, and reads the same steps as the count's table below, to the decimal.
 
 - **The rule counted.** A closed-form shape answers how far along the ray its boundary first is, entering or leaving
   ("never" when the ray misses it). The step is the least of those answers and stepscale times everything else's distance.
@@ -57,9 +60,19 @@ is built (`builder/test/alongray.gpu.mjs`).
       That is 3-25 rays a run, and 380 of 2304 camera rays on the Menger cubes (its floor, seen at a shallow angle:
       inferred).
     - Rays that ran out of steps reach their surface.
-- **Not known: the cost.** Steps are not time. An answered step does the answers' arithmetic beside the distance, and
-  the count asks the scene twice to model the rule (codegen would not). What a step costs with answers is the card's to
-  say: a build behind a switch, with a bench, as the distance-only march was.
+- **Built (read in code).** One evaluation a step: an answering shape is left out of the distance and gives its answer
+  and its own distance beside it (`add_along`); the hit test is the least of all the distances, as before. Only shapes
+  under plain groups and arrays answer, in codegen's text: the bake, and the codegen editing build. The scene as data
+  has no answers. With the switch off, codegen's text and every kernel's are byte for byte what they were.
+- **Found while building it: the step must stop short.** Stepping to the answer exactly ended some rays on the far side
+  of the surface, where f32 rounding put them: camera rays ending inside a solid on 69 of the material test's 1576 hits
+  and 142 of the showcase's 752, against none plainly (lavapipe). The whole picture's mean read 0.94 to 0.999 of the plain
+  one's on all five scenes tried, each within its error bar. An answer now stops half the tolerance short, and a step is
+  never shorter than the plain one: no ray ends inside, and the five means read 0.98 to 1.04, on both sides of 1
+  (`wavefront.js` ALONG_STEP_WGSL). The step counts did not move.
+- **Not known: the cost.** Steps are not time. An answered step does the answers' arithmetic beside the distance. What
+  a step costs with answers is the card's to say: **Tests > alongray**, each scene baked with and without answers,
+  dichroics and the prism scene with their lights' photons first, the material test also with a sun at 5 degrees.
 
 ## STATUS (2026-10-25) — the march and shadow rays on distance only: measured, and always on
 
