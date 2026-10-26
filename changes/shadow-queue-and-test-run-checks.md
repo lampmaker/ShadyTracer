@@ -24,8 +24,21 @@ sphere read 0.9960 at the old pins and 0.9999 +- 0.0006 at the new ones. The bea
 different and stays: rays entering within the surface tolerance of the sphere's rim are trapped by total internal
 reflection, and the shortfall moves with the tolerance (the furnace's note).
 
+**Three test rules that failed on noise or on the wrong comparison, from the second 0.78.0 run.**
+- **draft-lamps** warms each row up before it counts. The emitter list is found and published first, then the picture
+  is cleared (the `clearLearned` block, which no test was using). Each row starts from a fresh list, and a Draft path finds
+  the disc only by its seek rays, so the first samples of a Draft row were black. How many depended on timing: 0, 1 or
+  2 of the 64 in the user's three runs (each 1/64 = 1.6 %). The lamps-only row's 0.984 against draft was one row's
+  start-up against the other's. On Dawn a fresh Draft row read 0.971-0.981 of full and a warmed one 0.9994.
+- **optics-colour's two mix rows** trace 250,000 rays a batch instead of 100,000. Each ray picks one LED, and that
+  pick's noise alone went past their 0.002 in 7 runs of 40 on Dawn, and none of 40 at 250,000.
+- **rr-bias** judges each RR-on row against the RR-off row at its own maxbounce. It judged every row against
+  maxbounce 10, so the light past the tenth bounce counted as bias: 0.5 % on the user's scene.
+
 **What to look at:** Tests > furnace: rows 27 and 28 should read about 1.000, and take longer than before. The extra
 cost is not measured: 289 wavefront iterations a sample against 54. Tests > optics-mode: the full row should read with
 the illuminance-view row at every sensor, x 1 about 1.1 or more. Tests > optics-balance: balance 0 on every row, run as
-often as you like. In the picture, a scene with lamps and glass in view: the lamps' light on surfaces seen directly
-should no longer dim when the photon map wakes, which may show as a few percent brighter than before.
+often as you like. Tests > draft-lamps: draft and lamps only about 1 of full, and the same as each other.
+Tests > optics-colour: du'v' under 0.002 on both mix rows nearly every run. In the picture, a scene with lamps and
+glass in view: the lamps' light on surfaces seen directly should no longer dim when the photon map wakes, which may
+show as a few percent brighter than before.
