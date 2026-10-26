@@ -300,6 +300,42 @@
         ON, 0.29.0). The user asked for exactly that: "make sure that all these different options, even when turned off,
         dont impose an overhead".</p>
     </div>
+    <div data-claim="code">
+      <p><strong>A step that asks only the distance.</strong> Every step of the march asked the scene for its whole answer
+        (each shape's normal, turned into the world, the material, the solid the point is in) and read one number of it.
+        Since 0.next the renderer's march is built against a second <code>add_new</code> and <code>fold</code> that keep the
+        nearest surface's distance and nothing else, and the surface kernel asks for the whole answer once, at the ray the
+        march stopped, on a trip of the loop it already had (<code>scene_api.js</code>, FOLD_DIST; <code>wavefront.js</code>,
+        THE HIT ITSELF). The distance is the same expression, so the steps are the same: on a software GPU every camera ray
+        ends in the same place, bit for bit, and so does every pixel of the whole picture
+        (<code>builder/test/marchdist.gpu.mjs</code>). The Optics page keeps the full march: its shading reads the march's
+        hit directly.</p>
+    </div>
+    <div data-claim="code">
+      <p><strong>Shadow rays ask only the distance too.</strong> A shadow ray asks whether anything is in the way, which
+        is a distance, and since 0.next the occlusion kernel is built against the same distance-only <code>fold</code>
+        (<code>wavefront.js</code>, prog_occlude's distOnly). One shadow ray asks more: one aimed at a glowing surface
+        takes the glow of whatever blocks it (chapter 16). That kernel cannot answer it, so it marks the ray where it was
+        blocked and leaves it in its slot in the queue; a small kernel holding the whole scene asks the material there
+        before the next round (<code>prog_occlude_emit</code>), and is sized to no work at all when nothing was marked.
+        On a software GPU every shadow ray's light is the full kernel's, bit for bit, and every round's queue the same
+        (<code>builder/test/occludedist.gpu.mjs</code>).</p>
+    </div>
+    <div data-claim="measured">
+      <p><strong>A step that asks only the distance: the march 8% to 79% faster, the sample 2% to 35%.</strong> GPU time a
+        sample, before against after, on the user's Pascal card (Tests &gt; marchdist, 2026-10-25,
+        <code>docs/PERFORMANCE.md</code>): the march on the optics bench 49.3 against 10.2 ms, the showcase 17.3 against
+        8.8, dichroics 177.8 against 144.0, the Noise library 70.7 against 58.8. The surface kernel's one look more a hit
+        takes part of it back -- on dichroics 21 of the 34 ms -- so the whole sample fell 35.5% on the optics bench, 12.4% on the showcase, 2% to 4.5% on dichroics,
+        the Noise library and the Menger cubes, and not at all on the material test (+1%, within that run's drift).</p>
+    </div>
+    <div data-claim="measured">
+      <p><strong>Shadow rays on distance only: occlusion 8% to 83% faster on five scenes.</strong> GPU time a sample, the
+        occlusion kernel and its resolve together, before against after, on the user's Pascal card (Tests &gt;
+        occludedist, 2026-10-25, <code>docs/PERFORMANCE.md</code>): the optics bench 29.3 against 4.9 ms, the Menger
+        cubes 22.6 against 17.7, the showcase 6.5 against 5.3, dichroics 34.6 against 32.0. The Noise library read 40.9
+        against 52.4, in a row where the march, which the change does not touch, was 21% slower too: not explained.</p>
+    </div>
     <div data-claim="inferred">
       <p><strong>Boxes on shelled reliefs.</strong> In this page's model, a relief in its shell costs about its box test
         when the ray is far, so its box saves nothing and shortens steps. Not measured on a card: the culling rows all

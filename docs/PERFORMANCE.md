@@ -13,6 +13,76 @@ true?"). A plan built on inferences written as facts was reverted (commit fdc333
 it had called one scene's slow render "this architecture's full-resolution cost", which the user's
 own numbers contradict.
 
+## STATUS (2026-10-25) — the march and shadow rays on distance only: measured, and always on
+
+The user asked (2026-10-24) which techniques could make rendering faster.
+- **Over-relaxation, the list's first step, is gone.** The user saw the picture change with it (below, under
+  Rejected).
+- **The march on distance only (0.next)** is review #7 of `PERFORMANCE_REVIEW.md`, without the occlusion half.
+  - Every march step asked the scene for its whole answer and read one number of it (read in code: `wavefront.js`
+    prog_march, `abs(hit.s.w)`).
+  - Now the renderer's march is compiled against a distance-only `add_new` and `fold` (`scene_api.js` FOLD_DIST), and
+    the surface kernel asks for the whole hit once, at the ray the march stopped (`prog_surface`, THE HIT ITSELF).
+  - The Optics page's trace keeps the full march: its shade reads the march's hit directly.
+
+**MEASURED: Tests › marchdist** (the user's card, `ShadyTracer 0.78.0 · c3be0d6 (ccr-0f3a020a-590jz2) · nvidia pascal`,
+Chrome 155, 2026-10-25). Off was the setting `marchDist` 0, on was 1, each baked. GPU ms a sample; the drift row read
++1.5%.
+
+| scene | march off → on | surface off → on | gpu off → on |
+|---|---|---|---|
+| dichroics, its light's photons, the map on | 177.8 → 144.0 | 21.1 → 42.0 | 283.7 → 270.9 (−4.5%) |
+| the Noise library | 70.7 → 58.8 | 18.8 → 24.8 | 144.3 → 138.3 (−4.2%) |
+| the Menger cubes | 49.6 → 41.2 | 4.8 → 7.4 | 90.6 → 88.7 (−2.1%) |
+| the showcase | 17.3 → 8.8 | 3.8 → 6.0 | 50.9 → 44.6 (−12.4%) |
+| the material test | 11.3 → 10.4 | 4.7 → 6.0 | 39.8 → 40.2 (+1%) |
+| the optics bench | 49.3 → 10.2 | 5.5 → 12.5 | 91.9 → 59.3 (−35.5%) |
+
+- **The march gained on every scene, 8% to 79%.**
+- **The surface kernel takes part of it back.** It makes the one full evaluation per hit that the march's last step used
+  to make: 21 of the 34 ms the march saved on dichroics.
+  - Inferred, not tested: dichroics' plates have exact normals, so a hit on one cost the surface kernel one look (the
+    material) before, and costs two now.
+  - What would test it: the surface column on a scene of exact-normal shapes against one of `sd()` boxes, whose normals
+    take three looks anyway.
+- **The picture is the same.** The user saw it identical; on lavapipe it is bit for bit (`builder/test/marchdist.gpu.mjs`).
+- **The user's choice:** always on, the setting removed. Tests › marchdist went with it, since there is no off to time.
+- **Then shadow rays on distance only (0.next)**, the occlusion half of review #7.
+  - The occlusion kernel folds the distance alone (read in code: `wavefront.js` prog_occlude's distOnly).
+  - An emitter's shadow ray, the one that asks a material where it is blocked, is marked there, left in its slot in the
+    queue, and resolved by `prog_occlude_emit`, a small kernel holding the whole scene, before the next round.
+  - The prep sizes that kernel at zero groups when nothing was marked.
+  - On lavapipe (`builder/test/occludedist.gpu.mjs`) every deposit is bit for bit the full kernel's, and so is every
+    round's queue, on seven scenes. The whole picture is bit for bit except where emitters are about: there an emitter
+    ray's light lands a round later, and the frame's atomic float sum takes another order (the showcase: 2 of 768
+    pixels, 1.5e-7).
+
+**MEASURED: Tests › occludedist** (the user's card, `ShadyTracer 0.78.0 · 64535ad (ccr-0f3a020a-590jz2) · nvidia
+pascal`, Chrome 155, 2026-10-25). Off was the setting `occludeDist` 0, on was 1, each baked. GPU ms a sample; the drift
+row read −1.2%.
+
+| scene | occlude off → on (+ occlude_emit) | march off → on (unchanged code) | gpu off → on |
+|---|---|---|---|
+| dichroics, its light's photons, the map on | 34.6 → 31.5 + 0.5 | 175.2 → 178.4 | 324.3 → 327.8 |
+| the Noise library | 40.9 → 50.1 + 2.3 | 72.1 → 87.4 | 165.4 → 196.0 |
+| the Menger cubes | 22.6 → 17.4 + 0.3 | 44.8 → 45.2 | 96.2 → 91.0 |
+| the showcase | 6.5 → 3.5 + 1.8 | 10.4 → 9.9 | 51.8 → 48.4 |
+| the material test | 4.9 → 4.1 + 0.2 | 12.2 → 10.9 | 46.7 → 43.5 |
+| the optics bench | 29.3 → 4.7 + 0.2 | 11.7 → 10.7 | 69.2 → 43.1 (−38%) |
+
+- **Occlusion gained on five scenes, 8% to 83%** with `occlude_emit` counted in.
+- **The resolve:** 0.2–0.5 ms where little or nothing is marked (its empty dispatches), 1.8 ms on the showcase and 2.3
+  ms on the Noise library, where emitter rays run.
+- **The Noise library's row is unexplained.** Its "on" row was slower in every kernel, the march included, whose code
+  the setting does not touch (+21%). Inferred: the card's state in that row, not the setting. What would test it: the
+  two rows again, or the scene alone with the order reversed.
+- **The shadow queue in the log looked slower to drain** on the Menger cubes and the Noise library, with more rays cut
+  at the sample's end (Menger: 2886 → 10097). The rows' logs are different samples: on Menger the shadow-ray counts
+  already differ in the first round that makes any (258996 against 310625), before any occlusion ran. On lavapipe, both
+  scenes' shadow rays then go through every round the same both ways, with as many cut (the test added for it).
+- **The picture is the same.** The user saw it identical everywhere.
+- **The user's choice:** always on, the setting removed. Tests › occludedist went with it.
+
 ## STATUS (2026-10-16) — a glass-and-light scene: what it runs, what went (0.61.2), what to measure next
 
 The user asked (2026-10-16) whether render speed can be improved without losing anything of the picture, on
@@ -142,6 +212,10 @@ reading left over from another trace: the map ran no photons there (batches 1). 
 - an allow-list step-cache key;
 - dropping stepscale;
 - thinning the stored photons as a fix for the cut, which keeps the brightest first landings capped.
+- over-relaxed sphere tracing (Keinert et al. 2014, steps of 1.3-1.6 times the safe distance, checked and taken back):
+  built 2026-10-24, removed 2026-10-25 because the user's picture changed with it on. A lavapipe test of every camera and
+  shadow ray's end on six scenes and a grazed thin plate had passed it, so it is not to be built again without a test
+  that reproduces what the user saw (the commit that removed it says what it was).
 
 ## STATUS (2026-10-02) — measure first
 

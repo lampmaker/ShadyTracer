@@ -1,0 +1,380 @@
+//======================================================================================================================
+// THE MARCH ON DISTANCE ONLY ON A REAL WEBGPU (lib/pathtracer/core/wavefront.js prog_march's distOnly and prog_surface's
+// THE HIT ITSELF, scene_api.js FOLD_DIST; 0.next, the renderer's march always). Run:
+//   node builder/test/marchdist.gpu.mjs
+//
+// OPTIONAL, AND LOUD ABOUT IT, as stepcache.gpu.mjs is: the `webgpu` package and a Vulkan driver (lavapipe), or it says
+// so and passes.
+//
+// The user's requirement (2026-10-25): no change to the picture. It was the developer setting marchDist for one run of
+// Tests > marchdist, and is always on since; the full march is still prog_march with no option, the Optics page's. So:
+//   - THE KERNELS: camera rays through the full march and the distance-only one, pass after pass as the renderer chains
+//     it -- every bench scene as codegen, the optics bench as data, culled by boxes measured as the page measures them,
+//     and a haze box. Every ray ends in the same state, at the same place and in the same number of steps, bit for bit.
+//   - THE HIT SHADE READS: the surface kernel run over the distance-only march's queue, and the hit it writes back --
+//     ray, distance and normal, material, medium -- against the full march's own hit for the same ray, every field bit
+//     for bit. That hit is what the full march handed shade before.
+//   - THE WHOLE RENDERER (R.trace): a few samples of each scene as built, and from the same seeds with a full march put
+//     in its place, with lavapipe on one thread so the queues' order is the same both times (sppm.gpu.mjs says why both
+//     are needed). The pictures compared pixel by pixel -- how many bit for bit, the largest difference -- and,
+//     whatever that count, the two means within their paired error bar. The scenes: the showcase, the material test,
+//     dichroics, the Noise library and the Menger cubes, baked as the page shows them once the edits stop; Dusty beam's haze box (the march's haze build with
+//     it); and spheres and a smooth blend by hand, whose shapes give the normals the march no longer asks for.
+// COUNTS AND PICTURES, NOT TIMES (CLAUDE.md): what it saved was measured on the user's card (docs/PERFORMANCE.md).
+//======================================================================================================================
+import { readFileSync } from 'node:fs'
+import { execSync } from 'node:child_process'
+import { join } from 'node:path'
+import { pathToFileURL, fileURLToPath } from 'node:url'
+
+/* lavapipe reads it when the device is made, below: one thread, so the queues' order is the same every run */
+process.env.LP_NUM_THREADS ??= '0'
+/* every seed the renderer draws comes from Math.random (utilities.js seed_vec4u32): reseeded before each picture */
+const reseed = seed => {
+    let a = seed >>> 0
+    Math.random = () => {
+        a = (a + 0x6D2B79F5) >>> 0
+        let t = Math.imul(a ^ (a >>> 15), a | 1)
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+    }
+}
+
+let webgpu = null
+try { webgpu = await import('webgpu') } catch {
+    try { webgpu = await import(pathToFileURL(join(execSync('npm root -g').toString().trim(), 'webgpu/index.js')).href) } catch { }
+}
+if (!webgpu) { console.log('(distance-only march GPU check SKIPPED: no webgpu package. npm i -g webgpu to get it, and a Vulkan driver: lavapipe in a container.)'); process.exit(0) }
+
+const M = await import('../model.js')
+const { generate, boxLoName, boxHiName } = await import('../codegen.js')
+const { baked } = await import('../bake.js')
+const { liveInBench } = await import('../../bench/bake.js')
+const { cullBoxes, createBoxes, cullUniforms } = await import('../boxes.js')
+const { prog_tagfield, tagSample, TAG_FIELD_WORDS } = await import('../../lib/pathtracer/core/field.js')
+const { lightArrayDoc, CAMERA: LIGHT_ARRAY_CAMERA } = await import('../../bench/lightarray.js')
+const { CAMERAS, BENCH_FILES, benchUrl } = await import('../../bench/index.js')
+const { CAMERAS: SCALING_CAMERAS, SCALING_FILES } = await import('../../bench/scaling.js')
+const { WEBGPU } = await import('../../lib/tinywebgpu/src/tinywebgpu.js')
+const { prog_march, prog_surface, counterWords, COUNTER_WORDS } = await import('../../lib/pathtracer/core/wavefront.js')
+const { RAY_BYTES, SHADE_ITEM_BYTES, LEARN_WORDS } = await import('../../lib/pathtracer/core/tracebasics.js')
+const U = await import('../../lib/pathtracer/core/uniforms.schema.js')
+const { derive, LUMA } = await import('../../lib/pathtracer/core/photometry.js')
+const { effective } = await import('../../lib/pathtracer/quality.js')
+const { RAYTRACER } = await import('../../lib/pathtracer/core/raytrace_main.js')
+const { CAMERA } = await import('../../lib/camera.js')
+const { engineCamera } = await import('../../lib/pathtracer/core/units.js')
+const { defines, TOKENS, SHORT_TOKENS } = await import('../../lib/wgsl_shorthand.js')
+
+Object.assign(globalThis, webgpu.globals)
+let WG = null
+try {
+    globalThis.__dawn ??= webgpu.create([])
+    WG = WEBGPU()
+    await WG.init(0, {}, globalThis.__dawn)
+    WG.defines = defines(TOKENS, SHORT_TOKENS)
+} catch (e) {
+    console.log(`(distance-only march GPU check SKIPPED: no WebGPU device -- ${e?.message ?? e}. In a container, apt-get install mesa-vulkan-drivers.)`)
+    process.exit(0)
+}
+
+let pass = 0, fail = 0
+const ok = (name, cond, extra = '') => { if (cond) { pass++; return } fail++; console.log(`FAIL  ${name}${extra ? '\n      ' + extra : ''}`) }
+const say = console.log
+const quietly = async f => { const e = console.error, w = console.warn, l = console.log, i = console.info
+    console.error = console.warn = console.log = console.info = () => { }; try { return await f() } finally { console.error = e; console.warn = w; console.log = l; console.info = i } }
+const t0 = Date.now()
+
+const flat = v => v && typeof v === 'object' ? (Array.isArray(v) ? v : Object.values(v)) : v
+const sceneValues = scene => Object.fromEntries(Object.entries(scene.uniforms || {}).map(([k, u]) => [k, flat(u.def)]))
+function uniformBag(scene) {
+    const v = Object.fromEntries(Object.entries(U.UniformSpec).map(([k, s]) => [k, s.def]))
+    return { ...v, ...derive(v, { unit: scene.unit ?? 'm', extent: scene.extent ?? null, envRadius: scene.envRadius ?? null, haze: scene.haze ?? null }), ...sceneValues(scene) }
+}
+/* the boxes, measured as the page measures them (stepcache.gpu.mjs's, the same) */
+async function measure(doc, scene) {
+    const prog = await prog_tagfield(WG, scene); await prog.ready
+    const sample = async input => {
+        const count = new Uint32Array(input.buffer, input.byteOffset, 4)[3]
+        const inB = WG.createStorageBuffer(input), outB = WG.createStorageBuffer(Math.max(4 * TAG_FIELD_WORDS * count, 256))
+        prog.resources = { fieldIn: inB.b, fieldOut: outB.b }
+        prog.uniforms = { ...uniformBag(scene), res: [64, 64] }
+        prog.run(count, 1, 1)
+        const out = await outB.r(4 * TAG_FIELD_WORDS * count, 0, Float32Array)
+        inB.b.destroy(); outB.b.destroy()
+        return tagSample(out, scene)                     // four words a point (field.js), a copy's number among them
+    }
+    const B = createBoxes({ sample, doc: () => doc }); await B.update()
+    return B
+}
+const cullOf = (doc, S, B) => {
+    const cull = {}
+    for (const [id, b] of cullBoxes(doc, B)) { if (!(boxLoName(id) in (S.uniforms || {}))) continue; const { lo, hi } = cullUniforms(b); cull[boxLoName(id)] = lo; cull[boxHiName(id)] = hi }
+    return cull
+}
+
+/*----------------------------------------------------------------------------------------------------------------------
+  THE KERNELS: camera rays through the march, without the option and with it
+----------------------------------------------------------------------------------------------------------------------*/
+/* the rays as the engine's struct (stepcache.gpu.mjs has the layout) */
+const RAY_F = RAY_BYTES / 4, HIT_F = SHADE_ITEM_BYTES / 4
+function raysOf(pts, dirs) {
+    const n = pts.length / 3, f = new Float32Array(RAY_F * n), u = new Uint32Array(f.buffer)
+    for (let i = 0; i < n; i++) {
+        const o = RAY_F * i
+        f.set(pts.slice(3 * i, 3 * i + 3), o); f.set(dirs.slice(3 * i, 3 * i + 3), o + 4)
+        f[o + 12] = 1; f[o + 13] = 1; f[o + 14] = 1
+        u[o + 15] = 0; f[o + 16] = 1; f[o + 17] = 0; u[o + 18] = 0; u[o + 19] = 0; u[o + 20] = i; f[o + 21] = 1
+        u[o + 22] = 0; f[o + 23] = 0; f[o + 24] = -1; f[o + 25] = 0; f[o + 26] = 0
+    }
+    return f
+}
+const unit = v => { const l = Math.hypot(...v) || 1; return v.map(x => x / l) }
+/* an orbit camera's place, as the bench's cameras are written (stepcache.gpu.mjs cameraRays) */
+const eyeOf = cam => {
+    const RAD = Math.PI / 180, az = cam.azimuth * RAD, el = (90 - cam.elevation) * RAD
+    return [0, 1, 2].map(k => cam.target[k] + cam.distance * [Math.cos(el) * Math.cos(az), Math.cos(el) * Math.sin(az), Math.sin(el)][k])
+}
+function cameraRays(cam, W, H) {
+    const pos = eyeOf(cam), RAD = Math.PI / 180
+    const z = unit(pos.map((v, k) => v - cam.target[k])), x = unit([-z[1], z[0], 0]), y = [z[1] * x[2] - z[2] * x[1], z[2] * x[0] - z[0] * x[2], z[0] * x[1] - z[1] * x[0]]
+    const t = Math.tan(cam.fov * RAD / 2), pts = [], dirs = []
+    for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
+        const u = ((i + 0.5) / W * 2 - 1) * t * W / H, v = ((j + 0.5) / H * 2 - 1) * t
+        pts.push(...pos); dirs.push(...unit([0, 1, 2].map(k => -z[k] + u * x[k] + v * y[k])))
+    }
+    return { pts, dirs }
+}
+const inMetres = (rays, u) => { const r = rays.slice(); for (let i = 0; i < r.length / RAY_F; i++) for (let c = 0; c < 3; c++) r[RAY_F * i + c] *= u; return r }
+async function marchAll(prog, bag, rays0, buffers, passes = 160, keep = false) {
+    const n = rays0.length / RAY_F, rays = inMetres(rays0, bag.sceneUnit)
+    const mb0 = WG.createStorageBuffer(rays), mb1 = WG.createStorageBuffer(rays.byteLength)
+    const shade = WG.createStorageBuffer(HIT_F * 4 * n), counters = WG.createStorageBuffer(4 * Math.max(COUNTER_WORDS, 4))
+    prog.resources = { marchBuffer0: mb0.b, marchBuffer1: mb1.b, shadeBuffer: shade.b, counters: counters.b, ...buffers }
+    let inCount = n, readfrom = 0, shaded = 0
+    for (let p = 0; p < passes && inCount > 0; p++) {
+        counters.w(counterWords({ [readfrom]: inCount, 2: shaded, 3: readfrom }))
+        prog.uniforms = { ...bag, lastpass: p === passes - 1 ? 1 : 0 }
+        prog.dispatch(Math.ceil(inCount / 64), 1, 1)
+        const c = await counters.r(Uint32Array)
+        shaded = c[2]; inCount = readfrom === 0 ? c[1] : c[0]; readfrom = 1 - readfrom
+    }
+    const h = await shade.r(Float32Array), hu = new Uint32Array(h.buffer)
+    const out = new Array(n).fill(null)
+    for (let k = 0; k < shaded; k++) {
+        const o = HIT_F * k
+        out[hu[o + 20]] = { pos: [hu[o], hu[o + 1], hu[o + 2]], steps: hu[o + 15], state: hu[o + 19] }      // the place's bits
+    }
+    for (const b of [mb0, mb1]) b.b.destroy()
+    if (!keep) { shade.b.destroy(); counters.b.destroy(); return out }
+    return { out, words: hu, shaded, shade, counters }        // the queue as the march left it, for the surface kernel
+}
+/* THE HIT, field by field as struct Hit lays it out (tracebasics.js): the ray (RAY_F words), s (normal, distance), m, a,
+   insideW -- the item's first words; by the ray's pix, since the two marches' queues need not be in one order */
+const HIT_WORDS = RAY_F + 4 + 3
+const hitsByPix = (words, shaded) => { const m = new Map(); for (let k = 0; k < shaded; k++) { const o = HIT_F * k; m.set(words[o + 20], words.slice(o, o + HIT_WORDS)) } return m }
+async function kernels(label, S, buffers, extra, cam) {
+    const bag = { ...uniformBag(S), ...extra, res: [64, 64], seed: [1, 2, 3, 4], maxiter: 4000 }
+    const haze = S.haze ? 1 : 0
+    const K0 = await prog_march(WG, S, 64, { haze }), K1 = await prog_march(WG, S, 64, { haze, distOnly: 1 })
+    await K0.ready; await K1.ready
+    ok(`${label}: the march built without the option folds the whole hit, with it the distance alone`,
+        /let pass1 = /.test(K0.wgsl) && !/let pass1 = /.test(K1.wgsl))
+    const { pts, dirs } = cameraRays(cam, 64, 36)
+    const a = await marchAll(K0, bag, raysOf(pts, dirs), buffers), b = await marchAll(K1, bag, raysOf(pts, dirs), buffers)
+    const state = b.filter((h, i) => (h?.state ?? -1) !== (a[i]?.state ?? -1)).length
+    const steps = b.filter((h, i) => h && a[i] && h.steps !== a[i].steps).length
+    const place = b.filter((h, i) => h && a[i] && h.pos.some((v, k) => v !== a[i].pos[k])).length
+    const hits = a.filter(h => h?.state === 0).length
+    say(`  ${label}: ${a.length} camera rays, ${hits} hit, ${(a.reduce((s, h) => s + (h?.steps ?? 0), 0) / a.length).toFixed(1)} steps a ray; on distance only otherwise: ${state} state, ${steps} steps, ${place} place (bit for bit)`)
+    ok(`${label}: on distance only, every camera ray ends in the same state, in the same steps, at the same place bit for bit`, state + steps + place === 0,
+        `${state} state, ${steps} steps, ${place} place of ${a.length}`)
+    /* THE HIT SHADE READS: the surface kernel over the distance-only march's queue, the hit it wrote back against the full
+       march's, for every hit it answers (a ray that ended on a surface: RAY_ACTIVE) */
+    const SK = await prog_surface(WG, S, 64); await SK.ready
+    const full = await marchAll(K0, bag, raysOf(pts, dirs), buffers, 160, true), dist = await marchAll(K1, bag, raysOf(pts, dirs), buffers, 160, true)
+    const learn = WG.createStorageBuffer(4 * LEARN_WORDS)
+    dist.counters.w(counterWords({ 2: dist.shaded }))
+    SK.resources = { shadeBuffer: dist.shade.b, counters: dist.counters.b, learn: learn.b, ...buffers }
+    SK.uniforms = { ...bag, lastpass: 0 }
+    SK.dispatch(Math.ceil(dist.shaded / 64), 1, 1)
+    const written = hitsByPix(await dist.shade.r(Uint32Array), dist.shaded), want = hitsByPix(full.words, full.shaded)
+    let asked = 0, differ = 0, fields = new Set()
+    const NAMES = i => i < RAY_F ? 'ray' : ['s.x', 's.y', 's.z', 's.w', 'm', 'a', 'insideW'][i - RAY_F]
+    for (const [pix, w] of want) {
+        if (w[19] !== 0) continue                                   // not a surface's: the surface kernel leaves it
+        asked++
+        const g = written.get(pix)
+        const bad = g ? [...w.keys()].filter(i => w[i] !== g[i]) : [-1]
+        if (bad.length) { differ++; bad.forEach(i => fields.add(i < 0 ? 'missing' : NAMES(i))) }
+    }
+    say(`  ${label}: the surface kernel's hit, ${asked} asked, ${differ} differ from the full march's${differ ? ` (${[...fields].join(', ')})` : ''}`)
+    ok(`${label}: the hit the surface kernel writes back, every field bit for bit the full march's (ray, distance, normal, material, medium)`,
+        asked > 0 && differ === 0, `${differ} of ${asked}: ${[...fields].join(', ')}`)
+    for (const b of [full.shade, full.counters, dist.shade, dist.counters, learn]) b.b.destroy()
+}
+const docOf = url => M.parse(readFileSync(fileURLToPath(url), 'utf8'))
+const BENCH_SCENES = [
+    ['the optics bench', benchUrl(SCALING_FILES.bench), SCALING_CAMERAS.bench],
+    ['the demo', benchUrl(BENCH_FILES.demo), CAMERAS.demo],
+    ['the showcase', benchUrl(BENCH_FILES.showcase), CAMERAS.showcase],
+    ['the material test', benchUrl(BENCH_FILES.materials), CAMERAS.materials],
+    ['dichroics', benchUrl(BENCH_FILES.dichroics), CAMERAS.dichroics],
+    // the reliefs and the warps: two bench scenes this test did not have until shadow rays went distance-only (0.next)
+    ['the Noise library', benchUrl(BENCH_FILES.noise), CAMERAS.noise],
+    ['the Menger cubes', benchUrl(BENCH_FILES.Menger_cubes), CAMERAS.Menger_cubes],
+]
+for (const [label, url, cam] of BENCH_SCENES) {
+    const doc = docOf(url)
+    const S = generate(...M.generateArgs(doc, { id: 'built' }))
+    const B = await measure(doc, S)
+    await kernels(`${label} (codegen)`, S, {}, cullOf(doc, S, B), cam)
+    if (url !== BENCH_SCENES[0][1]) continue
+    // the optics bench as data: every node's box in its records (the page's pushCull: nested)
+    const [tree] = M.generateArgs(doc, { data: true })
+    const D = generate(...M.generateArgs(doc, { id: 'built', data: true }))
+    D.data = D.dataOf(tree, cullBoxes(doc, B, { nested: true })).data
+    await kernels(`${label} (as data)`, D, await D.init(WG), {}, cam)
+}
+{
+    const url = new URL('../../scenes/dusty-beam.json', import.meta.url), doc = docOf(url)
+    const S = generate(...M.generateArgs(doc, { id: 'built' }))
+    ok('Dusty beam has a haze box (the march\'s haze build is checked on it)', !!S.haze)
+    await kernels('Dusty beam (a haze box)', S, {}, {}, doc.view.camera)
+}
+/* LIGHTS IN ARRAYS (bench/lightarray.js, merged from dev with them): a row of 16 and a ring of 16 rows of 16, their content
+   boxes measured as the bench measures them, so each array's window (builder/arrays.js) is live -- code the scene runs
+   through add_new and fold that no scene had before it, and that the distance-only fold must answer as the full one does */
+const LIGHT_ARRAYS = []
+for (const kind of ['row', 'ring']) {
+    const doc = lightArrayDoc(kind)
+    const S = generate(...M.generateArgs(doc, { id: `md-la-${kind}` }))
+    const B = await measure(doc, S), cull = cullOf(doc, S, B)
+    ok(`lights in a ${kind}: the array's window in the text and its content box measured`, /arrWindow/.test(S.wgsl) && Object.keys(cull).length > 0, Object.keys(cull).join(' '))
+    await kernels(`lights in a ${kind} (codegen, the window live)`, S, {}, cull, LIGHT_ARRAY_CAMERA)
+    if (kind === 'ring') {
+        const [tree] = M.generateArgs(doc, { data: true })
+        const D = generate(...M.generateArgs(doc, { id: `md-la-ring-data`, data: true }))
+        D.data = D.dataOf(tree, cullBoxes(doc, B, { nested: true })).data
+        await kernels('lights in a ring (as data, the window live)', D, await D.init(WG), {}, LIGHT_ARRAY_CAMERA)
+    }
+    LIGHT_ARRAYS.push({ kind, doc, B })
+}
+
+/*----------------------------------------------------------------------------------------------------------------------
+  THE WHOLE RENDERER: the picture as built, and with a full march put in its place, from the same seeds
+----------------------------------------------------------------------------------------------------------------------*/
+const W = 32, H = 24, SAMPLES = 4
+const target = WG.device.createTexture({ size: [W, H], format: WG.format, usage: GPUTextureUsage.RENDER_ATTACHMENT }).createView()
+const bagFor = (scene, cam, { cull = {}, ...over } = {}) => {
+    const v = { ...U.defaultUniformValues(), envMode: 0, uSunElevation: 50, uSunAzimuth: 30, sunDiameter: 0.53, sunIlluminance: 100000,
+                skyIlluminance: 20000, nee: 1, lt: 1, ltPhotons: 1, ltLearn: 0, maxbounce: 8, rr: 0, fireflyClamp: 0,
+                maxaverages: 0, autoExposure: 0, sppm: 0, ...over }
+    const traced = effective(v)
+    const derived = derive(traced, { unit: scene.unit, extent: scene.extent, envRadius: scene.envRadius, haze: scene.haze })
+    const EC = engineCamera({ ...cam.getUniforms(), camLens: [0, 1, 0, 0] }, 0, derived.sceneUnit)
+    return Object.fromEntries(Object.entries({ ...sceneValues(scene),
+        ...Object.fromEntries(Object.entries(traced).map(([k, x]) => [k, U.uniformToGPU(x, U.UniformSpec[k]?.type)])),
+        ...derived, invView: EC.invView, invProjection: EC.invProjection, camPos: EC.camPos, camLens: EC.camLens, camtype: 0, ...cull })
+        .filter(([k]) => k in U.ComputeUniformTypes || k in U.UniformSpec || k in (scene.uniforms || {})))
+}
+/* a fresh renderer a picture, so the two start alike; its seeds from `seed`. `full`: its march replaced by the full one
+   (prog_march with no option, the Optics page's), bound as R.rebind binds the renderer's own */
+const picture = async (scene, cam, over, seed, full = false) => {
+    const Q = { w: W, h: H, resetframecount: 1 }
+    const R = RAYTRACER(WG, null, Q, scene)
+    R.hud = () => { }
+    let err = null
+    try { await quietly(() => R.init()) } catch (e) { return { err: e?.message ?? String(e) } }
+    const bag = bagFor(scene, cam, over)
+    R.kernelOptions = R.kernelOptionsOf(bag)
+    await quietly(() => R.applyKernelOptions())
+    if (full) {
+        const m = await prog_march(WG, scene, R.wvf_wg, { haze: scene.haze ? 1 : 0 }); await m.ready
+        R.prog_wvfmarch = m
+        R.rebind()
+    }
+    const marchText = R.prog_wvfmarch.wgsl
+    reseed(seed)
+    try {
+        Q.resetframecount = 1
+        await quietly(() => R.trace(Q, bag, 1, target))
+        Q.resetframecount = 0
+        if (SAMPLES > 1) await quietly(() => R.trace(Q, bag, SAMPLES - 1, target))
+        await WG.device.queue.onSubmittedWorkDone()
+    } catch (e) { err = e?.message ?? String(e) }
+    const a = await R.accumulation_u32.r(W * H * 16, 0, Uint32Array)
+    const f = new Float32Array(a.buffer, a.byteOffset, a.length)
+    return { err, marchText, bits: Array.from(a), img: Array.from({ length: W * H }, (_, i) => LUMA[0] * f[i * 4] + LUMA[1] * f[i * 4 + 1] + LUMA[2] * f[i * 4 + 2]) }
+}
+/* the two pictures' means, a over b, with the error of the pixels' paired differences (haze.gpu.mjs paired) */
+const paired = (a, b) => {
+    const n = a.length, mb = b.reduce((s, x) => s + x, 0) / n
+    const d = a.map((x, i) => x - b[i]), md = d.reduce((s, x) => s + x, 0) / n
+    return { mean: 1 + md / mb, se: Math.sqrt(d.reduce((s, x) => s + (x - md) ** 2, 0) / Math.max(n - 1, 1) / n) / mb, of: mb }
+}
+const camOf = (orbit, aspect) => {
+    const cam = CAMERA({ aspect, fov: orbit.fov ?? 40, up: [0, 0, 1] })
+    cam.setPose({ pos: eyeOf(orbit), target: orbit.target, up: [0, 0, 1] })
+    return cam
+}
+async function compare(label, scene, orbit, over = {}) {
+    const cam = camOf(orbit, W / H)
+    const off = await picture(scene, cam, over, 7, true), on = await picture(scene, cam, over, 7)
+    ok(`${label}: both pictures traced, the renderer's march on distance only and the full one put in its place`, !off.err && !on.err
+        && /let pass1 = /.test(off.marchText) && !/let pass1 = /.test(on.marchText), `${off.err ?? ''} ${on.err ?? ''}`)
+    if (off.err || on.err) return
+    const px = W * H
+    let same = 0, worst = 0
+    for (let i = 0; i < px; i++) {
+        if ([0, 1, 2, 3].every(c => on.bits[4 * i + c] === off.bits[4 * i + c])) same++
+        const m = Math.max(Math.abs(off.img[i]), 1e-30)
+        worst = Math.max(worst, Math.abs(on.img[i] - off.img[i]) / m)
+    }
+    const p = paired(on.img, off.img)
+    const lit = off.img.filter(x => x > 0).length
+    say(`  ${label}: ${same} of ${px} pixels bit for bit (${lit} lit), the largest difference ${(100 * worst).toFixed(3)} %, mean as built / full march ${p.mean.toFixed(5)} +- ${p.se.toFixed(5)}`)
+    ok(`${label}: a picture to compare -- most pixels lit`, lit > px / 2, `${lit} of ${px}`)
+    ok(`${label}: the picture's mean within its paired error bar of the full march's`, Math.abs(p.mean - 1) <= Math.max(3.5 * p.se, 1e-6), `${p.mean} +- ${p.se}`)
+    ok(`${label}: every pixel bit for bit as with the full march`, same === px, `${same} of ${px}`)
+}
+const bakedOf = (doc, id) => baked(generate(...M.generateArgs(doc, { id })), { live: liveInBench })
+for (const [label, url, cam] of BENCH_SCENES.slice(2)) await compare(`${label}, baked`, bakedOf(docOf(url), `md-${label}`), cam)
+// the light arrays baked, their measured boxes written as the page writes them, so the window runs in the renderer too
+for (const { kind, doc, B } of LIGHT_ARRAYS) {
+    const S = bakedOf(doc, `md-la-${kind}-baked`)
+    await compare(`lights in a ${kind}, baked, the window live`, S, LIGHT_ARRAY_CAMERA, { cull: cullOf(doc, S, B) })
+}
+{
+    const url = new URL('../../scenes/dusty-beam.json', import.meta.url), doc = docOf(url)
+    const S = generate(...M.generateArgs(doc, { id: 'md-dusty' }))
+    await compare('Dusty beam (a haze box)', S, doc.view.camera)
+}
+/* SPHERES AND A SMOOTH BLEND BY HAND, on a floor, in glass and out: shapes that give a normal (Nsphere, csgUnion's blend
+   of two), the normals the march no longer asks for and the surface kernel now does */
+{
+    const scene = {
+        id: 'md-spheres', title: 'md-spheres', unit: 'm', extent: 3, envRadius: 6, uniforms: {},
+        wgsl: /*wgsl*/`
+fn getMaterial2(C: Hit, checkInside: bool) -> Material2 {
+    let idx = select(C.m, C.a, checkInside);
+    var m = makeDefaultMaterial();
+    if (idx == 1u) { m = makeDiffuse(vec3<f32>(0.7, 0.7, 0.7), 1.0); }
+    if (idx == 2u) { m = makeDiffuse(vec3<f32>(0.8, 0.3, 0.2), 1.0); }
+    if (idx == 3u) { m = makeGlassSmooth(vec3<f32>(1.0), 1.5); }
+    return m;
+}
+fn SDF(r: Ray) -> Hit {
+    var C = emptyHit(r);
+    C = add_new(C, Nplane(r.pos), 1u);
+    C = add_new(C, csgUnion(Nsphere(r.pos - VEC3(-0.5, 0.0, 0.45), 0.45), Nsphere(r.pos - VEC3(0.1, 0.2, 0.35), 0.35), 0.2), 2u);
+    C = add_new(C, Nsphere(r.pos - VEC3(0.7, -0.5, 0.4), 0.4), 3u);
+    return C;
+}`,
+    }
+    await compare('spheres, a blend and a glass ball by hand', scene, { azimuth: -60, elevation: 65, distance: 4, target: [0, 0, 0.3], fov: 45 })
+}
+
+say(`  ${((Date.now() - t0) / 1000).toFixed(0)} s`)
+console.log(`distance-only march on the GPU: ${pass} passed, ${fail} failed`)
+process.exit(fail ? 1 : 0)
