@@ -13,7 +13,7 @@ true?"). A plan built on inferences written as facts was reverted (commit fdc333
 it had called one scene's slow render "this architecture's full-resolution cost", which the user's
 own numbers contradict.
 
-## STATUS (2026-10-26) — answers along the ray: counted, then built behind a switch; not measured on a card
+## STATUS (2026-10-26) — answers along the ray: counted, built behind a switch, measured once: fewer steps, mostly not less time
 
 The user asked (2026-10-26) about exact intersections for basic shapes, a relief's included ("check if there is any
 intersection possible at all"), for rays running nearly parallel to a surface. **Exact hits were built once (0.18 to
@@ -70,9 +70,37 @@ build itself now, and reads the same steps as the count's table below, to the de
   one's on all five scenes tried, each within its error bar. An answer now stops half the tolerance short, and a step is
   never shorter than the plain one: no ray ends inside, and the five means read 0.98 to 1.04, on both sides of 1
   (`wavefront.js` ALONG_STEP_WGSL). The step counts did not move.
-- **Not known: the cost.** Steps are not time. An answered step does the answers' arithmetic beside the distance. What
-  a step costs with answers is the card's to say: **Tests > alongray**, each scene baked with and without answers,
-  dichroics and the prism scene with their lights' photons first, the material test also with a sun at 5 degrees.
+- **Measured: the user's Ampere card**, Tests > alongray (`ShadyTracer 0.78.0 · 4c69c91 (ccr-0f3a020a-590jz2) · nvidia
+  ampere`, 2026-10-26, 1280 x 720, baked). GPU ms a sample, without -> with answers:
+
+  | scene | answering | the whole sample | march | occlude |
+  |---|---|---|---|---|
+  | dichroics, its light's photons, the map on | 10 + a band | 176.1 -> 189.7 | 94.3 -> 108.3 | 18.7 -> 18.4 |
+  | the prism scene, 5 degrees over its table, the same | 2 | 66.1 -> 65.5 | 13.2 -> 11.3 | 7.6 -> 10.1 |
+  | the material test | 2 | 35.3 -> 34.6 | 9.8 -> 9.2 | 3.9 -> 3.5 |
+  | the material test, the sun at 5 degrees | 2 | 38.1 -> 32.3 | 10.4 -> 9.8 | 5.0 -> 2.9 |
+  | the Noise library | 8 | 91.6 -> 106.9 | 35.9 -> 42.4 | 21.8 -> 27.2 |
+  | the Menger cubes | 4 | 64.0 -> 65.9 | 30.8 -> 31.5 | 12.6 -> 12.5 |
+  | the showcase | 11 | 39.9 -> 42.0 | 7.9 -> 10.1 | 2.8 -> 3.9 |
+  | the optics bench (answers nothing: the same text twice) | 0 | 25.6 -> 22.4 | 5.9 -> 5.8 | 2.4 -> 2.2 |
+
+  - **What the run can tell apart.** The optics bench's two rows are the same text, and read 12 % apart in the whole
+    sample (its march 2 %). The drift row read row 1 again 3 % higher. A difference under about 12 % in a sample is
+    inside this run's noise.
+  - **Slower where many shapes answer:** the march of dichroics +15 %, the Noise library +18 % (its shadow rays +25 %),
+    the showcase +28 %. These are the scenes counted to take the most fewer steps. The showcase's camera rays took 26 %
+    fewer steps on lavapipe and its march 28 % more time here, so a step cost about 1.7 times as much (measured over two
+    machines: inferred).
+  - **Faster where few answer and rays graze:** the material test under a 5 degree sun, its shadow rays -42 % and the
+    sample -15 %; the prism scene's march -14 % (its shadow rays +33 %).
+  - **Fewer truncated paths:** rays ended by the iteration budget (`budgetFlushed`) went 30 -> 6 on the prism scene and
+    11 -> 0 on the material test. Shadow rays cut at the sample's end went 85 -> 0 on the prism scene, but 2918 -> 9237 on
+    the Menger cubes (not understood: the two rows trace different samples).
+  - **Why, inferred:** every answering shape works out its answer at every step, so the cost of a step grows with the
+    number of answering shapes. Most of what an answer gains is likely the NEAREST answering shape's: it is the one whose
+    distance sets the plain step, and the others' distances are no nearer. Answering only that one, with the others
+    folded in by their distance, would still be safe, and would give a step between the plain one and today's. What
+    would test it: build that, and run Tests > alongray again.
 
 ## STATUS (2026-10-25) — the march and shadow rays on distance only: measured, and always on
 
