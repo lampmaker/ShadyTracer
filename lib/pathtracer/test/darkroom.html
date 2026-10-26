@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Darkroom viewer · check</title>
+<!-- THE DARKROOM'S VIEWER, for lib/pathtracer/test/darkroom.check.mjs: darkroom/viewer.js in a box of a fixed size,
+     over a stand-in darkroom that records what it is asked to draw and read -- no WebGPU here (the container's
+     software adapter kills the browser), so the picture itself is the user's to judge, and everything else is this. -->
+<link rel="stylesheet" href="../../shell/shell.css">
+<style>html, body { margin: 0; background: var(--sh-panel); } #v { width: 800px; height: 500px; }</style>
+</head>
+<body>
+<div id="v"></div>
+<script type="module">
+import { makeViewer } from '../darkroom/viewer.js'
+
+const draws = [], reads = []
+const NOW = { tag: 'now' }, BEFORE = { tag: 'before' }
+const darkroom = {
+    async preview(ctx, s, opts) { if (window.CHECK.fail) throw new Error(window.CHECK.fail); draws.push({ canvas: ctx.canvas.dataset.dr, w: ctx.canvas.width, h: ctx.canvas.height, tag: s.tag, ...opts }) },
+    async pixel(x, y) { reads.push([x, y]); return { rgb: [1.5, 2.5, 0.25], Y: 2.1 } },
+}
+const V = makeViewer(document.getElementById('v'), { darkroom, settings: () => NOW, before: () => BEFORE, context: canvas => ({ canvas }) })
+window.CHECK = { V, draws, reads, fail: null }
+</script>
+</body>
+</html>

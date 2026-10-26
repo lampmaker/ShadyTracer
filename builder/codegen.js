@@ -42,7 +42,8 @@
 //======================================================================================================================
 
 import { FIELDS as MATERIAL_FIELDS, FIELDS_OF, COAT_FIELDS, hasCoating, reliefMaterialId, reliefOwner } from './materials.js'
-import { hasFace, lightOf, lightRGBObject, beamOf } from './lights.js'
+import { hasFace, lightOf, lightRGBObject, beamOf, arraysOf, copyCount, arrayedLightProblem } from './lights.js'
+import { copyPattern, codeOf, contentKey, ARRAY_WINDOW_WGSL } from './arrays.js'
 import { sceneExtent } from './bounds.js'
 import { SCENE_PRELUDE } from '../lib/pathtracer/core/scene_api.js'
 import { NO_LIGHT_FACES } from '../lib/pathtracer/core/uniforms.schema.js'
@@ -772,7 +773,7 @@ function emitMaterials(e, materials, matIdOf, uniforms, wantLocal, lights = []) 
         e.raw(`                m.emissive = UB.${c} / max(dot(UB.${c}, LUMA_709), 1e-6) * le * w;`)
         e.raw('            }')
         e.raw(`            m.lightTraced = ${L.transparent ? 2 : 1}u;`)
-        e.raw(`            fm = m; face = ${lights.indexOf(L) + 1}u;     // to the one weight below`)
+        e.raw(`            fm = m; face = ${L.first + 1}u;     // to the one weight below${L.faces > 1 ? ': its first copy\'s, which weighs as every copy (lights.js)' : ''}`)
         e.raw('        }')
     }
     // 0 is MAT_AIR, the medium: never shaded, asked only for its IOR, which the default has as 1
@@ -817,34 +818,39 @@ function emitLightFaces(e, lights, liveVisibility) {
         const shown = liveVisibility ? L.visChain.map(id => `UB.${visName(id)} != 0u && `).join('') : ''
         return `select(0.0, 1.0, ${shown}u32(UB.${uniformName(L.id, 'beam')}.x + 0.5) != 0u)`
     }
-    e.raw(`const LIGHT_FACES: u32 = ${lights.length}u;`)
+    e.raw(`const LIGHT_FACES: u32 = ${faceCount(lights)}u;`)
     e.raw('fn lightFaceTotal() -> f32 {')
     e.raw('    var t = 0.0;')
-    for (const L of lights) e.raw(`    t += ${weight(L)};     // light ${L.id}`)
+    for (const L of lights) e.raw(faceTotalLine(L, weight(L)))
     e.raw('    return t;')
     e.raw('}')
     // u in [0, lightFaceTotal()): the face whose share of it u falls in (the last one shown, past the end)
     e.raw('fn lightFacePick(u: f32) -> u32 {')
     e.raw('    var acc = 0.0;')
     e.raw('    var last = 0u;')
-    lights.forEach((L, i) => {
-        e.raw(`    { let w = ${weight(L)}; if (w > 0.0) { last = ${i}u; acc += w; if (u < acc) { return ${i}u; } } }     // light ${L.id}`)
-    })
+    for (const L of lights) e.raw(facePickLine(L, weight(L)))
     e.raw('    return last;')
     e.raw('}')
     e.raw('fn lightFace(i: u32) -> LightFace {')
     e.raw('    var f: LightFace;')
     if (lights.length) {
         e.raw('    switch (i) {')
-        lights.forEach((L, i) => {
+        lights.forEach(L => {
             const par = k => L.constants[k] ? wgslLiteral(L.params[k], L.constants[k]) : `UB.${uniformName(L.id, k)}`
             const c = uniformName(L.id, 'emissive'), l = uniformName(L.id, 'emissiveLuminance'), b = uniformName(L.id, 'beam')
-            e.raw(`        case ${i}u: {     // light ${L.id}`)
+            e.raw(`        case ${faceCases(L)}: {     // light ${L.id}`)
+            for (const a of copyIndexLines(L)) e.raw(`            ${a}`)
             e.raw('            var M = mat3x3<f32>(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0);')
             e.raw('            var S = 1.0;')
             e.raw('            var t = VEC3(0.0);')
-            for (const id of L.xfChain)
-                e.raw(`            { let T = UB.${xfName(id)}; t += M * (S * T[3].xyz); M = M * xfRot(T); S *= T[3].w; }`)
+            for (const id of L.xfChain) {
+                if (typeof id === 'string') { e.raw(`            { let T = UB.${xfName(id)}; t += M * (S * T[3].xyz); M = M * xfRot(T); S *= T[3].w; }`); continue }
+                /* A COPY OF AN ARRAY: its transform by this face's copy index, entered where the SDF enters it (group(),
+                   AN ARRAY), picked by a switch as there -- uniforms are not arrays */
+                const g = L.arrays.find(a => a.id === id.copiesOf)
+                e.raw(`            { var T = mat4x4<f32>(); switch (c_${g.id}) { ${Array.from({ length: g.count }, (_, k) => `case ${k}u: { T = UB.${copyName(g.id, k)}; }`).join(' ')} default: { } }`)
+                e.raw('              t += M * (S * T[3].xyz); M = M * xfRot(T); S *= T[3].w; }')
+            }
             e.raw('            f.centre = t; f.u = M[0]; f.v = M[1]; f.n = M[2];')
             e.raw(L.shape === 'rectangle' ? `            f.half = VEC2(${par('width')}, ${par('height')}) * (0.5 * S); f.shape = 2u;`
                                           : `            f.half = VEC2(${par('radius')}) * S; f.shape = 1u;`)
@@ -862,6 +868,35 @@ function emitLightFaces(e, lights, liveVisibility) {
     e.raw('fn lightFaceLe(f: LightFace, cosT: f32) -> VEC3 {')
     e.raw('    return f.le * lightBeam(f.beam, cosT);')
     e.raw('}')
+}
+/* ...THE TEXT A LIGHT'S FACES TAKE, LINEAR IN THE LIGHTS AND NOT IN THEIR COPIES (lights.js A LIGHT INSIDE ARRAYS): its term
+   of the total and its line of the pick, the light's weight times its number of faces -- every copy weighs what the
+   light weighs -- and within it the copy u falls in, as a loop over the faces one by one would find it: the weights are 0
+   or 1, so the sums are whole numbers and exact in f32, the same numbers shade's own loop over the table adds
+   (tracebasics.js FACE_TABLE). A light under no array is the line it always was, byte for byte (the golden shaders).
+   Shared with the scene as data (scenedata.js lightFacesWGSL). */
+export const faceCount = lights => lights.reduce((k, L) => k + (L.faces ?? 1), 0)
+export const faceTotalLine = (L, w) => (L.faces ?? 1) === 1 ? `    t += ${w};     // light ${L.id}`
+    : `    t += ${w} * ${L.faces}.0;     // light ${L.id}, ${L.faces} copies`
+export function facePickLine(L, w) {
+    const K = L.faces ?? 1, first = L.first ?? 0
+    if (K === 1) return `    { let w = ${w}; if (w > 0.0) { last = ${first}u; acc += w; if (u < acc) { return ${first}u; } } }     // light ${L.id}`
+    return `    { let w = ${w}; if (w > 0.0) { last = ${first + K - 1}u; if (u < acc + w * ${K}.0) { return ${first}u + min(u32((u - acc) / w), ${K - 1}u); } acc += w * ${K}.0; } }     // light ${L.id}, ${K} copies`
+}
+/** a light's case of a switch over the faces: its own index, or one for each copy */
+export const faceCases = L => Array.from({ length: L.faces ?? 1 }, (_, k) => `${(L.first ?? 0) + k}u`).join(', ')
+/** ...and, in it, each array's copy for face i, innermost fastest (lights.js copyIndices): `c_<group>` */
+export function copyIndexLines(L) {
+    if (!L.arrays?.length) return []
+    const out = [`let j = i - ${L.first}u;`]
+    let inner = 1
+    const lines = []
+    for (let k = L.arrays.length - 1; k >= 0; k--) {
+        const g = L.arrays[k]
+        lines.unshift(`let c_${g.id} = (j / ${inner}u) % ${g.count}u;`)
+        inner *= g.count
+    }
+    return [...out, ...lines]
 }
 
 /**
@@ -926,7 +961,7 @@ export function generate(tree, opts = {}) {
     /* HOW BIG IT IS, in scene units: the renderer sizes its surface tolerance from this
        (bounds.js sceneExtent, an estimate since objects are code; photometry.js derive) */
     const extent = Array.isArray(tree) ? null : sceneExtent(tree)
-    const { lights: _l, _data, ...out } = scene
+    const { lights: _l, _data, _windows, ...out } = scene
     /* carryUniforms false: every uniform here is the document's own value, and its default IS that value.
        The renderer carries a value across setScene by NAME, and ids repeat between documents (o3 is in
        every scene), so the scene shown before put its o3's transform on this one's: the material test's
@@ -951,6 +986,9 @@ export function generate(tree, opts = {}) {
         Object.defineProperty(result, 'compiledIds', { enumerable: false, value: _data.compiledIds })
     }
     if (dataRefused) Object.defineProperty(result, 'dataRefused', { enumerable: false, value: dataRefused })
+    /* WHICH ARRAYS' COPIES HAVE A WINDOW, AND HOW (arrays.js): id -> the pattern's code, as the render copy's text compiles
+       it in -- a copies edit that makes another pattern of one needs that text again (demo.js nodeLive) */
+    Object.defineProperty(result, 'arrayWindows', { enumerable: false, value: new Map([..._windows].map(([id, p]) => [id, codeOf(p)])) })
     /* MADE WITHOUT ITS BOUNDING BOXES (opts.cull false: a generation option the bench alone sets since 0.34.0, the
        renderer's setting `cull` before): no box test anywhere in its text, codegen's or the records' walk -- a mode of
        its own to the page's mode watcher (index.html), never the one it wants */
@@ -980,7 +1018,7 @@ export function generate(tree, opts = {}) {
    IN A CSG GROUP a hidden child is ABSENT, not an empty shape: its block and its combine are skipped, and a
    runtime flag makes the first VISIBLE child the base -- an empty shape as the base of a subtraction, or
    one side of an intersection, would have emptied the whole group. */
-function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, optics = false, liveVisibility = false, cull = 'dear', editing = null, data = false, carry = null, count = false } = {}) {
+function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, optics = false, liveVisibility = false, cull = 'dear', editing = null, data = false, carry = null, count = false, arrayWindow = true } = {}) {
     /* `cull` (ONLY THE DEAR ONES below): 'dear', the builder's way since 0.34.0; 'all' and false the bench's alone. `true`
        meant every box until then, and the builder passed it -- refused rather than read as one or the other */
     if (cull !== 'dear' && cull !== 'all' && cull !== false)
@@ -1040,7 +1078,7 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
        in the frames of the groups between, and left out of the combine where it sits. Not drawn, it
        had no face and no rays, and nothing in the view said why. */
     const lights = []
-    const warpedLights = new Set()
+    const warpedLights = new Map()          // id -> why it is not drawn
     /* A HOISTED LIGHT: id -> { at, through }, `at` the outermost CSG group above it, `through` the
        groups between that and the light, outermost first -- the frames and the visibility it is drawn
        in after `at`'s combine (children(), emitHoisted). hoistedAt: group id -> its lights, in order. */
@@ -1051,14 +1089,20 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
        the root left out, outermost first. */
     const collectLights = (n, warped, xfChain = [], visChain = [], above = []) => {
         if (n.kind === 'object' && n.type === 'light' && hasFace(n.light)) {
-            if (warped) warpedLights.add(n.id)
+            const arrayed = warped ? null : arrayedLightProblem(above, isCsg)
+            if (warped) warpedLights.set(n.id, 'a light inside group code: not drawn')
+            else if (arrayed) warpedLights.set(n.id, `a light not drawn: ${arrayed}`)
             else {
                 const L = lightOf(n)
+                /* ITS FACES (lights.js A LIGHT INSIDE ARRAYS): one a copy of every array above it, numbered from `first`,
+                   the light's own place among the faces; its material one for them all */
+                const first = lights.reduce((k, x) => k + x.faces, 0)
                 // the face's exact colour (a negative channel outside the gamut): the display clips it
                 lights.push({ id: n.id, matId: materials.length + 4 + lights.length, colour: lightRGBObject(L), luminance: L.luminance,
                               beam: beamOf(L), transparent: L.transparent, twoSided: L.twoSided, shape: L.shape,
                               xfChain: n.transform ? [...xfChain, n.id] : xfChain, visChain: [...visChain, n.id],
-                              params: n.params || {}, constants: n.constants || {} })
+                              params: n.params || {}, constants: n.constants || {},
+                              arrays: arraysOf(above).map(g => ({ id: g.id, count: g.copies.length })), faces: copyCount(above), first })
                 // the outermost combine: always a CSG group (a plain group combines only as one's shape)
                 const at = above.findIndex(g => combined.has(g.id))
                 if (at >= 0) {
@@ -1068,13 +1112,16 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
             }
         }
         const w = warped || (n !== tree && n.kind === 'group' && hasCode(n))
-        const xf = n !== tree && n.transform ? [...xfChain, n.id] : xfChain
+        // an array's copy is entered after the group's own frame (group(), AN ARRAY): a step of the chain of its own
+        const xf0 = n !== tree && n.transform ? [...xfChain, n.id] : xfChain
+        const xf = n !== tree && n.kind === 'group' && n.copies?.length ? [...xf0, { copiesOf: n.id }] : xf0
         const vis = n !== tree ? [...visChain, n.id] : visChain
         const up = n !== tree && n.kind === 'group' ? [...above, n] : above
         for (const c of n.children || []) collectLights(c, w, xf, vis, up)
     }
     collectLights(tree, false)
     const lightOfId = new Map(lights.map(L => [L.id, L]))
+    const windowed = new Map()          // array id -> its pattern, where its copies have a window (below, before SDF)
     const e = new Emit()
 
     /* THE ENGINE PRELUDE, the same SCENE_PRELUDE string prog_march compiles the scene after:
@@ -1389,7 +1436,7 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
             const why = node.type === 'export' ? 'an export box: draws nothing'
                 : node.type === 'haze' ? 'a haze box: draws nothing (the renderer\'s dust, scene.haze)'
                 : node.type !== 'light' ? 'an optics limiter, not in the picture'
-                : warpedLights.has(node.id) ? 'a light inside group code: not drawn' : 'a ray file: no geometry'
+                : warpedLights.get(node.id) ?? 'a ray file: no geometry'
             line(d, `// node ${node.id} (${node.type}): ${why}`)
             return
         }
@@ -1729,15 +1776,53 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
                copy combined and folded on its own, as before (scenedata.js the same) */
             const together = combined.has(g.id) && !isCsg(g)
             if (together) combineOpen(d + 1, g, true)
-            line(d + 1, `for (var ${c} = 0u; ${c} < ${K}u; ${c} = ${c} + 1u) {`)
-            line(d + 2, `var T_${g.id}: mat4x4<f32>;`)
-            line(d + 2, `switch ${c} {`)
-            g.copies.forEach((_, i) => line(d + 3, `case ${i}u: { T_${g.id} = UB.${copyName(g.id, i)}; }`))
-            line(d + 3, 'default: { }')
-            line(d + 2, '}')
+            const win = windowed.get(g.id), every = win && arrayWindow === 'every'
+            if (win) {
+                /* ...A WINDOW OF THEM (arrays.js THE WINDOW): a row's or a ring's copies near the point, from its content's
+                   box (cullBoxes, contentKey: unknown until measured, and then every copy as before), the rest a bound in
+                   CULL -- here, in the group's frame, at its scale to the world */
+                const lo = boxLoName(contentKey(g.id)), hi = boxHiName(contentKey(g.id))
+                uniforms[lo] = { type: 'vec4<f32>', def: [0, 0, 0, 0] }
+                uniforms[hi] = { type: 'vec4<f32>', def: [0, 0, 0, 0] }
+                const i = g.id
+                line(d + 1, `var wf_${i} = 0; var wn_${i} = ${K}u;     // the window: its first copy, how many (all, until the box is known)`)
+                line(d + 1, `{ let wl = UB.${lo}; let wh = UB.${hi};`)
+                line(d + 2, 'if (wl.w != 0.0) {')
+                const row = win.kind === 'row'
+                line(d + 3, `let w0 = UB.${copyName(i, 0)};${row ? ` let w1 = UB.${copyName(i, 1)};` : ''}`)
+                // (aw, not W: the page's shorthand makes W a vec3, wgsl_shorthand.js SHORT_TOKENS)
+                line(d + 3, `let aw = arrWindowOf(${codeOf(win)}u, ${K}u, p, xfRot(w0), w0[3].xyz, w0[3].w, ${row ? 'w1' : 'w0'}[3].xyz, wl.xyz, wh.xyz, XF_S);`)
+                // (`every`, the bench's question only: the window's own first copy, then every copy, nothing in CULL)
+                line(d + 3, every ? `wf_${i} = aw.first;` : `CULL = min(CULL, aw.bound); wf_${i} = aw.first; wn_${i} = aw.count;`)
+                line(d + 2, '}')
+                line(d + 1, '}')
+                line(d + 1, `for (var cm_${i} = 0u; cm_${i} < wn_${i}; cm_${i} = cm_${i} + 1u) {`)
+                line(d + 2, `let ${c} = u32(((wf_${i} + i32(cm_${i})) % ${K} + ${K}) % ${K});`)
+            }
+            else line(d + 1, `for (var ${c} = 0u; ${c} < ${K}u; ${c} = ${c} + 1u) {`)
+            if (win && !every) {
+                /* ...ITS COPY WORKED OUT FROM COPY 0 BY THE PATTERN (arrays.js arrCopy), not picked by the switch below: in a
+                   window the copy differs from pixel to pixel, and a switch on it is run case after case across the
+                   pixels that share the GPU's instructions -- inferred the first window's cost, which made the bench's
+                   ring 3.5 times slower to march on the user's Pascal card (a81cac9, 2026-10-25) with about as many steps
+                   (arraywindow.gpu.mjs counts them). Its copies' matrices are the pattern's to f32's precision: the
+                   pattern itself was matched to TOL (copyPattern), and a copies edit leaving it asks for a compile
+                   (demo.js nodeLive) */
+                line(d + 2, `let T_${g.id} = arrCopy(${codeOf(win)}u, ${K}u, UB.${copyName(g.id, 0)}, ${win.kind === 'row' ? `UB.${copyName(g.id, 1)}[3].xyz - UB.${copyName(g.id, 0)}[3].xyz` : 'VEC3(0.0)'}, i32(${c}));`)
+            } else {
+                line(d + 2, `var T_${g.id}: mat4x4<f32>;`)
+                line(d + 2, `switch ${c} {`)
+                g.copies.forEach((_, i) => line(d + 3, `case ${i}u: { T_${g.id} = UB.${copyName(g.id, i)}; }`))
+                line(d + 3, 'default: { }')
+                line(d + 2, '}')
+            }
             enter(d + 2, pseudo, `T_${g.id}`)
+            /* THE PICK COPY SAYS WHICH COPY (scene_api.js XF_COPY): the copy number one digit more, the arrays one more,
+               for the bounds' lattice to put a point in its own copy's frame (boxes.js) -- the render copies keep none */
+            if (pick) line(d + 2, `let xfc_${g.id} = XF_COPY; XF_COPY = xfc_${g.id} * ${K}u + ${c}; XF_COPIES = XF_COPIES + 1u;`)
             if (together) { combineRest(d + 2, g); combineShapes(d + 2, g, true) }
             else children(d + 2, g)
+            if (pick) line(d + 2, `XF_COPY = xfc_${g.id}; XF_COPIES = XF_COPIES - 1u;`)
             leave(d + 2, pseudo, `T_${g.id}`)
             line(d + 1, '}')
             if (together) combineClose(d + 1, g)
@@ -1992,21 +2077,36 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
         if (plan.lights.map(L => L.id).join() !== lights.map(L => L.id).join())
             throw new Error(`[codegen] the data plan's lights (${plan.lights.map(L => L.id)}) are not codegen's (${lights.map(L => L.id)})`)
         const how = { materialIndex: mid => mid != null && matIdOf.has(mid) ? matIdOf.get(mid) : 1,
-                      lightMaterial: i => lights[i].matId, limiters }
+                      lightMaterial: i => lights[i].matId, limiters, arrayWindow: arrayWindow !== false }
         const rec = recordsOf(tree, plan, how)
         if (!rec) throw new Error('[codegen] the data plan does not cover its own tree')
         /* ...READ FROM A UNIFORM COPY, where every ray walks them in step (scenedata.js RECORDS_IN_UNIFORM) -- in every
            copy alike: they share the scene's buffers. (Not with the candidate grid or exact hits until 0.41.0, which
            walked different records in neighbouring rays.) */
         const uniformRecs = true
+        /* the arrays' window (arrays.js), wherever the walk culls and the scene has an array: which arrays are rows or rings
+           is in their records, so a copy dragged off its row is a write, not a compile */
+        if (plan.arrays > 0 && cull !== false && !pick && !optics && arrayWindow !== false) e.raw(ARRAY_WINDOW_WGSL)
         for (const l of evaluatorWGSL({ blocks: plan.blocks.length, befores: plan.befores.length, afters: plan.afters.length, subs: plan.subs.length, stack: plan.stack, arrays: plan.arrays, wantLocal, keepK, straight, pick, optics, cull,
-            count, recs: 'scnRecs' })) e.raw(l)
+            count, recs: 'scnRecs', arrayWindow: arrayWindow !== false })) e.raw(l)
         // the nodes inside compiled subtrees: their values are those subtrees' uniforms, never records (demo.js liveValue)
         const compiledIds = new Set()
         const into = n => { compiledIds.add(n.id); (n.children || []).forEach(into) }
         plan.subs.forEach(into)
         dataOut = { records: rec.data, blocks: [...plan.blocks, ...plan.befores, ...plan.afters], compiledIds, uniformRecs, dataOf: (t, boxes = null) => recordsOf(t, plan, { ...how, boxes }) }
     } else {
+    /* THE ARRAYS THAT HAVE A WINDOW (arrays.js): where culling is, reached from the root through plain groups and arrays
+       alone, with a row's or a ring's copies -- the arrays cullBoxes measures a content box for */
+    if (culling && arrayWindow !== false) {
+        const visit = (n, top) => {
+            if (n.kind !== 'group' || (!top && (isCsg(n) || hasCode(n) || combined.has(n.id)))) return
+            const pat = !top && n.copies?.length ? copyPattern(n.copies) : null
+            if (pat) windowed.set(n.id, pat)
+            for (const c of n.children || []) visit(c, false)
+        }
+        visit(tree, true)
+        if (windowed.size) e.raw(ARRAY_WINDOW_WGSL)
+    }
     e.raw('fn SDF(r: Ray) -> Hit {')
     e.raw('    let p = r.pos;')
     e.raw('    var C = emptyHit(r);')   // the renderer's starting Hit, core/scene_api.js
@@ -2051,6 +2151,7 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
         map: e.map,
         tags: plan ? plan.tags : tags,
         lights,
+        _windows: windowed,
         // the scene as data: its records, and how to make them again for the same plan (generate attaches them)
         ...(dataOut ? { _data: dataOut } : {}),
         /* the paths and profiles a live change can reach (livePointsUpdate): live ones, and compiled ones that name a

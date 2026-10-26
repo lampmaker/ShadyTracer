@@ -723,6 +723,11 @@ open, open it in the same pane as the viewport, as these will rarely have to be 
 
 ## Open decisions
 
+**Lights as parameters and code: decided 2026-10-22, see `LIGHT_CONTROL.md`.** The user chose arrays of lights first
+(built in `0.next`: a light inside a group's copies is a light at every copy) and, for emission over angle and position,
+a map the light's code is baked into -- not code run wherever a light is evaluated, nor the face-less emission function
+below. What follows is the investigation of 2026-09-28, kept as it was.
+
 **Lights as parameters and code: investigated (2026-09-28), a decision for the user.** A light is a node of
 type `light` with `params` (its size: live uniforms, as an object's) and a `light` block of settings, and no
 code -- lights.js says why: three things need its shape exactly.

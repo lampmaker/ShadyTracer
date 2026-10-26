@@ -58,6 +58,7 @@ import { syncSources } from './sources.js'
 import { lightRGBObject, beamOf } from './lights.js'
 import { runExport } from './exportbox.js'
 import { hazeOf } from './hazebox.js'
+import { copyPattern, codeOf as codeOfPattern } from './arrays.js'
 import { stamp } from '../version.js'
 import { baked } from './bake.js'
 import { animatedKeys, keptUniforms, liveUniformsOf } from './animate.js'
@@ -584,9 +585,16 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
                 { wantLocal: doc.materials.some(m => readsLocal(m.code)), relief: !!M.material(doc, f.node.kind === 'object' ? M.wornMaterial(doc, id).material : null)?.relief })
             return RT.set({ [name]: M.matrixOf({ ...f.node.pattern, scale: 1 }) }).length === 0
         }
-        // AN ARRAY'S COPIES (model.js version 17): a uniform each -- refused when the count is not the one compiled
-        if (k === 'copies') return !!f.node.copies && RT.set(Object.fromEntries(f.node.copies.map((t, i) => [copyName(id, i), M.matrixOf(t)]))).length === 0
-            && !(copyName(id, f.node.copies.length) in (RT.scene?.uniforms || {}))
+        /* AN ARRAY'S COPIES (model.js version 17): a uniform each -- refused when the count is not the one compiled, or when
+           its copies have a window (arrays.js) compiled for a row or a ring and are no longer that: the window would leave
+           out copies it should not. One that had none and becomes a row stays live: every copy is walked, which is right,
+           and the next compile (the bake once the edits stop) gives it its window. */
+        if (k === 'copies') {
+            const was = RT.scene?.arrayWindows?.get(id)
+            if (was && was !== codeOfPattern(copyPattern(f.node.copies))) return false
+            return !!f.node.copies && RT.set(Object.fromEntries(f.node.copies.map((t, i) => [copyName(id, i), M.matrixOf(t)]))).length === 0
+                && !(copyName(id, f.node.copies.length) in (RT.scene?.uniforms || {}))
+        }
         /* SHOWN OR HIDDEN, live: only when the scene keeps hidden nodes compiled (liveVisibility);
            otherwise hiding is structural and the caller recompiles */
         if (k === 'enabled') return liveVis && RT.set({ [visName(id)]: f.node.enabled === false ? 0 : 1 }).length === 0

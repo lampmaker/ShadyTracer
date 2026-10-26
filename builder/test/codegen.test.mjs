@@ -1051,6 +1051,99 @@ eq('uniformName', uniformName('n7', 'radius'), 'radius_n7')
 }
 
 {
+    /* A LIGHT INSIDE ARRAYS (0.next; lights.js A LIGHT INSIDE ARRAYS): a face a copy, numbered from the light's own place,
+       innermost copy fastest -- and the same faces, in the same order, from the three that enumerate them: codegen's
+       lightFace (run here on the uniforms' defaults, line by line as emitted, as the test above runs one light's), the
+       scene as data's light table (scenedata.js recordsOf), and the optics' sources (sources.js sourceTable). A light
+       before the arrays and one after them keep their places; a light under copies of two scales, or in an array in a
+       joining group, is not drawn, and the Optics page is told why. */
+    const { sourceTable } = await import('../sources.js')
+    const at = (x, y = 0, z = 0, rx = 0, ry = 0, rz = 0, scale = 1) => ({ pos: { x, y, z }, rot: { x: rx, y: ry, z: rz }, scale })
+    const d = Model.createDoc({})
+    Model.addLight(d, 'root', { id: 'solo', shape: 'disc', transform: at(0, 0, 3) })
+    Model.addGroup(d, 'root', { id: 'strip', transform: at(1, -2, 0.5, 20, -35, 50, 1.5) })
+    Model.addGroup(d, 'strip', { id: 'pair', transform: at(0.2, 0, 0, 0, 0, 30) })
+    Model.addLight(d, 'pair', { id: 'led', shape: 'rectangle', params: { width: 0.4, height: 0.2 }, transform: at(0.3, 0.1, -0.2, -10, 60, 15, 0.8) })
+    Model.setCopies(d, 'strip', [at(-1, 0, 0, 0, 0, 0, 1.2), at(0, 0.5, 0, 30, 0, 0, 1.2), at(1, 0, 0.25, 0, 45, 10, 1.2)])
+    Model.setCopies(d, 'pair', Model.copiesRing(2, 0.5, 'z'))
+    Model.addLight(d, 'root', { id: 'last', shape: 'rectangle', transform: at(0, 2, 1) })
+    eq('the scene is sound: a light in a nested array, copies of one scale each', Model.validate(d), [])
+    const g = generate(Model.toTree(d))
+    const fn = g.wgsl.slice(g.wgsl.indexOf('fn lightFace(i: u32)'), g.wgsl.indexOf('fn lightFaceLe('))
+    ok('LIGHT_FACES: 1 + 3 x 2 + 1', /const LIGHT_FACES: u32 = 8u;/.test(g.wgsl))
+    /* face i as codegen's lightFace makes it: its case, its copies' indices (`let c_<group> = (j / N) % K`), then the frames
+       root first -- a group's own (`let T = UB.xf_...`) or a copy's, picked by its index -- by the composition rule */
+    const mul = (M, v) => [0, 1, 2].map(r => M[0][r] * v[0] + M[1][r] * v[1] + M[2][r] * v[2])
+    const faceOf = i => {
+        const cases = fn.split(/\n(?=        (?:case|default))/)
+        const c = cases.find(x => new RegExp(`^        case [^:]*\\b${i}u[,:]`).test(x))
+        if (!c) return null
+        const first = +(c.match(/let j = i - (\d+)u;/)?.[1] ?? i)
+        const idx = {}
+        for (const m of c.matchAll(/let (c_\w+) = \(j \/ (\d+)u\) % (\d+)u;/g)) idx[m[1]] = Math.floor((i - first) / +m[2]) % +m[3]
+        let M = [[1, 0, 0], [0, 1, 0], [0, 0, 1]], S = 1, t = [0, 0, 0]
+        for (const m of c.matchAll(/\{ let T = UB\.(\w+);|switch \((c_\w+)\) \{ ([^\n]*?) default/g)) {
+            const name = m[1] ?? [...m[3].matchAll(/case (\d+)u: \{ T = UB\.(\w+); \}/g)].find(x => +x[1] === idx[m[2]])[2]
+            const T = g.uniforms[name].def, col = k => [T[4 * k], T[4 * k + 1], T[4 * k + 2]]
+            const tr = mul(M, col(3).map(x => x * S))
+            t = t.map((x, k) => x + tr[k]); M = [0, 1, 2].map(k => mul(M, col(k))); S *= T[15]
+        }
+        const half = /f\.shape = 2u/.test(c) ? [0.4 * 0.5 * S, 0.2 * 0.5 * S] : null
+        return { origin: t, u: M[0], normal: M[2], S, half }
+    }
+    const src = sourceTable(d).sources
+    const close = (a, b) => a && b && a.every((x, k) => Math.abs(x - b[k]) < 1e-9)
+    eq('the sources: a light, six copies in order, a light', src.map(x => x.key ?? x.id),
+       ['solo', 'led#1', 'led#2', 'led#3', 'led#4', 'led#5', 'led#6', 'last'])
+    ok('...each copy its label and its index', src[3].label === 'rectangle light (copy 3 of 6)' && src[3].copy === 2 && src[3].copies === 6, JSON.stringify(src[3].label))
+    const leds = src.filter(x => x.id === 'led')
+    ok('lightFace\'s copies are the sources\' copies, face by face: centre, axes, half sizes',
+        leds.every((x, j) => { const f = faceOf(1 + j); return close(f?.origin, x.origin) && close(f.u, x.u) && close(f.normal, x.normal) && close(f.half, x.half) }),
+        JSON.stringify([faceOf(2), leds[1]]))
+    ok('...six places, all different', new Set(leds.map(x => x.origin.map(v => v.toFixed(6)).join())).size === 6)
+    ok('...the light after them the eighth face, the one before the first', close(faceOf(7)?.origin, src[7].origin) && close(faceOf(0)?.origin, src[0].origin))
+    ok('...every copy the area of the first: the weight a hit on any copy is given (lights.js)', leds.every(x => Math.abs(x.area - leds[0].area) < 1e-12))
+    // the material case hands the weight below the light's first face, the pick and the total one line a light
+    ok('the light\'s material case: its first face to the weight', /fm = m; face = 2u;/.test(g.wgsl))
+    const body = f => { const k = g.wgsl.indexOf(`fn ${f}(`); return g.wgsl.slice(k, g.wgsl.indexOf('\n}', k)) }
+    ok('the total: the light\'s weight times its 6 faces, one line a light', (body('lightFaceTotal').match(/t \+= /g) || []).length === 3 && /t \+= select\([^\n]*\) \* 6\.0;/.test(body('lightFaceTotal')))
+    /* the pick, run in JS as emitted: every u in [0, total) finds the face a loop over the faces one by one finds (shade's,
+       tracebasics.js FACE_TABLE), each a share of 1 */
+    const pickLine = body('lightFacePick').split('\n').find(l => /6 copies/.test(l))
+    const [, last, lo, , hi] = pickLine.match(/last = (\d+)u; if \(u < acc \+ w \* 6\.0\) \{ return (\d+)u \+ min\(u32\(\(u - acc\) \/ w\), (\d+)u\); \} acc \+= w \* 6\.0;/).slice(0, 5).concat([0])
+    ok('the pick within the copies: face 1 + floor(u - 1), the last 6', +lo === 1 && +last === 6 && /min\(u32\(\(u - acc\) \/ w\), 5u\)/.test(pickLine), pickLine)
+    // ...and the scene as data: its light table the same faces
+    const dg = generate(...Model.generateArgs(d, { id: 'lt', data: true }))
+    const D = dg.data, u32 = k => new Uint32Array(D.buffer, 4 * 4 * 0, 4)[k]
+    const base = u32(1), n = u32(2)
+    const row = (i, k) => [0, 1, 2, 3].map(c => D[4 * (base + 4 * i + k) + c])
+    ok('as data: the light table holds the 8 faces', n === 8, `${n}`)
+    // (in f32: the buffer's)
+    const near = (a, b) => a.every((x, k) => Math.abs(x - b[k]) < 1e-5)
+    ok('...each copy where the sources have it, its axes and half sizes', src.every((x, i) => near(row(i, 0).slice(0, 3), x.origin) && near(row(i, 1).slice(0, 3), x.u)
+        && near(row(i, 3).slice(0, 3), x.normal) && Math.abs(row(i, 1)[3] - x.half[0]) < 1e-6 && row(i, 3)[3] === 1),
+        JSON.stringify([row(2, 0), src[2].origin]))
+    const dt = dg.wgsl.slice(dg.wgsl.indexOf('fn lightFaceTotal('), dg.wgsl.indexOf('fn lightFaceLe('))
+    ok('...its total and pick one line a light, its first face\'s shown flag the light\'s', /scnLight\(1u\) \+ 3u\]\.w > 0\.5[^\n]*\* 6\.0;/.test(dt)
+        && /case 1u, 2u, 3u, 4u, 5u, 6u: \{ f\.le = UB\.emissive_led/.test(dt), dt.slice(0, 600))
+    /* NOT DRAWN, AND SAID: copies of two scales (the model refuses them; a tree made by hand can have them), and an array
+       in a joining group (not refused: a join above changed would make a saved scene unreadable) */
+    const t2 = Model.toTree(d)
+    const strip = t2.children.find(x => x.id === 'strip')
+    strip.copies = strip.copies.map((c, k) => ({ ...c, scale: k ? 1 : 2 }))
+    const g2 = generate(t2)
+    ok('copies of two scales: no face, a comment why', /const LIGHT_FACES: u32 = 2u;/.test(g2.wgsl) && /node led \(light\): a light not drawn: the copies of 'strip' differ in scale/.test(g2.wgsl))
+    Model.addObject(d, 'root', { id: 'block', primitive: 'box' })
+    Model.addGroup(d, 'root', { id: 'joined' })
+    Model.move(d, 'block', 'joined'); Model.move(d, 'strip', 'joined')
+    Model.setJoin(d, 'strip', 'subtract')
+    const g3 = generate(Model.toTree(d))
+    ok('an array with a light in a joining group: no face, a comment why', /const LIGHT_FACES: u32 = 2u;/.test(g3.wgsl) && /a light not drawn: inside an array inside a group whose children join \('joined'\)/.test(g3.wgsl))
+    ok('...and the Optics page told why', sourceTable(d).skipped.some(x => x.id === 'led' && /group whose children join/.test(x.reason)) && !sourceTable(d).sources.some(x => x.id === 'led'))
+    eq('...as data, the same faces left out', generate(...Model.generateArgs(d, { id: 'lt3', data: true })).data && (() => { const D3 = generate(...Model.generateArgs(d, { id: 'lt3', data: true })).data; return new Uint32Array(D3.buffer, 0, 4)[2] })(), 2)
+}
+
+{
     /* THE LIGHT-FACE CODE GROWS LINEARLY with the number of lights (PLAN.md L7). A GPU compiler inlines
        every call, so a function the size of every light, called once per light, is code the square of
        their number -- in every kernel that asks for a material. L7 first shipped that: each face's case

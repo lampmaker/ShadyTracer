@@ -180,6 +180,31 @@
 // for a disc -- so the rim past its edge takes the back's material. Checked before freezing, every document in both modes
 // against a worktree of the code before (89a8731): 200 texts (render, pick and the optics trace's two) moved, by 340 lines,
 // every one a light's MATERIAL line as above; no line count, uniform or tag moved. cases.*.wgsl moved by that line alone.
+//
+// REFROZEN FOR ONE SCENE (2026-10-23, 0.next), for a feature the user chose ("faster large arrays", after Tests >
+// lightarray measured 256 copies of a light at 465 ms of march a sample): a row's or a ring's copies evaluated in a
+// window around the point (builder/arrays.js). Checked before freezing: generated with arrayWindow false, every one of the
+// 51 documents' fingerprints was the one frozen, both modes; with the window, only scenes/parametric-part.json moved (its
+// heatsink's fins are a row of 9 copies) -- the one line that left its text was its copies loop's head, every line that
+// came the window's (the arrWindow functions, the window's uniforms' reads, the loop over the window), and its uniforms
+// gained exactly its content box's two (bxlo_n9_cbx, bxhi_n9_cbx). Its pick texts and tags did not move: the window is
+// the render copy's alone.
+//
+// BOTH, MERGED (2026-10-24): dev's refreeze for the light's face above came into this branch's window; expected.json was
+// taken as git merged the two and frozen again. Checked before freezing: generated with arrayWindow false, every document's
+// fingerprints were dev's frozen ones, both modes; with the window, scenes/parametric-part.json alone moved from dev's, by
+// the window's lines as above.
+//
+// THE WINDOW'S COPY WORKED OUT (2026-10-25): the first window made the bench's ring slower on the user's Pascal card, with
+// about as many steps (arraywindow.gpu.mjs counts them), so a window's copy is now worked out from copy 0 by the pattern
+// (arrays.js arrCopy) where a switch picked it. codegen.test failed scenes/parametric-part.json alone, both modes, before
+// this freeze: its fins' loop the one windowed array among the documents.
+//
+// A NODE IN AN ARRAY MEASURED AS ONE COPY (2026-10-25): the pick copies keep which copy is walked (scene_api.js
+// XF_COPY, codegen's copies loop and the data walk's ARRAY records), and the window's bounds follow its content's box
+// (arrays.js arrWindowOf). codegen.test failed scenes/parametric-part.json alone before this freeze, both modes -- its
+// wgsl and opticsWgsl by the window's functions, its pickWgsl and opticsPickWgsl by the copy number -- the one document
+// with an array.
 //======================================================================================================================
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'

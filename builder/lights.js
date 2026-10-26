@@ -26,6 +26,9 @@
 //   emitN         the index of what it emits into: 1 in air, 1.41 for an LED die in silicone
 //   file, box     a ray file: its name (the data is the host's, by name), and where its rays start
 //
+// INSIDE AN ARRAY (a group's copies) a light is one face a copy, each a light of the same settings: its flux is EACH
+// COPY'S. The rules for that are below (A LIGHT INSIDE ARRAYS).
+//
 // A glowing SURFACE is something else: a material of type `emitter` on any shape, drawn by the
 // renderer as an ordinary Lambertian emitter, and not an optics source (it has no known shape).
 //======================================================================================================================
@@ -116,6 +119,49 @@ export function lightProblems(n) {
         for (const k of need) if (!(Number.isFinite(n.params?.[k]) && n.params[k] > 0)) p.push(`'${id}': a ${L.shape} light needs ${k} > 0`)
     }
     return p
+}
+
+/*======================================================================================================================
+  A LIGHT INSIDE ARRAYS (model.js copies, 0.next): drawn once a copy, and a FACE a copy -- light sampling, the face table and
+  the photons see each copy where the SDF draws it. Refused until then ("light sampling needs each face where it is"),
+  which is what this provides: codegen (collectLights, emitLightFaces), the scene as data (scenedata.js lightsOf, the
+  light table) and the optics' sources (sources.js sourceTable) each enumerate the copies by the helpers here, so the
+  three agree on how many faces a light has and in which order.
+    THE ORDER: the arrays above it outermost first, the innermost copy fastest -- face j of a light under arrays of K1 and
+  K2 copies is copy j / K2 of the outer and j % K2 of the inner (copyIndices).
+    ONE MATERIAL A LIGHT, NOT A COPY. A hit on any copy is the light's material case in getMaterial2, and the face that
+  case hands the MIS weight is the light's first. That is exact only because the weight reads nothing of a face but its
+  area and its pick weight (scene_api.js lightFaceDensity): the pick weight is the light's (its visibility, its beam), the
+  area its size times the scales above it -- the same for every copy WHEN EVERY COPY OF EACH ARRAY ABOVE IT HAS ONE SCALE.
+  So that is a rule (arrayedLightProblem), and a light that breaks it is not drawn, as one under group code is not. A copy
+  index carried by the hit would lift it (and is what a per-copy colour would need: roadmap/LIGHT_CONTROL.md).
+    INSIDE A CSG GROUP a light is drawn after the outermost one's combine (codegen collectLights, HOISTED) -- outside any
+  array the combine is in, so once, not once a copy. An array with a light in it under a CSG group is the other rule.
+======================================================================================================================*/
+/** The arrays among `above` (the groups above a light, outermost first, the root left out): those with copies. */
+export const arraysOf = above => above.filter(g => Array.isArray(g.copies) && g.copies.length)
+/** How many faces a light under these groups has: the product of its arrays' counts (1 under none). */
+export const copyCount = above => arraysOf(above).reduce((k, g) => k * g.copies.length, 1)
+/** Face j of a light under arrays of `counts` copies (outermost first) as each array's copy, innermost fastest. */
+export function copyIndices(j, counts) {
+    const out = new Array(counts.length)
+    for (let k = counts.length - 1; k >= 0; k--) { out[k] = j % counts[k]; j = Math.floor(j / counts[k]) }
+    return out
+}
+/** WHY A LIGHT UNDER THESE GROUPS (outermost first, the root left out) CANNOT BE DRAWN ONCE A COPY, or null. `isCsg` is
+ *  codegen's (passed in: codegen imports this file). Not about group code, which every reader tests on its own. */
+export function arrayedLightProblem(above, isCsg) {
+    const arrays = arraysOf(above)
+    if (!arrays.length) return null
+    for (const g of arrays) {
+        const s = g.copies[0]?.scale ?? 1
+        if (g.copies.some(t => (t?.scale ?? 1) !== s))
+            return `the copies of '${g.id}' differ in scale: a light inside an array needs one scale for all its copies (light sampling weighs every copy's face by the first's area)`
+    }
+    const last = above.indexOf(arrays.at(-1))
+    const csg = above.slice(0, last + 1).find(g => isCsg(g))
+    if (csg) return `inside an array inside a group whose children join ('${csg.id}'): such a light is drawn after the combine, once, not once a copy -- put the array outside the joining group`
+    return null
 }
 
 /** k: flux per unit luminance and unit area, one face. With L0 the luminance straight out of the face

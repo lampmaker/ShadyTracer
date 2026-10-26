@@ -160,7 +160,7 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
        with the handles, a flux typed in its panel, a new light added, is in the next trace.
        This page has no source of its own any more. */
     const SRC = { text: '' }
-    const placedKey = new Map()                 // ray set id -> the key its placed rays are under
+    const placedKey = new Map()                 // ray set id (a copy's key) -> the key its placed rays are under
     const sourcesFromDoc = () => {
         const doc = BUILDER?.doc
         if (!doc) return { list: [], skipped: [] }
@@ -176,11 +176,13 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
             const f = RAYFILES.get(x.file)
             if (!f) { RAYFILES.restore(x.file); skipped.push({ id: x.id, label: x.label, reason: `ray file '${x.file}' not loaded: choose it in the Builder` }); continue }
             const frame = { origin: x.origin, u: x.u, v: x.v, w: x.normal, scale: x.scale / mpu }
-            const key = `${x.id}|${x.file}|${JSON.stringify(frame)}`
-            if (placedKey.get(x.id) !== key) {
-                if (placedKey.has(x.id)) O.dropRayData(placedKey.get(x.id))
+            // a copy of one in an array is placed on its own, under its own key (builder/sources.js INSIDE AN ARRAY)
+            const own = x.key ?? x.id
+            const key = `${own}|${x.file}|${JSON.stringify(frame)}`
+            if (placedKey.get(own) !== key) {
+                if (placedKey.has(own)) O.dropRayData(placedKey.get(own))
                 O.setRayData(key, placeRays(f.rays, frame))
-                placedKey.set(x.id, key)
+                placedKey.set(own, key)
             }
             sources.push({ ...x, rays: key, flux: x.flux ?? f.total, unit: f.header.fluxUnit, header: f.header })
         }

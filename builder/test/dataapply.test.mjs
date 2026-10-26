@@ -195,9 +195,16 @@ try {
         got.arrDataLive = B.live('grp', 'copies')
         const C = standIn(); C.set({ sceneData: 0 })
         const BC = installBuilder({}, { RT: C, gpu, project: P.createProject([scene()]) })
-        M.setCopies(BC.doc, 'grp', M.copiesRow(3, 2)); await BC.apply()
+        /* a list that is no row: its copy moved, live. A row's copy moved off it (arrays.js, 0.next): refused, a compile --
+           the row's window would leave copies out */
+        const odd = M.copiesRow(3, 2); odd[2].pos.y = 1
+        M.setCopies(BC.doc, 'grp', odd); await BC.apply()
         BC.doc.root.children.find(n => n.id === 'grp').copies[1].pos.y = 4
         got.arrCodeLive = [BC.live('grp', 'copies'), C.get()['cp1_grp']?.[13]]
+        M.setCopies(BC.doc, 'grp', M.copiesRow(3, 2)); await BC.apply()
+        const rowWindow = BC.live && C.scene?.arrayWindows?.get('grp')
+        BC.doc.root.children.find(n => n.id === 'grp').copies[1].pos.y = 4
+        got.arrCodeOff = [rowWindow, BC.live('grp', 'copies')]
         M.setCopies(BC.doc, 'grp', M.copiesRow(4, 2))
         got.arrCodeCount = BC.live('grp', 'copies')
     }
@@ -224,6 +231,7 @@ for (const data of [1, 0]) {
 ok('arrays as data: another count compiles nothing', got.arrData[0] === 0 && got.arrData[1], JSON.stringify(got.arrData))
 ok('...a copy moved, live: written', got.arrDataLive === true)
 ok('arrays in codegen: a copy moved, live -- its uniform written', got.arrCodeLive[0] === true && got.arrCodeLive[1] === 4, JSON.stringify(got.arrCodeLive))
+ok('...but a row\'s copy moved off its row: not live, its window compiled for a row', got.arrCodeOff[0] === 1 && got.arrCodeOff[1] === false, JSON.stringify(got.arrCodeOff))
 ok('...another count is no live write (the caller compiles)', got.arrCodeCount === false)
 
 /* THE RECORDS' UNIFORM COPY (scenedata.js RECORDS_IN_UNIFORM): every write of a data scene's buffer -- made, an edit, a

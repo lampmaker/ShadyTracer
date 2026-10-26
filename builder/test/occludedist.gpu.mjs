@@ -50,7 +50,8 @@ const { generate, boxLoName, boxHiName } = await import('../codegen.js')
 const { baked } = await import('../bake.js')
 const { liveInBench } = await import('../../bench/bake.js')
 const { cullBoxes, createBoxes, cullUniforms } = await import('../boxes.js')
-const { prog_tagfield, tagFieldTags } = await import('../../lib/pathtracer/core/field.js')
+const { prog_tagfield, tagSample, TAG_FIELD_WORDS } = await import('../../lib/pathtracer/core/field.js')
+const { lightArrayDoc, CAMERA: LIGHT_ARRAY_CAMERA } = await import('../../bench/lightarray.js')
 const { CAMERAS, BENCH_FILES, benchUrl } = await import('../../bench/index.js')
 const { CAMERAS: SCALING_CAMERAS, SCALING_FILES } = await import('../../bench/scaling.js')
 const { WEBGPU } = await import('../../lib/tinywebgpu/src/tinywebgpu.js')
@@ -94,15 +95,13 @@ async function measure(doc, scene) {
     const prog = await prog_tagfield(WG, scene); await prog.ready
     const sample = async input => {
         const count = new Uint32Array(input.buffer, input.byteOffset, 4)[3]
-        const inB = WG.createStorageBuffer(input), outB = WG.createStorageBuffer(Math.max(8 * count, 256))
+        const inB = WG.createStorageBuffer(input), outB = WG.createStorageBuffer(Math.max(4 * TAG_FIELD_WORDS * count, 256))
         prog.resources = { fieldIn: inB.b, fieldOut: outB.b }
         prog.uniforms = { ...uniformBag(scene), res: [64, 64] }
         prog.run(count, 1, 1)
-        const out = await outB.r(8 * count, 0, Float32Array)
+        const out = await outB.r(4 * TAG_FIELD_WORDS * count, 0, Float32Array)
         inB.b.destroy(); outB.b.destroy()
-        const n = out.length / 2, d = new Float32Array(n), tag = new Uint32Array(n), bits = new Uint32Array(out.buffer, out.byteOffset, out.length)
-        for (let i = 0; i < n; i++) { d[i] = out[2 * i]; tag[i] = bits[2 * i + 1] }
-        return { d, tag, tags: tagFieldTags(scene) }
+        return tagSample(out, scene)                     // four words a point (field.js), a copy's number among them
     }
     const B = createBoxes({ sample, doc: () => doc }); await B.update()
     return B
@@ -272,6 +271,24 @@ for (const [label, url, cam] of BENCH_SCENES) {
     ok('Dusty beam has a haze box', !!S.haze)
     await sceneShadows('Dusty beam (a haze box)', S, {}, {}, doc.view.camera)
 }
+/* LIGHTS IN ARRAYS (bench/lightarray.js, merged from dev with them): a row of 16 and a ring of 16 rows of 16, their content
+   boxes measured as the bench measures them, so each array's window (builder/arrays.js) is live -- code the scene runs
+   through add_new and fold that no scene had before it, and that the distance-only fold must answer as the full one does */
+const LIGHT_ARRAYS = []
+for (const kind of ['row', 'ring']) {
+    const doc = lightArrayDoc(kind)
+    const S = generate(...M.generateArgs(doc, { id: `od-la-${kind}` }))
+    const B = await measure(doc, S), cull = cullOf(doc, S, B)
+    ok(`lights in a ${kind}: the array's window in the text and its content box measured`, /arrWindow/.test(S.wgsl) && Object.keys(cull).length > 0, Object.keys(cull).join(' '))
+    await sceneShadows(`lights in a ${kind} (codegen, the window live)`, S, {}, cull, LIGHT_ARRAY_CAMERA)
+    if (kind === 'ring') {
+        const [tree] = M.generateArgs(doc, { data: true })
+        const D = generate(...M.generateArgs(doc, { id: `od-la-ring-data`, data: true }))
+        D.data = D.dataOf(tree, cullBoxes(doc, B, { nested: true })).data
+        await sceneShadows('lights in a ring (as data, the window live)', D, await D.init(WG), {}, LIGHT_ARRAY_CAMERA)
+    }
+    LIGHT_ARRAYS.push({ kind, doc, B })
+}
 
 /*----------------------------------------------------------------------------------------------------------------------
   THE EMITTER RAYS: glowing panels by hand, an occluder, a floor
@@ -325,7 +342,7 @@ await emitterRays('glowing panels by hand, in a haze box', panels('od-panels-haz
 ----------------------------------------------------------------------------------------------------------------------*/
 const W = 32, H = 24, SAMPLES = 6
 const target = WG.device.createTexture({ size: [W, H], format: WG.format, usage: GPUTextureUsage.RENDER_ATTACHMENT }).createView()
-const bagFor = (scene, cam, over) => {
+const bagFor = (scene, cam, { cull = {}, ...over } = {}) => {
     const v = { ...U.defaultUniformValues(), envMode: 0, uSunElevation: 50, uSunAzimuth: 30, sunDiameter: 0.53, sunIlluminance: 100000,
                 skyIlluminance: 20000, nee: 1, lt: 1, ltPhotons: 1, ltLearn: 0, maxbounce: 8, rr: 0, fireflyClamp: 0,
                 maxaverages: 0, autoExposure: 0, sppm: 0, ...over }
@@ -334,7 +351,7 @@ const bagFor = (scene, cam, over) => {
     const EC = engineCamera({ ...cam.getUniforms(), camLens: [0, 1, 0, 0] }, 0, derived.sceneUnit)
     return Object.fromEntries(Object.entries({ ...sceneValues(scene),
         ...Object.fromEntries(Object.entries(traced).map(([k, x]) => [k, U.uniformToGPU(x, U.UniformSpec[k]?.type)])),
-        ...derived, invView: EC.invView, invProjection: EC.invProjection, camPos: EC.camPos, camLens: EC.camLens, camtype: 0 })
+        ...derived, invView: EC.invView, invProjection: EC.invProjection, camPos: EC.camPos, camLens: EC.camLens, camtype: 0, ...cull })
         .filter(([k]) => k in U.ComputeUniformTypes || k in U.UniformSpec || k in (scene.uniforms || {})))
 }
 /* `full`: the full occlusion kernel put in the renderer's place, as it was before. It declares no emitArgs, which the
@@ -398,6 +415,11 @@ async function compare(label, scene, orbit, over = {}, emitters = false) {
 }
 const bakedOf = (doc, id) => baked(generate(...M.generateArgs(doc, { id })), { live: liveInBench })
 for (const [label, url, cam] of BENCH_SCENES.slice(1)) await compare(`${label}, baked`, bakedOf(docOf(url), `od-${label}`), cam)
+// the light arrays baked, their measured boxes written as the page writes them, so the window runs in the renderer too
+for (const { kind, doc, B } of LIGHT_ARRAYS) {
+    const S = bakedOf(doc, `od-la-${kind}-baked`)
+    await compare(`lights in a ${kind}, baked, the window live`, S, LIGHT_ARRAY_CAMERA, { cull: cullOf(doc, S, B) })
+}
 {
     const url = new URL('../../scenes/dusty-beam.json', import.meta.url), doc = docOf(url)
     await compare('Dusty beam (a haze box)', generate(...M.generateArgs(doc, { id: 'od-dusty' })), doc.view.camera)

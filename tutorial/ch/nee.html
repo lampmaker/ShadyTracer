@@ -263,8 +263,10 @@
       facts disagree, it says so. This one was found writing this chapter, and the comment was corrected.</aside>
     <p>ShadyTracer has three kinds of light to aim at: the faces of the light objects you place in the builder, glowing
       surfaces it has discovered in the scene (<a data-ch="emitters">Every glowing thing is a light</a>), and the sky
-      with its sun. One random number chooses which, and each choice is then divided by its probability, as in the
-      fold-out above. The code is <a data-g="wgsl">WGSL</a>, the GPU's language:</p>
+      with its sun. A light inside an array, a group's copies, is a face at every copy
+      (<cite data-src="builder/lights.js" data-sym="A LIGHT INSIDE ARRAYS (model.js copies"></cite>), and the faces are chosen evenly
+      among themselves. One random number chooses which kind, and each choice is then divided by its probability, as in
+      the fold-out above. The code is <a data-g="wgsl">WGSL</a>, the GPU's language:</p>
     <pre data-src="lib/pathtracer/core/materials_pbr.js" data-sym="/* THREE LIGHTS NOW" data-to="let uL = PRNG().xy;"
          data-why="pick00 is a random number from 0 to 1 (PRNG, the random number generator; .x is the first of the four it gives, .xy the first two). fs is the share of choices that go to light faces: if pick00 is below fs, a face is aimed at. Otherwise pick0 stretches what is left of pick00 back to 0 to 1 (max(…, 1e-6) only keeps it from dividing by 0), and is used the same way: below es (the discovered emitters' share), an emitter, else the sky. uL is two more random numbers, for the point or direction on the light chosen. The comment's names point to other parts of the code; the idea is in these lines." data-hash="f2dd9ee4"></pre>
     <p>Each branch then multiplies its own chance by the share that picked it: for a discovered emitter, the chance of

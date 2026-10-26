@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Darkroom tools · check</title>
+<!-- THE DARKROOM'S CURVES EDITOR AND COLOUR WHEELS, for lib/pathtracer/test/darkroomtools.check.mjs: each over a plain
+     settings object, its changes counted. No GPU: these draw on 2D canvases. -->
+<link rel="stylesheet" href="../../shell/shell.css">
+<style>html, body { margin: 0; background: var(--sh-panel); } #c, #w { width: 300px; }</style>
+</head>
+<body>
+<div id="c"></div>
+<div id="w"></div>
+<script type="module">
+import { makeCurveEditor } from '../darkroom/curveeditor.js'
+import { makeWheels } from '../darkroom/wheels.js'
+import { CURVE_DEFAULTS } from '../darkroom/curves.js'
+
+const DV = { curves: CURVE_DEFAULTS(), curveLuma: false, liftX: 0, liftY: 0, gammaX: 0, gammaY: 0, gainX: 0, gainY: 0 }
+const counts = { curve: 0, wheel: 0 }
+const E = makeCurveEditor(document.getElementById('c'), {
+    get: () => DV.curves, set: c => { DV.curves = c }, getLuma: () => DV.curveLuma, setLuma: on => { DV.curveLuma = on },
+    onChange: () => counts.curve++,
+})
+const W = makeWheels(document.getElementById('w'), {
+    get: n => ({ x: DV[n + 'X'], y: DV[n + 'Y'] }), set: (n, p) => { DV[n + 'X'] = p.x; DV[n + 'Y'] = p.y }, onChange: () => counts.wheel++,
+})
+window.CHECK = { DV, counts, E, W }
+</script>
+</body>
+</html>

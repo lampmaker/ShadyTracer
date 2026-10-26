@@ -8,7 +8,7 @@
 //======================================================================================================================
 import * as M from '../model.js'
 import { createBoxes, toLocalOf, fromParent, latticeFor, COARSE, geometryKey, cullBoxes, cullUniforms, cullReport, smoothBulge, measured } from '../boxes.js'
-import { toParent } from '../bounds.js'
+import { toParent, framesTo, arraysAbove } from '../bounds.js'
 
 let pass = 0, fail = 0
 const ok = (name, cond, extra = '') => {
@@ -641,6 +641,62 @@ await run()
     let threw = null
     try { cullBoxes(d, { fresh: () => true, get: () => unit }) } catch (e) { threw = e }
     ok('a store that cannot say what is missing is refused, never culled by', !!threw && /missing/.test(threw.message), String(threw))
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// A NODE IN AN ARRAY MEASURED AS ONE COPY (0.next). The pick copy says which copy a surface is (scene_api.js XF_COPY:
+// the outermost array the most significant digit, XF_COPIES how many arrays). Before, every copy's points went into
+// the node's frame through its first copy, and its box spanned the array: Tests > lightarray's 4 cm light measured
+// 2.2 m across in its ring of rows, its group's 5.25 m where the ring is 2.2. A sampler that draws EVERY copy here
+// (the one above draws the first copy alone) and says which won -- or, as a tag field that cannot say, does not.
+{
+    const at = (x, y = 0, z = 0, rz = 0) => ({ pos: { x, y, z }, rot: { x: 0, y: 0, z: rz }, scale: 1 })
+    const d = M.createDoc()
+    const ring = M.addGroup(d, 'root', { label: 'ring' })
+    const row = M.addGroup(d, ring.id, { label: 'row', transform: at(1, 0, 0, 90) })
+    const bead = M.addObject(d, row.id, { primitive: 'sphere', label: 'bead' })
+    bead.params = { radius: 0.05 }
+    M.setCopies(d, row.id, M.copiesRow(8, 0.3, 'x'))
+    M.setCopies(d, ring.id, M.copiesRing(4, 0, 'z'))
+    const fromFrames = F => p => F.reduceRight((q, t) => fromParent(t, q), p)
+    const arrays = arraysAbove(d, bead.id)
+    const all = []                                                  // every copy: its number and its point's map
+    for (let j = 0; j < 32; j++) {
+        const which = new Map([[arrays[0], Math.floor(j / 8)], [arrays[1], j % 8]])
+        all.push({ j, local: fromFrames(framesTo(d, bead.id, up => up.copies[which.get(up)])) })
+    }
+    const sampler = says => async input => {
+        const u = new Uint32Array(input.buffer)
+        const o = [input[0], input[1], input[2]], count = u[3], nx = u[7], ny = u[11], c = input[4]
+        const D = new Float32Array(count), T = new Uint32Array(count), C = new Uint32Array(count), N = new Uint32Array(count)
+        for (let i = 0; i < count; i++) {
+            const p = [o[0] + (i % nx) * c, o[1] + (Math.floor(i / nx) % ny) * c, o[2] + Math.floor(i / (nx * ny)) * c]
+            let best = Infinity, won = 0
+            for (const e of all) { const v = Math.abs(Math.hypot(...e.local(p)) - 0.05); if (v < best) { best = v; won = e.j } }
+            D[i] = best; T[i] = 1; C[i] = says ? won : 0; N[i] = says ? 2 : 0
+        }
+        return { d: D, tag: T, copy: C, copies: N, tags: [bead.id] }
+    }
+    const span = b => b.hi.map((v, k) => v - b.lo[k])
+    const per = createBoxes({ sample: sampler(true), doc: () => d })
+    await per.update()
+    const b = per.get(bead.id)
+    ok('a bead in a ring of rows, measured by each copy\'s own frame: its box one bead\'s, to its cell', b && span(b).every(v => v < 0.1 + 3 * b.cell),
+        JSON.stringify(b))
+    const R = per.get(row.id), Rg = per.get(ring.id)
+    ok('...its row\'s box the eight beads along it, its ring\'s the four rows round it -- every copy, once', R && span(R)[0] > 2.1 && span(R)[0] < 2.2 + 4 * b.cell && span(R)[1] < 0.1 + 4 * b.cell
+        && Rg && Math.abs(span(Rg)[0] - span(Rg)[1]) < 4 * b.cell && span(Rg)[0] < 2 * (1 + 2.1) + 0.1 + 4 * b.cell, JSON.stringify([R, Rg]))
+    const C = cullBoxes(d, per, { nested: true })
+    const cb = C.get(`${row.id}_cbx`)
+    // (the bead's own box padded by its cell, as cullBoxes pads every box)
+    ok('...the row\'s content (the window\'s, arrays.js) one bead\'s, not the array\'s', cb && near(cb.lo, b.lo.map(v => v - b.cell), 1e-9) && near(cb.hi, b.hi.map(v => v + b.cell), 1e-9),
+        JSON.stringify([cb, b]))
+    // a tag field that cannot say which copy (copies 0): through the first copy, as before -- the box of them all there
+    const old = createBoxes({ sample: sampler(false), doc: () => d })
+    await old.update()
+    const ob = old.get(bead.id)
+    ok('...where the copy cannot be believed, every copy through the first, as before: too big, never too small', ob && span(ob)[0] > 2 && span(ob)[1] > 2,
+        JSON.stringify(ob))
 }
 
 console.log(`boxes: ${pass} passed, ${fail} failed`)
