@@ -13,6 +13,54 @@ true?"). A plan built on inferences written as facts was reverted (commit fdc333
 it had called one scene's slow render "this architecture's full-resolution cost", which the user's
 own numbers contradict.
 
+## STATUS (2026-10-26) — answers along the ray: counted, not built
+
+The user asked (2026-10-26) about exact intersections for basic shapes, a relief's included ("check if there is any
+intersection possible at all"), for rays running nearly parallel to a surface. **Exact hits were built once (0.18 to
+0.40) and removed** (below, *Exact hits*): they lived only in the scene-as-data path, and that build was 12 to 30 times
+codegen's GPU time on two scenes. So this time the steps were **counted first**, in codegen's own text, before anything
+is built (`builder/test/alongray.gpu.mjs`).
+
+- **The rule counted.** A closed-form shape answers how far along the ray its boundary first is, entering or leaving
+  ("never" when the ray misses it). The step is the least of those answers and stepscale times everything else's distance.
+  - Safe for any hard union (its first crossing is no nearer than its shapes' least); a shape inside a CSG group, a
+    blend, a warp or group code answers by distance.
+  - Answering in this count: a plane, a box (exact when sharp; with rounding its outer box from outside), a sphere, a
+    capped cylinder, a rectangle sheet, and a plane relief's band (a ray that never meets the slab |z| <= amplitude never
+    meets the relief; inside it, the relief steps as now).
+  - Each answer is the same as its JS twin, and never past the shape's first crossing by a brute march of its own
+    distance (counted on lavapipe).
+- **Counted on lavapipe** through the renderer's own march (`prog_march`, distance only); camera rays from the bench's
+  cameras (64 x 36), and shadow rays from where they end. Steps a ray, plain -> with answers:
+
+  | scene | answering shapes | camera rays | shadow rays, sun at 50 deg | shadow rays, sun at 5 deg |
+  |---|---|---|---|---|
+  | the optics bench | 0 | 21.9 -> 21.9 | 19.1 -> 19.1 | 33.8 -> 33.8 |
+  | the Noise library | 8 | 19.6 -> 13.4 | 26.5 -> 19.3 | 41.8 -> 21.9 |
+  | the showcase | 11 | 15.9 -> 11.7 | 21.5 -> 13.6 | 45.1 -> 15.9 |
+  | the demo | 2 | 33.4 -> 33.3 | 21.7 -> 21.6 | 105.6 -> 105.5 |
+  | the Menger cubes | 4 | 92.8 -> 78.5 | 88.7 -> 80.6 | 140.8 -> 86.7 |
+  | the material test | 2 | 23.3 -> 19.6 | 28.1 -> 24.2 | 30.0 -> 16.7 |
+  | dichroics (its floor's relief band) | 11 | 18.3 -> 9.3 | 15.7 -> 6.4 | 29.5 -> 4.2 |
+  | the prism scene | 2 | 6.7 -> 3.0 | 14.9 -> 6.2 | 65.1 -> 6.6 |
+
+  - **The graze.** Rays lowered onto the prism scene's table at 0.1 to 0.5 degrees: 31 of 320 reach it within maxiter
+    (400) plainly, at 398 steps a ray; all 320 with answers, at 3.6. That is the slit beam that only exact hits drew
+    (*Removed in 0.41.0*).
+  - **Where nothing moves:** the optics bench's shapes are its holders and lenses, inside CSG groups or without an
+    answer (a lens, a disc); the demo's are in group code. A hard CSG group could answer too (no nearer than its shapes'
+    least), not counted here.
+  - **The picture, as far as counts go.**
+    - No answered ray went through a solid: the plain field traced along every stretch an answer skipped.
+    - Where the answers went on past a plain hit, each is a graze: the plain march stops a tolerance short of a surface,
+      eps / sin(theta) along a ray at a shallow angle, where an answer lands on it, or brushes an edge an answer passes.
+      That is 3-25 rays a run, and 380 of 2304 camera rays on the Menger cubes (its floor, seen at a shallow angle:
+      inferred).
+    - Rays that ran out of steps reach their surface.
+- **Not known: the cost.** Steps are not time. An answered step does the answers' arithmetic beside the distance, and
+  the count asks the scene twice to model the rule (codegen would not). What a step costs with answers is the card's to
+  say: a build behind a switch, with a bench, as the distance-only march was.
+
 ## STATUS (2026-10-25) — the march and shadow rays on distance only: measured, and always on
 
 The user asked (2026-10-24) which techniques could make rendering faster.
