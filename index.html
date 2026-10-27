@@ -50,7 +50,7 @@
         "license": "https://opensource.org/licenses/MIT",
         "image": "https://shadytracer.com/docs/screenshots/social.jpg",
         "screenshot": "https://shadytracer.com/docs/screenshots/hero.jpg",
-        "author": { "@type": "Person", "name": "Matthijs Keuper" },
+        "author": { "@type": "Person", "name": "Matthijs Keuper", "sameAs": ["https://keuper-innovations.com", "https://codeandwood.art", "https://github.com/lampmaker"] },
         "sameAs": ["https://github.com/lampmaker/ShadyTracer"]
     }
     </script>
@@ -84,6 +84,7 @@
         <div class="wrap">
             <a class="brand" href="./"><img src="favicon.svg" alt="" width="26" height="26">ShadyTracer</a>
             <nav aria-label="Sections">
+                <a href="#maker">About</a>
                 <a href="#features">Features</a>
                 <a href="#optics">Lighting design</a>
                 <a href="#checked">Checked</a>
@@ -111,6 +112,44 @@
                     alt="The raytracer in its Design layout: the project's scenes as cards over the tree on the left; in the middle a light sculpture, blue and amber light bars and a mirror ball in a plaster room, its light seen through the photon map; the Render settings and Render stats on the right">
             </div>
         </div>
+
+        <!-- WHO MAKES IT, AND WHY A TIP (0.next; the user's words, and their two sites: keuper-innovations.com,
+             codeandwood.art). Near the top, as asked. How it is made is said plainly: written with an AI coding assistant
+             under one person's direction, and trusted for what checks it, not for who typed it. -->
+        <section id="maker" class="alt">
+            <div class="wrap">
+                <div class="maker">
+                    <h2>Who makes it, and why</h2>
+                    <p>I'm Matthijs Keuper: an applied physicist from the University of Twente, an engineer and an artist.
+                        For three decades I have turned hard technical problems into products. I founded
+                        <strong>Invisua Lighting</strong> and ran it for ten years: a tunable LED lighting system, its
+                        optics, colour algorithms and firmware included, that ended up in flagship stores for Apple, BMW and
+                        Selfridges. Today I work on LED systems and nonimaging optics at
+                        <a href="https://keuper-innovations.com">Keuper Innovations</a>, and as an artist at
+                        <a href="https://codeandwood.art">code+wood</a>: wood reliefs, engravings and generative work where
+                        software, lasers and robots meet traditional techniques.</p>
+                    <p>ShadyTracer is where the two meet. I always wanted a ray tracer that did what I wanted from one:
+                        light in the units an optical engineer measures it in, and pictures worth looking at. This is it.</p>
+                    <h3>How it is made</h3>
+                    <p>I designed ShadyTracer and I decide what it does and how it should work. Most of its code is
+                        written by Claude Code, an AI coding assistant, under my direction: I set the goals, review what
+                        comes back and measure it on real hardware. I say so openly, because it is a fair question. What
+                        should decide whether you trust a renderer is not who typed it but what checks it: every
+                        <span class="ok-mark">✓</span> on this page is a measurement against a closed-form answer on a
+                        real graphics card, more than a hundred test files run on every change, and
+                        <a href="https://github.com/lampmaker/ShadyTracer/blob/main/FEATURES.md">FEATURES.md</a> gives the
+                        evidence for every feature, including what has not been confirmed yet.</p>
+                    <h3>Why sponsor</h3>
+                    <p>ShadyTracer is free and stays free. Sponsoring pays for hardware: everything measured so far ran on
+                        two NVIDIA cards, and the renderer should be checked on others. And it tells me the work is useful
+                        to someone, which is worth as much.</p>
+                    <div class="actions" style="justify-content: flex-start">
+                        <a class="btn primary" href="https://github.com/sponsors/lampmaker"><span class="heart">♥</span> Sponsor on GitHub</a>
+                        <a class="btn" href="https://github.com/lampmaker/ShadyTracer">The code</a>
+                    </div>
+                </div>
+            </div>
+        </section>
 
         <section id="features">
             <div class="wrap">
@@ -304,7 +343,7 @@
                     serve the folder, open it.</p>
                 <div class="actions" style="justify-content: flex-start">
                     <a class="btn" href="https://github.com/lampmaker/ShadyTracer">The code on GitHub</a>
-                    <a class="btn" href="https://github.com/sponsors/lampmaker"><span class="heart">♥</span> Sponsor</a>
+                    <a class="btn" href="#maker"><span class="heart">♥</span> Sponsor</a>
                 </div>
             </div>
         </section>

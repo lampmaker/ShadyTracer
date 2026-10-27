@@ -10,6 +10,11 @@ of search results, with Help › ShadyTracer homepage back to the front page. Pr
 so nothing saved is lost. A link of the old kind, `/?safe` or `/?s=2048`, still opens the app; a shared link's
 `?utm_source=` stays on the front page.
 
+**Who makes it, and why**, just under the first picture: the author's background (applied physics, LED lighting
+and optics, art at code+wood), why ShadyTracer exists, how it is made -- with an AI coding assistant under one
+person's direction, said plainly, and trusted for what checks it -- and what a sponsor pays for (hardware to test on,
+and the knowledge that it is useful). The bar's About goes there.
+
 **The README's screenshots are JPEGs**, quality 85, under the same names: 16.0 MB for the nine as PNGs, 3.6 MB now,
 the largest about 600 KB. The front page shows these same files, so a screenshot retaken is retaken for both.
 `docs/screenshots/README.md` gives the command for a new one, and `test/seo.test.mjs` fails a PNG left there, a file

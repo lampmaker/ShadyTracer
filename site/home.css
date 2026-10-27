@@ -98,6 +98,9 @@ section.alt { background: var(--bg-deep); }
 .chapters a:hover { border-color: var(--blue); }
 .chapters small { display: block; color: var(--ink-faint); font-size: .85rem; margin-top: .2rem; }
 
+.maker { max-width: 48rem; }
+.maker p { color: var(--ink-soft); }
+.maker h3 { margin-top: 1.8rem; }
 .faq { max-width: 48rem; }
 .faq h3 { margin-top: 2rem; }
 .faq p { color: var(--ink-soft); }
