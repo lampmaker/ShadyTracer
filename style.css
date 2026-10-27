@@ -29,3 +29,20 @@ body {
 
 /* the Sponsor link at the menu bar's right end (index.html, SHELL.barEnd) */
 .sponsor-heart { color: #e0607e; }
+
+/* THE INTRODUCTION in #container (index.html): what a search engine reads, what shows while the modules load, and
+   what stays, with the reason, in a browser without WebGPU. The body does not scroll, so this does */
+.about {
+    height: 100%;
+    overflow: auto;
+    padding: 12vh max(1.25rem, calc((100% - 44rem) / 2)) 4rem;
+    line-height: 1.55;
+}
+.about h1 { font-size: 2.4rem; font-weight: 600; margin-bottom: 1rem; color: #fff; }
+.about h2 { font-size: 1.15rem; font-weight: 600; margin: 2rem 0 .6rem; color: #fff; }
+.about p, .about li { margin-bottom: .6rem; }
+.about ul { padding-left: 1.2rem; }
+.about a { color: #7fb8ff; }
+.about-lead { font-size: 1.1rem; }
+.about-status { color: #9a9a9a; font-style: italic; }
+.about-stop { color: #f2a93b; font-style: normal; }

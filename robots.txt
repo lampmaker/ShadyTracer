@@ -1,0 +1,10 @@
+# Search engines: the app, its tutorial and the files they load are open. Left out: the plans and mock-ups, and every
+# test folder (fixtures and test pages), none of which a page loads. Nothing the app or the tutorial fetches may be
+# disallowed here: a crawler that renders the page needs its scripts. test/seo.test.mjs holds this file.
+User-agent: *
+Disallow: /roadmap/
+Disallow: /ui-mockups/
+Disallow: /test/
+Disallow: /*/test/
+
+Sitemap: https://shadytracer.com/sitemap.xml

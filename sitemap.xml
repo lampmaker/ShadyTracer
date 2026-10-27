@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The pages a search engine should find (robots.txt points here): the app and the tutorial, in the tutorial's order.
+     test/seo.test.mjs holds it to tutorial/kit/chapters.js: a chapter written is a line added here. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://shadytracer.com/</loc></url>
+  <url><loc>https://shadytracer.com/tutorial/</loc></url>
+  <url><loc>https://shadytracer.com/tutorial/glossary.html</loc></url>
+  <url><loc>https://shadytracer.com/tutorial/ch/reading.html</loc></url>
+  <url><loc>https://shadytracer.com/tutorial/ch/rays.html</loc></url>
+  <url><loc>https://shadytracer.com/tutorial/ch/distances.html</loc></url>
+  <url><loc>https://shadytracer.com/tutorial/ch/shapes.html</loc></url>
+  <url><loc>https://shadytracer.com/tutorial/ch/normals.html</loc></url>
+  <url><loc>https://shadytracer.com/tutorial/ch/photometry.html</loc></url>
+  <url><loc>https://shadytracer.com/tutorial/ch/colour.html</loc></url>
+  <url><loc>https://shadytracer.com/tutorial/ch/pixels.html</loc></url>
+  <url><loc>https://shadytracer.com/tutorial/ch/diffuse.html</loc></url>
+  <url><loc>https://shadytracer.com/tutorial/ch/microfacets.html</loc></url>
+  <url><loc>https://shadytracer.com/tutorial/ch/glass.html</loc></url>
+  <url><loc>https://shadytracer.com/tutorial/ch/dispersion.html</loc></url>
+  <url><loc>https://shadytracer.com/tutorial/ch/montecarlo.html</loc></url>
+  <url><loc>https://shadytracer.com/tutorial/ch/paths.html</loc></url>
+  <url><loc>https://shadytracer.com/tutorial/ch/nee.html</loc></url>
+  <url><loc>https://shadytracer.com/tutorial/ch/mis.html</loc></url>
+  <url><loc>https://shadytracer.com/tutorial/ch/emitters.html</loc></url>
+  <url><loc>https://shadytracer.com/tutorial/ch/lens.html</loc></url>
+  <url><loc>https://shadytracer.com/tutorial/ch/caustics.html</loc></url>
+  <url><loc>https://shadytracer.com/tutorial/ch/photons.html</loc></url>
+  <url><loc>https://shadytracer.com/tutorial/ch/haze.html</loc></url>
+  <url><loc>https://shadytracer.com/tutorial/ch/gpu.html</loc></url>
+  <url><loc>https://shadytracer.com/tutorial/ch/wavefront.html</loc></url>
+  <url><loc>https://shadytracer.com/tutorial/ch/accumulate.html</loc></url>
+  <url><loc>https://shadytracer.com/tutorial/ch/codegen.html</loc></url>
+  <url><loc>https://shadytracer.com/tutorial/ch/measure.html</loc></url>
+  <url><loc>https://shadytracer.com/tutorial/ch/steps.html</loc></url>
+  <url><loc>https://shadytracer.com/tutorial/ch/compiles.html</loc></url>
+  <url><loc>https://shadytracer.com/tutorial/ch/feel.html</loc></url>
+  <url><loc>https://shadytracer.com/tutorial/ch/checking.html</loc></url>
+  <url><loc>https://shadytracer.com/tutorial/ch/precision.html</loc></url>
+  <url><loc>https://shadytracer.com/tutorial/ch/optics.html</loc></url>
+  <url><loc>https://shadytracer.com/tutorial/ch/yours.html</loc></url>
+  <url><loc>https://shadytracer.com/tutorial/ch/open.html</loc></url>
+</urlset>
