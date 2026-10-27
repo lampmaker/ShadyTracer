@@ -4,7 +4,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ShadyTracer</title>
+    <!-- WHAT A SEARCH ENGINE AND A SHARED LINK SEE (0.next). The script below retitles the page with the version once it
+         starts; a crawler, which has no WebGPU, keeps this title and the introduction in #container. The address is
+         the one the README gives (shadytracer.com); test/seo.test.mjs holds these to it, robots.txt and sitemap.xml. -->
+    <title>ShadyTracer: a physically based WebGPU path tracer in your browser</title>
+    <meta name="description" content="A free, open-source WebGPU path tracer in your browser: light in real units (lux, cd/m²), caustics through glass, a scene builder, and an optics bench for LED and luminaire design.">
+    <link rel="canonical" href="https://shadytracer.com/">
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <meta name="theme-color" content="#1e1e1e">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="ShadyTracer">
+    <meta property="og:url" content="https://shadytracer.com/">
+    <meta property="og:title" content="ShadyTracer: a physically based WebGPU path tracer in your browser">
+    <meta property="og:description" content="Light in real units, caustics through glass, a scene builder and an optics bench for LED and luminaire design. Nothing to install: it runs on your own graphics card.">
+    <meta property="og:image" content="https://shadytracer.com/docs/screenshots/social.jpg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="ShadyTracer's window: a light sculpture of blue and amber light bars and a mirror ball in a plaster room, the scene tree on the left and the render settings on the right">
+    <meta name="twitter:card" content="summary_large_image">
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "ShadyTracer",
+        "url": "https://shadytracer.com/",
+        "description": "A physically based WebGPU path tracer in the browser: light in real units (lux, cd/m²), a scene builder, and an optics bench for LED and luminaire design.",
+        "applicationCategory": "DesignApplication",
+        "operatingSystem": "Any, in a browser with WebGPU",
+        "browserRequirements": "Requires WebGPU",
+        "isAccessibleForFree": true,
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+        "license": "https://opensource.org/licenses/MIT",
+        "image": "https://shadytracer.com/docs/screenshots/social.jpg",
+        "author": { "@type": "Person", "name": "Matthijs Keuper" },
+        "sameAs": ["https://github.com/lampmaker/ShadyTracer"]
+    }
+    </script>
     <link rel="stylesheet" href="style.css">
     <!-- the docking (lib/dockview, MIT, vendored) and the shell made on it (lib/shell) -->
     <link rel="stylesheet" href="./lib/dockview/dockview.css">
@@ -17,7 +52,56 @@
 </head>
 
 <body>
-    <div class="content" id="container"></div>
+    <div class="content" id="container">
+        <!-- THE INTRODUCTION: what a crawler, a browser without WebGPU or without JavaScript reads, and what shows while
+             the modules load. Taken away just before the shell is made in this element; kept, with the reason, when
+             the browser has no WebGPU (the script below). Its words follow the README's top and Highlights. -->
+        <main class="about" id="about">
+            <h1>ShadyTracer</h1>
+            <p class="about-lead"><strong>Physically based light in the browser.</strong> A WebGPU path tracer that
+                renders in real units, candela per square metre and lux, with a scene builder, a measuring tool, and an
+                optics bench for LED and luminaire design that traces the same scene the picture shows. Nothing to
+                install and no server: the page runs on your own graphics card.</p>
+            <p class="about-status" id="about-status"></p>
+            <noscript><p class="about-status about-stop">ShadyTracer runs in the browser: it needs JavaScript, and a
+                browser with WebGPU.</p></noscript>
+            <h2>What it does</h2>
+            <ul>
+                <li><strong>Light in physical units.</strong> Luminance in cd/m², illuminance in lux, a sun and sky
+                    given by the illuminance they deliver.</li>
+                <li><strong>Caustics through glass</strong>, by tracing photons from the sun, and what is seen through
+                    glass or in a mirror lit right, by a photon map.</li>
+                <li><strong>Any glowing surface is a light</strong>, with nothing declared.</li>
+                <li><strong>Glass the way glass behaves</strong>: dispersion that splits white light in a prism,
+                    dichroic and anti-reflection coatings, and a camera lens with depth of field.</li>
+                <li><strong>Lux and luminance as false colour</strong>, with an error bar on every pixel, and a measure
+                    tool that reads lux, uniformity and colour temperature off any surface.</li>
+                <li><strong>A scene builder where every shape is code</strong> you can edit: signed distance fields,
+                    CSG, modifiers, STEP and STL import, and export for 3D printing.</li>
+                <li><strong>An optics bench over the same scene</strong>: LEDs, lenses and detectors; far field in
+                    candela with beam and field angles, illuminance maps in lux, CCT and Duv.</li>
+            </ul>
+            <h2>How it works</h2>
+            <p><a href="tutorial/">ShadyTracer, inside out</a> teaches how a path tracer like this one is built, with
+                figures that run: rays and distance fields, the units of light, glass and rough surfaces, path tracing,
+                caustics and photon mapping, and how it all runs on a graphics card.</p>
+            <p>Open source under the MIT licence: <a href="https://github.com/lampmaker/ShadyTracer">the code on
+                GitHub</a>.</p>
+        </main>
+    </div>
+    <script>
+        /* NO WEBGPU, NO START: said on the introduction before the modules load, since a module may not even load in
+           a browser without it. Chrome/Edge 113+, Firefox 141+ on Windows and Safari 26+ are TinyWebGPU's README's */
+        {   // a block: a classic script's const would be a global the whole page shares
+            const s = document.getElementById('about-status');
+            s.textContent = 'Starting the renderer…';   // written here, so a page without JavaScript says only its noscript
+            if (!navigator.gpu) {
+                s.textContent = 'This browser has no WebGPU, which ShadyTracer renders with. Open it in Chrome or Edge '
+                    + '113+, Firefox 141+ on Windows or Safari 26+, on a computer with a graphics card.';
+                s.classList.add('about-stop');
+            }
+        }
+    </script>
     <script type="module">
         //==============================================================================================================
         // THE RAYTRACER APPLICATION -- a HOST for lib/pathtracer, not the renderer itself.
@@ -99,6 +183,19 @@
         //==============================================================================================================
         // DEVICE AND LAYOUT -- the host's job
         //==============================================================================================================
+        /* NO WEBGPU, OR NO ADAPTER: the introduction stays, saying why, and nothing starts. The shell used to be made
+           anyway and WG.init then threw: a window with no picture, and no word why. A browser can have navigator.gpu
+           and no adapter (a headless one, a blocklisted card), so one is asked for here, as WG.init asks (no options),
+           before the introduction is taken away; the classic script before this one covers no navigator.gpu at all */
+        if (!navigator.gpu || !(await navigator.gpu.requestAdapter().catch(() => null))) {
+            const s = document.getElementById('about-status');
+            if (navigator.gpu) {
+                s.textContent = 'This browser has WebGPU but found no graphics card to run it on: ShadyTracer needs one. '
+                    + 'Its settings may have hardware acceleration switched off.';
+                s.classList.add('about-stop');
+            }
+            throw new Error('[start] no WebGPU adapter: the page stays on its introduction');
+        }
         const U = UTILITY();
 
         /* STALE FILES, CAUGHT AT START (diagnose.js). A module the browser took from its cache without
@@ -155,6 +252,8 @@
         await loadRevision();
         document.title = versionText();
         const container = document.getElementById('container');
+        // the introduction (above) has done its part: the shell fills this element whole
+        document.getElementById('about')?.remove();
         const SHELL = createShell(container, {
             title: `${versionText()} © Matthijs Keuper`, storageKey: 'raytracer.layout', popoutUrl: 'popout.html',
             /* FIVE MENUS (0.63.0; the user, 2026-10-17: "Minimise the number of menu options"): no Render settings menu --

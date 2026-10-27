@@ -38,6 +38,14 @@ from the Project panel, or the user's own.
 | `optics-analyse.png` | View › Layout › **Analyse** on the *RGBW colour mixing* example after a Run of 10 million rays: the map with isolux lines, the profiles, the polar diagram and the result cards; the screen material's properties on the left. |
 | `animate.png` | View › Layout › **Animate** on the *Glass and liquid* example: three camera tracks keyed in the Timeline, the video's 1920 × 1080 frame over the picture. |
 
+One more file is not the README's: `social.jpg`, the card a shared link to the site shows (`og:image` in
+`index.html`), 1200 × 630 as the card wants it and under 1 MB. It is `hero.png` cut to that shape, top kept; a new
+hero is a new card by the same command:
+
+```sh
+convert docs/screenshots/hero.png -resize 1200x -gravity north -crop 1200x630+0+0 +repage -strip -quality 85 docs/screenshots/social.jpg
+```
+
 Proposed and not taken (the README does not show them): a render of the noise library, the RGBW map
 showing CCT beside the Colour mixing tool, and a 3MF export in the slicer.
 
