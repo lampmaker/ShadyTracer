@@ -10,10 +10,11 @@ of search results, with Help › ShadyTracer homepage back to the front page. Pr
 so nothing saved is lost. A link of the old kind, `/?safe` or `/?s=2048`, still opens the app; a shared link's
 `?utm_source=` stays on the front page.
 
-**Who makes it, and why**, just under the first picture: the author's background (applied physics, LED lighting
-and optics, art at code+wood), why ShadyTracer exists, how it is made -- with an AI coding assistant under one
-person's direction, said plainly, and trusted for what checks it -- and what a sponsor pays for (hardware to test on,
-and the knowledge that it is useful). The bar's About goes there.
+**Who makes it, and why**, just under the first picture, in the author's own words: an applied physicist in the
+lighting industry (Philips Lighting, Lumileds, Invisua Lighting; now Keuper Innovations, and art at code+wood); the
+ray tracers built before for art works, and TinyWebGPU, left unfinished; signed distance functions; how it was
+finished -- with an AI coding assistant, said plainly, ambivalence included -- and what checks it; and what a sponsor
+pays for (hardware to test on, and the knowledge that it is useful). The bar's About goes there.
 
 **The README's screenshots are JPEGs**, quality 85, under the same names: 16.0 MB for the nine as PNGs, 3.6 MB now,
 the largest about 600 KB. The front page shows these same files, so a screenshot retaken is retaken for both.

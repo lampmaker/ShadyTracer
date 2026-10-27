@@ -113,30 +113,37 @@
             </div>
         </div>
 
-        <!-- WHO MAKES IT, AND WHY A TIP (0.next; the user's words, and their two sites: keuper-innovations.com,
-             codeandwood.art). Near the top, as asked. How it is made is said plainly: written with an AI coding assistant
+        <!-- WHO MAKES IT, AND WHY A TIP (0.next): the user's own words -- what they told us, and a post of theirs -- and
+             their two sites (keuper-innovations.com, codeandwood.art). Near the top, as asked. How it is made is said plainly: written with an AI coding assistant
              under one person's direction, and trusted for what checks it, not for who typed it. -->
         <section id="maker" class="alt">
             <div class="wrap">
                 <div class="maker">
                     <h2>Who makes it, and why</h2>
-                    <p>I'm Matthijs Keuper: an applied physicist from the University of Twente, an engineer and an artist.
-                        For three decades I have turned hard technical problems into products. I founded
-                        <strong>Invisua Lighting</strong> and ran it for ten years: a tunable LED lighting system, its
-                        optics, colour algorithms and firmware included, that ended up in flagship stores for Apple, BMW and
-                        Selfridges. Today I work on LED systems and nonimaging optics at
-                        <a href="https://keuper-innovations.com">Keuper Innovations</a>, and as an artist at
-                        <a href="https://codeandwood.art">code+wood</a>: wood reliefs, engravings and generative work where
-                        software, lasers and robots meet traditional techniques.</p>
-                    <p>ShadyTracer is where the two meet. I always wanted a ray tracer that did what I wanted from one:
-                        light in the units an optical engineer measures it in, and pictures worth looking at. This is it.</p>
+                    <p>I'm Matthijs Keuper, an applied physicist from the University of Twente. I have spent most of my
+                        career in the lighting industry: at Philips Lighting and Lumileds, and as founder of Invisua
+                        Lighting. At <a href="https://keuper-innovations.com">Keuper Innovations</a> I now consult on system
+                        architecture (mechanics, hardware, LEDs, electronics, firmware, assembly) and on LEDs. And as an
+                        artist, at <a href="https://codeandwood.art">code+wood</a>, I make wood reliefs, engravings and
+                        generative work.</p>
+                    <p>I have built several ray and path tracers over the years, mostly for my art. About two years ago I
+                        wanted something more universal, and to move from WebGL to WebGPU, so I built a tiny WebGPU toolkit
+                        (<a href="https://github.com/lampmaker/tinywebgpu">TinyWebGPU</a>) and went from there. I never
+                        finished it. As an optics engineer by education, mostly nonimaging optics for lighting, I always
+                        wanted a ray tracer that is physically correct. Well, reasonably so: don't use it to design camera
+                        lenses. And a while back I fell in love with signed distance functions, so ShadyTracer uses them for
+                        everything. If you don't know them, <a href="https://iquilezles.org">iquilezles.org</a> is the rabbit
+                        hole; don't expect to come out.</p>
                     <h3>How it is made</h3>
-                    <p>I designed ShadyTracer and I decide what it does and how it should work. Most of its code is
-                        written by Claude Code, an AI coding assistant, under my direction: I set the goals, review what
-                        comes back and measure it on real hardware. I say so openly, because it is a fair question. What
-                        should decide whether you trust a renderer is not who typed it but what checks it: every
-                        <span class="ok-mark">✓</span> on this page is a measurement against a closed-form answer on a
-                        real graphics card, more than a hundred test files run on every change, and
+                    <p>Recently I decided to finish it with Claude Code, an AI coding assistant, and to put in all the
+                        features I never got around to, and quite frankly could not have built myself. I set the direction
+                        and decide what it does; the AI writes most of the code. I am honestly ambivalent about that. AI took
+                        the fun out of programming for me, and I miss coding myself. On the other hand, it let me make a
+                        tool I could never have managed on my own. Call it AI slop if you like; for me it is a tool to make
+                        new things with.</p>
+                    <p>If you want to know whether to trust it, look at what checks it rather than who typed it: every
+                        <span class="ok-mark">✓</span> on this page is a measurement against a closed-form answer on a real
+                        graphics card, more than a hundred test files run on every change, and
                         <a href="https://github.com/lampmaker/ShadyTracer/blob/main/FEATURES.md">FEATURES.md</a> gives the
                         evidence for every feature, including what has not been confirmed yet.</p>
                     <h3>Why sponsor</h3>
