@@ -2246,7 +2246,7 @@ export const environmentOf = doc => doc.environment
   all -- and put back only the fields it had: an example's camera has no field of view, so it kept the last scene's.
 
   WHOLE WHEN READ (sceneViewOf): whatever a scene leaves out is the default, never what the scene before had. The camera's
-  defaults are the page's start (index.html Q: 20 units off, the 40 degree field), the exposure's the schema's.
+  defaults are the page's start (app.html Q: 20 units off, the 40 degree field), the exposure's the schema's.
 
   NOT AN EDIT (demo.js): looking is not editing, so a camera moved or an exposure changed is no undo step, and the
   history's snapshots leave the view out (project.js historyText). Lengths are the scene's unit, as every length here.
@@ -2272,7 +2272,7 @@ export const VIEW_CAMERA = Object.freeze({
     aperture: v => (Number.isFinite(v) && v >= 0) || 'must be a number >= 0 (0 a pinhole)',
     focus: v => (Number.isFinite(v) && v >= 0) || 'must be a number >= 0 (0 the target\'s distance)',
 })
-/* THE CAMERA A SCENE LEAVING ONE OUT HAS: the page's start (index.html Q, and the renderer's up), a pinhole */
+/* THE CAMERA A SCENE LEAVING ONE OUT HAS: the page's start (app.html Q, and the renderer's up), a pinhole */
 export const CAMERA_DEFAULTS = Object.freeze({ mode: 'orbit', camtype: 0, fov: 40, dimensions: 10, target: [0, 0, 0],
     azimuth: 40, elevation: 70, distance: 20, up: [0, 0, 1], aperture: 0, focus: 0 })
 /* the camera's lengths: what a unit's change, or a camera from a scene in another unit, scales */

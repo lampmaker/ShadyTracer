@@ -27,11 +27,12 @@ body {
     height: 100vh;
 }
 
-/* the Sponsor link at the menu bar's right end (index.html, SHELL.barEnd) */
+/* the Sponsor link at the menu bar's right end (app.html, SHELL.barEnd) */
 .sponsor-heart { color: #e0607e; }
 
-/* THE INTRODUCTION in #container (index.html): what a search engine reads, what shows while the modules load, and
-   what stays, with the reason, in a browser without WebGPU. The body does not scroll, so this does */
+/* WHILE IT STARTS, OR WHY IT CANNOT, in #container (app.html): what shows while the modules load, and what stays, with
+   the reason, in a browser without WebGPU or an adapter. The body does not scroll, so this does. (The site's front page,
+   index.html, has its own sheet: site/home.css) */
 .about {
     height: 100%;
     overflow: auto;

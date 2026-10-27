@@ -59,7 +59,7 @@ export function addScene(p, doc, index) {
  *  or a lamp, and its + shapes are 1 unit across (primitives.js), so a 1 cm sphere. createDoc stays in
  *  metres with the 400 m default: it is what every test, bench and library document is built on. */
 export const NEW_SCENE = Object.freeze({ unit: 'cm', envRadius: 25 })
-/* ...and seen from close by (model.js VIEW): the page's start angle (index.html camera), 4 units off -- a 1-unit shape
+/* ...and seen from close by (model.js VIEW): the page's start angle (app.html camera), 4 units off -- a 1-unit shape
    a third of the view's height at the 40 degree field -- rather than wherever the scene before left the camera, 20 m
    off or 150 mm. dimensions is the parallel view's width. In the document since 0.66.0, as every scene's camera is: it
    was held beside it, for the first time the scene was shown, and a new scene saved before it was shown had none. */
@@ -165,7 +165,7 @@ export function carryOutside(next, from, memory = null) {
 
 /* THE RENDERER'S SETTINGS AS A PROJECT KEEPS THEM (0.66.0): everything the renderer hands over (RT.settings) but what
    the scenes have of their own now -- the camera, the exposure (model.js VIEW_EXPOSURE) and the surface tolerance
-   (`eps`). Saved, they were put back over the scene shown at every start (index.html applySettings), one scene's
+   (`eps`). Saved, they were put back over the scene shown at every start (app.html applySettings), one scene's
    camera over another's, and one exposure and one tolerance for all. */
 export function rendererSettings(s) {
     if (!s || typeof s !== 'object' || Array.isArray(s)) return {}

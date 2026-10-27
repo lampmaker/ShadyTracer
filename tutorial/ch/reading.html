@@ -182,7 +182,7 @@
       by its version and its <em>revision</em>, the exact saved state of the files, as the program's version file
       describes:</p>
     <pre data-src="version.js" data-sym="//   await loadRevision()" data-to="what a saved file records as `app`"
-         data-why="Three things the file offers the rest of the program, each with an example of what it gives: 'ShadyTracer 0.1.0 · 1819ac6 (main)' is a version (0.1.0), a revision (1819ac6, a short code for one saved state of the files) and the line of work it was on (main)." data-hash="9ceb40fa"></pre>
+         data-why="Three things the file offers the rest of the program, each with an example of what it gives: 'ShadyTracer 0.1.0 · 1819ac6 (main)' is a version (0.1.0), a revision (1819ac6, a short code for one saved state of the files) and the line of work it was on (main)." data-hash="bf2fb113"></pre>
     <p>The tests themselves are rows in one file, <code>lib/pathtracer/tests.js</code>, so a new measurement is a new
       row, not a new program (<a href="https://github.com/lampmaker/ShadyTracer/blob/main/docs/TESTING.md">docs/TESTING.md</a>
       says why).</p>
@@ -193,7 +193,7 @@
   <div class="prose">
     <h2><span class="n">6</span>Running ShadyTracer</h2>
     <p>The quickest way is the published copy: open <a href="https://shadytracer.com">shadytracer.com</a>
-      in a browser with <a data-g="webgpu">WebGPU</a>. To run your own copy, and read and change its code, you need two
+      in a browser with <a data-g="webgpu">WebGPU</a> and press <em>Open ShadyTracer</em>. To run your own copy, and read and change its code, you need two
       common programs installed first: <strong>git</strong>, which fetches the code, and <strong>Python 3</strong>,
       whose one-line web server serves it (any web server will do). Then open a terminal, the window you type commands
       into (Terminal on a Mac, PowerShell on Windows, any terminal on Linux), and type these three commands, one at a
@@ -202,12 +202,13 @@
 cd ShadyTracer
 python3 -m http.server 8000</pre>
     <p>The first fetches the code into a new folder, the second goes into it, and the third starts a web server there,
-      which keeps running until you close the terminal. Then open <code>http://localhost:8000/</code> in the browser:
-      <code>localhost</code> is your own computer, and 8000 the number the server listens on, so the address asks your
-      own computer for the files the server is serving. What it needs:</p>
+      which keeps running until you close the terminal. Then open <code>http://localhost:8000/app.html</code> in the browser
+      (<code>http://localhost:8000/</code> is the site's front page, with a button to it): <code>localhost</code> is
+      your own computer, and 8000 the number the server listens on, so the address asks your own computer for the files
+      the server is serving. What it needs:</p>
     <ul>
       <li><strong>A browser with WebGPU</strong>: Chrome or Edge 113 or later, Firefox 141 or later on Windows, or
-        Safari 26 or later. Not sure? Open the published copy: if a picture appears, your browser has it.</li>
+        Safari 26 or later. Not sure? Open the published copy: its front page says, under its button, whether your browser can run it.</li>
       <li><strong>Real graphics hardware</strong>, not a software imitation of it. The results in these chapters were
         measured on NVIDIA cards, which is where the numbers come from, not a demand of the program: ShadyTracer's
         README asks only for a real graphics card.</li>

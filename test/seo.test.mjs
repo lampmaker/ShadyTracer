@@ -2,17 +2,22 @@
 // Tests for what a search engine and a shared link see. Run: node test/seo.test.mjs
 //
 // What has to hold, none of it needing a GPU or a browser:
-//   index.html's head: a title, a description, the canonical address -- the one the README sends people to -- and the
-//     Open Graph card, its picture a file here of the size it claims; the JSON-LD parsing, about the same address.
-//   the introduction in #container (what a crawler reads, having no WebGPU): a heading and the tutorial linked; taken
-//     away before the shell is made in that element, and nothing started without navigator.gpu.
-//   sitemap.xml: the app, the tutorial's contents and glossary and every chapter written, each a file here, nothing
-//     else; every page in it with its own description, a chapter's the line tutorial/kit/chapters.js gives it.
+//   the front page (index.html, 0.next)'s head: a title, a description, the canonical address -- the one the README
+//     sends people to -- and the Open Graph card, its picture a file here of the size it claims; the JSON-LD parsing,
+//     about the same address, and its FAQ the questions and answers the page shows, word for word.
+//   the front page's body: every picture one of the README's own (docs/screenshots), its alt and its size the file's,
+//     the first one loaded at once and the rest lazily; every link and source a file here; the app linked; a query the
+//     app reads (app.html's own keys) sent on to it, and only such a query.
+//   docs/screenshots: JPEGs under 1 MB, each one the README or the card shows, and every one they name there.
+//   the app (app.html, which was / until 0.next): kept out of search results and the sitemap; its introduction taken
+//     away before the shell is made in that element, and nothing started without WebGPU or an adapter.
+//   sitemap.xml: the front page, the tutorial's contents and glossary and every chapter written, each a file here,
+//     nothing else; every page in it with its own description, a chapter's the line tutorial/kit/chapters.js gives it.
 //   robots.txt: the sitemap named, and nothing the app or the tutorial loads disallowed (a crawler that renders the
 //     page needs its scripts).
 // Every one of these is invisible at run time: a stale sitemap or a wrong card says nothing in the page.
 //======================================================================================================================
-import { readFileSync, existsSync } from 'node:fs'
+import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { CHAPTERS } from '../tutorial/kit/chapters.js'
@@ -33,7 +38,7 @@ ok('the README names the site\'s address', !!site)
 const SITE = site + '/'
 const fileOf = url => url.startsWith(SITE) ? url.slice(SITE.length) : null
 
-// ---- index.html's head ------------------------------------------------------------------------------------------------
+// ---- the front page's head ----------------------------------------------------------------------------------------------
 const page = read('index.html')
 const head = page.slice(0, page.indexOf('</head>'))
 const meta = (attr, key) => new RegExp(`<meta ${attr}="${key}" content="([^"]*)">`).exec(head)?.[1]
@@ -70,19 +75,83 @@ if (imageFile && existsSync(join(repo, imageFile))) {
 } else ok('og:image a file here', false, imageFile)
 
 // the JSON-LD: it must parse, or a search engine drops it quietly
-const ld = /<script type="application\/ld\+json">([\s\S]*?)<\/script>/.exec(head)?.[1]
-let data = null
-try { data = JSON.parse(ld) } catch (e) { ok('the JSON-LD parses', false, e.message) }
-ok('the JSON-LD a SoftwareApplication at the address', data?.['@type'] === 'SoftwareApplication' && data?.url === SITE, JSON.stringify(data?.url))
+const lds = [...head.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map(m => {
+    try { return JSON.parse(m[1]) } catch (e) { ok('every JSON-LD block parses', false, e.message); return null }
+})
+const data = lds.find(d => d?.['@type'] === 'SoftwareApplication')
+ok('the JSON-LD a SoftwareApplication at the address', data?.url === SITE, JSON.stringify(data?.url))
 ok('...with the card\'s picture', data?.image === image)
+ok('...its screenshot a file here', !!fileOf(data?.screenshot ?? '') && existsSync(join(repo, fileOf(data.screenshot))), data?.screenshot)
 
-// ---- the introduction and the start -----------------------------------------------------------------------------------
-const container = /<div class="content" id="container">([\s\S]*?)\n    <\/div>/.exec(page)?.[1] ?? ''
-ok('#container holds the introduction', /<main class="about" id="about">/.test(container))
-ok('...a heading', /<h1>ShadyTracer<\/h1>/.test(container))
-ok('...the tutorial linked', container.includes('href="tutorial/"'))
+// the FAQ: the questions and answers the page shows, word for word -- Google drops markup that says what the page does not
+const plain = html => html.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()
+const faqHtml = /<div class="faq">([\s\S]*?)<\/div>/.exec(page)?.[1] ?? ''
+const shown = [...faqHtml.matchAll(/<h3>([\s\S]*?)<\/h3>\s*<p>([\s\S]*?)<\/p>/g)].map(m => ({ q: plain(m[1]), a: plain(m[2]) }))
+const faq = lds.find(d => d?.['@type'] === 'FAQPage')?.mainEntity ?? []
+ok('the FAQ on the page', shown.length >= 5, `${shown.length} questions`)
+ok('the FAQ\'s JSON-LD as many questions as the page', faq.length === shown.length, `${faq.length} vs ${shown.length}`)
+faq.forEach((e, i) => {
+    ok(`FAQ ${i + 1}'s question the page's`, e.name === shown[i]?.q, `${JSON.stringify(e.name)} vs ${JSON.stringify(shown[i]?.q)}`)
+    ok(`FAQ ${i + 1}'s answer the page's`, e.acceptedAnswer?.text === shown[i]?.a, `${JSON.stringify(e.acceptedAnswer?.text)}\n      vs ${JSON.stringify(shown[i]?.a)}`)
+})
+
+// ---- the front page's body ----------------------------------------------------------------------------------------------
+const body = page.slice(page.indexOf('<body>'))
+const attr = (tag, name) => new RegExp(`\\s${name}="([^"]*)"`).exec(tag)?.[1]
+const imgs = [...body.matchAll(/<img\b[^>]*>/g)].map(m => m[0]).filter(t => attr(t, 'src') !== 'favicon.svg')
+ok('the front page shows the pictures', imgs.length >= 6, `${imgs.length}`)
+imgs.forEach((t, i) => {
+    const src = attr(t, 'src') ?? ''
+    ok(`${src}: one of the README's own pictures`, /^docs\/screenshots\/[a-z-]+\.jpg$/.test(src))
+    ok(`${src}: an alt that says what it shows`, (attr(t, 'alt') ?? '').length > 30)
+    if (!existsSync(join(repo, src))) return ok(`${src} exists`, false)
+    const size = jpegSize(readFileSync(join(repo, src)))
+    ok(`${src}: width and height the file's own (${size?.w} x ${size?.h}) -- a picture retaken at another size is these two numbers`,
+        size && +attr(t, 'width') === size.w && +attr(t, 'height') === size.h, `the page says ${attr(t, 'width')} x ${attr(t, 'height')}`)
+    ok(`${src}: ${i ? 'loaded lazily' : 'the first, loaded at once'}`, i ? attr(t, 'loading') === 'lazy' : !attr(t, 'loading'))
+})
+// every link and source on it a file here (the address, its anchors and other sites aside)
+const locals = [...page.matchAll(/\s(?:href|src)="([^"#]+)(?:#[^"]*)?"/g)].map(m => m[1]).filter(u => !/^(https?:|mailto:)/.test(u))
+for (const u of new Set(locals)) {
+    const f = u === './' ? 'index.html' : u.endsWith('/') ? u + 'index.html' : u
+    ok(`the front page's ${u} a file here`, existsSync(join(repo, f)))
+}
+ok('...the app linked', locals.includes('app.html'))
+ok('...the tutorial linked', locals.includes('tutorial/'))
+// its anchors: each a section
+for (const [, id] of page.matchAll(/href="#([^"]+)"/g)) ok(`#${id} a section of the page`, page.includes(` id="${id}"`))
+
+// a query the app reads is sent on to it, and only such a query. The app's keys: its start's ?safe (start.js), the picture's
+// ?s and ?a (lib/utils.js ctx.Sc), and every key of the Q the page reads its query into (lib/utils.js GU) -- read here from app.html
+const app = read('app.html')
+const qKeys = [...(/U\.GU\(\{([\s\S]*?)\}\)/.exec(app)?.[1] ?? '').matchAll(/(\w+)\s*:/g)].map(m => m[1])
+ok('app.html\'s Q read', qKeys.length >= 5, JSON.stringify(qKeys))
+const sent = JSON.parse((/const APP_KEYS = (\[[^\]]*\])/.exec(page)?.[1] ?? '[]').replace(/'/g, '"'))
+const appKeys = ['safe', 's', 'a', ...qKeys]
+ok('the front page sends on every key the app reads', appKeys.every(k => sent.includes(k)), `missing ${JSON.stringify(appKeys.filter(k => !sent.includes(k)))}`)
+ok('...and no other (a shared link\'s ?utm_source= stays here)', sent.every(k => appKeys.includes(k)), `extra ${JSON.stringify(sent.filter(k => !appKeys.includes(k)))}`)
+ok('...to app.html, with its query and anchor', page.includes("location.replace('app.html' + location.search + location.hash)"))
+ok('...before the page is drawn: in its head', head.includes('const APP_KEYS'))
+
+// ---- docs/screenshots: the README's pictures, and the front page's -----------------------------------------------------
+const shots = readdirSync(join(repo, 'docs/screenshots')).filter(f => f !== 'README.md')
+const readme = read('README.md')
+const named = new Set([...readme.matchAll(/\(docs\/screenshots\/([^)]+)\)/g)].map(m => m[1]))
+for (const f of shots) {
+    if (!f.endsWith('.jpg')) { ok(`docs/screenshots/${f}: a JPEG`, false, `convert docs/screenshots/${f} -strip -sampling-factor 4:2:0 -quality 85 docs/screenshots/${f.replace(/\.\w+$/, '.jpg')}, then delete it (docs/screenshots/README.md)`); continue }
+    const n = statSync(join(repo, 'docs/screenshots', f)).size
+    ok(`docs/screenshots/${f} under 1 MB`, n < 1 << 20, `${n} bytes`)
+    ok(`docs/screenshots/${f} shown by the README, or the card`, named.has(f) || image.endsWith('/' + f))
+}
+for (const f of named) ok(`the README's docs/screenshots/${f} a file here`, shots.includes(f))
+
+// ---- the app: a tool, not the page to find ------------------------------------------------------------------------------
+ok('app.html kept out of search results', app.includes('<meta name="robots" content="noindex">'))
+const container = /<div class="content" id="container">([\s\S]*?)\n    <\/div>/.exec(app)?.[1] ?? ''
+ok('app.html\'s #container holds the introduction', /<main class="about" id="about">/.test(container))
 ok('...a noscript line', container.includes('<noscript>'))
-const module = page.slice(page.indexOf('<script type="module">'))
+ok('...the front page linked', container.includes('href="./"'))
+const module = app.slice(app.indexOf('<script type="module">'))
 const at = s => module.indexOf(s)
 const probe = at('if (!navigator.gpu || !(await navigator.gpu.requestAdapter()')
 ok('the module stops without WebGPU or an adapter, before the introduction goes and the shell is made',
@@ -127,12 +196,12 @@ const take = (from, spec) => {
     if (!loaded.has(path) && existsSync(join(repo, path))) { loaded.add(path); if (path.endsWith('.js')) queue.push(path) }
 }
 const refs = text => [...text.matchAll(/(?:from\s*|import\s*\(\s*|import\s+|src=|href=)["'`](\.{1,2}\/[^"'`]+|[a-z][\w./-]*\.(?:js|css|svg|html))["'`]/g)].map(m => m[1].startsWith('.') ? m[1] : './' + m[1])
-for (const p of ['index.html', ...want.slice(1).map(pageFile)]) for (const s of refs(read(p))) take(p, s)
+for (const p of ['index.html', 'app.html', ...want.slice(1).map(pageFile)]) for (const s of refs(read(p))) take(p, s)
 while (queue.length) { const f = queue.pop(); for (const s of refs(read(f))) take(f, s) }
 ok('the pages\' loads found', loaded.size > 50, `${loaded.size}`)
 const hit = [...loaded].filter(p => blocked('/' + p))
 ok('nothing the app or the tutorial loads disallowed', !hit.length, hit.slice(0, 5).join(' '))
-for (const p of ['/', '/index.html', '/tutorial/', ...want.map(f => '/' + f)]) ok(`${p} not disallowed`, !blocked(p))
+for (const p of ['/', '/index.html', '/app.html', '/tutorial/', ...want.map(f => '/' + f)]) ok(`${p} not disallowed`, !blocked(p))
 
 console.log(fail ? `\n${fail} FAILED, ${pass} passed` : `${pass} assertions pass.`)
 process.exit(fail ? 1 : 0)

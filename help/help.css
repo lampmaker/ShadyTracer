@@ -46,5 +46,5 @@
 .help-hit p { margin: 2px 0; color: var(--sh-muted); }
 .help-hit-track { color: var(--sh-faint); }
 .help-error { color: var(--sh-warn); }
-/* A PART OF THE WINDOW POINTED AT by a page's show: link (index.html) */
+/* A PART OF THE WINDOW POINTED AT by a page's show: link (app.html) */
 .help-flash { outline: 3px solid #ffd34d !important; outline-offset: -3px; transition: outline-color 0.3s; }

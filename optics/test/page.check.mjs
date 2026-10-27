@@ -1,7 +1,7 @@
 // node optics/test/page.check.mjs
 //
 // THE OPTICS PAGE IN A BROWSER: optics/test/page.html -- the Analysis pane and the chart panels as
-// index.html makes them, over a stand-in optics module whose analysis is made-up data -- driven headless.
+// app.html makes them, over a stand-in optics module whose analysis is made-up data -- driven headless.
 // The application's own page stops at WebGPU, so without this the pane, the charts, their bars, the
 // shared hover, the zoom and the results were code nothing ever ran (CLAUDE.md: a feature nothing
 // exercises has never run). It checks:

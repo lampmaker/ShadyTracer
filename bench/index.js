@@ -82,7 +82,7 @@ export const BENCH_FILES = {
 /** Where a frozen scene is, relative to this module: a URL in the page, a file URL in node. */
 export const benchUrl = file => new URL(`./scenes/${file}`, import.meta.url)
 
-/** The scene object the renderer takes, generated exactly as the page generates its scenes (index.html) -- or, `data`,
+/** The scene object the renderer takes, generated exactly as the page generates its scenes (app.html) -- or, `data`,
  *  as the builder does with its developer setting sceneData on (builder/scenedata.js). (`grid` and `exact` were the two
  *  arguments after it until 0.41.0, when the candidate grid and exact hits went.)
  *  `cull` 'dear', the default: a box test only for the top-level nodes dearer than their box, as the builder makes
@@ -115,7 +115,7 @@ export const boxesFor = (doc, { only = null, same = null } = {}) => {
            the developer setting stepCache on (Tests > stepcache), and set for every row, so no row depends on another's */
         RT.setStepCacheBox?.(stepCacheBox(doc, V))
         /* A SCENE AS DATA (builder/scenedata.js) carries its boxes in its records, every node's under plain groups (the
-           records cull each): made again with them and written, as the page does (index.html pushCull) */
+           records cull each): made again with them and written, as the page does (app.html pushCull) */
         if (RT.scene?.dataOf && RT.scene.writeData) {
             const C = cullBoxes(doc, V, { nested: true })
             const r = RT.scene.dataOf(Model.toTree(doc, { keepDisabled: true }), C)

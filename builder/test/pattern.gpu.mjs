@@ -256,7 +256,7 @@ const RA = reliefDoc('h = amplitude * sin((q.x - 0.3) / size);\nslope = amplitud
 const RB = reliefDoc('h = amplitude * sin(q.z / size);\nslope = amplitude / size;', { pos: { x: 0.3, y: 0, z: 0 }, rot: { x: 0, y: 90, z: 0 } })
 ok('a relief alone is in its pattern frame too (codegen patterned: no material reads p_local)', patterned(treeOf(RB).children[0], { relief: true }))
 /* without culling: the ball is a dear node (codegen ONLY THE DEAR ONES), whose box the host measures and sends
-   (index.html pushCull); a box test is not what this is about */
+   (app.html pushCull); a box test is not what this is about */
 const RCA = generate(treeOf(RA), { id: 'built', liveVisibility: true, cull: false })
 const RCB = generate(treeOf(RB), { id: 'built', liveVisibility: true, cull: false }), RDB = generate(treeOf(RB), { id: 'built', liveVisibility: true, data: true, cull: false })
 // ...and the same relief code with no frame: another field, or the comparison below could not fail

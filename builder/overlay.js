@@ -674,7 +674,7 @@ export function installSelectionOverlay({ stage, canvas, RT, BUILDER, onPick = (
         points,
         /** WHAT IS UNDER A POINT OF THE PAGE (client coordinates): { hit, pos, id } -- the world point hit and
          *  the object there, as a click would find it -- or null off the picture or when the scene changed
-         *  meanwhile. For a drop from the library (index.html), which has a point and no click. */
+         *  meanwhile. For a drop from the library (app.html), which has a point and no click. */
         async probe(cx, cy) {
             const V = viewNow()
             if (!V || !RT.pick) return null

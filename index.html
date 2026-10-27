@@ -4,9 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- WHAT A SEARCH ENGINE AND A SHARED LINK SEE (0.79.1). The script below retitles the page with the version once it
-         starts; a crawler, which has no WebGPU, keeps this title and the introduction in #container. The address is
-         the one the README gives (shadytracer.com); test/seo.test.mjs holds these to it, robots.txt and sitemap.xml. -->
+    <!-- THE SITE'S FRONT PAGE (0.next): what ShadyTracer is, the button to the app (app.html, which was / until then), what
+         it needs, and the FAQ. Static: it works without JavaScript, and a crawler reads all of it. Its words follow the
+         README's, its pictures are the README's own (docs/screenshots), its claims carry the README's marks (✓ and
+         preview). test/seo.test.mjs holds it: the head, the pictures and their sizes, every link, the FAQ's JSON-LD
+         against the questions on the page, the queries sent on to the app. -->
     <title>ShadyTracer: a physically based WebGPU path tracer in your browser</title>
     <meta name="description" content="A free, open-source WebGPU path tracer in your browser: light in real units (lux, cd/m²), caustics through glass, a scene builder, and an optics bench for LED and luminaire design.">
     <link rel="canonical" href="https://shadytracer.com/">
@@ -22,6 +24,17 @@
     <meta property="og:image:height" content="630">
     <meta property="og:image:alt" content="ShadyTracer's window: a light sculpture of blue and amber light bars and a mirror ball in a plaster room, the scene tree on the left and the render settings on the right">
     <meta name="twitter:card" content="summary_large_image">
+    <script>
+        /* A LINK TO THE APP AS IT USED TO BE: until 0.next the app was /, and a query set it up (?safe, start.js; ?s=2048,
+           the picture's size; any key of the page's Q, lib/utils.js GU). Such a link still opens the app. Only those
+           keys: a shared link's ?fbclid= or ?utm_source= is for this page. test/seo.test.mjs reads the keys from
+           app.html, so a new one is not left behind here. */
+        {
+            const APP_KEYS = ['safe', 's', 'a', 'azimuth', 'elevation', 'distance', 'dimensions', 'fov', 'camtype', 'resetframecount'];
+            if ([...new URLSearchParams(location.search).keys()].some(k => APP_KEYS.includes(k)))
+                location.replace('app.html' + location.search + location.hash);
+        }
+    </script>
     <script type="application/ld+json">
     {
         "@context": "https://schema.org",
@@ -36,1605 +49,321 @@
         "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
         "license": "https://opensource.org/licenses/MIT",
         "image": "https://shadytracer.com/docs/screenshots/social.jpg",
+        "screenshot": "https://shadytracer.com/docs/screenshots/hero.jpg",
         "author": { "@type": "Person", "name": "Matthijs Keuper" },
         "sameAs": ["https://github.com/lampmaker/ShadyTracer"]
     }
     </script>
-    <link rel="stylesheet" href="style.css">
-    <!-- the docking (lib/dockview, MIT, vendored) and the shell made on it (lib/shell) -->
-    <link rel="stylesheet" href="./lib/dockview/dockview.css">
-    <link rel="stylesheet" href="./lib/shell/shell.css">
-    <!-- the keyframe timeline and video export (lib/timeline), and its look in a panel (tools/) -->
-    <link rel="stylesheet" href="./lib/timeline/timeline.css">
-    <link rel="stylesheet" href="tools/timeline.css">
-    <link rel="stylesheet" href="help/help.css">
-    <script src="./lib/dockview/dockview.min.js"></script>
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+            { "@type": "Question", "name": "What do I need to run it?",
+              "acceptedAnswer": { "@type": "Answer", "text": "A browser with WebGPU: Chrome or Edge 113 or later, Firefox 141 or later on Windows, or Safari 26 or later. And a real graphics card: the results here were measured on NVIDIA cards. The line under the button at the top of this page says whether your browser can run it." } },
+            { "@type": "Question", "name": "Do I need to install anything?",
+              "acceptedAnswer": { "@type": "Answer", "text": "No. Open the app and it runs in the browser, on your own graphics card. There is no account, no download and no server doing the work." } },
+            { "@type": "Question", "name": "Where is my work kept?",
+              "acceptedAnswer": { "@type": "Answer", "text": "In your browser, on this computer, saved as it changes: a reload comes back to the same scene, camera and settings. The Project panel lists your projects and downloads any of them, and File › Export saves a scene or a whole project as a file. Clearing the browser's data for this site deletes them, so keep a file of anything you care about." } },
+            { "@type": "Question", "name": "Is anything uploaded?",
+              "acceptedAnswer": { "@type": "Answer", "text": "No. Your scenes stay in your browser. The page loads its own files from this site and sends nothing anywhere: no account, no analytics, no tracking." } },
+            { "@type": "Question", "name": "Does it work on a phone or tablet?",
+              "acceptedAnswer": { "@type": "Answer", "text": "It is made for a desktop or laptop with a graphics card: the interface is a workbench of docked panels, and path tracing wants a graphics card's power. A phone browser with WebGPU may start it, but that is not what it is built or tested for." } },
+            { "@type": "Question", "name": "Is it free?",
+              "acceptedAnswer": { "@type": "Answer", "text": "Yes. ShadyTracer is open source under the MIT licence, and the code is on GitHub. If it is useful to you, a tip through GitHub Sponsors keeps it going." } },
+            { "@type": "Question", "name": "What do ✓ and preview mean on this page?",
+              "acceptedAnswer": { "@type": "Answer", "text": "✓ means checked against a closed-form answer on a real graphics card, with the test that did it. Preview means built and tested without a graphics card, and not yet confirmed on one. Anything unmarked is in use." } }
+        ]
+    }
+    </script>
+    <link rel="stylesheet" href="site/home.css">
 </head>
 
 <body>
-    <div class="content" id="container">
-        <!-- THE INTRODUCTION: what a crawler, a browser without WebGPU or without JavaScript reads, and what shows while
-             the modules load. Taken away just before the shell is made in this element; kept, with the reason, when
-             the browser has no WebGPU (the script below). Its words follow the README's top and Highlights. -->
-        <main class="about" id="about">
-            <h1>ShadyTracer</h1>
-            <p class="about-lead"><strong>Physically based light in the browser.</strong> A WebGPU path tracer that
-                renders in real units, candela per square metre and lux, with a scene builder, a measuring tool, and an
-                optics bench for LED and luminaire design that traces the same scene the picture shows. Nothing to
-                install and no server: the page runs on your own graphics card.</p>
-            <p class="about-status" id="about-status"></p>
-            <noscript><p class="about-status about-stop">ShadyTracer runs in the browser: it needs JavaScript, and a
-                browser with WebGPU.</p></noscript>
-            <h2>What it does</h2>
-            <ul>
-                <li><strong>Light in physical units.</strong> Luminance in cd/m², illuminance in lux, a sun and sky
-                    given by the illuminance they deliver.</li>
-                <li><strong>Caustics through glass</strong>, by tracing photons from the sun, and what is seen through
-                    glass or in a mirror lit right, by a photon map.</li>
-                <li><strong>Any glowing surface is a light</strong>, with nothing declared.</li>
-                <li><strong>Glass the way glass behaves</strong>: dispersion that splits white light in a prism,
-                    dichroic and anti-reflection coatings, and a camera lens with depth of field.</li>
-                <li><strong>Lux and luminance as false colour</strong>, with an error bar on every pixel, and a measure
-                    tool that reads lux, uniformity and colour temperature off any surface.</li>
-                <li><strong>A scene builder where every shape is code</strong> you can edit: signed distance fields,
-                    CSG, modifiers, STEP and STL import, and export for 3D printing.</li>
-                <li><strong>An optics bench over the same scene</strong>: LEDs, lenses and detectors; far field in
-                    candela with beam and field angles, illuminance maps in lux, CCT and Duv.</li>
-            </ul>
-            <h2>How it works</h2>
-            <p><a href="tutorial/">ShadyTracer, inside out</a> teaches how a path tracer like this one is built, with
-                figures that run: rays and distance fields, the units of light, glass and rough surfaces, path tracing,
-                caustics and photon mapping, and how it all runs on a graphics card.</p>
-            <p>Open source under the MIT licence: <a href="https://github.com/lampmaker/ShadyTracer">the code on
-                GitHub</a>.</p>
-        </main>
-    </div>
+    <header class="top">
+        <div class="wrap">
+            <a class="brand" href="./"><img src="favicon.svg" alt="" width="26" height="26">ShadyTracer</a>
+            <nav aria-label="Sections">
+                <a href="#features">Features</a>
+                <a href="#optics">Lighting design</a>
+                <a href="#checked">Checked</a>
+                <a href="#learn">How it works</a>
+                <a href="#faq">FAQ</a>
+                <a href="https://github.com/lampmaker/ShadyTracer">GitHub</a>
+            </nav>
+            <a class="btn primary small" href="app.html">Open ShadyTracer</a>
+        </div>
+    </header>
+
+    <main>
+        <div class="hero">
+            <div class="wrap">
+                <h1>Physically based light, <span class="tint">in your browser</span></h1>
+                <p class="lead">A WebGPU path tracer that renders in real units, candela per square metre and lux, with a
+                    scene builder, a measuring tool, and an optics bench for LED and luminaire design that traces the same
+                    scene the picture shows. Nothing to install and no server: it runs on your own graphics card.</p>
+                <div class="actions">
+                    <a class="btn primary" href="app.html">Open ShadyTracer</a>
+                    <a class="btn" href="tutorial/">How it works</a>
+                </div>
+                <p class="gpu" id="gpu"></p>
+                <img class="shot" src="docs/screenshots/hero.jpg" width="1919" height="1028" fetchpriority="high"
+                    alt="The raytracer in its Design layout: the project's scenes as cards over the tree on the left; in the middle a light sculpture, blue and amber light bars and a mirror ball in a plaster room, its light seen through the photon map; the Render settings and Render stats on the right">
+            </div>
+        </div>
+
+        <section id="features">
+            <div class="wrap">
+                <h2>What it does</h2>
+                <p class="intro">A renderer that treats light as something to measure, and a workshop to build what it
+                    lights. <span class="legend"><span class="ok-mark">✓</span> checked against a closed-form answer on a
+                    real graphics card · <span class="pre-mark">preview</span> built and tested without one, not yet
+                    confirmed on one · unmarked: in use.</span></p>
+
+                <div class="feature">
+                    <div class="text">
+                        <h3>Light found the way light goes</h3>
+                        <ul>
+                            <li><strong>Wavefront path tracing on the GPU</strong>, with next-event estimation and multiple
+                                importance sampling toward the sun and sky: 3.8× less noise, unbiased <span class="ok-mark">✓</span></li>
+                            <li><strong>Caustics through glass</strong>, by tracing photons from the sun and learning where
+                                they are worth sending <span class="ok-mark">✓</span>; and what is seen through glass or in a
+                                mirror, lit right, by a photon map.</li>
+                            <li><strong>Any glowing surface is a light</strong>, with nothing declared <span class="ok-mark">✓</span></li>
+                            <li><strong>Dust in the air</strong>: a haze box whose air scatters light in real units, so a
+                                beam shows in it; it loses no light, to 0.02 % <span class="ok-mark">✓</span></li>
+                            <li><strong>Glass the way glass behaves</strong>: dispersion, dichroic and anti-reflection
+                                coatings, and a camera lens with depth of field <span class="pre-mark">preview</span></li>
+                        </ul>
+                    </div>
+                    <img class="shot" src="docs/screenshots/showcase.jpg" width="1920" height="1030" loading="lazy" decoding="async"
+                        alt="The Material board example: the library's materials on spheres in daylight -- plastics, metals, clear, tinted and frosted glass, stone, wood and paint -- beside the Render settings and Render stats">
+                </div>
+
+                <div class="feature flip">
+                    <div class="text">
+                        <h3>Light as numbers</h3>
+                        <p><strong>Luminance in cd/m² and illuminance in lux</strong>, everywhere. A white floor under sun
+                            and sky reads its textbook value to 0.1 % <span class="ok-mark">✓</span>. The sun is its
+                            illuminance at its real size, the sky the light it puts on the ground.</p>
+                        <ul>
+                            <li><strong>Lux and luminance as false colour</strong>, with an <strong>error bar on every
+                                pixel</strong> <span class="pre-mark">preview</span></li>
+                            <li><strong>A measure tool</strong>: pins and areas read lux, uniformity U0 and colour
+                                temperature off any surface, a ruler measures distances, all of it as CSV
+                                <span class="pre-mark">preview</span></li>
+                        </ul>
+                    </div>
+                    <img class="shot" src="docs/screenshots/lux-view.jpg" width="1917" height="1032" loading="lazy" decoding="async"
+                        alt="The LED, lens and screen example measured: an area and a pin on the screen read in cd/m² with their error, colour temperature, Duv and Δu′v′; the optics rays drawn over the picture, and the drawer of views, measuring tools and rays at its bottom right">
+                </div>
+
+                <div class="feature">
+                    <div class="text">
+                        <h3>Every shape is code</h3>
+                        <p>The scene builder makes shapes from signed distance fields, each one code you can edit, with
+                            compile errors shown at your own line and column. Move handles in the picture, CSG, modifiers,
+                            undo; projects of several scenes, kept in your browser as they change.</p>
+                        <ul>
+                            <li><strong>STEP and STL parts imported as shapes</strong>, exact, with analytic normals
+                                <span class="pre-mark">preview</span></li>
+                            <li><strong>3MF with colour</strong> for multi-colour 3D printing, straight from the scene
+                                <span class="pre-mark">preview</span></li>
+                        </ul>
+                    </div>
+                    <img class="shot" src="docs/screenshots/builder.jpg" width="1917" height="1030" loading="lazy" decoding="async"
+                        alt="The builder: dichroic glass plates, flint-glass spheres and a light in dusty air; one plate selected, with the Transform gizmo's arrows, planes, arcs and stretch cubes in the picture, the numbers panel at the top right, and its properties and code beside it">
+                </div>
+
+                <div class="feature flip">
+                    <div class="text">
+                        <h3>Surfaces with relief</h3>
+                        <p>Plaster, knockdown stucco, sand-float render, rough stone, hammered metal, leather, orange-peel
+                            paint: a noise library for surfaces (value, gradient, fBm and Worley noise) displaces them, each
+                            noise with a proved or measured bound on its slope, so a displaced surface never lets the march
+                            step through it <span class="pre-mark">preview</span>.</p>
+                        <p>Any material field can be code; brushed, turned and radial grain along the surface
+                            <span class="ok-mark">✓</span>.</p>
+                    </div>
+                    <img class="shot" src="docs/screenshots/surfaces.jpg" width="1920" height="1030" loading="lazy" decoding="async"
+                        alt="A copy of the Relief and texture example: plaster, knockdown stucco, sand-float render, rough stone, hammered metal and leather on panels in a raking sun, and a sphere in orange-peel paint; the scene's own settings in Properties">
+                </div>
+
+                <div class="feature">
+                    <div class="text">
+                        <h3>A library to start from</h3>
+                        <p>43 built-in items (shapes, modifiers, lights and material presets) and 42 named materials, from
+                            plastics, paints and plaster to brushed, anodised and hammered metal, clear, tinted, frosted and
+                            flint glass, stone, wood and leather. Five optics parts too: a PMMA lens, an LED die, a
+                            detector screen, a prism and a whole LED–lens–screen bench <span class="pre-mark">preview</span>.
+                            Keep your own items beside them, and drag any of them onto the tree or into the picture
+                            <span class="pre-mark">preview</span>.</p>
+                    </div>
+                    <img class="shot" src="docs/screenshots/library.jpg" width="1917" height="1032" loading="lazy" decoding="async"
+                        alt="The Library beside the Product shot example: shapes, modifiers, lights and materials as rendered pictures, with search, filters and tags; the perfume bottle selected in the picture">
+                </div>
+
+                <div class="feature flip">
+                    <div class="text">
+                        <h3>Animation and video</h3>
+                        <p><strong>Keyframe any live setting</strong> (the camera, the sun, a light's flux, an object's
+                            position) and render it frame by frame to MP4 or GIF, each frame offscreen at the export size
+                            with its own samples <span class="pre-mark">preview</span>.</p>
+                    </div>
+                    <img class="shot" src="docs/screenshots/animate.jpg" width="1917" height="1032" loading="lazy" decoding="async"
+                        alt="The Animate layout on the Glass and liquid example: three camera tracks keyed in the Timeline under the picture, and the video's 1920 × 1080 frame drawn over it">
+                </div>
+            </div>
+        </section>
+
+        <section id="optics" class="alt">
+            <div class="wrap">
+                <h2>For lighting and optics design</h2>
+                <p class="intro">An optics bench over the same scene: a <strong>non-sequential Monte Carlo trace</strong>
+                    through the geometry and materials the picture uses, so the numbers and the picture cannot disagree.
+                    Rays are weighted, never discarded; every lumen is booked, emitted = escaped + lost + absorbed, to zero;
+                    and every number carries its standard error.</p>
+                <div class="pair">
+                    <img class="shot" src="docs/screenshots/optics-rays.jpg" width="1920" height="1027" loading="lazy" decoding="async"
+                        alt="An LED package modelled in the builder, its chip, silicone dome and gold leads, with the optics trace's rays drawn over the picture">
+                    <img class="shot" src="docs/screenshots/optics-analyse.jpg" width="1917" height="1027" loading="lazy" decoding="async"
+                        alt="The Analyse layout on the RGBW colour mixing example: ten million rays coloured by their light, the illuminance map on the screen with isolux lines, its profiles, the polar diagram and the results; Run, Live and Σ at the top of the Analysis pane">
+                </div>
+                <div class="cols">
+                    <ul>
+                        <li><strong>Refraction, Fresnel and total internal reflection</strong> match the textbook within
+                            two standard errors <span class="ok-mark">✓</span></li>
+                        <li><strong>Sources</strong>: rectangle and disc lights in lumens or cd/m², Lambertian, cosⁿ, cones
+                            and collimated beams; colour as RGB, CCT + Duv or CIE xy; <strong>Zemax ray files</strong>
+                            <span class="pre-mark">preview</span></li>
+                        <li><strong>The optics sources light the picture at their real brightness</strong>: a lens's spot
+                            on a screen shows in lux <span class="ok-mark">✓</span></li>
+                        <li><strong>See the rays</strong>, retraced live while you move things; <strong>Live</strong>
+                            analysis that follows every edit <span class="pre-mark">preview</span></li>
+                    </ul>
+                    <ul>
+                        <li><strong>Far field</strong>: intensity in cd or cd/klm on a type C grid, beam and field angles,
+                            I max, efficiency, zonal flux, a polar diagram <span class="pre-mark">preview</span></li>
+                        <li><strong>Illuminance maps</strong> in lux on a detector: isolux lines, profiles, U0 and Ud,
+                            encircled flux, a virtual plane at any distance <span class="pre-mark">preview</span></li>
+                        <li><strong>Colour</strong>: CIE xy, u′v′, CCT and Duv, Δu′v′ uniformity, single lights exact to
+                            10⁻⁸ <span class="ok-mark">✓</span>; colour mixing to a target</li>
+                        <li><strong>Export</strong>: the intensity table, the illuminance map and the hits as CSV, any chart
+                            as PNG</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="checked">
+            <div class="wrap">
+                <h2>Checked against known answers</h2>
+                <p class="intro">Every <span class="ok-mark">✓</span> comes from a test with a closed-form answer, run in
+                    the app on a real graphics card: one button each in its Tests panel. A few of them:</p>
+                <div class="table">
+                    <table class="checks">
+                        <thead><tr><th>test</th><th>what must hold</th><th>result</th></tr></thead>
+                        <tbody>
+                            <tr><td>photometry</td><td>a white floor under sun and sky reads ρE/π</td><td>0.9984–1.0001 on ten rows</td></tr>
+                            <tr><td>furnace</td><td>a white sphere in uniform light vanishes</td><td>every material 1.000 to 0.04 %</td></tr>
+                            <tr><td>lt</td><td>light tracing moves the noise and never the mean</td><td>within 0.03 %</td></tr>
+                            <tr><td>haze</td><td>albedo-1 dust in the air loses no light</td><td>within 0.024 %</td></tr>
+                            <tr><td>optics-refraction</td><td>a slab at 0, 45 and 70°, total internal reflection, a ball, a wedge</td><td>within two standard errors; the wedge to 2 × 10⁻⁶ °</td></tr>
+                            <tr><td>optics-light</td><td>an optics source lights the picture at its real brightness</td><td>three LEDs mixed to 4000 K read 3999.9 K</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p>All of them, with the hardware each ran on: <a href="https://github.com/lampmaker/ShadyTracer#checked-against-known-answers">the README</a>
+                    and <a href="https://github.com/lampmaker/ShadyTracer/blob/main/docs/TESTING.md">TESTING.md</a>; every feature
+                    with its evidence: <a href="https://github.com/lampmaker/ShadyTracer/blob/main/FEATURES.md">FEATURES.md</a>.</p>
+            </div>
+        </section>
+
+        <section id="learn" class="alt">
+            <div class="wrap">
+                <h2>Learn how it works</h2>
+                <p class="intro"><a href="tutorial/">ShadyTracer, inside out</a> teaches how a path tracer like this one
+                    is built, for developers new to ray tracing: it quotes the code, runs some of it in its figures and
+                    reports its measurements. Some of its chapters:</p>
+                <ul class="chapters">
+                    <li><a href="tutorial/ch/rays.html">Rays make a picture<small>A ray through every pixel, and why from the eye</small></a></li>
+                    <li><a href="tutorial/ch/distances.html">Shapes as distances<small>Finding the first surface with nothing but distances</small></a></li>
+                    <li><a href="tutorial/ch/photometry.html">Measuring light<small>Lumen, candela and lux, distance and slant, the sun</small></a></li>
+                    <li><a href="tutorial/ch/caustics.html">Caustics<small>Light focused through glass, and why the camera cannot find it</small></a></li>
+                    <li><a href="tutorial/ch/photons.html">Photon mapping<small>Photons kept where they land, gathered by the eye</small></a></li>
+                    <li><a href="tutorial/ch/wavefront.html">Wavefront path tracing<small>Small programs passing rays along, to keep the card busy</small></a></li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="open">
+            <div class="wrap">
+                <h2>Open source</h2>
+                <p class="intro">ShadyTracer is free and open source under the MIT licence: the renderer, the builder,
+                    the optics bench, the tutorial and every test. No build step and no dependencies to install: clone it,
+                    serve the folder, open it.</p>
+                <div class="actions" style="justify-content: flex-start">
+                    <a class="btn" href="https://github.com/lampmaker/ShadyTracer">The code on GitHub</a>
+                    <a class="btn" href="https://github.com/sponsors/lampmaker"><span class="heart">♥</span> Sponsor</a>
+                </div>
+            </div>
+        </section>
+
+        <section id="faq" class="alt">
+            <div class="wrap"><div class="faq">
+                <h2>Questions</h2>
+                <h3>What do I need to run it?</h3>
+                <p>A browser with WebGPU: Chrome or Edge 113 or later, Firefox 141 or later on Windows, or Safari 26 or
+                    later. And a real graphics card: the results here were measured on NVIDIA cards. The line under the
+                    button at the top of this page says whether your browser can run it.</p>
+                <h3>Do I need to install anything?</h3>
+                <p>No. Open the app and it runs in the browser, on your own graphics card. There is no account, no
+                    download and no server doing the work.</p>
+                <h3>Where is my work kept?</h3>
+                <p>In your browser, on this computer, saved as it changes: a reload comes back to the same scene, camera
+                    and settings. The Project panel lists your projects and downloads any of them, and File › Export saves
+                    a scene or a whole project as a file. Clearing the browser's data for this site deletes them, so keep a
+                    file of anything you care about.</p>
+                <h3>Is anything uploaded?</h3>
+                <p>No. Your scenes stay in your browser. The page loads its own files from this site and sends nothing
+                    anywhere: no account, no analytics, no tracking.</p>
+                <h3>Does it work on a phone or tablet?</h3>
+                <p>It is made for a desktop or laptop with a graphics card: the interface is a workbench of docked panels,
+                    and path tracing wants a graphics card's power. A phone browser with WebGPU may start it, but that is
+                    not what it is built or tested for.</p>
+                <h3>Is it free?</h3>
+                <p>Yes. ShadyTracer is open source under the MIT licence, and the code is on GitHub. If it is useful to
+                    you, a tip through GitHub Sponsors keeps it going.</p>
+                <h3>What do ✓ and preview mean on this page?</h3>
+                <p>✓ means checked against a closed-form answer on a real graphics card, with the test that did it.
+                    Preview means built and tested without a graphics card, and not yet confirmed on one. Anything unmarked
+                    is in use.</p>
+                <p style="margin-top: 2.5rem"><a class="btn primary" href="app.html">Open ShadyTracer</a></p>
+            </div></div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="wrap">
+            <span>© Matthijs Keuper · MIT licence</span>
+            <a href="app.html">The app</a>
+            <a href="tutorial/">The tutorial</a>
+            <a href="https://github.com/lampmaker/ShadyTracer">GitHub</a>
+            <a href="https://github.com/lampmaker/ShadyTracer/blob/main/CHANGELOG.md">What changed</a>
+        </div>
+    </footer>
+
     <script>
-        /* NO WEBGPU, NO START: said on the introduction before the modules load, since a module may not even load in
-           a browser without it. Chrome/Edge 113+, Firefox 141+ on Windows and Safari 26+ are TinyWebGPU's README's */
-        {   // a block: a classic script's const would be a global the whole page shares
-            const s = document.getElementById('about-status');
-            s.textContent = 'Starting the renderer…';   // written here, so a page without JavaScript says only its noscript
-            if (!navigator.gpu) {
-                s.textContent = 'This browser has no WebGPU, which ShadyTracer renders with. Open it in Chrome or Edge '
-                    + '113+, Firefox 141+ on Windows or Safari 26+, on a computer with a graphics card.';
-                s.classList.add('about-stop');
-            }
-        }
-    </script>
-    <script type="module">
-        //==============================================================================================================
-        // THE RAYTRACER APPLICATION -- a HOST for lib/pathtracer, not the renderer itself.
-        //
-        // What this page owns: the device, the window layout, and the scene builder -- which is
-        // where every scene lives now. What it does not own, any more: the render loop, the camera, the uniform
-        // assembly, and the View / Light / Sampling / Material / Advanced / Tests pages. Those
-        // belong to the renderer and arrive with it, because a weave editor or an erosion sim
-        // wants exactly those and none of this.
-        //
-        // The test of whether the extraction is real is not this file's length. It is that a
-        // second host -- no side panel, no canvas, calling step(64) and writing a PNG -- needs
-        // nothing from here.
-        //==============================================================================================================
-        import { PropertyTable } from './lib/guistuff/propertytable/propertytable.js';
-        import { UTILITY } from "./lib/utils.js"
-        import { CAMERA } from "./lib/camera.js"
-        import { WEBGPU } from "./lib/tinywebgpu/src/tinywebgpu.js"
-        import { defines, TOKENS, SHORT_TOKENS } from "./lib/wgsl_shorthand.js"
-        import { createPathTracer } from "./lib/pathtracer/index.js"
-        import { installViewToolbar } from "./lib/pathtracer/viewtools.js"
-        import { QUALITY_PRESETS, applyPreset } from "./lib/pathtracer/quality.js"
-        import { createShell, busyOverlay } from "./lib/shell/shell.js"
-        import { compileFraction, compileLabel } from "./lib/pathtracer/core/compileprogress.js"
-        import { makeParams } from "./lib/shell/params.js"
-        import { installParamsPanel, paramsSearch } from "./lib/shell/paramspanel.js"
-        import { EXAMPLES, FIRST_VISIT, urlOf } from './scenes/index.js'
-        import { benchTest } from './bench/index.js'
-        import { scalingTest } from './bench/scaling.js'
-        import { sceneDataTest } from './bench/scenedata.js'
-        import { overheadTest } from './bench/overhead.js'
-        import { stepCacheTest } from './bench/stepcache.js'
-        import { bakeTest } from './bench/bake.js'
-        import { buildsTest } from './bench/builds.js'
-        import { animatedTest } from './bench/animated.js'
-        import { boxCostTest } from './bench/boxcost.js'
-        import { dichroicsTest } from './bench/dichroics.js'
-        import { importedTest } from './bench/imported.js'
-        import { lightArrayTest } from './bench/lightarray.js'
-        import { installBuilder } from './builder/demo.js'
-        import { createBaker } from './builder/baker.js'
-        import { modeLine } from './builder/modeline.js'
-        import * as Model from './builder/model.js'
-        import * as Project from './builder/project.js'
-        import { generate, boxLoName, boxHiName } from './builder/codegen.js'
-        import { installBuilderTree } from './builder/tree.js'
-        import { installSceneStrip, sceneCards, seconds } from './builder/scenestrip.js'
-        import { fileCommands, sceneCommands } from './builder/filemenu.js'
-        import { installBuilderPanel } from './builder/panel.js'
-        import { sceneParams, viewEntriesFlagged } from './builder/params.js'
-        import { createBoxes, cullBoxes, cullUniforms, cullReport } from './builder/boxes.js'
-        import { stepCacheBox } from './builder/stepbox.js'
-        import { lightBench } from './builder/lightbench.js'
-        import { iconButton, iconPill, lit } from "./lib/pathtracer/icons.js"
-        import { installToolbar } from './builder/toolbar.js'
-        import { installSelectionOverlay } from './builder/overlay.js'
-        import { focusBox, focusPose, glidePose } from './builder/focus.js'
-        import { installOpticsPage, OPTICS_CHARTS, chartSet } from './optics/page.js'
-        import { installMeasureTool } from './lib/pathtracer/measure/tool.js'
-        import { report, reloadFresh, staleFiles } from './diagnose.js'
-        import { versionText, loadRevision, stamp } from './version.js'
-        import { safeStartOf, started, safeNote, firstCompile } from './start.js'
-        import { createProjectStore, indexedDbProjects, memoryProjects } from './workspace/store.js'
-        import { createTabs } from './workspace/tabs.js'
-        import { createAutosave, recoverAll } from './workspace/autosave.js'
-        import { createSession } from './workspace/session.js'
-        import { installProjectView, fileName as projectFileName } from './workspace/projectview.js'
-        import { ask } from './workspace/ask.js'
-        import { createScenePics, indexedDbPics, memoryPics, startCapture } from './workspace/scenepics.js'
-        import { createLibrary, indexedDbBackend, memoryBackend } from './library/store.js'
-        import { installLibraryPanel } from './library/panel.js'
-        import { createThumbs, indexedDbThumbs, memoryThumbs } from './library/thumbs.js'
-        import { createStudio } from './library/studio.js'
-        import { installItemEditor, SAMPLE_CHOICES, SAMPLE_SIZES, sampleOf, setSample } from './library/edit.js'
-        import { ITEM_FILES, itemUrl } from './library/items/index.js'
-        import { installTimeline } from './tools/timeline.js'
-        import { installHelp } from './help/panel.js'
-
-        //==============================================================================================================
-        // DEVICE AND LAYOUT -- the host's job
-        //==============================================================================================================
-        /* NO WEBGPU, OR NO ADAPTER: the introduction stays, saying why, and nothing starts. The shell used to be made
-           anyway and WG.init then threw: a window with no picture, and no word why. A browser can have navigator.gpu
-           and no adapter (a headless one, a blocklisted card), so one is asked for here, as WG.init asks (no options),
-           before the introduction is taken away; the classic script before this one covers no navigator.gpu at all */
-        if (!navigator.gpu || !(await navigator.gpu.requestAdapter().catch(() => null))) {
-            const s = document.getElementById('about-status');
-            if (navigator.gpu) {
-                s.textContent = 'This browser has WebGPU but found no graphics card to run it on: ShadyTracer needs one. '
-                    + 'Its settings may have hardware acceleration switched off.';
-                s.classList.add('about-stop');
-            }
-            throw new Error('[start] no WebGPU adapter: the page stays on its introduction');
-        }
-        const U = UTILITY();
-
-        /* STALE FILES, CAUGHT AT START (diagnose.js). A module the browser took from its cache without
-           asking the server may be from before an update, and the page then runs old code with new --
-           which is how the LED's spot went missing in one Chrome profile and not in an incognito
-           window, with nothing said. Checked in the background while the page starts (only files taken
-           from the cache unasked are compared, so a server that revalidates costs nothing); if any
-           differs from the server's, they are fetched past the cache and the page reloads -- at most
-           once a minute, so a server whose files keep changing cannot make it loop. */
-        staleFiles().then(stale => {
-            if (!stale.length) return;
-            console.warn('[stale] the cached copy differs from the server\'s:', stale);
-            let last = 0;
-            try { last = +sessionStorage.getItem('raytracer.freshReload') || 0; } catch { }
-            if (Date.now() - last < 60000) return console.warn('[stale] not reloading again so soon: Help › Reload every file fresh');
-            try { sessionStorage.setItem('raytracer.freshReload', String(Date.now())); } catch { }
-            reloadFresh(stale);
-        }).catch(e => console.warn('[stale] could not check:', e));
-        const { CC } = U;
-        const WG = WEBGPU();
-        WG.defines = defines(TOKENS, SHORT_TOKENS);   // legacy WGSL shorthands used by the kernels
-        /* NO `a` AND NO `s` HERE ANY MORE, and that absence is the feature. They used to be
-           hardcoded to 1 and 1024, which made ctx.Sc compute a constant 1024x1024 whatever the
-           window did. The renderer now owns its own size -- fit the panel, or a size you pick,
-           times a downscale. GU still merges the query string over this, so `?s=2048&a=1.7778`
-           forces a fixed size exactly as it always did; the difference is that now it only
-           means something when it is actually asked for. */
-        let Q = U.GU({
-            azimuth: 40, elevation: 70, distance: 20, dimensions: 10, fov: 40,
-            camtype: 0,
-            resetframecount: 1,
-        })
-
-        /*=========================================================================================
-          THE SHELL: a menu bar, a dock of panels, a status bar (lib/shell). Every part of the
-          program is a panel the user can place, stack, float, pop out or close, and the layout
-          is kept between visits (UI_PLAN.md). The panels are the pages this page had before,
-          unchanged inside: the renderer's settings, the Builder's tree and properties, the
-          Optics page and its two charts. Each is labelled with the module it belongs to.
-
-          ORDER MATTERS HERE, three ways:
-            - EVERY PANEL IS REGISTERED BEFORE THE LAYOUT IS RESTORED. A saved layout names its
-              panels, and one not registered yet is left out of it -- the optics charts would lose
-              their place on every reload. So the charts are registered here, long before the
-              Optics page that fills them exists.
-            - THE LAYOUT IS RESTORED BEFORE THE CANVAS IS MADE. lib/utils.js CC() finds the
-              canvas's parent by its id in the document, and a panel's element is only in the
-              document once the layout has placed it.
-            - THE VIEWPORT IS ALWAYS OPEN: it cannot be closed or popped out (a WebGPU canvas
-              belongs to the document that made it), and restore() is followed by open().
-        =========================================================================================*/
-        /* WHICH BUILD THIS IS (version.js): the version, and the commit the server's checkout is on, read from .git
-           before the title is drawn -- two or three small files from the same server; given up after a second */
-        await loadRevision();
-        document.title = versionText();
-        const container = document.getElementById('container');
-        // the introduction (above) has done its part: the shell fills this element whole
-        document.getElementById('about')?.remove();
-        const SHELL = createShell(container, {
-            title: `${versionText()} © Matthijs Keuper`, storageKey: 'raytracer.layout', popoutUrl: 'popout.html',
-            /* FIVE MENUS (0.63.0; the user, 2026-10-17: "Minimise the number of menu options"): no Render settings menu --
-               every row of it was the Render settings panel's or the view's Quality ▾ and ⚡ again -- and no Window menu,
-               whose verbs are the buttons on every panel group's header (standardCommands({ window: false })). Their
-               commands are kept, in the palette (Ctrl K) */
-            menus: ['File', 'Edit', 'View', 'Analysis', 'Help'],
-        });
-        window.SHELL = SHELL;
-        /* THE PARAMETERS: every setting by a path -- the renderer's (RT.parameters) and the scene's
-           (builder/params.js) -- for the palette, the Parameters panel, a console script, and the
-           timeline and optimiser to come (lib/shell/params.js). From the console:
-             PARAMS.find('radius'), PARAMS.read(path), PARAMS.write(path, value) */
-        const PARAMS = makeParams();
-        window.PARAMS = PARAMS;
-
-        /* THE VIEWPORT, the renderer's: the canvas's parent (sized by the renderer's ResizeObserver) and
-           the stage the Builder's handles and the measure tool draw on. 'always': it stays in the page
-           while another tab covers it, rather than being detached. */
-        const stage = SHELL.panel({ id: 'viewport', title: 'Viewport', module: 'renderer', renderer: 'always',
-            popout: false, closable: false, help: 'The picture. Click to select, drag the handles to move things, orbit with the mouse.' });
-        Object.assign(stage.style, { overflow: 'hidden' });
-        const canvasId = 'rt-canvas';
-        {
-            const canvasHost = document.createElement('div');
-            canvasHost.id = canvasId;
-            Object.assign(canvasHost.style, { position: 'absolute', inset: '0' });
-            stage.appendChild(canvasHost);
-        }
-        /* THE RENDERER'S SETTINGS, placed by what each changes (UI_PLAN.md section 8), where its six
-           pages used to be one panel:
-             the view       camera, what it shows, exposure -- the viewport's own toolbar (below, once
-                            the renderer exists: lib/pathtracer/viewtools.js)
-             the scene      the sun, the sky or the studio: NOT the renderer's any more. The scene
-                            document carries it (model.js ENVIRONMENT), and the scene's
-                            Properties show it (its own tree row until 0.52.0) -- so the renderer is told to make no folder
-             its effort     tracing, render size, diagnostics: Render settings (Renderer until 0.57.0)
-             a file         saving an image: a floating panel opened from File
-             its bench      Tests
-           The renderer fills each with the same folders it used to put on its pages (installUI's
-           `sections`); only where they sit is new. */
-        /* the tables take the shell's font and colours (shell.css themes Tweakpane inside a panel). `opts` are the
-           table's own: `boxes`, its top-level folders drawn as boxes -- by the property table (GUISTUFF), in the
-           colours shell.css gives its --pt-box-* properties, so every panel in boxes has the one look */
-        const tableIn = (el, opts = {}) => {
-            const t = new PropertyTable({ container: el, ...opts });
-            Object.assign(t.element.style, { fontSize: '13px', width: '100%' });
-            return t;
-        };
-        /* ...IN BOXES, as the Analysis pane's sections are (the user, 2026-10-04): the renderer's folders are its boxes
-           (lib/pathtracer/settingsui.js RENDERER_BOXES) */
-        const rendererEl = SHELL.panel({ id: 'renderer', title: 'Render settings', module: 'renderer',
-            help: 'How hard the renderer works: Quality (Preview: Sketch, Draft · Accurate: Standard, High · Optics), the light sources and how each is traced, bounces and noise, render size; the developer settings behind their switch.' });
-        const rendererTable = tableIn(rendererEl, { boxes: true });
-        const testsTable = tableIn(SHELL.panel({ id: 'tests', title: 'Tests', module: 'renderer',
-            help: 'The measurement bench: one row per test with a known answer, and a report to copy.' }));
-        /* THE DARKROOM (0.79.0; the floating "Save picture" panel before it): a render at a size and sample count of its own,
-           kept as light and shown large -- panned and zoomed by darkroom/viewer.js in the left part -- beside its boxes,
-           Render, Develop and Save. A tab beside the picture, as the Project panel is: File › Save picture… opens it there
-           (below). Its id stays `output`, so a saved layout that has it finds it; the shell gives it its new title. No View
-           entry (menu: false, lib/shell/shell.js standard). */
-        const outputEl = SHELL.panel({ id: 'output', title: 'Darkroom', module: 'renderer', menu: false,
-            help: 'Render a picture at a size and sample count of its own, then look at it large -- zoom, pan, compare with the view -- develop it (exposure, tone curve, grading, with its histogram) and save it as PNG.' });
-        Object.assign(outputEl.style, { display: 'flex', overflow: 'hidden' });
-        const darkroomViewer = document.createElement('div');
-        Object.assign(darkroomViewer.style, { flex: '1 1 auto', minWidth: '0' });
-        const darkroomSide = document.createElement('div');
-        Object.assign(darkroomSide.style, { flex: '0 0 300px', overflowY: 'auto', borderLeft: '1px solid var(--sh-line, #333)' });
-        outputEl.append(darkroomViewer, darkroomSide);
-        const outputTable = tableIn(darkroomSide, { boxes: true });
-        const statsEl = SHELL.panel({ id: 'stats', title: 'Render stats', module: 'renderer',
-            help: 'The renderer\'s live readout: samples per second, cost per sample, the value under the cursor.' });
-        /* THE BUILDER, split in two: the project's tree (with its toolbar) and the selection's properties */
-        const sceneEl = SHELL.panel({ id: 'scene', title: 'Scene', module: 'builder',
-            help: 'The project and its scenes, a card each; under them the scene being worked on: its objects, lights and materials.' });
-        /* THE PROJECT PANEL (workspace/projectview.js, 0.63.0): the projects in this browser, this one's scenes large, the
-           examples. A dock panel of its own, opened as a tab beside the picture (openProject, below) -- "these will rarely
-           have to be viewed side by side" (the user, 2026-10-17). No View row: File › Projects… and the project's name over
-           the tree open it */
-        const projectEl = SHELL.panel({ id: 'project', title: 'Project', module: 'builder', menu: false,
-            help: 'The projects kept in this browser; this one\'s scenes with their pictures; the examples.' });
-        const propsEl = SHELL.panel({ id: 'properties', title: 'Properties', module: 'builder',
-            help: 'The selected row\'s settings.' });
-        /* THE OPTICS: one Analysis pane and a panel per chart (optics/charts.js, mockup F). The pane keeps the
-           id 'optics' it had as the Optics panel, so a saved layout still has it. NOT IN VIEW, nor are the charts
-           (menu: false): the Analysis menu opens them (the user, 2026-10-10: "remove the chart and analysis views
-           from the view menu") -- the pane by its show / hide, a chart by Open chart ▸. */
-        const opticsEl = SHELL.panel({ id: 'optics', title: 'Analysis', module: 'optics', menu: false,
-            help: 'The optics analysis: ▶ Run, the data every chart is made from, the results; below, the sources, totals and limits. Each chart has its own settings on it.' });
-        /* COLOUR MIXING, a tool: it sets the scene's lights' fluxes rather than measuring anything, so it is
-           a window of its own (View › Colour mixing floats it), not a folder of the Analysis pane */
-        const mixingEl = SHELL.panel({ id: 'tools.mixing', title: 'Colour mixing', module: 'optics',
-            help: 'Three of the scene\'s lights, a target colour and a total flux: the fluxes that make it, set in one undo step.' });
-        /* THE CHARTS THAT EXIST: one of each kind, and those the user made (another map, its own settings),
-           kept between visits -- so registered here, from the kept list, before the layout that names them is
-           restored. A chart made later is registered when it is made (charts.add, below). */
-        const CHARTS = chartSet({ key: 'raytracer.charts' });
-        const chartEls = {};
-        const chartPanel = c => (chartEls[c.id] = SHELL.panel({ id: c.id, title: c.title, module: 'optics', menu: false, help: c.help }));
-        for (const c of CHARTS.list()) chartPanel(c);
-        // in boxes, as Render settings (builder/panel.js show: the selection's, then one a category)
-        const propsTable = tableIn(propsEl, { boxes: true });
-        /* THE LIBRARY (library/): objects, groups, lights and materials to put in, built in and one's own */
-        const libraryEl = SHELL.panel({ id: 'library', title: 'Library', module: 'builder',
-            help: 'Things to put into the scene: shapes, modifiers, lights, materials, assemblies, and your own. Double-click one to put it in at the selection; ＋ keeps the selection.' });
-        const paramsEl = SHELL.panel({ id: 'parameters', title: 'Parameters', module: 'app',
-            help: 'Every setting by the name a script, the timeline or an optimiser uses; its value, its range, and whether changing it recompiles.' });
-        /* THE TIMELINE, a tool (tools/timeline.js): keys on the parameters over time, played in the view and
-           filmed offscreen. Registered here with the rest, filled once the parameters have their providers. */
-        const timelineEl = SHELL.panel({ id: 'tools.timeline', title: 'Timeline', module: 'app', menu: false,
-            help: 'Keyframes on any live setting -- the camera, a light\'s flux, an object\'s position -- played in the view, and a video rendered frame by frame (⚙ export, RECORD).' });
-        /* THE HELP (help/panel.js): pages to read, with links that open examples, run commands and point at panels.
-           Help › Contents and F1 open it, floating; View lists it too. Filled once the commands exist (below). */
-        const helpEl = SHELL.panel({ id: 'help', title: 'Help', module: 'app', menu: false,
-            help: 'How to use ShadyTracer: getting started, modelling and rendering, optical design, and a reference of every shape, modifier, material field and light setting.' });
-
-        /* THE LAYOUTS: one per stage of the work, in the menu bar's switcher and the View menu. Each is
-           where to start; what the user changes from there is kept between visits. Design is also the
-           default, what View > Reset the layout returns to. The charts are Analyse's: the Analysis pane
-           on the left, the charts beside it in two rows -- the map, polar and I-gamma over the profiles,
-           rings and encircled flux -- and the picture a tab behind the map. */
-        const O = (id, at, size, opts) => SHELL.open(id, at, size, opts);
-        const DESIGN = () => {
-            O('viewport');
-            O('scene', { referencePanel: 'viewport', direction: 'left' }, { width: 320 });
-            O('properties', { referencePanel: 'scene', direction: 'below' });
-            O('library', { referencePanel: 'scene', direction: 'within' });
-            O('scene');
-            O('renderer', { referencePanel: 'viewport', direction: 'right' }, { width: 330 });
-            O('optics', { referencePanel: 'renderer', direction: 'within' });
-            O('stats', { referencePanel: 'renderer', direction: 'below' }, { height: 220 });
-            O('renderer');
-        };
-        SHELL.layout.setDefault(DESIGN);
-        SHELL.layout.preset('Design', DESIGN, 'Build the scene: the tree and the selection\'s properties beside the picture.');
-        SHELL.layout.preset('Analyse', () => {
-            O('viewport');
-            O('optics', { referencePanel: 'viewport', direction: 'left' }, { width: 330 });
-            O('optics.map', { referencePanel: 'viewport', direction: 'within' });
-            O('optics.polar', { referencePanel: 'optics.map', direction: 'right' }, { width: Math.round((innerWidth - 330) / 3) });
-            O('optics.igamma', { referencePanel: 'optics.polar', direction: 'right' }, { width: Math.round((innerWidth - 330) / 3) });
-            O('optics.profiles', { referencePanel: 'optics.map', direction: 'below' });
-            O('optics.rings', { referencePanel: 'optics.polar', direction: 'below' });
-            O('optics.encircled', { referencePanel: 'optics.igamma', direction: 'below' });
-            O('optics.map');
-        }, 'Measure and decide: the Analysis pane beside every chart, each in a panel of its own; the picture behind the map.');
-        /* ANIMATE: the timeline across the whole foot of the window, under the picture and the tree -- opened
-           before the tree, so the tree splits the top row and not the timeline's. Properties and Parameters
-           beside the tree: a key holds a setting's current value, so the place it is set is where a key starts. */
-        SHELL.layout.preset('Animate', () => {
-            O('viewport');
-            O('tools.timeline', { referencePanel: 'viewport', direction: 'below' }, { height: Math.round(innerHeight * 0.34) });
-            O('scene', { referencePanel: 'viewport', direction: 'left' }, { width: 300 });
-            O('properties', { referencePanel: 'scene', direction: 'below' });
-            O('parameters', { referencePanel: 'properties', direction: 'within' });
-            O('properties');
-        }, 'Animate and film: the timeline along the bottom, the picture above it, the tree and a setting\'s properties beside.');
-        /* NO RENDER LAYOUT (it was the picture, the renderer and the stats): Design with the Analysis pane hidden
-           (Analysis › Analysis setup) is the same arrangement, so it was a second name for one thing (the user,
-           2026-10-10). A saved arrangement is kept by its panels, not by a preset's name (lib/shell/shell.js
-           restore), so nothing saved named it. */
-        /* whatever a layout holds, the picture is in it: nothing else can make the canvas. Only when it is
-           missing: open() on an open panel brings it to the front, which put the picture over the map
-           Analyse had just chosen to show */
-        SHELL.layout.onApply(() => { if (!SHELL.isOpen('viewport')) SHELL.open('viewport'); });
-        /* VIEW OPENS THE PANELS, and nothing else does (the user, 2026-10-09: "lots of duplicate entries" -- Render,
-           Optics, Tools and Edit each had an entry that opened a panel View already listed). Two panels open their own
-           way, so their View entries are the page's, registered before the shell's (which keeps an entry it finds):
-           the colour mixing floats, a tool beside the work; the timeline goes across the foot of the view. */
-        /* the colour mixing is an optics tool, so it is the Analysis menu's with the pane and the charts; its id stays
-           `view.<panel id>`, which is what keeps the shell from adding a View entry of its own */
-        SHELL.command({ id: 'view.tools.mixing', menu: 'Analysis', group: 'tools', label: 'Colour mixing',
-            help: 'Three of the scene\'s lights, a target colour and a total flux: the fluxes that make it',
-            run: () => SHELL.isOpen('tools.mixing') ? SHELL.open('tools.mixing')
-                : SHELL.open('tools.mixing', undefined, undefined, { floating: { width: 380, height: 480 } }) });
-        /* THE HELP floats over the work, a page to read beside it. Help › Contents and F1 open it (registered with the help,
-           below); View said it again until 0.63.0 -- its id is kept, with no menu row, so the shell adds none */
-        const openHelp = () => SHELL.isOpen('help') ? SHELL.open('help')
-            : SHELL.open('help', undefined, undefined, { floating: { width: Math.min(900, innerWidth - 80), height: Math.min(680, innerHeight - 80) } });
-        SHELL.command({ id: 'view.help', label: 'Help: the help pages', help: 'The help pages (Help › Contents, F1)', run: openHelp });
-        /* THE WINDOW VERBS AND "LAYOUT: X" IN NO MENU (0.63.0): the first are the buttons on every group's header, the second
-           the layout buttons on the menu bar; the palette keeps both */
-        SHELL.standardCommands({ window: false, layouts: false });
-        /* THE TIMELINE goes across the foot of the view: its View entry is the page's (the panel has none of the shell's,
-           menu: false), registered after the shell's so it comes after Parameters, among the app's panels */
-        SHELL.command({ id: 'view.tools.timeline', menu: 'View', group: 'panels.app', label: 'Timeline',
-            help: 'Keyframes on any live setting, played in the view, and a video rendered frame by frame',
-            run: () => SHELL.isOpen('tools.timeline') ? SHELL.open('tools.timeline')
-                : SHELL.open('tools.timeline', { referencePanel: 'viewport', direction: 'below' }, { height: Math.round(innerHeight * 0.34) }) });
-        SHELL.layout.restore();
-        SHELL.open('viewport');
-
-        let ctx = CC(canvasId, "webgpu", 0, {})
-        // no ctx.Sc(Q) -- createPathTracer sizes itself from the panel before it builds the
-        // camera, and keeps doing so from a ResizeObserver
-        // timestamp-query is best-effort: tinywebgpu drops a feature the adapter lacks with a
-        // warning rather than throwing, and the cost instrument falls back to wall-clock timing.
-        await WG.init(ctx, { features: ['timestamp-query'] })
-
-        //==============================================================================================================
-        // THE RENDERER
-        //==============================================================================================================
-        /* THE PROJECT: THE ONE KEPT IN THIS BROWSER (workspace/, UI_PLAN.md section 10) -- the one worked on last, as it
-           was left: its scenes, the scene being worked on, the renderer's settings, every scene's camera, a library
-           item being edited. Until 0.7.0 every load put the nine bundled scenes into a fresh project and restored
-           nothing, so a refresh lost the work. A first visit gets a project of one lightweight demo scene
-           (scenes/index.js FIRST_VISIT); the bundled scenes are the Project panel's examples. A second tab on the project
-           another has works on its own copy (workspace/session.js); a project that cannot be read is kept as it was
-           and a fresh one started. A browser that refuses storage keeps the work for the visit, and says so.
-           The renderer starts on the scene being worked on, generated here the same way BUILDER.apply generates it
-           -- id 'built', which is how the builder knows the scene showing is one of its own. */
-        const readScene = async file => Model.ensureMaterial(Model.parse(await (await fetch(urlOf(file))).text()))
-        let localStore = null;
-        try { localStore = window.localStorage; } catch { }
-        let projectBackend = indexedDbProjects(), storeNote = null;
-        try { await projectBackend.all('meta'); }
-        catch (e) {
-            console.warn('[projects] IndexedDB refused, the work lasts this visit:', e?.message);
-            projectBackend = memoryProjects();
-            storeNote = 'this browser refused storage: the work lasts this visit (File › Export ▸ Project file keeps it)';
-        }
-        const PROJECTS = createProjectStore({ backend: projectBackend });
-        /* THE SCENES' PICTURES (workspace/scenepics.js, 0.63.0): the last picture each scene had, and how long it took to open,
-           for its card -- a database of their own, or memory where the browser refuses storage */
-        const PICS = window.PICS = createScenePics({ backend: storeNote ? memoryPics() : indexedDbPics() });
-        let showProject = async () => { };            // the page's, once the builder exists (below)
-        /* WHAT IS SAVED, looked at once a second (workspace/autosave.js): the builder's revision (saveRevision: its edits
-           and every timeline kept, which is saved as an edit is but no undo step: builder/model.js TIMELINE) and scenes, and the
-           session -- the scene being worked on, the renderer's settings but what each scene has of its own (the
-           camera, the exposure, the tolerance: project.js rendererSettings), every scene's view as it is now (written
-           between the project's writes: BUILDER.views), the item editor's memory. Read only once the builder exists:
-           the ticks start at the end of the page. */
-        const AUTOSAVE = createAutosave({ store: PROJECTS, local: localStore, say: t => SHELL.status(t),
-            read: () => ({ revision: BUILDER.saveRevision, project: BUILDER.project,
-                session: { current: BUILDER.current, renderer: Project.rendererSettings(RT.settings()), views: BUILDER.views(), item: window.ITEM_EDITOR?.remember?.() ?? null } }),
-            onCreated: m => SESSION.adopt(m) });
-        const SESSION = window.SESSION = createSession({ store: PROJECTS, tabs: createTabs(), autosave: AUTOSAVE, say: t => SHELL.status(t),
-            firstVisit: async () => {
-                try { return Project.createProject([await readScene(FIRST_VISIT)]) }
-                catch (e) { console.error(`[scenes] ${FIRST_VISIT} did not load:`, e); return Project.createProject([Project.blankScene()]) }
-            },
-            apply: (w, item) => showProject(w, item) });
-        // what a page flushed as it went, if the store did not get it (workspace/autosave.js)
-        await recoverAll(PROJECTS, localStore);
-        const START = await SESSION.start();
-        const project = START.workspace.project;
-        for (const s of project.scenes) Model.ensureMaterial(s.doc);
-        const first = Project.scene(project, START.workspace.current)?.doc ?? project.scenes[0].doc
-        /* A SCENE THAT DOES NOT COMPILE MUST NOT KEEP THE PAGE FROM STARTING (start.js): the scene compiled here is
-           the user's, as it was left, since the work is kept in the browser. A failing first compile starts the
-           renderer on an empty scene instead (firstCompile, below), and a SAFE START -- ?safe, or a last start that
-           never finished -- does not compile the user's scene at all. */
-        const SAFE = safeStartOf(localStore, location.search, first.title);
-        const safeStart = SAFE.safe;
-        // id 'nothing', not 'built': the builder then knows the renderer shows no scene of its own. Not a blankScene:
-        // that is a NEW scene (centimetres, 25 cm, its own camera), and this is no scene of the user's at all
-        const NOTHING = generate(...Model.generateArgs(Model.ensureMaterial(Model.createDoc({ title: 'nothing compiled' })), { id: 'nothing', title: 'nothing compiled' }));
-        const RT = await createPathTracer({ gpu: WG, ctx, Q, CAMERA, minfps: 20,
-            scene: safeStart ? NOTHING : generate(...Model.generateArgs(first, { id: 'built', title: first.title })) })
-        // a small debug surface, the way WEAVESIM exposes window.PT: enough to drive the renderer
-        // from the console or a headless harness without reaching into the module
-        window.RT = RT
-        window.Q = Q
-        /* A COMPILE, as it goes: over the viewport, which cannot be used meanwhile, and at the bottom --
-           the status bar alone was easy to miss while the picture sat frozen (the user, 2026-09-28) */
-        /* BY THE CLOCK when the renderer predicts the build's time (expectMs: compileprogress.js), by the count of
-           kernels ready otherwise. The count alone jumped to 12 of 13 in the first second -- nine kernels are tiny
-           -- and sat there until shade was ready, most of the build: "stuck on the last part" (the user,
-           2026-10-03). Redrawn five times a second from the time since the request; never at the end before the
-           end notice, which always stops the clock -- a failed build sends one too (raytrace_main.js, finally). */
-        const viewBusy = busyOverlay(stage);
-        let compileClock = 0, compileExpect = null;
-        const showCompile = (label, job) => {
-            viewBusy(job && { ...job, label: `Compiling the scene${label ? ` — ${label}` : '…'}` });
-            SHELL.progress('compile', job && { ...job, label: `compiling the scene${label ? ` — ${label}` : ''}` });
-        };
-        const byClock = () => {
-            if (!compileExpect) return;
-            const { expectMs, startedAt } = compileExpect, elapsed = performance.now() - startedAt;
-            showCompile(compileLabel(elapsed, expectMs), { fraction: compileFraction(elapsed, expectMs) });
-        };
-        RT.onCompile(p => {
-            if (p.end) {
-                clearInterval(compileClock); compileClock = 0; compileExpect = null;
-                showCompile('', null);
-                return;
-            }
-            if (p.expectMs > 0) {
-                compileExpect = { expectMs: p.expectMs, startedAt: p.startedAt ?? performance.now() };
-                if (!compileClock) compileClock = setInterval(byClock, 200);
-                byClock();
-                return;
-            }
-            if (compileExpect) return;          // the clock has this build: a count would pull the bar back to 12 of 13's jump
-            showCompile('', { done: p.done, total: p.total });
-        });
-
-        /* No window resize listener. The renderer watches the canvas's own box instead, which
-           also catches the splitter being dragged -- that moves the panel without the window
-           changing at all, and used to leave the picture at its old size. */
-
-        //==============================================================================================================
-        // THE PANEL. The host decided the page order when it built the viewport; the renderer
-        // fills the pages that are its own and never touches the layout around them.
-        //==============================================================================================================
-        RT.setHud(statsEl);      // the readout is a panel of its own, out of the picture
-        /* DEBOUNCED, and it has to be. The renderer calls this whenever a setting changes from
-           its side -- including on every camera onChange, which fires on every mouse move while
-           orbiting, and refreshing walks every property table on both panels, so an undebounced
-           version puts that in the drag path. One per frame keeps the sliders honest. */
-        const refresh = (() => {
-            let p = 0;
-            return () => {
-                if (p) return; p = 1;
-                requestAnimationFrame(() => {
-                    p = 0;
-                    for (const t of [rendererTable, testsTable, outputTable, propsTable, ...Object.values(VIEW.sections)])
-                        try { t.refresh?.() } catch { }
-                    VIEW.refresh();
-                });
-            };
+        /* WHETHER THIS BROWSER CAN RUN IT, under the button: asked as the app asks (app.html, before it builds its window:
+           an adapter, no options). Without JavaScript the line stays empty and the FAQ says what is needed */
+        (async () => {
+            const line = document.getElementById('gpu');
+            const say = (text, kind) => { line.textContent = text; line.className = 'gpu ' + kind; };
+            if (!navigator.gpu) return say('This browser has no WebGPU: see “What do I need to run it?” below.', 'no');
+            const adapter = await navigator.gpu.requestAdapter().catch(() => null);
+            if (!adapter) return say('This browser has WebGPU but found no graphics card to run it on: hardware acceleration may be switched off.', 'no');
+            say('✓ Your browser can run it.', 'ok');
         })();
-        /* THE VIEW'S TOOLBAR, then every folder of the renderer's to where it belongs (see the panels
-           above). No shell: every section is placed. */
-        const VIEW = installViewToolbar(stage, { PropertyTable, RT, tips: {
-            1: 'Everything in view. One detector\'s light, with its error bar: the optics Map.' } });
-        RT.installUI(null, { onRefresh: refresh, sections: {
-            ...VIEW.sections,
-            Environment: null,              // the scene's: the tree's Environment row, in Properties
-            // the Renderer panel's boxes, every one (lib/pathtracer/settingsui.js RENDERER_BOXES)
-            Quality: rendererTable, 'Light sources': rendererTable, 'Paths and noise': rendererTable, 'Render size': rendererTable,
-            'Ray marching': rendererTable, Performance: rendererTable, Diagnostics: rendererTable,
-            // the Developer switch (gui.dev) is a line at the foot of Quality: no box of its own
-            'Save an image': outputTable,
-            Tests: testsTable,
-        },
-            // a panel or popover holding one folder shows it flat: its tab or icon already names it
-            untitled: [...VIEW.untitled, 'Tests'],             // the Darkroom's boxes have titles: Render, Develop, Save
-            omit: VIEW.omit,
-            darkroom: darkroomViewer,
-            build: versionText });          // every test and benchmark result names the build it ran on
-        /* THE LIVE VIEW HELD WHILE THE DARKROOM COVERS IT (0.79.0): the viewport is kept in the page under another tab
-           (renderer: 'always', above), so its loop would go on tracing a picture nobody sees, beside the darkroom's own
-           draws on the same GPU. Held only while the darkroom is seen and the viewport is not -- a darkroom floated beside
-           the picture (a layout from before) leaves it running. RT.hold holds the live loop only: a render offscreen
-           still runs. Holds nest, and this one is let go once. */
-        {
-            const seen = { output: false, viewport: false };
-            let release = null;
-            const decide = () => {
-                const hold = seen.output && !seen.viewport;
-                if (hold && !release) release = RT.hold();
-                else if (!hold && release) { release(); release = null; }
-            };
-            for (const id of Object.keys(seen)) SHELL.onVisible(id, v => { seen[id] = !!v; decide(); });
-        }
-        /* THE BENCHMARK (bench): its scenes are builder documents, which the renderer's own
-           bench cannot make, so the page hands it the test -- built when the button is pressed, from the
-           frozen files next to this page. */
-        {
-            let prepared = null;
-            const prepare = () => prepared ??= benchTest(async url => { const r = await fetch(url); if (!r.ok) throw new Error(`${url}: ${r.status}`); return r.text() })
-                .catch(e => { prepared = null; throw e; });
-            window.RTTESTS?.addTest?.({ id: 'bench', title: 'Performance benchmark (1280 x 720, fixed camera)', prepare });
-            /* ...and a look through any row's camera, from the console: await BENCH.view(1). The benchmark renders
-               offscreen, so this is the only way to see what it measures. */
-            /* ...and some of its rows, by number, from the console: await BENCH.run(1, 25, 27, 29, 31, 33) -- each scene
-               as it is, a few minutes where the whole benchmark is twenty-five. A row's "= row N" still names the
-               full benchmark's numbering. */
-            window.BENCH = {
-                view: async n => window.RTTESTS.view(await prepare(), n),
-                /* the rows in the order given, a row given twice run twice: an A/B interleaved (33, 35, 33, 35)
-                   so a card that warms up or clocks down over the run shows as a spread, not as a difference --
-                   the third run (Pascal, 2026-10-02) read the same kernels at 217 and 256 ms within minutes */
-                run: async (...rows) => {
-                    const t = await prepare();
-                    const missing = rows.filter(n => !t.cases[n - 1]);
-                    if (missing.length) throw new Error(`BENCH.run: no row ${missing.join(', ')} (rows 1-${t.cases.length})`);
-                    return window.RTTESTS.run(rows.length ? { ...t, cases: rows.map(n => t.cases[n - 1]) } : t);
-                },
-            };
-            /* THE SCALING BENCHMARK (bench/scaling.js, PERFORMANCE.md P3 step 0): the optics benches, and 1 to 32 lens
-               assemblies in one picture -- a button of its own, and BENCH.scaling.view(n) / .run(...rows) as above */
-            let scaling = null;
-            const prepareScaling = () => scaling ??= scalingTest(async url => { const r = await fetch(url); if (!r.ok) throw new Error(`${url}: ${r.status}`); return r.text() })
-                .catch(e => { scaling = null; throw e; });
-            window.RTTESTS?.addTest?.({ id: 'scaling', title: 'Scaling benchmark (optics benches, 1-32 lens assemblies)', prepare: prepareScaling });
-            window.BENCH.scaling = {
-                view: async n => window.RTTESTS.view(await prepareScaling(), n),
-                run: async (...rows) => {
-                    const t = await prepareScaling();
-                    const missing = rows.filter(n => !t.cases[n - 1]);
-                    if (missing.length) throw new Error(`BENCH.scaling.run: no row ${missing.join(', ')} (rows 1-${t.cases.length})`);
-                    return window.RTTESTS.run(rows.length ? { ...t, cases: rows.map(n => t.cases[n - 1]) } : t);
-                },
-            };
-            /* THE SCENE AS DATA AGAINST CODEGEN (bench/scenedata.js, PERFORMANCE.md P3 call 5): every bench scene both
-               ways, back to back -- a button of its own, and BENCH.scenedata.view(n) / .run(...rows) as above */
-            let scenedata = null;
-            const prepareSceneData = () => scenedata ??= sceneDataTest(async url => { const r = await fetch(url); if (!r.ok) throw new Error(`${url}: ${r.status}`); return r.text() })
-                .catch(e => { scenedata = null; throw e; });
-            window.RTTESTS?.addTest?.({ id: 'scenedata', title: 'The scene as data against codegen (every bench scene both ways)', prepare: prepareSceneData });
-            window.BENCH.scenedata = {
-                view: async n => window.RTTESTS.view(await prepareSceneData(), n),
-                run: async (...rows) => {
-                    const t = await prepareSceneData();
-                    const missing = rows.filter(n => !t.cases[n - 1]);
-                    if (missing.length) throw new Error(`BENCH.scenedata.run: no row ${missing.join(', ')} (rows 1-${t.cases.length})`);
-                    return window.RTTESTS.run(rows.length ? { ...t, cases: rows.map(n => t.cases[n - 1]) } : t);
-                },
-            };
-            /* THE DATA WALK'S OWN COST (bench/overhead.js): the Menger cubes with and without their warps, one cube, the
-               material test, codegen and as data -- a button of its own, and BENCH.overhead.view(n) / .run(...rows) */
-            let overhead = null;
-            const prepareOverhead = () => overhead ??= overheadTest(async url => { const r = await fetch(url); if (!r.ok) throw new Error(`${url}: ${r.status}`); return r.text() })
-                .catch(e => { overhead = null; throw e; });
-            window.RTTESTS?.addTest?.({ id: 'overhead', title: 'The data walk\'s own cost (Menger cubes with and without warps, one cube, material test)', prepare: prepareOverhead });
-            window.BENCH.overhead = {
-                view: async n => window.RTTESTS.view(await prepareOverhead(), n),
-                run: async (...rows) => {
-                    const t = await prepareOverhead();
-                    const missing = rows.filter(n => !t.cases[n - 1]);
-                    if (missing.length) throw new Error(`BENCH.overhead.run: no row ${missing.join(', ')} (rows 1-${t.cases.length})`);
-                    return window.RTTESTS.run(rows.length ? { ...t, cases: rows.map(n => t.cases[n - 1]) } : t);
-                },
-            };
-            /* BAKED AGAINST CODEGEN (bench/bake.js): each bench scene as codegen, then with its values as constants -- a
-               button of its own, and BENCH.bake.view(n) / .run(...rows) */
-            let bake = null;
-            const prepareBake = () => bake ??= bakeTest(async url => { const r = await fetch(url); if (!r.ok) throw new Error(`${url}: ${r.status}`); return r.text() })
-                .catch(e => { bake = null; throw e; });
-            window.RTTESTS?.addTest?.({ id: 'bake', title: 'Baked against codegen (every value a constant)', prepare: prepareBake });
-            window.BENCH.bake = {
-                view: async n => window.RTTESTS.view(await prepareBake(), n),
-                run: async (...rows) => {
-                    const t = await prepareBake();
-                    const missing = rows.filter(n => !t.cases[n - 1]);
-                    if (missing.length) throw new Error(`BENCH.bake.run: no row ${missing.join(', ')} (rows 1-${t.cases.length})`);
-                    return window.RTTESTS.run(rows.length ? { ...t, cases: rows.map(n => t.cases[n - 1]) } : t);
-                },
-            };
-            /* THE STEP CACHE ON THE CARD (bench/stepcache.js): each scene with the cache off, on its own cell, on the cells
-               ahead -- a button of its own, and BENCH.stepcache.view(n) / .run(...rows) */
-            let stepcache = null;
-            const prepareStepCache = () => stepcache ??= stepCacheTest(async url => { const r = await fetch(url); if (!r.ok) throw new Error(`${url}: ${r.status}`); return r.text() })
-                .catch(e => { stepcache = null; throw e; });
-            window.RTTESTS?.addTest?.({ id: 'stepcache', title: 'The step cache (off, own cell, cells ahead)', prepare: prepareStepCache });
-            window.BENCH.stepcache = {
-                view: async n => window.RTTESTS.view(await prepareStepCache(), n),
-                run: async (...rows) => {
-                    const t = await prepareStepCache();
-                    const missing = rows.filter(n => !t.cases[n - 1]);
-                    if (missing.length) throw new Error(`BENCH.stepcache.run: no row ${missing.join(', ')} (rows 1-${t.cases.length})`);
-                    return window.RTTESTS.run(rows.length ? { ...t, cases: rows.map(n => t.cases[n - 1]) } : t);
-                },
-            };
-            /* WHICH BUILD RENDERS FASTEST (bench/builds.js): each bench scene as codegen, baked, baked with the step cache,
-               as data, and that with the cache -- a button of its own, and
-               BENCH.builds.view(n) / .run(...rows) */
-            let builds = null;
-            const prepareBuilds = () => builds ??= buildsTest(async url => { const r = await fetch(url); if (!r.ok) throw new Error(`${url}: ${r.status}`); return r.text() })
-                .catch(e => { builds = null; throw e; });
-            window.RTTESTS?.addTest?.({ id: 'builds', title: 'Which build renders fastest (codegen, baked, data; with and without the step cache)', prepare: prepareBuilds });
-            window.BENCH.builds = {
-                view: async n => window.RTTESTS.view(await prepareBuilds(), n),
-                run: async (...rows) => {
-                    const t = await prepareBuilds();
-                    const missing = rows.filter(n => !t.cases[n - 1]);
-                    if (missing.length) throw new Error(`BENCH.builds.run: no row ${missing.join(', ')} (rows 1-${t.cases.length})`);
-                    return window.RTTESTS.run(rows.length ? { ...t, cases: rows.map(n => t.cases[n - 1]) } : t);
-                },
-            };
-            /* WHAT ANIMATED VALUES COST THE BAKE (bench/animated.js): each bench scene as data, baked, and baked with four
-               positions flagged animated -- a button of its own, and BENCH.animated.view(n) / .run(...rows) */
-            let animated = null;
-            const prepareAnimated = () => animated ??= animatedTest(async url => { const r = await fetch(url); if (!r.ok) throw new Error(`${url}: ${r.status}`); return r.text() })
-                .catch(e => { animated = null; throw e; });
-            window.RTTESTS?.addTest?.({ id: 'animated', title: 'What animated values cost the bake (as data, baked, baked with 4 animated)', prepare: prepareAnimated });
-            window.BENCH.animated = {
-                view: async n => window.RTTESTS.view(await prepareAnimated(), n),
-                run: async (...rows) => {
-                    const t = await prepareAnimated();
-                    const missing = rows.filter(n => !t.cases[n - 1]);
-                    if (missing.length) throw new Error(`BENCH.animated.run: no row ${missing.join(', ')} (rows 1-${t.cases.length})`);
-                    return window.RTTESTS.run(rows.length ? { ...t, cases: rows.map(n => t.cases[n - 1]) } : t);
-                },
-            };
-            /* WHAT THE BOX TESTS COST (bench/boxcost.js): four bench scenes with their boxes off, tested but never culling,
-               measured, and on the dear nodes only -- a button of its own, and BENCH.boxcost.view(n) / .run(...rows) */
-            let boxcost = null;
-            const prepareBoxCost = () => boxcost ??= boxCostTest(async url => { const r = await fetch(url); if (!r.ok) throw new Error(`${url}: ${r.status}`); return r.text() })
-                .catch(e => { boxcost = null; throw e; });
-            window.RTTESTS?.addTest?.({ id: 'boxcost', title: 'What the box tests cost (boxes off, never culling, measured, on the dear nodes only)', prepare: prepareBoxCost });
-            window.BENCH.boxcost = {
-                view: async n => window.RTTESTS.view(await prepareBoxCost(), n),
-                run: async (...rows) => {
-                    const t = await prepareBoxCost();
-                    const missing = rows.filter(n => !t.cases[n - 1]);
-                    if (missing.length) throw new Error(`BENCH.boxcost.run: no row ${missing.join(', ')} (rows 1-${t.cases.length})`);
-                    return window.RTTESTS.run(rows.length ? { ...t, cases: rows.map(n => t.cases[n - 1]) } : t);
-                },
-            };
-            /* WHERE A GLASS-AND-LIGHT SCENE'S TIME GOES (bench/dichroics.js, 0.61.2): the dichroics scene baked, lit by its own
-               light's photons, the photon map on and off, at two sizes -- a button of its own, and
-               BENCH.dichroics.view(n) / .run(...rows) */
-            let dichroics = null;
-            const prepareDichroics = () => dichroics ??= dichroicsTest(async url => { const r = await fetch(url); if (!r.ok) throw new Error(`${url}: ${r.status}`); return r.text() })
-                .catch(e => { dichroics = null; throw e; });
-            window.RTTESTS?.addTest?.({ id: 'dichroics', title: 'Where a glass-and-light scene\'s time goes (dichroics: the photon map, the light\'s photons, two sizes)', prepare: prepareDichroics });
-            window.BENCH.dichroics = {
-                view: async n => window.RTTESTS.view(await prepareDichroics(), n),
-                run: async (...rows) => {
-                    const t = await prepareDichroics();
-                    const missing = rows.filter(n => !t.cases[n - 1]);
-                    if (missing.length) throw new Error(`BENCH.dichroics.run: no row ${missing.join(', ')} (rows 1-${t.cases.length})`);
-                    return window.RTTESTS.run(rows.length ? { ...t, cases: rows.map(n => t.cases[n - 1]) } : t);
-                },
-            };
-        }
-        /* WHAT AN IMPORTED PART COSTS (bench/imported.js, 0.71.0): the Imported parts example as imported, against its rounded
-           boxes and its lens as one shape each, and the floor alone. BENCH.imported.view(n) / .run(...rows) */
-        {
-            let imported = null;
-            const prepareImported = () => imported ??= importedTest(async url => { const r = await fetch(url); if (!r.ok) throw new Error(`${url}: ${r.status}`); return r.text() })
-                .catch(e => { imported = null; throw e; });
-            window.RTTESTS?.addTest?.({ id: 'imported', title: 'What an imported part costs (STEP and STL parts as shapes, against one shape each)', prepare: prepareImported });
-            window.BENCH.imported = {
-                view: async n => window.RTTESTS.view(await prepareImported(), n),
-                run: async (...rows) => {
-                    const t = await prepareImported();
-                    const missing = rows.filter(n => !t.cases[n - 1]);
-                    if (missing.length) throw new Error(`BENCH.imported.run: no row ${missing.join(', ')} (rows 1-${t.cases.length})`);
-                    return window.RTTESTS.run(rows.length ? { ...t, cases: rows.map(n => t.cases[n - 1]) } : t);
-                },
-            };
-        }
-        /* WHAT LIGHTS IN AN ARRAY COST (bench/lightarray.js, 0.79.0): one light against 16 and 256 copies of it, the same lumens,
-           and the 16 as lights of their own. BENCH.lightarray.view(n) / .run(...rows) */
-        {
-            let lightArray = null;
-            const prepareLightArray = () => lightArray ??= lightArrayTest().catch(e => { lightArray = null; throw e; });
-            window.RTTESTS?.addTest?.({ id: 'lightarray', title: 'What lights in an array cost (one light against 16 and 256 copies, the same lumens)', prepare: prepareLightArray });
-            window.BENCH.lightarray = {
-                view: async n => window.RTTESTS.view(await prepareLightArray(), n),
-                run: async (...rows) => {
-                    const t = await prepareLightArray();
-                    const missing = rows.filter(n => !t.cases[n - 1]);
-                    if (missing.length) throw new Error(`BENCH.lightarray.run: no row ${missing.join(', ')} (rows 1-${t.cases.length})`);
-                    return window.RTTESTS.run(rows.length ? { ...t, cases: rows.map(n => t.cases[n - 1]) } : t);
-                },
-            };
-        }
-        /* THE LIGHT BENCH (builder/lightbench.js, light-vs-emitter): a light against the same surface made an
-           emissive object. Its scene too is a builder document, so the page hands it in the same way -- in the Lights &
-           emitters folder, not the benchmarks'. */
-        window.RTTESTS?.addTest?.({ id: 'light-vs-emitter', title: 'A light against the same emissive object', group: 'lights', prepare: async () => lightBench() });
-        // the environment's entries are the scene's now (builder/params.js), not the renderer's
-        /* ...and the view's values a scene flags animated (builder model.js setAnimated, 0.66.0) are offered as animated: the
-           camera's and the exposure's are the renderer's entries, at its paths, which a saved track names. Unmarked, they
-           left the timeline's + track whenever any scene value was flagged (tools/timeline.js onlyAnimated). */
-        PARAMS.provide('renderer', () => viewEntriesFlagged(RT.parameters().filter(p => !p.path.startsWith('scene/environment/')), window.BUILDER?.doc));
-
-        /*=========================================================================================
-          THE BUILDER -- the whole of the application's side now. Every scene is a document in
-          the project; the tree shows the one being worked on, and File the rest (builder/filemenu.js). The console still reaches it all: BUILDER.wgsl(), check(),
-          apply(), break(), fix().
-        =========================================================================================*/
-        let builderTree = null, builderPanel = null, toolbar = null, ACTIONS = null, STRIP = null, examples = null, PROJECT_VIEW = null;
-        // a builder status goes to the shell's status bar (the toolbar's own line said the same)
-        const status = t => SHELL.status(t);
-        /* WHICH BUILD IS SHOWN, at the status bar's right (builder/modeline.js): baked, or the editing build and its mode --
-           the picture is the same either way, so only this says which. Painted twice a second with the boxes' look, and
-           at once when a scene is shown or the bake swapped in. Set up below, once the baker is. */
-        const modeEl = document.createElement('span');
-        /* ...AND BESIDE IT, THAT THE WORK IS KEPT (0.63.0): File has no Save -- the project is written to this browser as it
-           changes (workspace/autosave.js) -- so the bar says so: when it was last written, or that it is not being kept
-           at all (a browser that refuses storage). Painted with the mode line. */
-        const savedEl = document.createElement('span');
-        savedEl.className = 'shell-saved';
-        let savedAt = null;
-        const paintSaved = () => {
-            if (storeNote) { savedEl.textContent = '⚠ not kept'; savedEl.title = storeNote; savedEl.classList.add('bad'); return }
-            const i = SESSION.info();
-            savedEl.textContent = i.copy && !i.id ? 'not saved yet' : '✓ saved';
-            savedEl.title = i.copy && !i.id ? `This tab's copy of '${i.copy}': kept as a project of its own once something in it changes`
-                : `Kept in this browser as it changes${savedAt ? `; last written ${new Date(savedAt).toLocaleTimeString()}` : ''}. A file is the backup: File › Export ▸ Project file`;
-        };
-        const rightEl = document.createElement('span');
-        rightEl.className = 'shell-status-group';
-        rightEl.append(savedEl, modeEl);
-        SHELL.statusRight(rightEl);
-        let paintMode = () => { };
-        const BUILDER = installBuilder(window, {
-            // each scene seen as it keeps (builder/model.js VIEW): a first visit's example from its own camera, in its file
-            RT, gpu: WG, project, current: START.workspace.current,
-            onScene: (sc, ms) => {
-                // the scene row's camera and exposure are the scene's once it is shown (builder/panel.js viewFolder)
-                if (builderPanel?.shown() === BUILDER.doc.root.id) builderPanel.refresh();
-                status(`${sc.title}  (${ms.toFixed(0)} ms, march kernel `
-                    + `${((RT.prog_wvfmarch?.wgsl?.length || 0) / 1024).toFixed(0)} kB)`);
-                // how long it took, for its card (a data-mode swap is 0: nothing compiled, nothing to say)
-                if (ms > 0 && !BUILDER.doc.libraryItem) PICS.put(SESSION.info().id, BUILDER.current, { openMs: ms });
-                // the timeline's + track list and its headers are the scene's parameters (tools/timeline.js)
-                window.TIMELINE?.refreshParams();
-                paintMode();
-                // a library item's scene shown or left: the camera, the lighting and the strip follow (library/edit.js)
-                window.ITEM_EDITOR?.shown();
-            },
-            // a loaded or restored project replaces the one the tree was built from
-            onDoc: () => { builderTree?.rebuild(); builderPanel?.refresh(); window.ITEM_EDITOR?.sync(); STRIP?.refresh(); },
-        });
-        if (safeStart) BUILDER.unshow();            // the renderer was made on the empty scene (above)
-
-        /* THE SCENE PANEL, top to bottom (0.63.0): one line for the project and its scenes and a card per scene
-           (builder/scenestrip.js) -- then the scene being worked on in the user's TreeView, its row the root; the selected
-           row's properties are a panel of their own. Undo and Redo are on the menu bar (the project's history is every
-           scene's, not this panel's: the user, 2026-10-17); the files and the projects are File's (builder/filemenu.js). */
-        {
-            const host = sceneEl;
-            const swHost = document.createElement('div');
-            const el = document.createElement('div');
-            host.append(swHost, el);
-            /* the tree has the Scene panel to itself: the properties are a panel of their own now,
-               so it no longer stops at 45% of the height to leave them room */
-            let panel = null;
-            /* Every structural edit is to the current scene, which is the one showing, so it
-               re-applies. The tree's apply() queues rather than overlapping compiles. */
-            const reapply = () => builderTree.apply();
-            /* the selected row's box and handles, drawn over the picture (builder/overlay.js); a
-               click in the picture selects through the tree, as a click on the row would */
-            /* THE MEASURED BOXES (builder/boxes.js): every object's and group's bounds, sampled on the GPU
-               from the scene's tagged copy. MEASURED WHEN A SHAPE HAS SETTLED: what is due is looked at
-               twice a second, and measured once it has held still for a look -- a slider dragged is
-               measured at rest, not at every step. Moving things needs no measuring (a box is kept in
-               its node's own frame). Only while the renderer shows this scene: its tags name its nodes. */
-            /* NEVER DURING A COMPILE (PERFORMANCE.md). Every node was measured after every structural edit --
-               up to ~60 GPU round trips, each behind the frames -- which took 37 s on the Noise library and ran
-               straight through the next edit's compile, which took 8x its time alone. Then it was only what
-               the toolbar's box button showed -- until the culling wanted every box (below). What is left: a
-               sample asked for while the builder applies or the renderer compiles returns nothing, which
-               abandons the measurement until later. */
-            let compiling = false;
-            RT.onCompile(p => { compiling = !p.end; });
-            const holdBoxes = () => compiling || BUILDER.applying;
-            /* CULLING WANTS EVERY BOX (builder/codegen.js, the SDF's root): a top-level node is skipped while the
-               point is farther than its box -- the cost the line above left behind, now in the background after the
-               compile. Every node is measured, as while the renderer's setting `cull` was on (its default; gone in
-               0.34.0): codegen tests a box on the dear nodes alone, but the records of a scene as data test every
-               node's, and the step cache's box is made from them all (stepCacheBox below): createBoxes' `wanted` left at its default, every box. The
-               toolbar's box button says only which are drawn (overlay.js). */
-            const BOXES = window.BOXES = createBoxes({ sample: input => holdBoxes() ? Promise.resolve(null) : RT.sampleTags(input),
-                doc: () => BUILDER.doc, ready: () => BUILDER.showing, onBox: () => pushCull() });
-            /* THE BOXES INTO THE SHADER: each top-level node's box (cullBoxes: padded, or unknown while its shape
-               has changed since it was measured) as its bxlo/bxhi uniforms -- only those that changed, and
-               without restarting the picture (RT.set's reset false): with a box that contains its object, the
-               picture is the same culled or not. Called as each box is measured, on the boxes' look twice a
-               second, and after every live change (BUILDER.afterLive): a slider that grows an object makes its
-               box unknown in the same call, so it is never cut off by the box it had. A new compile starts
-               every box unknown (its uniforms' defaults), so the scene is followed here too. */
-            const cullSent = new Map();
-            let cullScene = null, dataBoxes = '';
-            /* A SCENE AS DATA carries its boxes in its records (builder/scenedata.js): every node's under plain groups,
-               not the top level's alone -- the records cull each -- made again and written when any changed */
-            BUILDER.cullBoxes = () => cullBoxes(BUILDER.doc, BOXES, { nested: true });
-            /* THE STEP CACHE'S BOX (builder/stepbox.js), while the developer setting stepCache is on: from the same boxes,
-               made again only when they changed or the scene did -- it builds the scene's records, which is not a thing
-               to do twice a second -- and set, which starts the cache and the picture over */
-            let stepBoxKey = '', stepBoxScene = null;
-            const pushStepBox = () => {
-                if ((RT.get().stepCache | 0) === 0) { stepBoxKey = ''; return; }
-                const key = JSON.stringify([...BUILDER.cullBoxes()]);
-                if (key === stepBoxKey && RT.scene === stepBoxScene) return;
-                stepBoxKey = key; stepBoxScene = RT.scene;
-                RT.setStepCacheBox(stepCacheBox(BUILDER.doc, BOXES));
-            };
-            const pushCull = () => {
-                if (!BUILDER.showing || RT.scene?.id !== 'built' || holdBoxes()) return;
-                pushStepBox();
-                if (RT.scene.writeData) {
-                    const key = JSON.stringify([...BUILDER.cullBoxes()]);
-                    if (RT.scene === cullScene && key === dataBoxes) return;
-                    if (BUILDER.pushData({ reset: false })) { cullScene = RT.scene; dataBoxes = key; }
-                    return;
-                }
-                if (RT.scene !== cullScene) { cullSent.clear(); cullScene = RT.scene; }
-                const U = RT.scene.uniforms || {}, vals = {};
-                for (const [id, b] of cullBoxes(BUILDER.doc, BOXES)) {
-                    if (!(boxLoName(id) in U)) continue;                  // draws nothing: no box test emitted
-                    const { lo, hi } = cullUniforms(b), key = `${lo}|${hi}`;
-                    if (cullSent.get(id) === key) continue;
-                    cullSent.set(id, key);
-                    vals[boxLoName(id)] = lo; vals[boxHiName(id)] = hi;
-                }
-                if (Object.keys(vals).length) RT.set(vals, false);
-            };
-            /* ...and the lights' photons start from where the lights are now, in the same frame as the geometry that moved
-               with them (optics/page.js O.followScene, 0.61.4): they followed a half-second tick, and lagged a drag */
-            BUILDER.afterLive = () => { pushCull(); window.OPTICS?.followScene?.(); };
-            // a live change a compile must make (a path's pieces changed shape: builder/demo.js liveValue), in the queue
-            BUILDER.onRestructure = reapply;
-            /* WHAT GOES UNCULLED, from the console: each top-level node without a box and why (boxes.js cullReport).
-               A node never culled costs only speed, so nothing in the picture says so. */
-            window.CULL_REPORT = () => cullReport(BUILDER.doc, BOXES);
-            /* THE BAKE IN THE BACKGROUND (builder/baker.js; the developer setting sceneBake, Renderer > Performance): once
-               the edits stop, the scene with its values constants compiled while the picture goes on and swapped in, the
-               picture kept; the first edit puts the editing build back (an apply, in the tree's queue). Looked at with the
-               boxes, below. Swapped in: the culling boxes sent to it (they stay uniforms), and the status says what it cost. */
-            const BAKER = window.BAKER = createBaker({ RT, builder: BUILDER, wanted: () => (RT.get().sceneBake | 0) === 1, leave: reapply,
-                onShown: (sc, r) => {
-                    pushCull();
-                    paintMode();
-                    status(`${sc.title}  (baked: ${r.compiled} of ${r.total} kernels compiled in ${(r.ms / 1000).toFixed(1)} s, swapped in ${r.swapMs} ms)`);
-                    console.log(`[bake] '${sc.title}' shown baked: ${r.compiled} of ${r.total} kernels compiled in ${r.ms} ms, swapped in ${r.swapMs} ms`);
-                } });
-            {
-                let last = '';
-                /* THE DEVELOPER SWITCH `sceneData` turned (BUILDER.dataMode): the scene shown made again the other way, once
-                   a change -- what is shown is the reference, so a page opened on a codegen scene with the switch on is made
-                   data at the first look. Code, or data (the grid and exact hits, its two other switches, went in 0.41.0).
-                   A scene without its boxes (codegen `unculled`: the bench's
-                   "boxes off" rows, the renderer's `cull` off until 0.34.0) counts as another mode, never the one
-                   wanted; the bench puts the scene it found back when it ends (lib/pathtracer/tests.js run). */
-                const modeOf = (data, unculled = false) => (data ? 'data' : 'code') + (unculled ? '-boxes' : '');
-                const shownMode = () => modeOf(!!RT.scene?.writeData, !!RT.scene?.unculled);
-                let wantedData = shownMode();
-                paintMode = () => {
-                    const m = modeLine({ scene: RT.scene, mode: shownMode(), showing: BUILDER.showing, bakeOn: (RT.get().sceneBake | 0) === 1,
-                                         baker: BAKER.state, lastLeave: BUILDER.lastLeave });
-                    if (modeEl.textContent !== m.text) modeEl.textContent = m.text;
-                    modeEl.title = m.title;
-                    modeEl.classList.toggle('baked', m.baked);
-                    paintSaved();
-                };
-                setInterval(async () => {
-                    const want = modeOf(BUILDER.dataMode);
-                    if (want !== wantedData) {
-                        wantedData = want;
-                        if (BUILDER.showing && want !== shownMode()) reapply();
-                    }
-                    pushCull();
-                    BAKER.tick();
-                    paintMode();
-                    if (BOXES.busy || !BUILDER.showing || holdBoxes()) return;
-                    const now = BOXES.pending();
-                    if (now && now === last) {
-                        /* timed: each measurement compiles the tagged field once per scene and evaluates
-                           the whole scene on lattices -- a cost every structural edit pays (PERFORMANCE.md) */
-                        const t0 = performance.now();
-                        try {
-                            const done = await BOXES.update();
-                            if (done.length) {
-                                console.log(`[boxes] ${done.length} measured in ${(performance.now() - t0).toFixed(0)} ms`);
-                                overlay.redraw();
-                            }
-                        }
-                        catch (e) { console.warn('[boxes]', e); }
-                    }
-                    last = now;
-                }, 500);
-            }
-            const overlay = installSelectionOverlay({ stage, canvas: ctx.canvas, RT, BUILDER, boxes: BOXES,
-                onPick: id => builderTree?.select(id) });
-            /* THE BOXES ON THE VIEW'S TOOLBAR, three states, one click each to the next: none, the
-               selection's (the default), every object's and group's. The icon shows which; remembered. */
-            {
-                const STATES = [{ mode: 'none', icon: 'boxOff', tip: 'Bounding boxes: none (click: the selection\'s)' },
-                                { mode: 'active', icon: 'box', tip: 'Bounding boxes: the selection\'s (click: all)' },
-                                { mode: 'all', icon: 'boxes', tip: 'Bounding boxes: every object and group (click: none)' }];
-                let k = 1;                        // the selection's, unless another was chosen before
-                try { const i = STATES.findIndex(x => x.mode === localStorage.getItem('raytracer.boxes')); if (i >= 0) k = i } catch { }
-                const holder = document.createElement('span');
-                const show = () => {
-                    const st = STATES[k];
-                    const b = iconButton(st.icon, st.tip, () => {
-                        k = (k + 1) % STATES.length;
-                        try { localStorage.setItem('raytracer.boxes', STATES[k].mode) } catch { }
-                        show();
-                    });
-                    lit(b, st.mode !== 'none');
-                    holder.replaceChildren(b);
-                    overlay.showBoxes(st.mode);
-                };
-                show();
-                VIEW.bar.append(iconPill(holder));         // a switch: its own pill (icons.js)
-                // beside it, the Points mode's legs switch (pointsmode.js), shown only while points are edited
-                VIEW.bar.append(overlay.points.viewPill);
-            }
-            /* A NODE'S ROW DOUBLE-CLICKED: the camera glides to it (builder/focus.js), looking the way it looked -- the
-               measured box if it is for the node as it is now, else the document's estimate (right for the stock
-               shapes). An endless one (a plane) or one with no size known yet is said, and the camera stays. A press
-               or a wheel in the view takes the camera back at once: the glide stops where it is. */
-            let glide = 0;
-            for (const ev of ['pointerdown', 'wheel']) stage.addEventListener(ev, () => { glide++; }, { passive: true });
-            const focusOn = (id, again = true) => {
-                const doc = BUILDER.doc, node = Model.find(doc, id)?.node;
-                if (!node) return;
-                const box = focusBox(doc, id, BOXES);
-                if (!box) {
-                    // corners() asked for it to be measured: the boxes look every half second and settle in two looks
-                    if (again) setTimeout(() => { if (BUILDER.doc === doc) focusOn(id, false); }, 1200);
-                    return status(again ? `${node.label}: measuring its size…` : `${node.label}: no size known to frame it by`);
-                }
-                if (box.open) return status(`${node.label} goes on without end: nothing to frame`);
-                window.STUDIO?.releaseView();             // the library's pictures may have paused the view
-                const was = RT.settings?.().camera ?? RT.cam?.get?.();
-                if (!was) return;
-                const to = focusPose(was, box);
-                // where the glide starts: the orbit the camera is on, or a free camera's place as one (focus.js focusPose)
-                const from = was.mode === 'orbit' ? was
-                    : { target: was.target, distance: Math.hypot(...was.pos.map((v, k) => v - was.target[k])), dimensions: was.dimensions };
-                const mine = ++glide, t0 = performance.now(), MS = 300;
-                const step = now => {
-                    if (glide !== mine) return;
-                    const t = Math.min(1, (now - t0) / MS);
-                    RT.applySettings({ camera: glidePose(from, to, t) });
-                    if (t < 1) requestAnimationFrame(step);
-                };
-                requestAnimationFrame(step);
-            };
-            /* A SCENE'S CARD CHOSEN (builder/scenestrip.js) shows in Properties (panel.js showScene), the tree's selection
-               cleared -- and stays shown through the tree's own onSelect(null), which every rebuild sends; a tree row chosen
-               takes Properties back. Nothing is compiled for it: what it shows is read from the project. */
-            const editing = () => !!window.ITEM_EDITOR?.active;
-            const notWhileEditing = fn => (...a) => editing() ? status('close the library item first (over the view)') : fn(...a);
-            let cardKey = null;
-            const showCard = key => {
-                const c = sceneCards(BUILDER.project, BUILDER.current).find(x => x.key === key), shot = PICS.get(SESSION.info().id, key);
-                const info = c ? `${c.unit} · ${c.objects} object${c.objects === 1 ? '' : 's'} · ${c.lights} light${c.lights === 1 ? '' : 's'}`
-                    + (shot?.openMs ? `\nopened in ${seconds(shot.openMs)} last time` : '') : '';
-                const ops = builderTree.sceneOps;
-                panel?.showScene(key, { picture: shot?.url ?? null, info, actions: {
-                    open: notWhileEditing(k => ops.enter(k)), duplicate: notWhileEditing(k => ops.duplicate(k, { go: false })),
-                    exportScene: k => BUILDER.saveScene(undefined, k), remove: notWhileEditing(k => ops.remove(k)), rename: (k, t) => ops.rename(k, t) } });
-            };
-            const selectRow = id => {
-                if (id == null && cardKey && cardKey !== BUILDER.current && Project.scene(BUILDER.project, cardKey)) { showCard(cardKey); overlay.select(null); return; }
-                cardKey = null; STRIP?.select(null);
-                panel?.show(id); overlay.select(id);
-            };
-            const chooseCard = key => {
-                if (key === BUILDER.current) { cardKey = null; return builderTree.select(BUILDER.doc.root.id); }
-                cardKey = key;
-                builderTree.select(null);                 // ...whose onSelect(null) shows the card
-            };
-            builderTree = installBuilderTree(el, BUILDER, {
-                onStatus: status, onSelect: id => selectRow(id), onStructure: reapply,
-                onFocus: id => focusOn(id),
-                onLibrary: () => { SHELL.open('library'); window.LIBRARY_PANEL?.focus(); },
-                // a library item's scene: its back row closes it (library/edit.js); Save is the strip's over the view
-                onItem: (what, key) => {
-                    const E = window.ITEM_EDITOR;
-                    if (!E) return;
-                    if (BUILDER.current !== key) builderTree.enterScene(key);
-                    what === 'save' ? E.save() : E.close();
-                },
-            });
-            /* THE LIBRARY: its items put in where a paste would go (the tree's selection), the selection
-               kept as one's own. One's own live in IndexedDB; a browser that refuses it keeps them for
-               the visit, and says so. */
-            {
-                let backend = indexedDbBackend();
-                try { await backend.all(); } catch (e) { console.warn('[library] IndexedDB refused, your items last this visit:', e?.message); backend = memoryBackend(); }
-                const library = window.LIBRARY = createLibrary({ model: Model, backend, files: ITEM_FILES,
-                    load: async f => (await fetch(itemUrl(f))).json() });
-                /* THE PICTURES (library/thumbs.js, library/studio.js): made by a second, quiet renderer --
-                   the studio -- started the first time the panel is seen, and only while the view has
-                   been left alone for a moment, so they never cost a frame of what is being worked on */
-                let thumbStore = indexedDbThumbs();
-                try { await thumbStore.get('probe'); } catch { thumbStore = memoryThumbs(); }
-                let lastViewInput = 0;
-                // touching the view gives it back at once, if the studio had paused it (window.STUDIO, once made)
-                const viewInput = () => { lastViewInput = Date.now(); window.STUDIO?.releaseView(); };
-                for (const ev of ['pointerdown', 'pointermove', 'wheel']) stage.addEventListener(ev, viewInput, { passive: true });
-                window.addEventListener('keydown', e => { if (!e.target.closest?.('input, textarea, .shell-lib')) viewInput(); });
-                let studio = null, studioStarting = null;
-                const thumbs = window.THUMBS = createThumbs({ backend: thumbStore, idle: () => Date.now() - lastViewInput > 1500 });
-                /* the view stops while the studio renders -- they share the GPU -- and starts again after */
-                const pauseView = () => { const was = RT.running(); RT.stop(); return () => { if (was && !RT.running()) RT.start(); }; };
-                const note = t => window.LIBRARY_PANEL?.note(t);
-                const startStudio = () => studioStarting ??= (note('Preparing the pictures: starting a second renderer, once...'),
-                    createStudio({ gpu: WG, pauseView }))
-                    /* told everything first: an item it has not been told of rebuilds its unit's scene -- a
-                       compile each -- where the whole list makes one scene per unit, compiled once */
-                    .then(async S => {
-                        note(''); S.onStatus(note);
-                        S.onCompile(p => SHELL.progress('pictures', p));
-                        S.know(await library.list()); studio = window.STUDIO = S; thumbs.setRender(item => S.render(item));
-                    })
-                    .catch(e => { note(''); console.error('[studio]', e); status(`library pictures: ${e.message}`); });
-                // an item kept or imported makes its unit's scene stale: rebuilt once, when next shown
-                library.on(async () => { if (studio) studio.know(await library.list()); });
-                /* DRAGGED OUT OF THE LIBRARY onto the tree (builder/tree.js acceptLibrary) or the picture: a material
-                   onto the object under the pointer, anything else into the scene, standing where it lands */
-                let dragged = null;
-                builderTree.acceptLibrary(() => dragged);
-                stage.addEventListener('dragover', e => {
-                    if (!dragged) return;
-                    e.preventDefault(); e.dataTransfer.dropEffect = 'copy';
-                    stage.classList.add('shell-drop-target');
-                });
-                stage.addEventListener('dragleave', e => { if (!stage.contains(e.relatedTarget)) stage.classList.remove('shell-drop-target'); });
-                stage.addEventListener('drop', async e => {
-                    const it = dragged;                       // dragend clears it while the pick is awaited
-                    if (!it) return;
-                    e.preventDefault();
-                    stage.classList.remove('shell-drop-target');
-                    let hit = null;
-                    try { hit = await overlay.probe(e.clientX, e.clientY); } catch (err) { console.warn('[library] drop:', err); }
-                    if (it.asset.kind === 'material') {
-                        if (!hit?.id) return status(`${it.name}: drop a material onto an object`);
-                        if (builderTree.dropAsset(it.asset, { mid: hit.id })) status(`${it.name} on ${hit.id}`);
-                    } else if (builderTree.dropAsset(it.asset, { pos: hit?.pos ?? null })) status(`put in: ${it.name}`);
-                });
-                /* EDITING AN ITEM (library/edit.js): a scene of its own, the tree isolated on it, Save and Close
-                   over the view */
-                window.ITEM_EDITOR = installItemEditor({ BUILDER, RT, SHELL, library, tree: builderTree, stage, say: status, thumbs });
-                window.LIBRARY_PANEL = installLibraryPanel(libraryEl, { library, say: status, thumbs, drag: it => { dragged = it; },
-                    live: (item, el) => studio ? studio.live(item, el) : null,
-                    insert: (asset, name) => { builderTree.insertAsset(asset); status(`put in: ${name}`); },
-                    selection: () => builderTree.selectedAsset(),
-                    edit: item => window.ITEM_EDITOR.open(item) });
-                // after the panel exists: a panel already showing is told at once, and the note needs the panel
-                SHELL.onVisible('library', v => { if (v) startStudio(); });
-            }
-            panel = builderPanel = installBuilderPanel(propsTable, BUILDER, {
-                onLabel: () => builderTree.rebuild(),
-                onStructure: reapply,
-                onApply: () => builderTree.apply(),
-                // a code box's "Functions you can call…": the Help panel opened at that page (help/reference/code.md)
-                help: (page, anchor) => { openHelp(); window.HELP?.open(page, anchor); },
-                params: PARAMS, environment: () => RT.get(),
-                // the scene row's camera and exposure (builder/panel.js cameraFolder, exposureFolder): the renderer's own fields
-                view: { cameraBindings: () => RT.cameraBindings(), cameraShown: () => RT.cameraShown(), exposure: () => RT.view().exposure,
-                        setExposure: (k, v) => RT.applyView({ exposure: { [k]: v } }), watch: f => RT.watchView(f) },
-                // a material item's sample shape and size (library/edit.js): the library's, handed to the builder;
-                // a new size is framed afresh, since the camera was where the other size wanted it
-                itemSample: { choices: SAMPLE_CHOICES, sizes: SAMPLE_SIZES, of: sampleOf,
-                    set: (doc, shape, size) => { const was = sampleOf(doc); setSample(doc, shape, size); if (was?.size !== size) window.ITEM_EDITOR?.frame() } },
-            });
-            /* THE SCENE'S PARAMETERS: the current scene's, asked afresh each time, so a node added,
-               deleted, undone or loaded is in or out of the list at once. What a change does is the
-               properties panel's (builder/params.js makeAfter): the same uniform, undo step, compile. */
-            PARAMS.provide('scene', () => sceneParams(BUILDER.doc, {
-                live: (id, k) => BUILDER.live(id, k), commit: key => BUILDER.commit(key), structure: reapply,
-                syncSources: () => BUILDER.syncSources(), onLabel: () => builderTree.rebuild(),
-                reveal: id => { builderTree.select(id); SHELL.open('properties'); },
-                environment: () => RT.get(),
-            }));
-
-            /* A FILE TO SAVE, and one to open: the browser's download, and its picker (resolving null if cancelled) */
-            const downloadText = (name, text) => {
-                const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
-                Object.assign(document.createElement('a'), { href: url, download: name }).click();
-                setTimeout(() => URL.revokeObjectURL(url), 0);
-            };
-            /* a STEP or STL file is read as bytes (an STL is binary, usually); anything else as text */
-            const CAD = /\.(step|stp|p21|stl)$/i;
-            const pickFile = () => new Promise(res => {
-                const input = Object.assign(document.createElement('input'), { type: 'file', accept: '.json,application/json,.step,.stp,.stl' });
-                input.onchange = async () => {
-                    const f = input.files?.[0];
-                    if (!f) return res(null);
-                    res(CAD.test(f.name) ? { name: f.name, bytes: await f.arrayBuffer() } : { name: f.name, text: await f.text() });
-                };
-                input.oncancel = () => res(null);
-                input.click();
-            });
-            /* THE EXAMPLES (scenes/index.js): the bundled scenes, a COPY of one into the project from the Project panel -- the
-               same as opening its file (demo.js load: put after the scene being worked on, and worked on) -- by audience and
-               group, each with what it shows (scenes/examples.js, made by scenes/make.mjs), and seen as its file says: an
-               example is a place to look from as much as a scene (0.54.0), its camera and exposure in its document since
-               0.66.0 (builder/model.js VIEW) */
-            examples = {
-                list: EXAMPLES.map(e => ({ id: e.file, title: e.title, audience: e.audience, group: e.group, description: e.description })),
-                open: async file => openText(await (await fetch(urlOf(file))).text(), file),
-            };
-            const ops = builderTree.sceneOps;
-            const picture = key => PICS.get(SESSION.info().id, key);
-            const exportScene = key => BUILDER.saveScene(undefined, key);
-            const exportProject = () => BUILDER.saveWorkspace(projectFileName(SESSION.info().name));
-            /* THE PROJECT PANEL (workspace/projectview.js): a tab beside the picture when it is not open (the user, 2026-10-17:
-               "if it isnt open, open it in the same pane as the viewport"), brought forward when it is; the picture brought
-               back (showWork) once a scene, an example or another project is chosen in it */
-            const showWork = () => SHELL.open('viewport');
-            const openProject = section => {
-                if (SHELL.isOpen('project')) SHELL.open('project');
-                else SHELL.open('project', { referencePanel: 'viewport', direction: 'within' });
-                requestAnimationFrame(() => PROJECT_VIEW?.at(section));
-            };
-            PROJECT_VIEW = window.PROJECT_VIEW = installProjectView(projectEl, { session: SESSION, BUILDER, ops, picture, examples,
-                importFile: () => ACTIONS.importFile(), exportProject, exportScene, download: downloadText, app: stamp, showWork,
-                item: editing, onRemoved: id => PICS.removeProject(id), say: status });
-            SHELL.onVisible('project', v => PROJECT_VIEW.visible(v));
-            /* THE PROJECT AND ITS SCENES OVER THE TREE (builder/scenestrip.js): one line, a card each */
-            STRIP = window.STRIP = installSceneStrip(swHost, { BUILDER, ops, tree: builderTree, project: () => SESSION.info(), picture,
-                onSelect: key => chooseCard(key), openProject, item: editing, compile: () => builderTree.apply(), exportScene, say: status });
-            PICS.on(() => STRIP.refresh());
-            /* THE SCENE'S PICTURE, taken from the live one once it has settled (workspace/scenepics.js; RT.thumbnail) */
-            window.CAPTURE = startCapture({ RT, BUILDER, pics: PICS, project: () => SESSION.info().id });
-            /* ANOTHER PROJECT SHOWN (workspace/session.js open, create): its scenes into the builder -- a history of its
-               own -- its renderer settings, its item being edited if it had one, and its scene compiled */
-            showProject = async (w, item) => {
-                BUILDER.replace({ project: w.project, current: w.current });
-                // nothing selected: scene keys start again in every project, so `s1:n5` would name another node
-                builderTree.select(null);
-                const unknown = RT.applySettings(w.renderer || {});
-                if (unknown.length) console.warn(`[projects] settings this renderer does not have, ignored: ${unknown.join(', ')}`);
-                await window.ITEM_EDITOR?.adopt(item);
-                cardKey = null;
-                STRIP.refresh();
-                await builderTree.apply();
-                /* ITS SCENE DID NOT COMPILE: the picture would be the last project's scene, under this one's tree -- the
-                   empty scene instead, as at a start (start.js); the ▶ over the tree compiles it once it is fixed. Not while
-                   a compile is still on its way: that one decides. */
-                if (!BUILDER.showing && !BUILDER.applying) {
-                    try { await RT.setScene(NOTHING); } catch (e) { console.error('[projects] the empty scene:', e); }
-                }
-            };
-
-            /* UNDO / REDO. A restored project goes to the tree and panel through onDoc, like a
-               load; the renderer then needs either its uniforms pushed (only values differ --
-               BUILDER.undo did that already) or an apply (the shader text differs, or the step
-               was in another scene, which is now current). */
-            const step = which => {
-                const r = which === 'undo' ? BUILDER.undo() : BUILDER.redo();
-                if (r === null) return status(`nothing to ${which}`);
-                if (r === 'structural') builderTree.apply();
-                else status(which === 'undo' ? 'undone' : 'redone');
-            };
-            /* A FILE FROM DISK, the picker's (File › Import from file…) or one dropped on the page. A SCENE file joins the
-               project being worked on (demo.js load: after the current scene, and worked on). A PROJECT file -- every scene,
-               and a workspace's with their cameras and the render settings -- ASKS (0.63.0): a project of its own in this
-               browser (what a workspace file always became: replacing the work open would throw it away), or its scenes
-               added to this one (what an all-scenes file did: the one way to bring another project's scenes in). Projects
-               kept in this browser are not files: the Project panel opens them. Each scene brings its view in its document
-               (builder/model.js VIEW, 0.66.0). */
-            const openText = async (text, name = 'file') => {
-                try {
-                    let kind = null;
-                    try { kind = Project.parse(text); } catch { }      // a bad file: load() below says all that is wrong with it
-                    const many = kind?.workspace?.project ?? kind?.project;
-                    if (many) {
-                        const n = many.scenes.length, here = SESSION.info().name;
-                        const titles = many.scenes.slice(0, 4).map(x => x.doc.title).join(', ') + (n > 4 ? ', …' : '');
-                        const how = await ask({ title: `${name} holds ${n} scene${n === 1 ? '' : 's'}`,
-                            text: `${titles}${kind.workspace ? ', with their cameras and the render settings' : ''}. What should become of ${n === 1 ? 'it' : 'them'}?`,
-                            choices: [
-                                { value: 'new', label: 'Open as a project of its own', note: `kept in this browser beside ${here}, and opened` },
-                                { value: 'add', label: n === 1 ? `Add its scene to ${here}` : `Add its ${n} scenes to ${here}`,
-                                  note: 'after the scene being worked on; this project keeps its own render settings' }] });
-                        if (how === 'new') {
-                            await SESSION.importText(text, String(name).replace(/\.json$/i, ''));
-                            showWork();
-                            return status(`opened ${name} as a project of its own`);
-                        }
-                        if (how !== 'add') return status('nothing imported');
-                        status(BUILDER.load(kind.workspace ? Project.serialize(many) : text));
-                        return builderTree.apply();
-                    }
-                    status(BUILDER.load(text));
-                    builderTree.apply();
-                } catch (e) {
-                    // a ModelError lists every problem with the file; the project is unchanged
-                    console.error('[builder] load failed:', e);
-                    status('IMPORT FAILED: ' + (e.problems ? e.problems[0] + (e.problems.length > 1 ? ` (+${e.problems.length - 1} more, see console)` : '') : e.message));
-                }
-            };
-            /* A STEP OR STL FILE (import/, roadmap/IMPORT.md section 11): each solid in it converted into the builder's own shapes
-               -- boxes, cylinders, cones, spheres, tori and rounded prisms joined by union, intersect and subtract -- in a
-               Worker, and pasted into the scene being worked on as one undo step, in mm converted to the scene's unit
-               (model.js insertAsset), made of the scene's default material, standing on z = 0 of where it is pasted. What cannot be converted is said by name, with why: a face on a
-               B-spline, a mesh that is not closed or whose curves fit no such surface. */
-            const convertCAD = (name, bytes, material) => new Promise((resolve, reject) => {
-                let w;
-                try { w = new Worker(new URL('./import/worker.js', import.meta.url), { type: 'module' }); }
-                catch (e) {
-                    // no module workers: on this thread, the page waiting
-                    return import('./import/index.js').then(I => {
-                        const r = I.convert(Model, name, new Uint8Array(bytes), { material });
-                        resolve({ ok: true, kind: r.kind, asset: r.asset, parts: r.parts.map(p => ({ name: p.name, report: p.report })), refused: r.refused, warnings: r.warnings });
-                    }).catch(reject);
-                }
-                w.onmessage = e => { w.terminate(); resolve(e.data); };
-                w.onerror = e => { w.terminate(); reject(new Error(e.message || 'the import worker failed')); };
-                w.postMessage({ name, bytes, material }, [bytes]);
-            });
-            const importCAD = async (name, bytes) => {
-                const t0 = performance.now();
-                status(`importing ${name}…`);
-                try {
-                    const mat = Model.defaultMaterial(BUILDER.doc);
-                    const r = await convertCAD(name, bytes, mat ? structuredClone(mat) : null);
-                    if (!r.ok) throw new Error(r.error);
-                    const why = r.refused.map(x => `${x.name}: ${x.why}`).join('; ');
-                    if (!r.asset) return status(`IMPORT FAILED: ${name}: ${why || 'nothing in it to convert'}`);
-                    // the tree's paste: one undo step, selected; a refusal it says itself (model.js insertAsset is all or nothing)
-                    if (!builderTree.insertAsset(r.asset)) return;
-                    const shapes = r.parts.reduce((a, p) => a + p.report.shapes, 0);
-                    const s = performance.now() - t0;
-                    status(`${name}: ${r.parts.length} part${r.parts.length === 1 ? '' : 's'} as ${shapes} shapes in ${(s / 1000).toFixed(1)} s`
-                        + (why ? `; NOT CONVERTED: ${why}` : '') + (r.warnings.length ? `; ${r.warnings.join('; ')}` : ''));
-                    for (const p of r.parts) console.info(`[import] ${name} › ${p.name}:`, p.report);
-                } catch (e) {
-                    console.error('[import]', e);
-                    status(`IMPORT FAILED: ${name}: ${e.message}`);
-                }
-            };
-            const importFile = async () => {
-                const f = await pickFile();
-                if (!f) return;
-                if (f.bytes) await importCAD(f.name, f.bytes);
-                else await openText(f.text, f.name);
-            };
-            /* DROPPED FILES only -- the tree's own drags are rows, not files, and must reach it
-               untouched, so anything without 'Files' in it is left alone. */
-            const isFile = e => [...(e.dataTransfer?.types || [])].includes('Files');
-            window.addEventListener('dragover', e => { if (isFile(e)) e.preventDefault(); });
-            window.addEventListener('drop', e => {
-                if (!isFile(e)) return;
-                e.preventDefault();
-                for (const f of e.dataTransfer.files) {
-                    if (CAD.test(f.name)) { if (editing()) status('close the library item first (over the view)'); else f.arrayBuffer().then(b => importCAD(f.name, b)); }
-                    else if (/\.json$/i.test(f.name) || f.type === 'application/json') f.text().then(t => openText(t, f.name));
-                }
-            });
-            /* the same actions for the toolbar and the menu bar: the toolbar keeps its keys (Ctrl Z, Ctrl S, Ctrl O), the menus
-               only show them. WHILE A LIBRARY ITEM IS EDITED (library/edit.js) Ctrl+S saves it -- what the user is working on
-               -- and a new project or a file read in would leave its isolation behind, so they wait for it to close */
-            /* CTRL+S, WITH NO MENU ROW (0.63.0): the project is written to this browser as it changes (workspace/autosave.js),
-               so this only does it at once and says so -- kept because people press it; a library item's save is real */
-            const saveNow = async () => {
-                await SESSION.saveNow();
-                const i = SESSION.info();
-                status(i.id ? `saved in this browser: ${i.name} (it is saved as it changes)` : `nothing changed yet: this tab's copy of '${i.copy}' is kept once something is`);
-            };
-            /* EXPORT ▸ 3D PRINT: the scene's Export box, whose Properties hold Export 3MF and Export STL (panel.js) */
-            const exportPrint = () => {
-                let box = null;
-                Model.walk(BUILDER.doc, n => { if (!box && n.type === 'export') box = n; });
-                if (!box) return status('this scene has no Export box: ＋ on a group\'s row › Export box (3MF / STL) adds one; its Properties hold Export 3MF and Export STL');
-                builderTree.select(box.id);
-                SHELL.open('properties');
-                status(`${box.label}: Export 3MF and Export STL are in its Properties`);
-            };
-            ACTIONS = {
-                undo: () => step('undo'), redo: () => step('redo'),
-                importFile: notWhileEditing(importFile), open: notWhileEditing(importFile),
-                newProject: notWhileEditing(() => SESSION.create().then(showWork).catch(e => { console.error('[projects]', e); status(`new project: ${e.message}`); })),
-                projects: () => openProject(),
-                exportScene: () => exportScene(BUILDER.current), exportProject, exportPrint,
-                saveNow, saveKey: () => editing() ? window.ITEM_EDITOR.save() : saveNow(),
-                canUndo: () => BUILDER.canUndo, canRedo: () => BUILDER.canRedo,
-            };
-            toolbar = installToolbar(SHELL.tools, ACTIONS);       // Undo and Redo on the menu bar, after the menus; and the keys
-            status(first.title);
-        }
-
-        /* THE OPTICS PAGE: the technical ray trace over the same scene (lib/pathtracer/optics). It
-           compiles nothing and allocates nothing until Run or Reset is pressed, so a session that
-           never opens it renders exactly as before. */
-        // onEdit: the page wrote into the document (the colour mixing's fluxes) -- the panel shows it
-        /* its charts are the panels registered above, each with its own settings on it: the page draws one
-           while it is seen */
-        const charts = {
-            set: CHARTS,
-            el: chartEls,
-            onVisible: (id, fn) => SHELL.onVisible(id, fn),
-            /* A CHART MADE IN THE PAGE (another map): its panel registered, its View entry, and opened to the
-               right of the one it was made from -- side by side, to compare -- or of the first of its kind */
-            add: (c, near) => {
-                const el = chartPanel(c);
-                SHELL.standardCommands();
-                const by = [near, ...CHARTS.list().filter(o => o.type === c.type).map(o => o.id)].find(id => id !== c.id && SHELL.isOpen(id));
-                if (by) SHELL.open(c.id, { referencePanel: by, direction: 'right' });
-                else openChart(c.id);
-                return el;
-            },
-            remove: id => { SHELL.forget(id); delete chartEls[id]; },
-        };
-        /* A CHART OPENED where nothing says where: brought to the front when open; else beside another open
-           chart (a tab of its group), else under the picture */
-        const openChart = id => {
-            if (SHELL.isOpen(id)) return SHELL.open(id);
-            const other = CHARTS.list().map(c => c.id).find(o => o !== id && SHELL.isOpen(o));
-            SHELL.open(id, other ? { referencePanel: other, direction: 'within' } : { referencePanel: 'viewport', direction: 'below' },
-                       other ? undefined : { height: Math.round(stage.clientHeight * 0.45) });
-        };
-        const mixing = { el: mixingEl, onVisible: fn => SHELL.onVisible('tools.mixing', fn) };
-        window.OPTICS = installOpticsPage(opticsEl, { RT, WG, BUILDER, tableIn, charts, mixing,
-            onEdit: () => builderPanel?.refresh(), boxes: window.BOXES, view: VIEW });
-
-        /*=========================================================================================
-          THE PARAMETERS, seen: where each is set (reveal), the Parameters panel, the palette.
-        =========================================================================================*/
-        {
-            /* where a setting's own control is: a scene node's row selects it (its entry says so); the
-               renderer's are by the path's first parts, which say what they change */
-            const reveal = p => {
-                if (p.reveal) return p.reveal();
-                const [a, b] = p.path.split('/');
-                if (a === 'renderer') return SHELL.open('renderer');
-                if (a === 'view') { SHELL.open('viewport'); VIEW.open({ show: 'Show', exposure: 'Exposure', camera: 'Camera' }[b]); }
-            };
-            installParamsPanel(paramsEl, PARAMS, { reveal, say: t => SHELL.status(t) });
-            // the palette finds settings, after the commands; "name = value" sets one
-            SHELL.searchIn(paramsSearch(PARAMS, { reveal, say: t => SHELL.status(t) }));
-            /* A VALUE CHANGED FROM ELSEWHERE -- the palette, the Parameters panel, a script: the tables
-               follow (the scene's bind to the document's own values). A light's are copies the panel
-               made (its colour-by, its flux or luminance), so its panel is rebuilt, once a frame. */
-            let again = 0;
-            PARAMS.onChange(e => {
-                if (e.source === 'panel') return;
-                refresh();
-                if (e.path.includes('/light/') && !again) again = requestAnimationFrame(() => { again = 0; builderPanel?.refresh(); });
-            });
-        }
-
-        /* THE TIMELINE (tools/timeline.js): the parameters' live entries over time, and RECORD films them
-           through the renderer's offscreen verbs, with the view covered meanwhile. TIMELINE in the console.
-           THE SCENE'S (0.67.0, builder/model.js TIMELINE): the panel holds the timeline of the scene shown, handed over
-           as each is shown (the builder's markShown, with its view), and writes it back into that scene at each change. */
-        window.TIMELINE = installTimeline(timelineEl, { PARAMS, RT, stage, busy: busyOverlay(stage, { delay: 0 }),
-            progress: job => SHELL.progress('video', job), onVisible: fn => SHELL.onVisible('tools.timeline', fn),
-            scene: { timeline: () => BUILDER.timeline(), keep: t => BUILDER.keepTimeline(t) }, local: localStore });
-        BUILDER.onTimeline = t => window.TIMELINE.showScene(t);
-
-        /* THE MEASURE TOOL: pinned readings and a rectangle's average over the picture, points on surfaces and the
-           distances between them (its ruler), and the false colour's legend (lib/pathtracer/measure). Reads nothing
-           until something is placed. */
-        window.MEASURE = installMeasureTool({ stage, canvas: ctx.canvas, RT, toolbar: VIEW });     // its buttons: the analysis drawer's Measure
-
-        /*=========================================================================================
-          THE MENU BAR'S COMMANDS: File, Edit, Analysis and Help are the application's; View is the
-          shell's own (one entry per panel). Five menus since 0.63.0 (UI_PLAN.md section 11): no
-          Render settings menu -- every row of it was the Render settings panel's or the view's
-          Quality ▾ and ⚡ again -- and no Window menu -- the buttons on every panel group's header.
-          Their commands stay, menu-less, for the palette (Ctrl K) and the help's links: a command
-          need not be a row. Shortcuts are shown, not bound: the toolbar and the tree listen for them.
-        =========================================================================================*/
-        {
-            const C = SHELL.command, A = () => ACTIONS;
-            // a tab beside the picture, where the picture is (0.79.0; a floating panel before); brought forward if open
-            const savePicture = () => SHELL.open('output', { referencePanel: 'viewport', direction: 'within' });
-            const itemOpen = () => !!window.ITEM_EDITOR?.active;
-            /* FILE (builder/filemenu.js), five rows: New project · Projects… | Import from file… · Export ▸ | Save picture….
-               The scenes are on their cards over the tree and in the Project panel; the project is saved as it changes. */
-            for (const c of fileCommands({ item: { active: itemOpen },
-                actions: { newProject: () => A().newProject(), projects: () => A().projects(), importFile: () => A().importFile(),
-                           exportScene: () => A().exportScene(), exportProject: () => A().exportProject(), exportPrint: () => A().exportPrint(),
-                           picture: savePicture } }))
-                C(c);
-            // ...and the scenes' own commands, menu-less: new, duplicate, delete the one being worked on
-            for (const c of sceneCommands({ BUILDER, ops: builderTree.sceneOps, item: { active: itemOpen }, say: status })) C(c);
-            C({ id: 'edit.undo', menu: 'Edit', label: 'Undo', keys: 'Ctrl Z', when: () => !!A()?.canUndo(), run: () => A().undo() });
-            C({ id: 'edit.redo', menu: 'Edit', label: 'Redo', keys: 'Ctrl Y', when: () => !!A()?.canRedo(), run: () => A().redo() });
-            /* THE RENDERER'S SWITCHES, IN NO MENU (0.63.0; the user, 2026-10-17: "Those are already covered by the icons in the
-               viewport and settings in the render pane"). The palette keeps them, "Render" in each label so the word finds
-               them -- the palette reads a command's menu and label, and there is no menu. The environment is the scene row's
-               properties (tree.js select maps its id to it). */
-            C({ id: 'render.environment', label: 'Render: the scene\'s environment (sun, sky, studio)', run: () => { builderTree.select(Model.ENVIRONMENT_ID); SHELL.open('properties'); } });
-            /* THE QUALITY PRESETS (lib/pathtracer/quality.js), as the Render settings panel's Quality box and the view's
-               Quality ▾ set them */
-            for (const q of QUALITY_PRESETS)
-                C({ id: `render.quality.${q.id}`, label: `Render quality: ${q.label}`, help: q.help,
-                    run: () => applyPreset(q.id, RT.get(), v => RT.set(v)) });
-            /* FAST WHILE MOVING (0.59.0; quality.js effective, the view's ⚡ and its Quality menu): a full picture traced as
-               Draft or Sketch while the camera, a drag or a live value moves */
-            C({ id: 'render.moveFast', label: 'Render: fast while moving on / off',
-                help: 'While the camera or an object moves, a full picture is traced as Draft or Sketch, and comes back when it stops',
-                run: () => RT.set({ moveFast: ((RT.get().moveFast ?? 1) | 0) ? 0 : 1 }) });
-            for (const [m, name, help] of [[1, 'Draft', 'the light and the shadows kept'], [2, 'Sketch', 'a flat light, the lightest']])
-                C({ id: `render.moveMode.${name.toLowerCase()}`, label: `Render: fast while moving, as ${name}`,
-                    help: `A move traces as ${name}: ${help}`, run: () => RT.set({ moveFast: 1, moveMode: m }) });
-            C({ id: 'render.lampsOnly', label: 'Render: lamps only (no sun, sky or studio light) on / off',
-                help: 'The view lit by the scene\'s own lights; the scene keeps its environment (Render settings › Light sources › Sun, sky or studio)',
-                run: () => RT.set({ lampsOnly: (RT.get().lampsOnly | 0) ? 0 : 1 }) });
-            C({ id: 'render.lightRays', label: 'Render: lights\' rays (the light objects\' photons) on / off',
-                help: 'Off, the camera\'s paths count a light\'s face themselves: noisier through glass, and a point, a ray file or a collimated beam lights nothing',
-                run: () => RT.set({ lightRays: ((RT.get().lightRays ?? 1) | 0) ? 0 : 1 }) });
-            /* THE ANALYSIS PANE shown and hidden (the user, 2026-10-10): where Design keeps it, a tab beside
-               Render settings, or left of the picture when that is not open; hidden, Design is what the Render
-               layout was */
-            C({ id: 'analysis.setup', menu: 'Analysis', group: 'setup', label: 'Analysis setup: show / hide',
-                help: 'The Analysis pane: ▶ Run, the sources, detectors and totals every chart is made from',
-                run: () => SHELL.isOpen('optics') ? SHELL.close('optics')
-                    : SHELL.isOpen('renderer') ? SHELL.open('optics', { referencePanel: 'renderer', direction: 'within' })
-                    : SHELL.open('optics', { referencePanel: 'viewport', direction: 'left' }, { width: 330 }) });
-            /* A CHART OF A KIND, with its own settings (optics/charts.js): the kind's first chart when it is closed, another when
-               it is open; a chart's ⧉ makes one like it. One row, New chart ▸ (0.63.0: six rows were "New chart: X"); each kind
-               is also a command of its own, menu-less, for the palette */
-            const newChart = c => SHELL.isOpen(c.id) ? window.OPTICS.addChart(c.key) : openChart(c.id);
-            for (const c of OPTICS_CHARTS)
-                C({ id: `optics.new.${c.key}`, label: `New chart: ${c.title}`,
-                    help: 'The first of this kind if it is closed, else another, with settings of its own (a chart\'s ⧉ copies its settings instead)',
-                    run: () => newChart(c) });
-            C({ id: 'analysis.newChart', menu: 'Analysis', group: 'charts', label: 'New chart',
-                help: 'A chart of a kind: the first of it if it is closed, else another, with settings of its own',
-                items: () => OPTICS_CHARTS.map(c => ({ label: c.title, run: () => newChart(c) })) });
-            /* EVERY CHART THAT EXISTS, to bring one back: View listed them until they left it, and a closed chart
-               had no other way back -- New chart opens the kind's first only while it is closed */
-            C({ id: 'analysis.charts', menu: 'Analysis', group: 'charts', label: 'Open chart',
-                help: 'Every chart there is, open or closed: the one chosen brought to the front',
-                items: () => CHARTS.list().map(c => ({ label: `${SHELL.isOpen(c.id) ? '● ' : ''}${c.title}`, run: () => openChart(c.id),
-                    title: SHELL.isOpen(c.id) ? 'Open: brought to the front' : 'Closed: opened beside the other charts' })) });
-            /* THE HELP: its links act on the page through these (help/links.js) -- an example opened as the Project panel
-               opens one, a command run as its menu entry would, a panel opened and outlined for a moment so the eye finds it */
-            const flash = el => { if (!el) return false; el.classList.add('help-flash'); setTimeout(() => el.classList.remove('help-flash'), 1600); return true };
-            const HELP = window.HELP = installHelp(helpEl, {
-                say: status,
-                openExample: file => examples?.open(file),
-                runCommand: id => {
-                    const c = SHELL.registries.commands.get(id);
-                    if (!c || c.items || !c.when()) return false;
-                    c.run(); return true;
-                },
-                show: target => {
-                    if (target.startsWith('menu:')) {
-                        const name = target.slice(5);
-                        return flash([...document.querySelectorAll('.shell-menu')].find(b => b.textContent.trim() === name));
-                    }
-                    if (!SHELL.registries.panels.has(target)) return false;
-                    SHELL.open(target);
-                    return flash(document.querySelector(`[data-panel="${CSS.escape(target)}"]`));
-                },
-            });
-            C({ id: 'help.contents', menu: 'Help', group: 'help', label: 'Contents', keys: 'F1', run: openHelp,
-                help: 'How to use ShadyTracer: modelling and rendering, optical design, and a reference of every shape and setting' });
-            window.addEventListener('keydown', e => { if (e.key === 'F1') { e.preventDefault(); openHelp(); } });
-            C({ id: 'help.layout', menu: 'Help', label: 'Arranging the panels', run: () => SHELL.status(
-                'Drag a tab to dock it anywhere · ⧉ floats a group · ⇱ pops it out to its own window · ⤢ maximises · View reopens a closed panel · View > Reset the layout') });
-            /* WHEN THE PICTURE IS WRONG AND NOTHING SAYS WHY (diagnose.js): where its photons went, and
-               whether the page ran files from the browser's cache that the server has changed since --
-               copied, to paste back */
-            C({ id: 'help.report', menu: 'Help', group: 'diagnose', label: 'Report: the picture\'s light and the page\'s files (copied)', run: async () => {
-                SHELL.status('report: comparing the cached files with the server\'s...');
-                const text = await report({ RT, OPTICS: window.OPTICS });
-                try { await navigator.clipboard.writeText(text); } catch { }
-                const stale = /STALE/.test(text);
-                SHELL.status(stale ? 'report copied -- the page ran STALE files: Help › Reload every file fresh' : 'report copied (also in the console)');
-            } });
-            C({ id: 'help.fresh', menu: 'Help', group: 'diagnose', label: 'Reload every file fresh (past the browser\'s cache)', run: () => reloadFresh() });
-            /* A TIP FOR THE WORK: the GitHub Sponsors page, the one .github/FUNDING.yml and the README name too
-               (test/funding.test.mjs holds the three to one). A row in Help, and a link at the menu bar's right end
-               after the title (the user, 2026-10-20) -- a link, so its address shows on hover and a middle click works */
-            const SPONSOR = 'https://github.com/sponsors/lampmaker';
-            C({ id: 'help.sponsor', menu: 'Help', label: 'Support ShadyTracer…', run: () => window.open(SPONSOR, '_blank', 'noopener'),
-                help: 'ShadyTracer is free: a tip, one-time or monthly, through GitHub Sponsors (opens in a new tab)' });
-            {
-                const a = Object.assign(document.createElement('a'), { className: 'shell-menu', href: SPONSOR, target: '_blank', rel: 'noopener',
-                    title: 'ShadyTracer is free: a tip, one-time or monthly, through GitHub Sponsors' });
-                a.innerHTML = '<span class="sponsor-heart">♥</span> Sponsor';
-                SHELL.barEnd.appendChild(a);
-            }
-            C({ id: 'help.about', menu: 'Help', label: 'About', run: () => SHELL.status(`${versionText()} © Matthijs Keuper · a wavefront SDF path tracer with a technical optics trace · what changed: CHANGELOG.md · support it: Help › Support ShadyTracer…`) });
-        }
-
-        //==============================================================================================================
-        /* THE FIRST COMPILE (start.js firstCompile): a scene that will not build leaves the renderer on the empty one,
-           nothing of the project shown, and a note of why -- the probe's report names the node and the line. The
-           start is done either way, so the next one is not a safe start. */
-        const failed = await firstCompile({ RT, BUILDER, nothing: NOTHING });      // init itself, on a safe start too
-        const startNote = safeStart ? safeNote(first.title, SAFE) : failed;
-        started(localStore);
-        /* THE PROJECT AS IT WAS LEFT (workspace/): the renderer's settings -- quality, size: not the camera, the exposure
-           or the tolerance, which are each scene's and came back with it (builder/model.js VIEW); after init,
-           since a size needs the canvas's buffers -- and a library item that was being edited, taken up again with its
-           strip over the view, without framing the camera the project kept. Then what counts as saved is what is
-           there, and the autosave looks once a second, when the tab is hidden, and as the page goes. */
-        {
-            const unknown = RT.applySettings(START.workspace.renderer || {});
-            if (unknown.length) console.warn(`[projects] settings this renderer does not have, ignored: ${unknown.join(', ')}`);
-            await window.ITEM_EDITOR?.adopt(START.item);
-            AUTOSAVE.since();
-            // when it last wrote, for the status bar's "saved" (paintSaved): tick() resolves true when it did
-            setInterval(async () => { if (await AUTOSAVE.tick()) savedAt = Date.now(); }, 1000);
-            document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') AUTOSAVE.tick(); });
-            window.addEventListener('pagehide', () => { AUTOSAVE.flush(); AUTOSAVE.tick(); });
-            const note = [storeNote, START.note, startNote].filter(Boolean).join(' · ');
-            if (note) { status(note); console.warn('[projects]', note); }
-        }
-        RT.start()
     </script>
 </body>
 
