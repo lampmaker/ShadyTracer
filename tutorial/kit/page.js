@@ -16,7 +16,8 @@
 //                               what it is, then the page's own reason to read it
 //   nav.tabs[data-auto]         previous and next written chapters
 //
-// And the bar: contents, the style by name (kit/styles.js) and light / dark, both remembered. A style is kept in
+// And the bar: contents, the style by name (kit/styles.js) and light / dark, both remembered; with nothing chosen,
+// the defaults kit/styles.js names (minimal, dark). A style is kept in
 // localStorage (the preview of a claude.ai artifact drops a URL's query, so ?style= cannot be relied on), and ?style=
 // still wins where it arrives. Storage can be refused (a private window): every read and write is guarded and
 // the page works without it.
@@ -28,7 +29,7 @@ import { reading } from './reading.js'
 import { locate, optionsOf, languageOf } from './excerpt.js'
 import { mountFigure } from './figure.js'
 import { VERSION, loadRevision, revision } from '../../version.js'
-import { STYLES, DEFAULT_STYLE, styleOf } from './styles.js'
+import { STYLES, DEFAULT_STYLE, DEFAULT_THEME, styleOf } from './styles.js'
 
 export const TUT = new URL('../', import.meta.url)          // tutorial/
 export const REPO = new URL('../../', import.meta.url)      // the repository's root: excerpts' paths start here
@@ -333,8 +334,9 @@ function figuresOf(doc, specs) {
 export function boot({ figures = {}, styles = true, allFonts = false } = {}) {
     const doc = document
     doc.documentElement.classList.add('kit-js')
+    // the reader's own choice, else the default (styles.js): no longer the system's light or dark (0.next)
     const t = store.get(KEY_THEME)
-    if (t === 'light' || t === 'dark') doc.documentElement.dataset.theme = t
+    doc.documentElement.dataset.theme = t === 'light' || t === 'dark' ? t : DEFAULT_THEME
     setStyle(doc, currentStyle(doc))
     if (allFonts) loadFonts(doc, STYLES.map(st => st.id))
     const id = doc.body.dataset.chapter
