@@ -126,12 +126,31 @@
                     <p>I have built ray tracers for my art for years. ShadyTracer is the one I always wanted: physically
                         correct (reasonably so: not for camera lenses) and built entirely on signed distance functions
                         (<a href="https://iquilezles.org">iquilezles.org</a> is the rabbit hole). I started it on my own
-                        <a href="https://github.com/lampmaker/tinywebgpu">TinyWebGPU</a> toolkit and finished it with Claude
-                        Code. Every <span class="ok-mark">✓</span> on this page is measured against a known answer on a real
-                        graphics card.</p>
+                        <a href="https://github.com/lampmaker/tinywebgpu">TinyWebGPU</a> toolkit.</p>
+                    <h3>How it is made</h3>
+                    <p>I wrote the foundations of ShadyTracer myself, but used Claude Code to finish it. I decide what it
+                        does and how it should work. Claude Code writes under my direction: I set the goals, review what
+                        comes back and measure it on real hardware. A process of many iterations.</p>
+                    <p>So should you trust the output? Whether you can trust a renderer depends not on who typed it, but on
+                        what checks it. So ShadyTracer is built to be checked:</p>
+                    <ul>
+                        <li><strong>Every <span class="ok-mark">✓</span> on this page is a measurement</strong>: a test with
+                            a closed-form answer, a white floor under the sun or a sphere that should vanish in uniform light,
+                            run in the app on a real graphics card. Each is one button in the app's Tests panel, so you can run
+                            them yourself, and the results are recorded with the hardware they ran on.</li>
+                        <li><strong>Every change is tested before it goes in</strong>: 115 test files run automatically on
+                            every push, covering the light units, the error bars, the colour science, the photon map, the
+                            optics statistics, the scene builder and more. Every shader kernel is built against every scene
+                            and checked, 8,167 builds, without a graphics card. Another 44 tests run the renderer in a
+                            headless browser or on a software GPU.</li>
+                        <li><strong>Nothing is claimed that has not been shown.</strong>
+                            <a href="https://github.com/lampmaker/ShadyTracer/blob/main/FEATURES.md">FEATURES.md</a> lists
+                            every feature with its evidence. What is built but not yet confirmed on real hardware is marked
+                            <span class="pre-mark">preview</span>, here and there.</li>
+                    </ul>
                     <h3>Why sponsor</h3>
                     <p>ShadyTracer is free and stays free. A tip pays for hardware to test on, and tells me the work is
-                        useful to someone.</p>
+                        useful to someone, which keeps me motivated.</p>
                     <div class="actions" style="justify-content: flex-start">
                         <a class="btn primary" href="https://github.com/sponsors/lampmaker"><span class="heart">♥</span> Sponsor on GitHub</a>
                         <a class="btn" href="https://github.com/lampmaker/ShadyTracer">The code</a>
