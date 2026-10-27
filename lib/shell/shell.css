@@ -145,7 +145,7 @@ a.shell-menu { text-decoration: none; cursor: pointer; }
    `baked` lit so a switch is seen at a glance */
 .shell-status-right { flex: none; color: var(--sh-muted); cursor: default; }
 .shell-status-right .baked { color: #ffcc33; }
-/* the raytracer's "saved" note beside its build line (index.html paintSaved, 0.63.0): File has no Save, the bar says the
+/* the raytracer's "saved" note beside its build line (app.html paintSaved, 0.63.0): File has no Save, the bar says the
    work is kept -- or, in amber, that it is not */
 .shell-status-group { display: inline-flex; gap: 14px; }
 .shell-saved { color: #7fbf9a; }

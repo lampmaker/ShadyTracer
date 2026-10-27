@@ -45,7 +45,7 @@ try {
     globalThis.__dawn ??= webgpu.create([])
     WG = WEBGPU()
     await WG.init(0, {}, globalThis.__dawn)
-    WG.defines = defines(TOKENS, SHORT_TOKENS)        // as the page does (index.html)
+    WG.defines = defines(TOKENS, SHORT_TOKENS)        // as the page does (app.html)
 } catch (e) {
     console.log(`(CSG shape GPU check SKIPPED: no WebGPU device -- ${e?.message ?? e}. In a container, apt-get install mesa-vulkan-drivers.)`)
     process.exit(0)

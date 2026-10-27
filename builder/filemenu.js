@@ -1,6 +1,6 @@
 //======================================================================================================================
 // THE FILE MENU -- the projects and the files, as the menu bar's commands (lib/shell registry.js); and the scenes'
-// commands, which have no menu row. Data and functions, no DOM: the page registers them (index.html) and
+// commands, which have no menu row. Data and functions, no DOM: the page registers them (app.html) and
 // builder/test/filemenu.test.mjs runs them.
 //
 // FIVE ROWS (0.63.0; the user, 2026-10-17: "I dont like how the file menu is organized ... Minimise the number of menu

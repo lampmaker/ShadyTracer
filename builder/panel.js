@@ -1754,7 +1754,7 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
         cf.addButton({ title: 'Apply code  (Ctrl+Enter)' }).on('click', () => onApply())
         /* WHAT THERE IS TO CALL (the user, 2026-10-24, of the reference of the functions code can call: "add that
            button"): Help at that page, at the part a block of this kind reaches for first -- a material's helpers, a
-           relief's noise -- and at its top for the rest. `help(page, anchor)` is the host's (index.html opens its Help
+           relief's noise -- and at its top for the rest. `help(page, anchor)` is the host's (app.html opens its Help
            panel there); a host that gives none, as a test page, gets no button rather than one that does nothing. */
         if (help) cf.addButton({ title: 'Functions you can call…' }).on('click', () => help('ref-code', CODE_HELP_AT[kind] ?? null))
 

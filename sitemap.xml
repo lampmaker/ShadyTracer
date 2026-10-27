@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- The pages a search engine should find (robots.txt points here): the app and the tutorial, in the tutorial's order.
+<!-- The pages a search engine should find (robots.txt points here): the front page and the tutorial, in the tutorial's order.
+     Not the app (app.html): a tool, kept out of search results so a search lands on the page that explains it.
      test/seo.test.mjs holds it to tutorial/kit/chapters.js: a chapter written is a line added here. -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://shadytracer.com/</loc></url>

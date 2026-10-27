@@ -1,6 +1,6 @@
 //======================================================================================================================
 // LIGHTBENCH -- the test bench's `light-vs-emitter` row (PLAN.md, *Lights: one model*, L0), whose scene only the
-// builder can make: lib/pathtracer/tests.js runs it, the page hands it in (index.html, RTTESTS.addTest -- main's route
+// builder can make: lib/pathtracer/tests.js runs it, the page hands it in (app.html, RTTESTS.addTest -- main's route
 // for its benchmark, a button of its own in the Tests panel, not in Run all).
 //
 // THE QUESTION. Does a light -- the builder's light object, whose light reaches the picture by light tracing alone --

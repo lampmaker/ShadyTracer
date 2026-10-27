@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>Projects, scenes and the File menu · check</title>
 <!-- THE PROJECTS KEPT IN THE BROWSER, THE SCENES' CARDS, THE PROJECT PANEL AND THE FILE MENU, for
-     workspace/test/projects.check.mjs: wired as the application's page wires them (index.html) -- the real store in
+     workspace/test/projects.check.mjs: wired as the application's page wires them (app.html) -- the real store in
      IndexedDB, the tabs' locks, the autosave, the session; the real builder (builder/demo.js), tree, the line and cards
      over it (builder/scenestrip.js), the Project panel (workspace/projectview.js), Import's question (workspace/ask.js),
      File's commands (builder/filemenu.js, run as the menu bar would: lib/shell is checked on its own), library and item
@@ -84,7 +84,7 @@ const examples = { list: [{ id: 'menger.json', title: 'Menger cubes', audience: 
 const pics = createScenePics({ backend: memoryPics() })
 const picture = key => pics.get(SESSION.info().id, key)
 const exportScene = key => T.files.push(`exportScene:${key}`)
-/* IMPORT FROM FILE, as the page's openText does it (index.html): T.nextFile read -- a scene file joins this project; a
+/* IMPORT FROM FILE, as the page's openText does it (app.html): T.nextFile read -- a scene file joins this project; a
    project file asks (ask.js): a project of its own, or its scenes added here */
 const importFile = async () => {
     T.files.push('import')
@@ -109,7 +109,7 @@ const view = installProjectView(document.getElementById('pv'), { session: SESSIO
     importFile, exportProject: () => T.files.push('exportProject'), exportScene, download: (n, t) => T.downloads.push([n, t]), app: () => 'check',
     showWork: () => T.work++, item: () => E.active, onRemoved: id => T.removed.push(id), say })
 view.visible(true)
-/* THE FILE MENU'S COMMANDS, and the scenes' menu-less ones, as the page registers them (index.html), each file call recorded */
+/* THE FILE MENU'S COMMANDS, and the scenes' menu-less ones, as the page registers them (app.html), each file call recorded */
 const commands = [...fileCommands({ item: { active: () => E.active },
     actions: { newProject: () => SESSION.create(), projects: () => T.opened.push('projects'), importFile,
                exportScene: () => exportScene(BUILDER.current), exportProject: () => T.files.push('exportProject'),

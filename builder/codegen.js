@@ -991,7 +991,7 @@ export function generate(tree, opts = {}) {
     Object.defineProperty(result, 'arrayWindows', { enumerable: false, value: new Map([..._windows].map(([id, p]) => [id, codeOf(p)])) })
     /* MADE WITHOUT ITS BOUNDING BOXES (opts.cull false: a generation option the bench alone sets since 0.34.0, the
        renderer's setting `cull` before): no box test anywhere in its text, codegen's or the records' walk -- a mode of
-       its own to the page's mode watcher (index.html), never the one it wants */
+       its own to the page's mode watcher (app.html), never the one it wants */
     if (opts.cull === false) Object.defineProperty(result, 'unculled', { enumerable: false, value: true })
     return result
 }

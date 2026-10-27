@@ -1,6 +1,6 @@
 # The test bench
 
-`lib/pathtracer/tests.js` — open `index.html`, pick **Tests** in the menu bar, press a button.
+`lib/pathtracer/tests.js` — open `app.html`, pick **Tests** in the menu bar, press a button.
 A popup reports the table with a Copy button; the same text goes to the console.
 
 ## Why it is a button

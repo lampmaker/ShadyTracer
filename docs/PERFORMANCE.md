@@ -197,7 +197,7 @@ reading left over from another trace: the map ran no photons there (batches 1). 
    - the studio's share of light samples;
    - Draft's seek rays in a scene that cannot emit.
 8. **The step cache** (off by default):
-   - a bake swap restarts the picture with it on (`index.html` pushStepBox);
+   - a bake swap restarts the picture with it on (`app.html` pushStepBox);
    - moveFast refills it at every move's start and end (renderMode, nee and lt in its key);
    - the photon map's idle key resets on a Sketch round trip.
 
@@ -835,7 +835,7 @@ What grows with N objects, today:
 
 - **The uniform buffer, 64 KiB.** Every node's transform, parameters and box are fields of the one
   `var<uniform>` struct (`tinywebgpu.js:1234`). `init` raises only the storage limits (`tinywebgpu.js:211-219`)
-  and the page asks for no limit (`index.html:282`), so the WebGPU default of 65 536 bytes applies. D3D12 caps a
+  and the page asks for no limit (`app.html:282`), so the WebGPU default of 65 536 bytes applies. D3D12 caps a
   constant buffer there in any case (its spec: 4096 x 16 bytes). What the user's adapter reports is not checked:
   `(await navigator.gpu.requestAdapter()).limits.maxUniformBufferBindingSize` in the console says.
   - **Computed** (codegen in Node, sizes by tinywebgpu's layout rules): N copies of the box preset at the root

@@ -27,9 +27,11 @@ const server = createServer(async (req, res) => {
     try {
         const path = join(repo, decodeURIComponent(new URL(req.url, 'http://x').pathname))
         if (!path.startsWith(repo)) throw new Error('outside')
+        // read first: a header written before a file that is not there was written again by the 404, and threw
+        const body = await readFile(path)
         res.writeHead(200, { 'content-type': TYPES[extname(path)] ?? 'application/octet-stream' })
-        res.end(await readFile(path))
-    } catch { res.writeHead(404); res.end() }
+        res.end(body)
+    } catch { if (!res.headersSent) res.writeHead(404); res.end() }
 })
 await new Promise(r => server.listen(0, r))
 const base = `http://localhost:${server.address().port}/tutorial/`
@@ -48,6 +50,9 @@ const b = await chromium.launch({ args: ['--disable-gpu'] })
 for (const theme of ['light', 'dark']) for (const [style, face] of Object.entries(STYLES)) {
     const ctx = await b.newContext({ viewport: { width: 1360, height: 900 }, colorScheme: theme })
     const p = await ctx.newPage()
+    // the theme as a reader's choice: the system's (colorScheme) no longer decides once the page runs (kit/styles.js
+    // DEFAULT_THEME), so each theme is the one the bar's toggle would have kept
+    await p.goto(base + 'index.html'); await p.evaluate(t => localStorage.setItem('shadytracer.tutorial.theme', t), theme)
     const errs = []
     p.on('pageerror', e => errs.push('pageerror: ' + e.message)); p.on('console', m => { if (m.type() === 'error') errs.push(m.text().slice(0, 240)) })
     let fontsSaid = false
@@ -63,11 +68,12 @@ for (const theme of ['light', 'dark']) for (const [style, face] of Object.entrie
                 let n = 0; for (let i = 3; i < d.length; i += 16) if (d[i] > 0) n++
                 return n
             })
-            return { style: document.documentElement.dataset.style, ink, failedExcerpts: document.querySelectorAll('.excerpt.failed').length,
+            return { style: document.documentElement.dataset.style, theme: document.documentElement.dataset.theme, ink, failedExcerpts: document.querySelectorAll('.excerpt.failed').length,
                 excerpts: document.querySelectorAll('figure.excerpt').length, pending: document.querySelectorAll('pre[data-src]').length,
                 brokenTerms: document.querySelectorAll('.broken').length, noFigure: document.querySelectorAll('.fig-noscript').length }
         })
         const tag = `${theme} ${style} ${page}`
+        ok(`${tag}: in the theme asked for`, s.theme === theme, s.theme)
         ok(`${tag}: no errors`, !errs.length, errs.join(' | '))
         ok(`${tag}: in the style asked for`, s.style === style, s.style)
         ok(`${tag}: every figure mounted and drawn`, !s.noFigure && s.ink.every(n => n > 50), JSON.stringify(s.ink))
@@ -109,6 +115,17 @@ for (const theme of ['light', 'dark']) for (const [style, face] of Object.entrie
         await p.hover('a[data-g="pixel"]'); await p.waitForTimeout(200)
         ok('a glossary term shows its card', await p.evaluate(() => { const c = document.querySelector('.gcard'); return !!c && !c.hidden && /dot of the picture/.test(c.textContent) }))
     }
+    await ctx.close()
+}
+// A READER WHO HAS CHOSEN NOTHING: the defaults (kit/styles.js), whatever the system asks -- minimal and dark (0.next)
+for (const scheme of ['light', 'dark']) {
+    const ctx = await b.newContext({ viewport: { width: 1360, height: 900 }, colorScheme: scheme })
+    const p = await ctx.newPage()
+    await p.goto(base + 'ch/rays.html'); await p.waitForFunction(() => document.documentElement.classList.contains('kit-js'), null, { timeout: 5000 }).catch(() => { })
+    const d = await p.evaluate(() => ({ style: document.documentElement.dataset.style, theme: document.documentElement.dataset.theme, menu: document.getElementById('kit-style')?.value }))
+    const { DEFAULT_STYLE, DEFAULT_THEME } = await import('../kit/styles.js')
+    ok(`nothing chosen, the system ${scheme}: the default style and theme (${DEFAULT_STYLE}, ${DEFAULT_THEME})`,
+        d.style === DEFAULT_STYLE && d.theme === DEFAULT_THEME && d.menu === DEFAULT_STYLE, JSON.stringify(d))
     await ctx.close()
 }
 await b.close(); server.close()

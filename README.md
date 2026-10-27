@@ -9,7 +9,7 @@ Nothing to install and no server. The page runs on your own graphics card.
 **Run it: <https://shadytracer.com>** · Open source, [MIT](LICENSE) ·
 [♥ Sponsor](https://github.com/sponsors/lampmaker).
 
-![The raytracer in its Design layout: the project's scenes as cards over the tree on the left; in the middle a light sculpture, blue and amber light bars and a mirror ball in a plaster room, its light seen through the photon map; the Render settings and Render stats on the right](docs/screenshots/hero.png)
+![The raytracer in its Design layout: the project's scenes as cards over the tree on the left; in the middle a light sculpture, blue and amber light bars and a mirror ball in a plaster room, its light seen through the photon map; the Render settings and Render stats on the right](docs/screenshots/hero.jpg)
 
 > **In development.** How far along each feature is:
 > **✓** checked against a closed-form answer on real hardware ·
@@ -72,7 +72,8 @@ Nothing to install and no server. The page runs on your own graphics card.
 
 ## Quick start
 
-Open **<https://shadytracer.com>** in a browser with WebGPU. Or run it from a clone:
+Open **<https://shadytracer.com>** in a browser with WebGPU and press *Open ShadyTracer* (the app itself is
+<https://shadytracer.com/app.html>). Or run it from a clone:
 
 ```sh
 git clone --recursive https://github.com/lampmaker/ShadyTracer.git
@@ -80,7 +81,8 @@ cd ShadyTracer
 python3 -m http.server 8000
 ```
 
-Then open <http://localhost:8000/>. `--recursive` matters: TinyWebGPU and GUISTUFF (the property
+Then open <http://localhost:8000/app.html> (<http://localhost:8000/> is the site's front page, with a
+button to it). `--recursive` matters: TinyWebGPU and GUISTUFF (the property
 table and the tree view) are git submodules, and without them the page does not start
 (`git submodule update --init` mends a clone made without it).
 
@@ -133,7 +135,7 @@ for the help.
 
 ### Rendering
 
-![The Material board example: the library's materials on spheres in daylight -- plastics, metals, clear, tinted and frosted glass, stone, wood and paint -- beside the Render settings and Render stats](docs/screenshots/showcase.png)
+![The Material board example: the library's materials on spheres in daylight -- plastics, metals, clear, tinted and frosted glass, stone, wood and paint -- beside the Render settings and Render stats](docs/screenshots/showcase.jpg)
 
 **How light is found**
 
@@ -205,7 +207,7 @@ for the help.
   step through it *preview*.
 - Rough (frosted) glass works; its furnace reading (0.944) is still an open question.
 
-![A copy of the Relief and texture example: plaster, knockdown stucco, sand-float render, rough stone, hammered metal and leather on panels in a raking sun, and a sphere in orange-peel paint; the scene's own settings in Properties](docs/screenshots/surfaces.png)
+![A copy of the Relief and texture example: plaster, knockdown stucco, sand-float render, rough stone, hammered metal and leather on panels in a raking sun, and a sphere in orange-peel paint; the scene's own settings in Properties](docs/screenshots/surfaces.jpg)
 
 **Light in physical units** **✓**
 
@@ -236,7 +238,7 @@ for the help.
 
 ### Light as numbers
 
-![The LED, lens and screen example measured: an area and a pin on the screen read in cd/m² with their error, colour temperature, Duv and Δu′v′; the optics rays drawn over the picture, and the drawer of views, measuring tools and rays at its bottom right](docs/screenshots/lux-view.png)
+![The LED, lens and screen example measured: an area and a pin on the screen read in cd/m² with their error, colour temperature, Duv and Δu′v′; the optics rays drawn over the picture, and the drawer of views, measuring tools and rays at its bottom right](docs/screenshots/lux-view.jpg)
 
 - **Three views**, one icon each in the drawer at the picture's bottom right: **photographic**; **lux
   on surfaces**, every visible surface's illuminance whatever its material; **luminance in cd/m²**,
@@ -255,7 +257,7 @@ for the help.
 
 ### The scene builder
 
-![The builder: dichroic glass plates, flint-glass spheres and a light in dusty air; one plate selected, with the Transform gizmo's arrows, planes, arcs and stretch cubes in the picture, the numbers panel at the top right, and its properties and code beside it](docs/screenshots/builder.png)
+![The builder: dichroic glass plates, flint-glass spheres and a light in dusty air; one plate selected, with the Transform gizmo's arrows, planes, arcs and stretch cubes in the picture, the numbers panel at the top right, and its properties and code beside it](docs/screenshots/builder.jpg)
 
 - **Projects of several scenes**, each with its environment, its objects in groups, its materials,
   and its own camera, exposure, surface tolerance and timeline. Over the tree, one line for the
@@ -328,7 +330,7 @@ for the help.
 
 ### The library
 
-![The Library beside the Product shot example: shapes, modifiers, lights and materials as rendered pictures, with search, filters and tags; the perfume bottle selected in the picture](docs/screenshots/library.png)
+![The Library beside the Product shot example: shapes, modifiers, lights and materials as rendered pictures, with search, filters and tags; the perfume bottle selected in the picture](docs/screenshots/library.jpg)
 
 - **43 built-in items**: the 26 shapes, 8 modifiers, 3 lights and 6 material presets; **42 named
   materials**: plastics and paints, plaster, stucco and render, metals plain, brushed, turned,
@@ -348,7 +350,7 @@ for the help.
 
 ### Optics: the LED and luminaire bench
 
-![An LED package modelled in the builder, its chip, silicone dome and gold leads, with the optics trace's rays drawn over the picture](docs/screenshots/optics-rays.png)
+![An LED package modelled in the builder, its chip, silicone dome and gold leads, with the optics trace's rays drawn over the picture](docs/screenshots/optics-rays.jpg)
 
 A **non-sequential Monte Carlo trace** over the same scene, geometry and materials the picture uses,
 so the numbers and the picture cannot disagree (the dust of a haze box is the one thing it leaves
@@ -389,7 +391,7 @@ number carries its standard error**.
   with **Σ**, its rounds add up while nothing changes. A run is a number of rays times × 1 to × 10M,
   up to 50 million.
 
-![The Analyse layout on the RGBW colour mixing example: ten million rays coloured by their light, the illuminance map on the screen with isolux lines, its profiles, the polar diagram and the results; Run, Live and Σ at the top of the Analysis pane](docs/screenshots/optics-analyse.png)
+![The Analyse layout on the RGBW colour mixing example: ten million rays coloured by their light, the illuminance map on the screen with isolux lines, its profiles, the polar diagram and the results; Run, Live and Σ at the top of the Analysis pane](docs/screenshots/optics-analyse.jpg)
 
 **Far field: luminous intensity** *preview*
 - A **type C (C, γ) grid**, fed by the rays that escape or by one detector, from 0.25° steps.
@@ -434,7 +436,7 @@ number carries its standard error**.
 
 ### Animation and video
 
-![The Animate layout on the Glass and liquid example: three camera tracks keyed in the Timeline under the picture, and the video's 1920 × 1080 frame drawn over it](docs/screenshots/animate.png)
+![The Animate layout on the Glass and liquid example: three camera tracks keyed in the Timeline under the picture, and the video's 1920 × 1080 frame drawn over it](docs/screenshots/animate.jpg)
 
 *preview*
 - **Keyframes on any live setting**: the camera, the sun, a light's flux, an object's position. Flag
@@ -645,7 +647,9 @@ And not planned yet, but asked of a tool like this: UGR and other glare metrics,
 ## Repository layout
 
 ```
-index.html            the application (served as is: GitHub Pages serves this folder)
+index.html            the site's front page: what ShadyTracer is, the button to the app, the FAQ
+app.html              the application (both served as is: GitHub Pages serves this folder)
+site/                 the front page's style
 builder/ library/ optics/ tools/ workspace/ scenes/ bench/   ...and its modules
 help/                 the in-app help: its pages, the reference made from the program, its widgets
 test/                 the application's own tests (each module folder has its test/ too)

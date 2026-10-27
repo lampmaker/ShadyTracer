@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>Optics page · check</title>
 <!-- THE OPTICS PAGE WITHOUT A GPU, for optics/test/page.check.mjs: the application's shell, the Analysis
-     pane and the chart panels exactly as index.html makes them (one per chart of the set, more made and
+     pane and the chart panels exactly as app.html makes them (one per chart of the set, more made and
      taken away through the same hooks), over a made-up scene -- and a
      stand-in for the optics module whose "analysis" hands over the mockups' far field (ui-mockups/mock.js)
      and a spot of hits on a screen. Everything the page draws and computes is its own. -->
@@ -99,7 +99,7 @@ const O = {
 }
 
 const S = createShell(document.getElementById('app'), { title: 'check', menus: ['View'], storageKey: null })
-const pane = S.panel({ id: 'optics', title: 'Analysis', module: 'optics', menu: false })   // as index.html: the Analysis menu's, not View's
+const pane = S.panel({ id: 'optics', title: 'Analysis', module: 'optics', menu: false })   // as app.html: the Analysis menu's, not View's
 /* THE CHARTS: kept nowhere (no key), so every run starts from the six */
 const CHARTS = chartSet()
 const el = {}
@@ -115,7 +115,7 @@ S.layout.setDefault(() => {
     S.open('optics.profiles', { referencePanel: 'optics.map', direction: 'below' })
     S.open('optics.rings', { referencePanel: 'optics.polar', direction: 'below' })
     S.open('optics.encircled', { referencePanel: 'optics.igamma', direction: 'below' })
-    S.open('optics.map')                          // the preset ends on the map, as index.html's Analyse does
+    S.open('optics.map')                          // the preset ends on the map, as app.html's Analyse does
     S.dock.getPanel('optics')?.group?.api?.setSize?.({ width: 330 })
 })
 S.layout.restore()
@@ -128,7 +128,7 @@ document.body.appendChild(viewEl)
 const VIEW = installViewToolbar(viewEl, { PropertyTable, RT })
 installOpticsPage(pane, { RT, WG: null, BUILDER, tableIn, boxes, optics: O, view: VIEW, mixing: { el: mixEl, onVisible: fn => S.onVisible('tools.mixing', fn) }, charts: {
     set: CHARTS, el, onVisible: (id, fn) => S.onVisible(id, fn),
-    // as index.html: registered (no View entry: Analysis › Open chart lists it), to the right of the chart it was made from
+    // as app.html: registered (no View entry: Analysis › Open chart lists it), to the right of the chart it was made from
     add: (c, near) => {
         const e = chartPanel(c)
         S.standardCommands()

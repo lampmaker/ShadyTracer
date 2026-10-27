@@ -2,7 +2,7 @@
 
 Everything here is **project-agnostic**: code that would serve a program that does not exist yet.
 The application at the repository's root imports it with a relative path (`./lib/…` from
-`index.html`, `../lib/…` from its modules).
+`app.html`, `../lib/…` from its modules).
 
 Most of it exists **only here**. The rest is somebody else's, held one of two ways: as a **git
 submodule** (tinywebgpu, GUISTUFF) or as a **vendored copy** (dockview, the timeline). Nothing else

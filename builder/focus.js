@@ -3,7 +3,7 @@
 // double-click on an object, you zoom in on it" ... "I mean clicking on an object in the tree").
 //
 // PURE: no DOM, no renderer -- the box a node has, the orbit that frames it, a pose between two; test/focus.test.mjs.
-// The page (index.html focusOn) asks for them and moves the camera.
+// The page (app.html focusOn) asks for them and moves the camera.
 //
 //   focusBox(doc, id, boxes)     the world box to frame, { lo, hi, open, measured } -- or null: nothing to frame
 //   framing(lo, hi, opts)        { target, distance, radius }: a camera at that distance sees the sphere round the box

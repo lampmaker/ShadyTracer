@@ -1,6 +1,6 @@
 //======================================================================================================================
 // THE STATUS BAR'S WORD FOR THE BUILD SHOWN (builder/modeline.js). Run: node builder/test/modeline.test.mjs
-// No DOM, no GPU: each state's line and tooltip, as index.html hands them in.
+// No DOM, no GPU: each state's line and tooltip, as app.html hands them in.
 //======================================================================================================================
 import { modeLine } from '../modeline.js'
 

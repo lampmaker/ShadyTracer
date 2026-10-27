@@ -8,7 +8,7 @@
 // picture (widgets.js).
 //
 // The panel knows nothing of the page it is in: what a link does to the program is the host's, through `hooks`
-// (index.html) -- so the panel runs in a check page with stand-ins (test/panel.check.mjs).
+// (app.html) -- so the panel runs in a check page with stand-ins (test/panel.check.mjs).
 //======================================================================================================================
 
 import { renderMarkdown } from './markdown.js'

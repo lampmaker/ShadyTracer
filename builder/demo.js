@@ -137,7 +137,7 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
         }
         const values = {}
         for (const [k, u] of Object.entries(scene.uniforms)) {
-            /* NOT THE CULLING BOXES: their defaults are "unknown", and the host keeps what it last sent (index.html
+            /* NOT THE CULLING BOXES: their defaults are "unknown", and the host keeps what it last sent (app.html
                pushCull), so a box written back to unknown here was never sent again -- undo left the scene unculled
                until a box changed. The host is asked to send them again below, from the document as it is now. */
             if (/^bx(lo|hi)_/.test(k)) continue
@@ -344,7 +344,7 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
         return generate(...M.generateArgs(doc(), { id: 'built', title: doc().title || 'Scene builder', editing: editedNow(), data,
                                                    carry: data ? carried() : null }))
     }
-    /* THE CULLING BOXES the records carry (scenedata.js recordsOf `boxes`), from the host (BUILDER.cullBoxes: index.html,
+    /* THE CULLING BOXES the records carry (scenedata.js recordsOf `boxes`), from the host (BUILDER.cullBoxes: app.html,
        boxes.js cullBoxes nested) -- none known is never culled, as a codegen scene's unknown boxes are not */
     const boxesNow = () => { try { return BUILDER.cullBoxes?.() ?? null } catch (e) { console.warn('[builder] cullBoxes', e); return null } }
     const same = (a, b) => a.length === b.length && a.every((x, i) => x === b[i])
@@ -672,7 +672,7 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
          *  showed had is kept, and this one's put back. A host that shows a scene itself calls it. */
         markShown,
         /** SAY THE RENDERER SHOWS NO SCENE OF THE PROJECT: the page started it on an empty one, because the
-         *  scene being worked on did not compile or was not to be compiled at start (index.html, safe start).
+         *  scene being worked on did not compile or was not to be compiled at start (app.html, safe start).
          *  Live edits then wait for the next apply, which shows the current scene; the camera stays as it is. */
         unshow() { shown = null },
         model: M,
@@ -693,7 +693,7 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
         },
         /** THE SCENE SHOWN, BAKED (bake.js; baker.js bakes it in the background once the edits stop): codegen's scene of
          *  the document as it is, every value a constant, the culling boxes kept uniforms (the host measures and sends
-         *  them: index.html pushCull). Null when the scene being edited is not the one shown. */
+         *  them: app.html pushCull). Null when the scene being edited is not the one shown. */
         bakeScene() {
             if (current !== shown) return null
             M.resolveBindings(doc())         // first: the luminance syncSources derives reads what they write (build above)
@@ -761,7 +761,7 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
                 try { BUILDER.onRestructure() } catch (e) { console.warn('[builder] onRestructure', e) }
             }
             /* AFTER EVERY LIVE CHANGE, whoever made it (the properties panel, the parameter registry, the
-               timeline -- all come here): the host's hook, the culling boxes (index.html), which must stop
+               timeline -- all come here): the host's hook, the culling boxes (app.html), which must stop
                trusting a box in the same call that changed its shape -- not at the boxes' next look half a
                second later, when an object grown by a slider would have been cut off by its old box. */
             try { BUILDER.afterLive?.(id, k) } catch (e) { console.warn('[builder] afterLive', e) }
@@ -851,7 +851,7 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
         /** Whether the builder makes its scenes as data now (the renderer's sceneData, and a device that can). */
         get dataMode() { return dataMode() },
         /** Set by the host: run a compile in its own queue -- a live change to a path that only a compile can make
-         *  (liveValue). The tree's apply() in the page (index.html). */
+         *  (liveValue). The tree's apply() in the page (app.html). */
         onRestructure: null,
         /** Path or profile `k` of node `id` is being edited in the picture: compile it live, with room for more
          *  points, until this is called with null (see `editing` above). Asks the host for a compile (onRestructure)

@@ -11,7 +11,7 @@
 //   - every function the code reference has words for is one the scene prelude defines, every prelude function named
 //     like a shape or a join has words (or a reason it is not listed), and what a scene makes for its outlines and
 //     paths is what codegen writes -- so a shape added to the library without words fails here (reference.mjs CODE_HELP).
-// The commands and panels are read from the page's source (index.html and the modules that register them), as
+// The commands and panels are read from the page's source (app.html and the modules that register them), as
 // check-shaders reads the page's inline script: there is no running page here.
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs'
 import { join, relative } from 'node:path'
@@ -49,10 +49,10 @@ for (const p of PAGES) {
 }
 
 // ---- what a link can name: commands and panels as the page's source registers them
-const source = ['index.html', 'builder/filemenu.js', 'lib/shell/shell.js'].map(f => readFileSync(join(repo, f), 'utf8')).join('\n')
+const source = ['app.html', 'builder/filemenu.js', 'lib/shell/shell.js'].map(f => readFileSync(join(repo, f), 'utf8')).join('\n')
 const commands = new Set([...source.matchAll(/(?:\bC|command|add|SHELL\.command)\(\{\s*id:\s*[`'"]([\w.]+)[`'"]/g)].map(m => m[1]))
 const panels = new Set([...source.matchAll(/SHELL\.panel\(\{\s*id:\s*'([\w.]+)'/g)].map(m => m[1]))
-const menus = new Set(JSON.parse(/menus:\s*(\[[^\]]*\])/.exec(readFileSync(join(repo, 'index.html'), 'utf8'))[1].replace(/'/g, '"')))
+const menus = new Set(JSON.parse(/menus:\s*(\[[^\]]*\])/.exec(readFileSync(join(repo, 'app.html'), 'utf8'))[1].replace(/'/g, '"')))
 ok('the page\'s commands, panels and menus were found to check against', commands.has('help.contents') && panels.has('properties') && menus.has('Analysis'),
     JSON.stringify({ commands: commands.size, panels: [...panels], menus: [...menus] }))
 const examples = new Set(EXAMPLES.map(e => e.file))

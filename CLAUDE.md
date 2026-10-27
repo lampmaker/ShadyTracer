@@ -56,7 +56,7 @@ row in `lib/pathtracer/tests.js`, not a new harness. See `docs/TESTING.md`.
 ```
 git clone --recursive https://github.com/lampmaker/ShadyTracer.git   # or, in a clone made without it:
 git submodule update --init
-python3 -m http.server 8000                                         # then http://localhost:8000/
+python3 -m http.server 8000                                         # then http://localhost:8000/app.html (/ is the front page)
 ```
 
 Without the submodules every import of tinywebgpu or the property table fails, and so does
@@ -124,7 +124,7 @@ node optics/test/page.check.mjs # the Analysis pane and chart panels, headless, 
 node test/diagnose.check.mjs    # stale cached files found and reloaded fresh, headless (optional: playwright)
 node test/filename.test.mjs     # a saved picture's or video's name: the time it was saved, local, sortable, no `:`; twice in a second told apart
 node test/funding.test.mjs      # where a tip goes: .github/FUNDING.yml's account, the page's Help row and its Sponsor link at the bar's right end, and the README, one Sponsors page
-node test/seo.test.mjs          # what a search engine and a shared link see (0.79.1): the page's title, description, canonical address (the README's), card and JSON-LD; the introduction a crawler reads, taken away before the shell; the sitemap every tutorial chapter written with its chapters.js line as description; robots.txt keeping out nothing a page loads
+node test/seo.test.mjs          # what a search engine and a shared link see (0.79.1): the front page's (index.html, 0.next) title, description, canonical address (the README's), card, JSON-LD and FAQ word for word as shown; its pictures the README's own JPEGs at their own sizes, every link a file, a query the app reads sent on to app.html; docs/screenshots JPEGs under 1 MB; the app kept out of the index, its introduction taken away before the shell; the sitemap every tutorial chapter written with its chapters.js line as description; robots.txt keeping out nothing a page loads
 node test/version.test.mjs      # VERSION and CHANGELOG.md agree; the revision read from .git, or the REVISION file a Pages deploy writes, every failure null; a file's `app` stamp never read into a document
 node test/release.test.mjs      # the release (release.mjs): a change note read or refused naming its file, the largest bump, one entry above the newest, `0.next` replaced as a version and nowhere else, a tutorial excerpt re-stamped only when the release alone moved it; this repository's notes parse and a `0.next` has a note; through real git: main merged into dev, dev and main pushed together, a refused push or a conflict moving neither, the checkout run from untouched
 node test/start.test.mjs        # the page's start when its scene will not compile: the empty scene instead, why, and the safe start (?safe, or a start that never finished), no GPU
