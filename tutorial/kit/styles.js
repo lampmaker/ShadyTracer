@@ -49,7 +49,7 @@ export const STYLES = [
       fonts: 'family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@400;500',
       face: '800 16px "Bricolage Grotesque"' },
 ]
-/* WHAT A READER WHO HAS CHOSEN NOTHING SEES (0.next; the user: "minimal, black"): the minimal style, dark. Until then the lab
+/* WHAT A READER WHO HAS CHOSEN NOTHING SEES (0.80.0; the user: "minimal, black"): the minimal style, dark. Until then the lab
    notebook, light or dark as the reader's system asked. A choice made in the bar is kept and wins (page.js) */
 export const DEFAULT_STYLE = 'minimal'
 export const DEFAULT_THEME = 'dark'

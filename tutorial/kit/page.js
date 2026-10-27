@@ -334,7 +334,7 @@ function figuresOf(doc, specs) {
 export function boot({ figures = {}, styles = true, allFonts = false } = {}) {
     const doc = document
     doc.documentElement.classList.add('kit-js')
-    // the reader's own choice, else the default (styles.js): no longer the system's light or dark (0.next)
+    // the reader's own choice, else the default (styles.js): no longer the system's light or dark (0.80.0)
     const t = store.get(KEY_THEME)
     doc.documentElement.dataset.theme = t === 'light' || t === 'dark' ? t : DEFAULT_THEME
     setStyle(doc, currentStyle(doc))

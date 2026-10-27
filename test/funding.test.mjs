@@ -5,7 +5,7 @@
 //   .github/FUNDING.yml names one GitHub Sponsors account -- the repository page's Sponsor button.
 //   the app (app.html's inline script, which nothing imports) names that account's Sponsors page once, and opens it
 //     from a Help row (help.sponsor) and from a link at the menu bar's right end (the shell's barEnd); the site's front
-//     page (index.html, 0.next) and the README link the same page.
+//     page (index.html, 0.80.0) and the README link the same page.
 // Four places carry one name. Changing one and not the others sends a tip to a page that is not there, and nothing
 // at run time would say so: the menu row opens whatever URL it holds.
 //======================================================================================================================

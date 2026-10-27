@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- THE APP, NOT THE PAGE TO FIND (0.next): the site's front page is index.html, which says what ShadyTracer is and
+    <!-- THE APP, NOT THE PAGE TO FIND (0.80.0): the site's front page is index.html, which says what ShadyTracer is and
          links here. This page was / until then; a link to /?safe or another query still arrives here (index.html sends
          it on). Kept out of search results, so a search lands on the page that explains it. The script below retitles
          the page with the version once it starts. test/seo.test.mjs holds both pages. -->
@@ -1554,7 +1554,7 @@
                 a.innerHTML = '<span class="sponsor-heart">♥</span> Sponsor';
                 SHELL.barEnd.appendChild(a);
             }
-            // the site's front page (index.html, 0.next): what ShadyTracer is, what it needs, the tutorial -- this page was / before it
+            // the site's front page (index.html, 0.80.0): what ShadyTracer is, what it needs, the tutorial -- this page was / before it
             C({ id: 'help.home', menu: 'Help', label: 'ShadyTracer homepage', run: () => window.open('./', '_blank', 'noopener'),
                 help: 'The front page of shadytracer.com: what ShadyTracer does, what it needs, the tutorial and the code (opens in a new tab)' });
             C({ id: 'help.about', menu: 'Help', label: 'About', run: () => SHELL.status(`${versionText()} © Matthijs Keuper · a wavefront SDF path tracer with a technical optics trace · what changed: CHANGELOG.md · support it: Help › Support ShadyTracer…`) });

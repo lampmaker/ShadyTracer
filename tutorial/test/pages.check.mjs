@@ -117,7 +117,7 @@ for (const theme of ['light', 'dark']) for (const [style, face] of Object.entrie
     }
     await ctx.close()
 }
-// A READER WHO HAS CHOSEN NOTHING: the defaults (kit/styles.js), whatever the system asks -- minimal and dark (0.next)
+// A READER WHO HAS CHOSEN NOTHING: the defaults (kit/styles.js), whatever the system asks -- minimal and dark (0.80.0)
 for (const scheme of ['light', 'dark']) {
     const ctx = await b.newContext({ viewport: { width: 1360, height: 900 }, colorScheme: scheme })
     const p = await ctx.newPage()

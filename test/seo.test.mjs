@@ -2,14 +2,14 @@
 // Tests for what a search engine and a shared link see. Run: node test/seo.test.mjs
 //
 // What has to hold, none of it needing a GPU or a browser:
-//   the front page (index.html, 0.next)'s head: a title, a description, the canonical address -- the one the README
+//   the front page (index.html, 0.80.0)'s head: a title, a description, the canonical address -- the one the README
 //     sends people to -- and the Open Graph card, its picture a file here of the size it claims; the JSON-LD parsing,
 //     about the same address, and its FAQ the questions and answers the page shows, word for word.
 //   the front page's body: every picture one of the README's own (docs/screenshots), its alt and its size the file's,
 //     the first one loaded at once and the rest lazily; every link and source a file here; the app linked; a query the
 //     app reads (app.html's own keys) sent on to it, and only such a query.
 //   docs/screenshots: JPEGs under 1 MB, each one the README or the card shows, and every one they name there.
-//   the app (app.html, which was / until 0.next): kept out of search results and the sitemap; its introduction taken
+//   the app (app.html, which was / until 0.80.0): kept out of search results and the sitemap; its introduction taken
 //     away before the shell is made in that element, and nothing started without WebGPU or an adapter.
 //   sitemap.xml: the front page, the tutorial's contents and glossary and every chapter written, each a file here,
 //     nothing else; every page in it with its own description, a chapter's the line tutorial/kit/chapters.js gives it.

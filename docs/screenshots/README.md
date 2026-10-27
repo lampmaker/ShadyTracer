@@ -1,7 +1,7 @@
 # The README's pictures, and how each one is taken
 
 The top-level README and the site's homepage (`index.html`) show these nine files. They were taken on the user's card
-on 2026-10-21, with ShadyTracer 0.71.0, as whole-window screenshots, and turned into JPEG in 0.next (below). To retake
+on 2026-10-21, with ShadyTracer 0.71.0, as whole-window screenshots, and turned into JPEG in 0.80.0 (below). To retake
 one, keep its name: the README and the homepage show it the moment the new file is in. The homepage gives each
 picture's width and height, so a retake of another size is one edit there: `node test/seo.test.mjs` names the file and
 the size it now has. A picture added under a new name needs a line in the README.
@@ -19,7 +19,7 @@ checks run on cannot start the raytracer.
   (below) to the file name below.
 
 **JPEG, under 1 MB each.** The homepage loads them, and git keeps every version of a picture forever. They were PNGs
-until 0.next, 16.0 MB for the nine; as JPEGs at quality 85 they are 3.6 MB, the largest (hero, builder) about 600 KB
+until 0.80.0, 16.0 MB for the nine; as JPEGs at quality 85 they are 3.6 MB, the largest (hero, builder) about 600 KB
 (measured on the conversion). Quality 85 with the default 4:2:0 chroma was compared at 200 % with the PNG on the
 builder's tree, its blue icons and grey text: no difference worth the 4:4:4 version's near doubling. The PNGs are
 still in git's history; nothing can take them out short of rewriting it. A PNG to put in:
