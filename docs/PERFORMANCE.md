@@ -13,7 +13,7 @@ true?"). A plan built on inferences written as facts was reverted (commit fdc333
 it had called one scene's slow render "this architecture's full-resolution cost", which the user's
 own numbers contradict.
 
-## STATUS (2026-10-26) — answers along the ray: counted, built behind a switch, measured once: fewer steps, mostly not less time
+## STATUS (2026-10-27) — answers along the ray: counted, built, measured once (fewer steps, mostly not less time); the nearest only and the culling boxes built, not measured
 
 The user asked (2026-10-26) about exact intersections for basic shapes, a relief's included ("check if there is any
 intersection possible at all"), for rays running nearly parallel to a surface. **Exact hits were built once (0.18 to
@@ -101,6 +101,14 @@ build itself now, and reads the same steps as the count's table below, to the de
     distance sets the plain step, and the others' distances are no nearer. Answering only that one, with the others
     folded in by their distance, would still be safe, and would give a step between the plain one and today's. What
     would test it: build that, and run Tests > alongray again.
+- **Built since, not measured (2026-10-27; the user: "try nearest only, and with the boxes").**
+  - **The nearest only:** a shape works out its answer only while it is nearer than every answering shape before it
+    in the text; the one it overtakes bounds the step by its distance (`along.js` alNearer, alTake, AL_DREST).
+  - **The culling boxes answer:** a culled node's box says where the ray enters it (`alBoxEntry`, `codegen.js`
+    culled). Until then a box gave only its distance, so it capped the step as before (read in code: `cullDist`,
+    `scene_api.js`). Safe, since the node is inside its box.
+  - **The steps on lavapipe** are in `builder/test/along.gpu.mjs`'s report. The time is Tests > alongray's again, the
+    same rows, so the two runs read side by side.
 
 ## STATUS (2026-10-25) — the march and shadow rays on distance only: measured, and always on
 

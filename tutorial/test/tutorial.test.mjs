@@ -1199,7 +1199,8 @@ for (const [name, { mod }] of modules) {
     // THE MIRRORS, held to the engine's text: what kit/steps.js does is what these lines say
     ok('ch.26: cullDist is the exact box distance and -1 unknown; the margin ten surface tolerances; skipped while farther, CULL standing in where nearer', api.includes('if (lo.w == 0.0) { return -1.0; }')
         && api.includes('return length(max(d, VEC3(0.0))) + min(max(d.x, max(d.y, d.z)), 0.0);') && api.includes('fn cullMargin() -> FLOAT { return offsetEps(); }') && tb.includes('fn offsetEps() -> FLOAT { return 10.0 * marchEps(); }')
-        && cg.includes("if (bd_${n.id} > cullMargin()) { CULL = min(CULL, bd_${n.id}); } else {") && cg.includes("if (culling) e.raw('    if (CULL < abs(C.s.w)) { C.s.w = CULL; }')"))
+        // the skip as codegen writes it (with answers along the ray off, the switch's default: along.js)
+        && cg.includes("const skip = !alongOn ? `CULL = min(CULL, bd_${n.id});`") && cg.includes("if (bd_${n.id} > cullMargin()) { ${skip} } else {") && cg.includes("if (culling) e.raw('    if (CULL < abs(C.s.w)) { C.s.w = CULL; }')"))
     ok('ch.26: the relief\'s shell and division as the modifier writes them; 17.2 and 1.875 its numbers, 1.386 x amount its reach', relief.includes('let slope = 1.0 + amount / size * nzFbmLip(4u, 2.0, 0.5, NZ_GRAD_LIP_MEASURED) / peak;')
         && relief.includes('let reach = NZ_GRAD_VALUE_BOUND * abs(amount) * XF_S;') && relief.includes('if (abs(H.s.w) > 2.0 * reach + READ_REACH + (slope + 1.0) * marchEps()) {')
         && relief.includes('C = fold(C, VEC4(0.0, 0.0, 0.0, H.s.w - sign(H.s.w) * reach), H.m);') && relief.includes('let n = fbm3(p / size, 1u, 4u, 2.0, 0.5);')

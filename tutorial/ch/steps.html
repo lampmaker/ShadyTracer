@@ -212,7 +212,7 @@
     <p>The code it writes around each boxed object, and at the end of the scene's function the one line that lets the
       nearest skipped box stand in:</p>
     <pre data-src="builder/codegen.js" data-sym="const culled = (d, n) => {" data-to="line(d, '}')"
-         data-why="JavaScript writing WGSL, a line at a time (line(depth, text)). Each box is two uniforms, values the page sets after measuring it (0 until then: not known). xfPoint takes the point into the object's frame; times the frame's scale the box's distance is back in the world's units. emitNode writes the object's own code." data-hash="b0f01dd2"></pre>
+         data-why="JavaScript writing WGSL, a line at a time (line(depth, text)). Each box is two uniforms, values the page sets after measuring it (0 until then: not known). xfPoint takes the point into the object's frame; times the frame's scale the box's distance is back in the world's units. emitNode writes the object's own code. skip is what a skipped box does: with the developer setting alongRay off, the default, its distance stands in through CULL; on, the box may say instead where the ray first enters it (section 6, Answers along the ray)." data-hash="15d06f14"></pre>
     <p class="cite-line">The line, at the end of the scene's function: <code>if (CULL &lt; abs(C.s.w)) { C.s.w = CULL; }</code>
       (<cite data-src="builder/codegen.js" data-sym="if (culling) e.raw('    if (CULL &lt; abs(C.s.w)) { C.s.w = CULL; }')"></cite>):
       C.s.w is the scene's answer, the nearest distance found.</p>
@@ -329,18 +329,27 @@
         those answers into the scene's text for every such shape that sits under plain groups and arrays only: a CSG
         group, a blend or group code bends what "the first crossing" means, so a shape there answers by its distance as
         before. A relief on a plane answers for its band: a ray that never meets the slab the bumps live in never meets
-        the bumps. The march and the shadow rays then step by the least of the answers and 0.9 of everything else's
-        distance (<code>core/along.js</code>; <code>codegen.js</code>, ANSWERS ALONG THE RAY; <code>wavefront.js</code>,
-        <code>along</code>). On a software GPU, shadow rays under a sun 5 degrees up took 29.5 steps a ray on the
+        the bumps. A culled node's box answers too, where the ray enters it: the node is inside its box, so it cannot be
+        met before. At each step only the nearest answering one works out its answer, and the march and the shadow rays
+        step by that answer and 0.9 of everything else's distance (<code>core/along.js</code>, alNearer and alTake;
+        <code>codegen.js</code>, ANSWERS ALONG THE RAY; <code>wavefront.js</code>, <code>along</code>). On a software GPU, shadow rays under a sun 5 degrees up took 29.5 steps a ray on the
         dichroics scene plainly and 4.2 with answers, and rays grazing the prism scene's table at 0.1 to 0.5 degrees
         reached it 31 times in 320 plainly and every time with answers (<code>builder/test/along.gpu.mjs</code>).
         The switch acts on the scene compiled as code, the build the page shows once the edits stop.</p>
     </div>
+    <div data-claim="measured">
+      <p><strong>Every shape answering: fewer steps, mostly more time.</strong> The first build had every answering
+        shape work out its answer at every step. GPU time a sample, without against with, on the user's Ampere card
+        (Tests &gt; alongray, 2026-10-26, <code>docs/PERFORMANCE.md</code>): the march on the showcase 7.9 against 10.1
+        ms, on dichroics 94.3 against 108.3, on the Noise library 35.9 against 42.4. Only where few shapes answer and the
+        rays graze did it pay: the material test's shadow rays under a sun 5 degrees up, 5.0 against 2.9 ms. The same
+        text run twice read 12% apart in that run, so smaller differences are noise.</p>
+    </div>
     <div data-claim="inferred">
-      <p><strong>What an answered step costs.</strong> An answering shape works out its answer beside its distance at
-        every step, so a step costs a little more and there are fewer of them. Whether that is less time on a card is
-        not known: the counts above are steps, not milliseconds. What would test it: Tests &gt; alongray, each scene
-        with its answers and without, on the user's card.</p>
+      <p><strong>Why the nearest only.</strong> A step's cost grew with the number of answering shapes, and most of what
+        an answer gains is likely the nearest answering shape's: its distance is the one that sets the plain step. So now
+        a shape works out its answer only while it is nearer than every answering shape before it. Whether that turns
+        the fewer steps into less time is not known. What would test it: Tests &gt; alongray again, on the user's card.</p>
     </div>
     <div data-claim="measured">
       <p><strong>A step that asks only the distance: the march 8% to 79% faster, the sample 2% to 35%.</strong> GPU time a

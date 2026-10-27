@@ -1354,11 +1354,13 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
 
     /* ANSWERS ALONG THE RAY (`along`, the developer setting alongRay; core/along.js): an object whose code is one plain
        shape with an answer (along.js ANSWER_OF) tells the renderer's march and occlusion how far along the ray its
-       boundary first is, and is left out of their distance (add_along). A plane under a relief answers for its band.
+       boundary first is -- when it is the nearest answering shape so far, and then it is left out of their distance
+       (along.js alNearer, alTake: the nearest only since the user's run of Tests > alongray). A plane under a relief
+       answers for its band, and a culled node's box for where the ray enters it (culled, below).
        ONLY UNDER PLAIN GROUPS AND ARRAYS: a CSG group or a blend reads a shape's signed distance, which an answer is not,
        and group code can move the point anywhere along or off the ray. The render copy alone, and codegen's text alone:
        the pick and optics copies march with the full scene (an optics copy that is the render copy, with no limiter,
-       never sets AL_ON: add_along is add_new there), and the scene as data has no answers (the bake, demo.js, is
+       never sets AL_ON: a shape is folded in as ever there), and the scene as data has no answers (the bake, demo.js, is
        codegen's). With none answering, the text is what it was, byte for byte. */
     const alongOn = along && !pick && !optics && !data && !Array.isArray(tree)
     const answers = new Map()          // object id -> its plain shape { fn, args }
@@ -1376,8 +1378,10 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
     }
     const answerCall = (n, ps) => {
         const args = ps.args.length ? ', ' + ps.args.join(', ') : ''
-        return `var alt_${n.id} = AL_NONE; if (AL_ON) { alt_${n.id} = ${ANSWER_OF[ps.fn]}(p, transpose(XF_M) * r.dir${args}); } `
-             + `C = add_along(C, ${ps.fn}(p${args}), alt_${n.id}, MATERIAL);`
+        // its distance always; its answer only while it is the nearest answering shape so far (&& does not evaluate the rest)
+        return `let ald_${n.id} = ${ps.fn}(p${args}); `
+             + `if (!(alNearer(ald_${n.id}.w * XF_S) && alTake(${ANSWER_OF[ps.fn]}(p, transpose(XF_M) * r.dir${args}) * XF_S, ald_${n.id}.w * XF_S))) `
+             + `{ C = add_new(C, ald_${n.id}, MATERIAL); }`
     }
 
     const pad = d => '    '.repeat(d)
@@ -1559,10 +1563,12 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
             line(d + 1, '}')
             const A = relief.relief.constants?.amplitude ? wgslLiteral(relief.relief.params.amplitude, 'f32') : `UB.${reliefName(relief.id, 'amplitude')}`
             line(d + 1, `let ${a} = mm(${A}) * XF_K;`)
-            /* A PLANE'S BAND ANSWERING (ANSWERS ALONG THE RAY, above): its entry ahead, and the far fold -- what the band's
-               distance stands for -- to the hit test alone (along.js alFar); the near one as ever */
-            if (ans) line(d + 1, `alBand(AplaneBand(p, transpose(XF_M) * r.dir, ${a} / XF_S));`)
-            line(d + 1, `if (abs(${s}.w) > 2.0 * ${a}${reach}) { C = ${ans ? 'alFar' : 'fold'}(C, VEC4(0.0, 0.0, 0.0, ${s}.w - sign(${s}.w) * ${a}), ${sm}); }`)
+            /* A PLANE'S BAND ANSWERING (ANSWERS ALONG THE RAY, above): where it is folded far -- the base's distance less
+               the amplitude, what the band's distance is -- its entry ahead instead, when it is the nearest answering
+               shape so far; the near fold as ever */
+            const far = `VEC4(0.0, 0.0, 0.0, ${s}.w - sign(${s}.w) * ${a})`
+            line(d + 1, `if (abs(${s}.w) > 2.0 * ${a}${reach}) { ${!ans ? `C = fold(C, ${far}, ${sm});`
+                : `let alf_${node.id} = ${far}; if (!(alNearer(alf_${node.id}.w) && alTake(AplaneBand(p, transpose(XF_M) * r.dir, ${a} / XF_S) * XF_S, alf_${node.id}.w))) { C = fold(C, alf_${node.id}, ${sm}); }`} }`)
             // under a straight group, the relief reads the material frame's point: layers level on a twisted shape
             const at0 = inStraight(node) ? 'XF_Q * XF_QS' : 'p * (XF_S / XF_K)'
             // ...and in its pattern frame, where it has one: the point moved and turned by it, the scale as it was
@@ -1986,6 +1992,8 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
     const boxed = n => !drawsNothing(n) && (cull === 'all' || !plainShape(n))
     // every box: CULL kept even with no node to fold into it, the text as it was before 'dear' (the golden shaders)
     const culling = cull !== false && !pick && !optics && (cull === 'all' || (tree.children || []).some(boxed))
+    /* ANSWERS ALONG THE RAY in this text: an answering shape, or a culled box (culled, below) -- the scene says `along` then */
+    const alongAny = answers.size > 0 || (alongOn && culling && (tree.children || []).some(boxed))
     const culled = (d, n) => {
         const lo = boxLoName(n.id), hi = boxHiName(n.id)
         uniforms[lo] = { type: 'vec4<f32>', def: [0, 0, 0, 0] }     // unknown until measured
@@ -1994,7 +2002,12 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
         const s = n.transform ? ` * UB.${xfName(n.id)}[3].w` : ''
         line(d, `{   // ${n.id}: skipped while farther than its box`)
         line(d + 1, `let bd_${n.id} = cullDist(${q}, UB.${lo}, UB.${hi})${s};`)
-        line(d + 1, `if (bd_${n.id} > cullMargin()) { CULL = min(CULL, bd_${n.id}); } else {`)
+        /* ...and with answers along the ray (ANSWERS ALONG THE RAY, above), where the ray enters it while it is the nearest
+           answering thing so far: the node is inside its box, so not met before -- the ray outside it, as the skip needs */
+        const ld = n.transform ? `transpose(xfRot(UB.${xfName(n.id)})) * r.dir` : 'r.dir'
+        const skip = !alongOn ? `CULL = min(CULL, bd_${n.id});`
+            : `if (!(alNearer(bd_${n.id}) && alTake(alBoxEntry(${q}, ${ld}, UB.${lo}, UB.${hi})${s}, bd_${n.id}))) { CULL = min(CULL, bd_${n.id}); }`
+        line(d + 1, `if (bd_${n.id} > cullMargin()) { ${skip} } else {`)
         emitNode(d + 2, n)
         line(d + 1, '}')
         line(d, '}')
@@ -2141,7 +2154,8 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
         visit(tree, true)
         if (windowed.size) e.raw(ARRAY_WINDOW_WGSL)
     }
-    if (answers.size) { e.raw(ALONG_WGSL); e.raw(ALONG_SUPPORT_WGSL) }
+    // ...the answers' code once, where something answers (alongAny, above)
+    if (alongAny) { e.raw(ALONG_WGSL); e.raw(ALONG_SUPPORT_WGSL) }
     e.raw('fn SDF(r: Ray) -> Hit {')
     e.raw('    let p = r.pos;')
     e.raw('    var C = emptyHit(r);')   // the renderer's starting Hit, core/scene_api.js
@@ -2182,7 +2196,7 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
         ...(haze ? { haze } : {}),
         /* ...and whether a shape answers along the ray (ANSWERS ALONG THE RAY): the renderer's march and occlusion read
            its answers only then (wavefront.js along), so a scene without says nothing */
-        ...(answers.size ? { along: true } : {}),
+        ...(alongAny ? { along: true } : {}),
         wgsl: e.lines.slice(preludeLines).join('\n'),
         uniforms,
         body: e.wgsl,

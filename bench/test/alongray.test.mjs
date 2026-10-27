@@ -34,9 +34,12 @@ ok('alongRay is a developer setting, off by default', UniformSpec.alongRay?.def 
    code is codegen's own line, its shape's call as plainshape.js reads it, not the comments and spacing the user typed) */
 const unanswered = w => w
     .replace(/\n\nconst AL_NEVER[\s\S]*?\}\n\n(?=fn SDF\(r: Ray\))/, '\n')
-    .replace(/var alt_(\w+) = AL_NONE; if \(AL_ON\) \{ alt_\1 = \w+\(p, transpose\(XF_M\) \* r\.dir(?:, [^{}]*)?\); \} C = add_along\(C, (\w+\(p(?:, [^;]*)?\)), alt_\1, MATERIAL\);/g, 'C = add_new(C, $2, MATERIAL);')
-    .replace(/\n\s*alBand\(AplaneBand\(p, transpose\(XF_M\) \* r\.dir, ra_\w+ \/ XF_S\)\);/g, '')
-    .replace(/C = alFar\(C, /g, 'C = fold(C, ')
+    // an answering shape: its distance, its answer while the nearest so far, else folded in -- back to its one add_new
+    .replace(/let ald_(\w+) = (\w+\(p(?:, [^;]*)?\)); if \(!\(alNearer\(ald_\1\.w \* XF_S\) && alTake\([^;]*\)\)\) \{ C = add_new\(C, ald_\1, MATERIAL\); \}/g, 'C = add_new(C, $2, MATERIAL);')
+    // a plane relief's band where it is folded far -- back to the far fold
+    .replace(/let alf_(\w+) = (VEC4\([^;]*\)); if \(!\(alNearer\(alf_\1\.w\) && alTake\([^;]*\)\)\) \{ C = fold\(C, alf_\1, (rm_\w+)\); \}/g, 'C = fold(C, $2, $3);')
+    // a culled node's box -- back to the skip
+    .replace(/if \(!\(alNearer\((bd_\w+)\) && alTake\(alBoxEntry\([^;]*\)\)\) \{ CULL = min\(CULL, \1\); \}/g, 'CULL = min(CULL, $1);')
 const bare = w => w.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '').replace(/\s+/g, '')
 const sameButAnswers = (on, off) => bare(unanswered(on)) === bare(off)
 
@@ -53,13 +56,12 @@ for (let s = 0; s < N; s++) {
     ok(`${label}: both compiled`, a.compile === true && b.compile === true && a.sameTextAs === undefined && b.sameTextAs === undefined)
     ok(`${label}: every setting names a uniform`, rows.every(r => Object.keys(r.set).every(k => k in UniformSpec || k in r.scene.uniforms)))
     ok(`${label}: baked`, rows.every(r => r.baked === true && r.scene.wgsl && r.scene.baked))
-    const optics = /optics bench/.test(label)
-    if (optics) ok(`${label}: answers nothing -- its shapes in CSG groups -- the same text twice`, !a.scene.along && !b.scene.along && a.scene.wgsl === b.scene.wgsl)
-    else {
-        ok(`${label}: off answers nothing, on answers`, !a.scene.along && b.scene.along === true && /add_along\(C, /.test(b.scene.wgsl) && !/AL_ON/.test(a.scene.wgsl))
-        ok(`${label}: on, the answers and nothing else changed`, sameButAnswers(b.scene.wgsl, a.scene.wgsl)
-            && b.scene.pickWgsl === a.scene.pickWgsl && JSON.stringify(Object.keys(b.scene.uniforms)) === JSON.stringify(Object.keys(a.scene.uniforms)))
-    }
+    const optics = /optics bench/.test(label), shapes = t => (t.match(/alTake\(A\w+\(/g) || []).length, boxes = t => (t.match(/alTake\(alBoxEntry\(/g) || []).length
+    ok(`${label}: off answers nothing, on answers`, !a.scene.along && b.scene.along === true && !/AL_ON/.test(a.scene.wgsl)
+        && (optics ? shapes(b.scene.wgsl) === 0 && boxes(b.scene.wgsl) > 0 : shapes(b.scene.wgsl) > 0),
+        `${shapes(b.scene.wgsl)} shapes, ${boxes(b.scene.wgsl)} boxes answering`)
+    ok(`${label}: on, the answers and nothing else changed`, sameButAnswers(b.scene.wgsl, a.scene.wgsl)
+        && b.scene.pickWgsl === a.scene.pickWgsl && JSON.stringify(Object.keys(b.scene.uniforms)) === JSON.stringify(Object.keys(a.scene.uniforms)))
 }
 
 // ---- dichroics as Tests > dichroics row 1 has it, and the prism scene lit the same way
@@ -69,14 +71,14 @@ for (let s = 0; s < N; s++) {
         a.set.sppm === 1 && a.opticsLight.perPixel === 1 && JSON.stringify(a.opticsLight.sources) === JSON.stringify(D.opticsLight.sources)
         && a.camera === CAMERAS.dichroics && JSON.stringify(a.environment) === JSON.stringify(D.environment)
         && a.scene.wgsl === D.scene.wgsl)
-    ok('dichroics: its relief floor\'s band answers on', /alBand\(AplaneBand\(/.test(T.cases[1].scene.wgsl))
+    ok('dichroics: its relief floor\'s band answers on', /alTake\(AplaneBand\(/.test(T.cases[1].scene.wgsl))
     const p = T.cases[2]
     ok('the prism scene second: its light\'s photons, the map on, 5 degrees over its table',
         /prism/.test(p.label) && p.set.sppm === 1 && p.opticsLight?.perPixel === 1 && p.opticsLight.sources.length >= 1
         && p.camera === CAMERAS.prism && CAMERAS.prism.elevation === 5)
     const frozen = Model.parse(load(benchUrl(BENCH_FILES.prism))), example = Model.parse(load(new URL('../../scenes/prism-dispersion.json', import.meta.url)))
     ok('...frozen from the example: the same document', JSON.stringify(frozen) === JSON.stringify(example))
-    ok('...and its table and its light\'s rectangle answering', (T.cases[3].scene.wgsl.match(/add_along\(C, /g) || []).length >= 2)
+    ok('...and its table and its light\'s rectangle answering', (T.cases[3].scene.wgsl.match(/alTake\(A\w+\(/g) || []).length >= 2)
     ok('no other scene lit by a light\'s photons or with the map asked', T.cases.slice(4, -1).every(c => !c.opticsLight && !('sppm' in c.set)))
 }
 

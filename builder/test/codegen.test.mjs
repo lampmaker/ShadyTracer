@@ -2038,22 +2038,34 @@ eq('uniformName', uniformName('n7', 'radius'), 'radius_n7')
     const off = generate(...Model.generateArgs(d, { id: 'al' })), on = generate(...Model.generateArgs(d, { id: 'al', along: true }))
     // a node's block: to the next node's, or the end of the function it is in (group code's children come before the support)
     const block = (S, id) => { const w = S.wgsl, a = w.indexOf(`// node ${id} (`); if (a < 0) return ''; const ends = [w.indexOf('// node ', a + 8), w.indexOf('\nfn ', a)].filter(b => b >= 0); return w.slice(a, ends.length ? Math.min(...ends) : w.length) }
-    const answers = (S, id) => /C = add_along\(C, /.test(block(S, id))
-    ok('off: no answers anywhere, no `along` said', !off.along && !/AL_ON|add_along|alBand|alFar/.test(off.wgsl + off.pickWgsl))
-    ok('on: `along` said, the answers and their support once, before SDF', on.along === true && on.wgsl.split('fn add_along(').length === 2
-        && on.wgsl.split('fn Asphere(').length === 2 && on.wgsl.indexOf('fn add_along(') < on.wgsl.indexOf('fn SDF(r: Ray)'))
+    const answers = (S, id) => /alTake\(A\w+\(/.test(block(S, id))
+    ok('off: no answers anywhere, no `along` said', !off.along && !/AL_ON|alNearer|alTake|alBoxEntry/.test(off.wgsl + off.pickWgsl))
+    ok('on: `along` said, the answers and their support once, before SDF', on.along === true && on.wgsl.split('fn alTake(').length === 2
+        && on.wgsl.split('fn Asphere(').length === 2 && on.wgsl.indexOf('fn alTake(') < on.wgsl.indexOf('fn SDF(r: Ray)'))
     ok('...a sphere, a box under a plain group, a cylinder in an array under it answer, in their own frame',
-        ['ball', 'crate', 'post'].every(id => answers(on, id)) && /alt_ball = Asphere\(p, transpose\(XF_M\) \* r\.dir, radius\)/.test(block(on, 'ball')))
-    ok('...the answer asked only where AL_ON is set (the march and the shadow rays)', /if \(AL_ON\) \{ alt_crate = AboxRounded\(/.test(block(on, 'crate')))
-    ok('...a plane under a relief answers for its band, its far fold to the hit test alone',
-        /alBand\(AplaneBand\(p, transpose\(XF_M\) \* r\.dir, ra_floor \/ XF_S\)\);/.test(block(on, 'floor')) && /C = alFar\(C, /.test(block(on, 'floor'))
-        && !/alBand|alFar/.test(block(off, 'floor')))
+        ['ball', 'crate', 'post'].every(id => answers(on, id)) && /alTake\(Asphere\(p, transpose\(XF_M\) \* r\.dir, radius\) \* XF_S, /.test(block(on, 'ball')), block(on, 'ball'))
+    ok('...its distance always, its answer only while it is the nearest answering shape so far, else folded in by its distance',
+        /let ald_crate = NboxRounded\(p, [^;]*\); if \(!\(alNearer\(ald_crate\.w \* XF_S\) && alTake\(AboxRounded\(p, transpose\(XF_M\) \* r\.dir, [^;]*\) \* XF_S, ald_crate\.w \* XF_S\)\)\) \{ C = add_new\(C, ald_crate, MATERIAL\); \}/.test(block(on, 'crate')), block(on, 'crate'))
+    ok('...a plane under a relief answers for its band where it is folded far, the near fold as ever',
+        /let alf_floor = VEC4\(0\.0, 0\.0, 0\.0, rs_floor\.w - sign\(rs_floor\.w\) \* ra_floor\); if \(!\(alNearer\(alf_floor\.w\) && alTake\(AplaneBand\(p, transpose\(XF_M\) \* r\.dir, ra_floor \/ XF_S\) \* XF_S, alf_floor\.w\)\)\) \{ C = fold\(C, alf_floor, rm_floor\); \}/.test(block(on, 'floor'))
+        && /foldRelief\(/.test(block(on, 'floor')) && !/alTake/.test(block(off, 'floor')), block(on, 'floor'))
+    {
+        // A CULLED NODE'S BOX answers where the ray enters it, every one, in the node's own frame where it has one
+        const skips = (on.wgsl.match(/skipped while farther than its box/g) || []).length
+        const boxes = on.wgsl.match(/alTake\(alBoxEntry\([^;]*/g) || []
+        ok('every culled node\'s box answers where the ray enters it, folded in by its distance otherwise', skips > 0 && boxes.length === skips
+            && (on.wgsl.match(/\{ CULL = min\(CULL, bd_\w+\); \}/g) || []).length === skips, `${skips} boxes, ${boxes.length} answering`)
+        const turned = on.wgsl.match(/alBoxEntry\(xfPoint\(p, UB\.(\w+)\), transpose\(xfRot\(UB\.\1\)\) \* r\.dir, [^)]*\) \* UB\.\1\[3\]\.w/)
+        ok('...a box of a node with a transform in its frame: the point moved, the ray turned, the answer scaled back', !!turned, boxes.join('\n'))
+        ok('...and off, the skip as it was', !/alBoxEntry/.test(off.wgsl) && (off.wgsl.match(/\{ CULL = min\(CULL, bd_\w+\); \} else \{/g) || []).length === skips)
+    }
     ok('...and none other: a torus, a sphere under a relief, a CSG group\'s shapes, a blended group\'s, group code\'s',
         ['ring', 'bumpyball', 'cutbase', 'cuthole', 'softball', 'warpball'].every(id => !answers(on, id) && !/alBand/.test(block(on, id))))
     ok('the pick copy answers nothing, nor the uniforms move', on.pickWgsl === off.pickWgsl && JSON.stringify(on.uniforms) === JSON.stringify(off.uniforms))
     ok('the scene as data: no answers (its records answer nothing)', !generate(...Model.generateArgs(d, { id: 'al', data: true, along: true })).along)
+    // one plain shape with no answer: no box either (codegen's dear-only boxes), so nothing to answer
     const none = Model.createDoc({ title: 'none' })
-    Model.addObject(none, 'root', { id: 't', primitive: 'torus' })
+    Model.addObject(none, 'root', { id: 't', primitive: 'capsule' })
     const n1 = generate(...Model.generateArgs(none, { id: 'n' })), n2 = generate(...Model.generateArgs(none, { id: 'n', along: true }))
     ok('a scene where nothing answers: with `along`, the text byte for byte without it', !n2.along && n2.wgsl === n1.wgsl)
 }

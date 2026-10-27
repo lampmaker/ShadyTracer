@@ -18,7 +18,10 @@
 //
 // FIRST COUNTED, THEN BUILT. Until the build this file modelled the rule by rewriting codegen's text and asking the scene
 // twice (the count, 3dd0b5d; its numbers in docs/PERFORMANCE.md STATUS 2026-10-26). It now runs the build itself, one
-// evaluation a step: codegen's text with `along` and prog_march's `along`.
+// evaluation a step: codegen's text with `along` and prog_march's `along`. Since the user's first run of Tests > alongray
+// (every answer at every step: fewer steps, mostly more time), the nearest answering shape alone answers at a step, and a
+// culled node's box answers where the ray enters it (along.js alNearer, alTake, alBoxEntry): the boxes are measured here
+// as the page measures them, so they answer in every scene below.
 //   1. THE TWINS: each answer (ALONG_WGSL) against its JS twin on the GPU, and the JS against a brute march of the shape's
 //      own field.
 //   2. THE RENDERER'S OWN MARCH, per bench scene (the bench's camera, 64 x 36 rays, codegen with measured boxes) and the
@@ -110,6 +113,10 @@ const SDF = {
         ['cylinder', 'Acylinder(p, d, 0.5, 0.4)', (p, d) => JS.cylinder(p, d, 0.5, 0.4), p => SDF.cylinder(p, 0.5, 0.4)],
         ['rectangle', 'Arectangle(p, d, VEC2(0.6, 0.3))', (p, d) => JS.rectangle(p, d, [0.6, 0.3]), null],
         ['plane band', 'AplaneBand(p, d, 0.05)', (p, d) => JS.band(p, d, 0.05), p => SDF.band(p, 0.05)],
+        /* a culling box, off centre -- asked only from outside it (codegen.js culled: a node is skipped only while its box is
+           farther than the margin), so the rays from inside are not its to answer */
+        ['culling box', 'alBoxEntry(p, d, vec4<f32>(-0.4, -0.1, -0.3, 1.0), vec4<f32>(0.6, 0.5, 0.2, 1.0))',
+         (p, d) => JS.boxEntry(p, d, [-0.4, -0.1, -0.3], [0.6, 0.5, 0.2]), p => SDF.box(p.map((v, k) => v - [0.1, 0.2, -0.05][k]), [0.5, 0.3, 0.25], 0), true],
     ]
     const N = 1500, rays = []
     for (let i = 0; i < N; i++) {
@@ -121,7 +128,7 @@ const SDF = {
     }
     const inB = new Float32Array(8 * N)
     rays.forEach(([p, d], i) => { inB.set(p, 8 * i); inB.set(d, 8 * i + 4) })
-    for (const [name, call, js, field] of shapes) {
+    for (const [name, call, js, field, outsideOnly] of shapes) {
         const prog = await WG.makeCompute(`${ALONG_WGSL}`, `
             let i = gid.x;
             if (i >= arrayLength(&tOut)) { return; }
@@ -141,6 +148,7 @@ const SDF = {
             const same = t === NEVER ? tg >= 1e29 : t === NONE ? tg === -1 : Math.abs(tg - t) <= 1e-4 * Math.max(1, t)
             if (!same) twinBad++
             if (t === NONE) { none++; return }
+            if (outsideOnly && field(p) <= 0) { none++; return }
             // THE BRUTE FORCE: the field along the ray in steps of 2e-3 to 8 (every crossing is nearer), its first change of sign
             // (a sheet: of z within it)
             const dt = 2e-3
@@ -337,8 +345,9 @@ const TOTALS = []
 async function count(label, doc, cam, extraRays = null) {
     const id = `al-${label.replace(/\W+/g, '')}`
     const S = generate(...M.generateArgs(doc, { id })), SA = generate(...M.generateArgs(doc, { id, along: true }))
-    const answered = (SA.wgsl.match(/C = add_along\(C, /g) || []).length, reliefs = (SA.wgsl.match(/alBand\(AplaneBand\(/g) || []).length
-    ok(`${label}: codegen with \`along\` says so exactly when a shape answers, its uniforms the plain text's`, !S.along && !!SA.along === answered + reliefs > 0
+    const answered = (SA.wgsl.match(/alTake\(A(?!planeBand)\w+\(/g) || []).length, reliefs = (SA.wgsl.match(/alTake\(AplaneBand\(/g) || []).length
+    const boxes = (SA.wgsl.match(/alTake\(alBoxEntry\(/g) || []).length
+    ok(`${label}: codegen with \`along\` says so exactly when a shape or a box answers, its uniforms the plain text's`, !S.along && !!SA.along === answered + reliefs + boxes > 0
         && JSON.stringify(Object.keys(SA.uniforms)) === JSON.stringify(Object.keys(S.uniforms)) && SA.pickWgsl === S.pickWgsl)
     const B = await measure(doc, S)
     const bag = { ...uniformBag(S), ...cullOf(doc, S, B), res: [64, 64], seed: [1, 2, 3, 4] }
@@ -389,7 +398,7 @@ async function count(label, doc, cam, extraRays = null) {
     }
     const { pts, dirs } = cameraRays(cam, 64, 36)
     const cam1 = await run(pts, dirs)
-    say(`  ${label}: ${answered} shapes answering, ${reliefs} a relief's band; camera rays: ${fmt(cam1.c)}`)
+    say(`  ${label}: ${answered} shapes answering, ${reliefs} a relief's band, ${boxes} culling boxes; camera rays: ${fmt(cam1.c)}`)
     const skipped = r => `${r.skipped} went on past the plain hit: ${r.skipped - r.tunnelled - r.unfinished} grazes, ${r.tunnelled} through a solid${r.unfinished ? `, ${r.unfinished} not finished checking` : ''}`
     say(`    ${skipped(cam1)}`)
     ok(`${label}: the text with answers, never read (AL_ON false), every camera ray the plain march's bit for bit`, cam1.offDiffer === 0, `${cam1.offDiffer} rays differ, ${cam1.fewer} in fewer steps`)

@@ -7,8 +7,12 @@
 // far along a ray its surface first is, and the march go there in one step. Counted on a software GPU
 // (builder/test/along.gpu.mjs): shadow rays at a 5 degree sun 29.5 -> 4.2 steps on dichroics, 65.1 -> 6.6 on the prism
 // scene, 45.1 -> 15.9 on the showcase; the prism scene's grazing rays reaching its table 31 of 320 -> 320. A step with
-// answers asks each answering shape a little more (its answer beside its distance). Whether fewer steps at that price is
-// less time, only a card can say.
+// answers asks the nearest answering shape a little more (its answer beside its distance). Whether fewer steps at that
+// price is less time, only a card can say.
+//   THE FIRST RUN (the user's Ampere, 4c69c91, 2026-10-26; docs/PERFORMANCE.md) had every answering shape answer at every
+// step: fewer steps, mostly more time. Since, only the nearest answering shape answers, and a culled node's box answers
+// where the ray enters it (the user: "try nearest only, and with the boxes"). The rows are the same, so the two runs read
+// side by side.
 //
 // THE ROWS: each scene twice, back to back -- answers off, then on -- the same document, camera, environment and measured
 // boxes, baked (the build the page shows once the edits stop). Two texts a scene: on, codegen wrote the answers into it
@@ -16,8 +20,8 @@
 // it: under its studio light, lit by its own light's photons, the photon map on. Then the prism scene (scenes/prism-
 // dispersion.json, frozen here) from its own view, 5 degrees over its table, lit the same way; the material test in its
 // sun, then with the sun at 5 degrees (shadow rays grazing the floor); the Noise library, the Menger cubes, the showcase,
-// and the optics bench, whose shapes are all in CSG groups and answer nothing (its two rows the same text: they should
-// read the same). The last row is the first again: if it differs from row 1, so may every row.
+// and the optics bench, whose shapes are all in CSG groups: only its culling boxes answer (its two rows read 12 % apart in
+// the first run, when they were the same text: that run's noise). The last row is the first again: if it differs from row 1, so may every row.
 //======================================================================================================================
 
 import * as Model from '../builder/model.js'
@@ -75,14 +79,15 @@ export async function alongRayTest(load) {
         id: 'alongray', kind: 'bench',
         title: 'Answers along the ray: dichroics and the prism scene with their lights\' photons, the material test (its sun, and at 5 degrees), the Noise library, the Menger cubes, the showcase and the optics bench, off and on, baked, 1280 x 720, fixed camera',
         note: 'One sample per trace, each awaited; wall clock, then GPU time per kernel. Each scene twice, back to back: as it'
-            + ' is, then with its plain shapes answering along the ray (the developer setting alongRay: a sphere, box,'
-            + ' cylinder, plane or rectangle under plain groups, and a plane relief\'s band, say where along the ray their'
-            + ' surface is; lib/pathtracer/core/along.js). Each its own text, compiled uncached. Read each scene\'s "march"'
+            + ' is, then answering along the ray (the developer setting alongRay: a sphere, box, cylinder, plane or rectangle'
+            + ' under plain groups, a plane relief\'s band and a culled node\'s box say where along the ray their surface is --'
+            + ' the nearest answering one only, at each step; lib/pathtracer/core/along.js). Each its own text, compiled'
+            + ' uncached. Read each scene\'s "march"'
             + ' and "occlude" down its two rows; "gpu ms" is the sum. The first two scenes are lit by their own light\'s'
             + ' photons with the photon map on, as Tests > dichroics row 1 has it; the prism scene is seen from its own view,'
             + ' 5 degrees over its table. The material test runs twice more with the sun at 5 degrees, where shadow rays'
-            + ' graze its floor. The optics bench answers nothing (its shapes are all in CSG groups): its two rows should read'
-            + ' the same. Every scene baked, as the page shows it once the edits stop. The picture should not change between'
+            + ' graze its floor. The optics bench answers by its culling boxes alone (its shapes are all in CSG groups). Every'
+            + ' scene baked, as the page shows it once the edits stop. The picture should not change between'
             + ' a scene\'s rows beyond noise: that is the user\'s to judge (BENCH.alongray.view(n)). The last row is the first'
             + ' again: if it differs from row 1, so may every row. Save the whole text with the machine\'s name.'
             + ' (bench/alongray.js.)',

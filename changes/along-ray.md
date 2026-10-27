@@ -6,6 +6,10 @@ parallel to a surface. Exact hits existed once and were removed, so this time th
 behind a switch, off by default.
 - **What it does.** A plain sphere, box, cylinder, plane or flat rectangle says exactly how far along the ray its surface
   is, and the march and the shadow rays go nearly that far in one step instead of creeping towards it.
+  - **The nearest only:** at each step only the nearest of them works out its answer; the others count by their
+    distance, as before.
+  - **The culling boxes too:** a culled object's box says where the ray enters it, where before it gave only its
+    distance.
   - **Which shapes:** only those under plain groups and arrays. A shape inside a CSG group, a blended group or group code
     answers by its distance as before, since those bend what "the first crossing" means.
   - **Reliefs:** a relief on a plane answers for its band (the slab the bumps live in). A ray that never meets the band
@@ -33,24 +37,26 @@ behind a switch, off by default.
 - **Found while building it, and fixed before this:** a step exactly to the answer ended some rays a hair inside the
   surface, where f32 rounding put them (19 in 100 of the showcase's camera-ray hits). Every picture's mean read a little
   low. An answer now stops half the tolerance short.
-- **Measured on your Ampere, Tests › alongray** (`ShadyTracer 0.78.0 · 4c69c91 (ccr-0f3a020a-590jz2) · nvidia ampere`,
-  2026-10-26): fewer steps, mostly not less time. GPU ms a sample, without -> with:
+- **The first build, measured on your Ampere, Tests › alongray** (`ShadyTracer 0.78.0 · 4c69c91 (ccr-0f3a020a-590jz2) ·
+  nvidia ampere`, 2026-10-26), with every shape answering at every step: fewer steps, mostly not less time. GPU ms a
+  sample, without -> with:
   - **Slower where many shapes answer:** dichroics 176.1 -> 189.7 (its march +15 %), the Noise library 91.6 -> 106.9,
     the showcase 39.9 -> 42.0 (its march +28 %).
   - **Faster where few answer and rays graze:** the material test under a 5 degree sun 38.1 -> 32.3, its shadow rays
     5.0 -> 2.9 ms.
   - **About even:** the prism scene, the material test, the Menger cubes.
   - **The run's own noise:** the optics bench answers nothing, and its two identical rows read 12 % apart.
-  - **The likely cause (inferred):** every answering shape works out its answer at every step. The numbers are in
-    docs/PERFORMANCE.md.
+  - **The likely cause (inferred):** every answering shape worked out its answer at every step. The numbers are in
+    docs/PERFORMANCE.md. Hence the nearest only, with the boxes, since: not measured yet.
   - **Off by default, so nothing changes unless you turn it on.**
 - **Tests › alongray:** each scene baked twice, without answers then with. It runs dichroics and the prism scene first,
   each with its light's photons; the prism scene is new to the bench, frozen from the example and seen 5 degrees over its
   table. Then the material test, also with a sun 5 degrees up, the Noise library, the Menger cubes, the showcase, the optics
-  bench (which should not move), and a drift row.
+  bench (only its culling boxes answer: its shapes are all in CSG groups), and a drift row.
 
 **What to look at:**
 - Turn Render settings › Performance › Answers along the ray on and off, and wait for the bake. Look at the prism scene's
   beam on its table, dichroics' floor and plates, and anything seen at a grazing angle or under a low sun. The picture
   should not change beyond noise; the prism scene's table may now be reached where rays ran out of steps before.
-- Run Tests › alongray and paste the report. Read march and occlude down each scene's two rows.
+- Run Tests › alongray again and paste the report. Read march and occlude down each scene's two rows, and against the
+  first run's.
