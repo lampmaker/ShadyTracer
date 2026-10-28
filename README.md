@@ -50,19 +50,18 @@ Nothing to install and no server. The page runs on your own graphics card.
   it loses no light, to 0.02 % **✓**
 - **Glass the way glass behaves**: dispersion that splits white light in a prism, dichroic and
   anti-reflection coatings, colour that deepens with thickness; and a **camera lens** with depth of
-  field *preview*
+  field
 - **Lux and luminance as false colour**, with an **error bar on every pixel**, and a measure tool
-  that reads lux, uniformity and colour temperature off any surface *preview*
+  that reads lux, uniformity and colour temperature off any surface
 - **A scene builder where every shape is code** you can edit, with compile errors shown at your own
   line and column, move handles in the picture, CSG, modifiers and undo
 - **An optics bench over the same scene**: LEDs, lenses, detectors; refraction and Fresnel
   **✓**; far field in candela with beam and field angles, illuminance maps in lux, CCT and Duv
-  *preview*
 - **Zemax ray files** as light sources *preview*
 - **STEP and STL parts imported as shapes**: each solid in the file becomes boxes, cylinders, cones,
   spheres, tori and rounded prisms joined by union and subtract, exact, with analytic normals; a
-  spherical lens from STEP is its two spheres *preview*
-- **3MF with colour** for multi-colour 3D printing, straight from the scene *preview*
+  spherical lens from STEP is its two spheres
+- **3MF with colour** for multi-colour 3D printing, straight from the scene
 - **A docking workspace**: pop-out windows for a second monitor, a command palette, every setting by
   name
 - **Keyframe any setting and render it to MP4 or GIF**
@@ -113,19 +112,19 @@ for the help.
 
 - **A menu bar, a dock of panels and a status bar.** Fourteen panels, and one more for each optics
   chart you open. Every panel can be dragged, stacked, floated, maximised, closed, or **popped out
-  into a window of its own**, for a second monitor *preview*; the picture stays in the main window.
+  into a window of its own**, for a second monitor; the picture stays in the main window.
 - **Three layouts**: *Design* (the tree and properties on one side of the picture; Render settings,
   the library and Render stats on the other; the Analysis pane a tab that Analysis › Analysis setup
   shows and hides), *Analyse* (the optics charts) and *Animate* (the timeline). Save your own named
-  layouts; the last one comes back on the next visit *preview*.
+  layouts; the last one comes back on the next visit.
 - **Command palette** (Ctrl K or Ctrl Shift P). It finds every command and every setting, and
-  `exposure = 2` sets one *preview*.
+  `exposure = 2` sets one.
 - **Parameters panel**: every renderer and scene setting with its value and unit, typed exactly; ⌖
-  jumps to its control; right-click copies its path for a script *preview*.
+  jumps to its control; right-click copies its path for a script.
 - **Help** (F1, or Help › Contents): a welcome, two tracks (*modelling and rendering*, ten pages;
   *optical design*, eight) and five reference pages made from the program's own lists, with an
   explainer of distance fields whose ray and sliders you can drag. Search; links that open an
-  example, run a command or point at a panel *preview*.
+  example, run a command or point at a panel.
 - **Render stats**: samples a second and where a frame's time goes, the samples averaged, the photon
   map's state, the exposure and the surface tolerance in force.
 - The status bar shows progress for compiles, library pictures and video, whether the project is
@@ -172,18 +171,18 @@ for the help.
   followed), *Standard*, *High* (up to 24 bounces and twice the photons), and *Optics*, which traces
   the lights' rays through lenses and mirrors to the first diffuse surface, where its floor reads the
   closed form to within 0.6 % **✓**. *Lamps only* lights the view by the scene's own lights and
-  glowing objects, the sun and sky off. Sketch and Draft *preview*.
+  glowing objects, the sun and sky off.
 - **Max Diffuse Bounces**, beside Max Bounces: a cap on the bounces off matte and glossy surfaces
   and dust only, so mirrors and glass are still followed; at 0 the picture is the direct light,
-  through lenses and mirrors too. And a **Dispersion** switch, for the picture only *preview*.
+  through lenses and mirrors too. And a **Dispersion** switch, for the picture only.
 - **⚡ Fast while moving**: Draft or Sketch while the camera, a handle or a value moves, the full
-  picture again when it stops *preview*.
+  picture again when it stops.
 - **The bake**: once your edits stand still, the scene is compiled again with its values as
   constants and swapped in, quicker to render; the status bar says *baked*. A value flagged
   animated stays live in it.
-- **Heavy scenes stay responsive**: a slow sample is spread over several frames *preview*.
+- **Heavy scenes stay responsive**: a slow sample is spread over several frames.
 - **Renders of any size without tiling**: the ray budget is capped by memory, and a larger image
-  simply takes more samples to cover *preview*.
+  simply takes more samples to cover.
 - **Bounding boxes measured on the GPU**, far objects skipped: the heaviest bundled scene takes
   3.95× less GPU time per sample with them (measured, Ampere).
 - Shader compiles run off the main thread, so a heavy scene does not freeze the page.
@@ -195,16 +194,15 @@ for the help.
   the base, and multiple-scattering metal. Energy is conserved to 0.04 % (the white furnace test)
   **✓**, and sampling agrees with evaluation **✓**
 - Presets: **diffuse, plastic, metal, mirror, glass, glowing**.
-- **Glass in colour, and in colours** *preview*: a **colour depth** absorbs through the glass's
+- **Glass in colour, and in colours**: a **colour depth** absorbs through the glass's
   thickness (Beer–Lambert); an **Abbe number** disperses it, so a prism splits white light; **thin-film
   coatings** (dichroic, beam splitter, anti-reflection) reflect by wavelength and angle, averaged
   per colour channel.
-- **Anisotropic surfaces along a grain** (brushed, turned, radial) **✓**; visible brush streaks
-  *preview*.
+- **Anisotropic surfaces along a grain** (brushed, turned, radial) **✓**; visible brush streaks.
 - **Any material field can be code**: checkers, stripes and brushed grain ship as examples.
 - **A noise library for surfaces**: value, gradient, fBm and Worley noise, each with its analytic
   gradient and a proved or measured bound on its slope, so a displaced surface never lets the march
-  step through it *preview*.
+  step through it.
 - Rough (frosted) glass works; its furnace reading (0.944) is still an open question.
 
 ![A copy of the Relief and texture example: plaster, knockdown stucco, sand-float render, rough stone, hammered metal and leather on panels in a raking sun, and a sphere in orange-peel paint; the scene's own settings in Properties](docs/screenshots/surfaces.jpg)
@@ -217,10 +215,10 @@ for the help.
   (0.53°), so a bigger sun makes softer shadows, not a brighter picture. **The sky** is the
   illuminance it puts on the ground (default 15 000 lx), shaped by a Rayleigh and Mie scattering
   model and normalised on the GPU. Turbidity **✓**
-- **A studio light**: a set illuminance, a share from above and a tint *preview*.
+- **A studio light**: a set illuminance, a share from above and a tint.
 - **Glowing materials** in cd/m².
 - **Scene units** m, cm or mm; every numerical tolerance follows the scene's size, so a 5 cm lens
-  and a room both work *preview*.
+  and a room both work.
 - **Colours outside the display's gamut are kept exactly** and clipped once, at the display: three
   LEDs mixed to 4000 K read 3999.9 K **✓**
 
@@ -230,11 +228,11 @@ for the help.
   compensation; meter and lock.
 - **Seven tone curves**: clip, PBR Neutral (the default), AgX, AgX punchy, ACES, Reinhard, Hable.
 - **Save a PNG** up to 16 384 px on a side (or what the graphics card allows) with up to 16 384
-  samples; abortable *preview*. The render is kept as light, so its exposure, tone curve and grading
+  samples; abortable. The render is kept as light, so its exposure, tone curve and grading
   are chosen on a preview afterwards, and saved as often as wanted, each file named with the time it
   was saved.
 - Perspective or orthographic camera, orbit or walk, and a **lens**: an aperture and a focus
-  distance, for depth of field *preview*. Each scene keeps its own camera and exposure.
+  distance, for depth of field. Each scene keeps its own camera and exposure.
 
 ### Light as numbers
 
@@ -243,10 +241,10 @@ for the help.
 - **Three views**, one icon each in the drawer at the picture's bottom right: **photographic**; **lux
   on surfaces**, every visible surface's illuminance whatever its material; **luminance in cd/m²**,
   the picture itself as numbers. Both measuring views draw a logarithmic false colour with bands and
-  a legend *preview*.
+  a legend.
 - **An error bar on every pixel.** The cursor reads cd/m² or lux ± %, and how many samples'
-  worth that is *preview*.
-- **The measure tool** *preview*:
+  worth that is.
+- **The measure tool**:
   - **Pins** that stick to the surface you click and re-read as the picture converges;
   - an **area**: its mean ± error, minimum, maximum and uniformity **U0**;
   - each reading's **colour** as CCT + Duv, or CIE xy away from white, and an area's Δu′v′ spread;
@@ -277,7 +275,7 @@ for the help.
   surfaces, an STL's fitted back from its facets first; editable like anything built by hand. It
   stands on the floor, its axes the file's. A freeform (B-spline)
   face, a mesh that is not closed or a scan is refused by name, with why
-  ([`roadmap/IMPORT.md`](roadmap/IMPORT.md) section 11) *preview*
+  ([`roadmap/IMPORT.md`](roadmap/IMPORT.md) section 11)
 - **Twenty-six shapes in three groups**, each an editable piece of code from the start:
   - *Primitives:* sphere, box, cylinder, capsule, torus, cone, round cone, **pyramid** (a rectangular
     base and top: an apex or a frustum), **prism** (its number of sides a live slider), octahedron,
@@ -286,24 +284,23 @@ for the help.
     constant and a4 to a10 on each face, typed from a datasheet), **Fresnel lens**, **parabolic
     reflector** (its focus at its origin), rectangle and disc (detectors, limiters);
   - *From points:* extrusion, revolution, **bent tube**, **light guide**, **twisted bar**; or a blank
-    one *preview*.
+    one.
 - **Lights, a haze box and an export box** are nodes in the tree too, placed and stretched with the
   same handles.
 - **Shapes from points**: a profile parameter is an outline, one point a line -- `x, y`, and a fillet
   radius to round that corner -- which a node's code extrudes or revolves; a **path** parameter is an open
   line, `x, y, z` and a fillet a point, which it sweeps a tube or a profile along, and a point can scale
-  and twist the section there *preview*. A path's or a profile's points can name the object's
+  and twist the section there. A path's or a profile's points can name the object's
   parameters (`0.5, 0.5, rise`), and a **live** one moves with their sliders without a recompile;
-  untick live once it is right (paths confirmed; profiles *preview*).
+  untick live once it is right (paths and profiles confirmed).
 - **Booleans per child**: each child of a group joins by union, subtract or intersect, with a smooth
   blend; the tree marks each join, and a group's joins can be typed as a recipe. A subtraction's walls
   wear the cutter's material.
 - **A group as a component**: its parameters drive what is inside it, *from parameters* -- a child's
-  sizes, its place, a blend, a row of copies, and a light's flux and colour (`light.flux = flux`)
-  *preview*.
+  sizes, its place, a blend, a row of copies, and a light's flux and colour (`light.flux = flux`).
 - **Nine modifiers**, groups whose code bends what is inside them: twist, bend, repeat, mirror,
   **circular array** (copies round an axis: apart, or merged into one shape where they overlap),
-  round, shell, displace, **noise relief** *preview*.
+  round, shell, displace, **noise relief**.
 - **Write any object, group or material in WGSL.** Give it parameters (a number, a vector or a
   colour; live, or baked into the shader; with a range; a length in the scene's unit). A probe
   compile runs half a second after you stop typing and shows errors **at your own line and
@@ -316,12 +313,12 @@ for the help.
   axes; Ctrl snaps to the grid. A **Points** mode drags a path's or a profile's points in the picture.
   A panel at the view's top right shows the selection's position, rotation, scale and sizes, and
   what a drag changes. **Lock** a node's position or its parameters against the hand.
-- **Undo and redo** across the whole project, 100 steps *preview*; **copy, paste, duplicate**
-  *preview*; **hide and show** without recompiling *preview*.
+- **Undo and redo** across the whole project, 100 steps; **copy, paste, duplicate**;
+  **hide and show** without recompiling.
 - **Four material types**: surface, glowing, **optics detector**, **ray limiter** (seen by the
   optics trace, invisible in the picture).
 - **A group's material**: one material for everything in a group, over their own; an object with
-  **own material** keeps its own, as a child's own blend keeps its own *preview*.
+  **own material** keeps its own, as a child's own blend keeps its own.
 - **Files**: **Export ▸** a scene, the project (every scene with its view, and the render settings),
   or a 3D print. **Import from file…** (Ctrl O, or drop a file on the page): a scene joins the
   project; a project file asks whether to open as a project of its own or add its scenes to this
@@ -338,15 +335,14 @@ for the help.
   polycarbonate, stone, marble and granite, wood, cork, leather, rubber, concrete, rust and more;
   **five optics parts** (a PMMA lens Ø 18 mm, an LED die 2 × 1 mm at 100 lm, a detector screen, a
   triangular prism in N-BK7 -- any triangle, from a right-angle prism to an isosceles one, by its width,
-  height, depth and where its top stands -- and a whole LED–lens–screen bench) *preview*.
+  height, depth and where its top stands -- and a whole LED–lens–screen bench).
 - **Every item is a rendered picture**, made by a second, hidden path tracer while the main view is
-  idle, and kept; rest the pointer on one to see it rendered live *preview*.
+  idle, and kept; rest the pointer on one to see it rendered live.
 - **Drag items onto the tree or into the picture**: a material onto the object under the pointer
-  (or onto a group's row, for the whole group; the tree's own materials too), a shape standing on the surface where you drop it, units converted *preview*.
-- **Keep your own**: the selection becomes an item; rename, remove, export and import them as a file
-  *preview*.
+  (or onto a group's row, for the whole group; the tree's own materials too), a shape standing on the surface where you drop it, units converted.
+- **Keep your own**: the selection becomes an item; rename, remove, export and import them as a file.
 - Search by name, category, tag or help text; filter by kind, built-in or your own, and tag; grid or
-  list *preview*.
+  list.
 
 ### Optics: the LED and luminaire bench
 
@@ -358,7 +354,7 @@ out, and says so). Rays are weighted, never discarded; every lumen is
 booked (emitted = escaped + lost + absorbed, to zero); a run is split into batches, so **every
 number carries its standard error**.
 
-**Sources** *preview*
+**Sources**
 - **Rectangle and disc lights** as objects in the scene, as many as you like, placed with the
   handles; and **Zemax ray files** (below).
 - **Distribution**: Lambertian or cosⁿ, uniform cone, collimated; any of them limited to a cone.
@@ -379,21 +375,21 @@ number carries its standard error**.
 - **Refraction, Fresnel and total internal reflection**: a slab at three angles, a glass ball and a
   wedge match the textbook within two standard errors; the wedge's exit angle to 2 × 10⁻⁶ ° **✓**
 - **Coatings and dispersion** as in the picture: a dichroic sends one band one way and the rest the
-  other, a prism fans white light into its colours *preview*.
+  other, a prism fans white light into its colours.
 - **Detectors** stop and record every ray that reaches them; **ray limiters** do the same but are
-  invisible in the picture, for a cross-section of a beam *preview*.
+  invisible in the picture, for a cross-section of a beam.
 - **Totals**: emitted, escaped, absorbed, on detectors, lost, and per object and per material what
-  arrives and what is absorbed, each ± its error *preview*.
+  arrives and what is absorbed, each ± its error.
 - **See the rays**: up to 20 000 rays drawn over the picture and retraced live while you move
   things, coloured by the flux left, by step, plainly, by the light's own colour, or by colour ×
-  flux; an **optical path length slider** sweeps the light through the system as a front *preview*.
+  flux; an **optical path length slider** sweeps the light through the system as a front.
 - **Live**: the analysis run again and again while you edit, every chart, card and total following;
   with **Σ**, its rounds add up while nothing changes. A run is a number of rays times × 1 to × 10M,
   up to 50 million.
 
 ![The Analyse layout on the RGBW colour mixing example: ten million rays coloured by their light, the illuminance map on the screen with isolux lines, its profiles, the polar diagram and the results; Run, Live and Σ at the top of the Analysis pane](docs/screenshots/optics-analyse.jpg)
 
-**Far field: luminous intensity** *preview*
+**Far field: luminous intensity**
 - A **type C (C, γ) grid**, fed by the rays that escape or by one detector, from 0.25° steps.
 - **Intensity in cd or cd/klm**, an error bar per bin, rotational symmetry pooled if you ask.
 - **Beam angle (50 %) and field angle (10 %)** per plane, **I max**, **optical efficiency**, **zonal
@@ -401,7 +397,7 @@ number carries its standard error**.
 - A **polar diagram** (up to nine C planes, linear or logarithmic, ±1 standard-error band) and
   **intensity against angle**, zooming itself to narrow beams.
 
-**Illuminance: detector maps** *preview*
+**Illuminance: detector maps**
 - An **illuminance map in lux** on a detector, 8 to 256 cells, zoomed by Shift-dragging. Hold the button
   down and move: the value under the pointer is read, and the profiles follow it.
 - **More than one of any chart**, each with its own settings on a strip along its top: an illuminance map
@@ -413,7 +409,7 @@ number carries its standard error**.
   r90**.
 - A **virtual plane** at any distance, computed from the far field without tracing again.
 
-**Colour** *preview*
+**Colour**
 - Detectors read the **exact colour** of what arrives: CIE xy, u′v′, **CCT and Duv**; single lights
   exact to 10⁻⁸ **✓**
 - **Colour uniformity** Δu′v′ (max and rms); maps of the light's true colour, its colour alone,
@@ -426,7 +422,6 @@ number carries its standard error**.
 
 ### Export for 3D printing
 
-*preview*
 - Put an **export box** around what you want to print, placed with the handles.
 - The distance field is sampled on the GPU and meshed into a **closed surface** (marching
   tetrahedra), each triangle coloured from its material and reduced to at most 16 colours.
@@ -438,7 +433,6 @@ number carries its standard error**.
 
 ![The Animate layout on the Glass and liquid example: three camera tracks keyed in the Timeline under the picture, and the video's 1920 × 1080 frame drawn over it](docs/screenshots/animate.jpg)
 
-*preview*
 - **Keyframes on any live setting**: the camera, the sun, a light's flux, an object's position. Flag
   a value ◇ as animated and *+ track* offers it; the scene's camera and exposure can be flagged too.
 - Linear, smooth, spline or step interpolation, with easing.
