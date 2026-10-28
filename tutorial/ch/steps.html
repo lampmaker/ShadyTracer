@@ -345,11 +345,24 @@
         rays graze did it pay: the material test's shadow rays under a sun 5 degrees up, 5.0 against 2.9 ms. The same
         text run twice read 12% apart in that run, so smaller differences are noise.</p>
     </div>
-    <div data-claim="inferred">
-      <p><strong>Why the nearest only.</strong> A step's cost grew with the number of answering shapes, and most of what
-        an answer gains is likely the nearest answering shape's: its distance is the one that sets the plain step. So now
-        a shape works out its answer only while it is nearer than every answering shape before it. Whether that turns
-        the fewer steps into less time is not known. What would test it: Tests &gt; alongray again, on the user's card.</p>
+    <div data-claim="measured">
+      <p><strong>The nearest only: no better.</strong> Since, a shape works out its answer only while it is nearer than
+        every answering shape before it in the text. The second run (2026-10-27, the same card and rows) read the same:
+        the march on the showcase 7.9 against 12.1 ms, on dichroics 90.6 against 105.3, on the Noise library 33.1 against
+        38.8; the material test under a low sun 9.5 against 8.1. Read pass by pass, every scene's rays finished in fewer
+        passes, and where many shapes answer each pass cost more: dichroics' camera rays took 25.9 against 23.7 ms in
+        all, its light's photons 65.5 against 81.3.</p>
+    </div>
+    <div data-claim="measured">
+      <p><strong>Why: a group of rays runs every answer any of them takes.</strong> A GPU runs 32 rays in lockstep, and a
+        branch one of them takes, all of them wait through. Counted on a software GPU through the renderer's own march,
+        by the rays' places in its queue (<code>builder/test/along.gpu.mjs</code>), answers a step with the camera's rays
+        scattered as the queue is once packed: on dichroics a ray works out 1.7 and its group runs 4.1, on the showcase
+        4.1 and 7.9, on the Noise library 1.4 and 3.9 -- on the prism scene, with two answering shapes, 1.7 and 1.9. Meanwhile
+        the steps a group takes fall less than a ray's: on dichroics 19.3 steps a ray became 9.3, but a group's steps fell
+        only 38%. A ray works out more than one answer because "the nearest so far" is overtaken as the text goes on, and
+        only the last one's answer is used: computing that one alone would take the same steps and have a group run 2.9 a
+        step on the showcase, 3.4 on dichroics.</p>
     </div>
     <div data-claim="measured">
       <p><strong>A step that asks only the distance: the march 8% to 79% faster, the sample 2% to 35%.</strong> GPU time a

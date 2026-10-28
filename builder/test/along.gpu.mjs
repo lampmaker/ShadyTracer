@@ -37,6 +37,11 @@
 //   3. THE WHOLE RENDERER (R.trace): a few samples of a scene as it is and with answers, from the same seeds -- shadow
 //      rays through prog_occlude's `along` too -- the pictures' means within their paired error bar; a haze box among them.
 //      Not bit for bit: an answer lands on a surface where the plain march stops a tolerance short of it.
+//   4. WHAT A GROUP OF 32 RAYS RUNS (in 2., per scene): the card runs 32 rays in lockstep and a group runs every answer any
+//      of its rays takes. The answers a ray computes a step against the answers its group runs, by the ray's place in the
+//      renderer's own march queue -- camera rays in pixel order, the same shuffled, shadow rays to a 5 degree sun --
+//      with the steps of a group plain and with answers (logging, marchLogged, groupCount below). Why: run 2 of Tests >
+//      alongray, read pass by pass, cost up to twice as much a pass where many shapes answer and the rays are scattered.
 // COUNTS, NOT TIMES (CLAUDE.md): what an answer costs beside a distance is the card's to say (Tests > alongray).
 //======================================================================================================================
 import { readFileSync } from 'node:fs'
@@ -340,6 +345,97 @@ async function fieldAt(S) {
     }
 }
 
+/* WHAT A GROUP OF 32 RAYS RUNS (4.; the user, after run 2 of Tests > alongray: "I would like to understand why it does not
+   help" -- "count it on lavapipe first"). The card runs 32 rays in lockstep, and a group runs every branch any of its rays
+   takes. Run 2 read pass by pass: where the answering shapes are many (11 on dichroics and the showcase) a pass cost up to
+   twice as much for the same rays, most where the rays are scattered (a light's photons; the passes after the first, the
+   queue packed as rays finish); where they are 2 (the material test, the prism scene) a pass cost what it did and fewer
+   passes won. Inferred: each ray computes about one answer a step -- but the first answering shape in the text always
+   answers (AL_DANS starts at NEVER), and over 32 scattered rays nearly every shape is some ray's nearest, so the group runs
+   nearly all of them. Counted here, in the test only: the scene's text with each answer's site numbered (alTakeK sets its
+   bit in AL_MASK; alTake is reached only past alNearer, its answer computed just before), and the renderer's own march
+   (prog_march) through a stand-in WG that logs the mask at every step by the ray's place in the queue (rayindex, gid.x) --
+   places 32g to 32g + 31 one group, as the card's are. The plain march logged alike, its masks 0. COUNTS, NOT TIMES.
+     ...AND THE NEAREST ALONE: only the last answer a step takes sets the step (AL_T); the ones it overtook are thrown
+   away, their shapes bounding the step by their distance (AL_DREST). So a march that worked out the final nearest
+   shape's answer alone would take these same steps (but where that answer is none and an earlier one's stood), and
+   what its group would run is the number of different final nearest shapes among its rays: logged beside the mask,
+   the site that answered last (+1, in bits 16 to 20; 0 for none). */
+const UNLOGGED = 0xFFFFFFFF
+const logging = scene => {
+    let k = 0
+    const decl = t => {
+        const s = t.replace(/&& alTake\(/g, () => `&& alTakeK(${k++}u, `)
+        if (k > 16) throw new Error(`${k} answer sites: more than the mask's 16 bits`)
+        return `${s}
+var<private> AL_MASK: u32 = 0u;
+var<private> AL_LAST: u32 = 0u;
+${k ? 'fn alTakeK(k: u32, tw: f32, dw: FLOAT) -> bool { AL_MASK |= (1u << k); let t = alTake(tw, dw); if (t) { AL_LAST = k + 1u; } return t; }' : ''}
+`
+    }
+    const WL = Object.create(WG)
+    WL.makeCompute = (decls, main, uniforms, resources, opts) => {
+        const at = 'hit = sceneAt(ray, false);'
+        if (main.split(at).length !== 2) throw new Error('the march no longer asks the scene once a step as `hit = sceneAt(ray, false);`')
+        return WG.makeCompute(decl(decls), main.replace(at, `AL_MASK = 0u; AL_LAST = 0u; ${at} alLog[rayindex * 32u + i] = AL_MASK | (AL_LAST << 16u);`), uniforms, { ...resources, alLog: 'array<u32>' }, opts)
+    }
+    return { WL, sites: () => k }
+}
+/* marchAll's passes, each with a fresh log (UNLOGGED: no step there), read back: [{ log, count }] a pass -- and the ends,
+   as marchAll gives them */
+async function marchLogged(prog, bag, rays0, passes = 40) {
+    const n = rays0.length / RAY_F, u = bag.sceneUnit, rays = inMetres(rays0, u)
+    const mb0 = WG.createStorageBuffer(rays), mb1 = WG.createStorageBuffer(rays.byteLength)
+    const shade = WG.createStorageBuffer(HIT_F * 4 * n), counters = WG.createStorageBuffer(4 * Math.max(COUNTER_WORDS, 4))
+    const logs = []
+    let inCount = n, readfrom = 0, shaded = 0
+    for (let p = 0; p < passes && inCount > 0; p++) {
+        const L = WG.createStorageBuffer(new Uint32Array(32 * inCount).fill(UNLOGGED))
+        prog.resources = { marchBuffer0: mb0.b, marchBuffer1: mb1.b, shadeBuffer: shade.b, counters: counters.b, alLog: L.b }
+        counters.w(counterWords({ [readfrom]: inCount, 2: shaded, 3: readfrom }))
+        prog.uniforms = { ...bag, lastpass: 0 }
+        prog.dispatch(Math.ceil(inCount / 64), 1, 1)
+        const c = await counters.r(Uint32Array)
+        logs.push({ log: await L.r(4 * 32 * inCount, 0, Uint32Array), count: inCount })
+        L.b.destroy()
+        shaded = c[2]; inCount = readfrom === 0 ? c[1] : c[0]; readfrom = 1 - readfrom
+    }
+    const h = await shade.r(Float32Array), hu = new Uint32Array(h.buffer)
+    const out = Array.from({ length: n }, () => ({ pos: null, steps: 0, state: -1 }))
+    for (let k = 0; k < shaded; k++) {
+        const o = HIT_F * k
+        out[hu[o + 20]] = { pos: [h[o] / u, h[o + 1] / u, h[o + 2] / u], steps: hu[o + 15] & 0xffff, state: hu[o + 19] }
+    }
+    for (const b of [mb0, mb1, shade, counters]) b.b.destroy()
+    return { out, logs }
+}
+const popcount = m => { let c = 0; for (; m; m &= m - 1) c++; return c }
+/* per group of 32 places, per step while any of them marches: its rays' steps, the group's steps, the answers its rays
+   computed, the answers the group ran (the bits any of them set), and the different final nearest shapes among them */
+function groupCount(logs) {
+    const c = { laneSteps: 0, groupSteps: 0, laneAnswers: 0, groupAnswers: 0, groupNearest: 0 }
+    for (const { log, count } of logs) for (let g = 0; g < count; g += 32) for (let s = 0; s < 32; s++) {
+        let any = false, or = 0, last = 0
+        for (let l = g; l < Math.min(g + 32, count); l++) {
+            const m = log[32 * l + s]
+            if (m === UNLOGGED) continue
+            any = true; or |= m & 0xffff; c.laneSteps++; c.laneAnswers += popcount(m & 0xffff)
+            if (m >>> 16) last |= 1 << ((m >>> 16) - 1)
+        }
+        if (any) { c.groupSteps++; c.groupAnswers += popcount(or); c.groupNearest += popcount(last) }
+    }
+    return c
+}
+/* a fixed shuffle of the rays: the queue as it is once packed, rays finishing in any order, and a light's photons */
+function shuffled(pts, dirs) {
+    let s = 777
+    const rnd = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296 }
+    const n = pts.length / 3, order = Array.from({ length: n }, (_, i) => i)
+    for (let i = n - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [order[i], order[j]] = [order[j], order[i]] }
+    return { pts: order.flatMap(i => pts.slice(3 * i, 3 * i + 3)), dirs: order.flatMap(i => dirs.slice(3 * i, 3 * i + 3)) }
+}
+const GROUPS = []
+
 const SUN = elev => { const e = elev * Math.PI / 180, a = 30 * Math.PI / 180; return [Math.cos(e) * Math.cos(a), Math.cos(e) * Math.sin(a), Math.sin(e)] }
 const TOTALS = []
 async function count(label, doc, cam, extraRays = null) {
@@ -422,6 +518,33 @@ async function count(label, doc, cam, extraRays = null) {
         ok(`${label}: ...and none with answers through a solid`, sh.tunnelled === 0, `${sh.tunnelled}: ${sh.passed.join('; ')}`)
         row[`sun${elev}`] = sh.c
     }
+    // 4. WHAT A GROUP OF 32 RAYS RUNS: the camera rays in pixel order (a camera's first pass), the same shuffled, and the
+    //    shadow rays to the 5 degree sun -- plain and with answers, the logged marches ending every ray as the unlogged
+    if (SA.along) {
+        const lp = logging(S), la = logging(SA)
+        const KpL = await prog_march(lp.WL, S, 64, { distOnly: 1 }), KaL = await prog_march(la.WL, SA, 64, { distOnly: 1, along: 1 })
+        await KpL.ready; await KaL.ready
+        const sets = [['camera rays, pixel order', pts, dirs], ['camera rays, shuffled', ...Object.values(shuffled(pts, dirs))],
+                      ['shadow rays, sun at 5 degrees', hitPts.flat(), hitPts.flatMap(() => SUN(5))]]
+        const same = (x, y) => x.every((h, i) => h.steps === y[i].steps && h.state === y[i].state && String(h.pos) === String(y[i].pos))
+        say(`    what a group of 32 rays runs (${la.sites()} answer sites):`)
+        for (const [name, P, D] of sets) {
+            const rays = raysOf(P, D)
+            const [p, a] = [await marchLogged(KpL, bag, rays), await marchLogged(KaL, bag, rays)]
+            const [p0, a0] = [await marchAll(Kp, bag, rays, buffers), await marchAll(Ka, bag, rays, buffers)]
+            ok(`${label}: ${name}: the logged marches end every ray as the unlogged ones, plain and with answers`, same(p.out, p0) && same(a.out, a0))
+            const gp = groupCount(p.logs), ga = groupCount(a.logs), n = P.length / 3
+            const g = { n, sites: la.sites(), raySteps: [gp.laneSteps / n, ga.laneSteps / n], groupSteps: [gp.groupSteps, ga.groupSteps],
+                        rayAnswers: ga.laneAnswers / Math.max(ga.laneSteps, 1), groupAnswers: ga.groupAnswers / Math.max(ga.groupSteps, 1),
+                        groupNearest: ga.groupNearest / Math.max(ga.groupSteps, 1) }
+            say(`      ${name} (${n}): steps a ray ${g.raySteps.map(v => v.toFixed(1)).join(' -> ')}; group steps ${g.groupSteps.join(' -> ')}; `
+                + `with answers, a step: ${g.rayAnswers.toFixed(2)} answers a ray computes, ${g.groupAnswers.toFixed(2)} its group runs; `
+                + `the final nearest alone: ${g.groupNearest.toFixed(2)}`)
+            ok(`${label}: ${name}: a group runs at least the answers any of its rays computes, and the final nearest ones are among them`,
+                g.groupAnswers + 1e-9 >= g.rayAnswers && g.groupNearest <= g.groupAnswers + 1e-9)
+            GROUPS.push({ label, name, ...g })
+        }
+    }
     if (extraRays) {
         for (const [name, pts2, dirs2] of extraRays) {
             const x = await run(pts2, dirs2)
@@ -460,6 +583,8 @@ for (const [label, url, cam] of SCENES) await count(label, docOf(url), cam)
     say(`    the graze: ${g.n - g.outP} of ${g.n} reach the table plainly within maxiter, ${g.n - g.outA} with the answers`)
     ok('the prism scene: every ray grazing its table reaches it with answers', g.outA === 0, `${g.outA} of ${g.n} out of steps`)
 }
+say('  what a group of 32 rays runs, with answers (answer sites; answers a step: a ray computes / its group runs / the final nearest alone would; group steps plain -> with answers):')
+for (const g of GROUPS) say(`    ${`${g.label}, ${g.name}`.padEnd(58)} ${String(g.sites).padStart(2)}  ${g.rayAnswers.toFixed(2)} / ${g.groupAnswers.toFixed(2)} / ${g.groupNearest.toFixed(2)}  ${g.groupSteps.join(' -> ')}`)
 
 /*----------------------------------------------------------------------------------------------------------------------
   3. THE WHOLE RENDERER: a scene as it is and with answers, from the same seeds -- the march and the shadow rays both

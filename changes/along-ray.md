@@ -49,6 +49,16 @@ behind a switch, off by default.
   - **The likely cause (inferred):** every answering shape worked out its answer at every step. The numbers are in
     docs/PERFORMANCE.md. Hence the nearest only, with the boxes, since: not measured yet.
   - **Off by default, so nothing changes unless you turn it on.**
+- **The nearest only, with the boxes, measured on the same card** (`480f7db`, 2026-10-27): no better. The march on
+  dichroics 90.6 -> 105.3 ms, the showcase 7.9 -> 12.1, the Noise library 33.1 -> 38.8; the material test under a low sun
+  9.5 -> 8.1. Read pass by pass, rays finished in fewer passes in every scene, and each pass cost more where many shapes
+  answer: dichroics' camera rays 25.9 -> 23.7 ms in all, its light's photons 65.5 -> 81.3.
+- **Why, counted on a software GPU** (`builder/test/along.gpu.mjs`, what a group of 32 rays runs): the card runs 32 rays
+  in lockstep, and a group runs every answer any of its rays works out. With the rays scattered as the march's queue is
+  once packed, a group runs 4.1 answers a step on dichroics (a ray 1.7), 7.9 on the showcase (a ray 4.1), 1.9 on the prism
+  scene with its two answering shapes. A ray works out more than one because the nearest so far is overtaken as the scene
+  is read, and only the last one's answer is used: computing that one alone would take the same steps, with a group
+  running 3.4 a step on dichroics and 2.9 on the showcase. Not built.
 - **Tests › alongray:** each scene baked twice, without answers then with. It runs dichroics and the prism scene first,
   each with its light's photons; the prism scene is new to the bench, frozen from the example and seen 5 degrees over its
   table. Then the material test, also with a sun 5 degrees up, the Noise library, the Menger cubes, the showcase, the optics
@@ -58,5 +68,5 @@ behind a switch, off by default.
 - Turn Render settings › Performance › Answers along the ray on and off, and wait for the bake. Look at the prism scene's
   beam on its table, dichroics' floor and plates, and anything seen at a grazing angle or under a low sun. The picture
   should not change beyond noise; the prism scene's table may now be reached where rays ran out of steps before.
-- Run Tests › alongray again and paste the report. Read march and occlude down each scene's two rows, and against the
-  first run's.
+- Nothing new to run: the count says why the time did not fall. Whether to build the final nearest alone, answer for
+  planes and bands only, or take answers along the ray out is yours to choose.

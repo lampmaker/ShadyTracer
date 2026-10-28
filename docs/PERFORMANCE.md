@@ -13,7 +13,7 @@ true?"). A plan built on inferences written as facts was reverted (commit fdc333
 it had called one scene's slow render "this architecture's full-resolution cost", which the user's
 own numbers contradict.
 
-## STATUS (2026-10-27) — answers along the ray: counted, built, measured once (fewer steps, mostly not less time); the nearest only and the culling boxes built, not measured
+## STATUS (2026-10-28) — answers along the ray: counted, built, measured twice (fewer steps, mostly not less time); why, counted: a group of 32 rays runs every answer any of them takes
 
 The user asked (2026-10-26) about exact intersections for basic shapes, a relief's included ("check if there is any
 intersection possible at all"), for rays running nearly parallel to a surface. **Exact hits were built once (0.18 to
@@ -101,14 +101,67 @@ build itself now, and reads the same steps as the count's table below, to the de
     distance sets the plain step, and the others' distances are no nearer. Answering only that one, with the others
     folded in by their distance, would still be safe, and would give a step between the plain one and today's. What
     would test it: build that, and run Tests > alongray again.
-- **Built since, not measured (2026-10-27; the user: "try nearest only, and with the boxes").**
+- **Built since (2026-10-27; the user: "try nearest only, and with the boxes").**
   - **The nearest only:** a shape works out its answer only while it is nearer than every answering shape before it
     in the text; the one it overtakes bounds the step by its distance (`along.js` alNearer, alTake, AL_DREST).
   - **The culling boxes answer:** a culled node's box says where the ray enters it (`alBoxEntry`, `codegen.js`
     culled). Until then a box gave only its distance, so it capped the step as before (read in code: `cullDist`,
     `scene_api.js`). Safe, since the node is inside its box.
-  - **The steps on lavapipe** are in `builder/test/along.gpu.mjs`'s report. The time is Tests > alongray's again, the
-    same rows, so the two runs read side by side.
+- **Measured again: the user's Ampere card**, Tests > alongray (`ShadyTracer 0.78.0 · 480f7db (ccr-0f3a020a-590jz2) ·
+  nvidia ampere`, 2026-10-27, the same rows). GPU ms a sample, without -> with answers:
+
+  | scene | answer sites (shapes + boxes) | the whole sample | march | occlude |
+  |---|---|---|---|---|
+  | dichroics, its light's photons, the map on | 11 + 2 | 167.9 -> 185.7 | 90.6 -> 105.3 | 18.3 -> 19.5 |
+  | the prism scene, 5 degrees over its table, the same | 2 + 0 | 65.1 -> 66.4 | 13.3 -> 11.6 | 7.8 -> 10.6 |
+  | the material test | 2 + 2 | 34.4 -> 30.8 | 9.3 -> 8.3 | 4.0 -> 3.6 |
+  | the material test, the sun at 5 degrees | 2 + 2 | 34.3 -> 28.6 | 9.5 -> 8.1 | 4.8 -> 3.0 |
+  | the Noise library | 8 + 6 | 85.0 -> 98.5 | 33.1 -> 38.8 | 19.6 -> 25.5 |
+  | the Menger cubes | 4 + 2 | 63.0 -> 69.5 | 29.9 -> 35.1 | 12.6 -> 13.4 |
+  | the showcase | 11 + 2 | 39.8 -> 42.8 | 7.9 -> 12.1 | 2.9 -> 3.9 |
+  | the optics bench (its boxes alone) | 0 + 5 | 24.2 -> 22.7 | 6.0 -> 6.1 | 2.4 -> 2.6 |
+
+  - **No better than every shape answering.** The drift row read row 1 again within 0.2 %.
+  - **Read pass by pass** (the report's `wavefront` rows, summed by hand; each sum within 1 % of its row's march):
+    every scene's rays finish in fewer passes with answers, and where many shapes answer a pass costs more.
+    - dichroics' camera rays 25.9 -> 23.7 ms in all; its light's photons 65.5 -> 81.3 (a photon pass of ~921k rays
+      4.1 -> 9.3 ms).
+    - the showcase's first pass (camera rays in pixel order) 3.3 -> 3.7 ms; passes 2 to 24 4.6 -> 8.4.
+    - the material test's first pass 3.1 -> 3.2 ms; passes 2 to 24 6.2 -> 5.1.
+- **Why, counted on lavapipe** (2026-10-28, `builder/test/along.gpu.mjs`, "what a group of 32 rays runs"). The card runs
+  32 rays in lockstep; a branch any of them takes, the group runs. The test logs, at every step of the renderer's own
+  march, which answers each ray worked out, by its place in the march's queue (places 32g to 32g + 31 one group). Camera
+  rays 64 x 36 in pixel order (a camera's first pass), the same shuffled (the queue once packed, and a light's photons),
+  and shadow rays to a 5 degree sun. Answers a step with answers -- a ray works out / its group runs / its group would
+  run if only the final nearest shape answered -- and a group's steps, plain -> with answers:
+
+  | scene | sites | camera, pixel order | camera, shuffled | shadow, sun at 5 deg | group steps, shuffled |
+  |---|---|---|---|---|---|
+  | the optics bench | 5 | 1.68 / 3.02 / 2.45 | 1.68 / 3.57 / 2.99 | 1.57 / 3.12 / 2.81 | 2585 -> 2109 |
+  | the Noise library | 14 | 1.42 / 2.47 / 2.06 | 1.42 / 3.87 / 3.11 | 1.28 / 3.20 / 2.90 | 2503 -> 2012 |
+  | the showcase | 13 | 4.12 / 5.73 / 1.82 | 4.12 / 7.86 / 2.88 | 3.41 / 5.54 / 2.13 | 2385 -> 1483 |
+  | the demo | 8 | 2.74 / 3.41 / 1.82 | 2.74 / 4.96 / 3.28 | 3.06 / 3.94 / 1.90 | 3567 -> 3476 |
+  | the Menger cubes | 6 | 1.61 / 2.15 / 1.79 | 1.61 / 2.68 / 2.40 | 1.09 / 1.74 / 1.72 | 8139 -> 7098 |
+  | the material test | 4 | 1.60 / 2.64 / 2.05 | 1.60 / 2.92 / 2.58 | 1.28 / 2.24 / 1.84 | 2979 -> 2325 |
+  | dichroics | 13 | 1.70 / 3.02 / 2.22 | 1.70 / 4.05 / 3.36 | 1.53 / 2.70 / 2.38 | 2578 -> 1586 |
+  | the prism scene | 2 | 1.70 / 1.86 / 1.09 | 1.70 / 1.90 / 1.14 | 1.98 / 2.00 / 1.07 | 1022 -> 755 |
+
+  - **A group runs up to twice the answers its rays work out**, more when the rays are scattered (dichroics 3.0 in
+    pixel order, 4.1 shuffled); with two sites, as on the prism scene, it cannot run more than two.
+  - **A ray works out more than one answer a step** (1.1 to 4.1): the first answering shape in the text always answers
+    (nothing is nearer yet), and each one nearer than those before it answers again. Only the last one's answer sets
+    the step; the rest are thrown away.
+  - **A group's steps fall less than a ray's:** dichroics' camera rays 19.3 -> 9.3 steps a ray (-52 %), a group's steps
+    -38 % shuffled; the Noise library -30 % and -20 %.
+  - **So, inferred:** with answers a group's step runs some 2 to 8 answers it did not before, while its steps fall 20 to
+    40 %; where the sites are two (the prism scene, the material test) it runs about two, and the fewer steps win. What
+    an answer costs beside a plain step is the card's to say: setting the card's march times beside these counts gives
+    0.05 to 0.26 of a plain step an answer, across scenes -- two machines, two sizes, not one number, so something else
+    (the kernel's size, its registers) may cost too.
+  - **Only the final nearest answering** would take the same steps (but where its answer is none and an earlier one's
+    stood) and have a group run 1.1 to 3.4 answers a step: the showcase 7.9 -> 2.9 shuffled, dichroics 4.1 -> 3.4, the
+    Noise library 3.9 -> 3.1, the prism scene 1.9 -> 1.1. It needs that shape's frame again after the scene has been
+    asked (not built).
 
 ## STATUS (2026-10-25) — the march and shadow rays on distance only: measured, and always on
 
