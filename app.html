@@ -108,6 +108,7 @@
         import { focusBox, focusPose, glidePose } from './builder/focus.js'
         import { installOpticsPage, OPTICS_CHARTS, chartSet } from './optics/page.js'
         import { installMeasureTool } from './lib/pathtracer/measure/tool.js'
+        import { installFocusPick } from './lib/pathtracer/focuspick.js'
         import { report, reloadFresh, staleFiles } from './diagnose.js'
         import { versionText, loadRevision, stamp } from './version.js'
         import { safeStartOf, started, safeNote, firstCompile } from './start.js'
@@ -542,6 +543,10 @@
             omit: VIEW.omit,
             darkroom: darkroomViewer,
             build: versionText });          // every test and benchmark result names the build it ran on
+        /* PICK FOCUS (lib/pathtracer/focuspick.js): a button at the Camera popover's foot, which installUI has just filled;
+           then a press on the picture focuses the lens on the surface under it until the mouse is let go. Installed
+           before the measure tool, so its press on the window is heard first and a pin is not placed by it. */
+        window.FOCUSPICK = installFocusPick({ canvas: ctx.canvas, RT, toolbar: VIEW });
         /* THE LIVE VIEW HELD WHILE THE DARKROOM COVERS IT (0.79.0): the viewport is kept in the page under another tab
            (renderer: 'always', above), so its loop would go on tracing a picture nobody sees, beside the darkroom's own
            draws on the same GPU. Held only while the darkroom is seen and the viewport is not -- a darkroom floated beside
