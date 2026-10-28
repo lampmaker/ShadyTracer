@@ -59,12 +59,13 @@ const RESULTS = { unit: 'lm', rays: 0, batches: 0, emitted: v(1000), escaped: v(
    runs: analyses begun; done: the last one that finished (its emitted flux is 1000 + its number, so the totals say
    which run they are of); asked: each run's { rays, batches }; batchMs: a wait per batch, so a check can switch
    Live off in the middle of a round; traces: the rays traced by the page itself (Live's, between its rounds);
-   living: the rays' own loop, as O.live leaves it, and liveCalls every call */
+   living: the rays' own loop, as O.live leaves it, and liveCalls every call; liveGet and liveOnResult what the page
+   handed the loop last, for a check to play the loop's part (index.js O.live runs it, drawn.test.mjs checks it) */
 const O = {
     settings: { bounces: 8, marchSteps: 1000, eps: 0, maxDist: 0 }, picture: {}, compiling: false, far: null, _liveLoop: null,
     runs: 0, done: 0, asked: [], batchMs: 0, traces: 0, living: false, liveCalls: [],
     lightPicture() { }, setSources() { }, setRayData() { }, dropRayData() { }, setFar(s) { O.farAsked = s }, drawPaths(on, s) { O.pathStyle = { ...O.pathStyle, ...s } },
-    live(on) { O.living = !!on; O.liveCalls.push(!!on) },
+    live(on, get, onResult) { O.living = !!on; O.liveCalls.push(!!on); if (on) Object.assign(O, { liveGet: get, liveOnResult: onResult }) },
     readPaths: async () => null,
     readHits: async () => ({ hits: batchHits() }),
     /* fail: the next run throws this message after its first batch; swap: ...having put another scene in, as the

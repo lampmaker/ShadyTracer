@@ -409,8 +409,21 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
         O.drawPaths(true, { colorMode: V.colour, brightness: V.brightness, maxOpl: oplLimit() })
         // an analysis has the module: Live traces them between its rounds, and ▶ Run's end starts them (pauseRays)
         if (held) return
-        O.live(true, () => { push(); return { rays: T.rays | 0, steps: T.steps | 0 } }, (r, err) => {
-            if (err) { say(`rays stopped: ${err.message}`); showRays(false) }
+        /* THROUGH A STRUCTURAL EDIT, as Live's rounds (liveRounds below): nothing traced while a scene is built or swapped
+           in, and a trace that fails with the scene changed or a build begun since it started is let go -- the next is
+           of the new scene. Only one that fails with the scene as it was switches the rays off. They switched off at
+           any failure (the user, 2026-10-28: "often shuts off ... need to manually enable the ray view"), and every
+           edit that rebuilds the scene, the background bake once the edits stand still among them, is such a window. */
+        let scene = null, builds = 0
+        O.live(true, () => {
+            if (sceneBusy()) return null
+            push()
+            scene = RT.scene; builds = LIVE.builds
+            return { rays: T.rays | 0, steps: T.steps | 0 }
+        }, (r, err) => {
+            if (!err) return
+            if (RT.scene !== scene || LIVE.builds !== builds || sceneBusy()) return true
+            say(`rays stopped: ${err.message}`); showRays(false)
         })
     }
     /* an analysis needs the module to itself (a second trace while one runs is refused): the live rays

@@ -220,6 +220,12 @@
       <li><strong>Batches flashing over the view.</strong> The drawn rays were whatever was in the trace's buffer last,
         and a Live analysis's batches would have drawn over them; each trace now publishes its paths to a copy of its
         own (<code>optics/README.md</code>).</li>
+      <li><strong>Rays that switched themselves off.</strong> The live rays stopped at the first trace that failed, and
+        "often" had to be switched on again (the user, 2026-10-28). A scene rebuilt under them can make a trace fail:
+        the renderer puts the new scene in before its values are ready, and every structural edit, the background bake
+        among them, opens that window. The Live analysis already waited it out and let such a round go; the rays now do
+        the same, and stop only on a failure with the scene as it was (<code>optics/page.js</code>,
+        <code>showRays</code>).</li>
     </ul>
   </div>
 </section>
