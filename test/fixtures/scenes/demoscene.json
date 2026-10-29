@@ -34,7 +34,9 @@
         "coatWidth": 20,
         "coatIndex": 1.8,
         "abbe": 0,
-        "translucency": 0
+        "translucency": 0,
+        "spreadX": 0,
+        "spreadY": 0
       },
       "code": ""
     },
@@ -85,7 +87,9 @@
         "coatWidth": 20,
         "coatIndex": 1.8,
         "abbe": 0,
-        "translucency": 0
+        "translucency": 0,
+        "spreadX": 0,
+        "spreadY": 0
       },
       "code": "// a different material per face direction, blended sharply at the edges (edge: how sharply):\n// -x the base colour, +x a metal, the y faces and the z faces a colour each, at the base roughness\nlet xmin = makeDiffuse(m.baseColor, m.roughness);\nlet xmax = makeMetal(xPlus, metalRough);\nlet ymin = makeDiffuse(yFaces, m.roughness);\nlet ymax = makeDiffuse(yFaces, m.roughness);\nlet zmin = makeDiffuse(zFaces, m.roughness);\nlet zmax = makeDiffuse(zFaces, m.roughness);\nlet e = 1.0 / edge;\nlet nn = normalize(n);\nlet wxmin = pow(clamp(-nn.x, 0.0, 1.0), e); let wxmax = pow(clamp(nn.x, 0.0, 1.0), e);\nlet wymin = pow(clamp(-nn.y, 0.0, 1.0), e); let wymax = pow(clamp(nn.y, 0.0, 1.0), e);\nlet wzmin = pow(clamp(-nn.z, 0.0, 1.0), e); let wzmax = pow(clamp(nn.z, 0.0, 1.0), e);\nlet wsum = wxmin + wxmax + wymin + wymax + wzmin + wzmax + 1e-6;\nm = xmin;\nm = mixMaterials(m, xmax, wxmax / wsum);\nm = mixMaterials(m, ymin, wymin / wsum);\nm = mixMaterials(m, ymax, wymax / wsum);\nm = mixMaterials(m, zmin, wzmin / wsum);\nm = mixMaterials(m, zmax, wzmax / wsum);",
       "ranges": {
@@ -145,7 +149,9 @@
         "coatWidth": 20,
         "coatIndex": 1.8,
         "abbe": 0,
-        "translucency": 0
+        "translucency": 0,
+        "spreadX": 0,
+        "spreadY": 0
       },
       "code": "// worley3x cell number: each grain its own mineral -- light (the base colour), pink or dark --\n// as in granite. grain is a crystal's size in mm; the shares are how many of them are pink and\n// dark; edge darkens the boundaries between them.\nlet q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\nlet w = worley3x(q / grain, 6u);\nlet c = select(select(m.baseColor, pink, w.z < darkShare + pinkShare), dark, w.z < darkShare);\nm.baseColor = c * (1.0 - edge + edge * smoothstep(0.0, 0.1, w.y - w.x));",
       "ranges": {
@@ -233,7 +239,9 @@
         "coatWidth": 20,
         "coatIndex": 1.8,
         "abbe": 0,
-        "translucency": 0
+        "translucency": 0,
+        "spreadX": 0,
+        "spreadY": 0
       },
       "code": "// The base colour and the second in alternate cubes `square` mm on a side, moving with the object.\nlet q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\nlet c = floor(q / square);\nlet odd = ((i32(c.x) + i32(c.y) + i32(c.z)) & 1) == 1;\nm.baseColor = select(m.baseColor, second, odd);",
       "ranges": {
@@ -279,7 +287,9 @@
         "coatWidth": 20,
         "coatIndex": 1.8,
         "abbe": 0,
-        "translucency": 0
+        "translucency": 0,
+        "spreadX": 0,
+        "spreadY": 0
       },
       "code": "// worley3x -- two Worley lattices crossed, so the spangles keep to no grid: a spangle every `spangle`\n// mm, each with its own grain direction in the object's xy (the anisotropy), and a roughness and\n// brightness up to `spread` either side of the base ones.\nlet q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\nlet w = worley3x(q / spangle, 31u);\nlet a = 2.0 * PI * w.z;\nm.tangent = grainAlong(R_local, vec3<f32>(cos(a), sin(a), 0.0));\nm.roughness = m.roughness * (1.0 - spread + 2.0 * spread * fract(w.z * 13.0));\nm.baseColor = m.baseColor * (1.0 - 0.5 * spread + spread * fract(w.z * 29.0));",
       "ranges": {
@@ -331,7 +341,9 @@
         "coatWidth": 20,
         "coatIndex": 1.8,
         "abbe": 0,
-        "translucency": 0
+        "translucency": 0,
+        "spreadX": 0,
+        "spreadY": 0
       },
       "code": "// Turned on a lathe: circles about the object's own z axis through its origin.\n// On the axis itself there is no direction (grainAround gives zero): the plain frame.\nlet q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\nm.tangent = grainAround(R_local, p_local, VEC3(0.0, 0.0, 1.0));\n// The rings: each pass of the tool a little different. streakWidth and streakLength in mm,\n// real size; streaks is how much the rings differ, 0 to 1.\nlet s = streaksAround(q, VEC3(0.0, 0.0, 1.0), streakWidth, streakLength);\nm.roughness = m.roughness * mix(1.0 - 0.6 * streaks, 1.0 + 0.6 * streaks, s);\nm.baseColor = m.baseColor * mix(1.0 - 0.1 * streaks, 1.0, s);",
       "ranges": {
@@ -398,7 +410,9 @@
         "coatWidth": 20,
         "coatIndex": 1.8,
         "abbe": 0,
-        "translucency": 0
+        "translucency": 0,
+        "spreadX": 0,
+        "spreadY": 0
       },
       "code": "// Rings about an axis along the object's z -- the heart of the log, `heart` mm along x from the\n// object's origin, so a board cut beside it shows arcs on its face and stripes on its edges --\n// one every `ring` mm: the base colour (earlywood) darkening into latewood over the last\n// `lateShare` of each, then starting again, as a year does. Gradient noise `wobbleSize` mm across\n// (longer along z) bends them by `wobble` rings; fibres `fibre` mm wide and twenty times as long\n// run along z.\nlet q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\nlet bend = gnoise3(q / vec3<f32>(wobbleSize, wobbleSize, 4.0 * wobbleSize), 7u).w;\nlet r = fract(length(q.xy - vec2<f32>(heart, 0.0)) / ring + wobble * bend);\nlet late = smoothstep(1.0 - lateShare, 1.0, r);\nlet fib = 0.5 + 0.5 * vnoise3(q / vec3<f32>(fibre, fibre, 20.0 * fibre), 8u).w;\nm.baseColor = mix(m.baseColor, latewood, late) * (1.0 - fibreAmount + 2.0 * fibreAmount * fib);\nm.roughness = min(1.0, m.roughness + 0.15 * late);",
       "ranges": {
@@ -478,7 +492,9 @@
         "coatWidth": 20,
         "coatIndex": 1.8,
         "abbe": 0,
-        "translucency": 0
+        "translucency": 0,
+        "spreadX": 0,
+        "spreadY": 0
       },
       "code": "// Brushed along the object's own x: the strokes turn with the object (R_local).\n// Positive anisotropy is smooth along the strokes and rough across them, so the\n// highlight is drawn out ACROSS the strokes, as on real brushed metal.\nm.tangent = grainAlong(R_local, VEC3(1.0, 0.0, 0.0));\n// The lines: grooves of different depths, each a little rougher or smoother and darker or\n// lighter than the next. streakWidth and streakLength in mm, real size whatever the scene's\n// unit or the object's scale -- so on a metre-sized object seen whole they are too fine to see,\n// as in life. streaks is how much the lines differ, 0 to 1.\nlet q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\nlet s = streaksAlong(q, VEC3(1.0, 0.0, 0.0), streakWidth, streakLength);\nm.roughness = m.roughness * mix(1.0 - 0.6 * streaks, 1.0 + 0.6 * streaks, s);\nm.baseColor = m.baseColor * mix(1.0 - 0.1 * streaks, 1.0, s);",
       "ranges": {
@@ -533,7 +549,9 @@
         "coatWidth": 20,
         "coatIndex": 1.8,
         "abbe": 0,
-        "translucency": 0
+        "translucency": 0,
+        "spreadX": 0,
+        "spreadY": 0
       },
       "code": ""
     },
@@ -567,7 +585,9 @@
         "coatWidth": 20,
         "coatIndex": 1.8,
         "abbe": 0,
-        "translucency": 0
+        "translucency": 0,
+        "spreadX": 0,
+        "spreadY": 0
       },
       "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   R_local  that frame's rotation to the world, for a direction written in it\n//   S_local  its scale: p_local * S_local is in scene units; metres(x) is x m in them, mm(x) x mm\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe; one marked\n//            as a length is in real mm, whatever the scene's unit -- read the point in mm too:\n//   let q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. brushed along the object's x, for an anisotropy above 0 (or turned: grainAround):\n//   m.tangent = grainAlong(R_local, VEC3(1.0, 0.0, 0.0));\n// e.g. with a length width (mm) and a colour stripe added with +, and q as above:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(q.x / width), 0.5));\n"
     },
@@ -611,7 +631,9 @@
         "coatWidth": 20,
         "coatIndex": 1.8,
         "abbe": 0,
-        "translucency": 0
+        "translucency": 0,
+        "spreadX": 0,
+        "spreadY": 0
       },
       "code": "// Veins about `veinSpacing` mm apart, bent by five octaves of noise over `size` mm -- the stone's\n// movement -- by `turbulence` spacings; `sharpness` is how thin a vein is, and `cloud` a soft grey\n// between them, as Carrara has.\nlet q = p_local * S_local / mm(1.0)/size;   // the point in mm, moving with the object\nlet nz = fbm3(q  , 3u, 5u, 2.0, 0.5);\nlet v = pow(1.0 - abs(sin(PI * (q.x / veinSpacing + turbulence * nz.w))), sharpness);\nlet cl = 0.5 + 0.5 * fbm3(q / 0.5 , 4u, 3u, 2.0, 0.5).w;\nm.baseColor = mix(mix(m.baseColor, vein, cloud * cl), vein, v);",
       "ranges": {
@@ -690,7 +712,9 @@
         "coatWidth": 20,
         "coatIndex": 1.8,
         "abbe": 0,
-        "translucency": 0
+        "translucency": 0,
+        "spreadX": 0,
+        "spreadY": 0
       },
       "code": "// Five octaves of noise `patchSize` mm across: where it is in the top `coverage`, rust -- its\n// shade varying on a fifth of that -- not a metal any more, rough and with a plain coat.\nlet q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\nlet f = 0.5 + 0.5 * fbm3(q / patchSize, 21u, 5u, 2.0, 0.5).w;\nlet r = smoothstep(1.0 - coverage - softness, 1.0 - coverage + softness, f);\nlet tone = 0.5 + 0.5 * vnoise3(q / (0.2 * patchSize), 22u).w;\nm.baseColor = mix(m.baseColor, mix(rust, rustLight, tone), r);\nm.metallic = m.metallic * (1.0 - r);\nm.roughness = mix(m.roughness, rustRough, r);\nm.specular = mix(m.specular, 0.5, r);",
       "ranges": {
@@ -749,7 +773,9 @@
         "coatWidth": 20,
         "coatIndex": 1.8,
         "abbe": 0,
-        "translucency": 0
+        "translucency": 0,
+        "spreadX": 0,
+        "spreadY": 0
       },
       "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
     },
@@ -783,7 +809,9 @@
         "coatWidth": 20,
         "coatIndex": 1.8,
         "abbe": 0,
-        "translucency": 0
+        "translucency": 0,
+        "spreadX": 0,
+        "spreadY": 0
       },
       "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   R_local  that frame's rotation to the world, for a direction written in it\n//   S_local  its scale: p_local * S_local is in scene units; metres(x) is x m in them, mm(x) x mm\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe; one marked\n//            as a length is in real mm, whatever the scene's unit -- read the point in mm too:\n//   let q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. brushed along the object's x, for an anisotropy above 0 (or turned: grainAround):\n//   m.tangent = grainAlong(R_local, VEC3(1.0, 0.0, 0.0));\n// e.g. with a length width (mm) and a colour stripe added with +, and q as above:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(q.x / width), 0.5));\n"
     },
@@ -817,7 +845,9 @@
         "coatWidth": 20,
         "coatIndex": 1.8,
         "abbe": 0,
-        "translucency": 0
+        "translucency": 0,
+        "spreadX": 0,
+        "spreadY": 0
       },
       "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   R_local  that frame's rotation to the world, for a direction written in it\n//   S_local  its scale: p_local * S_local is in scene units; metres(x) is x m in them, mm(x) x mm\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe; one marked\n//            as a length is in real mm, whatever the scene's unit -- read the point in mm too:\n//   let q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. brushed along the object's x, for an anisotropy above 0 (or turned: grainAround):\n//   m.tangent = grainAlong(R_local, VEC3(1.0, 0.0, 0.0));\n// e.g. with a length width (mm) and a colour stripe added with +, and q as above:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(q.x / width), 0.5));\n"
     }

@@ -45,7 +45,9 @@
         "coatEdge": 600,
         "coatWidth": 20,
         "coatIndex": 1.8,
-        "translucency": 0
+        "translucency": 0,
+        "spreadX": 0,
+        "spreadY": 0
       },
       "code": "// Stains: four octaves of noise `stainSize` mm across. Pores: in a `poreShare` of the Worley cells\n// `poreSpacing` mm apart, a hole `poreRadius` of a cell across -- darker, and rough.\nlet q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\nlet st = 0.5 + 0.5 * fbm3(q / stainSize, 11u, 4u, 2.0, 0.5).w;\nlet w = worley3x(q / poreSpacing, 12u);\nlet pore = (1.0 - smoothstep(0.6 * poreRadius, poreRadius, w.x)) * step(1.0 - poreShare, w.z);\nm.baseColor = mix(m.baseColor, stain, stainAmount * smoothstep(0.35, 0.75, st)) * (1.0 - 0.7 * pore);\nm.roughness = mix(m.roughness, 1.0, pore);",
       "ranges": {
@@ -120,7 +122,9 @@
         "coatEdge": 600,
         "coatWidth": 20,
         "coatIndex": 1.8,
-        "translucency": 0
+        "translucency": 0,
+        "spreadX": 0,
+        "spreadY": 0
       },
       "code": "// Veins about `veinSpacing` mm apart, bent by five octaves of noise over `size` mm -- the stone's\n// movement -- by `turbulence` spacings; `sharpness` is how thin a vein is, and `cloud` a soft grey\n// between them, as Carrara has.\nlet q = p_local * S_local / mm(1.0)/size;   // the point in mm, moving with the object\nlet nz = fbm3(q  , 3u, 5u, 2.0, 0.5);\nlet v = pow(1.0 - abs(sin(PI * (q.x / veinSpacing + turbulence * nz.w))), sharpness);\nlet cl = 0.5 + 0.5 * fbm3(q / 0.5 , 4u, 3u, 2.0, 0.5).w;\nm.baseColor = mix(mix(m.baseColor, vein, cloud * cl), vein, v);",
       "ranges": {
@@ -195,7 +199,9 @@
         "coatEdge": 600,
         "coatWidth": 20,
         "coatIndex": 1.8,
-        "translucency": 0
+        "translucency": 0,
+        "spreadX": 0,
+        "spreadY": 0
       },
       "code": "// gnoise3 bending layers laid down along the object's z: a layer every `layer` mm, bent by\n// `warp` layers by noise `size` mm across -- and a grit of sand grains `grit` mm across.\nlet q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\nlet g = gnoise3(q / size, 2u).w;\nlet b = 0.5 + 0.5 * sin(2.0 * PI * (q.z / layer + warp * g));\nlet sand = 1.0 - gritAmount + 2.0 * gritAmount * (0.5 + 0.5 * vnoise3(q / grit, 9u).w);\nm.baseColor = mix(m.baseColor, band, b * b) * sand;",
       "ranges": {

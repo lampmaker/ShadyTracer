@@ -40,6 +40,8 @@ export const FIELD_HELP = {
     coatWidth: 'How sharp the switch is: nm from 10 % to 90 % of the way.',
     coatIndex: 'The coating stack\'s effective index: how fast the edge moves with the angle -- higher moves it less.',
     translucency: 'How much of the diffuse body passes THROUGH the surface instead of back off it, spread evenly on the far side: an opal diffuser, paper, a lampshade. 0 opaque. Every face a ray crosses scatters it, so a sheet scatters twice; a sheet whose datasheet gives a total transmittance T (white, specular 0) is translucency 2T / (1 + T) -- 0.667 for 50 %. Light sampling and the lights\' rays reach through it in Standard and High; Draft follows it as it follows frosted glass. Turning it on is a compile.',
+    spreadX: 'A diffuser film: what the material transmits is spread about the straight-through direction instead of bent, by this many degrees FWHM along the grain (the material code\'s `m.tangent`; else a direction of the surface\'s own) -- at each face a ray crosses, so a thin sheet spreads twice: about FWHM / 1.41 a face for a sheet up to 30 degrees; the library\'s films say what wider ones take. 0 with spread y 0: glass refracts, as always. The film\'s reflection is a smooth mirror. Turning it on is a compile.',
+    spreadY: 'The diffuser film\'s spread across the grain, degrees FWHM a face: the same as spread x for a round film, much less for an elliptical one (60 x 1).',
     emissive: 'An emitter\'s colour. Only its hue counts: the brightness is the luminance.',
     emissiveLuminance: 'An emitter\'s brightness in cd/m²: 300 a monitor, 5000 a frosted bulb, 20 000 a fluorescent tube, 1.6 billion the sun.',
 }
