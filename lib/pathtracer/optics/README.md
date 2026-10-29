@@ -17,7 +17,8 @@ await O.run({ rays: 100000, batches: 4 })   // every ray to the end; mean +- sta
 await O.reset({ rays: 10000 })              // or: rays at the source, then
 await O.step()                              // every live ray on to its next interaction
 await O.trace({ rays: 5000, steps: 6 })     // N interactions in one go -- the same rays each time
-O.live(true, () => ({ rays, steps }))       // ...again and again, for moving things and watching
+O.live(true, () => ({ rays, steps }),        // ...again and again, for moving things and watching; get() null: none this frame
+       (r, err) => err && sceneChanged())   // a failure answered true is let go (a scene swapped or built under it)
 await O.readHits()                          // what the detectors caught: pos, flux, dir, object
 O.results                                   // totals, per object, per material, in lm (or W)
 O.drawPaths(true)                           // the last trace's or step's rays as lines over the picture

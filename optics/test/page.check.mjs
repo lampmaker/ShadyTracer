@@ -634,6 +634,38 @@ ok('a round failing with a build begun since it started: let go, and Live goes o
 await p.evaluate(() => { CHECK.O.batchMs = 0 })
 await p.click('.shell-runbar .live'); await p.waitForTimeout(300)
 
+/* THE RAYS' OWN LOOP THROUGH A STRUCTURAL EDIT, as Live's rounds (0.next; the user, 2026-10-28: the rays "often shut
+   off", and had to be switched on again): nothing traced while a scene is built, a trace failing with the scene swapped
+   or a build begun under it let go, one failing with the scene as it was switching the rays off and saying why. The
+   stand-in hands a check what the page gave the loop (O.liveGet, O.liveOnResult): the check plays the loop's part. */
+await raysButton(); await p.waitForTimeout(100)          // on
+const raysLoop = (what, msg) => p.evaluate(([what, msg]) => {
+    const O = CHECK.O
+    if (what === 'get') return JSON.stringify(O.liveGet())
+    if (what === 'swap') CHECK.RT.scene = { ...CHECK.RT.scene }     // as setScene does before it builds
+    if (what === 'build') CHECK.compiled()
+    return { goOn: O.liveOnResult(null, new Error(msg)) === true, living: O.living, note: document.querySelector('.shell-runbar').nextElementSibling.textContent }
+}, [what, msg])
+ok('the rays on: their loop asked for rays and steps', /"rays":\d+,"steps":\d+/.test(await raysLoop('get')) && await p.evaluate(() => CHECK.O.living))
+await p.evaluate(() => { CHECK.busy = true })
+ok('...a scene being built: the loop told to trace nothing this frame', await raysLoop('get') === 'null')
+await p.evaluate(() => { CHECK.busy = false })
+await raysLoop('get')
+let rl = await raysLoop('swap', "Unknown uniform 'mengerScale'")
+ok('...a trace failing with the scene swapped under it: let go, the rays still on', rl.goOn && rl.living && !/rays stopped/.test(rl.note), JSON.stringify(rl))
+await raysLoop('get')
+rl = await raysLoop('build', 'No resources bound')
+ok('...one failing with a build begun since it started: let go too', rl.goOn && rl.living && !/rays stopped/.test(rl.note), JSON.stringify(rl))
+await raysLoop('get')
+await p.evaluate(() => { CHECK.busy = true })
+rl = await raysLoop('', 'Unknown uniform')
+await p.evaluate(() => { CHECK.busy = false })
+ok('...one failing while a scene is being built: let go', rl.goOn && rl.living, JSON.stringify(rl))
+await raysLoop('get')
+rl = await raysLoop('', 'kernel refused')
+ok('...one failing with the scene as it was: the rays switched off, and the reason said', !rl.goOn && !rl.living && /^rays stopped: kernel refused/.test(rl.note),
+   JSON.stringify(rl))
+
 if (errs.length) failed++
 console.log(errs.join('\n') || 'no page errors'); await b.close(); server.close()
 console.log(failed ? `${failed} failed` : 'all passed')
