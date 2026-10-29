@@ -64,7 +64,7 @@ const AUTOSAVE = createAutosave({ store, local, say,
         session: { current: BUILDER.current, renderer: P.rendererSettings(RT.settings()), views: BUILDER.views(), item: E?.remember() ?? null } }),
     onCreated: m => SESSION.adopt(m) })
 const SESSION = createSession({ store, tabs: createTabs(), autosave: AUTOSAVE, say,
-    firstVisit: async () => P.createProject([demo()]), apply: (w, item) => showProject(w, item) })
+    firstVisit: async () => P.createProject([demo()]), apply: (w, item, info, how) => showProject(w, item, how) })
 await recoverAll(store, local)
 const START = await SESSION.start()
 BUILDER = installBuilder(window, { RT, gpu: null, project: START.workspace.project, current: START.workspace.current,
@@ -107,7 +107,7 @@ strip = installSceneStrip(document.getElementById('sw'), { BUILDER, ops: tree.sc
     onSelect: key => T.cards.push(key), openProject: s => T.opened.push(s ?? 'top'), item: () => E.active, compile: () => tree.apply(), exportScene, say })
 const view = installProjectView(document.getElementById('pv'), { session: SESSION, BUILDER, ops: tree.sceneOps, picture, examples,
     importFile, exportProject: () => T.files.push('exportProject'), exportScene, download: (n, t) => T.downloads.push([n, t]), app: () => 'check',
-    showWork: () => T.work++, item: () => E.active, onRemoved: id => T.removed.push(id), say })
+    showWork: () => T.work++, compile: key => key !== BUILDER.current ? tree.sceneOps.enter(key) : tree.apply(), item: () => E.active, onRemoved: id => T.removed.push(id), say })
 view.visible(true)
 /* THE FILE MENU'S COMMANDS, and the scenes' menu-less ones, as the page registers them (app.html), each file call recorded */
 const commands = [...fileCommands({ item: { active: () => E.active },
@@ -124,13 +124,14 @@ const menu = {
     items: id => menu.on(id) ? cmd(id).items() : [],
     choose: (id, label) => { const x = menu.items(id).find(i => i.label === label); return x && !x.off ? x.run() : null },
 }
-showProject = async (w, item) => {
+/* as the page's: from the Project panel ({ compile: false }) nothing compiles until a scene is chosen in it */
+showProject = async (w, item, { compile = true } = {}) => {
     BUILDER.replace({ project: w.project, current: w.current })
     tree.select(null)
     RT.applySettings(w.renderer || {})
     await E.adopt(item)
     strip.refresh()
-    await tree.apply()
+    if (compile || BUILDER.doc.libraryItem) await tree.apply()
 }
 RT.applySettings(START.workspace.renderer || {})
 await E.adopt(START.item)

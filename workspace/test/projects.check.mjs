@@ -464,10 +464,20 @@ await p.waitForFunction(() => CHECK.T.downloads.length > 0, null, { timeout: 400
 r = await p.evaluate(() => CHECK.T.downloads.at(-1))
 ok('download: a project file (the workspace format), named for it, without the library item', r?.[0] === 'Lamp_B.json' && /"format": "raytracer-workspace"/.test(r[1]) && !/libraryItem/.test(r[1]), r?.[0])
 let work = await p.evaluate(() => CHECK.T.work)
+n = await applied()
 await p.click('#pv .shell-proj-row:has(.shell-proj-name:text-is("Lamp B"))')
 await p.waitForFunction(() => CHECK.SESSION.info().name === 'Lamp B', null, { timeout: 4000 }).catch(() => { })
-r = await p.evaluate(() => ({ info: CHECK.SESSION.info(), undo: CHECK.BUILDER.canUndo, work: CHECK.T.work }))
-ok('a click on another project: this tab works on it, its own history, and the picture comes back', r.info.name === 'Lamp B' && !r.undo && r.work === work + 1, JSON.stringify(r))
+await p.waitForTimeout(700)                      // the panel looks every 500 ms
+r = await p.evaluate(() => ({ info: CHECK.SESSION.info(), undo: CHECK.BUILDER.canUndo, work: CHECK.T.work, showing: CHECK.BUILDER.showing,
+    cur: CHECK.BUILDER.current, here: document.querySelector('#pv .shell-pv-card.here')?.dataset.key,
+    meta: document.querySelector('#pv .shell-pv-card.here .shell-pv-cmeta.faint')?.textContent }))
+r.applied = await applied()
+ok('a click on another project: this tab works on it, its own history, the panel stays with its scenes and nothing compiles (0.next)',
+   r.info.name === 'Lamp B' && !r.undo && r.work === work && r.applied === n && !r.showing && r.here === r.cur && /not compiled yet/.test(r.meta ?? ''), JSON.stringify(r))
+await p.click('#pv .shell-pv-card.here')
+await p.waitForTimeout(100)
+r = { applied: await applied(), work: await p.evaluate(() => CHECK.T.work), showing: await p.evaluate(() => CHECK.BUILDER.showing) }
+ok('...its scene chosen: compiled, and the picture back', r.applied === n + 1 && r.work === work + 1 && r.showing, JSON.stringify(r))
 await p.waitForTimeout(300)
 ok('...the line over the tree names it', /Lamp B/.test(await line()))
 await p.evaluate(() => CHECK.view.refresh()); await p.waitForTimeout(200)

@@ -443,7 +443,7 @@
                 try { return Project.createProject([await readScene(FIRST_VISIT)]) }
                 catch (e) { console.error(`[scenes] ${FIRST_VISIT} did not load:`, e); return Project.createProject([Project.blankScene()]) }
             },
-            apply: (w, item) => showProject(w, item) });
+            apply: (w, item, info, how) => showProject(w, item, how) });
         // what a page flushed as it went, if the store did not get it (workspace/autosave.js)
         await recoverAll(PROJECTS, localStore);
         const START = await SESSION.start();
@@ -1188,8 +1188,32 @@
             const exportProject = () => BUILDER.saveWorkspace(projectFileName(SESSION.info().name));
             /* THE PROJECT PANEL (workspace/projectview.js): a tab beside the picture when it is not open (the user, 2026-10-17:
                "if it isnt open, open it in the same pane as the viewport"), brought forward when it is; the picture brought
-               back (showWork) once a scene, an example or another project is chosen in it */
+               back (showWork) once a scene or an example is chosen in it */
             const showWork = () => SHELL.open('viewport');
+            /* ANOTHER PROJECT OPENED IN IT STAYS IN IT, compiling nothing (the user, 2026-10-29: "I'd rather stay in the
+               project view and be able to chose which scene to open"): `unopened` while the renderer still shows the last
+               project's scene -- nobody's (demo.js replace), so no edit reaches it. The scene chosen there is compiled
+               (openChosen); one the picture is brought back to without a choice too, the viewport's tab or Back -- and at
+               once while the viewport is in view beside the panel, since the picture there would be the other project's.
+               Something else that compiled meanwhile (the ▶ over the tree, an edit) leaves nothing owed. */
+            let unopened = false, viewportSeen = false;
+            const openChosen = async key => {
+                const foreign = unopened;
+                unopened = false;
+                await (key !== BUILDER.current ? ops.enter(key) : builderTree.apply());
+                /* ITS SCENE DID NOT COMPILE: the picture would be the last project's scene, under this one's tree -- the
+                   empty scene instead, as at a start (start.js); the ▶ over the tree compiles it once it is fixed. Not while
+                   a compile is still on its way: that one decides. */
+                if (foreign && !BUILDER.showing && !BUILDER.applying) {
+                    try { await RT.setScene(NOTHING); } catch (e) { console.error('[projects] the empty scene:', e); }
+                }
+            };
+            SHELL.onVisible('viewport', v => {
+                viewportSeen = v;
+                if (!v || !unopened) return;
+                if (BUILDER.showing || BUILDER.applying) unopened = false;
+                else openChosen(BUILDER.current);
+            });
             const openProject = section => {
                 if (SHELL.isOpen('project')) SHELL.open('project');
                 else SHELL.open('project', { referencePanel: 'viewport', direction: 'within' });
@@ -1197,7 +1221,7 @@
             };
             PROJECT_VIEW = window.PROJECT_VIEW = installProjectView(projectEl, { session: SESSION, BUILDER, ops, picture, examples,
                 importFile: () => ACTIONS.importFile(), exportProject, exportScene, download: downloadText, app: stamp, showWork,
-                item: editing, onRemoved: id => PICS.removeProject(id), say: status });
+                compile: openChosen, item: editing, onRemoved: id => PICS.removeProject(id), say: status });
             SHELL.onVisible('project', v => PROJECT_VIEW.visible(v));
             /* THE PROJECT AND ITS SCENES OVER THE TREE (builder/scenestrip.js): one line, a card each */
             STRIP = window.STRIP = installSceneStrip(swHost, { BUILDER, ops, tree: builderTree, project: () => SESSION.info(), picture,
@@ -1207,7 +1231,7 @@
             window.CAPTURE = startCapture({ RT, BUILDER, pics: PICS, project: () => SESSION.info().id });
             /* ANOTHER PROJECT SHOWN (workspace/session.js open, create): its scenes into the builder -- a history of its
                own -- its renderer settings, its item being edited if it had one, and its scene compiled */
-            showProject = async (w, item) => {
+            showProject = async (w, item, { compile = true } = {}) => {
                 BUILDER.replace({ project: w.project, current: w.current });
                 // nothing selected: scene keys start again in every project, so `s1:n5` would name another node
                 builderTree.select(null);
@@ -1216,13 +1240,11 @@
                 await window.ITEM_EDITOR?.adopt(item);
                 cardKey = null;
                 STRIP.refresh();
-                await builderTree.apply();
-                /* ITS SCENE DID NOT COMPILE: the picture would be the last project's scene, under this one's tree -- the
-                   empty scene instead, as at a start (start.js); the ▶ over the tree compiles it once it is fixed. Not while
-                   a compile is still on its way: that one decides. */
-                if (!BUILDER.showing && !BUILDER.applying) {
-                    try { await RT.setScene(NOTHING); } catch (e) { console.error('[projects] the empty scene:', e); }
-                }
+                unopened = true;
+                /* from the Project panel ({ compile: false }) nothing compiles until a scene is chosen in it (openChosen) --
+                   unless the picture is in view, or the scene worked on is a library item being edited, which is shown to be
+                   edited */
+                if (compile || viewportSeen || BUILDER.doc.libraryItem) await openChosen(BUILDER.current);
             };
 
             /* UNDO / REDO. A restored project goes to the tree and panel through onDoc, like a
