@@ -13,7 +13,8 @@ a browser starved by heavy scenes) has its own too: `PERFORMANCE.md`, in `../doc
 STATUS section. **Where the scene should go** (data, rays answered by objects, shading without geometry, and the
 order of that work): `ARCHITECTURE.md`, beside this file (2026-10-04). **Media** -- dust in the air, then a volume
 photon map, scattering inside materials, an Optics-view beam view -- has its own: `MEDIA.md`, beside this file
-(2026-10-16).
+(2026-10-16). **Translucent and scattering materials** -- opal sheets, diffuser films, light guides, milky glass:
+the options, unbuilt, in `DIFFUSERS.md` (2026-10-29).
 
 ## STEP and STL import as shapes — built 2026-10-21 (0.73.0), NOT yet seen
 
@@ -323,7 +324,8 @@ instead of averaging into it.
 6. **Deferred material work.** Rough transmission is still sampled and not evaluated, so NEE cannot
    connect through frosted glass (`materials_pbr.js`, rough transmission's "no evaluable BTDF on the
    other side"); a multiple-scattering compensation for rough glass is *C* below. The anisotropy
-   tangent is done (SURFACES.md phase 1, `Material2.tangent`).
+   tangent is done (SURFACES.md phase 1, `Material2.tangent`). Making rough transmission evaluable
+   needs the same back-side plumbing as a translucent lobe (`DIFFUSERS.md`, B1 and B2).
 7. **The performance pass** — PERFORMANCE.md is that pass now; the parked light-tracing cost is in *To
    check or review later*.
 

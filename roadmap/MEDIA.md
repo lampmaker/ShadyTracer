@@ -95,7 +95,12 @@ Milky glass, smoke in a dome, an opal diffuser at low density. The ray has to ca
 it carries now (`muR/G/B`). That takes the Ray from 112 to 128 bytes: (2·112 + 272) = 496 → 544 bytes a ray, about 9 %
 fewer rays a batch at the cap (read in code, not timed). The collision would read the ray's own medium instead of the
 box. From outside, such glass glows only through phase 2: light reaches the inside through a refraction, and gets out
-to the camera through another. A dense diffuser (hundreds of scatters) is a surface's job, not a random walk's.
+to the camera through another. A dense diffuser (tens of scatters or more) is a surface's job, not a random walk's.
+
+**The options and their costs are in `DIFFUSERS.md`** (2026-10-29), beside this file. It covers a translucent surface lobe
+for opal sheets, a forward lobe for narrow-angle films, and this phase as a material's medium for light guides and thick
+milky glass. It also explains why a scatter inside smooth glass can never sample a light, and why the Optics page needs
+no connections at all.
 
 ## Phase 4 — beams in the Optics view, and less noise (open)
 

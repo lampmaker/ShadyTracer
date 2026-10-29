@@ -387,6 +387,8 @@ frozen copy, from before rough stone carried its own, has six). Code saved befor
 
 ### Phase 7 — The missing lobes
 
+- **Translucency and forward-scattering films** (opal sheets, narrow-angle diffusers) — investigated in
+  `DIFFUSERS.md` (2026-10-29), options B1 and B2; they share their back-side plumbing with evaluable rough glass.
 - **Sheen** (velvet, peach fuzz, the grazing brightening of dust) — commented out of `Material2`.
 - **A coat over anything** — a clear dielectric over a metal (lacquer, car paint), gone with
   `clearcoat`.
