@@ -61,6 +61,9 @@ A picture that is all white or all black usually means one of these:
 - **the lens**: an **aperture** (its diameter, in the scene's unit) and a **focus** distance (0 is focused on the
   target). An aperture above 0 gives depth of field: what is nearer or farther than the focus blurs, more for a
   larger aperture.
+- **Pick focus**, under the lens's numbers: the popover closes, and a press on the picture focuses the lens on the
+  surface under the mouse. Hold the button and move to try other surfaces: the focus follows. Let go, and it stays
+  focused there. Esc, or a press anywhere else, cancels. Nothing changes in the picture until the aperture is above 0.
 
 [Depth of field](example:depth-of-field.json) is a row of pawns, focused on the third.
 
