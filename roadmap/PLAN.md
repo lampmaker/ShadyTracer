@@ -510,6 +510,47 @@ code, a look each.
   3. **The exact method for the optics trace** -- a source's spectrum (an LED's SPD, Planck, a Zemax file's own
      wavelength: optRays' unused 4th word), watts as watts, X Y Z from the CMFs at the detector, R(λ) and n(λ) per
      ray; and a true-colour detector map.
+  4. **The spectral ray: the numbers (2026-10-29), before one is built.** The user asked for spectral sources,
+     phosphor conversion, and whether a ray carrying N bands (a scene setting) beats one wavelength a ray. Three ways
+     a ray can carry a spectrum were computed on an LED's light by `core/test/spectralnoise.test.mjs`: exact sums
+     over every wavelength draw on a 0.1 nm grid, no GPU, checked against seeded Monte Carlo. Noise from the draw is
+     the estimator's property, not the card's. Speed is NOT in it. One path's sigma, and the paths a reading needs
+     before the draw alone leaves 0.001 u'v' and 1 % of Y; for the deterministic ways their bias against the 0.1 nm
+     integral (LED 5656 K; dichroic a long-pass at 500 nm, 10 nm wide; amber an 80 nm edge at 585; gather a dichroic
+     on the photon's side times a cyan glass on the camera's; phosphor a 450 nm pump through A(lambda), QE 0.9, Kasha's
+     rule):
+
+     | way | sigma_Y/Y a path | paths to 0.001 u'v' | paths to 1 % Y | bias Y (dichroic / amber / gather / phosphor) | bias u'v' (same) |
+     |---|---|---|---|---|---|
+     | 1 wavelength (p ~ x+y+z) | 0.94-1.71 | 20 000-90 000 | 8 800-29 000 | none | none |
+     | hero 4, Wilkie (uniform, 100 nm apart) | 0.18-1.60 | 4 800-24 000 | 315-26 000 | none | none |
+     | hero 4, pbrt-v4 (stratified in p's CDF) | 0.07-0.25 | 800-1 400 | 48-635 | none | none |
+     | bands 8 | 0 | - | - | -4.8 / +4.6 / -10.3 / -9.6 % | 0.009 / 0.013 / 0.019 / 0.044 |
+     | bands 16 | 0 | - | - | -0.5 / +1.3 / -1.3 / -9.1 % | 0.001 / 0.004 / 0.003 / 0.038 |
+     | bands 40 | 0 | - | - | -0.1 / +0.2 / -0.3 / -1.2 % | 2e-4 / 7e-4 / 6e-4 / 0.005 |
+     | RGB, today | 0 | - | - | -9.1 / -9.6 / -5.8 % / cannot | 0.016 / 0.018 / 0.028 / cannot |
+
+     Every way but the sampled ones is exact through neutral optics (to 1e-12). What follows:
+     - **One wavelength is the noise PLAN.md said** (computed): a path's Y off by about its own size.
+     - **Hero wavelengths pay only drawn pbrt-v4's way**: 4-11 times fewer paths to 0.001 u'v' than Wilkie's uniform rotation. Through
+       the phosphor, 18 times fewer, where the uniform draw rarely lands on a narrow pump.
+     - **Bands' bias is a narrow spectrum against a slope inside a band.** The phosphor's is nearly all its absorption,
+       averaged flat over a band under a 20 nm pump; a photon's energy at the band's centre costs a few tenths of a %
+       (a scratch run). No band average can fix that after other optics, which have reshaped the light inside the
+       band (inferred). 16 bands are about 1 % through filters and 9 % through a phosphor; 40 bands are under 0.3 %
+       and 1.2 %.
+     - **Today's RGB through an edge filter is 6-10 % off in Y** on these cases: the "looks" method's assumption (a
+       channel's light spread as its weights) against an LED's narrow blue. That is the same arithmetic as
+       coatEdgeRGB (`core/spectral.js:100-112`) and a light's exact RGB (`builder/lights.js:64-72`). On hardware it
+       is unseen: `optics-coating` checks the arithmetic, not an LED's spectrum.
+     - **What the numbers leave open (inferred):**
+       - Whether ~1000 paths for 0.001 u'v' shows in a picture. A pixel's geometry is noisy anyway, and a reading
+         over a detector area sums far more paths.
+       - What a wider ray costs. 40 bands with beta and mu a ray is 408 B, and about 0.99 M rays in flight against
+         2.16 M (rayBudgetBytes over 2 rays + a shade item; arithmetic). Hero is about 128 B and 2.03 M.
+       - The photon map with hero wavelengths. A photon's wavelengths are not the camera path's; the options are
+         one shared draw a sample, a kernel in wavelength, or bands for photons only.
+       The user decides from here (the optics trace first, then the picture; a thin phosphor layer first).
 - **The camera's lens -- built (0.43.0), not yet seen; its photons removed (0.61.0)** (the user, 2026-10-09: "a more
   realistic camera model that has a lens with certain diameter, and that could work in parallel"). A thin lens (aperture,
   focus; `core/lens.js`): depth of field, and connections to a point of its disc. Until 0.61.0 it was also an area a

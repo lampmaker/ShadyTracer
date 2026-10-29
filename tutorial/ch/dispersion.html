@@ -200,6 +200,15 @@
         light into colour noise everywhere (<code>spectral.js</code>'s header; chapter 6).</p>
     </div>
     <div data-claim="measured">
+      <p><strong>What "looks right" costs an LED.</strong> Averaging a filter over each channel's wavelengths assumes the
+        channel's light is spread the way its weights are, and an LED's blue is a narrow peak. On a white LED through a
+        dichroic edge at 500 nm, through an amber filter and through two filters met at a gather, the three channels read Y
+        6 to 10% low and the colour 0.016 to 0.028 u′v′ off. One wavelength a ray has no such error, but each path's Y
+        is then off by about its own size. Four wavelengths a ray, drawn stratified, need about 1,000 paths to settle the colour to
+        0.001 u′v′. Sixteen fixed bands per ray are about 1% off through these filters and 9% through a phosphor layer
+        (<code>core/test/spectralnoise.test.mjs</code>, exact sums in Node, 2026-10-29: arithmetic, no graphics card).</p>
+    </div>
+    <div data-claim="measured">
       <p><strong>Checked on a simulated graphics card.</strong> The shading kernel's own bounce, 65,536 times a case, a
         ray at 45° onto glass of index 1.75: reflected at the yellow line's Fresnel and white; refracted along Snell at
         the index of its own wavelength to within 10⁻⁵; averaging the share not reflected in every channel
