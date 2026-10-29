@@ -14,7 +14,25 @@ STATUS section. **Where the scene should go** (data, rays answered by objects, s
 order of that work): `ARCHITECTURE.md`, beside this file (2026-10-04). **Media** -- dust in the air, then a volume
 photon map, scattering inside materials, an Optics-view beam view -- has its own: `MEDIA.md`, beside this file
 (2026-10-16). **Translucent and scattering materials** -- opal sheets, diffuser films, light guides, milky glass:
-the options, unbuilt, in `DIFFUSERS.md` (2026-10-29).
+the options in `DIFFUSERS.md` (2026-10-29), the first two built (below).
+
+## Translucency, diffuser films, frosted glass evaluated — built 2026-10-29 (0.next), NOT yet seen
+
+The user chose `DIFFUSERS.md` B1 and B2 first ("do B1 and B2 first. It will make rough glass more correct too right?" --
+in its average no, it was unbiased; in its noise a lot). Built on one foundation, evaluable transmission:
+- **Rough glass's transmission is evaluated.** Light sampling aims through the face a path leaves glass by. A photon in
+  glass connects out to the camera through it, over n^2. To light tracing's splits it is EV_EVAL; to the photon map,
+  EV_OTHER. This holds only in the full renderer.
+- **Translucency (B1):** an opal sheet's diffuse transmission.
+- **A diffuser film (B2):** a slope-Gaussian spread about the straight line, per face, in degrees FWHM.
+- **Scene format 25.** Material2 is 112 bytes, about 3 % fewer rays a batch.
+
+How it works: README § *Materials*. What changed while it was built, and what was measured on Dawn over lavapipe:
+`DIFFUSERS.md` STATUS.
+- **To press:** `furnace-beyond`, `transmission-parity`, and `light-vs-emitter`'s three diffuser pairs (frosted, opal,
+  film).
+- **To look at:** an LED behind a frosted cover, an opal sheet and a film, in Standard. The brightness should be as
+  before and the noise far lower; Draft should look as it always did.
 
 ## STEP and STL import as shapes — built 2026-10-21 (0.73.0), NOT yet seen
 
@@ -321,11 +339,10 @@ instead of averaging into it.
    luminance derived from the area of their sheets). Emissive objects are still cd/m² only -- an SDF
    gives no area to divide by (README § *Units*); *Lights* L8 measures their flux by Crofton lines
    instead. IES profiles: not built.
-6. **Deferred material work.** Rough transmission is still sampled and not evaluated, so NEE cannot
-   connect through frosted glass (`materials_pbr.js`, rough transmission's "no evaluable BTDF on the
-   other side"); a multiple-scattering compensation for rough glass is *C* below. The anisotropy
-   tangent is done (SURFACES.md phase 1, `Material2.tangent`). Making rough transmission evaluable
-   needs the same back-side plumbing as a translucent lobe (`DIFFUSERS.md`, B1 and B2).
+6. **Deferred material work.** Rough transmission is evaluated since 0.next, so NEE and the photons'
+   connection reach through frosted glass (`materials_pbr.js` THE SIDE BEYOND; built with B1 and B2 of
+   `DIFFUSERS.md`, *Translucency, diffuser films* above). A multiple-scattering compensation for rough
+   glass is *C* below. The anisotropy tangent is done (SURFACES.md phase 1, `Material2.tangent`).
 7. **The performance pass** — PERFORMANCE.md is that pass now; the parked light-tracing cost is in *To
    check or review later*.
 

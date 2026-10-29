@@ -176,7 +176,7 @@
          data-why="extent is the scene's size in its own unit, unitScale(unit) its unit in metres (1 for m, 0.001 for mm). The share is clamped between 1e-8 m (10 nm) and EPS_FALLBACK, 1 mm; a scene that gives no size keeps 1 mm." data-hash="7eb677f6"></pre>
     <p>Every use of the tolerance, in one table that a test counts against the code:</p>
     <pre data-src="lib/pathtracer/core/tolerances.js" data-sym="export const TOLERANCES = [" data-to="why: 'Shadow rays start this far off the surface along its normal"
-         data-why="times is the multiple of the tolerance at the point; pattern the text the test (core/test/tolerances.test.mjs) looks for in each file, and sites how many times it must find it: a use added or moved without its row fails the test. A regular expression (/.../g) is a pattern of text; \b a word's edge." data-hash="de4b54c9"></pre>
+         data-why="times is the multiple of the tolerance at the point; pattern the text the test (core/test/tolerances.test.mjs) looks for in each file, and sites how many times it must find it: a use added or moved without its row fails the test. A regular expression (/.../g) is a pattern of text; \b a word's edge." data-hash="ef63327d"></pre>
     <p>The boundary, where the engine asks the scene:</p>
     <pre data-src="lib/pathtracer/core/scene_api.js" data-sym="/* THE SCENE AT r (an engine ray): its Hit" data-to="return h;"
          data-why="This is WGSL inside a JavaScript text (the ${...} parts are filled in by JavaScript; capture is for the pick, which part of the scene was hit). h.s.w is the distance the scene answers. rayToScene turns the ray's lengths into the scene's unit; SCN_TOL hands the scene the engine's tolerance at the point, in its unit, for the length of the call; SDF is the scene's own distance function; engPerScene() is the unit in metres, and the answer's lengths are multiplied by it back into metres." data-hash="99bdff31"></pre>
@@ -203,7 +203,9 @@
       <p><strong>Off a surface by a multiple.</strong> A bounce leaves a surface ten tolerances along its way; a shadow
         ray (chapter 14) starts twenty tolerances off along the surface's normal, twice the bounce's, since the normal it
         starts from is itself an estimate, and the same twenty are how far across the medium beyond is asked (section
-        1); the optics trace's lights (chapter 31) start their rays two tolerances off their exact flat faces
+        1) and where a ray drawn through a surface that light sampling aims through starts (0.next: from one step along
+        its way, a ray leaving at a grazing angle could be shaded again at the same face, and a white sphere that passes
+        everything read 1.0022 in the furnace); the optics trace's lights (chapter 31) start their rays two tolerances off their exact flat faces
         (<code>tolerances.js</code>).</p>
     </div>
     <div data-claim="code">

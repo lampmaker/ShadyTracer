@@ -183,9 +183,9 @@
     <div data-claim="code">
       <p><strong>Rays counted as memory.</strong> How many rays a sample may hold in flight is set as the memory they
         take, 1 GiB (2³⁰ bytes, about 1.07 billion), not as a count: a ray is 112 bytes in each of two <a data-g="ping-pong">ping-pong</a> buffers (one
-        read while the other is written, chapter 22), plus a 272-byte item in the shade queue, 496 bytes, so about 2.16
+        read while the other is written, chapter 22), plus a 288-byte item in the shade queue, 512 bytes, so about 2.10
         million rays, enough for a 1080p picture (1920 × 1080, 2.07 million pixels) at one ray a pixel. Even so the shade
-        queue alone is about 590 MB, over the 256 MB a device need allow one buffer, so the program still asks the card
+        queue alone is about 600 MB, over the 256 MB a device need allow one buffer, so the program still asks the card
         for its largest buffers when it starts. A sample with more rays and photons than that is traced in batches,
         chapter 23
         (<cite data-src="lib/pathtracer/core/raytrace_main.js" data-sym="/* The ceiling on rays in flight, expressed as the memory they may occupy rather than" data-to="planBatches, 0.38.1), so the cap costs time, never coverage or light."></cite>).</p>

@@ -184,9 +184,14 @@
     <pre data-src="lib/pathtracer/core/tracebasics.js" data-sym="/* The walk continues only through delta events." data-to="else if (res.r.state == RAY_ACTIVE) { res.r.state = RAY_TERMINATED; }"
          data-why="TAG_PASSED is set once the photon has passed a delta: only such photons connect (the camera counts the rest). The lens's walk is chapter 17's story." data-hash="46483ae5"></pre>
     <p>Where on the picture a connection lands and what it adds, the maths fold-out in 3D, with the camera's footprint
-      (the line that adds it: <cite data-src="lib/pathtracer/core/materials_pbr.js" data-sym="let contrib = ray.radiance * ray.beta * f * (G / apx * w);"></cite>):</p>
+      (the line that adds it: <cite data-src="lib/pathtracer/core/materials_pbr.js" data-sym="let contrib = ray.radiance * ray.beta * f * (G / apx * w * nOut);"></cite>):</p>
     <pre data-src="lib/pathtracer/core/materials_pbr.js" data-sym="/* THE CONNECTION. Where on the picture this point lands and what it adds there." data-to="return VEC2(abs(dot(nrm, fwd)), apx);"
          data-why="WGSL (chapter 21), line by line. fwd is the camera's backward direction (the third column of invView, the camera's frame). fx and fy, read from invProjection, are the film's half-width and half-height at distance 1, so apx = (2 fx)(2 fy) / (w h) is one pixel's area on it. d runs from the point to the eye; dist is its length and z its depth along the camera's axis. dot(nrm, d / dist) is cos θx, the fold-out's tilt. dist / z³ is the 3D version of the fold-out's 1 / (d cos²θc): z = dist cos θc, so dist / z³ = 1 / (dist² cos³θc). The pair returned is G and the pixel's area; a point behind the camera gets G = 0. An orthographic camera (camtype not 0) has parallel rays, and its film is the area measure itself." data-hash="3f174e67"></pre>
+    <p>A photon inside glass connects too, but only through a face whose transmission can be evaluated (frosted glass, a
+      translucent sheet, a diffuser film), out to a camera in air. There its contribution is divided by the glass's n²:
+      a photon carries flux, which crosses a surface with no n in it, while the camera's paths carry radiance over n²
+      (chapter 10). Without that factor, a test slab frosted underneath read 2.33 times the camera's own paths, against
+      1.5² = 2.25 (<cite data-src="lib/pathtracer/core/materials_pbr.js" data-sym="OUT OF GLASS, OVER n^2."></cite>).</p>
     <p>One constant decides which glossy surfaces count as "scattering" for both sides at once:</p>
     <pre data-src="lib/pathtracer/core/tracebasics.js" data-sym="/* Below this GGX alpha a glossy lobe is left to BSDF sampling rather than connected to." data-to="const LT_MIN_ALPHA: FLOAT = 0.05;"
          data-why="alpha is the roughness squared (chapter 9): 0.05 is a roughness of 0.22. Below it a surface is shiny enough that a connection would evaluate a needle of a lobe; such surfaces stay on the camera's side, which samples them." data-hash="cb26c9b5"></pre>

@@ -387,10 +387,34 @@ pdf, so light sampling and BSDF sampling can be weighted against each other hone
   so reflections stay white.
 - **Transmission** refracts with the same IOR (the ray's current IOR from the path, the other
   side's from the material, or an SDF probe for glass), reflecting by the exact Fresnel. Rough
-  transmission is SAMPLED (a facet from the visible normals, then reflect or refract by that
-  facet's Fresnel, as Walter et al. 2007) but not EVALUATED: NEE and light tracing do not
-  connect through it. Single scattering loses what masking takes at grazing angles inside, so
-  rough glass reads a little under 1 in the furnace.
+  transmission is sampled (a facet from the visible normals, then reflect or refract by that
+  facet's Fresnel, as Walter et al. 2007) and, since 0.next, EVALUATED too: its value is the one
+  its own draw implies, through the refraction's Jacobian (`lobesThroughEval`, *The side beyond*
+  below). Single scattering loses what masking takes at grazing angles inside, so rough glass
+  reads under 1 in the furnace.
+- **Translucency** (0.next; `Material2.translucency`, `roadmap/DIFFUSERS.md` B1): a share of the
+  diffuse base passes THROUGH the surface instead of back off it, in the same form on the far side
+  as the share it reflects -- an opal diffuser, paper, a lampshade. Every face a ray crosses
+  scatters it, and each face is the same surface from either side: its gloss takes the index step
+  from the thinner medium to the denser, whichever side the ray is on. The ray inside is in the
+  material's medium, as in glass. A sheet of total transmittance T is translucency 2T / (1 + T)
+  (`builder/materials.js` translucencyForSheet).
+- **A diffuser film** (0.next; `Material2.spreadX/spreadY`, B2): what the material transmits is
+  spread about the straight-through direction instead of refracted, no net deviation, by that FWHM
+  in degrees along the grain and across it, at each face -- a slope-Gaussian folded back below the
+  surface, exact in its FWHM head-on (`filmSigma`). Its reflection is the smooth Fresnel mirror,
+  taken from the thinner side both ways so a ray inside is never trapped.
+- **The side beyond** (0.next): these three are evaluated below the surface (`Lobes.through`), in
+  the full renderer only -- Draft, Sketch and the Optics view follow them as they always followed
+  frosted glass. Light sampling aims through a face where the medium beyond is air (the face a path
+  leaves glass by, `throughLit`), the sky drawn from the far hemisphere there, and the BSDF's half
+  of MIS weighs a transmitted direction against it; a ray drawn through starts where its shadow ray
+  would. A photon in glass connects out to the camera through such a face, over the glass's n^2
+  (photons carry flux, the camera's side L / n^2). To light tracing's splits a transmission there is
+  EV_EVAL from LT_MIN_ALPHA up (the camera leaves the photons that light); to the photon map EV_OTHER
+  (`LAST_THROUGH`: its gather sees one side). Held by `test/transmission.test.mjs` and, on Dawn,
+  `test/transmission.gpu.mjs`: a slab with one frosted, opal or film face reads the same each way,
+  translucent and film spheres vanish in the furnace.
 - **Anisotropy runs along a grain**, `Material2.tangent` (world space; `roadmap/SURFACES.md`
   phase 1). `makeLobes` projects it onto the surface and builds the one frame that eval, pdf,
   sampling and light tracing's `ltConnect` all use; with it, positive anisotropy is smooth along

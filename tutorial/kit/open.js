@@ -51,6 +51,10 @@ export const ITEMS = [
     row('nee-split', 'once', 'open — one press.', 'Which half of light sampling is wrong, disc or sky.', 'nee', 'which half of light sampling is off?'),
     { id: 'firefly-clamp', kind: 'never', src: T, quote: 'The two firefly-clamp rows are in no recorded press.', ch: 'checking', title: 'the firefly-clamp rows',
         note: 'Two rows of the photometry test, which itself passes; these two have never been pressed.' },
+    { id: 'furnace-beyond', kind: 'never', src: T, status: 'open', quote: 'Whether what is evaluated below a surface since', ch: 'microfacets', title: 'the furnace, the side beyond',
+        note: 'Translucent and film spheres, and frosted glass with light sampling through it: built, checked on a software GPU, never pressed on a card.' },
+    { id: 'transmission-parity', kind: 'never', src: T, status: 'open', quote: 'Whether light sampling through the face a path leaves glass by', ch: 'microfacets', title: 'light through a diffuser',
+        note: 'Light sampling and the sun\'s photons through frosted glass, an opal sheet and a film, against the camera\'s own paths: built, never pressed on a card.' },
 
     /* MEASURED, NOT EXPLAINED: each in its document's words */
     { id: 'rough-glass', kind: 'unexplained', src: 'roadmap/SURFACES.md', quote: '0.9440 in every run since (946 wide)', ch: 'checking', title: 'rough glass reads 0.944',
@@ -79,8 +83,6 @@ export const ITEMS = [
         note: 'A gap under the probe\'s reach is jumped: two slabs 0.5 mm apart read as one (0.9228).' },
     { id: 'rough-dielectric', kind: 'designed', src: T, quote: 'compensation for dielectrics (Kulla-Conty\'s albedo tables, with transmission), not a fix.', ch: 'microfacets', title: 'rough glass\'s lost light',
         note: 'Rough glass loses the light that scatters more than once in its surface; closing that is a compensation still to build.' },
-    { id: 'frosted-nee', kind: 'designed', src: 'roadmap/PLAN.md', quote: 'Rough transmission is still sampled and not evaluated, so NEE cannot', ch: 'microfacets', title: 'NEE through frosted glass',
-        note: 'Rough transmission can be drawn but not evaluated, so a shadow ray cannot be weighed through frosted glass.' },
     { id: 'strat-pick', kind: 'designed', src: 'roadmap/PLAN.md', quote: '**Stratified source pick — not built**', ch: 'optics', title: 'a stratified source pick',
         note: 'Each LED\'s share of the rays is a random draw, the only reason a mix\'s colour is noisy (about 0.0012 in u\'v\'); picking by the ray\'s number would spread them evenly.' },
     { id: 'face-reflect', kind: 'designed', src: 'roadmap/PLAN.md', quote: '**A reflectance for a light\'s face — not built**', ch: 'emitters', title: 'a light face that reflects',

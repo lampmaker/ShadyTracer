@@ -46,7 +46,9 @@
       nobody has pressed it. Among the others: whether the illuminance view reads the lux a surface really gets
       (chapter 5); whether the surface tolerance, the small distance at which a ray counts as touching a surface,
       follows a scene's size (chapter 30); whether the far field gives a known source's curve (chapter 31); whether the
-      photon map adds exactly its share (chapter 19). Four ask only what something costs, not whether it is right.</p>
+      photon map adds exactly its share (chapter 19); whether light found through frosted glass, an opal sheet or a
+      diffuser film, newly evaluated on their far side, is the light the camera's own paths find (chapter 9). Four ask
+      only what something costs, not whether it is right.</p>
     <p data-step="board:once">Two rows have been pressed once and are still open. Light sampling, aiming shadow rays at
       the lights (chapter 14), once read 76% too bright with a sun twenty times the real one, in a scene with a glowing
       object of its own that light sampling does not aim at, so the cause was unclear. One row was built to tell whether
@@ -74,7 +76,7 @@
       gets one too coarse for it; the user asked for "different eps for different pixels" (eps is the tolerance's name
       in the code), it was agreed, and the engine was first moved to work in metres, so that one tolerance means the
       same in every scene. The others: a probe for the thin air gap two slabs of glass leave; a compensation for the
-      light rough glass loses; shadow rays weighed through frosted glass; a light's face that reflects; a photon map for
+      light rough glass loses; a light's face that reflects; a photon map for
       dust; and picking the optics trace's light sources evenly instead of at random. Each design is written down where
       the card's source says.</p>
     <p data-step="board:limit">Limits the documents state plainly. A <em>bug</em>, as this chapter uses the word, is

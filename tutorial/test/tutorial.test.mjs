@@ -1035,8 +1035,8 @@ for (const [name, { mod }] of modules) {
     // the engine's numbers the page states
     const rm = readFileSync(join(REPO, 'lib/pathtracer/core/raytrace_main.js'), 'utf8'), perf = readFileSync(join(REPO, 'docs/PERFORMANCE.md'), 'utf8')
     const TB = await import('../../lib/pathtracer/core/tracebasics.js')
-    ok('ch.21: 64 threads a group, 150 and 250 ms, a 1 GiB ray budget of 496 bytes a ray, the compile times where the page says', /wvf_wg: 64,/.test(rm) && rm.includes('export const SUBMIT_MS = 150, SPLIT_OVER_MS = 250')
-        && rm.includes('rayBudgetBytes: 1024 * 1024 * 1024,') && 2 * TB.RAY_BYTES + TB.SHADE_ITEM_BYTES === 496 && (2 ** 30 / 496 / 1e6).toFixed(2) === '2.16'
+    ok('ch.21: 64 threads a group, 150 and 250 ms, a 1 GiB ray budget of 512 bytes a ray, the compile times where the page says', /wvf_wg: 64,/.test(rm) && rm.includes('export const SUBMIT_MS = 150, SPLIT_OVER_MS = 250')
+        && rm.includes('rayBudgetBytes: 1024 * 1024 * 1024,') && 2 * TB.RAY_BYTES + TB.SHADE_ITEM_BYTES === 512 && (2 ** 30 / 512 / 1e6).toFixed(2) === '2.10'
         && perf.includes('ready at (ms): shade 18546, occlude 3365, march 1765, genrays 507') && perf.includes('read 21.2 and\n22.7 s for the Noise library on Ampere') && perf.includes('7.9-8.1 s on the 1080 Ti'))
 }
 
@@ -1111,7 +1111,7 @@ for (const [name, { mod }] of modules) {
         streams.forEach((n, s) => { let t = 0; for (let k = 0; k < p.batches; k++) t += p.part(s, k); if (t !== n) plans = false })
     }
     const pl = st => A.planOf(A.figures.batches.steps[st]).plan
-    ok('ch.23: planBatches\' batches each fit and add up to every stream; the page\'s 2,164,802 rays, 1 batch, 5 of 1,658,880 and 200,000, 2 with the photon map first', plans && A.BUDGET === 2164802
+    ok('ch.23: planBatches\' batches each fit and add up to every stream; the page\'s 2,097,152 rays, 1 batch, 5 of 1,658,880 and 200,000, 2 with the photon map first', plans && A.BUDGET === 2097152
         && pl('fits').batches === 1 && pl('over').batches === 5 && pl('over').part(0, 2) === 1658880 && pl('over').part(1, 4) === 200000 && pl('map').batches === 2 && pl('map').firstBatches === 1 && pl('map').part(0, 0) === 0)
     const tj = readFileSync(join(REPO, 'lib/pathtracer/tests.js'), 'utf8'), rmn = readFileSync(join(REPO, 'lib/pathtracer/core/raytrace_main.js'), 'utf8')
     ok('ch.23: the measured and counted numbers are where the page says', tj.includes('FIRST RUN (Pascal, 1188x969): 70 ms with light tracing, 9 ms without -- 7.8x') && tj.includes('read about 1.4x')
