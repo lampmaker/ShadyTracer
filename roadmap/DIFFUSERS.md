@@ -1,9 +1,9 @@
 # Translucent and scattering materials: the options
 
-**STATUS (2026-10-29, later).** The user chose **B1 and B2 first, built in one go and checked at the end**. They are
-**built (0.next), not yet seen on hardware**, together with what they rest on, evaluable rough transmission. How it works
-is `lib/pathtracer/README.md` § *Materials* (*Translucency*, *A diffuser film*, *The side beyond*). What follows below
-was written before the build and is kept as it was, but for these notes:
+**STATUS (2026-10-29, later).** The user chose **B1 and B2 first**. B1 is **built (0.next), not yet seen on hardware**,
+together with what it rests on, evaluable rough transmission. **B2 was built and taken out again** before any release.
+How it works is `lib/pathtracer/README.md` § *Materials* (*Translucency*, *A diffuser film is rough glass*, *The side
+beyond*). What follows below was written before the build and is kept as it was, but for these notes:
 
 - **Where B1 changed in the building.** Its far side first had the value t base (1 − Ec(o)) / π, with the ray taking
   n0 / n1 as it came. Seen from inside glass (n 1.5), the coat's Fresnel and its albedo tables disagreed, and a glossy
@@ -11,19 +11,34 @@ was written before the build and is kept as it was, but for these notes:
   - **The fix:** its value has the reflected share's form, t base (1 − Ec(o)) (1 − Ec(i′)) / (π (1 − Ec_avg)), which
     is symmetric. A translucent face takes its index ratio from the thinner side to the denser, either way round.
     The furnace now reads 1.0016 ± 0.0013 with light sampling and 0.9998 ± 0.0007 without.
-- **Where B2 changed.** Its spread is per face; a film modelled as a thin sheet spreads twice.
-  - **Small films:** F / √2 a face holds to about 30°.
-  - **Wide films:** in one plane two faces' angles nearly add, so a wide film needs more per face. The library's
-    elliptical 60° × 1° film is 53.1° × 0.68° a face, from a walk of two faces (`core/test/transmission.test.mjs`).
-  - **A per-sheet field was tried and dropped:** a per-sheet FWHM with a fitted per-face conversion needed a fit that
-    depends on the film's shape.
+- **Why B2 went.** The user, seeing what it was: *"remove the film, I'll do it with roughness. want to keep the
+  properties of materials as realistic / physical as possible."* It was a thin-sheet model, not a property of a
+  material:
+  - it did not refract, so on a thick part it would not bend light;
+  - its Fresnel was always taken from the thinner side, so it suppressed total internal reflection;
+  - its reflection was forced to a smooth mirror.
+
+  It was exact in FWHM, any aspect, with a Gaussian profile.
+- **A film is rough glass now.** A thin sheet frosted on both faces, anisotropy for an elliptical one. Its far side is
+  evaluated with both alphas since 0.next, so light sampling and the photons reach through it.
+  - **The library's *diffuser film 10° (frosted polycarbonate)*** is roughness 0.36. That spreads a ray head-on through
+    the sheet by about 10° FWHM: a walk of two rough faces, `core/transmission.js` roughSheetJS, held by
+    `core/test/transmission.test.mjs`.
+  - **What it gives up (read in code, and inferred):**
+    - The aspect is capped at 10:1 in alpha (`microfacet.js` mfAnisoAlpha), so a 60° × 1° film cannot be made.
+      Widening it means rebuilding the anisotropic albedo tables over a wider range and re-verifying every
+      anisotropic material.
+    - GGX's D falls off as 1 / tan⁴ of the facet angle, where a datasheet's curve is near-Gaussian, so it puts more
+      light at wide angles than the film it stands for (inferred from the forms, not measured).
+  - **The physical way to both** would be a microfacet refraction with a Gaussian (Beckmann-like) slope distribution
+    and free alphas, which refracts and reflects as a surface does. It is not built.
 - **Measured on Dawn over lavapipe (a software adapter: agreement, never speed).** A slab with one frosted, opal or
-  film face, seen from below under the sun, reads the same with light sampling and the sun's photons on or off, each
-  way round. Translucent and film spheres vanish in the furnace (`core/test/transmission.gpu.mjs`).
-  - **For the bench:** the furnace and `transmission-parity` rows (`lib/pathtracer/tests.js`).
+  anisotropically frosted face, seen from below under the sun, reads the same with light sampling and the sun's photons
+  on or off, each way round. Translucent spheres vanish in the furnace (`core/test/transmission.gpu.mjs`).
+  - **For the bench:** `furnace-beyond` and `transmission-parity` (`lib/pathtracer/tests.js`).
 - **Still open:** A (volume scattering) and MEDIA.md phase 2, as below.
-  - **The lights' photons through these faces (CLS_LIGHTS)** are checked only on hardware, by `transmission-parity`'s
-    LED rows. The node tests have no builder light.
+  - **The lights' photons through these faces (CLS_LIGHTS)** are checked only on hardware, by `light-vs-emitter`'s
+    frosted and opal diffuser pairs. The node tests have no builder light.
 
 ## The ask
 

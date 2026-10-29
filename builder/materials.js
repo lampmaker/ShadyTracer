@@ -70,15 +70,6 @@ export const FIELDS = {
        the colour depth): a file without it compiles to the text it did, and the first value is a compile. For a sheet
        whose datasheet gives a total transmittance T: translucencyForSheet (below). */
     translucency:       { type: 'f32', def: 0.0, gui: { min: 0, max: 1, step: 0.001 }, only: v => v > 0 },
-    /* A DIFFUSER FILM (0.next; core/materials.js spreadX/spreadY, roadmap/DIFFUSERS.md B2): what the material transmits
-       is spread about the straight-through direction instead of refracted, by this FWHM in degrees along the grain
-       (x: the material code's m.tangent, else the frame's own) and across it (y), at EACH face a ray crosses -- so a
-       film modelled as a thin sheet spreads twice: a 10 degree sheet is about 7 per face (F / sqrt 2 below about 30
-       degrees; wider, and one axis much narrower than the other, it takes more: the library's films say what theirs
-       are). 0 both: refraction, as always. BOTH IN THE SHADER WHILE EITHER IS ABOVE 0 (`only`): a file without them
-       compiles to the text it did, and the first value is a compile. */
-    spreadX:            { type: 'f32', def: 0.0, gui: { min: 0, max: 170, step: 0.1 }, only: (v, P) => P?.spreadX > 0 || P?.spreadY > 0 },
-    spreadY:            { type: 'f32', def: 0.0, gui: { min: 0, max: 170, step: 0.1 }, only: (v, P) => P?.spreadX > 0 || P?.spreadY > 0 },
     emissive:           { type: 'vec3<f32>', def: { r: 1, g: 1, b: 1 } },
     emissiveLuminance:  { type: 'f32', def: 0.0, gui: { min: 0, step: 1 } },
 }
@@ -172,8 +163,7 @@ export const PRESETS = {
  *  its other fields never did anything; a surface and a detector have no emission; a limiter is
  *  not in the picture at all. */
 const SURFACE_FIELDS = ['baseColor', 'metallic', 'roughness', 'anisotropy', 'specular', 'specularTint', 'transmission', 'ior',
-    'abbe', 'attenuationDistance', 'coating', 'coatLow', 'coatHigh', 'coatEdge', 'coatWidth', 'coatIndex', 'translucency',
-    'spreadX', 'spreadY']
+    'abbe', 'attenuationDistance', 'coating', 'coatLow', 'coatHigh', 'coatEdge', 'coatWidth', 'coatIndex', 'translucency']
 export const FIELDS_OF = {
     surface: SURFACE_FIELDS,
     detector: SURFACE_FIELDS,
@@ -183,8 +173,7 @@ export const FIELDS_OF = {
 /** What the panel calls a field, where its name says too little */
 export const FIELD_LABELS = { emissive: 'colour', emissiveLuminance: 'luminance (cd/m\u00b2)',
     attenuationDistance: 'colour depth (mm)', abbe: 'Abbe number (dispersion)', coating: 'coating', coatLow: 'R below edge', coatHigh: 'R above edge',
-    coatEdge: 'edge (nm)', coatWidth: 'edge width (nm)', coatIndex: 'stack index', translucency: 'translucency',
-    spreadX: 'film spread x (\u00b0 FWHM)', spreadY: 'film spread y (\u00b0 FWHM)' }
+    coatEdge: 'edge (nm)', coatWidth: 'edge width (nm)', coatIndex: 'stack index', translucency: 'translucency' }
 /** What a coating is for, put on in one click (the panel's coating presets): values for the coating fields. A beam
  *  splitter and an AR layer are the same at every wavelength, so their edge does nothing. */
 export const COAT_PRESETS = {

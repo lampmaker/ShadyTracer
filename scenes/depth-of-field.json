@@ -43,9 +43,7 @@
         "coatEdge": 600,
         "coatWidth": 20,
         "coatIndex": 1.8,
-        "translucency": 0,
-        "spreadX": 0,
-        "spreadY": 0
+        "translucency": 0
       },
       "code": "// The base colour and the second in alternate cubes `square` mm on a side, moving with the object -- drawn as a\n// wave, so the edges can be softened and the squares shrunk to dots. s is +1 or -1 at a cube's centre and 0 where\n// two cubes meet; the second colour is where s is above `level`, blended over `softness` either side of it:\n//   level 0            the checker: softness 0 sharp edges, 1 as soft as the wave itself\n//   level up to 1      round dots of the second colour, shrinking, in alternate squares: on a face through cube\n//                      centres, a dot of radius r mm at level = cos(PI * r / square)\n//   level down to -1   the reverse: dots of the base colour in the other squares\n// A cube's centre is at the object's origin (cos, not sin), so the floor's plane z = 0, and a box whose half-sizes\n// are whole squares, have faces through centres. A flat face half a square off that -- where two cubes meet -- has\n// s = 0 all over and shows no squares: change `square` for that object.\nlet q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\nlet w = cos(PI * q / square);\nlet s = w.x * w.y * w.z;\nlet e = max(softness, 1e-4);           // smoothstep's two edges must differ\nm.baseColor = mix(m.baseColor, second, smoothstep(level - e, level + e, s));",
       "ranges": {
@@ -99,9 +97,7 @@
         "coatEdge": 600,
         "coatWidth": 20,
         "coatIndex": 1.8,
-        "translucency": 0,
-        "spreadX": 0,
-        "spreadY": 0
+        "translucency": 0
       },
       "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
     },
@@ -135,9 +131,7 @@
         "coatEdge": 600,
         "coatWidth": 20,
         "coatIndex": 1.8,
-        "translucency": 0,
-        "spreadX": 0,
-        "spreadY": 0
+        "translucency": 0
       },
       "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
     }

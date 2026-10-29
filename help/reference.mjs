@@ -29,7 +29,7 @@ export const FIELD_HELP = {
     anisotropy: 'Roughness different along and across a direction -- brushed or turned metal. 0 the same every way; the direction is the material code\'s `m.tangent`.',
     specular: 'How strong a dielectric\'s reflection is: 0.5 the physical value for its index of refraction, 0 none at all (a pure diffuse surface), 1 twice.',
     specularTint: 'Tints a dielectric\'s reflection with its base colour: 0 white, as real plastics and paints reflect.',
-    transmission: 'How much light passes into the material instead of being scattered off it: 1 glass and clear plastics, 0 everything opaque.',
+    transmission: 'How much light passes into the material instead of being scattered off it: 1 glass and clear plastics, 0 everything opaque. With roughness it is frosted glass -- and a diffuser film is a thin sheet of it: roughness 0.36 spreads a ray head-on through a polycarbonate sheet by about 10 degrees, anisotropy makes the spread elliptical along the grain, up to 10:1.',
     ior: 'The index of refraction, at the d line (587.6 nm): 1.5 a typical glass, 1.333 water, 1.49 PMMA, 1.586 polycarbonate. Sets how much a transparent material bends light and how strongly it reflects.',
     abbe: 'The Abbe number V_d -- how much the index changes with colour: 0 none (no dispersion), 64 a crown glass (BK7), 36 a flint, 30 polycarbonate. Lower spreads colours more. Turning it on is a compile.',
     attenuationDistance: 'The colour depth, in real mm whatever the scene\'s unit: light that has travelled this far inside has been filtered to the base colour, so a thick part is darker than a thin one. 0 off: each crossing tints by the colour, whatever the thickness. Turning it on is a compile.',
@@ -40,8 +40,6 @@ export const FIELD_HELP = {
     coatWidth: 'How sharp the switch is: nm from 10 % to 90 % of the way.',
     coatIndex: 'The coating stack\'s effective index: how fast the edge moves with the angle -- higher moves it less.',
     translucency: 'How much of the diffuse body passes THROUGH the surface instead of back off it, spread evenly on the far side: an opal diffuser, paper, a lampshade. 0 opaque. Every face a ray crosses scatters it, so a sheet scatters twice; a sheet whose datasheet gives a total transmittance T (white, specular 0) is translucency 2T / (1 + T) -- 0.667 for 50 %. Light sampling and the lights\' rays reach through it in Standard and High; Draft follows it as it follows frosted glass. Turning it on is a compile.',
-    spreadX: 'A diffuser film: what the material transmits is spread about the straight-through direction instead of bent, by this many degrees FWHM along the grain (the material code\'s `m.tangent`; else a direction of the surface\'s own) -- at each face a ray crosses, so a thin sheet spreads twice: about FWHM / 1.41 a face for a sheet up to 30 degrees; the library\'s films say what wider ones take. 0 with spread y 0: glass refracts, as always. The film\'s reflection is a smooth mirror. Turning it on is a compile.',
-    spreadY: 'The diffuser film\'s spread across the grain, degrees FWHM a face: the same as spread x for a round film, much less for an elliptical one (60 x 1).',
     emissive: 'An emitter\'s colour. Only its hue counts: the brightness is the luminance.',
     emissiveLuminance: 'An emitter\'s brightness in cd/m²: 300 a monitor, 5000 a frosted bulb, 20 000 a fluorescent tube, 1.6 billion the sun.',
 }

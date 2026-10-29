@@ -35,9 +35,7 @@
         "coatEdge": 600,
         "coatWidth": 20,
         "coatIndex": 1.8,
-        "translucency": 0,
-        "spreadX": 0,
-        "spreadY": 0
+        "translucency": 0
       },
       "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
     },
@@ -74,9 +72,7 @@
         "coatEdge": 600,
         "coatWidth": 20,
         "coatIndex": 1.8,
-        "translucency": 0,
-        "spreadX": 0,
-        "spreadY": 0
+        "translucency": 0
       },
       "code": "// Brushed along the object's own x: the strokes turn with the object (R_local).\n// Positive anisotropy is smooth along the strokes and rough across them, so the\n// highlight is drawn out ACROSS the strokes, as on real brushed metal.\nm.tangent = grainAlong(R_local, VEC3(1.0, 0.0, 0.0));\n// The lines: grooves of different depths, each a little rougher or smoother and darker or\n// lighter than the next. streakWidth and streakLength in mm, real size whatever the scene's\n// unit or the object's scale -- so on a metre-sized object seen whole they are too fine to see,\n// as in life. streaks is how much the lines differ, 0 to 1.\nlet q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\nlet s = streaksAlong(q, VEC3(1.0, 0.0, 0.0), streakWidth, streakLength);\nm.roughness = m.roughness * mix(1.0 - 0.6 * streaks, 1.0 + 0.6 * streaks, s);\nm.baseColor = m.baseColor * mix(1.0 - 0.1 * streaks, 1.0, s);",
       "ranges": {
@@ -131,9 +127,7 @@
         "coatEdge": 600,
         "coatWidth": 20,
         "coatIndex": 1.8,
-        "translucency": 0,
-        "spreadX": 0,
-        "spreadY": 0
+        "translucency": 0
       },
       "code": ""
     },
@@ -170,9 +164,7 @@
         "coatEdge": 600,
         "coatWidth": 20,
         "coatIndex": 1.8,
-        "translucency": 0,
-        "spreadX": 0,
-        "spreadY": 0
+        "translucency": 0
       },
       "code": "// Turned on a lathe: circles about the object's own z axis through its origin.\n// On the axis itself there is no direction (grainAround gives zero): the plain frame.\nlet q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\nm.tangent = grainAround(R_local, p_local, VEC3(0.0, 0.0, 1.0));\n// The rings: each pass of the tool a little different. streakWidth and streakLength in mm,\n// real size; streaks is how much the rings differ, 0 to 1.\nlet s = streaksAround(q, VEC3(0.0, 0.0, 1.0), streakWidth, streakLength);\nm.roughness = m.roughness * mix(1.0 - 0.6 * streaks, 1.0 + 0.6 * streaks, s);\nm.baseColor = m.baseColor * mix(1.0 - 0.1 * streaks, 1.0, s);",
       "ranges": {
@@ -227,9 +219,7 @@
         "coatEdge": 600,
         "coatWidth": 20,
         "coatIndex": 1.8,
-        "translucency": 0,
-        "spreadX": 0,
-        "spreadY": 0
+        "translucency": 0
       },
       "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
     },
@@ -263,9 +253,7 @@
         "coatEdge": 600,
         "coatWidth": 20,
         "coatIndex": 1.8,
-        "translucency": 0,
-        "spreadX": 0,
-        "spreadY": 0
+        "translucency": 0
       },
       "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
     },
@@ -299,9 +287,7 @@
         "coatEdge": 600,
         "coatWidth": 20,
         "coatIndex": 1.8,
-        "translucency": 0,
-        "spreadX": 0,
-        "spreadY": 0
+        "translucency": 0
       },
       "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
     }

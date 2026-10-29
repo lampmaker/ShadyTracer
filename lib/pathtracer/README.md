@@ -399,12 +399,12 @@ pdf, so light sampling and BSDF sampling can be weighted against each other hone
   from the thinner medium to the denser, whichever side the ray is on. The ray inside is in the
   material's medium, as in glass. A sheet of total transmittance T is translucency 2T / (1 + T)
   (`builder/materials.js` translucencyForSheet).
-- **A diffuser film** (0.next; `Material2.spreadX/spreadY`, B2): what the material transmits is
-  spread about the straight-through direction instead of refracted, no net deviation, by that FWHM
-  in degrees along the grain and across it, at each face -- a slope-Gaussian folded back below the
-  surface, exact in its FWHM head-on (`filmSigma`). Its reflection is the smooth Fresnel mirror,
-  taken from the thinner side both ways so a ray inside is never trapped.
-- **The side beyond** (0.next): these three are evaluated below the surface (`Lobes.through`), in
+- **A diffuser film is rough glass** (the user, 2026-10-29: "keep the properties of materials as realistic / physical
+  as possible"): a thin sheet frosted on both faces, anisotropy for an elliptical one (up to 10:1 in alpha,
+  `mfAnisoAlpha`). The library's *diffuser film 10°* is polycarbonate at roughness 0.36, from a walk of two rough faces
+  (`core/transmission.js` roughSheetJS). A lobe of its own (B2: a Gaussian spread about the straight line, no
+  refraction) was built and taken out before release: a thin-sheet model, not a property of a material.
+- **The side beyond** (0.next): rough refraction and translucency are evaluated below the surface (`Lobes.through`), in
   the full renderer only -- Draft, Sketch and the Optics view follow them as they always followed
   frosted glass. Light sampling aims through a face where the medium beyond is air (the face a path
   leaves glass by, `throughLit`), the sky drawn from the far hemisphere there, and the BSDF's half
@@ -413,8 +413,8 @@ pdf, so light sampling and BSDF sampling can be weighted against each other hone
   (photons carry flux, the camera's side L / n^2). To light tracing's splits a transmission there is
   EV_EVAL from LT_MIN_ALPHA up (the camera leaves the photons that light); to the photon map EV_OTHER
   (`LAST_THROUGH`: its gather sees one side). Held by `test/transmission.test.mjs` and, on Dawn,
-  `test/transmission.gpu.mjs`: a slab with one frosted, opal or film face reads the same each way,
-  translucent and film spheres vanish in the furnace.
+  `test/transmission.gpu.mjs`: a slab with one frosted, opal or anisotropically frosted face reads the
+  same each way, translucent spheres vanish in the furnace.
 - **Anisotropy runs along a grain**, `Material2.tangent` (world space; `roadmap/SURFACES.md`
   phase 1). `makeLobes` projects it onto the surface and builds the one frame that eval, pdf,
   sampling and light tracing's `ltConnect` all use; with it, positive anisotropy is smooth along
