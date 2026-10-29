@@ -1,6 +1,6 @@
 {
   "format": "raytracer-scene",
-  "version": 24,
+  "version": 25,
   "title": "Material showcase",
   "nextId": 5,
   "materials": [
@@ -33,7 +33,8 @@
         "coatEdge": 600,
         "coatWidth": 20,
         "coatIndex": 1.8,
-        "abbe": 0
+        "abbe": 0,
+        "translucency": 0
       },
       "code": ""
     },
@@ -66,7 +67,8 @@
         "coatEdge": 600,
         "coatWidth": 20,
         "coatIndex": 1.8,
-        "abbe": 0
+        "abbe": 0,
+        "translucency": 0
       },
       "code": ""
     },
@@ -99,7 +101,8 @@
         "coatEdge": 600,
         "coatWidth": 20,
         "coatIndex": 1.8,
-        "abbe": 0
+        "abbe": 0,
+        "translucency": 0
       },
       "code": "// sandblasted checker: rough glass on alternate cells\nm.roughness = step(0.0, sin(p.y * 4.0) * sin(p.x * 4.0) * sin(p.z * 4.0)) * 0.4;"
     },
@@ -132,7 +135,8 @@
         "coatEdge": 600,
         "coatWidth": 20,
         "coatIndex": 1.8,
-        "abbe": 0
+        "abbe": 0,
+        "translucency": 0
       },
       "code": ""
     },
@@ -165,7 +169,8 @@
         "coatEdge": 600,
         "coatWidth": 20,
         "coatIndex": 1.8,
-        "abbe": 0
+        "abbe": 0,
+        "translucency": 0
       },
       "code": ""
     },
@@ -208,7 +213,8 @@
         "coatEdge": 600,
         "coatWidth": 20,
         "coatIndex": 1.8,
-        "abbe": 0
+        "abbe": 0,
+        "translucency": 0
       },
       "code": "// petrol for x < 0, orange for x > 0, as a light: the colours written directly, not normalised\n// the way the emissive field is, at the field's luminance (cd/m^2) -- which m.emissive arrives\n// holding, as its colour at that luminance\nm.emissive = select(negX, posX, p.x > 0.0) * dot(m.emissive, LUMA_709);",
       "type": "emitter"
@@ -242,7 +248,8 @@
         "coatEdge": 600,
         "coatWidth": 20,
         "coatIndex": 1.8,
-        "abbe": 0
+        "abbe": 0,
+        "translucency": 0
       },
       "code": ""
     },
@@ -275,7 +282,8 @@
         "coatEdge": 600,
         "coatWidth": 20,
         "coatIndex": 1.8,
-        "abbe": 0
+        "abbe": 0,
+        "translucency": 0
       },
       "code": ""
     },
@@ -308,7 +316,8 @@
         "coatEdge": 600,
         "coatWidth": 20,
         "coatIndex": 1.8,
-        "abbe": 0
+        "abbe": 0,
+        "translucency": 0
       },
       "code": ""
     },
@@ -347,7 +356,8 @@
         "coatEdge": 600,
         "coatWidth": 20,
         "coatIndex": 1.8,
-        "abbe": 0
+        "abbe": 0,
+        "translucency": 0
       },
       "code": "// the old palette's ground: a checker in world space, the base colour (petrol) and orange, in\n// squares `square` mm on a side\nlet k = PI / mm(square);\nm.baseColor = mix(m.baseColor, orange, smoothstep(-0.001, 0.001, sin(p.x * k) * sin(p.y * k) * sin(p.z * k)));",
       "ranges": {

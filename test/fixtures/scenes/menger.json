@@ -1,6 +1,6 @@
 {
   "format": "raytracer-scene",
-  "version": 24,
+  "version": 25,
   "title": "Menger cubes",
   "nextId": 3,
   "materials": [
@@ -33,7 +33,8 @@
         "coatEdge": 600,
         "coatWidth": 20,
         "coatIndex": 1.8,
-        "abbe": 0
+        "abbe": 0,
+        "translucency": 0
       },
       "code": ""
     },
@@ -83,7 +84,8 @@
         "coatEdge": 600,
         "coatWidth": 20,
         "coatIndex": 1.8,
-        "abbe": 0
+        "abbe": 0,
+        "translucency": 0
       },
       "code": "// a different material per face direction, blended sharply at the edges (edge: how sharply):\n// -x the base colour, +x a metal, the y faces and the z faces a colour each, at the base roughness\nlet xmin = makeDiffuse(m.baseColor, m.roughness);\nlet xmax = makeMetal(xPlus, metalRough);\nlet ymin = makeDiffuse(yFaces, m.roughness);\nlet ymax = makeDiffuse(yFaces, m.roughness);\nlet zmin = makeDiffuse(zFaces, m.roughness);\nlet zmax = makeDiffuse(zFaces, m.roughness);\nlet e = 1.0 / edge;\nlet nn = normalize(n);\nlet wxmin = pow(clamp(-nn.x, 0.0, 1.0), e); let wxmax = pow(clamp(nn.x, 0.0, 1.0), e);\nlet wymin = pow(clamp(-nn.y, 0.0, 1.0), e); let wymax = pow(clamp(nn.y, 0.0, 1.0), e);\nlet wzmin = pow(clamp(-nn.z, 0.0, 1.0), e); let wzmax = pow(clamp(nn.z, 0.0, 1.0), e);\nlet wsum = wxmin + wxmax + wymin + wymax + wzmin + wzmax + 1e-6;\nm = xmin;\nm = mixMaterials(m, xmax, wxmax / wsum);\nm = mixMaterials(m, ymin, wymin / wsum);\nm = mixMaterials(m, ymax, wymax / wsum);\nm = mixMaterials(m, zmin, wzmin / wsum);\nm = mixMaterials(m, zmax, wzmax / wsum);",
       "ranges": {

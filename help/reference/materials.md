@@ -24,6 +24,7 @@ What each field of a material does. Every field is live -- a slider moves the pi
 | coatEdge | edge (nm) | Where the coating switches, in nm, head-on. At an angle it moves to shorter wavelengths, as real interference filters do. |
 | coatWidth | edge width (nm) | How sharp the switch is: nm from 10 % to 90 % of the way. |
 | coatIndex | stack index | The coating stack's effective index: how fast the edge moves with the angle -- higher moves it less. |
+| translucency | translucency | How much of the diffuse body passes THROUGH the surface instead of back off it, spread evenly on the far side: an opal diffuser, paper, a lampshade. 0 opaque. Every face a ray crosses scatters it, so a sheet scatters twice; a sheet whose datasheet gives a total transmittance T (white, specular 0) is translucency 2T / (1 + T) -- 0.667 for 50 %. Light sampling and the lights' rays reach through it in Standard and High; Draft follows it as it follows frosted glass. Turning it on is a compile. |
 | emissive | colour | An emitter's colour. Only its hue counts: the brightness is the luminance. |
 | emissiveLuminance | luminance (cd/m²) | An emitter's brightness in cd/m²: 300 a monitor, 5000 a frosted bulb, 20 000 a fluorescent tube, 1.6 billion the sun. |
 

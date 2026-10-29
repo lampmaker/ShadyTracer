@@ -82,7 +82,7 @@ for (const [k, u] of Object.entries(S.uniforms || {})) bag[k] = flat(u.def)
 const X0 = 33.5, DX = 0.004, N = 501
 const RAY_F = RAY_BYTES / 4, ITEM_F = SHADE_ITEM_BYTES / 4
 /* sf.nrm in a ShadeItem (scene_api.js): Hit 144 bytes (its Ray 112, s, m, a, insideW, to 16), then the Surface -- its
-   Material2, nrm (16-aligned) with n1, mu1 with v1 -- ending the item's 272: nrm at 272 - 32. Checked below by what it
+   Material2, nrm (16-aligned) with n1, mu1 with v1 -- ending the item's 288: nrm at 288 - 32. Checked below by what it
    holds: a unit vector, about +z, on every hit of the plaster. */
 const NRM_F = (SHADE_ITEM_BYTES - 32) / 4
 function rays() {

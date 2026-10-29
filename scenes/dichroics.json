@@ -1,6 +1,6 @@
 {
   "format": "raytracer-scene",
-  "version": 24,
+  "version": 25,
   "app": "0.77.0+97c3e1f",
   "title": "Dichroics",
   "nextId": 84,
@@ -35,7 +35,8 @@
           "g": 1,
           "b": 1
         },
-        "emissiveLuminance": 0
+        "emissiveLuminance": 0,
+        "translucency": 0
       },
       "code": "// Material code: runs once per hit, after the fields above are put into m.\n",
       "relief": {
@@ -91,7 +92,8 @@
           "g": 1,
           "b": 1
         },
-        "emissiveLuminance": 0
+        "emissiveLuminance": 0,
+        "translucency": 0
       },
       "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
     },
@@ -124,7 +126,8 @@
           "g": 1,
           "b": 1
         },
-        "emissiveLuminance": 0
+        "emissiveLuminance": 0,
+        "translucency": 0
       },
       "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
     },
@@ -157,7 +160,8 @@
           "g": 1,
           "b": 1
         },
-        "emissiveLuminance": 0
+        "emissiveLuminance": 0,
+        "translucency": 0
       },
       "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
     },
@@ -190,7 +194,8 @@
           "g": 1,
           "b": 1
         },
-        "emissiveLuminance": 0
+        "emissiveLuminance": 0,
+        "translucency": 0
       },
       "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
     },
@@ -223,7 +228,8 @@
           "g": 1,
           "b": 1
         },
-        "emissiveLuminance": 0
+        "emissiveLuminance": 0,
+        "translucency": 0
       },
       "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
     },
@@ -256,7 +262,8 @@
           "g": 1,
           "b": 1
         },
-        "emissiveLuminance": 0
+        "emissiveLuminance": 0,
+        "translucency": 0
       },
       "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
     },
@@ -289,7 +296,8 @@
           "g": 1,
           "b": 1
         },
-        "emissiveLuminance": 0
+        "emissiveLuminance": 0,
+        "translucency": 0
       },
       "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
     }

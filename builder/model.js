@@ -138,7 +138,13 @@ export const FORMAT = 'raytracer-scene'
    and its relief are read in that frame instead of the object's own. The user, 2026-10-21: the grain of a table's top
    and of its legs, one wood, ran the same way in each, so the top showed end grain. Version 23 files have none:
    nothing to change. A builder of 23 refuses a file of 24 rather than lose every pattern turned on its first save. */
-export const VERSION = 24
+/* 25: TRANSLUCENCY AND A DIFFUSER FILM ON A MATERIAL (0.next; roadmap/DIFFUSERS.md, materials_pbr.js THE SIDE BEYOND):
+   `translucency`, the share of the diffuse base that passes through the surface, Lambertian (an opal sheet), and
+   `spreadX` / `spreadY`, a transmission spread about the straight-through direction by that FWHM in degrees (a diffuser
+   film). Every material has the fields; version 24 files get them at 0, which is what they rendered: an opaque base,
+   glass that refracts (v24to25). A builder of 24 refuses a file of 25 rather than read the fields as parameters of the
+   material's own and render the diffuser opaque. */
+export const VERSION = 25
 /** The most copies an array has: each is a walk of its children at every step near them, until a BVH can tell which
  *  copies are near (call 4: chosen, not measured). */
 export const ARRAY_MAX = 16
@@ -2853,6 +2859,14 @@ export function upgrade(doc) {
     if (d.version === 21) d.version = 22          // nothing to change: haze boxes are new
     if (d.version === 22) d.version = 23          // nothing to change: a group's material is new
     if (d.version === 23) d.version = 24          // nothing to change: pattern frames are new
+    if (d.version === 24) d = v24to25(d)
+    return d
+}
+
+/** 24 -> 25: every material gets translucency and a film's spread at 0 -- an opaque base, refracting glass, as it rendered. */
+function v24to25(d) {
+    d.materials = (d.materials || []).map(m => withFieldDefaults(m))
+    d.version = 25
     return d
 }
 
