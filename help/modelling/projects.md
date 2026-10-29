@@ -17,7 +17,8 @@ writes at once, if you like to press it.
 - **Undo** (Ctrl Z, Edit, or ↶ on the menu bar) of a change to the list of scenes -- a scene deleted, a copy sent to
   another scene -- keeps you on the scene you are working on.
 - The **project's name** over the tree, or **File › Projects…**, opens the **Project panel**, a tab beside the picture:
-  - your projects in this browser: open, new, rename, duplicate, download, delete;
+  - your projects in this browser: open, new, rename, duplicate, download, delete. Opening one keeps you in the panel
+    with its scenes, and nothing is compiled until you click the scene you want;
   - this project's scenes, larger;
   - the **examples**, by who they are for, each with what it shows: a click adds a copy to the project.
 - Right-click a row in the tree to copy or move it to another scene.

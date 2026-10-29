@@ -441,7 +441,8 @@ export function installBuilderTree(container, BUILDER, { onStatus = () => { }, o
         P.removeScene(p, key)
         return next
     }, { follow: true })
-    const enterScene = key => { if (enter(key)) { selectedId = here(BUILDER.doc.root.id); rebuild(); onSelect(selectedMid()); apply() } }
+    /* the compile's promise, for a caller that must know how it ended (the Project panel's host: app.html openChosen) */
+    const enterScene = key => { if (enter(key)) { selectedId = here(BUILDER.doc.root.id); rebuild(); onSelect(selectedMid()); return apply() } }
     /* THE SCENES' OPERATIONS (the scene cards', builder/scenestrip.js, and the Project panel's), each through
        sceneEdit: one undo step, and a compile when the scene being worked on changes. A rename touches no shader;
        it is the scene row's label, as Properties renames it. */

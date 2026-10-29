@@ -13,7 +13,8 @@
 //
 // OPENING ANOTHER is the same, from the list: what this tab has is saved first, its project let go, the other
 // taken or copied. The page does the rest through `apply(workspace, item)` -- the builder's project replaced,
-// the renderer's settings and the item editor put back, the scene compiled -- since that needs the page.
+// the renderer's settings and the item editor put back, the scene compiled (or, from the Project panel, left for the
+// scene chosen there) -- since that needs the page.
 //======================================================================================================================
 
 import * as P from '../builder/project.js'
@@ -25,7 +26,7 @@ const copyName = name => `${name} (copy)`
  * @param tabs        tabs.js's createTabs
  * @param autosave    autosave.js's createAutosave
  * @param firstVisit  async () => a project object: a first visit's (the demo scene)
- * @param apply       async (workspace, item, info) => void: the page shows a project read from the store
+ * @param apply       async (workspace, item, info, how) => void: the page shows a project read from the store (`how` open's)
  * @param say         a status line
  */
 export function createSession({ store, tabs, autosave, firstVisit, apply = async () => { }, say = () => { } }) {
@@ -74,8 +75,9 @@ export function createSession({ store, tabs, autosave, firstVisit, apply = async
                 return { ...r, note: `'${latest.name}' could not be read (${why}). It is kept unchanged: File › Projects… can download it` }
             }
         },
-        /** Open project `id` here: what this tab has saved first, then it is taken (or copied) and shown. */
-        async open(id) {
+        /** Open project `id` here: what this tab has saved first, then it is taken (or copied) and shown. `how` goes to
+         *  the page's apply as it is: { compile: false } from the Project panel, where a scene is chosen next. */
+        async open(id, how = {}) {
             if (id === autosave.id) return say('that is the project open here')
             const meta = await store.meta(id)
             await S.saveNow()
@@ -86,7 +88,7 @@ export function createSession({ store, tabs, autosave, firstVisit, apply = async
                 // the one asked for cannot be read: this tab stays on what it had
                 try { r = await take(meta) } catch (e) { autosave.target(before); throw e }
                 if (before.id) tabs.release(before.id)
-                await apply(r.workspace, r.item, S.info())
+                await apply(r.workspace, r.item, S.info(), how)
                 autosave.since()
             } finally { autosave.hold(false) }
             say(r.note ?? `opened ${meta.name}`)
