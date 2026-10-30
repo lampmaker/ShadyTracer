@@ -64,12 +64,17 @@ export const FIELDS = {
     coatEdge:           { type: 'f32', def: 600.0, gui: { min: 380, max: 780, step: 0.5 }, coat: true },
     coatWidth:          { type: 'f32', def: 20.0, gui: { min: 0, max: 200, step: 0.5 }, coat: true },
     coatIndex:          { type: 'f32', def: 1.8, gui: { min: 1, max: 3, step: 0.01 }, coat: true },
-    /* TRANSLUCENCY (0.next; core/materials.js translucency, roadmap/DIFFUSERS.md B1): the share of the diffuse base that
-       passes THROUGH the surface instead of back off it, Lambertian on the far side -- an opal sheet, paper, a lampshade.
-       Every face a ray crosses scatters it. 0 = an opaque base, the default. ONLY IN THE SHADER WHILE ABOVE 0 (`only`, as
-       the colour depth): a file without it compiles to the text it did, and the first value is a compile. For a sheet
-       whose datasheet gives a total transmittance T: translucencyForSheet (below). */
-    translucency:       { type: 'f32', def: 0.0, gui: { min: 0, max: 1, step: 0.001 }, only: v => v > 0 },
+    /* HAZE (0.next; core/materials.js haze, roadmap/DIFFUSERS.md B1): of what passes through the surface (transmission),
+       the share diffused -- Lambertian on the far side -- instead of going straight, as ASTM D1003 defines a sheet's haze.
+       Clear acrylic with a veil is transmission 1 and haze 0.1; an opal sheet, paper or a lampshade haze 1, with
+       transmission what passes. Roughness is the other, narrow blur (a datasheet's clarity). Every face a ray crosses
+       scatters it: for a sheet's datasheet numbers, faceForSheet (below). 0 = all that passes refracts, the default and
+       every material before it. It was `translucency`, a share of the diffuse base, which transmission 1 leaves none of
+       -- "translucency only works when transmission is < 1" (the user, 2026-10-30). ONLY IN THE SHADER WHILE ABOVE 0
+       (`only`, as the colour depth): a file without it compiles to the text it did, and the first value is a compile.
+       Shown whatever transmission is (its help says it is a share of it): showing it only above 0 would rebuild the
+       panel under a transmission slider being dragged up from 0. */
+    haze:               { type: 'f32', def: 0.0, gui: { min: 0, max: 1, step: 0.001 }, only: v => v > 0 },
     emissive:           { type: 'vec3<f32>', def: { r: 1, g: 1, b: 1 } },
     emissiveLuminance:  { type: 'f32', def: 0.0, gui: { min: 0, step: 1 } },
 }
@@ -140,11 +145,13 @@ export const make = {
     emissive: (color, luminance = 1000) => ({ ...defaults(), emissive: color, emissiveLuminance: luminance, ior: 1 }),
 }
 
-/** A SHEET'S TRANSLUCENCY FROM ITS TOTAL TRANSMITTANCE (the datasheet's T, 0..1, both faces, no absorption): each face
- *  passes t of the light and reflects 1 - t, diffusely, and the light between the two adds up to
- *  T = t^2 / (1 - (1 - t)^2) = t / (2 - t), so t = 2 T / (1 + T). For a white base with specular 0 (no gloss on top,
- *  which would reflect a few % more at each face); core/test/transmission.test.mjs walks it. */
-export const translucencyForSheet = T => { const t = Math.min(1, Math.max(0, +T || 0)); return 2 * t / (1 + t) }
+/** A SHEET'S FACES FROM ITS DATASHEET (0.next): a sheet whose every transmitted ray is diffused (haze 1: an opal sheet,
+ *  paper) and whose datasheet gives a total transmittance T (0..1, both faces, no absorption). Each face passes t and
+ *  reflects 1 - t, diffusely, and the light between the two adds up to T = t^2 / (1 - (1 - t)^2) = t / (2 - t), so the
+ *  face's transmission is t = 2 T / (1 + T), its haze 1. For a white base with specular 0 (no gloss on top, which would
+ *  reflect a few % more at each face); core/test/transmission.test.mjs walks it. A clear sheet's haze compounds over its
+ *  two faces about as 1 - (1 - h)^2 (the help's table, from the same walk: hazeOfSheetJS). */
+export const faceForSheet = T => { const t = Math.min(1, Math.max(0, +T || 0)); return { transmission: 2 * t / (1 + t), haze: 1 } }
 
 /** What + under Materials offers: a label and the parameters it starts from. */
 export const PRESETS = {
@@ -162,8 +169,8 @@ export const PRESETS = {
  *  emission alone -- a surface that emits ends every path that reaches it (materials_pbr.js), so
  *  its other fields never did anything; a surface and a detector have no emission; a limiter is
  *  not in the picture at all. */
-const SURFACE_FIELDS = ['baseColor', 'metallic', 'roughness', 'anisotropy', 'specular', 'specularTint', 'transmission', 'ior',
-    'abbe', 'attenuationDistance', 'coating', 'coatLow', 'coatHigh', 'coatEdge', 'coatWidth', 'coatIndex', 'translucency']
+const SURFACE_FIELDS = ['baseColor', 'metallic', 'roughness', 'anisotropy', 'specular', 'specularTint', 'transmission', 'haze', 'ior',
+    'abbe', 'attenuationDistance', 'coating', 'coatLow', 'coatHigh', 'coatEdge', 'coatWidth', 'coatIndex']
 export const FIELDS_OF = {
     surface: SURFACE_FIELDS,
     detector: SURFACE_FIELDS,
@@ -173,7 +180,7 @@ export const FIELDS_OF = {
 /** What the panel calls a field, where its name says too little */
 export const FIELD_LABELS = { emissive: 'colour', emissiveLuminance: 'luminance (cd/m\u00b2)',
     attenuationDistance: 'colour depth (mm)', abbe: 'Abbe number (dispersion)', coating: 'coating', coatLow: 'R below edge', coatHigh: 'R above edge',
-    coatEdge: 'edge (nm)', coatWidth: 'edge width (nm)', coatIndex: 'stack index', translucency: 'translucency' }
+    coatEdge: 'edge (nm)', coatWidth: 'edge width (nm)', coatIndex: 'stack index', haze: 'haze' }
 /** What a coating is for, put on in one click (the panel's coating presets): values for the coating fields. A beam
  *  splitter and an AR layer are the same at every wavelength, so their edge does nothing. */
 export const COAT_PRESETS = {

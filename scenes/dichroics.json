@@ -36,7 +36,7 @@
           "b": 1
         },
         "emissiveLuminance": 0,
-        "translucency": 0
+        "haze": 0
       },
       "code": "// Material code: runs once per hit, after the fields above are put into m.\n",
       "relief": {
@@ -93,7 +93,7 @@
           "b": 1
         },
         "emissiveLuminance": 0,
-        "translucency": 0
+        "haze": 0
       },
       "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
     },
@@ -127,7 +127,7 @@
           "b": 1
         },
         "emissiveLuminance": 0,
-        "translucency": 0
+        "haze": 0
       },
       "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
     },
@@ -161,7 +161,7 @@
           "b": 1
         },
         "emissiveLuminance": 0,
-        "translucency": 0
+        "haze": 0
       },
       "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
     },
@@ -195,7 +195,7 @@
           "b": 1
         },
         "emissiveLuminance": 0,
-        "translucency": 0
+        "haze": 0
       },
       "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
     },
@@ -229,7 +229,7 @@
           "b": 1
         },
         "emissiveLuminance": 0,
-        "translucency": 0
+        "haze": 0
       },
       "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
     },
@@ -263,7 +263,7 @@
           "b": 1
         },
         "emissiveLuminance": 0,
-        "translucency": 0
+        "haze": 0
       },
       "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
     },
@@ -297,7 +297,7 @@
           "b": 1
         },
         "emissiveLuminance": 0,
-        "translucency": 0
+        "haze": 0
       },
       "code": "// Material code: runs once per hit, after the fields above are put into m.\n"
     }

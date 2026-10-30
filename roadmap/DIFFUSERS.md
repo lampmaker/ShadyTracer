@@ -1,9 +1,33 @@
 # Translucent and scattering materials: the options
 
-**STATUS (2026-10-29, later).** The user chose **B1 and B2 first**. B1 is **built (0.next), not yet seen on hardware**,
+**STATUS (2026-10-30).** The user chose **B1 and B2 first**. B1 is **built (0.next), not yet seen on hardware**,
 together with what it rests on, evaluable rough transmission. **B2 was built and taken out again** before any release.
-How it works is `lib/pathtracer/README.md` § *Materials* (*Translucency*, *A diffuser film is rough glass*, *The side
+**B1's controls became transmission and haze** (below). How it works is `lib/pathtracer/README.md` § *Materials*
+(*Transmission and haze*, *A face that both refracts and diffuses*, *A diffuser film is rough glass*, *The side
 beyond*). What follows below was written before the build and is kept as it was, but for these notes:
+
+- **Translucency became haze (2026-10-30).** The user: *"right now translucency only works when transmission is < 1. I
+  want controls that have a realistic and intuitive feel; a transmissive material that has a bit of scatter for
+  example."* Translucency was a share of the diffuse base, which is weighted by 1 − transmission, so it did nothing at
+  transmission 1. Now:
+  - **transmission** is all that passes;
+  - **haze** is the share of it diffused, as a datasheet's haze (ASTM D1003);
+  - **roughness** is the narrow blur (a datasheet's clarity).
+
+  It is the same BSDF in other variables (`makeLobes`: refracted T (1 − H), diffused through T H, reflected 1 − T), so
+  haze 0 is every material as it was. A clear sheet's haze from its faces' is a walk, `core/transmission.js`
+  hazySheetJS. The library's *hazy acrylic (10 % haze)* is haze 0.059 a face.
+  - **What building it found.** A face that both refracts and diffuses, seen from INSIDE the glass, was wrong. The
+    base was coupled to albedo tables made for light from the thinner side, and had no pick where TIR closes the gloss.
+    A hazy glass sphere read 1.23 in the furnace with light sampling and 0.92 without (Dawn over lavapipe). Every
+    transmission between 0 and 1 always had this fault; nothing had tested it.
+  - **The fix:** from inside, the face is the area mix the layered model is from outside, one part drawn per vertex.
+    The share that refracts is clear glass, the rest the diffuse face, the same surface from either side
+    (`processMaterial_advanced`). It now reads 0.9995 and 1.0001 at 2000 march steps; at 400 steps it read 0.992,
+    because light diffused in past the critical angle walks long. Half glass, half white reads 0.998 at the most
+    bounces allowed (40), with the cap's trend: 0.977 at 20, 0.994 at 30.
+  - **Thickness is the next step:** haze scatters at the faces. A thick block that is milkier than a thin one is
+    option A, chosen with the user to come after this is seen.
 
 - **Where B1 changed in the building.** Its far side first had the value t base (1 − Ec(o)) / π, with the ray taking
   n0 / n1 as it came. Seen from inside glass (n 1.5), the coat's Fresnel and its albedo tables disagreed, and a glossy
@@ -32,9 +56,9 @@ beyond*). What follows below was written before the build and is kept as it was,
       light at wide angles than the film it stands for (inferred from the forms, not measured).
   - **The physical way to both** would be a microfacet refraction with a Gaussian (Beckmann-like) slope distribution
     and free alphas, which refracts and reflects as a surface does. It is not built.
-- **Measured on Dawn over lavapipe (a software adapter: agreement, never speed).** A slab with one frosted, opal or
-  anisotropically frosted face, seen from below under the sun, reads the same with light sampling and the sun's photons
-  on or off, each way round. Translucent spheres vanish in the furnace (`core/test/transmission.gpu.mjs`).
+- **Measured on Dawn over lavapipe (a software adapter: agreement, never speed).** A slab with one frosted, opal,
+  anisotropically frosted or hazy face, seen from below under the sun, reads the same with light sampling and the sun's
+  photons on or off, each way round. Opal and hazy-glass spheres vanish in the furnace (`core/test/transmission.gpu.mjs`).
   - **For the bench:** `furnace-beyond` and `transmission-parity` (`lib/pathtracer/tests.js`).
 - **Still open:** A (volume scattering) and MEDIA.md phase 2, as below.
   - **The lights' photons through these faces (CLS_LIGHTS)** are checked only on hardware, by `light-vs-emitter`'s

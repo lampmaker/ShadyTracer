@@ -81,12 +81,12 @@ export function lightBenchDoc() {
     // A DIFFUSER over the lamp, between its top face and the camera: rough glass, 4 cm thick for the same reason
     M.addObject(d, 'root', { id: 'benchdiffuser', label: 'diffuser', primitive: 'box', material: 'benchfrost',
                              params: { size: { x: 0.6, y: 0.6, z: 0.02 }, rounding: 0 }, transform: at(0, 0, H + 0.1) })
-    /* ...AND THE SAME OF AN OPAL SHEET (translucency, B1), 0.next: the light's photons reach the camera out of it through
+    /* ...AND THE SAME OF AN OPAL SHEET (haze 1, B1), 0.next: the light's photons reach the camera out of it through
        its top face (ltConnect, over n^2), and the camera's paths leave them that light (CLS_LIGHTS: a transmission is
        EV_EVAL there) -- as they now do out of the frosted one. Its own object, not the frosted one's material changed by
-       a row: translucency is in the shader only while above 0 */
+       a row: haze is in the shader only while above 0 */
     M.addMaterial(d, { id: 'benchopal', label: 'opal', params: { baseColor: { r: 1, g: 1, b: 1 }, metallic: 0, roughness: 1,
-                                                                specular: 0, transmission: 0, ior: 1.5, translucency: 0.667 } })
+                                                                specular: 0, transmission: 0.667, ior: 1.5, haze: 1 } })
     M.addObject(d, 'root', { id: 'benchopaldiff', label: 'opal diffuser', primitive: 'box', material: 'benchopal',
                              params: { size: { x: 0.6, y: 0.6, z: 0.02 }, rounding: 0 }, transform: at(0, 0, H + 0.1) })
 
@@ -281,7 +281,7 @@ export function lightBench() {
             + ' light\'s meanLuma in Draft and Optics within 0.02% of full\'s. (A hair over 1 had been predicted, for'
             + ' Draft\'s emitter lighting the floor a sample late; the runner\'s warm-up lists it first -- clearLearned.)'
             + ' Before 2026-10-02 the light read low in Draft -- inferred from the code, never pressed: its photons kept'
-            + ' only their MIS share of the floor\'s direct light. Since 0.next an OPAL DIFFUSER (translucency) over the'
+            + ' only their MIS share of the floor\'s direct light. Since 0.next an OPAL DIFFUSER (haze 1) over the'
             + ' disc too, beside the frosted one: the light\'s photons now connect out of each through its top face and the'
             + ' camera\'s paths leave them that light, so those light rows are as quiet as their emitters\' and must still'
             + ' read 1 (roadmap/DIFFUSERS.md). Loads its own scene and camera.',

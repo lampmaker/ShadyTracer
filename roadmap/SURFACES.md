@@ -387,8 +387,8 @@ frozen copy, from before rough stone carried its own, has six). Code saved befor
 
 ### Phase 7 — The missing lobes
 
-- **Translucency and forward-scattering films** (opal sheets, narrow-angle diffusers) — built in 0.next as
-  `DIFFUSERS.md` B1 and B2, with evaluable rough glass; not yet seen (PLAN.md).
+- **Haze and forward-scattering films** (opal sheets, hazy plastics, narrow-angle diffusers) — built in 0.next as
+  `DIFFUSERS.md` B1 (transmission and haze) with evaluable rough glass, films as rough glass; not yet seen (PLAN.md).
 - **Sheen** (velvet, peach fuzz, the grazing brightening of dust) — commented out of `Material2`.
 - **A coat over anything** — a clear dielectric over a metal (lacquer, car paint), gone with
   `clearcoat`.

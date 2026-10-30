@@ -392,19 +392,32 @@ pdf, so light sampling and BSDF sampling can be weighted against each other hone
   its own draw implies, through the refraction's Jacobian (`lobesThroughEval`, *The side beyond*
   below). Single scattering loses what masking takes at grazing angles inside, so rough glass
   reads under 1 in the furnace.
-- **Translucency** (0.next; `Material2.translucency`, `roadmap/DIFFUSERS.md` B1): a share of the
-  diffuse base passes THROUGH the surface instead of back off it, in the same form on the far side
-  as the share it reflects -- an opal diffuser, paper, a lampshade. Every face a ray crosses
-  scatters it, and each face is the same surface from either side: its gloss takes the index step
-  from the thinner medium to the denser, whichever side the ray is on. The ray inside is in the
-  material's medium, as in glass. A sheet of total transmittance T is translucency 2T / (1 + T)
-  (`builder/materials.js` translucencyForSheet).
+- **Transmission and haze** (0.next; `Material2.haze`, `roadmap/DIFFUSERS.md` B1): transmission is how much of what
+  the gloss does not reflect passes THROUGH the surface; haze is the share of that diffused instead of going straight,
+  as a datasheet's haze (ASTM D1003). Of the body: 1 - T reflected diffusely, T (1 - H) refracted (smooth or rough by
+  roughness), T H diffused through in the same form on the far side as the share reflected (`makeLobes`;
+  `materials.js` `refractShare`). Haze 0 is every material as it was. Clear acrylic with a veil is T 1, H 0.06; an opal
+  diffuser, paper or a lampshade H 1. Every face a ray crosses scatters it. A face with haze 1 is the same surface from
+  either side: its gloss takes the index step from the thinner medium to the denser, whichever side the ray is on.
+  The ray inside is in the material's medium, as in glass. An opal sheet of total transmittance T is transmission
+  2T / (1 + T) a face (`builder/materials.js` faceForSheet); a clear sheet's haze from its faces' is a walk
+  (`core/transmission.js` hazySheetJS: 0.06 a face is 10 % for the sheet at n 1.49). Haze replaced *translucency*,
+  a share of the diffuse base alone, before release: at transmission 1 there is no base, so clear glass could not
+  have a little scatter (the user, 2026-10-30).
+- **A face that both refracts and diffuses, seen from inside** (0.next; `processMaterial_advanced`): one of two parts
+  drawn per vertex. With probability T (1 - H) it is clear glass, its true index ratio. Otherwise it is the diffuse
+  face, the same surface from either side. This is the area mix the layered model is from outside; inside, the
+  layered model coupled its base to albedo tables made for light from the thinner side, and gave the base no pick
+  where TIR closes the gloss. A hazy glass sphere read 1.23 in the furnace with light sampling and 0.92 without
+  (Dawn); now 0.9995 and 1.0001, at 2000 march steps. Light diffused in past the critical angle walks long:
+  400 steps cut it to 0.992. Transmission between 0 and 1 without haze (half glass, half white) always had the same
+  fault, and now reads 0.998 at the bounce cap of 40, as the cap's trend says (0.977 at 20, 0.994 at 30).
 - **A diffuser film is rough glass** (the user, 2026-10-29: "keep the properties of materials as realistic / physical
   as possible"): a thin sheet frosted on both faces, anisotropy for an elliptical one (up to 10:1 in alpha,
   `mfAnisoAlpha`). The library's *diffuser film 10°* is polycarbonate at roughness 0.36, from a walk of two rough faces
   (`core/transmission.js` roughSheetJS). A lobe of its own (B2: a Gaussian spread about the straight line, no
   refraction) was built and taken out before release: a thin-sheet model, not a property of a material.
-- **The side beyond** (0.next): rough refraction and translucency are evaluated below the surface (`Lobes.through`), in
+- **The side beyond** (0.next): rough refraction and haze are evaluated below the surface (`Lobes.through`), in
   the full renderer only -- Draft, Sketch and the Optics view follow them as they always followed
   frosted glass. Light sampling aims through a face where the medium beyond is air (the face a path
   leaves glass by, `throughLit`), the sky drawn from the far hemisphere there, and the BSDF's half
@@ -413,8 +426,8 @@ pdf, so light sampling and BSDF sampling can be weighted against each other hone
   (photons carry flux, the camera's side L / n^2). To light tracing's splits a transmission there is
   EV_EVAL from LT_MIN_ALPHA up (the camera leaves the photons that light); to the photon map EV_OTHER
   (`LAST_THROUGH`: its gather sees one side). Held by `test/transmission.test.mjs` and, on Dawn,
-  `test/transmission.gpu.mjs`: a slab with one frosted, opal or anisotropically frosted face reads the
-  same each way, translucent spheres vanish in the furnace.
+  `test/transmission.gpu.mjs`: a slab with one frosted, opal, anisotropically frosted or hazy face reads
+  the same each way, opal and hazy-glass spheres vanish in the furnace.
 - **Anisotropy runs along a grain**, `Material2.tangent` (world space; `roadmap/SURFACES.md`
   phase 1). `makeLobes` projects it onto the surface and builds the one frame that eval, pdf,
   sampling and light tracing's `ltConnect` all use; with it, positive anisotropy is smooth along

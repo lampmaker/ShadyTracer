@@ -52,9 +52,9 @@ export const ITEMS = [
     { id: 'firefly-clamp', kind: 'never', src: T, quote: 'The two firefly-clamp rows are in no recorded press.', ch: 'checking', title: 'the firefly-clamp rows',
         note: 'Two rows of the photometry test, which itself passes; these two have never been pressed.' },
     { id: 'furnace-beyond', kind: 'never', src: T, status: 'open', quote: 'Whether what is evaluated below a surface since', ch: 'microfacets', title: 'the furnace, the side beyond',
-        note: 'Translucent spheres, and frosted glass with light sampling through it, anisotropic too: built, checked on a software GPU, never pressed on a card.' },
+        note: 'Opal and hazy-glass spheres, and frosted glass with light sampling through it, anisotropic too: built, checked on a software GPU, never pressed on a card.' },
     { id: 'transmission-parity', kind: 'never', src: T, status: 'open', quote: 'Whether light sampling through the face a path leaves glass by', ch: 'microfacets', title: 'light through a diffuser',
-        note: 'Light sampling and the sun\'s photons through frosted glass, an opal sheet and anisotropically frosted glass, against the camera\'s own paths: built, never pressed on a card.' },
+        note: 'Light sampling and the sun\'s photons through frosted glass, an opal sheet, anisotropically frosted glass and hazy glass, against the camera\'s own paths: built, never pressed on a card.' },
 
     /* MEASURED, NOT EXPLAINED: each in its document's words */
     { id: 'rough-glass', kind: 'unexplained', src: 'roadmap/SURFACES.md', quote: '0.9440 in every run since (946 wide)', ch: 'checking', title: 'rough glass reads 0.944',

@@ -35,7 +35,7 @@
         "coatWidth": 20,
         "coatIndex": 1.8,
         "abbe": 0,
-        "translucency": 0
+        "haze": 0
       },
       "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   R_local  that frame's rotation to the world, for a direction written in it\n//   S_local  its scale: p_local * S_local is in scene units, and metres(x) is x m in them\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. brushed along the object's x, for an anisotropy above 0 (or turned: grainAround):\n//   m.tangent = grainAlong(R_local, VEC3(1.0, 0.0, 0.0));\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
     },
@@ -69,7 +69,7 @@
         "coatWidth": 20,
         "coatIndex": 1.8,
         "abbe": 0,
-        "translucency": 0
+        "haze": 0
       },
       "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   R_local  that frame's rotation to the world, for a direction written in it\n//   S_local  its scale: p_local * S_local is in scene units, and metres(x) is x m in them\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. brushed along the object's x, for an anisotropy above 0 (or turned: grainAround):\n//   m.tangent = grainAlong(R_local, VEC3(1.0, 0.0, 0.0));\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n",
       "type": "emitter"
@@ -111,7 +111,7 @@
         "coatWidth": 20,
         "coatIndex": 1.8,
         "abbe": 0,
-        "translucency": 0
+        "haze": 0
       },
       "code": "// vnoise3: value noise, [-1, 1]. The base colour and roughness where it is low, the second ones\n// where it is high; one cell every `size` mm.\nlet q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\nlet t = 0.5 + 0.5 * vnoise3(q / size, 1u).w;\nm.baseColor = mix(m.baseColor, second, t);\nm.roughness = mix(m.roughness, secondRough, t);",
       "ranges": {
@@ -167,7 +167,7 @@
         "coatWidth": 20,
         "coatIndex": 1.8,
         "abbe": 0,
-        "translucency": 0
+        "haze": 0
       },
       "code": "// gnoise3: gradient noise, about [-1, 1]: smoother and less grid-bound than value noise. The base\n// colour and roughness where it is low, the second ones where it is high; one cell every `size` mm.\nlet q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\nlet t = 0.5 + 0.5 * gnoise3(q / size, 2u).w;\nm.baseColor = mix(m.baseColor, second, t);\nm.roughness = mix(m.roughness, secondRough, t);",
       "ranges": {
@@ -225,7 +225,7 @@
         "coatWidth": 20,
         "coatIndex": 1.8,
         "abbe": 0,
-        "translucency": 0
+        "haze": 0
       },
       "code": "// fbm3: five octaves, bending sine bands into veins -- polished marble. size is the noise's cell\n// in mm; veins how many bands to a cell; turbulence how far it bends them; sharpness how thin.\nlet q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\nlet nz = fbm3(q / size, 3u, 5u, 2.0, 0.5);\nlet v = pow(1.0 - abs(sin(veins * (q.x / size + turbulence * nz.w))), sharpness);\nm.baseColor = mix(m.baseColor, vein, v);",
       "ranges": {
@@ -292,7 +292,7 @@
         "coatWidth": 20,
         "coatIndex": 1.8,
         "abbe": 0,
-        "translucency": 0
+        "haze": 0
       },
       "code": "// worley3 F1: the distance to the nearest cell point -- round spots at each point, on the base\n// colour. spacing is the distance between points in mm; spotRadius a spot's size, as a share of it.\nlet q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\nlet w = worley3(q / spacing, 4u);\nm.baseColor = mix(spot, m.baseColor, smoothstep(spotRadius - softness, spotRadius + softness, w.x));",
       "ranges": {
@@ -354,7 +354,7 @@
         "coatWidth": 20,
         "coatIndex": 1.8,
         "abbe": 0,
-        "translucency": 0
+        "haze": 0
       },
       "code": "// worley3 F2 - F1: zero on a cell border -- the creases of grained leather, rougher and darker.\n// The hide is the base colour and roughness; cell is a grain's size in mm.\nlet q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\nlet w = worley3(q / cell, 5u);\nlet crease = 1.0 - smoothstep(0.0, creaseWidth, w.y - w.x);\nm.baseColor = mix(m.baseColor, creaseColor, crease);\nm.roughness = mix(m.roughness, creaseRough, crease);",
       "ranges": {
@@ -422,7 +422,7 @@
         "coatWidth": 20,
         "coatIndex": 1.8,
         "abbe": 0,
-        "translucency": 0
+        "haze": 0
       },
       "code": "// worley3 cell number: each grain its own mineral -- light (the base colour), pink or dark --\n// as in granite. grain is a crystal's size in mm; the shares are how many are pink and dark.\nlet q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\nlet w = worley3(q / grain, 6u);\nlet c = select(select(m.baseColor, pink, w.z < darkShare + pinkShare), dark, w.z < darkShare);\nm.baseColor = c * (1.0 - edge + edge * smoothstep(0.0, 0.1, w.y - w.x));",
       "ranges": {
@@ -481,7 +481,7 @@
         "coatWidth": 20,
         "coatIndex": 1.8,
         "abbe": 0,
-        "translucency": 0
+        "haze": 0
       },
       "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   R_local  that frame's rotation to the world, for a direction written in it\n//   S_local  its scale: p_local * S_local is in scene units, and metres(x) is x m in them\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. brushed along the object's x, for an anisotropy above 0 (or turned: grainAround):\n//   m.tangent = grainAlong(R_local, VEC3(1.0, 0.0, 0.0));\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
     },
@@ -529,7 +529,7 @@
         "coatWidth": 20,
         "coatIndex": 1.8,
         "abbe": 0,
-        "translucency": 0
+        "haze": 0
       },
       "code": "// worley3 cell number: each grain its own mineral -- light (the base colour), pink or dark --\n// as in granite. grain is a crystal's size in mm; the shares are how many are pink and dark.\nlet q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\nlet w = worley3(q / grain, 6u);\nlet c = select(select(m.baseColor, pink, w.z < darkShare + pinkShare), dark, w.z < darkShare);\nm.baseColor = c * (1.0 - edge + edge * smoothstep(0.0, 0.1, w.y - w.x));",
       "relief": {

@@ -329,10 +329,10 @@ for the help.
 
 ![The Library beside the Product shot example: shapes, modifiers, lights and materials as rendered pictures, with search, filters and tags; the perfume bottle selected in the picture](docs/screenshots/library.jpg)
 
-- **43 built-in items**: the 26 shapes, 8 modifiers, 3 lights and 6 material presets; **42 named
+- **43 built-in items**: the 26 shapes, 8 modifiers, 3 lights and 6 material presets; **45 named
   materials**: plastics and paints, plaster, stucco and render, metals plain, brushed, turned,
-  anodised, galvanised and hammered, clear, tinted, frosted and flint glass, PMMA and
-  polycarbonate, stone, marble and granite, wood, cork, leather, rubber, concrete, rust and more;
+  anodised, galvanised and hammered, clear, tinted, frosted and flint glass, PMMA, hazy acrylic and
+  polycarbonate, an opal diffuser and a diffuser film, stone, marble and granite, wood, cork, leather, rubber, concrete, rust and more;
   **five optics parts** (a PMMA lens Ø 18 mm, an LED die 2 × 1 mm at 100 lm, a detector screen, a
   triangular prism in N-BK7 -- any triangle, from a right-angle prism to an isosceles one, by its width,
   height, depth and where its top stands -- and a whole LED–lens–screen bench).
