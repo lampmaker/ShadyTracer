@@ -269,7 +269,7 @@ rule above, and each scale has its own phase:
   makes streaks read at a glance: phase 5, driven by the same streak field as a height.
 - **as geometry** — grooves resolved by the SDF: a turned part's feed marks, knurling, a record's
   spiral: phase 6. (Diffraction by fine grooves — the rainbow on a CD — is wave optics and outside
-  this renderer.)
+  this renderer as geometry; as a grating surface it is `roadmap/LIGHT_MODEL.md` §4.5.)
 
 ### Phase 2 — A noise library with known bounds  *(built; checked without a GPU; rendered on hardware, STATUS)*
 
@@ -391,7 +391,8 @@ frozen copy, from before rough stone carried its own, has six). Code saved befor
 - **A coat over anything** — a clear dielectric over a metal (lacquer, car paint), gone with
   `clearcoat`.
 - **Thin film** — tarnish, heat-tinted steel, anodised titanium, anti-reflection coatings on
-  lenses: interference, not a colour. RGB per channel until the planned spectral bands.
+  lenses: interference, not a colour. RGB per channel until the planned spectral bands (now coating tables from a
+  layer stack, `roadmap/LIGHT_MODEL.md` §4.1).
 - **Dust as a layer** of optical depth tau: base seen through exp(-tau/mu_o) exp(-tau/mu_i),
   reciprocal, and brighter at grazing as real dust is.
 

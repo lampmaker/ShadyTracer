@@ -96,6 +96,7 @@ it carries now (`muR/G/B`). That takes the Ray from 112 to 128 bytes: (2·112 + 
 fewer rays a batch at the cap (read in code, not timed). The collision would read the ray's own medium instead of the
 box. From outside, such glass glows only through phase 2: light reaches the inside through a refraction, and gets out
 to the camera through another. A dense diffuser (hundreds of scatters) is a surface's job, not a random walk's.
+Its colour axis (σ(λ), colour over angle, a phosphor in silicone) is `roadmap/LIGHT_MODEL.md` §4.3, step S7.
 
 ## Phase 4 — beams in the Optics view, and less noise (open)
 

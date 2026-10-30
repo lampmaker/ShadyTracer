@@ -550,7 +550,8 @@ code, a look each.
          2.16 M (rayBudgetBytes over 2 rays + a shade item; arithmetic). Hero is about 128 B and 2.03 M.
        - The photon map with hero wavelengths. A photon's wavelengths are not the camera path's; the options are
          one shared draw a sample, a kernel in wavelength, or bands for photons only.
-       The user decides from here (the optics trace first, then the picture; a thin phosphor layer first).
+       What follows from here -- a ray that pays only for what the scene chooses, colour, polarisation, coatings,
+       media and diffraction, and the order -- is `roadmap/LIGHT_MODEL.md` (2026-10-30).
 - **The camera's lens -- built (0.43.0), not yet seen; its photons removed (0.61.0)** (the user, 2026-10-09: "a more
   realistic camera model that has a lens with certain diameter, and that could work in parallel"). A thin lens (aperture,
   focus; `core/lens.js`): depth of field, and connections to a point of its disc. Until 0.61.0 it was also an area a
@@ -584,6 +585,7 @@ code, a look each.
 - **Polarisation** -- unpolarised Fresnel per interface is -0.3% on a slab's transmission at 45
   degrees and -3% at 70 (optics-refraction's `vs polar.`). Matters for beam splitters and near
   Brewster. Stokes vector + frame: +28 bytes a ray (112 -> 144), the one item here that costs memory.
+  Planned with the rest of what a ray carries: `roadmap/LIGHT_MODEL.md` §4.4.
 - **Rough glass** loses a few % to single-scatter masking (furnace 0.959), booked by the trace as
   ABSORBED by the frosted part -- a textured lens reads a little too inefficient. Multiple-scattering
   compensation for the rough dielectric.

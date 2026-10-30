@@ -114,7 +114,7 @@ on the user's own GPU; there is no server.
 | **Measure tool**: pins that stay on the clicked surface and re-read as the picture converges; a rectangle's mean ± error, min, max, **U0**; each reading's colour as **CCT + Duv** or CIE xy, an area's **Δu′v′** spread; **CSV** | **in use**: the user said it works on their hardware, 2026-10-27 -- before that: built; Node-tested | `lib/pathtracer/measure/tool.js` |
 | **Measure tool's ruler** (0.68.0): points picked on surfaces with their (x, y, z) in the scene's unit, each joined to the last, each stretch's length, its Δx Δy Δz as red, green and blue legs (the Points mode's, `lib/pathtracer/legs.js`), and a line's total, Shift-click a new line, shown to the surface tolerance's digits; in the CSV. With a pin or the ruler on, a click places, a drag on a pin or a point moves it over the surfaces, and a drag elsewhere turns the view | **in use**: the user said it works on their hardware, 2026-10-27 -- before that: built 2026-10-19; Node-tested (`measure.test`) and headless-checked over a stand-in pick, camera and selection (`example.check`); **not seen on hardware** | `lib/pathtracer/measure/tool.js` |
 | Point sensors and work-plane grids that are not visible surfaces | planned | PLAN.md *Next* item 2 |
-| Glare (UGR), CRI, TM-30 | not there | |
+| Glare (UGR), CRI, TM-30 | not there; CRI and TM-30 planned with spectral detectors | `roadmap/LIGHT_MODEL.md` S2 |
 
 ### 1.6 Output
 
@@ -259,7 +259,7 @@ into batches, so **every number carries a standard error**. Target: LED and lumi
 | **Colour mixing tool**: three of the scene's lights, a target CCT + Duv or xy and a total flux → the fluxes, written as one undo step | **in use**: the user said it works on their hardware, 2026-10-27 -- before that: built | `optics/page.js` |
 | **Coatings: dichroics, beam splitters, AR layers** -- R(λ) with an edge that moves with the angle, averaged per colour channel; on the entry faces, the back AR, bare or coated | **in use**: the user said it works on their hardware, 2026-10-27 -- before that: built (0.39.0), not yet seen; `optics-coating` and furnace rows | `core/spectral.js`, `core/materials_pbr.js` |
 | **Dispersion** -- an Abbe number with the index (Cauchy through n_d and V_d); a refracted ray takes a wavelength and its colour, a prism splits white light | **in use**: the user said it works on their hardware, 2026-10-27 -- before that: built (0.40.0), not yet seen; `optics-dispersion` and furnace rows | `core/spectral.js`, `core/materials_pbr.js` |
-| A wavelength per ray for the optics analysis (a source's spectrum, CMFs at the detector); filters by spectrum; phosphor conversion | planned; the ways a ray could carry a spectrum computed first (0.next: one wavelength, hero wavelengths, N bands -- their noise and bias on an LED) | PLAN.md *C* 4, `core/test/spectralnoise.test.mjs` |
+| A wavelength per ray for the optics analysis (a source's spectrum, CMFs at the detector); filters by spectrum; phosphor conversion | planned; the ways a ray could carry a spectrum computed first (0.next: one wavelength, hero wavelengths, N bands -- their noise and bias on an LED) | `roadmap/LIGHT_MODEL.md`, PLAN.md *C* 4, `core/test/spectralnoise.test.mjs` |
 
 ### 3.7 Physics not yet in the optics trace
 
