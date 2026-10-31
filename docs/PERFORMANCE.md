@@ -742,6 +742,10 @@ sized from how long the GPU was busy with the last frame (`R.frameMs`: from its 
 before it ending, whichever is later, so a frame queued behind another is not timed with its wait, since
 0.10.0); frames under 250 ms are not cut; a new scene submits every iteration until it has a timing
 (`raytrace_main.js` NO SUBMIT LONG ENOUGH; not confirmed on hardware as of 2026-09-29). The experimental TRACE2 flow is not cut.
+**2026-10-31:** a 3840 x 2160 render in the Darkroom lost the device "after a few batches" (the user). Inferred, not
+measured: the rule spreads a frame's time evenly over its batches and iterations, and a batch is a band of the picture
+whose first iterations carry nearly all its rays, so the submission holding the object's band ran far over its share.
+Since 0.next each submission is timed and the longest caps the next cut (`raytrace_main.js` THE LONGEST SUBMISSION).
 
 ## Measured: a path edited in the picture (the user's machine, 2026-10-02)
 

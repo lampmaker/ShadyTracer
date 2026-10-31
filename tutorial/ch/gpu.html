@@ -124,7 +124,9 @@
       once sent a whole sample as one submission, and the Noise library, an example scene of shapes with noisy surfaces,
       hung (2026-09-29). Its sample had been timed at over a second, under the limit; that week a change to the march
       may have made it slower, which is ShadyTracer's own guess, not a measurement. A heavy frame is now cut into submissions of about 150 ms (the
-      fourth excerpt).</p>
+      fourth excerpt). Since version 0.next each submission is timed as well, and the longest one of the last frame decides how
+      fine the next is cut: a 3840 × 2160 render lost its device "after a few batches" (2026-10-31), the cause inferred to be
+      one submission holding the costly start of a band of the picture where the frame's average said there was room.</p>
   </div>
   <figure class="fig" data-fig="dispatch">
     <figcaption>Left: the first rows of a picture, each colour one workgroup of 64 pixels, flat or one row per y.
