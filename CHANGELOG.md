@@ -16,6 +16,128 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.81.0 — 2026-11-02
+
+**Haze on any transmissive material, and light through frosted glass found by light sampling and the lights' rays
+instead of by chance** (`roadmap/DIFFUSERS.md`). Three changes:
+- **Rough glass's transmission is evaluated, not only sampled.** Two estimators can now follow light through a frosted
+  face, in Standard and High. Light sampling aims through the face a path leaves glass by. A photon in glass connects
+  out to the camera through the face it leaves by. Anisotropic rough glass too, so an elliptical diffuser is a
+  material's own roughness and anisotropy.
+- **Transmission and haze.** Transmission is how much passes through. The new field **haze** is how much of that is
+  diffused, spread evenly on the far side, instead of going straight: a datasheet's haze (ASTM D1003). Roughness
+  stays the narrow blur.
+  - Clear acrylic with a veil is transmission 1, haze 0.06.
+  - An opal diffuser, paper or a lampshade is haze 1.
+  - Each face a ray crosses scatters it.
+- **A face that both refracts and diffuses is now right when seen from inside.** This covers hazy glass, and any
+  transmission between 0 and 1. From inside the glass, light used to get through where total internal reflection
+  forbids it: a hazy glass sphere read 1.23 in the furnace with light sampling and 0.92 without. Light diffused into
+  the glass past the critical angle was also never let out. Now it reads 1.
+
+In Draft, Sketch and the Optics view all of it is followed as frosted glass always was. The Optics page's ray trace
+samples it as it samples any material.
+
+The library gains:
+- *opal diffuser (50 %)*;
+- *hazy acrylic (10 % haze)*: haze 0.059 a face, from a walk of the sheet;
+- *diffuser film 10° (frosted polycarbonate)*, a thin sheet of rough glass whose roughness, 0.36, spreads a ray
+  head-on by about 10° FWHM.
+
+Scene format 25; files of 24 open as they rendered.
+
+**What changes for existing scenes:**
+- **Frosted glass** (roughness from 0.224 up) now counts as a diffuse bounce for Max Diffuse Bounces, as gloss always
+  has: with a low cap, what lies behind frosted glass gets darker.
+- **A material with transmission between 0 and 1** (half glass, half a diffuse body) renders differently where it is
+  seen from inside: before, it gained light there.
+- **Material2 is 112 bytes**, so a sample holds about 3 % fewer rays a batch (2.10 M where it held 2.16 M), which only
+  shows as an extra batch on very large pictures with photons.
+
+**Checked without a GPU and on Dawn over lavapipe, and pressed on an Ampere card** (`furnace-beyond` 14 of 14,
+`transmission-parity` 16 of 16):
+- The lobes' value, density and draw agree with each other, anisotropic too.
+- A slab with one frosted, opal, anisotropically frosted or hazy face, seen from below under the sun, reads the same
+  with light sampling and the photons on or off, each way round.
+- Opal and hazy-glass spheres vanish in the furnace. Hazy glass needs 2000 march steps for that: light trapped past
+  the critical angle walks long, and at the default 400 a smooth hazy sphere reads 0.992.
+
+**What to look at:**
+- In Standard, an LED (a builder light) behind a frosted cover, an opal sheet and the library's 10° film:
+  - they should show the same brightness as before, with far less noise at equal samples;
+  - in Draft they should look as they always did.
+- The library's *hazy acrylic* over a checkerboard: the checks should stay sharp under a faint veil.
+  - Haze 0.2 and 0.5 should be milkier but still show an image.
+  - Haze 1 is an opal.
+
+Press `light-vs-emitter` (its frosted and opal diffuser pairs) in Tests and paste it back. The investigation behind this is in
+`roadmap/DIFFUSERS.md`, with what was decided and measured while it was built. It also says why a diffuser film of its
+own was built and taken out again, and why translucency became haze.
+
+**The live rays no longer switch themselves off when the scene is rebuilt.** The rays' loop stopped at the first trace
+that failed, and a trace can fail for a moment whenever the scene is rebuilt under it: the renderer puts the new scene
+in before its values are ready, and every structural edit opens that window -- so does the background bake, once the
+edits stand still. The rays now do what the Live analysis already did: nothing is traced while a scene is being built,
+a trace that fails with the scene swapped or a build begun under it is let go, and only a failure with the scene as it
+was switches the rays off, saying why in the status line (`rays stopped: ...`).
+
+**What to look at:** switch the rays on (the view's analysis drawer, RAYS) and edit the scene -- add or delete a
+shape, change a group's join, then stop and let the bake swap in. The rays should stay on throughout. If they still
+switch off, the status line under the run bar says `rays stopped:` and the reason: that message is the next clue.
+
+**A large render no longer loses the GPU by cutting its work by the frame's average.** A 3840 x 2160 render in the
+Darkroom lost its device after a few batches (`DXGI_ERROR_DEVICE_HUNG`, Windows' two-second watchdog). The engine cuts
+a heavy frame into submissions of about 150 ms, sized by the last frame's time spread evenly over its batches and its
+wavefront iterations. Neither is even: a batch of camera rays is a band of the picture, and the band holding the object
+costs several times the band of sky; and inside a batch the first iterations carry nearly all the rays. Offscreen,
+nothing slices a sample, so at 4K the batches are as large as the ray buffer allows. The first two samples of a render
+are cut every iteration (untimed, and the second recorded before the first is done), so the third is the first one cut
+by the average, which matches "after a few". That is the inferred cause: nobody has measured a submission's time
+on the card. Now every submission is timed by its own done, and the longest one in the last frame of the same shape
+caps the next frame's cut at its iterations x 150 ms / its time, never below one iteration. The cap can only make cuts
+finer than the old rule, so a scene the old rule already cut safely is unchanged, and a fast frame measured whole
+stays whole. `RT.hud.submitMs` is the longest submission of the last timed frame, and `RT.hud.submissions` how many
+that frame made. One iteration of one batch that runs past two seconds would still be lost: the cut cannot go finer
+than that.
+
+**What to look at:** the same render again, 3840 x 2160 in the Darkroom, with the same scene and samples. It should
+finish. While it runs, type `RT.hud.submitMs` and `RT.hud.splitEvery` in the console and paste back what they say.
+A `submitMs` near or over 1000 with `splitEvery` 1 means one iteration of a band is close to the limit by itself. The
+next fix would then be smaller batches, not finer cuts. The live view should feel the same as before.
+
+**Pick focus: the lens focused on what is under the mouse.** The Camera popover (⌖▾) has a *Pick focus* button
+under the lens's numbers. Clicked, the popover closes and the cursor becomes a cross over the picture; a press on the
+picture focuses the lens on the surface under it -- the focus plane is put through the picked point, so it is sharp
+wherever it is in the picture -- and while the button is held the focus follows the mouse over the surfaces. Let go,
+it stays focused there and the mode is over. The press is the focus's alone: the camera does not turn, nothing is
+selected, no measuring pin is placed. A press on the sky leaves the focus as it was; Esc or a press anywhere else
+cancels. The button is there only for a perspective camera (an orthographic one has no lens).
+`lib/pathtracer/focuspick.js`; headless-checked by `lib/pathtracer/test/focuspick.check.mjs`.
+
+**What to look at:** a scene with depth, *Depth of field* for one, with the aperture above 0 (focus has no visible
+effect at 0). ⌖▾ › *Pick focus*, then press on a near pawn, drag to a far one and back while holding, and let go:
+the sharp band should follow the mouse and stay where it was released. Then check a plain drag orbits as before, and
+that with the Measure tool's pin or ruler on, the focus press placed no pin.
+
+**The *preview* marks taken off what the user has confirmed works.** The user went through the README's list of
+features marked *preview* (built and tested without a GPU, not yet confirmed on real hardware) and said every one
+works on their hardware but the Zemax ray files, not yet tried. Those features are unmarked now in the README and on
+the front page, and their rows in `FEATURES.md` say **in use** with the date, their earlier status kept after it. The
+Zemax ray files keep their mark everywhere.
+
+**What to look at:** the README and the front page: *preview* only beside the Zemax ray files and in the legend.
+
+**Opening another project in the Project panel stays in the panel.** Until now a click on a project switched straight
+to the viewport and compiled the scene it was last left on -- seconds spent on a scene that may not be the one wanted.
+Now the panel shows the project's scenes and compiles nothing; a click on a scene card compiles that one and brings the
+picture back. Bringing the picture back without choosing (the Viewport tab, or *Back to …*) compiles the scene the
+project was left on, and so does opening a project while the viewport is in view beside the panel. A scene that will
+not compile leaves the empty scene, as before, rather than the last project's picture.
+
+**What to look at:** in the Project panel, click another project: the panel should stay, its scene cards shown, the one
+it was left on marked *not compiled yet*. Click a different scene: it compiles and the viewport comes forward. Open a
+project again and click the Viewport tab instead: its last scene compiles.
+
 ## 0.80.0 — 2026-10-27
 
 **shadytracer.com has a front page, and the app moved to `app.html`.** `/` was the app itself, which told a search

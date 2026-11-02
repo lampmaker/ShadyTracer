@@ -1,6 +1,6 @@
 {
   "format": "raytracer-scene",
-  "version": 25,
+  "version": 26,
   "title": "From points",
   "nextId": 16,
   "unit": "mm",

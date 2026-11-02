@@ -1,6 +1,6 @@
 {
   "format": "raytracer-scene",
-  "version": 25,
+  "version": 26,
   "title": "LED, lens and screen",
   "nextId": 11,
   "unit": "mm",

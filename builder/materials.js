@@ -64,7 +64,7 @@ export const FIELDS = {
     coatEdge:           { type: 'f32', def: 600.0, gui: { min: 380, max: 780, step: 0.5 }, coat: true },
     coatWidth:          { type: 'f32', def: 20.0, gui: { min: 0, max: 200, step: 0.5 }, coat: true },
     coatIndex:          { type: 'f32', def: 1.8, gui: { min: 1, max: 3, step: 0.01 }, coat: true },
-    /* HAZE (0.next; core/materials.js haze, roadmap/DIFFUSERS.md B1): of what passes through the surface (transmission),
+    /* HAZE (0.81.0; core/materials.js haze, roadmap/DIFFUSERS.md B1): of what passes through the surface (transmission),
        the share diffused -- Lambertian on the far side -- instead of going straight, as ASTM D1003 defines a sheet's haze.
        Clear acrylic with a veil is transmission 1 and haze 0.1; an opal sheet, paper or a lampshade haze 1, with
        transmission what passes. Roughness is the other, narrow blur (a datasheet's clarity). Every face a ray crosses
@@ -155,7 +155,7 @@ export const make = {
     emissive: (color, luminance = 1000) => ({ ...defaults(), emissive: color, emissiveLuminance: luminance, ior: 1 }),
 }
 
-/** A SHEET'S FACES FROM ITS DATASHEET (0.next): a sheet whose every transmitted ray is diffused (haze 1: an opal sheet,
+/** A SHEET'S FACES FROM ITS DATASHEET (0.81.0): a sheet whose every transmitted ray is diffused (haze 1: an opal sheet,
  *  paper) and whose datasheet gives a total transmittance T (0..1, both faces, no absorption). Each face passes t and
  *  reflects 1 - t, diffusely, and the light between the two adds up to T = t^2 / (1 - (1 - t)^2) = t / (2 - t), so the
  *  face's transmission is t = 2 T / (1 + T), its haze 1. For a white base with specular 0 (no gloss on top, which would

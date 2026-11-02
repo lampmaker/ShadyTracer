@@ -232,7 +232,8 @@ for the help.
   are chosen on a preview afterwards, and saved as often as wanted, each file named with the time it
   was saved.
 - Perspective or orthographic camera, orbit or walk, and a **lens**: an aperture and a focus
-  distance, for depth of field. Each scene keeps its own camera and exposure.
+  distance, for depth of field -- or **Pick focus**, a press on the picture focusing on what is under the mouse
+  *preview*. Each scene keeps its own camera and exposure.
 
 ### Light as numbers
 

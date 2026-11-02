@@ -1,6 +1,6 @@
 # Translucent and scattering materials: the options
 
-**STATUS (2026-10-30).** The user chose **B1 and B2 first**. B1 is **built (0.next), not yet seen on hardware**,
+**STATUS (2026-10-30).** The user chose **B1 and B2 first**. B1 is **built (0.81.0), not yet seen on hardware**,
 together with what it rests on, evaluable rough transmission. **B2 was built and taken out again** before any release.
 **B1's controls became transmission and haze** (below). How it works is `lib/pathtracer/README.md` § *Materials*
 (*Transmission and haze*, *A face that both refracts and diffuses*, *A diffuser film is rough glass*, *The side
@@ -44,7 +44,7 @@ beyond*). What follows below was written before the build and is kept as it was,
 
   It was exact in FWHM, any aspect, with a Gaussian profile.
 - **A film is rough glass now.** A thin sheet frosted on both faces, anisotropy for an elliptical one. Its far side is
-  evaluated with both alphas since 0.next, so light sampling and the photons reach through it.
+  evaluated with both alphas since 0.81.0, so light sampling and the photons reach through it.
   - **The library's *diffuser film 10° (frosted polycarbonate)*** is roughness 0.36. That spreads a ray head-on through
     the sheet by about 10° FWHM: a walk of two rough faces, `core/transmission.js` roughSheetJS, held by
     `core/test/transmission.test.mjs`.

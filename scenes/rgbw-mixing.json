@@ -1,6 +1,6 @@
 {
   "format": "raytracer-scene",
-  "version": 25,
+  "version": 26,
   "title": "RGBW colour mixing",
   "nextId": 12,
   "unit": "mm",

@@ -1,6 +1,6 @@
 {
   "format": "raytracer-scene",
-  "version": 25,
+  "version": 26,
   "title": "Aspheric condenser",
   "nextId": 8,
   "unit": "mm",

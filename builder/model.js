@@ -138,16 +138,20 @@ export const FORMAT = 'raytracer-scene'
    and its relief are read in that frame instead of the object's own. The user, 2026-10-21: the grain of a table's top
    and of its legs, one wood, ran the same way in each, so the top showed end grain. Version 23 files have none:
    nothing to change. A builder of 23 refuses a file of 24 rather than lose every pattern turned on its first save. */
-/* 25: HAZE ON A MATERIAL (0.next; roadmap/DIFFUSERS.md, materials_pbr.js THE SIDE BEYOND): `haze`, of what passes
+/* 25: HAZE ON A MATERIAL (0.81.0; roadmap/DIFFUSERS.md, materials_pbr.js THE SIDE BEYOND): `haze`, of what passes
    through the surface (transmission), the share diffused instead of going straight (an opal sheet, clear acrylic with a
-   veil) -- and `scatterDistance` and `scatterAnisotropy`, scatter inside the volume (0.next, core/haze.js THE MEDIUM'S
-   WALK: milky glass). Every material has the three; version 24 files get them at 0, which is what they rendered: all
-   that passes refracts, through a clear volume (v24to25). A builder of 24 refuses a file of 25 rather than read the field as a parameter of the material's
+   veil). Every material has the field; version 24 files get it at 0, which is what they rendered: all that passes
+   refracts (v24to25). A builder of 24 refuses a file of 25 rather than read the field as a parameter of the material's
    own and render the diffuser clear. (While 25 was built and before any release it held `translucency`, a share of the
    diffuse base, which transmission 1 left none of -- the user, 2026-10-30, asked for controls with a realistic feel --
    and a diffuser film's spread, spreadX / spreadY, a thin-sheet model rather than a physical property, 2026-10-29: a
    film is rough glass.) */
-export const VERSION = 25
+/* 26: SCATTER INSIDE A MATERIAL (0.next; core/haze.js THE MEDIUM'S WALK, roadmap/DIFFUSERS.md A): `scatterDistance`,
+   the mean free path between scatterings in the material's volume (real mm), and `scatterAnisotropy`, each scattering's
+   asymmetry g -- milky glass, whose thickness shows. Every material has the two; version 25 files get them at 0, which
+   is what they rendered: a clear volume (v25to26). A builder of 25 refuses a file of 26 rather than read the fields as
+   parameters of the material's own and render milky glass clear. */
+export const VERSION = 26
 /** The most copies an array has: each is a walk of its children at every step near them, until a BVH can tell which
  *  copies are near (call 4: chosen, not measured). */
 export const ARRAY_MAX = 16
@@ -2863,10 +2867,18 @@ export function upgrade(doc) {
     if (d.version === 22) d.version = 23          // nothing to change: a group's material is new
     if (d.version === 23) d.version = 24          // nothing to change: pattern frames are new
     if (d.version === 24) d = v24to25(d)
+    if (d.version === 25) d = v25to26(d)
     return d
 }
 
-/** 24 -> 25: every material gets haze and a scatter distance at 0 -- all that passes refracts, through a clear volume, as it rendered. */
+/** 25 -> 26: every material gets a scatter distance and its asymmetry at 0 -- a clear volume, as it rendered. */
+function v25to26(d) {
+    d.materials = (d.materials || []).map(m => withFieldDefaults(m))
+    d.version = 26
+    return d
+}
+
+/** 24 -> 25: every material gets haze at 0 -- all that passes refracts, as it rendered. */
 function v24to25(d) {
     d.materials = (d.materials || []).map(m => withFieldDefaults(m))
     d.version = 25

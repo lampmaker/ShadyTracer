@@ -16,7 +16,7 @@ photon map, scattering inside materials, an Optics-view beam view -- has its own
 (2026-10-16). **Translucent and scattering materials** -- opal sheets, diffuser films, light guides, milky glass:
 the options in `DIFFUSERS.md` (2026-10-29), the first two built (below).
 
-## Transmission and haze, frosted glass evaluated — built 2026-10-29/30 (0.next), its benches pass on hardware, the picture NOT yet seen
+## Transmission and haze, frosted glass evaluated — built 2026-10-29/30 (0.81.0), its benches pass on hardware, the picture NOT yet seen
 
 The user chose `DIFFUSERS.md` B1 and B2 first ("do B1 and B2 first. It will make rough glass more correct too right?" --
 in its average no, it was unbiased; in its noise a lot). Built on one foundation, evaluable transmission:
@@ -348,7 +348,7 @@ instead of averaging into it.
    luminance derived from the area of their sheets). Emissive objects are still cd/m² only -- an SDF
    gives no area to divide by (README § *Units*); *Lights* L8 measures their flux by Crofton lines
    instead. IES profiles: not built.
-6. **Deferred material work.** Rough transmission is evaluated since 0.next, so NEE and the photons'
+6. **Deferred material work.** Rough transmission is evaluated since 0.81.0, so NEE and the photons'
    connection reach through frosted glass (`materials_pbr.js` THE SIDE BEYOND; built with B1 of
    `DIFFUSERS.md`, *Translucency, frosted glass evaluated* above). A multiple-scattering compensation for rough
    glass is *C* below. The anisotropy tangent is done (SURFACES.md phase 1, `Material2.tangent`).
