@@ -138,7 +138,7 @@ export const FORMAT = 'raytracer-scene'
    and its relief are read in that frame instead of the object's own. The user, 2026-10-21: the grain of a table's top
    and of its legs, one wood, ran the same way in each, so the top showed end grain. Version 23 files have none:
    nothing to change. A builder of 23 refuses a file of 24 rather than lose every pattern turned on its first save. */
-/* 25: HAZE ON A MATERIAL (0.next; roadmap/DIFFUSERS.md, materials_pbr.js THE SIDE BEYOND): `haze`, of what passes
+/* 25: HAZE ON A MATERIAL (0.81.0; roadmap/DIFFUSERS.md, materials_pbr.js THE SIDE BEYOND): `haze`, of what passes
    through the surface (transmission), the share diffused instead of going straight (an opal sheet, clear acrylic with a
    veil). Every material has the field; version 24 files get it at 0, which is what they rendered: all that passes
    refracts (v24to25). A builder of 24 refuses a file of 25 rather than read the field as a parameter of the material's

@@ -388,11 +388,11 @@ pdf, so light sampling and BSDF sampling can be weighted against each other hone
 - **Transmission** refracts with the same IOR (the ray's current IOR from the path, the other
   side's from the material, or an SDF probe for glass), reflecting by the exact Fresnel. Rough
   transmission is sampled (a facet from the visible normals, then reflect or refract by that
-  facet's Fresnel, as Walter et al. 2007) and, since 0.next, EVALUATED too: its value is the one
+  facet's Fresnel, as Walter et al. 2007) and, since 0.81.0, EVALUATED too: its value is the one
   its own draw implies, through the refraction's Jacobian (`lobesThroughEval`, *The side beyond*
   below). Single scattering loses what masking takes at grazing angles inside, so rough glass
   reads under 1 in the furnace.
-- **Transmission and haze** (0.next; `Material2.haze`, `roadmap/DIFFUSERS.md` B1): transmission is how much of what
+- **Transmission and haze** (0.81.0; `Material2.haze`, `roadmap/DIFFUSERS.md` B1): transmission is how much of what
   the gloss does not reflect passes THROUGH the surface; haze is the share of that diffused instead of going straight,
   as a datasheet's haze (ASTM D1003). Of the body: 1 - T reflected diffusely, T (1 - H) refracted (smooth or rough by
   roughness), T H diffused through in the same form on the far side as the share reflected (`makeLobes`;
@@ -404,7 +404,7 @@ pdf, so light sampling and BSDF sampling can be weighted against each other hone
   (`core/transmission.js` hazySheetJS: 0.06 a face is 10 % for the sheet at n 1.49). Haze replaced *translucency*,
   a share of the diffuse base alone, before release: at transmission 1 there is no base, so clear glass could not
   have a little scatter (the user, 2026-10-30).
-- **A face that both refracts and diffuses, seen from inside** (0.next; `processMaterial_advanced`): one of two parts
+- **A face that both refracts and diffuses, seen from inside** (0.81.0; `processMaterial_advanced`): one of two parts
   drawn per vertex. With probability T (1 - H) it is clear glass, its true index ratio. Otherwise it is the diffuse
   face, the same surface from either side. This is the area mix the layered model is from outside; inside, the
   layered model coupled its base to albedo tables made for light from the thinner side, and gave the base no pick
@@ -417,7 +417,7 @@ pdf, so light sampling and BSDF sampling can be weighted against each other hone
   `mfAnisoAlpha`). The library's *diffuser film 10°* is polycarbonate at roughness 0.36, from a walk of two rough faces
   (`core/transmission.js` roughSheetJS). A lobe of its own (B2: a Gaussian spread about the straight line, no
   refraction) was built and taken out before release: a thin-sheet model, not a property of a material.
-- **The side beyond** (0.next): rough refraction and haze are evaluated below the surface (`Lobes.through`), in
+- **The side beyond** (0.81.0): rough refraction and haze are evaluated below the surface (`Lobes.through`), in
   the full renderer only -- Draft, Sketch and the Optics view follow them as they always followed
   frosted glass. Light sampling aims through a face where the medium beyond is air (the face a path
   leaves glass by, `throughLit`), the sky drawn from the far hemisphere there, and the BSDF's half
