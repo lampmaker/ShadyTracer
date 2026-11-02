@@ -75,6 +75,16 @@ export const FIELDS = {
        Shown whatever transmission is (its help says it is a share of it): showing it only above 0 would rebuild the
        panel under a transmission slider being dragged up from 0. */
     haze:               { type: 'f32', def: 0.0, gui: { min: 0, max: 1, step: 0.001 }, only: v => v > 0 },
+    /* SCATTER INSIDE (0.next; core/materials.js scatterDistance, core/haze.js THE MEDIUM'S WALK, roadmap/DIFFUSERS.md A):
+       the mean free path between scatterings in the material's volume, in REAL MILLIMETRES whatever the scene's unit (as
+       the colour depth), and each scattering's asymmetry (Henyey-Greenstein's g: 0 evenly, towards 0.95 forward). Haze
+       scatters at the faces, whatever the thickness; this in the volume, so a thick part is milkier than a thin one --
+       milky glass, a light guide's diffusing body. It acts where light travels inside, so only with transmission. 0 =
+       a clear volume, the default. ONLY IN THE SHADER WHILE ABOVE 0 (`only`, as the colour depth), and the asymmetry
+       only with it: a file without it compiles to the text it did, and its first value is a compile -- the march has
+       the walk only for a scene that has one (codegen's scene.scatter). */
+    scatterDistance:    { type: 'f32', def: 0.0, gui: { min: 0, step: 0.01 }, only: v => v > 0 },
+    scatterAnisotropy:  { type: 'f32', def: 0.0, gui: { min: -0.95, max: 0.95, step: 0.01 }, only: (v, P) => P?.scatterDistance > 0 },
     emissive:           { type: 'vec3<f32>', def: { r: 1, g: 1, b: 1 } },
     emissiveLuminance:  { type: 'f32', def: 0.0, gui: { min: 0, step: 1 } },
 }
@@ -170,7 +180,7 @@ export const PRESETS = {
  *  its other fields never did anything; a surface and a detector have no emission; a limiter is
  *  not in the picture at all. */
 const SURFACE_FIELDS = ['baseColor', 'metallic', 'roughness', 'anisotropy', 'specular', 'specularTint', 'transmission', 'haze', 'ior',
-    'abbe', 'attenuationDistance', 'coating', 'coatLow', 'coatHigh', 'coatEdge', 'coatWidth', 'coatIndex']
+    'abbe', 'attenuationDistance', 'scatterDistance', 'scatterAnisotropy', 'coating', 'coatLow', 'coatHigh', 'coatEdge', 'coatWidth', 'coatIndex']
 export const FIELDS_OF = {
     surface: SURFACE_FIELDS,
     detector: SURFACE_FIELDS,
@@ -180,7 +190,8 @@ export const FIELDS_OF = {
 /** What the panel calls a field, where its name says too little */
 export const FIELD_LABELS = { emissive: 'colour', emissiveLuminance: 'luminance (cd/m\u00b2)',
     attenuationDistance: 'colour depth (mm)', abbe: 'Abbe number (dispersion)', coating: 'coating', coatLow: 'R below edge', coatHigh: 'R above edge',
-    coatEdge: 'edge (nm)', coatWidth: 'edge width (nm)', coatIndex: 'stack index', haze: 'haze' }
+    coatEdge: 'edge (nm)', coatWidth: 'edge width (nm)', coatIndex: 'stack index', haze: 'haze',
+    scatterDistance: 'scatter distance (mm)', scatterAnisotropy: 'scatter forward (g)' }
 /** What a coating is for, put on in one click (the panel's coating presets): values for the coating fields. A beam
  *  splitter and an AR layer are the same at every wavelength, so their edge does nothing. */
 export const COAT_PRESETS = {

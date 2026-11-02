@@ -140,8 +140,9 @@ export const FORMAT = 'raytracer-scene'
    nothing to change. A builder of 23 refuses a file of 24 rather than lose every pattern turned on its first save. */
 /* 25: HAZE ON A MATERIAL (0.next; roadmap/DIFFUSERS.md, materials_pbr.js THE SIDE BEYOND): `haze`, of what passes
    through the surface (transmission), the share diffused instead of going straight (an opal sheet, clear acrylic with a
-   veil). Every material has the field; version 24 files get it at 0, which is what they rendered: all that passes
-   refracts (v24to25). A builder of 24 refuses a file of 25 rather than read the field as a parameter of the material's
+   veil) -- and `scatterDistance` and `scatterAnisotropy`, scatter inside the volume (0.next, core/haze.js THE MEDIUM'S
+   WALK: milky glass). Every material has the three; version 24 files get them at 0, which is what they rendered: all
+   that passes refracts, through a clear volume (v24to25). A builder of 24 refuses a file of 25 rather than read the field as a parameter of the material's
    own and render the diffuser clear. (While 25 was built and before any release it held `translucency`, a share of the
    diffuse base, which transmission 1 left none of -- the user, 2026-10-30, asked for controls with a realistic feel --
    and a diffuser film's spread, spreadX / spreadY, a thin-sheet model rather than a physical property, 2026-10-29: a
@@ -2865,7 +2866,7 @@ export function upgrade(doc) {
     return d
 }
 
-/** 24 -> 25: every material gets haze at 0 -- all that passes refracts, as it rendered. */
+/** 24 -> 25: every material gets haze and a scatter distance at 0 -- all that passes refracts, through a clear volume, as it rendered. */
 function v24to25(d) {
     d.materials = (d.materials || []).map(m => withFieldDefaults(m))
     d.version = 25

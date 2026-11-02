@@ -412,6 +412,19 @@ pdf, so light sampling and BSDF sampling can be weighted against each other hone
   (Dawn); now 0.9995 and 1.0001, at 2000 march steps. Light diffused in past the critical angle walks long:
   400 steps cut it to 0.992. Transmission between 0 and 1 without haze (half glass, half white) always had the same
   fault, and now reads 0.998 at the bounce cap of 40, as the cap's trend says (0.977 at 20, 0.994 at 30).
+- **Scatter inside** (0.next; `Material2.scatterDistance` and `scatterAnisotropy`, `roadmap/DIFFUSERS.md` A): a
+  material's volume scatters, its mean free path in real millimetres and Henyey-Greenstein's g, so a thick part is
+  milkier than a thin one -- milky glass, a light guide's body. Pure scattering; the colour stays the colour depth's.
+  THE MEDIUM'S WALK (`core/haze.js`) is in the march, not a shade vertex: inside a solid every shadow ray and photon
+  connection is stopped by its own wall, so a collision only turns the ray, and the march marches on -- a collision is
+  a march step against Max Iterations, not a bounce. A leg's flight is drawn from its vertex (`absLtot`), not from the
+  step off the surface: drawn after it, a slab of optical depth 6 passed 3.6 % too much (Dawn). A ray that collided
+  goes on as light sampling could not have made it (`prevPdf` -1), and a shadow ray takes the scattering as extinction
+  (`shadowTransmittance`). The ray's medium is six f16 in the three words the absorption's f32 had
+  (`tracebasics.js` `packMedium`: per millimetre, within 2^-11 of itself), so the Ray stays 112 bytes. Compiled in only
+  for a scene with a scattering material (`scene.scatter`, codegen's); the Optics page's trace has it through the same
+  march (read in code, `optics/index.js`; no test runs that page with it yet). Inside smooth glass light sampling cannot reach, so a milky part lit by a small lamp is found by chance (the
+  photons light what is beyond it). Held by `test/volume.test.mjs` and, on Dawn, `test/volume.gpu.mjs`.
 - **A diffuser film is rough glass** (the user, 2026-10-29: "keep the properties of materials as realistic / physical
   as possible"): a thin sheet frosted on both faces, anisotropy for an elliptical one (up to 10:1 in alpha,
   `mfAnisoAlpha`). The library's *diffuser film 10°* is polycarbonate at roughness 0.36, from a walk of two rough faces
