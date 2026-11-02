@@ -423,8 +423,17 @@ pdf, so light sampling and BSDF sampling can be weighted against each other hone
   (`shadowTransmittance`). The ray's medium is six f16 in the three words the absorption's f32 had
   (`tracebasics.js` `packMedium`: per millimetre, within 2^-11 of itself), so the Ray stays 112 bytes. Compiled in only
   for a scene with a scattering material (`scene.scatter`, codegen's); the Optics page's trace has it through the same
-  march (read in code, `optics/index.js`; no test runs that page with it yet). Inside smooth glass light sampling cannot reach, so a milky part lit by a small lamp is found by chance (the
-  photons light what is beyond it). Held by `test/volume.test.mjs` and, on Dawn, `test/volume.gpu.mjs`.
+  march (read in code, `optics/index.js`; no test runs that page with it yet). Inside smooth glass light sampling cannot reach, so the light the glass scatters reaches the picture through the
+  photon map in the volume (below) or, without it, by chance. Held by `test/volume.test.mjs` and, on Dawn,
+  `test/volume.gpu.mjs`.
+- **The beam seen inside** (0.next; `core/haze.js` THE BEAM SEEN INSIDE, `sppm.js` `sppmGatherVolume`, MEDIA.md phase 2):
+  the photon map in the volume. A photon stores a record where it collides, in the march (SPPM_VOL; the surface map's
+  rules for who stores). A camera ray whose lens field is 1 hands its first collision to the shade queue (RAY_GATHER),
+  the map's kernel gathers there, sum p Phi / (sigma_s 4/3 pi r^3) over n^2, and shade turns it -- the map's D, so the
+  camera's path then leaves the class. A collimated beam, which no camera path can meet, is seen in glass only so. The
+  march takes the map's two buffers, and the sample's `sppmGeom`, only where the stage has room (`volumeOf`): it stored
+  every photon in a cell of size 0 until it was handed the sample's cells (Dawn). A radius near the part's size reads
+  low (the sphere sticks out of the face).
 - **A diffuser film is rough glass** (the user, 2026-10-29: "keep the properties of materials as realistic / physical
   as possible"): a thin sheet frosted on both faces, anisotropy for an elliptical one (up to 10:1 in alpha,
   `mfAnisoAlpha`). The library's *diffuser film 10°* is polycarbonate at roughness 0.36, from a walk of two rough faces

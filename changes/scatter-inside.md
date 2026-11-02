@@ -7,8 +7,13 @@ glass by the block, a light guide's diffusing body. Haze (0.81.0) scatters at th
 scatters inside.
 - **Each scattering is a step of the march**, not a bounce, so a dense, thick part may need more Max Iterations to
   read its full brightness.
-- **Light sampling cannot reach inside smooth glass**, so a milky part lit by a small lamp is noisy until it settles.
-  The sun's photons do light what lies beyond it.
+- **A beam is seen inside it: the photon map in the volume.** A collimated beam through slightly milky acrylic shows
+  its track, as a laser's does. Photons are stored where they scatter in the glass, and a camera ray gathers them
+  where it first scatters. Light sampling cannot reach inside smooth glass, so this is how that light reaches the
+  picture; with the photon map off it is found only by chance (and a collimated beam not at all). Like the surface
+  map, it starts a little soft and sharpens as samples come in. It needs two storage buffers more in the march; desktop
+  adapters usually offer 16 a stage (tinywebgpu's note, not checked here), and on one with only the spec's 8 the beam
+  stays unseen.
 - **The Optics page's rays walk it too**, through the same march. No test runs that page with it yet.
 - **Only a scene with a scattering material compiles the walk**; every other scene's march is the text it was.
 
@@ -26,8 +31,10 @@ it.
 - A floor lit through a milky slab reads one mean by the camera's own paths, the sun's photons and the photon map.
 
 **What to look at:**
+- A collimated beam (a builder light set to collimated) through a thin sheet of slightly milky glass, seen from the
+  side, the photon map on: the beam's track should show inside the glass and sharpen with samples.
 - The library's *milky glass* as a thin sheet and a thick block side by side: the thin one should show what lies behind
   it, the thick one glow.
 - On the Optics page, the light guide example with a scatter distance.
 
-Press `volume` and `volume-light` in Tests and paste them back.
+Press `volume`, `volume-light` and `volume-map` in Tests and paste them back.

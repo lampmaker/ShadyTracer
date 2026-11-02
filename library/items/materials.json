@@ -1389,7 +1389,7 @@
     "volume",
     "light guide"
    ],
-   "help": "Smooth glass (n_d 1.5) whose volume scatters: a free path of 3 mm, each scattering mostly onwards (g 0.7). Unlike haze, which scatters at the faces, this scatters inside, so a thick block is milkier than a thin sheet: about 5 mm of it still shows what lies behind, a few centimetres glows. Shorter free paths for opal, longer for a faint milkiness; raise Max Iterations if a thick, dense part reads dark. The Optics page's rays walk it too; in the picture, light from a small lamp found through it is noisy until it settles.",
+   "help": "Smooth glass (n_d 1.5) whose volume scatters: a free path of 3 mm, each scattering mostly onwards (g 0.7). Unlike haze, which scatters at the faces, this scatters inside, so a thick block is milkier than a thin sheet: about 5 mm of it still shows what lies behind, a few centimetres glows. Shorter free paths for opal, longer for a faint milkiness; raise Max Iterations if a thick, dense part reads dark. The Optics page's rays walk it too; in the picture, a beam's track or a lamp's glow in it shows through the photon map, sharpening as samples come in.",
    "asset": {
     "kind": "material",
     "material": {

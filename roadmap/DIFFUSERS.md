@@ -67,7 +67,8 @@ beyond*). What follows below was written before the build and is kept as it was,
   passes what a JS walk passes at depths 1, 3 and 6, the JS walk itself held to exp(-tau), T + R = 1 and the
   diffusion regime's 1 / (tau + 2q); milky spheres vanish in the furnace. Found while building it: a flight drawn after
   shade's step off the surface made a slab pass 3.6 % too much; drawn from the vertex it agrees.
-- **Still open:** MEDIA.md phase 2 (a volume photon map), for a milky part's own glow around a small light.
+- **MEDIA.md phase 2 built for it (2026-11-02):** the photon map in the volume, so a collimated beam's track in milky
+  glass shows (the user's laser in hazy acrylic). The haze box's points in the air are still open.
   - **The lights' photons through these faces (CLS_LIGHTS)** are checked only on hardware, by `light-vs-emitter`'s
     frosted and opal diffuser pairs. The node tests have no builder light.
 
