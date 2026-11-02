@@ -59,7 +59,8 @@ beyond*). What follows below was written before the build and is kept as it was,
 - **Measured on Dawn over lavapipe (a software adapter: agreement, never speed).** A slab with one frosted, opal,
   anisotropically frosted or hazy face, seen from below under the sun, reads the same with light sampling and the sun's
   photons on or off, each way round. Opal and hazy-glass spheres vanish in the furnace (`core/test/transmission.gpu.mjs`).
-  - **For the bench:** `furnace-beyond` and `transmission-parity` (`lib/pathtracer/tests.js`).
+  - **On hardware (Ampere, 2026-11-02, 86ed2ca):** `furnace-beyond` 14 of 14 (hazy glass 0.99975 and 0.99974, opal 1.0001
+    and 1.0000) and `transmission-parity` 16 of 16 (`docs/TESTING.md` has the rows).
 - **Still open:** A (volume scattering) and MEDIA.md phase 2, as below.
   - **The lights' photons through these faces (CLS_LIGHTS)** are checked only on hardware, by `light-vs-emitter`'s
     frosted and opal diffuser pairs. The node tests have no builder light.

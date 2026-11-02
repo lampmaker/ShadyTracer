@@ -36,7 +36,8 @@ Scene format 25; files of 24 open as they rendered.
 - **Material2 is 112 bytes**, so a sample holds about 3 % fewer rays a batch (2.10 M where it held 2.16 M), which only
   shows as an extra batch on very large pictures with photons.
 
-**Checked without a GPU and on Dawn over lavapipe, not on hardware:**
+**Checked without a GPU and on Dawn over lavapipe, and pressed on an Ampere card** (`furnace-beyond` 14 of 14,
+`transmission-parity` 16 of 16):
 - The lobes' value, density and draw agree with each other, anisotropic too.
 - A slab with one frosted, opal, anisotropically frosted or hazy face, seen from below under the sun, reads the same
   with light sampling and the photons on or off, each way round.
@@ -51,7 +52,6 @@ Scene format 25; files of 24 open as they rendered.
   - Haze 0.2 and 0.5 should be milkier but still show an image.
   - Haze 1 is an opal.
 
-Press `furnace-beyond` (with its new hazy-glass rows), `transmission-parity` (with a hazy face) and `light-vs-emitter`
-(its frosted and opal diffuser pairs) in Tests, and paste them back. The investigation behind this is in
+Press `light-vs-emitter` (its frosted and opal diffuser pairs) in Tests and paste it back. The investigation behind this is in
 `roadmap/DIFFUSERS.md`, with what was decided and measured while it was built. It also says why a diffuser film of its
 own was built and taken out again, and why translucency became haze.

@@ -16,7 +16,7 @@ photon map, scattering inside materials, an Optics-view beam view -- has its own
 (2026-10-16). **Translucent and scattering materials** -- opal sheets, diffuser films, light guides, milky glass:
 the options in `DIFFUSERS.md` (2026-10-29), the first two built (below).
 
-## Transmission and haze, frosted glass evaluated — built 2026-10-29/30 (0.next), NOT yet seen
+## Transmission and haze, frosted glass evaluated — built 2026-10-29/30 (0.next), its benches pass on hardware, the picture NOT yet seen
 
 The user chose `DIFFUSERS.md` B1 and B2 first ("do B1 and B2 first. It will make rough glass more correct too right?" --
 in its average no, it was unbiased; in its noise a lot). Built on one foundation, evaluable transmission:
@@ -37,7 +37,8 @@ in its average no, it was unbiased; in its noise a lot). Built on one foundation
 
 How it works: README § *Materials*. What changed while it was built, and what was measured on Dawn over lavapipe:
 `DIFFUSERS.md` STATUS.
-- **To press:** `furnace-beyond`, `transmission-parity`, and `light-vs-emitter`'s frosted and opal diffuser pairs.
+- **Pressed (Ampere, 2026-11-02, 86ed2ca):** `furnace-beyond` 14 of 14, `transmission-parity` 16 of 16 (TESTING.md).
+- **To press:** `light-vs-emitter`'s frosted and opal diffuser pairs.
 - **To look at:** an LED behind a frosted cover, an opal sheet, the library's 10° film and its hazy acrylic, in Standard. The brightness should be as
   before and the noise far lower; Draft should look as it always did.
 
