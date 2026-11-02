@@ -13,7 +13,34 @@ a browser starved by heavy scenes) has its own too: `PERFORMANCE.md`, in `../doc
 STATUS section. **Where the scene should go** (data, rays answered by objects, shading without geometry, and the
 order of that work): `ARCHITECTURE.md`, beside this file (2026-10-04). **Media** -- dust in the air, then a volume
 photon map, scattering inside materials, an Optics-view beam view -- has its own: `MEDIA.md`, beside this file
-(2026-10-16).
+(2026-10-16). **Translucent and scattering materials** -- opal sheets, diffuser films, light guides, milky glass:
+the options in `DIFFUSERS.md` (2026-10-29), the first two built (below).
+
+## Transmission and haze, frosted glass evaluated — built 2026-10-29/30 (0.81.0), its benches pass on hardware, the picture NOT yet seen
+
+The user chose `DIFFUSERS.md` B1 and B2 first ("do B1 and B2 first. It will make rough glass more correct too right?" --
+in its average no, it was unbiased; in its noise a lot). Built on one foundation, evaluable transmission:
+- **Rough glass's transmission is evaluated.** Light sampling aims through the face a path leaves glass by. A photon in
+  glass connects out to the camera through it, over n^2. To light tracing's splits it is EV_EVAL; to the photon map,
+  EV_OTHER. This holds only in the full renderer.
+- **Transmission and haze (B1):** transmission how much passes, haze how much of it is diffused (ASTM D1003). Clear
+  glass with a little scatter is transmission 1, haze 0.06. It replaced *translucency*, a share of the diffuse base,
+  which transmission 1 left none of (the user, 2026-10-30: "a transmissive material that has a bit of scatter"). A face
+  that both refracts and diffuses is an area mix of clear glass and a diffuse face when seen from inside; a hazy sphere
+  read 1.23 and 0.92 in the furnace before that, and half glass, half white always had that fault.
+- **A diffuser film is rough glass.** B2, a film lobe of its own, was built and taken out: a thin-sheet model, not a
+  physical property (the user: "keep the properties of materials as realistic / physical as possible"). The library's
+  *diffuser film 10°* is polycarbonate at roughness 0.36; anisotropy makes a film elliptical, up to 10:1.
+- **Scene format 25.** Material2 is 112 bytes, about 3 % fewer rays a batch.
+- **Next, chosen with the user (2026-10-30):** scatter inside the volume, thickness-dependent (`DIFFUSERS.md` A), as a
+  walk in the march kernel: a scatter distance and anisotropy beside the colour depth. After this part is seen.
+
+How it works: README § *Materials*. What changed while it was built, and what was measured on Dawn over lavapipe:
+`DIFFUSERS.md` STATUS.
+- **Pressed (Ampere, 2026-11-02, 86ed2ca):** `furnace-beyond` 14 of 14, `transmission-parity` 16 of 16 (TESTING.md).
+- **To press:** `light-vs-emitter`'s frosted and opal diffuser pairs.
+- **To look at:** an LED behind a frosted cover, an opal sheet, the library's 10° film and its hazy acrylic, in Standard. The brightness should be as
+  before and the noise far lower; Draft should look as it always did.
 
 ## STEP and STL import as shapes — built 2026-10-21 (0.73.0), NOT yet seen
 
@@ -320,10 +347,10 @@ instead of averaging into it.
    luminance derived from the area of their sheets). Emissive objects are still cd/m² only -- an SDF
    gives no area to divide by (README § *Units*); *Lights* L8 measures their flux by Crofton lines
    instead. IES profiles: not built.
-6. **Deferred material work.** Rough transmission is still sampled and not evaluated, so NEE cannot
-   connect through frosted glass (`materials_pbr.js`, rough transmission's "no evaluable BTDF on the
-   other side"); a multiple-scattering compensation for rough glass is *C* below. The anisotropy
-   tangent is done (SURFACES.md phase 1, `Material2.tangent`).
+6. **Deferred material work.** Rough transmission is evaluated since 0.81.0, so NEE and the photons'
+   connection reach through frosted glass (`materials_pbr.js` THE SIDE BEYOND; built with B1 of
+   `DIFFUSERS.md`, *Translucency, frosted glass evaluated* above). A multiple-scattering compensation for rough
+   glass is *C* below. The anisotropy tangent is done (SURFACES.md phase 1, `Material2.tangent`).
 7. **The performance pass** — PERFORMANCE.md is that pass now; the parked light-tracing cost is in *To
    check or review later*.
 

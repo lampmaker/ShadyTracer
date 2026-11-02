@@ -634,7 +634,7 @@ ok('a round failing with a build begun since it started: let go, and Live goes o
 await p.evaluate(() => { CHECK.O.batchMs = 0 })
 await p.click('.shell-runbar .live'); await p.waitForTimeout(300)
 
-/* THE RAYS' OWN LOOP THROUGH A STRUCTURAL EDIT, as Live's rounds (0.next; the user, 2026-10-28: the rays "often shut
+/* THE RAYS' OWN LOOP THROUGH A STRUCTURAL EDIT, as Live's rounds (0.81.0; the user, 2026-10-28: the rays "often shut
    off", and had to be switched on again): nothing traced while a scene is built, a trace failing with the scene swapped
    or a build begun under it let go, one failing with the scene as it was switching the rays off and saying why. The
    stand-in hands a check what the page gave the loop (O.liveGet, O.liveOnResult): the check plays the loop's part. */

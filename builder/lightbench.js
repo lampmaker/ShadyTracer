@@ -81,6 +81,15 @@ export function lightBenchDoc() {
     // A DIFFUSER over the lamp, between its top face and the camera: rough glass, 4 cm thick for the same reason
     M.addObject(d, 'root', { id: 'benchdiffuser', label: 'diffuser', primitive: 'box', material: 'benchfrost',
                              params: { size: { x: 0.6, y: 0.6, z: 0.02 }, rounding: 0 }, transform: at(0, 0, H + 0.1) })
+    /* ...AND THE SAME OF AN OPAL SHEET (haze 1, B1), 0.81.0: the light's photons reach the camera out of it through
+       its top face (ltConnect, over n^2), and the camera's paths leave them that light (CLS_LIGHTS: a transmission is
+       EV_EVAL there) -- as they now do out of the frosted one. Its own object, not the frosted one's material changed by
+       a row: haze is in the shader only while above 0 */
+    M.addMaterial(d, { id: 'benchopal', label: 'opal', params: { baseColor: { r: 1, g: 1, b: 1 }, metallic: 0, roughness: 1,
+                                                                specular: 0, transmission: 0.667, ior: 1.5, haze: 1 } })
+    M.addObject(d, 'root', { id: 'benchopaldiff', label: 'opal diffuser', primitive: 'box', material: 'benchopal',
+                             params: { size: { x: 0.6, y: 0.6, z: 0.02 }, rounding: 0 }, transform: at(0, 0, H + 0.1) })
+
     /* L4's closed forms. A GLASS BLOCK round the lamp, 0.8 x 0.8 x 0.2 m, its top level 10 cm over the
        lamp: the camera sees the lamp through it, from air, as an LED is seen through its dome. */
     M.addObject(d, 'root', { id: 'benchblock', label: 'glass block', primitive: 'box', material: 'benchglass',
@@ -128,7 +137,7 @@ export function lightBenchDoc() {
 /* WHAT EACH ROW SHOWS: the lamp as a light (its photons light the picture) or as the emissive disc, and
    the pane or the diffuser only in their own rows. */
 const LIGHT = { vis_benchlamp: 1, vis_benchdisc: 0 }, EMITTER = { vis_benchlamp: 0, vis_benchdisc: 1 }
-const PLAIN = { vis_benchpane: 0, vis_benchdiffuser: 0, vis_benchblock: 0, vis_benchclear: 0, vis_benchback: 0,
+const PLAIN = { vis_benchpane: 0, vis_benchdiffuser: 0, vis_benchopaldiff: 0, vis_benchblock: 0, vis_benchclear: 0, vis_benchback: 0,
                 vis_benchsmall: 0, vis_benchsmalldisc: 0, vis_benchtopshade: 0,
                 vis_benchside: 0, vis_benchsidedisc: 0, vis_benchsideshade: 0, vis_benchwall: 0, measureMode: 0 }
 const SMALL_LIGHT = { vis_benchlamp: 0, vis_benchdisc: 0, vis_benchsmall: 1, vis_benchsmalldisc: 0, vis_benchtopshade: 1 }
@@ -272,7 +281,10 @@ export function lightBench() {
             + ' light\'s meanLuma in Draft and Optics within 0.02% of full\'s. (A hair over 1 had been predicted, for'
             + ' Draft\'s emitter lighting the floor a sample late; the runner\'s warm-up lists it first -- clearLearned.)'
             + ' Before 2026-10-02 the light read low in Draft -- inferred from the code, never pressed: its photons kept'
-            + ' only their MIS share of the floor\'s direct light. Loads its own scene and camera.',
+            + ' only their MIS share of the floor\'s direct light. Since 0.81.0 an OPAL DIFFUSER (haze 1) over the'
+            + ' disc too, beside the frosted one: the light\'s photons now connect out of each through its top face and the'
+            + ' camera\'s paths leave them that light, so those light rows are as quiet as their emitters\' and must still'
+            + ' read 1 (roadmap/DIFFUSERS.md). Loads its own scene and camera.',
         delta: 'meanLuma',
         samples: 64,
         scene,
@@ -339,6 +351,7 @@ export function lightBench() {
             ...pair('metal floor, roughness 0.23', { ...metal(0.23), ...FINE }),
             ...pair('through a clear pane', { ...LAMBERT, ...FINE, vis_benchpane: 1 }),
             ...pair('a diffuser over the disc', { ...LAMBERT, ...FINE, vis_benchdiffuser: 1 }),
+            ...pair('an opal diffuser over the disc', { ...LAMBERT, ...FINE, vis_benchopaldiff: 1 }),
             ...pairSmall('a 1 cm lamp of the same flux, metal floor, roughness 0.20, eps 10 um', { ...metal(0.20), ...FINE }),
             ...pairSmall('a 1 cm lamp of the same flux, metal floor, roughness 0.25, eps 10 um', { ...metal(0.25), ...FINE }),
             ...pairSmall('a 1 cm lamp of the same flux, metal floor, roughness 0.25, the automatic eps', metal(0.25)),

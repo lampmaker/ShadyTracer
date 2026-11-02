@@ -472,7 +472,7 @@ r = await p.evaluate(() => ({ info: CHECK.SESSION.info(), undo: CHECK.BUILDER.ca
     cur: CHECK.BUILDER.current, here: document.querySelector('#pv .shell-pv-card.here')?.dataset.key,
     meta: document.querySelector('#pv .shell-pv-card.here .shell-pv-cmeta.faint')?.textContent }))
 r.applied = await applied()
-ok('a click on another project: this tab works on it, its own history, the panel stays with its scenes and nothing compiles (0.next)',
+ok('a click on another project: this tab works on it, its own history, the panel stays with its scenes and nothing compiles (0.81.0)',
    r.info.name === 'Lamp B' && !r.undo && r.work === work && r.applied === n && !r.showing && r.here === r.cur && /not compiled yet/.test(r.meta ?? ''), JSON.stringify(r))
 await p.click('#pv .shell-pv-card.here')
 await p.waitForTimeout(100)

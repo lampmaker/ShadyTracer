@@ -117,8 +117,8 @@
   <div class="prose">
     <h2><span class="n">3</span>Bigger than the buffer</h2>
     <p data-step="batches:fits">A sample traces a camera ray for every pixel and every photon the light tracer asked for,
-      and the rays in flight must fit the ray buffers: 1 GiB, 496 bytes a ray (two ray buffers and a shade queue
-      item), 2,164,802 rays. At 1280 × 720, 921,600 camera rays and a million photons fit at once: one batch. The
+      and the rays in flight must fit the ray buffers: 1 GiB, 512 bytes a ray (two ray buffers and a shade queue
+      item), 2,097,152 rays. At 1280 × 720, 921,600 camera rays and a million photons fit at once: one batch. The
       batches' plan here is ShadyTracer's own function, run in this page.</p>
     <p data-step="batches:over">At 3840 × 2160, 8,294,400 camera rays and a million photons are 5 batches. Each batch is a
       fair slice of every stream (1,658,880 camera rays and 200,000 photons each), runs the whole wavefront chain of
