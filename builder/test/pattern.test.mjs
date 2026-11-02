@@ -49,10 +49,10 @@ const LOCAL = 'm.baseColor = fract(p_local);'
     ok('a parameter may not be called pat (its uniform is pat_<id>)', M.RESERVED_PARAMS.includes('pat'))
     M.setPattern(d, o.id, P1)
     const back = M.parse(JSON.stringify(d))
-    ok('saved and read back whole, at version 24', M.VERSION === 24 && JSON.stringify(M.find(back, o.id).node.pattern) === JSON.stringify(P1))
+    ok('saved and read back whole, at version 24 or later', M.VERSION >= 24 && JSON.stringify(M.find(back, o.id).node.pattern) === JSON.stringify(P1))
     const old = structuredClone(d); old.version = 23; delete M.find(old, o.id).node.pattern
     const up = M.upgrade(old)
-    ok('a file of 23 is read as 24, nothing else changed', up.version === 24 && JSON.stringify({ ...up, version: 23 }) === JSON.stringify(old))
+    ok('a file of 23 is read as the current version, nothing else changed', up.version === M.VERSION && JSON.stringify({ ...up, version: 23 }) === JSON.stringify(old))
     const t = M.toTree(d).children.find(n => n.id === o.id)
     ok('toTree carries it', JSON.stringify(t.pattern) === JSON.stringify(P1))
     const copy = M.duplicate(d, o.id)

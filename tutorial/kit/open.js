@@ -79,8 +79,6 @@ export const ITEMS = [
         note: 'A gap under the probe\'s reach is jumped: two slabs 0.5 mm apart read as one (0.9228).' },
     { id: 'rough-dielectric', kind: 'designed', src: T, quote: 'compensation for dielectrics (Kulla-Conty\'s albedo tables, with transmission), not a fix.', ch: 'microfacets', title: 'rough glass\'s lost light',
         note: 'Rough glass loses the light that scatters more than once in its surface; closing that is a compensation still to build.' },
-    { id: 'frosted-nee', kind: 'designed', src: 'roadmap/PLAN.md', quote: 'Rough transmission is still sampled and not evaluated, so NEE cannot', ch: 'microfacets', title: 'NEE through frosted glass',
-        note: 'Rough transmission can be drawn but not evaluated, so a shadow ray cannot be weighed through frosted glass.' },
     { id: 'strat-pick', kind: 'designed', src: 'roadmap/PLAN.md', quote: '**Stratified source pick — not built**', ch: 'optics', title: 'a stratified source pick',
         note: 'Each LED\'s share of the rays is a random draw, the only reason a mix\'s colour is noisy (about 0.0012 in u\'v\'); picking by the ray\'s number would spread them evenly.' },
     { id: 'face-reflect', kind: 'designed', src: 'roadmap/PLAN.md', quote: '**A reflectance for a light\'s face — not built**', ch: 'emitters', title: 'a light face that reflects',
