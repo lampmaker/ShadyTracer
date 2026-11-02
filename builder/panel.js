@@ -52,6 +52,8 @@ import { exportGrid, gridProblem, EXPORT_DEFAULTS } from './exportbox.js'
 import { visibilityOf, HAZE_G_MAX } from './hazebox.js'
 import { makeAfter } from './params.js'
 import { codeOnly } from './codegen.js'
+import { SEG, SEGBTN } from '../lib/pathtracer/strip.js'
+import { lit } from '../lib/pathtracer/icons.js'
 const EXPORT_CELL = EXPORT_DEFAULTS.cell
 
 /** WHAT EACH ENVIRONMENT SETTING DOES (model.js ENVIRONMENT, the renderer's Lighting schema), said on its row. Every key
@@ -415,7 +417,8 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
                 // after this change event has finished: the binding that fired it is disposed
                 setTimeout(() => { if (shownId === mat.id) show(mat.id) })
             })
-            const all = M.MATERIAL_FIELDS_OF[M.typeOf(mat)] || []
+            // what the scene's features leave in (model.js setFeatures: dispersion off, no Abbe number)
+            const all = (M.MATERIAL_FIELDS_OF[M.typeOf(mat)] || []).filter(k => M.fieldShown(doc, k))
             // the coating's fields in a folder of their own, below (coatingFolder)
             const fields = all.filter(k => k !== 'coating' && !M.MATERIAL_FIELDS[k].coat)
             if (fields.length) {
@@ -552,6 +555,8 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
                     + 'scene; the optics trace uses it too.')
                 // ...and what it sees there: the sun and sky, or the studio (a row of the tree of its own until 0.52.0)
                 environmentFolder(folder, doc)
+                // ...and which optics it has: dispersion, absorption, coatings (model.js setFeatures, 0.next)
+                featuresFolder(folder, doc)
                 // ...and how it is looked at: its camera and its exposure (model.js VIEW, 0.66.0)
                 cameraFolder(folder, doc)
                 exposureFolder(folder, doc)
@@ -824,6 +829,70 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
                         set v(x) { try { view.setExposure(k, x); said(`view/exposure/${k}`) } catch (e) { console.warn('[panel] exposure', e) } } }
             const b = rowTip(f.addBinding(H, 'v', { ...gui }), EXPOSURE_HELP[k] ?? gui.label ?? k)
             flagRow(b, `view/exposure/${k}`)
+        }
+    }
+
+    /* THE SCENE'S OPTICAL FEATURES (model.js setFeatures, materials.js FEATURES; roadmap/LIGHT_MODEL.md S0a): a switch a
+       feature, and Basic and Full over them as Quality's buttons are (lib/pathtracer/settingsui.js addQuality: in a
+       separator blade, since Tweakpane places each blade by its index). A feature off hides its material fields and
+       leaves them out of the shader; the line under the switches says which materials have a value hidden. Every
+       change is one undo step and a compile -- "everything through the compile" (the user, 2026-11-02). */
+    function featuresFolder(parent, doc) {
+        const presetNow = M.featurePresetOf(doc)
+        const folder = parent.addFolder({ title: `optical features${presetNow === 'full' ? '' : ` · ${presetNow}`}`,
+            expanded: !!foldState()['scene.features'] })
+        folder.on('fold', ev => keepFold('scene.features', ev.expanded))
+        const t = folder.element?.querySelector?.('.tp-fldv_t')
+        if (t) t.title = 'Which optics this scene has. A feature off is not traced, in the picture or on the Optics page, and its '
+            + 'fields are not shown on any material -- their values are kept, and come back when it is on. Basic: none of them, '
+            + 'for a scene that needs no more than colour and glass. Full: all of them. Each change is a compile.'
+        const set = values => {
+            const before = JSON.stringify(M.featuresOf(doc))
+            try { M.setFeatures(doc, values) } catch (e) { console.warn('[builder]', e.message); return }
+            if (JSON.stringify(M.featuresOf(doc)) === before) return
+            edited(null)
+            onStructure()
+            said('scene/features')
+            // after the change event has finished: the bindings that fired it are disposed by the redraw
+            setTimeout(() => { if (shownId === doc.root.id) show(shownId) })
+        }
+        const blade = folder.addBlade({ view: 'separator' })
+        const el = blade.element
+        el.replaceChildren()
+        Object.assign(el.style, { padding: '4px 4px 2px', height: 'auto' })
+        const seg = document.createElement('div')
+        Object.assign(seg.style, SEG, { width: 'fit-content' })
+        for (const [id, p] of Object.entries(M.FEATURE_PRESETS)) {
+            const b = document.createElement('button')
+            b.type = 'button'
+            b.textContent = p.label
+            b.dataset.preset = id
+            b.title = id === 'basic' ? 'No dispersion, absorption inside or coatings: their fields hidden on every material'
+                : 'Every optical feature, every field shown'
+            Object.assign(b.style, SEGBTN, { padding: '0 9px' })
+            lit(b, presetNow === id)
+            b.setAttribute('aria-pressed', String(presetNow === id))
+            b.onclick = () => set(p.values)
+            seg.appendChild(b)
+        }
+        const line = document.createElement('div')
+        line.className = 'features-line'
+        Object.assign(line.style, { font: '12px/1.35 var(--sh-sans, system-ui, sans-serif)', color: 'var(--sh-muted, #8fa3b3)',
+                                    margin: '6px 2px 2px', whiteSpace: 'normal' })
+        line.textContent = presetNow === 'custom' ? 'Custom: some features on, some off.'
+            : presetNow === 'basic' ? 'Basic: no dispersion, absorption inside or coatings.' : 'Full: every optical feature.'
+        el.append(seg, line)
+        for (const [k, f] of Object.entries(M.FEATURES)) {
+            const H = { get on() { return M.featuresOf(doc)[k] }, set on(v) { set({ [k]: !!v }) } }
+            rowTip(folder.addBinding(H, 'on', { label: f.label.toLowerCase() }), f.help)
+        }
+        /* WHAT IS HIDDEN, said once here rather than on each material: a value a library item or an older file brought */
+        const hidden = M.hiddenByFeatures(doc)
+        const words = Object.entries(hidden).map(([name, mats]) =>
+            `${mats.length === 1 ? `${mats[0]} has` : `${mats.length} materials have`} ${M.FEATURES[name].hides} (${M.FEATURES[name].label.toLowerCase()} off)`)
+        if (words.length) {
+            const note = { note: `Kept, not traced: ${words.join('; ')}.` }
+            folder.addBinding(note, 'note', { readonly: true, multiline: true, rows: Math.min(4, words.length + 1), label: '' })
         }
     }
 

@@ -28,7 +28,9 @@ The library's optical materials, with catalogue values:
 **abbe**, the Abbe number V_d, makes the index depend on the wavelength (a Cauchy fit through n_d and V_d). A ray
 refracted into such a material takes a wavelength and that wavelength's colour, so white light fans out by colour. 0
 is no dispersion. Lower is more. Turning it on compiles once.
-See [Dispersion in a prism](example:prism-dispersion.json).
+See [Dispersion in a prism](example:prism-dispersion.json). The scene can switch dispersion off as a whole, in its
+[optical features](../modelling/materials.md#optical-features): every glass then refracts at n_d, here and in the
+picture, and the Abbe number is not shown. The same goes for the colour depth and coatings.
 
 ## Absorption: colour depth
 

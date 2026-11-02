@@ -78,6 +78,43 @@ export const FIELDS = {
     emissive:           { type: 'vec3<f32>', def: { r: 1, g: 1, b: 1 } },
     emissiveLuminance:  { type: 'f32', def: 0.0, gui: { min: 0, step: 1 } },
 }
+
+/* THE SCENE'S OPTICAL FEATURES (0.next; roadmap/LIGHT_MODEL.md S0a): which of the fields above a scene has at all. The
+   user, 2026-10-30: "I'd rather not have automatic rules -- a choice somewhere that shows extra properties per material.
+   Dispersion is a trace parameter now, but it could be a scene setting: no dispersion, and the materials' Abbe numbers
+   are not shown either. More or fewer options, depending on what the user knows." A feature OFF is the scene compiled
+   as if no material had its fields (model.js toTree puts them at their defaults, so `only` leaves them out of the
+   shader, byte for byte), and the panels, the parameter registry and the timeline do not offer them. Their values stay
+   in the file: switching it on again brings them back. The picture and the Optics page alike, since both trace the
+   scene's own code (the user, 2026-11-02: "follows the scene"). Every feature on is every scene before it, and the
+   default. Switching one is a compile, as the first coating always was ("everything through the compile", the user,
+   2026-11-02: dispersion was a live render setting, `dispersionOff`, 0.74.0 -- gone).
+   A material's OWN CODE that writes one of these fields itself is not stopped: a feature hides the fields, not code. */
+/** Each: its label, its material fields, what a material keeps when it is off (the panel's line), and its help. */
+export const FEATURES = {
+    dispersion: { label: 'Dispersion', fields: ['abbe'], hides: 'an Abbe number',
+        help: 'Glass with an Abbe number splits white light into its colours where it refracts: prisms, a lens\'s colour fringes. '
+            + 'Off, every glass bends all colours alike, at its index, and its Abbe number is not shown -- no fringes, and none of the '
+            + 'colour noise they take to settle.' },
+    absorption: { label: 'Absorption inside', fields: ['attenuationDistance'], hides: 'a colour depth',
+        help: 'A material\'s colour depth: light inside glass or a liquid filtered to its colour over that depth, so a thick part '
+            + 'is deeper in colour than a thin one. Off, the colour tints a ray at each crossing, whatever the thickness, and the '
+            + 'colour depth is not shown.' },
+    coatings: { label: 'Coatings', fields: ['coating', ...Object.keys(FIELDS).filter(k => FIELDS[k].coat)], hides: 'a coating',
+        help: 'Thin-film coatings in place of a surface\'s own reflection: dichroics, beam splitters, anti-reflective layers. '
+            + 'Off, every surface reflects as its index says, and the coating box is not shown.' },
+}
+/** The presets, in the order shown: Basic is none of them, Full all (the default). "Expert" comes when there is a feature
+ *  Full should not have; "Optics" is Quality's word already (lib/pathtracer/quality.js). */
+export const FEATURE_PRESETS = {
+    basic: { label: 'Basic', values: Object.fromEntries(Object.keys(FEATURES).map(k => [k, false])) },
+    full:  { label: 'Full',  values: Object.fromEntries(Object.keys(FEATURES).map(k => [k, true])) },
+}
+const FEATURE_OF_FIELD = Object.fromEntries(Object.entries(FEATURES).flatMap(([f, d]) => d.fields.map(k => [k, f])))
+/** The feature a material field belongs to, or null for one every scene has. */
+export const featureOfField = k => FEATURE_OF_FIELD[k] ?? null
+/** Whether a field is part of a scene with these features (model.js featuresOf: every key there). */
+export const fieldOn = (features, k) => { const f = FEATURE_OF_FIELD[k]; return !f || features?.[f] !== false }
 /* ...the coating's values are in the shader exactly while it has one: a value of theirs is `only` its material's
    coating being on (codegen passes the material's params, demo.js and params.js ask the same) */
 for (const f of Object.values(FIELDS)) if (f.coat) f.only = (v, P) => P?.coating > 0

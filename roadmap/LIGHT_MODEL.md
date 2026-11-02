@@ -87,19 +87,24 @@ The rules around them:
   "Works, averaged" keeps it on and says in the feature's own box what the numbers mean then.
 - **Switching off loses nothing.** The values stay in the file and do not reach the shader (`only`'s rule, extended
   to the feature). The block says once per scene what is hidden: "2 materials have an Abbe number; dispersion is off".
-- **How much the user knows.** Three presets set the features in one click:
-  - *Basic*: RGB, no extra fields;
-  - *Optics*: absorption, dispersion, coating edges, detectors;
-  - *Expert*: everything built.
-
-  Any feature changed after that reads *Custom*, as Quality does. The level is the scene's: a beginner's example opens
-  plain, a dichroic model opens Expert.
-- **Render settings are about sampling, scene settings about physics.** `dispersionOff` moves out of the render
-  settings and out of Quality's Standard into the scene. That is a change to the scene file's `version`
-  (`bump: minor`). An old file reads as dispersion on, which was the default. A workspace that had it off reads as off
-  in each of its scenes.
+- **How much the user knows.** Presets set the features in one click, and any feature changed after that reads
+  *Custom*, as Quality does. As built (S0a, the user, 2026-11-02): *Basic* is every feature off, *Full* every one on,
+  and Full is the default for every new scene, every example and every older file, so no picture changed until someone
+  chose. *Expert* comes when there is a feature Full should not have. *Optics* is Quality's word already, so it is not
+  used here. The level is the scene's.
+- **Render settings are about sampling, scene settings about physics.** `dispersionOff` moved out of the render
+  settings and out of Quality's Standard into the scene (S0a). It is **no version change** (read in code), as the
+  environment and the view were not: `validate` passes a top-level key it does not know through, so an older builder
+  of the same version carries `features` along and renders every feature on. An old file reads as every feature on,
+  which was the default. A project or workspace whose renderer had dispersion off reads as off in each of its scenes
+  (`builder/project.js` adoptViews).
+- **Everything through the compile** (the user, 2026-11-02, over keeping dispersion a live uniform): a feature off
+  puts its fields at their defaults in what `toTree` hands codegen. Each field is `only` at its default, so the shader
+  is byte for byte the one of the same scene without those values (`codegen.test.mjs`), and the Optics page follows,
+  because it traces the scene's own code. Switching dispersion is a compile now; it was live (0.74.0).
 - **The status bar names the model running**, as the modeline names the build (`builder/modeline.js`):
-  "RGB · dispersion", "spectral 4λ · polarisation".
+  "RGB · dispersion", "spectral 4λ · polarisation". Not in S0a: with three features the box's title says the preset,
+  and the line comes with the colour axis (S0).
 - **A preview in a cheaper model** than the final render is possible (inferred: the same scene compiled twice). It
   would be a choice in the Optical features block, labelled in the picture, because the numbers differ. Open: whether
   the user wants it.
@@ -228,7 +233,7 @@ One PR a step, each with its change note, its Node and Dawn tests, and its `test
 
 | step | what |
 |---|---|
-| **S0a** | **The Optical features block** and its presets. Dispersion, absorption and coating edges move into it and hide their fields when off; `dispersionOff` out of the render settings. Useful with no new physics. |
+| **S0a** | **The Optical features block** and its presets. Dispersion, absorption and coating edges move into it and hide their fields when off; `dispersionOff` out of the render settings. Useful with no new physics. **Built (0.next), not yet seen on hardware.** |
 | **S0** | The `SPEC` type and the composed Ray, RGB byte for byte. Nothing visible; everything after rests on it. |
 | **S1** | Spectra as data (§3), the user's LED database among the sources, exact RGB. |
 | **S2** | Spectral (K = 4, and K = 1) in the optics trace, with spectral detectors. **The user's priority (2026-10-30):** response curves first (W, PPFD, melanopic, UV: weighted tallies), then a spectrum per cell for CRI and TM-30. |

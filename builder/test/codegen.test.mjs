@@ -2011,5 +2011,52 @@ eq('uniformName', uniformName('n7', 'radius'), 'radius_n7')
     ok('...and validates', Model.validate(up).length === 0, Model.validate(up).join('; '))
 }
 
+//----------------------------------------------------------------------------------------------
+// THE SCENE'S OPTICAL FEATURES (0.next; model.js setFeatures, materials.js FEATURES): a feature off is the scene compiled
+// as if no material had its fields -- byte for byte the shader of the same scene with them at their defaults -- and every
+// feature on (the key absent) the shader it always was. The document keeps the values.
+//----------------------------------------------------------------------------------------------
+{
+    const make = () => {
+        const d = Model.createDoc({ title: 'features' })
+        Model.addMaterial(d, { id: 'flint', preset: 'glass' })
+        Model.addMaterial(d, { id: 'dich', preset: 'glass' })
+        Model.addObject(d, 'root', { id: 'pr', primitive: 'prism', material: 'flint' })
+        Model.addObject(d, 'root', { id: 'pl', primitive: 'box', material: 'dich' })
+        Object.assign(d.materials.find(m => m.id === 'flint').params, { abbe: 28, attenuationDistance: 12 })
+        Object.assign(d.materials.find(m => m.id === 'dich').params, { coating: 1, coatEdge: 550 })
+        return d
+    }
+    const gen = d => generate(...Model.generateArgs(d, { id: 'feat' }))
+    const full = make(), fullOut = gen(full)
+    for (const [k, f] of Object.entries(Model.FEATURES))
+        ok(`Full: ${k}'s fields are in the shader`, f.fields.some(n => Object.keys(fullOut.uniforms).some(u => u.endsWith(`_${n}`) || u === uniformName('flint', n) || u === uniformName('dich', n))))
+    for (const name of [...Object.keys(Model.FEATURES), 'basic']) {
+        const d = make()
+        if (name === 'basic') Model.setFeatures(d, Model.FEATURE_PRESETS.basic.values)
+        else Model.setFeatures(d, { [name]: false })
+        const off = Object.keys(Model.FEATURES).filter(k => !Model.featuresOf(d)[k])
+        // the same scene with those fields at their defaults, and every feature on
+        const plain = make()
+        for (const m of plain.materials) for (const k of off) for (const n of Model.FEATURES[k].fields) m.params[n] = structuredClone(Model.MATERIAL_FIELDS[n].def)
+        const a = gen(d), b = gen(plain)
+        ok(`${name} off: the shader byte for byte the scene's without those values`, a.wgsl === b.wgsl, `${a.wgsl.length} vs ${b.wgsl.length}`)
+        eq(`${name} off: ...and the same uniforms`, Object.keys(a.uniforms).sort(), Object.keys(b.uniforms).sort())
+        ok(`${name} off: the document keeps its values`, d.materials.find(m => m.id === 'flint').params.abbe === 28
+            && d.materials.find(m => m.id === 'dich').params.coating === 1)
+        ok(`${name} off: the shader differs from Full's`, a.wgsl !== fullOut.wgsl)
+    }
+    // every feature on again is no key, and the text it was
+    const back = make()
+    Model.setFeatures(back, Model.FEATURE_PRESETS.basic.values)
+    Model.setFeatures(back, Model.FEATURE_PRESETS.full.values)
+    ok('Basic then Full: no key, and the shader Full\'s', !('features' in back) && gen(back).wgsl === fullOut.wgsl)
+    // the coating fields of the feature are the material fields marked coat, and every feature's fields are real
+    eq('coatings: the coating and every coat field', Model.FEATURES.coatings.fields, ['coating', ...Model.COAT_FIELDS])
+    ok('every feature\'s fields are material fields, each `only` at its default (what toTree leaves them at)',
+        Object.values(Model.FEATURES).every(f => f.fields.every(n => n in Model.MATERIAL_FIELDS
+            && !(Model.MATERIAL_FIELDS[n].only?.(Model.MATERIAL_FIELDS[n].def, { coating: 0 }) ?? true))))
+}
+
 console.log(fail ? `\n${fail} failed, ${pass} passed.` : `${pass} assertions pass.`)
 process.exit(fail ? 1 : 0)

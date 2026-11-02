@@ -31,7 +31,6 @@ glass and near-mirror metal on the way.
 | lights' rays | off | as set | on | on, twice the photons | on, to the first matte surface |
 | seen through glass (photon map) | off | as set | on | on | as set |
 | dust in the air | off | light scattered once | in full | in full | off |
-| dispersion | as set | as set | on | on | as set |
 | diffuse bounces | — | — | all | all | — |
 
 **Why Draft can be little faster than Standard.** Draft leaves out only the camera's bounce light. The photons of the
@@ -61,9 +60,8 @@ you stop.
   - **0** is the direct light alone, but through lenses, mirrors and glass, caustics included: what Draft shows, done
     exactly. **1** adds one bounce off a wall, and so on.
   - Fewer reads as Custom; Standard and High put all of them back. At or above Max Bounces it changes nothing.
-  **Dispersion** (ticked by default): glass with an Abbe number splits white light into its colours where it
-  refracts. Untick it and every glass bends all colours alike: no colour fringes, and none of the colour noise they
-  take to settle. Standard and High tick it again. The Optics page always traces dispersion.
+  **Dispersion** is no render setting: it is the scene's, with absorption and coatings, in its
+  [optical features](materials.md#optical-features).
 - **Render size**: fit the view, or a fixed width and height; and a **resolution** of 100 % down to 25 %, which keeps the picture's size on screen, softer, with a quarter of the pixels to trace at 50 %.
 
 The **Developer** switch at the foot of the Quality box shows the rest: ray marching, performance, diagnostics.

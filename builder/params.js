@@ -112,7 +112,9 @@ export function sceneParams(doc, hooks = {}) {
         params({ id: mat.id, unit: 'mm', params: mat.params, constants: mat.constants, ranges: mat.ranges, lengths: mat.lengths },
                /* a coating's values only while it has one (materials.js coating): otherwise none is in the shader, and a
                   value moved would be a compile that changes nothing */
-               [...(M.MATERIAL_FIELDS_OF[M.typeOf(mat)] || []).filter(k => !M.MATERIAL_FIELDS[k].coat || M.hasCoating(mat.params)),
+               /* ...and a field of a feature the scene has off (model.js setFeatures): it is not in the shader at all */
+               [...(M.MATERIAL_FIELDS_OF[M.typeOf(mat)] || []).filter(k => (!M.MATERIAL_FIELDS[k].coat || M.hasCoating(mat.params))
+                   && M.fieldShown(doc, k)),
                 ...M.customParams(mat)], where,
                k => k in M.MATERIAL_FIELDS ? gui(k) : {})
         /* ITS RELIEF's, live as the material's own: the owner `<id>#relief`, whose uniforms are its own

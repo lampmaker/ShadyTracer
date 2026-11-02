@@ -14,7 +14,7 @@
 import { writeFileSync, mkdirSync } from 'node:fs'
 import { PRIMITIVES, SHAPE_GROUPS } from '../builder/primitives.js'
 import { MODIFIERS } from '../builder/modifiers.js'
-import { FIELDS, FIELD_LABELS, COAT_PRESETS, RELIEFS, PRESETS } from '../builder/materials.js'
+import { FIELDS, FIELD_LABELS, COAT_PRESETS, RELIEFS, PRESETS, FEATURES } from '../builder/materials.js'
 import { LIGHT_SHAPES, LIGHT_DEFAULTS } from '../builder/lights.js'
 import { HAZE_DEFAULTS, HAZE_G_MAX, KOSCHMIEDER } from '../builder/hazebox.js'
 import { codeOnly } from '../builder/codegen.js'
@@ -258,6 +258,9 @@ function materials() {
         + '(a height on the surface, which is shape). Lengths in a material are real millimetres whatever the scene\'s unit.')
     s += '\n## Fields\n\n| field | panel label | does |\n|---|---|---|\n'
     for (const k of Object.keys(FIELDS)) s += `| ${k} | ${cell(FIELD_LABELS[k] ?? k)} | ${cell(FIELD_HELP[k] ?? '')} |\n`
+    s += '\n## Optical features\n\nThe scene\'s [optical features](../modelling/materials.md#optical-features) decide which of these a '
+        + 'scene has. With one off, its fields are not shown or traced, and their values are kept.\n\n| feature | fields | does |\n|---|---|---|\n'
+    for (const f of Object.values(FEATURES)) s += `| ${cell(f.label)} | ${f.fields.map(k => cell(FIELD_LABELS[k] ?? k)).join(', ')} | ${cell(f.help)} |\n`
     s += `\n## Starting points\n\nThe Properties panel's **+** makes a material from one of these: ${Object.values(PRESETS).map(p => `*${p.label}*`).join(', ')}. `
         + 'The Library has many more, with real values.\n'
     s += '\n## Coating presets\n\n' + Object.entries(COAT_PRESETS).map(([k, v]) => `- **${k}**: ${Object.entries(v).map(([f, x]) => `${FIELD_LABELS[f] ?? f} ${x}`).join(', ')}`).join('\n') + '\n'

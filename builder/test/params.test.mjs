@@ -291,6 +291,20 @@ ok('the bundled scenes have parameters at all', total > 50, `${total}`)
     ok('...where it is, moved between faces: written, no compile', asked === 2 && state[cu('coating')] === 3)
     PR.write(cpath('coating'), 0)
     ok('...taken off: written, no compile (coat 0 is none in the shader)', asked === 2 && state[cu('coating')] === 0, `${asked}`)
+
+    /* A FEATURE OFF (0.next; model.js setFeatures): its fields leave the registry, and a value written to one all the same
+       (a timeline track made before) asks no compile -- toTree keeps it out of every build, so one would declare
+       nothing, every frame. Its value kept; back on, the registry offers it again. */
+    M.setFeatures(B.doc, { absorption: false })
+    ok('absorption off: the colour depth not offered, the index still', !PR.get(path) && !!PR.get(`scene/${glass.id}/ior`))
+    const asks = asked
+    M.material(B.doc, glass.id).params.attenuationDistance = 9
+    B.live(glass.id, 'attenuationDistance')
+    ok('...a value written to it anyway: no compile asked', asked === asks, `${asked - asks} asked`)
+    await B.apply()
+    ok('...compiled with it off: not declared, the value kept', !(u in RT.scene.uniforms) && M.material(B.doc, glass.id).params.attenuationDistance === 9)
+    M.setFeatures(B.doc, { absorption: true })
+    ok('...on again: offered again', PR.get(path)?.kind === 'live')
     console.log = log
 }
 

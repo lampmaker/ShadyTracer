@@ -166,11 +166,13 @@ export function carryOutside(next, from, memory = null) {
 /* THE RENDERER'S SETTINGS AS A PROJECT KEEPS THEM (0.66.0): everything the renderer hands over (RT.settings) but what
    the scenes have of their own now -- the camera, the exposure (model.js VIEW_EXPOSURE) and the surface tolerance
    (`eps`). Saved, they were put back over the scene shown at every start (app.html applySettings), one scene's
-   camera over another's, and one exposure and one tolerance for all. */
+   camera over another's, and one exposure and one tolerance for all. And `dispersionOff` (0.74.0 to 0.next), whose
+   uniform is gone: dispersion is each scene's feature now (model.js setFeatures), read into them by adoptViews. */
 export function rendererSettings(s) {
     if (!s || typeof s !== 'object' || Array.isArray(s)) return {}
     const { camera: _, values = {}, ...rest } = s
-    return { ...rest, values: Object.fromEntries(Object.entries(values || {}).filter(([k]) => !(k in M.VIEW_EXPOSURE) && k !== 'eps')) }
+    return { ...rest, values: Object.fromEntries(Object.entries(values || {})
+        .filter(([k]) => !(k in M.VIEW_EXPOSURE) && k !== 'eps' && k !== 'dispersionOff')) }
 }
 /**
  * WHAT A PROJECT KEPT BESIDE ITS SCENES, PUT INTO THEM (0.66.0): `views` { key: view } -- the browser's session, newer
@@ -178,7 +180,9 @@ export function rendererSettings(s) {
  * session every second: workspace/autosave.js) -- and, from a project or a workspace written before, `cameras`
  * { key: camera }, each scene's kept camera, and `renderer`, whose exposure was every scene's and whose tolerance
  * (eps, metres) was set while `current` was being worked on. A scene's own view comes first; a kept view that is not
- * sound is left out, never the reason a project does not open. Changes `p`; returns it.
+ * sound is left out, never the reason a project does not open. And the renderer's dispersion switch (`dispersionOff`
+ * 1, 0.74.0 to 0.next), which was every scene's: each scene's dispersion off (model.js setFeatures). Changes `p`;
+ * returns it.
  */
 export function adoptViews(p, { views = null, cameras = null, renderer = null, current = null } = {}) {
     const obj = o => o && typeof o === 'object' && !Array.isArray(o)
@@ -191,6 +195,8 @@ export function adoptViews(p, { views = null, cameras = null, renderer = null, c
         if (!d.view?.camera && obj(c)) tryView(d, { camera: c })
         if (!d.view?.exposure && exposure && Object.keys(exposure).length) tryView(d, { exposure })
     }
+    if (renderer?.values?.dispersionOff === 1)
+        for (const s of p.scenes) { try { M.setFeatures(s.doc, { dispersion: false }) } catch (e) { console.warn(`[project] dispersion off left out: ${e.message}`) } }
     const eps = +renderer?.values?.eps, cur = scene(p, current)?.doc
     if (eps > 0 && cur && !cur.tolerance) {
         try { M.setTolerance(cur, Number((eps / (M.UNITS[cur.unit] ?? 1)).toPrecision(12))) }

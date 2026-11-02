@@ -185,7 +185,7 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
    optics/fresnel.js refract), the flint against BK7 at least deviation; n(lambda) through n_d and V_d with BK7's
    catalogue against it; the wavelength draw and its weights averaging exactly 1, drawn live; a dichroic coat's edge
    moving with the tilt and each channel's reflectance (edgeAt, edgeRGB); the shading kernel's dispersion block and
-   its off switch (UB.dispersionOff, 0.74.0: every Abbe number read as 0, the picture only); the
+   its off switch (the scene's optical features, 0.next: every material compiled without its Abbe number, the picture and the Optics page alike; a render setting, UB.dispersionOff, from 0.74.0 until then); the
    comments' stale bit count, softplus count, red's range and BK7 accuracy; the green reflections of 0.44.1 ->
    spectral.js, materials_pbr.js. *Read:* wiki-dispersion, wiki-abbe, wiki-cauchy, pbr-spectra.
 

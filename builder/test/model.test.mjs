@@ -1670,5 +1670,43 @@ throws('another version is refused, not guessed at',
     ok('taken away: no timeline at all', !('timeline' in d))
 }
 
+//----------------------------------------------------------------------------------------------
+// THE SCENE'S OPTICAL FEATURES (0.next; setFeatures): every feature on is no key (an old file, every example), only what
+// is off saved, a refusal changing nothing, the presets, what is hidden said, and toTree putting a feature's fields at
+// their defaults without touching the document. No version change: an older builder of the same version carries the key along.
+//----------------------------------------------------------------------------------------------
+{
+    const d = M.createDoc({ title: 'features' })
+    M.addMaterial(d, { id: 'g', preset: 'glass', label: 'flint' })
+    d.materials.find(m => m.id === 'g').params.abbe = 36
+    eq('a scene with no key: every feature on, Full', [M.featuresOf(d), M.featurePresetOf(d)], [{ dispersion: true, absorption: true, coatings: true }, 'full'])
+    M.setFeatures(d, { dispersion: false })
+    eq('dispersion off: only that saved, Custom', [d.features, M.featurePresetOf(d)], [{ dispersion: false }, 'custom'])
+    eq('...and read back from the file', M.featuresOf(M.parse(M.serialize(d))), { dispersion: false, absorption: true, coatings: true })
+    ok('...the Abbe number not shown, the index still', !M.fieldShown(d, 'abbe') && M.fieldShown(d, 'ior') && M.fieldShown(d, 'attenuationDistance'))
+    eq('...and said: the material whose value is kept, not traced', M.hiddenByFeatures(d), { dispersion: ['flint'] })
+    const tree = M.toTree(d)
+    ok('toTree: the Abbe number at its default for codegen, the features on the root', tree.materials[0].params.abbe === 0
+        && tree.features?.dispersion === false)
+    ok('...the document untouched', d.materials[0].params.abbe === 36)
+    M.setFeatures(d, M.FEATURE_PRESETS.basic.values)
+    eq('Basic: all three off', [d.features, M.featurePresetOf(d)], [{ dispersion: false, absorption: false, coatings: false }, 'basic'])
+    d.materials[0].params.coatEdge = 520
+    ok('...a coating\'s edge with no coating on hides no coating: only the Abbe number is said', JSON.stringify(M.hiddenByFeatures(d)) === JSON.stringify({ dispersion: ['flint'] }))
+    d.materials[0].params.coating = 1
+    eq('...one on is', M.hiddenByFeatures(d), { dispersion: ['flint'], coatings: ['flint'] })
+    d.materials[0].params.coating = 0
+    const before = JSON.stringify(d.features)
+    throws('an unknown feature is refused', () => M.setFeatures(d, { polarisation: true }), /not a feature/)
+    throws('...a feature not true or false', () => M.setFeatures(d, { dispersion: 0 }), /true or false/)
+    eq('...and a refusal changes nothing', JSON.stringify(d.features), before)
+    M.setFeatures(d, M.FEATURE_PRESETS.full.values)
+    ok('Full again: no key at all, as every scene before', !('features' in d) && M.featurePresetOf(d) === 'full')
+    ok('toTree with every feature on: no features on the root, the value as it is', !('features' in M.toTree(d)) && M.toTree(d).materials[0].params.abbe === 36)
+    ok('a file with a wrong feature is refused', M.validate({ ...M.createDoc(), features: { dispersion: 'no' } }).some(p => /features\.dispersion/.test(p))
+        && M.validate({ ...M.createDoc(), features: [] }).some(p => /features must be/.test(p)))
+    ok('a file of this version with features reads them, one without reads Full', M.featurePresetOf(M.parse(M.serialize(M.createDoc()))) === 'full')
+}
+
 console.log(fail ? `\n${fail} FAILED, ${pass} passed` : `${pass} assertions pass.`)
 process.exit(fail ? 1 : 0)

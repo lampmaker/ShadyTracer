@@ -791,8 +791,8 @@ ok('...and a conic typed to four places kept on its slider (its step\'s rounding
         f.querySelector(':scope > .tp-fldv_b .tp-fldv_t').textContent.trim(), f.classList.contains('pt-box'),
         [...f.querySelectorAll(':scope > .tp-fldv_c > .tp-lblv .tp-lblv_l')].map(l => l.textContent.trim().replace(/^[◇◆]/, ''))]))
     let SB = await sceneBoxes()
-    ok('...in boxes: the animated values\' first, then the scene\'s own with its rows, then environment and functions',
-       JSON.stringify(SB.map(b => b[0].replace(/\s+◆$/, ''))) === '["animated · 1","Scene","environment","functions"]' && SB.every(b => b[1])
+    ok('...in boxes: the animated values\' first, then the scene\'s own with its rows, then environment, optical features and functions',
+       JSON.stringify(SB.map(b => b[0].replace(/\s+◆$/, ''))) === '["animated · 1","Scene","environment","optical features","functions"]' && SB.every(b => b[1])
        && ['label', 'unit', 'instant hide / show'].every(l => SB[1][2].includes(l)) && SB[1][2].some(l => l.startsWith('environment radius')), JSON.stringify(SB))
     await p.evaluate(() => CHECK.flagPanel.show(CHECK.doc.root.id))
     ok('...drawn again: the same boxes, none left over', JSON.stringify(await sceneBoxes()) === JSON.stringify(SB), JSON.stringify(await sceneBoxes()))
@@ -859,6 +859,65 @@ ok('...and a conic typed to four places kept on its slider (its step\'s rounding
     await p.waitForTimeout(50)
     rows = await shown()
     ok('...taken off: written, and the panel without its values', (await P()).coating === 0 && !VALUES.some(l => rows.includes(l)), JSON.stringify(rows))
+}
+
+/* THE SCENE'S OPTICAL FEATURES (0.next; model.js setFeatures): a box on the scene's row, Basic and Full over a switch a
+   feature. A feature off hides its fields on every material; each change is one undo step and a compile; what a feature
+   off hides is said once, in the box. */
+{
+    const FIELDS = ['Abbe number (dispersion)', 'colour depth (mm)', 'coating']
+    const root = await p.evaluate(() => CHECK.doc.root.id)
+    const box = () => p.evaluate(() => {
+        const f = [...document.querySelectorAll('#t .tp-fldv')].find(x => x.querySelector(':scope > .tp-fldv_b .tp-fldv_t')?.textContent.trim().startsWith('optical features'))
+        if (!f) return null
+        return { title: f.querySelector(':scope > .tp-fldv_b .tp-fldv_t').textContent.trim(),
+                 lit: [...f.querySelectorAll('button[data-preset]')].filter(b => b.getAttribute('aria-pressed') === 'true').map(b => b.dataset.preset),
+                 line: f.querySelector('.features-line')?.textContent ?? '', notes: [...f.querySelectorAll('textarea')].map(t => t.value) }
+    })
+    const press = id => p.evaluate(id => { const b = document.querySelector(`#t button[data-preset="${id}"]`); if (!b) return 'no button'; b.click(); return 'pressed' }, id)
+    const features = () => p.evaluate(() => CHECK.M.featuresOf(CHECK.doc))
+    await p.evaluate(() => { CHECK.M.material(CHECK.doc, 'gl').params.abbe = 36 })
+    rows = await rowsOf('gl')
+    ok('Full, the default: the glass shows its Abbe number, colour depth and coating', FIELDS.every(l => rows.includes(l)), JSON.stringify(rows))
+    rows = await rowsOf(root)
+    let b = await box()
+    ok('the scene\'s row: a box, optical features, Full lit, a switch a feature', b?.title === 'optical features' && JSON.stringify(b.lit) === '["full"]'
+        && ['dispersion', 'absorption inside', 'coatings'].every(l => rows.includes(l)) && /Full/.test(b.line), JSON.stringify([b, rows]))
+    before = await state()
+    ok('Basic pressed', await press('basic') === 'pressed')
+    await p.waitForTimeout(50)
+    s = await state()
+    ok('...every feature off, one undo step and a compile', JSON.stringify(await features()) === '{"dispersion":false,"absorption":false,"coatings":false}'
+        && s.commits.length === before.commits.length + 1 && s.commits.at(-1) === null && s.structure === before.structure + 1,
+        JSON.stringify([await features(), s.commits.slice(before.commits.length), s.structure - before.structure]))
+    b = await box()
+    ok('...the box redrawn: titled basic, Basic lit, the hidden Abbe number said', b?.title === 'optical features · basic' && JSON.stringify(b.lit) === '["basic"]'
+        && b.notes.some(n => /glass has an Abbe number/.test(n)), JSON.stringify(b))
+    rows = await rowsOf('gl')
+    ok('...and the glass without the three, its index still there', !FIELDS.some(l => rows.includes(l)) && rows.includes('ior'), JSON.stringify(rows))
+    ok('...its value kept', await p.evaluate(() => CHECK.M.material(CHECK.doc, 'gl').params.abbe) === 36)
+    await rowsOf(root)
+    before = await state()
+    ok('dispersion ticked on its own', await set('dispersion', true) === 'set')
+    await p.waitForTimeout(50)
+    s = await state()
+    b = await box()
+    ok('...dispersion on, Custom, nothing lit, one undo step', (await features()).dispersion === true && b?.title === 'optical features · custom'
+        && b.lit.length === 0 && /Custom/.test(b.line) && s.commits.length === before.commits.length + 1, JSON.stringify([b, await features()]))
+    rows = await rowsOf('gl')
+    ok('...the Abbe number back on the glass, the colour depth and coating still not', rows.includes('Abbe number (dispersion)')
+        && !rows.includes('colour depth (mm)') && !rows.includes('coating'), JSON.stringify(rows))
+    await rowsOf(root)
+    ok('Full pressed', await press('full') === 'pressed')
+    await p.waitForTimeout(50)
+    ok('...every feature on: no key in the document', !(await p.evaluate(() => 'features' in CHECK.doc)))
+    rows = await rowsOf('gl')
+    ok('...and the glass shows all three again', FIELDS.every(l => rows.includes(l)), JSON.stringify(rows))
+    before = await state()
+    await rowsOf(root)
+    await press('full'); await p.waitForTimeout(50)
+    ok('Full again: nothing written, no undo step', (await state()).commits.length === before.commits.length)
+    await p.evaluate(() => { CHECK.M.material(CHECK.doc, 'gl').params.abbe = 0 })
 }
 
 // A HAZE BOX (0.62.0; builder/hazebox.js): where it is, its size, and its dust -- live, the renderer's own uniforms

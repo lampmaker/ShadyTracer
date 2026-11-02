@@ -43,6 +43,21 @@ coatings, glow -- are in the [Material fields](../reference/materials.md) refere
 the picture follows. Three turn a feature on and compile the first time: the Abbe number, the colour depth, and a
 coating.
 
+## Optical features
+
+Those three are also the scene's to have or not. The scene's row in the tree has a box, **optical features**, with a
+switch for each:
+- **dispersion**: the Abbe number;
+- **absorption inside**: the colour depth;
+- **coatings**: the coating box.
+
+A feature switched off is not traced at all, in the picture or on the Optics page, and its fields are not shown on any
+material. Their values are kept: switch it on and they are back. The box says which materials have a value it is
+hiding, for instance one a library glass brought in.
+
+**Basic** switches all three off, for a scene that needs no more than colour and glass. **Full**, the default and every
+older scene, switches them all on. Anything between reads Custom. Each change is a compile and one undo step.
+
 ## Glowing
 
 A **glowing** material makes any shape a light. Its brightness is a luminance in cd/m²: 300 is a monitor, 5000 a

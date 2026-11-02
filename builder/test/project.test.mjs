@@ -118,6 +118,15 @@ throws('and so is broken JSON', () => P.parse('{'), /JSON/)
     eq('...its typed tolerance into the scene being worked on, in its unit (2 um in mm)', [op.tolerance, oq.tolerance], [undefined, 0.002])
     eq('...and the renderer\'s settings are what is left', ow.renderer, { values: { maxbounce: 12 } })
     ok('...no cameras left beside them', !('cameras' in ow))
+    /* A PROJECT WHOSE RENDERER HAD DISPERSION OFF (dispersionOff 1, 0.74.0 to 0.next): it was every scene's, so every
+       scene's dispersion is off (model.js setFeatures), and the setting is not kept among the renderer's */
+    const disp = JSON.parse(P.serializeWorkspace(P.createProject([M.createDoc({ title: 'D' }), M.createDoc({ title: 'E' })]), 's1', {}))
+    disp.renderer = { values: { dispersionOff: 1, maxbounce: 12 } }
+    const dw = P.parse(JSON.stringify(disp)).workspace
+    eq('dispersion off in an old project\'s renderer: off in each of its scenes', dw.project.scenes.map(s => M.featuresOf(s.doc).dispersion), [false, false])
+    eq('...and gone from the renderer\'s settings', dw.renderer, { values: { maxbounce: 12 } })
+    disp.renderer = { values: { dispersionOff: 0 } }
+    ok('...on (0) changes no scene', P.parse(JSON.stringify(disp)).workspace.project.scenes.every(s => !('features' in s.doc)))
     // A SESSION'S VIEWS (workspace/store.js workspaceText): newer than the documents, so they win
     const sess = JSON.parse(P.serializeWorkspace(P.createProject([M.setView(M.createDoc({ title: 'R' }), { camera: { distance: 3 } })]), 's1', {}))
     sess.views = { s1: { camera: { distance: 5 }, exposure: { exposureEV: 4 } } }
