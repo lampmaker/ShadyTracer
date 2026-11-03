@@ -54,9 +54,23 @@ kept and radius.
 **Measured on the user's Ampere:** `volume-light` agreed on three presses (within 0.25 %). `volume-map` read 1.0006 at
 94a1903 (880 × 896), with the map at 0.85 of its room, kept 0.032, and nothing dropped or cut.
 
+**The photon map has a radius of its own inside glass.** It is under Render settings › Light sources › Photon map,
+*radius inside glass (pixels)*, with the developer settings shown. It defaults to 10 pixels, where the surface's is 3.
+- **Why:** a gather inside glass finds what lies in a sphere, so what it finds goes as the radius cubed. At the
+  surface's radius it found about 0.01 records on the bench's milky sheet, and a beam's track was grainy.
+- **Its own grid:** the photons stored inside glass go on a grid of their own, and the radius shrinks over samples as a
+  volume shrinks.
+- **On Dawn:** twice the surface's radius read the same mean, and the spread across a lit slab's face fell from 0.172 to
+  0.068.
+- **The limit:** near the glass's own faces a large radius reads dark. The sphere sticks out of the glass and is divided
+  as if whole, so keep the radius well under the glass's thickness.
+
 **An image row in Tests waits for the kernels its settings ask for**, as a timing row did. Switching the photon map in a
 scene that scatters builds every kernel again. The row's samples were refused while that ran ("trace while the scene's
 pipelines are being built"), and a second press worked. The map's columns are read once the row's samples are done, not
 from the first sample.
 
-Press `volume` in Tests and paste it back. `sppm` and `dichroics` take the same plan for the keep.
+**What to look at:** the beam's track through slightly milky glass, the photon map on: smoother than before, and
+sharpening as samples come in. If it is still grainy, raise the radius inside glass; if the glass reads dark near its
+faces, lower it. Press `volume` and `volume-map` in Tests and paste them back: `volume-map` now gathers inside glass
+at 10 pixels (its `r glass mm` column). `sppm` and `dichroics` take the same plan for the keep.
