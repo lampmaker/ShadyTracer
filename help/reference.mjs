@@ -2,8 +2,8 @@
 //
 // THE REFERENCE PAGES, MADE FROM THE PROGRAM'S OWN LISTS: every shape (builder/primitives.js), every modifier
 // (builder/modifiers.js), every material field, relief and coating (builder/materials.js), every light setting
-// (builder/lights.js), every haze box setting (builder/hazebox.js), and the functions code can call (the scene prelude: CODE_HELP
-// below). A shape's or a modifier's text is the comment its code starts with -- what its properties panel
+// (builder/lights.js), every haze box setting (builder/hazebox.js), the functions code can call (the scene prelude: CODE_HELP
+// below), and the functions a scene's script can call (tools/scriptref.js, which tools/test/script.test.mjs holds to the API). A shape's or a modifier's text is the comment its code starts with -- what its properties panel
 // shows -- so it is written once. Material fields and light settings have no text of their own in the code; theirs is
 // below, one a key, and test/coverage.test.mjs fails on a key with none. So a shape, modifier, field or setting
 // added to the program without words fails the tests, rather than shipping undocumented -- the "second caller" this
@@ -19,6 +19,7 @@ import { LIGHT_SHAPES, LIGHT_DEFAULTS } from '../builder/lights.js'
 import { HAZE_DEFAULTS, HAZE_G_MAX, KOSCHMIEDER } from '../builder/hazebox.js'
 import { codeOnly } from '../builder/codegen.js'
 import { SCENE_PRELUDE } from '../lib/pathtracer/core/scene_api.js'
+import { referenceMarkdown as scriptReference } from '../tools/scriptref.js'
 import { TOKENS, SHORT_TOKENS } from '../lib/wgsl_shorthand.js'
 
 /** WHAT EACH MATERIAL FIELD DOES -- read in builder/materials.js FIELDS and lib/pathtracer/core/materials_pbr.js. */
@@ -347,6 +348,8 @@ export const referencePages = () => ({
     'reference/lights.md': lights(),
     'reference/haze.md': haze(),
     'reference/code.md': code(),
+    // a script's functions (0.next): tools/scriptref.js, which the Script panel's Reference pane shows too
+    'reference/script.md': scriptReference(),
 })
 
 if (import.meta.url === `file://${process.argv[1]}`) {

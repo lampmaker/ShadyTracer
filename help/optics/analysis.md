@@ -67,3 +67,6 @@ Folded below them:
 
 Every chart and table can be saved: the intensity table, the illuminance map and every detector hit as **CSV**, and
 any chart as a **PNG**.
+
+A [script](../modelling/scripts.md) can run the analysis and read the same numbers: the peak intensity, the flux within a cone, a
+detector's uniformity. It can run one after another, with a setting changed between them, to tune a lens.

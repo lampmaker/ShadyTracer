@@ -2476,6 +2476,44 @@ export function setTimeline(doc, t) {
 }
 
 /*======================================================================================================================
+  THE SCRIPT -- JavaScript that drives the scene and reads what it measures (0.next; tools/script.js, tools/scriptapi.js).
+  The user, 2026-11-03: "a javascript code block (part of a scene) that can control and read everything": the parameters,
+  the camera, a render kept in the darkroom and written to a file, an analysis run and its numbers read -- for a piece
+  of generative art, or a lens tuned by a loop until a built-in optimiser exists.
+
+  `doc.script`, a string, absent when there is none. The scene's, not the page's, for the reason the timeline is
+  (TIMELINE above): what it names -- 'scene/n4/radius' -- is a node id, unique only within its document.
+
+  NOT AN UNDO STEP, as the view and the timeline are not (project.js OUTSIDE_HISTORY): its panel is a text editor with
+  its own undo, and an edit of the scene's undone by Ctrl+Z must not take back the last lines typed. SAVED as an edit
+  is (demo.js keepScript), so a reload keeps it.
+
+  NEVER RUN ON ITS OWN. A scene is a file people pass around (an example, a library, a mail); a script in one is code
+  with the page's whole reach. It runs when its panel's Run is pressed, and at no other time -- not when the scene is
+  opened, shown or loaded.
+
+  No version change, as the view's and the timeline's: a builder that predates it carries it along unread.
+======================================================================================================================*/
+/** The longest script a scene keeps, in characters: a fence against a file that is not a scene's, not a size anyone
+ *  writing by hand comes near (the longest example is about 4 kB). */
+export const SCRIPT_MAX = 256 * 1024
+function scriptProblems(s) {
+    if (typeof s !== 'string') return ['script must be text (JavaScript)']
+    if (s.length > SCRIPT_MAX) return [`script is ${s.length} characters, more than ${SCRIPT_MAX}`]
+    return []
+}
+/** The scene's script, '' for none. */
+export const sceneScriptOf = doc => typeof doc?.script === 'string' ? doc.script : ''
+/** Set the scene's script; '' or null takes it away. Checked first: a refusal changes nothing. */
+export function setScript(doc, text) {
+    if (text == null || text === '') { delete doc.script; return doc }
+    const bad = scriptProblems(text)
+    if (bad.length) throw new ModelError(bad)
+    doc.script = text
+    return doc
+}
+
+/*======================================================================================================================
   THE SCENE'S SURFACE TOLERANCE (0.66.0): how close a ray must come to a surface to have hit it, in the scene's unit,
   0 or absent the renderer's automatic one (a share of the scene's size: lib/pathtracer/core/photometry.js autoEps).
   It was a renderer setting in metres, one for every scene: a value typed for a 25 cm optic was the one a 4 m room, an
@@ -2700,6 +2738,7 @@ export function validate(doc) {
     if (doc.envRadius !== undefined) p.push(...envRadiusProblems(doc.envRadius))
     if (doc.view !== undefined) p.push(...viewProblems(doc.view))
     if (doc.timeline !== undefined) p.push(...timelineProblems(doc.timeline))
+    if (doc.script !== undefined) p.push(...scriptProblems(doc.script))
     if (doc.tolerance !== undefined) p.push(...toleranceProblems(doc.tolerance))
     if (doc.liveVisibility !== undefined && typeof doc.liveVisibility !== 'boolean') p.push('liveVisibility must be true or false')
     if (p.length) return p

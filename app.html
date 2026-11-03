@@ -19,6 +19,7 @@
     <!-- the keyframe timeline and video export (lib/timeline), and its look in a panel (tools/) -->
     <link rel="stylesheet" href="./lib/timeline/timeline.css">
     <link rel="stylesheet" href="tools/timeline.css">
+    <link rel="stylesheet" href="tools/script.css">
     <link rel="stylesheet" href="help/help.css">
     <script src="./lib/dockview/dockview.min.js"></script>
 </head>
@@ -126,6 +127,9 @@
         import { installItemEditor, SAMPLE_CHOICES, SAMPLE_SIZES, sampleOf, setSample } from './library/edit.js'
         import { ITEM_FILES, itemUrl } from './library/items/index.js'
         import { installTimeline } from './tools/timeline.js'
+        import { installScript } from './tools/script.js'
+        import { makeScriptApi } from './tools/scriptapi.js'
+        import { download as downloadBlob } from './lib/pathtracer/darkroom/export/run.js'
         import { installHelp } from './help/panel.js'
 
         //==============================================================================================================
@@ -313,6 +317,10 @@
            filmed offscreen. Registered here with the rest, filled once the parameters have their providers. */
         const timelineEl = SHELL.panel({ id: 'tools.timeline', title: 'Timeline', module: 'app', menu: false,
             help: 'Keyframes on any live setting -- the camera, a light\'s flux, an object\'s position -- played in the view, and a video rendered frame by frame (⚙ export, RECORD).' });
+        /* THE SCRIPT, a tool (tools/script.js): the scene's JavaScript, run with ▶ -- every setting, the camera, renders kept
+           in the darkroom and saved, analyses run and read (tools/scriptapi.js). Filled once the optics page exists. */
+        const scriptEl = SHELL.panel({ id: 'tools.script', title: 'Script', module: 'app', menu: false,
+            help: 'The scene\'s script: JavaScript that sets any setting, moves the camera, renders and saves pictures, runs the analysis and reads its numbers. Run with ▶; never on its own.' });
         /* THE HELP (help/panel.js): pages to read, with links that open examples, run commands and point at panels.
            Help › Contents and F1 open it, floating; View lists it too. Filled once the commands exist (below). */
         const helpEl = SHELL.panel({ id: 'help', title: 'Help', module: 'app', menu: false,
@@ -391,6 +399,11 @@
             help: 'Keyframes on any live setting, played in the view, and a video rendered frame by frame',
             run: () => SHELL.isOpen('tools.timeline') ? SHELL.open('tools.timeline')
                 : SHELL.open('tools.timeline', { referencePanel: 'viewport', direction: 'below' }, { height: Math.round(innerHeight * 0.34) }) });
+        /* ...AND THE SCRIPT beside the view, its View entry the page's for the same reason (where it opens) */
+        SHELL.command({ id: 'view.tools.script', menu: 'View', group: 'panels.app', label: 'Script',
+            help: 'The scene\'s script: JavaScript that drives the settings, the camera, renders and the analysis',
+            run: () => SHELL.isOpen('tools.script') ? SHELL.open('tools.script')
+                : SHELL.open('tools.script', { referencePanel: 'viewport', direction: 'right' }, { width: Math.round(Math.min(560, innerWidth * 0.36)) }) });
         SHELL.layout.restore();
         SHELL.open('viewport');
 
@@ -1453,6 +1466,18 @@
             progress: job => SHELL.progress('video', job), onVisible: fn => SHELL.onVisible('tools.timeline', fn),
             scene: { timeline: () => BUILDER.timeline(), keep: t => BUILDER.keepTimeline(t) }, local: localStore });
         BUILDER.onTimeline = t => window.TIMELINE.showScene(t);
+
+        /* THE SCRIPT (tools/script.js; builder/model.js SCRIPT): the scene shown's, handed over as each is shown, kept into
+           it at every keystroke. Each run gets an API of its own (tools/scriptapi.js), stopped by its own signal: the same
+           registry, renderer, builder and Analysis pane a person works through. SCRIPT in the console. */
+        window.SCRIPT = installScript(scriptEl, {
+            scene: { script: () => BUILDER.script(), keep: text => BUILDER.keepScript(text) },
+            status: t => SHELL.status(t),
+            api: (signal, log) => makeScriptApi({ PARAMS, RT, BUILDER, OPTICS: window.OPTICS, signal, log,
+                save: downloadBlob, progress: job => SHELL.progress('script', job),
+                frame: () => new Promise(r => requestAnimationFrame(r)), build: versionText }),
+        });
+        BUILDER.onScript = text => window.SCRIPT.showScene(text);
 
         /* THE MEASURE TOOL: pinned readings and a rectangle's average over the picture, points on surfaces and the
            distances between them (its ruler), and the false colour's legend (lib/pathtracer/measure). Reads nothing

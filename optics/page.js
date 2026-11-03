@@ -1295,18 +1295,25 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
         sumBtn.title = LIVE.sum ? 'Σ on: Live\'s rounds add up while nothing changes -- the error bars shrink, the map fills in. Click for every round on its own'
             : 'Σ off: every round of Live on its own, the same number of rays each, to compare one with another. Click to add them up while nothing changes'
     }
-    const runAnalysis = async () => {
-        if (analysing || LIVE.on) return say(LIVE.on ? 'the analysis is live: switch Live off to run it once' : 'an analysis is already running')
+    /* ONE ANALYSIS, as ▶ Run runs it -- and a script (O.analyse below), which needs what it throws rather than a line
+       saying it failed: so the run is here, and the button's handler only says. */
+    const analyseOnce = async () => {
+        if (LIVE.on) throw new Error('the analysis is live: switch Live off to run it once')
+        if (analysing) throw new Error('an analysis is already running')
         analysing = true; buttons()
         const resume = await pauseRays()
         try {
             await analysis()
             // the run bar says how many and when; its tooltip how long -- the status line has nothing to add but the dust's absence
             say(hazeNote())
-        } catch (e) {
+        } finally { analysing = false; resume(); buttons() }
+    }
+    const runAnalysis = async () => {
+        if (analysing || LIVE.on) return say(LIVE.on ? 'the analysis is live: switch Live off to run it once' : 'an analysis is already running')
+        try { await analyseOnce() } catch (e) {
             console.error('[optics]', e)
             say(`analysis failed: ${e.message}`)
-        } finally { analysing = false; resume(); buttons() }
+        }
     }
     runBtn.onclick = runAnalysis
 
@@ -1448,5 +1455,90 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
        second, its photons leaving from behind the reflector's new place (the user, 2026-10-16, Reflector.json).
        A table is about 0.03 ms of the CPU (measured on the user's laptop, three scenes). */
     O.followScene = () => { followScene() }
+
+    /*==================================================================================================================
+      FOR A SCRIPT (tools/scriptapi.js, 0.next): the analysis as ▶ Run runs it, its setup as the Analysis pane's data
+      sets it, and what it found as data. THE PANE'S OWN, not a second analysis: a script's run is shown in the pane and
+      the charts as a click's is, and a click's is what a script reads afterwards -- one result, never two that differ.
+    ==================================================================================================================*/
+    /** What the next analysis runs with: the rays, what feeds the far field and its axis and grid, and the choices the
+     *  scene offers (`fromOptions` and `axisOptions`, label -> value, as the pane lists them). */
+    O.analysisSetup = () => {
+        keepChoices()
+        return { rays: raysTotal(), from: F.from, axis: isCustom() ? F.axisV.slice() : F.light, flip: !!F.flip, dG: F.dG, dC: F.dC,
+                 fromOptions: fromOptions(), axisOptions: Object.fromEntries(Object.entries(lightOptions()).filter(([, v]) => v !== -1)),
+                 dGOptions: Object.values(DG), dCOptions: Object.values(DC) }
+    }
+    /** Change the setup, any of { rays, from, axis, flip, dG, dC } -- each checked first, and a refusal (thrown, naming
+     *  what is allowed) changes nothing. `from`: 'escaped', a detector material by its label or id, or a value of
+     *  fromOptions; `axis`: a light by its label or its place in axisOptions, or a vector [x, y, z]. The pane follows. */
+    O.setupAnalysis = (patch = {}) => {
+        const known = ['rays', 'from', 'axis', 'flip', 'dG', 'dC']
+        for (const k of Object.keys(patch)) if (!known.includes(k)) throw new Error(`analysis setup: '${k}' is not one of ${known.join(', ')}`)
+        const next = {}
+        if (patch.rays !== undefined) {
+            const n = Math.round(+patch.rays)
+            if (!(n >= 1 && n <= RAYS_MAX)) throw new Error(`analysis setup: rays must be 1 to ${RAYS_MAX.toLocaleString()}`)
+            // the multiplier the count reads best with: the largest that leaves a whole number of at least 1
+            const times = Object.values(TIMES).filter(t => t <= n && Number.isInteger(n / t)).pop() ?? 1
+            next.T = { count: n / times, times }
+        }
+        if (patch.from !== undefined) {
+            const opts = fromOptions(), v = String(patch.from)
+            const mat = detectorMats().find(d => d.m.label === v || d.m.id === v)
+            const hit = Object.values(opts).includes(v) ? v : opts[v] ?? (mat ? `mat:${mat.id}` : null)
+            if (!hit) throw new Error(`analysis setup: from '${v}' is none of ${['escaped', ...detectorMats().map(d => d.m.label || d.m.id)].join(', ')}`)
+            next.from = hit
+        }
+        if (patch.axis !== undefined) {
+            const a = patch.axis
+            if (Array.isArray(a)) {
+                if (!(a.length === 3 && a.every(Number.isFinite) && Math.hypot(...a) > 0)) throw new Error('analysis setup: an axis vector is three numbers, not all 0')
+                next.axis = { light: -1, axisV: a.slice(), axisText: a.join(', ') }
+            } else {
+                const opts = Object.entries(lightOptions()).filter(([, v]) => v !== -1)
+                const i = typeof a === 'number' ? (opts.some(([, v]) => v === a) ? a : null) : opts.find(([k]) => k === String(a))?.[1]
+                if (i == null) throw new Error(`analysis setup: axis '${a}' is none of the lights (${opts.map(([k]) => k).join(', ')}) nor a vector`)
+                next.axis = { light: i }
+            }
+        }
+        if (patch.flip !== undefined) next.flip = !!patch.flip
+        for (const [k, list] of [['dG', Object.values(DG)], ['dC', Object.values(DC)]]) if (patch[k] !== undefined) {
+            if (!list.includes(+patch[k])) throw new Error(`analysis setup: ${k} must be one of ${list.join(', ')} (degrees)`)
+            next[k] = +patch[k]
+        }
+        if (next.T) { Object.assign(T, next.T); showCount() }
+        const far = 'from' in next || 'axis' in next || 'flip' in next || 'dG' in next || 'dC' in next
+        if ('from' in next) F.from = next.from
+        if (next.axis) Object.assign(F, next.axis)
+        if ('flip' in next) F.flip = next.flip
+        if ('dG' in next) F.dG = next.dG
+        if ('dC' in next) F.dC = next.dC
+        if (far) { buildData(true); farChanged() }
+        return O.analysisSetup()
+    }
+    /** Run the analysis (with `setup` first, as setupAnalysis takes it) and resolve with what it found (O.analysis). Throws
+     *  what the trace throws, and while Live is on or another analysis runs. */
+    O.analyse = async (setup = null) => {
+        if (setup) O.setupAnalysis(setup)
+        await analyseOnce()
+        return O.analysis()
+    }
+    /** WHAT THE LAST ANALYSIS FOUND, as data, or null before one: its totals (estimate.js results), its far field (each bin's
+     *  flux and error, for optics/farfield.js), the detector hits it kept for the map (each batch's share of the flux,
+     *  as the map reads them), and what names them -- an object's tag its node's label, a detector's box its corners. */
+    O.analysis = () => {
+        if (!ANA.results) return null
+        const unit = RT.scene?.unit
+        return { results: ANA.results, far: ANA.far, rays: ANA.rays, at: ANA.at, stale: !!ANA.stale, live: !!ANA.live,
+                 hits: lastMap?.hits ?? [], hitsUnit: lastMap?.unit ?? 'lm', lengthUnit: unit ?? 'units', metresPerUnit: UNITS[unit] ?? 1,
+                 setup: O.analysisSetup(), haze: hazeNote(),
+                 tagName: t => nameOfTag(t, `tag ${t}`),
+                 matName: i => nameOfMat(i),
+                 corners: t => {
+                     const id = (RT.scene?.opticsTags ?? RT.scene?.tags)?.[t - 1]
+                     return id && boxes && BUILDER?.doc ? boxes.corners(BUILDER.doc, id) : null
+                 } }
+    }
     return O
 }

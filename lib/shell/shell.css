@@ -193,9 +193,9 @@ a.shell-menu { text-decoration: none; cursor: pointer; }
 .shell-params-top .shell-params-only input { flex: none; margin: 0; padding: 0; }
 .shell-params-list { flex: 1; overflow: auto; min-height: 0; padding-bottom: 8px; }
 .shell-params-group { font-size: 11px; letter-spacing: 0.04em; color: var(--sh-muted); padding: 8px 10px 3px; }
-.shell-param { display: grid; grid-template-columns: minmax(0, 1fr) 128px 40px 22px; gap: 6px; align-items: center; padding: 0 10px; min-height: 24px; }
+.shell-param { display: grid; grid-template-columns: minmax(0, 1fr) 128px 40px 22px 22px; gap: 6px; align-items: center; padding: 0 10px; min-height: 24px; }
 .shell-param:hover { background: rgba(120, 150, 175, 0.07); }
-.shell-param-label { color: var(--sh-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.shell-param-label { color: var(--sh-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: grab; }
 .shell-param-unit { color: var(--sh-faint); font-size: 11px; white-space: nowrap; overflow: hidden; }
 .shell-param-value { width: 100%; box-sizing: border-box; font: 12px var(--sh-mono); color: var(--sh-ink); background: var(--sh-bg);
                      border: 1px solid var(--sh-line); border-radius: 3px; padding: 2px 5px; min-width: 0; }

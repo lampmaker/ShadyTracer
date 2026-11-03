@@ -18,6 +18,7 @@ the parameters header adds one. Each parameter can be:
 Every setting in the program, the renderer's included, also has a path, such as `scene/<id>/radius`. The
 [Parameters panel](show:parameters) lists them all, and **Ctrl K** finds one by name. Typing `exposure = 2` there
 sets it.
+A [script](scripts.md) reads and sets them by the same paths.
 
 ## Component parameters
 
