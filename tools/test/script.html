@@ -18,6 +18,7 @@ import { installScript } from '../script.js'
 import { makeScriptApi } from '../scriptapi.js'
 import { download } from '../../lib/pathtracer/darkroom/export/run.js'
 import * as M from '../../builder/model.js'
+import { SCRIPT_EXAMPLES } from '../scriptexamples.js'
 
 const docs = { a: M.createDoc({ title: 'A' }), b: M.createDoc({ title: 'B' }) }
 M.setScript(docs.a, 'log("from A")')
@@ -36,6 +37,7 @@ window.CHECK = {
     show: k => { shown = k; panel.showScene(M.sceneScriptOf(docs[k])) },
     scriptOf: k => M.sceneScriptOf(docs[k]),
     keeps: () => keeps,
+    example: id => SCRIPT_EXAMPLES.find(x => x.id === id).code,
 }
 </script>
 </body>

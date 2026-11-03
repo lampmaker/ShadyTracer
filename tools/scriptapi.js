@@ -37,6 +37,11 @@ import { profile, radial, encircled, isolux, peak, centroid, cellAt, cellSe, int
 import { exportPicture } from '../lib/pathtracer/darkroom/export/run.js'
 import { FORMATS, defaultExport } from '../lib/pathtracer/darkroom/export/index.js'
 
+/** The names a script is handed (makeScriptApi's keys, test/script.test.mjs holds the two together): what the editor
+ *  colours as the script's own (tools/scripthighlight.js). */
+export const SCRIPT_NAMES = Object.freeze(['params', 'settled', 'scene', 'camera', 'exposure', 'picture', 'render', 'optics', 'files',
+    'log', 'warn', 'progress', 'sleep', 'frame', 'check', 'signal', 'st'])
+
 /** The error a stopped script ends with: said as "stopped", not as a failure. */
 export const STOPPED = 'ScriptStopped'
 const stoppedError = () => { const e = new Error('stopped'); e.name = STOPPED; return e }

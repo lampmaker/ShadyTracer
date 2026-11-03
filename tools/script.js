@@ -13,12 +13,16 @@
 // WHAT IS TYPED IS KEPT AT ONCE (scene.keep at every input, the timeline's way): into the scene the renderer shows,
 // whose parameters the script names. Kept later, a keep due when another scene was shown would have gone into that one.
 //
-// THE EDITOR IS A TEXTAREA. A code editor (highlighting, completion) is a library the page does not have; a textarea
-// with Tab and Ctrl Enter is enough to write a loop in, and the error line says where a script failed.
+// THE EDITOR IS A TEXTAREA, COLOURED FROM UNDERNEATH. A code editor (completion, folding) is a library the page does
+// not have. The textarea's text is transparent, its caret and selection not; under it a layer draws the same text in
+// colours (tools/scripthighlight.js), in the same font in the same box, scrolled with it, and beside it the line
+// numbers an error names -- that line marked until the next edit. The textarea is still what is typed in: Tab, Ctrl
+// Enter, undo and the selection are the browser's own.
 //======================================================================================================================
 
 import { SCRIPT_EXAMPLES } from './scriptexamples.js'
-import { runScript, scriptLocation, formatValue, STOPPED } from './scriptapi.js'
+import { runScript, scriptLocation, formatValue, STOPPED, SCRIPT_NAMES } from './scriptapi.js'
+import { highlightJS } from './scripthighlight.js'
 
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e }
 
@@ -48,8 +52,37 @@ export function installScript(host, { scene, api, status = () => { } }) {
         + '//   params.list(), params.set(path, v), camera.set({ azimuth: 30 }), await render({ samples: 64 }),\n'
         + '//   await optics.run({ rays: 1e6 }), files.save(name, data), log(...)\n'
         + '// Examples… above; Help › Scripts for all of it.'
+    /* the box: the line numbers, the colours, and the textarea over them (see the header) */
+    const box = el('div', 'rt-script-edit'), gutter = el('div', 'rt-script-gutter'), colours = el('pre', 'rt-script-hl')
+    colours.setAttribute('aria-hidden', 'true')
+    box.append(gutter, colours, ed)
     const out = el('div', 'rt-script-out')
-    host.append(bar, ed, out)
+    host.append(bar, box, out)
+    const GLOBALS = new Set(SCRIPT_NAMES)
+    let errorLine = 0, drawn = null, drawnError = -1
+    const sync = () => {
+        // the textarea's client box leaves its scrollbars out: the colours' box is made that size, so both scroll alike
+        colours.style.width = `${ed.clientWidth}px`; colours.style.height = `${ed.clientHeight}px`
+        colours.scrollTop = ed.scrollTop; colours.scrollLeft = ed.scrollLeft
+        gutter.scrollTop = ed.scrollTop
+    }
+    const redraw = () => {
+        const v = ed.value
+        if (v !== drawn) {
+            /* a last empty line, and room below: the colours scroll as far as the textarea, whose last line may be empty */
+            colours.innerHTML = highlightJS(v, { globals: GLOBALS }) + '\n\n'
+            drawn = v
+            drawnError = -1
+        }
+        const lines = v.split('\n').length
+        if (gutter.childElementCount !== lines || drawnError !== errorLine) {
+            gutter.innerHTML = Array.from({ length: lines }, (_, i) => `<div${i + 1 === errorLine ? ' class="err"' : ''}>${i + 1}</div>`).join('') + '<div>&nbsp;</div><div>&nbsp;</div>'
+            drawnError = errorLine
+        }
+        sync()
+    }
+    ed.addEventListener('scroll', sync)
+    if (globalThis.ResizeObserver) new ResizeObserver(sync).observe(ed)
 
     let ctrl = null, t0 = 0
     const lines = []
@@ -62,6 +95,7 @@ export function installScript(host, { scene, api, status = () => { } }) {
         out.scrollTop = out.scrollHeight
     }
     const paint = () => {
+        redraw()
         const running = !!ctrl
         runB.disabled = running; stopB.disabled = !running; exS.disabled = running
         state.textContent = running ? 'running…' : ed.value.trim() ? 'this scene has a script' : 'no script in this scene'
@@ -87,7 +121,7 @@ export function installScript(host, { scene, api, status = () => { } }) {
     // the editor's own keys stay the editor's: the page's shortcuts (Delete, Ctrl Z on the scene) are not for here
     for (const k of ['keydown', 'keyup', 'keypress']) ed.addEventListener(k, e => e.stopPropagation())
     const keep = () => { if (!scene.keep(ed.value)) status('the script is not kept: no scene of the project is shown') ; paint() }
-    ed.addEventListener('input', keep)
+    ed.addEventListener('input', () => { errorLine = 0; keep() })
 
     exS.addEventListener('change', () => {
         const x = SCRIPT_EXAMPLES.find(e => e.id === exS.value)
@@ -108,6 +142,7 @@ export function installScript(host, { scene, api, status = () => { } }) {
         paint()
         t0 = performance.now()
         print(`▶ ${new Date().toLocaleTimeString()}`, 'mark')
+        errorLine = 0
         try {
             const r = await runScript(code, api(ctrl.signal, print))
             if (r !== undefined) print(`→ ${formatValue(r)}`, 'result')
@@ -117,7 +152,7 @@ export function installScript(host, { scene, api, status = () => { } }) {
             else {
                 const at = scriptLocation(e)
                 print(`${e?.name ?? 'Error'}: ${e?.message ?? e}${at ? `  (line ${at.line})` : ''}`, 'error')
-                if (at) selectLine(at.line)
+                if (at) { errorLine = at.line; selectLine(at.line) }
                 console.error('[script]', e)
             }
         } finally { ctrl = null; paint() }
@@ -139,7 +174,7 @@ export function installScript(host, { scene, api, status = () => { } }) {
     paint()
     return {
         /** the scene shown changed: its script in the editor (a run goes on: it is the person's to stop) */
-        showScene(text) { if (ed.value !== (text ?? '')) { ed.value = text ?? ''; paint() } },
+        showScene(text) { if (ed.value !== (text ?? '')) { ed.value = text ?? ''; errorLine = 0; paint() } },
         run, stop,
         get running() { return !!ctrl },
         /** the editor's text, and what was printed: for a test or the console */

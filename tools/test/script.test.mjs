@@ -13,7 +13,8 @@ import * as M from '../../builder/model.js'
 import * as P from '../../builder/project.js'
 import { makeParams } from '../../lib/shell/params.js'
 import { farGeometry } from '../../lib/pathtracer/optics/farfield.js'
-import { makeScriptApi, runScript, scriptLocation, analysisOf, toCSV, formatValue, fileBlob, STOPPED } from '../scriptapi.js'
+import { makeScriptApi, runScript, scriptLocation, analysisOf, toCSV, formatValue, fileBlob, STOPPED, SCRIPT_NAMES } from '../scriptapi.js'
+import { highlightJS } from '../scripthighlight.js'
 import { SCRIPT_EXAMPLES } from '../scriptexamples.js'
 import { chunk } from '../../lib/pathtracer/darkroom/export/png.js'
 
@@ -279,6 +280,26 @@ const api = (signal = new AbortController().signal) => makeScriptApi({ PARAMS, R
     await runScript(SCRIPT_EXAMPLES.find(x => x.id === 'generative').code, api())
     eq('the generative example renders its series and saves each', saved.map(s => s[0]), ['series-001.png', 'series-002.png', 'series-003.png', 'series-004.png'].map(n => n))
     eq('...and puts the settings back as they were', S.radius, 2)
+}
+
+// ---- THE EDITOR'S COLOURS (tools/scripthighlight.js) ------------------------------------------------------------------------
+{
+    const unhtml = h => h.replace(/<[^>]*>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
+    const kinds = (code, opts) => [...highlightJS(code, opts).matchAll(/<span class="hl-(\w+)">([^<]*)<\/span>/g)].map(m => [m[1], unhtml(m[2])])
+    // the text is never changed, only wrapped: the colours would drift off the caret
+    const tricky = 'const a = `x ${b + `y ${c}`} z` // done\nlet r = /a\\/[/]b/g, d = e / f / 2, s = "q // not a comment", t = \'it\\\'s\'\n/* a <b> & c */ x &&= 0x1F + .5e3 + 10n'
+    eq('the text is the code exactly, in every example and a tricky line', [...SCRIPT_EXAMPLES.map(x => x.code), tricky, '`open', '"open', '/* open', 'a /'].every(c => unhtml(highlightJS(c)) === c), true)
+    const k = kinds('// note\nconst x = "a // b"; log(x)', { globals: SCRIPT_NAMES })
+    eq('a comment, a keyword, a string with // in it, the API\'s name', k, [['com', '// note'], ['kw', 'const'], ['str', '"a // b"'], ['api', 'log']])
+    eq('a template\'s ${...} is code, to any depth', kinds('`a ${params.get(`p${n}`)} b`', { globals: SCRIPT_NAMES }).map(x => x[0]),
+        ['str', 'tpl', 'api', 'fn', 'str', 'tpl', 'tpl', 'str', 'tpl', 'str'])
+    eq('a division is no regular expression; after = or ( one is', [kinds('a / b / 2').map(x => x[0]), kinds('x = /a+b/g').map(x => x[0]), kinds('f(/[/]/)').map(x => x[0])],
+        [['num'], ['re'], ['fn', 're']])
+    eq('after return, a / opens one', kinds('return /x/').map(x => x[0]), ['kw', 're'])
+    eq('numbers of every kind', kinds('1 2.5 .5 1e-3 0xFF 10n').map(x => x[1]), ['1', '2.5', '.5', '1e-3', '0xFF', '10n'])
+    eq('a method called and a property read, after a dot', kinds('a.peak().I').map(x => x), [['fn', 'peak'], ['prop', 'I']])
+    eq('HTML in the code is escaped', highlightJS('a<b&&c>d'), 'a&lt;b&amp;&amp;c&gt;d')
+    eq('the names coloured are the ones a script is handed', [...SCRIPT_NAMES].sort(), Object.keys(api()).sort())
 }
 
 console.log(`script (the scene's script and its API): ${pass} passed, ${fail} failed`)

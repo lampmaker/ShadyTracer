@@ -6,7 +6,8 @@
 // typed kept into the scene shown at once; another scene shown, its script (and none for one without); ▶ Run printing
 // what the script logs and returns, a setting set; an error with its line, that line selected; ■ Stop ending a loop at
 // its next await, its finally run; Ctrl Enter running; Tab indenting; an example put in only once its question is
-// answered yes; files.save a real download. What the API does to a real picture is the user's to see.
+// answered yes; files.save a real download. The colours under the text: the same text, in the same font and box, a
+// comment and the API's names coloured, scrolled with the editor, an error's line marked in the gutter until an edit. What the API does to a real picture is the user's to see.
 //
 // OPTIONAL, AND LOUD ABOUT IT: it needs Playwright's Chromium.
 /* global CHECK -- the page's own, read inside page.evaluate() */
@@ -98,6 +99,37 @@ try {
     const d = await dl.catch(() => null)
     ok('files.save downloads the file under its name', d?.suggestedFilename() === 'numbers.csv', d?.suggestedFilename())
     if (d) { const path = await d.path(); ok('...its rows as CSV', (await readFile(path, 'utf8')) === 'x,y\n1,2\n') }
+
+    // THE COLOURS: the layer under the textarea draws its text, laid out as the textarea lays it out
+    const long = Array.from({ length: 80 }, (_, i) => `// line ${i + 1}\nlog("value", params.get("scene/n4/radius") * ${i})`).join('\n')
+    await ed.fill(long)
+    await p.waitForTimeout(50)
+    const L = await p.evaluate(() => {
+        const ta = document.querySelector('.rt-script-code'), hl = document.querySelector('.rt-script-hl')
+        const cs = e => { const c = getComputedStyle(e); return [c.fontFamily, c.fontSize, c.lineHeight, c.paddingTop, c.paddingLeft, c.tabSize, c.whiteSpace, c.letterSpacing] }
+        const a = ta.getBoundingClientRect(), b = hl.getBoundingClientRect()
+        return { text: hl.textContent, value: ta.value, same: JSON.stringify(cs(ta)) === JSON.stringify(cs(hl)), at: [a.left - b.left, a.top - b.top],
+                 kinds: [...new Set([...hl.querySelectorAll('span')].map(x => x.className))], textColour: getComputedStyle(ta).color }
+    })
+    ok('the colours draw the editor\'s text exactly', L.text === L.value + '\n\n')
+    ok('...in the same font, line height, padding and tabs, at the same place', L.same && L.at[0] === 0 && L.at[1] === 0, JSON.stringify(L.at))
+    ok('...comments, strings, numbers, the API\'s names and calls coloured', ['hl-com', 'hl-str', 'hl-num', 'hl-api', 'hl-fn'].every(k => L.kinds.includes(k)), L.kinds.join(' '))
+    ok('...and the textarea\'s own text transparent over them', /rgba\(0, 0, 0, 0\)|transparent/.test(L.textColour), L.textColour)
+    await ed.evaluate(e => { e.scrollTop = 600; e.dispatchEvent(new Event('scroll')) })
+    await p.waitForTimeout(30)
+    const scr = await p.evaluate(() => [document.querySelector('.rt-script-code').scrollTop, document.querySelector('.rt-script-hl').scrollTop, document.querySelector('.rt-script-gutter').scrollTop])
+    ok('...scrolled with the editor, the line numbers too', scr[0] > 0 && scr[0] === scr[1] && scr[1] === scr[2], JSON.stringify(scr))
+    await ed.evaluate(e => { e.scrollTop = e.scrollHeight; e.dispatchEvent(new Event('scroll')) })
+    await p.waitForTimeout(30)
+    const end = await p.evaluate(() => [document.querySelector('.rt-script-code').scrollTop, document.querySelector('.rt-script-hl').scrollTop])
+    ok('...to the very end', end[0] === end[1], JSON.stringify(end))
+    await ed.fill('log(1)\nnull.boom')
+    await p.click('.rt-script-bar .run')
+    ok('an error\'s line marked in the gutter', await until(() => p.evaluate(() => document.querySelector('.rt-script-gutter .err')?.textContent === '2')))
+    await ed.press('End'); await p.keyboard.type(' ')
+    ok('...until the next edit', await until(() => p.evaluate(() => !document.querySelector('.rt-script-gutter .err'))))
+    await ed.fill(await p.evaluate(() => CHECK.example('lens')))
+    if (process.env.SHOT) await p.locator('#panel').screenshot({ path: process.env.SHOT })
 
     ok('no page errors', !errs.length, errs.join(' | '))
 } catch (e) { failed++; console.log('FAIL  ' + (e.stack || e)) }

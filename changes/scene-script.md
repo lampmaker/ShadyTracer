@@ -1,7 +1,7 @@
 bump: minor
 
 **A scene can hold a script: JavaScript that drives the scene and reads what it measures.** View › Script opens its
-panel: an editor, ▶ Run (Ctrl Enter), ■ Stop, Examples… and what the script prints. The script is the scene's, saved
+panel: an editor with JavaScript's colours and line numbers (an error's line marked), ▶ Run (Ctrl Enter), ■ Stop, Examples… and what the script prints. The script is the scene's, saved
 with it and in its file (`script` in the document, outside the undo history as the view and the timeline are; no
 format version change). It never runs on its own -- not when a scene is opened, shown or loaded -- because a scene is a
 file people pass around and a script has the page's whole reach. What it is handed (tools/scriptapi.js): every setting
@@ -14,7 +14,7 @@ detector's illuminance map with its uniformity and encircled flux, the far field
 or text. Five examples: settings read and written, a generative series of renders, the analysis's numbers, a lens's
 setting searched by golden section for the highest peak, a turntable. Help › Scripts says all of it.
 
-**What to look at:** View › Script. Run each example on a scene of yours -- the generative one needs a few settings
+**What to look at:** View › Script. The colours should sit exactly under the caret, scrolling included. Run each example on a scene of yours -- the generative one needs a few settings
 flagged animated (★) with a range; the lens one a setting flagged or its path typed, and a light. A render should show
 in the Darkroom and download; an analysis should fill the pane and the charts as ▶ Run does, and the numbers the
 script prints should be the ones the cards show. ■ Stop during a render or an analysis should end it.

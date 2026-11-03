@@ -11,7 +11,7 @@ The script is part of the scene. It is saved with it and travels with its file. 
 
 **▶ Run** (or **Ctrl Enter** in the editor) runs the script. **■ Stop** stops it the next time it waits for
 something: a render, an analysis, `sleep`. What it prints, and any error with the line it is on, appears under the
-editor. **Examples…** puts in a script to start from.
+editor; that line is marked in red in the line numbers. **Examples…** puts in a script to start from.
 
 A script never runs on its own: not when a scene is opened, shown or loaded. It runs only when you press Run.
 

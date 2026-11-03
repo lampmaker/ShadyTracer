@@ -12,8 +12,31 @@
 .rt-script-bar .stop:not(:disabled) { background: #7a3b2e; }
 .rt-script-bar .state { color: var(--sh-muted); margin-left: auto; }
 .rt-script.running .rt-script-bar .state { color: var(--sh-warn); }
-.rt-script-code { flex: 3 1 0; min-height: 60px; resize: none; border: 0; outline: none; padding: 6px 8px; tab-size: 4;
-                  background: var(--sh-bg); color: var(--sh-ink); font: 12px/1.45 var(--sh-mono); white-space: pre; overflow: auto; }
+.rt-script-edit { position: relative; flex: 3 1 0; min-height: 60px; overflow: hidden; background: var(--sh-bg); }
+/* THE COLOURS UNDER THE TEXT (tools/script.js): the layer and the textarea in one font, one box, one padding -- a
+   pixel's difference and the caret is beside the letter it is in */
+.rt-script-hl, .rt-script-code { position: absolute; top: 0; left: 40px; right: 0; bottom: 0; margin: 0; border: 0; padding: 6px 8px;
+                  box-sizing: border-box; font: 12px/1.45 var(--sh-mono); tab-size: 4; white-space: pre; letter-spacing: 0;
+                  font-variant-ligatures: none; }
+.rt-script-hl { overflow: hidden; pointer-events: none; color: var(--sh-ink); }
+.rt-script-code { resize: none; outline: none; overflow: auto; background: transparent; color: transparent;
+                  -webkit-text-fill-color: transparent; caret-color: var(--sh-ink); }
+.rt-script-code::selection { background: rgba(120, 150, 175, 0.35); }
+.rt-script-code::placeholder { color: var(--sh-faint); -webkit-text-fill-color: var(--sh-faint); }
+.rt-script-gutter { position: absolute; top: 0; left: 0; bottom: 0; width: 40px; padding: 6px 6px 6px 0; box-sizing: border-box;
+                    overflow: hidden; text-align: right; color: var(--sh-faint); font: 12px/1.45 var(--sh-mono); user-select: none;
+                    border-right: 1px solid var(--sh-line); background: var(--sh-panel); }
+.rt-script-gutter .err { color: #fff; background: #7a3b2e; }
+.rt-script-hl .hl-com { color: #6a9955; }
+.rt-script-hl .hl-str { color: #ce9178; }
+.rt-script-hl .hl-tpl { color: #569cd6; }
+.rt-script-hl .hl-num { color: #b5cea8; }
+.rt-script-hl .hl-kw { color: #c586c0; }
+.rt-script-hl .hl-lit { color: #569cd6; }
+.rt-script-hl .hl-api { color: #4ec9b0; }
+.rt-script-hl .hl-fn { color: #dcdcaa; }
+.rt-script-hl .hl-prop { color: #9cdcfe; }
+.rt-script-hl .hl-re { color: #d16969; }
 .rt-script-out { flex: 2 1 0; min-height: 40px; overflow: auto; padding: 4px 8px; border-top: 1px solid var(--sh-line);
                  font: 11.5px/1.4 var(--sh-mono); white-space: pre-wrap; word-break: break-word; }
 .rt-script-out .line.warn { color: var(--sh-warn); }
