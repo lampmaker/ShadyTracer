@@ -1,0 +1,22 @@
+/* THE SCRIPT PANEL (tools/script.js): a bar, the editor, the output under it. In the page's sheets, not inline: a
+   popped-out panel gets the main window's sheets (lib/shell). */
+.rt-script { display: flex; flex-direction: column; height: 100%; min-height: 0; background: var(--sh-panel); color: var(--sh-ink);
+             font-family: var(--sh-sans); font-size: 12px; }
+.rt-script-bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 5px 6px; background: var(--sh-raised);
+                 border-bottom: 1px solid var(--sh-line); }
+.rt-script-bar button, .rt-script-bar select { background: #26303a; color: var(--sh-ink); border: 1px solid var(--sh-line);
+                 border-radius: 3px; padding: 2px 8px; font: inherit; cursor: pointer; }
+.rt-script-bar button:hover:not(:disabled) { background: #2f3b47; }
+.rt-script-bar button:disabled, .rt-script-bar select:disabled { opacity: 0.45; cursor: default; }
+.rt-script-bar .run { background: #2f5d3e; }
+.rt-script-bar .stop:not(:disabled) { background: #7a3b2e; }
+.rt-script-bar .state { color: var(--sh-muted); margin-left: auto; }
+.rt-script.running .rt-script-bar .state { color: var(--sh-warn); }
+.rt-script-code { flex: 3 1 0; min-height: 60px; resize: none; border: 0; outline: none; padding: 6px 8px; tab-size: 4;
+                  background: var(--sh-bg); color: var(--sh-ink); font: 12px/1.45 var(--sh-mono); white-space: pre; overflow: auto; }
+.rt-script-out { flex: 2 1 0; min-height: 40px; overflow: auto; padding: 4px 8px; border-top: 1px solid var(--sh-line);
+                 font: 11.5px/1.4 var(--sh-mono); white-space: pre-wrap; word-break: break-word; }
+.rt-script-out .line.warn { color: var(--sh-warn); }
+.rt-script-out .line.error { color: #e0796a; }
+.rt-script-out .line.mark { color: var(--sh-faint); }
+.rt-script-out .line.result { color: var(--sh-accent); }

@@ -1,0 +1,20 @@
+bump: minor
+
+**A scene can hold a script: JavaScript that drives the scene and reads what it measures.** View › Script opens its
+panel: an editor, ▶ Run (Ctrl Enter), ■ Stop, Examples… and what the script prints. The script is the scene's, saved
+with it and in its file (`script` in the document, outside the undo history as the view and the timeline are; no
+format version change). It never runs on its own -- not when a scene is opened, shown or loaded -- because a scene is a
+file people pass around and a script has the page's whole reach. What it is handed (tools/scriptapi.js): every setting
+by its path (`params.list`, `get`, `set`, `apply`, the animated ones alone; a mistyped path an error naming what is near;
+`settled()` waits out a compile), the camera and the exposure, the live picture's samples and readings
+(`picture.wait`, `measure`, `region`), `render()` into the Darkroom and `.save()` in any of its formats with the view's
+look, the Darkroom's or settings of its own, the Analysis pane's run (`optics.run`, shown in the pane and the charts as
+▶ Run's) and the numbers its charts show (I max, intensity in a direction, beam and field angles, flux in a cone, a
+detector's illuminance map with its uniformity and encircled flux, the far field on a plane), files saved as CSV, JSON
+or text. Five examples: settings read and written, a generative series of renders, the analysis's numbers, a lens's
+setting searched by golden section for the highest peak, a turntable. Help › Scripts says all of it.
+
+**What to look at:** View › Script. Run each example on a scene of yours -- the generative one needs a few settings
+flagged animated (★) with a range; the lens one a setting flagged or its path typed, and a light. A render should show
+in the Darkroom and download; an analysis should fill the pane and the charts as ▶ Run does, and the numbers the
+script prints should be the ones the cards show. ■ Stop during a render or an analysis should end it.

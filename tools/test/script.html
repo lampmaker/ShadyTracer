@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Script panel · check</title>
+<!-- THE SCRIPT PANEL WITHOUT A GPU, for tools/test/script.check.mjs: the panel as app.html makes it, over two scenes that
+     keep their script through the builder's own model (builder/model.js SCRIPT), a registry with one setting, a stand-in
+     camera, and the browser's real download for files.save. Everything the panel and the API do is their own. -->
+<link rel="stylesheet" href="../../lib/shell/shell.css">
+<link rel="stylesheet" href="../script.css">
+<style>html, body { height: 100%; margin: 0; } #panel { height: 600px; width: 700px; }</style>
+</head>
+<body>
+<div id="panel"></div>
+<script type="module">
+import { makeParams } from '../../lib/shell/params.js'
+import { installScript } from '../script.js'
+import { makeScriptApi } from '../scriptapi.js'
+import { download } from '../../lib/pathtracer/darkroom/export/run.js'
+import * as M from '../../builder/model.js'
+
+const docs = { a: M.createDoc({ title: 'A' }), b: M.createDoc({ title: 'B' }) }
+M.setScript(docs.a, 'log("from A")')
+let shown = 'a', keeps = 0
+const S = { radius: 1 }
+const PARAMS = makeParams()
+PARAMS.provide('scene', () => [{ path: 'scene/n4/radius', label: 'lens › radius', min: 0, max: 10, get: () => S.radius, set: v => { S.radius = v } }])
+const cam = { azimuth: 0 }
+const RT = { view: () => ({ camera: { ...cam }, exposure: {} }), applyView: ({ camera }) => Object.assign(cam, camera ?? {}) }
+const panel = installScript(document.getElementById('panel'), {
+    scene: { script: () => M.sceneScriptOf(docs[shown]), keep: t => { M.setScript(docs[shown], t); keeps++; return true } },
+    api: (signal, log) => makeScriptApi({ PARAMS, RT, signal, log, save: download, frame: () => new Promise(r => requestAnimationFrame(r)) }),
+})
+window.CHECK = {
+    panel, S, cam,
+    show: k => { shown = k; panel.showScene(M.sceneScriptOf(docs[k])) },
+    scriptOf: k => M.sceneScriptOf(docs[k]),
+    keeps: () => keeps,
+}
+</script>
+</body>
+</html>

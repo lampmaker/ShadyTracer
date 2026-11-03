@@ -1,0 +1,106 @@
+// node tools/test/script.check.mjs
+//
+// THE SCRIPT PANEL IN A BROWSER (0.next): tools/test/script.html -- the panel over two scenes that keep their script
+// through the builder's model -- driven headless. The application's page stops at WebGPU here, so without this the
+// panel was code nothing ran. It checks: the scene's script in the editor and the line saying the scene has one; what is
+// typed kept into the scene shown at once; another scene shown, its script (and none for one without); ▶ Run printing
+// what the script logs and returns, a setting set; an error with its line, that line selected; ■ Stop ending a loop at
+// its next await, its finally run; Ctrl Enter running; Tab indenting; an example put in only once its question is
+// answered yes; files.save a real download. What the API does to a real picture is the user's to see.
+//
+// OPTIONAL, AND LOUD ABOUT IT: it needs Playwright's Chromium.
+/* global CHECK -- the page's own, read inside page.evaluate() */
+import { createServer } from 'node:http'
+import { readFile } from 'node:fs/promises'
+import { join, extname, resolve, dirname } from 'node:path'
+import { fileURLToPath, pathToFileURL } from 'node:url'
+import { execSync } from 'node:child_process'
+
+const repo = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
+let chromium
+try { ({ chromium } = await import('playwright')) } catch {
+    try { ({ chromium } = await import(pathToFileURL(join(execSync('npm root -g').toString().trim(), 'playwright/index.mjs')).href)) } catch { }
+}
+if (!chromium) { console.log('(script panel check SKIPPED: no playwright. npm i -g playwright to get it.)'); process.exit(0) }
+
+const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json' }
+const server = createServer(async (req, res) => {
+    try {
+        const path = join(repo, decodeURIComponent(new URL(req.url, 'http://x').pathname))
+        if (!path.startsWith(repo)) throw new Error('outside')
+        res.writeHead(200, { 'content-type': TYPES[extname(path)] ?? 'application/octet-stream' })
+        res.end(await readFile(path))
+    } catch { res.writeHead(404); res.end() }
+})
+await new Promise(r => server.listen(0, r))
+const port = server.address().port
+
+const b = await chromium.launch({ args: ['--disable-gpu'] })
+const p = await (await b.newContext({ viewport: { width: 900, height: 700 }, acceptDownloads: true })).newPage()
+const errs = []
+p.on('pageerror', e => errs.push('pageerror: ' + e.message)); p.on('console', m => { if (m.type() === 'error' && !/\[script\]/.test(m.text())) errs.push(m.text().slice(0, 300)) })
+let failed = 0
+const ok = (n, c, x = '') => { if (!c) failed++; console.log((c ? 'ok    ' : 'FAIL  ') + n + (c ? '' : '  ' + x)) }
+const out = () => p.evaluate(() => CHECK.panel.output())
+const until = async (fn, ms = 3000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await fn()) return true; await p.waitForTimeout(30) } return false }
+try {
+    await p.goto(`http://localhost:${port}/tools/test/script.html`); await p.waitForTimeout(300)
+    const ed = p.locator('.rt-script-code')
+    ok('the scene\'s script in the editor', await ed.inputValue() === 'log("from A")', await ed.inputValue())
+    ok('...and the line says the scene has one', (await p.locator('.rt-script-bar .state').textContent()) === 'this scene has a script')
+
+    await ed.fill('params.set("scene/n4/radius", 7)\nlog("radius", params.get("scene/n4/radius"))\nreturn 41 + 1')
+    ok('what is typed is kept into the scene shown at once', await p.evaluate(() => CHECK.scriptOf('a')).then(t => t.startsWith('params.set')))
+    await p.click('.rt-script-bar .run')
+    ok('▶ Run prints what it logs and returns', await until(async () => (await out()).includes('→ 42')), JSON.stringify(await out()))
+    ok('...the log line', (await out()).includes('radius 7'))
+    ok('...and the setting was set', await p.evaluate(() => CHECK.S.radius) === 7)
+
+    await p.evaluate(() => CHECK.show('b'))
+    ok('another scene shown: its script (none)', await ed.inputValue() === '' && (await p.locator('.rt-script-bar .state').textContent()) === 'no script in this scene')
+    await p.evaluate(() => CHECK.show('a'))
+    ok('...and back: A\'s again', (await ed.inputValue()).startsWith('params.set'))
+
+    await ed.fill('const x = 1\nlog("before")\nnull.boom')
+    await p.click('.rt-script-bar .run')
+    ok('an error is said with its line', await until(async () => (await out()).some(l => /TypeError: .*\(line 3\)/.test(l))), JSON.stringify((await out()).slice(-3)))
+    const sel = await ed.evaluate(e => e.value.slice(e.selectionStart, e.selectionEnd))
+    ok('...and that line selected in the editor', sel === 'null.boom', sel)
+
+    await ed.fill('try { for (;;) { camera.set({ azimuth: 90 }); await sleep(20) } } finally { camera.set({ azimuth: 5 }); log("put back") }')
+    await ed.focus()
+    await p.keyboard.press('Control+Enter')
+    ok('Ctrl Enter runs it', await until(() => p.evaluate(() => CHECK.panel.running)))
+    ok('...Run greyed and Stop not while it runs', await p.locator('.rt-script-bar .run').isDisabled() && !(await p.locator('.rt-script-bar .stop').isDisabled()))
+    await p.waitForTimeout(100)
+    await p.click('.rt-script-bar .stop')
+    ok('■ Stop ends the loop at its next await', await until(async () => (await out()).some(l => /^■ stopped/.test(l))), JSON.stringify((await out()).slice(-3)))
+    ok('...its finally run', (await out()).includes('put back') && await p.evaluate(() => CHECK.cam.azimuth) === 5)
+
+    await ed.fill('')
+    await ed.focus()
+    await p.keyboard.press('Tab')
+    await p.keyboard.type('x')
+    ok('Tab indents in the editor', await ed.inputValue() === '    x', JSON.stringify(await ed.inputValue()))
+
+    // an example: asked first when the editor holds a script, refused and accepted
+    p.once('dialog', d => d.dismiss())
+    await p.selectOption('.rt-script-bar .examples', 'settings')
+    ok('an example over a script is asked first: no, nothing replaced', await ed.inputValue() === '    x')
+    p.once('dialog', d => d.accept())
+    await p.selectOption('.rt-script-bar .examples', 'settings')
+    ok('...yes, the example in', (await ed.inputValue()).startsWith('// Every setting has a path'))
+    ok('...and kept into the scene', (await p.evaluate(() => CHECK.scriptOf('a'))).startsWith('// Every setting has a path'))
+
+    await ed.fill('files.save("numbers.csv", [["x", "y"], [1, 2]])')
+    const dl = p.waitForEvent('download', { timeout: 3000 })
+    await p.click('.rt-script-bar .run')
+    const d = await dl.catch(() => null)
+    ok('files.save downloads the file under its name', d?.suggestedFilename() === 'numbers.csv', d?.suggestedFilename())
+    if (d) { const path = await d.path(); ok('...its rows as CSV', (await readFile(path, 'utf8')) === 'x,y\n1,2\n') }
+
+    ok('no page errors', !errs.length, errs.join(' | '))
+} catch (e) { failed++; console.log('FAIL  ' + (e.stack || e)) }
+finally { await b.close(); server.close() }
+console.log(failed ? `${failed} FAILED` : 'all passed')
+process.exit(failed ? 1 : 0)

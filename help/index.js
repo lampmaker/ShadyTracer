@@ -24,6 +24,7 @@ export const HELP = [
         { id: 'light-camera', file: 'modelling/light-camera.md', title: 'Light, environment and camera' },
         { id: 'rendering', file: 'modelling/rendering.md', title: 'Render settings and saving pictures' },
         { id: 'projects', file: 'modelling/projects.md', title: 'Projects, files and the library' },
+        { id: 'scripts', file: 'modelling/scripts.md', title: 'Scripts' },
         { id: 'troubleshooting', file: 'modelling/troubleshooting.md', title: 'When something is wrong' },
     ] },
     { track: 'Optical design', pages: [
