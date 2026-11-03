@@ -37,4 +37,12 @@ it.
   it, the thick one glow.
 - On the Optics page, the light guide example with a scatter distance.
 
+**A medium's first samples no longer overflow the photon map.** A sample's keep is planned from the sample before. The very
+first had been planned from twice its photons, a surface's two stores. A photon walking milky glass stores at every
+collision, about 8.4 on the bench's sheet. So the first samples dropped 72 % of their stores past the room. With the map
+in a medium the first guess is now 256 stores a photon: too high costs a sample a sparser map, too low lost light. The
+user's first press of `volume-map` read 0.546. On Dawn, at the keep the user's size asks, it read 0.74 before the fix and
+about 0.97 after. The row now pins the map's radius and capacity, and shows the map's own columns: dropped, samples over,
+cut, kept and radius.
+
 Press `volume`, `volume-light` and `volume-map` in Tests and paste them back.
