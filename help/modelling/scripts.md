@@ -7,6 +7,10 @@ trying values and measuring each.
 The script is part of the scene. It is saved with it and travels with its file. Open it with **View › Script**
 ([the Script panel](show:tools.script)).
 
+This page is the overview. Every function, with what it gives back and an example, is in
+[Script functions](../reference/script.md), and in the Script panel itself: **? Reference** opens it beside the editor,
+where you can search it and put an example into your script with **insert**.
+
 ## Running one
 
 **▶ Run** (or **Ctrl Enter** in the editor) runs the script. **■ Stop** stops it the next time it waits for
@@ -103,7 +107,8 @@ charts show it. It returns what it found. `optics.last()` is the pane's last ana
 
 Before a run you can set what feeds it, with the same choices as the pane's **Intensity** box:
 `{ rays, from: 'escaped' or a detector material's name, axis: a light's name or [x, y, z], flip, dG, dC }`.
-`optics.setup()` lists what the scene offers.
+`optics.setup()` lists what the scene offers. What every number means, what its error says and how many rays you
+need are in [Script functions](../reference/script.md#the-analysis-running-it).
 
 | | |
 |---|---|

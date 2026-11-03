@@ -9,7 +9,8 @@
 // answered yes; files.save a real download. The colours under the text: the same text, in the same font and box, a
 // comment and the API's names coloured, scrolled with the editor, an error's line marked in the gutter until an edit. A
 // setting dragged from the Parameters panel by its name: its binding on an empty line, its call inside code, the result
-// running; the row's ⧉ copying its path. What the API does to a real picture is the user's to see.
+// running; the row's ⧉ copying its path. The Reference pane: ? opens it beside the editor (under it when narrow), a word
+// finding the names that have it, an example's insert putting it in on a line of its own, open kept over a reload. What the API does to a real picture is the user's to see.
 //
 // OPTIONAL, AND LOUD ABOUT IT: it needs Playwright's Chromium.
 /* global CHECK -- the page's own, read inside page.evaluate() */
@@ -133,7 +134,31 @@ try {
     await ed.press('End'); await p.keyboard.type(' ')
     ok('...until the next edit', await until(() => p.evaluate(() => !document.querySelector('.rt-script-gutter .err'))))
     await ed.fill(await p.evaluate(() => CHECK.example('lens')))
-    if (process.env.SHOT) await p.locator('#panel').screenshot({ path: process.env.SHOT })
+
+    // THE REFERENCE PANE
+    ok('the reference is closed at first', !(await p.locator('.rt-script-ref').isVisible()))
+    await p.click('.rt-script-bar .ref')
+    ok('? opens it beside the editor', await p.locator('.rt-script-ref').isVisible()
+        && await p.evaluate(() => { const r = document.querySelector('.rt-script-ref').getBoundingClientRect(), e = document.querySelector('.rt-script-edit').getBoundingClientRect(); return r.left >= e.right - 1 }))
+    await p.fill('.rt-script-ref > input', 'flux within')
+    const found = await p.evaluate(() => [...document.querySelectorAll('.rt-script-ref .item')].filter(i => !i.hidden).map(i => i.querySelector('.sig').textContent))
+    ok('a search finds the names with those words, and only those', found.includes('a.fluxWithin(angle)') && found.length < 8, JSON.stringify(found))
+    await ed.fill('log(1)\nlog(2)')
+    await ed.evaluate(e => e.setSelectionRange(3, 3))
+    await p.locator('.rt-script-ref .item').filter({ hasText: 'a.fluxWithin(angle)' }).locator('.ex button').click()
+    const after = await ed.inputValue()
+    ok('insert puts its example in at the caret, on a line of its own', after.startsWith('log\nlog(\'within 10°:\'') && after.endsWith('\n(1)\nlog(2)'), JSON.stringify(after))
+    ok('...kept into the scene', (await p.evaluate(() => CHECK.scriptOf('a'))) === after)
+    await p.fill('.rt-script-ref > input', 'zzzz nothing')
+    ok('a search with no match says so', await p.locator('.rt-script-ref-none').isVisible())
+    await p.fill('.rt-script-ref > input', '')
+    if (process.env.SHOT) { await ed.fill(await p.evaluate(() => CHECK.example('beam'))); await p.fill('.rt-script-ref > input', 'beam'); await p.locator('#panel').screenshot({ path: process.env.SHOT }) }
+    await p.setViewportSize({ width: 900, height: 700 })
+    await p.evaluate(() => { document.getElementById('panel').style.width = '480px' })
+    await p.waitForTimeout(100)
+    ok('in a narrow panel it goes under the editor', await p.evaluate(() => { const r = document.querySelector('.rt-script-ref').getBoundingClientRect(), e = document.querySelector('.rt-script-edit').getBoundingClientRect(); return r.top >= e.bottom - 1 }))
+    await p.reload(); await p.waitForTimeout(300)
+    ok('open is kept over a reload', await p.locator('.rt-script-ref').isVisible())
 
     // A SETTING DRAGGED IN from the Parameters panel by its name, and its path copied by the row's ⧉
     await ed.fill('log(1)\n\nconst r = ')

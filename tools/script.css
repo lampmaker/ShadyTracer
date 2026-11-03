@@ -43,3 +43,32 @@
 .rt-script-out .line.error { color: #e0796a; }
 .rt-script-out .line.mark { color: var(--sh-faint); }
 .rt-script-out .line.result { color: var(--sh-accent); }
+/* THE BODY: the editor and its output, and the reference beside them -- or under them in a narrow panel */
+.rt-script-body { flex: 1 1 0; min-height: 0; display: flex; }
+.rt-script-main { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; }
+.rt-script.narrow .rt-script-body { flex-direction: column; }
+.rt-script-bar .ref.on { background: var(--sh-strong); }
+.rt-script-ref { display: none; flex: 0 0 44%; min-width: 0; min-height: 0; flex-direction: column; border-left: 1px solid var(--sh-line);
+                 background: var(--sh-panel); }
+.rt-script.ref-open .rt-script-ref { display: flex; }
+.rt-script.narrow .rt-script-ref { flex-basis: 45%; border-left: 0; border-top: 1px solid var(--sh-line); }
+.rt-script-ref > input { margin: 6px; padding: 3px 6px; font: inherit; color: var(--sh-ink); background: var(--sh-bg);
+                         border: 1px solid var(--sh-line); border-radius: 3px; }
+.rt-script-ref-list { flex: 1 1 0; overflow: auto; padding: 0 8px 12px; }
+.rt-script-ref-none { padding: 8px; color: var(--sh-muted); }
+.rt-script-ref .sec > summary { cursor: pointer; padding: 6px 0 4px; font-weight: 600; color: var(--sh-ink); }
+.rt-script-ref .intro { color: var(--sh-muted); line-height: 1.45; margin: 0 0 6px; }
+.rt-script-ref .item { padding: 6px 0 7px; border-top: 1px solid var(--sh-line); line-height: 1.45; }
+.rt-script-ref .sig { font: 12px/1.4 var(--sh-mono); color: var(--sh-ink); white-space: pre-wrap; margin-bottom: 2px; }
+.rt-script-ref .ret { color: var(--sh-muted); margin-top: 2px; }
+.rt-script-ref code { font: 11.5px var(--sh-mono); color: #d7ba7d; }
+.rt-script-ref .ex { position: relative; margin-top: 4px; }
+.rt-script-ref .ex pre { margin: 0; padding: 5px 7px; background: var(--sh-bg); border: 1px solid var(--sh-line); border-radius: 3px;
+                         font: 11.5px/1.4 var(--sh-mono); white-space: pre; overflow-x: auto; color: var(--sh-ink); }
+.rt-script-ref .ex button { position: absolute; top: 3px; right: 3px; font: 11px var(--sh-sans); color: var(--sh-ink); background: #26303a;
+                            border: 1px solid var(--sh-line); border-radius: 3px; padding: 1px 6px; cursor: pointer; opacity: 0.75; }
+.rt-script-ref .ex button:hover { opacity: 1; background: #2f3b47; }
+.rt-script-ref .hl-com { color: #6a9955; } .rt-script-ref .hl-str { color: #ce9178; } .rt-script-ref .hl-tpl { color: #569cd6; }
+.rt-script-ref .hl-num { color: #b5cea8; } .rt-script-ref .hl-kw { color: #c586c0; } .rt-script-ref .hl-lit { color: #569cd6; }
+.rt-script-ref .hl-api { color: #4ec9b0; } .rt-script-ref .hl-fn { color: #dcdcaa; } .rt-script-ref .hl-prop { color: #9cdcfe; }
+.rt-script-ref .hl-re { color: #d16969; }

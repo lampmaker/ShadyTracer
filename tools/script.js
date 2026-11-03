@@ -18,12 +18,17 @@
 // colours (tools/scripthighlight.js), in the same font in the same box, scrolled with it, and beside it the line
 // numbers an error names -- that line marked until the next edit. The textarea is still what is typed in: Tab, Ctrl
 // Enter, undo and the selection are the browser's own.
+//
+// THE REFERENCE BESIDE IT (? Reference, tools/scriptrefpane.js): every name a script is handed, found by words, its
+// examples put in the editor at the caret. Open or not is remembered in this browser; in a narrow panel it goes under
+// the editor rather than beside it.
 //======================================================================================================================
 
 import { SCRIPT_EXAMPLES } from './scriptexamples.js'
 import { runScript, scriptLocation, formatValue, STOPPED, SCRIPT_NAMES } from './scriptapi.js'
 import { highlightJS } from './scripthighlight.js'
 import { PARAM_MIME, offsetAt, dropEdit } from './scriptdrop.js'
+import { referencePane } from './scriptrefpane.js'
 
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e }
 
@@ -41,24 +46,42 @@ export function installScript(host, { scene, api, status = () => { } }) {
     const option = (text, value) => { const o = el('option', null, text); o.value = value; return o }
     exS.append(option('Examples…', ''), ...SCRIPT_EXAMPLES.map(x => option(x.label, x.id)))
     const clearB = el('button', 'clear', 'Clear output')
+    const refB = el('button', 'ref', '? Reference')
+    refB.title = 'Every function a script can call -- the analysis\'s numbers among them -- with examples to put in the editor'
     const state = el('span', 'state')
     runB.title = 'Run the scene\'s script (Ctrl Enter in the editor). It runs with the page\'s whole reach: read a script from someone else before running it'
     stopB.title = 'Stop the script at its next await'
     exS.title = 'Put an example in the editor (the script there now is replaced: asked first)'
-    bar.append(runB, stopB, exS, clearB, state)
+    bar.append(runB, stopB, exS, clearB, refB, state)
     const ed = el('textarea', 'rt-script-code')
     ed.spellcheck = false
     ed.setAttribute('autocomplete', 'off'); ed.setAttribute('autocapitalize', 'off')
     ed.placeholder = '// JavaScript, run with ▶ Run. The scene\'s settings, camera, renders and analyses:\n'
         + '//   params.list(), params.set(path, v), camera.set({ azimuth: 30 }), await render({ samples: 64 }),\n'
         + '//   await optics.run({ rays: 1e6 }), files.save(name, data), log(...)\n'
-        + '// Examples… above; Help › Scripts for all of it.'
+        + '// Examples… and ? Reference above.'
     /* the box: the line numbers, the colours, and the textarea over them (see the header) */
     const box = el('div', 'rt-script-edit'), gutter = el('div', 'rt-script-gutter'), colours = el('pre', 'rt-script-hl')
     colours.setAttribute('aria-hidden', 'true')
     box.append(gutter, colours, ed)
     const out = el('div', 'rt-script-out')
-    host.append(bar, box, out)
+    const main = el('div', 'rt-script-main'), body = el('div', 'rt-script-body')
+    main.append(box, out)
+    const ref = referencePane({ names: SCRIPT_NAMES, insert: code => insertSnippet(code) })
+    body.append(main, ref.el)
+    host.append(bar, body)
+    /* open or not, this browser's choice; beside the editor, or under it in a narrow panel */
+    const REF_KEY = 'raytracer.script.reference'
+    const showRef = on => {
+        host.classList.toggle('ref-open', on)
+        refB.classList.toggle('on', on)
+        try { globalThis.localStorage?.setItem(REF_KEY, on ? '1' : '0') } catch { }
+    }
+    let refOn = false
+    try { refOn = globalThis.localStorage?.getItem(REF_KEY) === '1' } catch { }
+    showRef(refOn)
+    refB.addEventListener('click', () => showRef(!host.classList.contains('ref-open')))
+    if (globalThis.ResizeObserver) new ResizeObserver(() => host.classList.toggle('narrow', host.clientWidth < 640)).observe(host)
     const GLOBALS = new Set(SCRIPT_NAMES)
     let errorLine = 0, drawn = null, drawnError = -1
     const sync = () => {
@@ -179,6 +202,22 @@ export function installScript(host, { scene, api, status = () => { } }) {
         ed.focus()
     })
     clearB.addEventListener('click', () => { out.replaceChildren(); lines.length = 0 })
+
+    /* AN EXAMPLE FROM THE REFERENCE, at the caret: on a line of its own (a line break before it when the caret is in a
+       line's text, after it when text follows), through the browser's insert so Ctrl Z takes it back */
+    function insertSnippet(code) {
+        if (ctrl) return status('a script is running: put an example in once it has stopped')
+        const v = ed.value
+        const at = ed.selectionEnd                    // a textarea keeps its caret when the focus leaves it
+        const start = v.lastIndexOf('\n', at - 1) + 1, end = v.indexOf('\n', at) < 0 ? v.length : v.indexOf('\n', at)
+        const before = v.slice(start, at).trim(), after = v.slice(at, end).trim()
+        const text = (before ? '\n' : '') + code + (after ? '\n' : '')
+        ed.focus()
+        ed.setSelectionRange(at, at)
+        let done = false
+        try { done = document.execCommand?.('insertText', false, text) } catch { }
+        if (!done) { ed.setRangeText(text, at, at, 'end'); keep() }
+    }
 
     async function run() {
         if (ctrl) return

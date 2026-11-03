@@ -194,7 +194,9 @@ function mapOf(m, name) {
     return {
         name, nx: m.nx, ny: m.ny, cell: m.cell, range: m.range, unit: m.unit, lengthUnit: m.lengthUnit, axisNames: m.axisNames,
         E: m.E, max: m.max, meanLit: m.meanLit, minLit: m.minLit, uniformity: m.uniformity, total: m.total,
-        litArea: m.litArea, colour: m.colour ?? null, relNoise: m.relNoise ?? null, raw: m,
+        litArea: m.litArea, litCells: m.litCells, colour: m.colour ?? null, relNoise: m.relNoise ?? null,
+        /* Ud, min / max, as the pane's U0 card says beside U0; the two a fitted detector has and a virtual plane has not */
+        Ud: m.max > 0 ? m.minLit / m.max : null, hitsPerLitCell: m.hitsPerLitCell ?? null, flatness: m.flatness ?? null, raw: m,
         /** E at a point (the map's coordinates), with its error: { E, se } or null off the map */
         at(a, b) { const c = cellAt(m, a, b); return c ? { E: m.E[c.i], se: cellSe(m, c.i) } : null },
         peak: () => peak(m),
@@ -342,7 +344,7 @@ export function makeScriptApi({ PARAMS, RT, BUILDER = null, OPTICS = null, signa
                 write(a)
                 return true
             },
-            has: (t, k) => k === 'value' || k in t || part(k) != null,
+            has: (t, k) => k === 'value' || k === 'info' || (k === 'length' && dims() > 1) || k in t || part(k) != null,
         })
     }
 

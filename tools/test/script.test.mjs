@@ -15,6 +15,7 @@ import { makeParams } from '../../lib/shell/params.js'
 import { farGeometry } from '../../lib/pathtracer/optics/farfield.js'
 import { makeScriptApi, runScript, scriptLocation, analysisOf, toCSV, formatValue, fileBlob, STOPPED, SCRIPT_NAMES } from '../scriptapi.js'
 import { highlightJS } from '../scripthighlight.js'
+import { SCRIPT_REF, documentedNames, referenceMarkdown } from '../scriptref.js'
 import { PARAM_MIME, nameFor, declaredNames, offsetAt, dropEdit } from '../scriptdrop.js'
 import { PARAM_DRAG } from '../../lib/shell/paramspanel.js'
 import { SCRIPT_EXAMPLES } from '../scriptexamples.js'
@@ -367,6 +368,43 @@ spherepos = [1, 2, 4]`, api()), /constant/)
     eq('a method called and a property read, after a dot', kinds('a.peak().I').map(x => x), [['fn', 'peak'], ['prop', 'I']])
     eq('HTML in the code is escaped', highlightJS('a<b&&c>d'), 'a&lt;b&amp;&amp;c&gt;d')
     eq('the names coloured are the ones a script is handed', [...SCRIPT_NAMES].sort(), Object.keys(api()).sort())
+}
+
+// ---- THE REFERENCE (tools/scriptref.js): every name the API has, and nothing it has not ------------------------------
+{
+    // what a script can reach, walked: the API's names and its objects' members, a render's handle, an analysis, a map,
+    // a setting's handle -- each as the reference spells it (pic., a., m., p.)
+    const A = api()
+    const have = new Set()
+    for (const [k, v] of Object.entries(A)) {
+        if (k === 'st') { have.add('st'); continue }
+        if (v && typeof v === 'object' && !(v instanceof AbortSignal)) for (const m of Object.keys(v)) have.add(`${k}.${m}`)
+        else have.add(k)
+    }
+    const pic = await A.render({ width: 8, height: 8, samples: 1 })
+    for (const m of Object.keys(pic)) have.add(`pic.${m}`)
+    // the far field and the hits of the closed-form test above, made again here (a map needs hits, a.plane a far field)
+    const nC = 8, nG = 19, omega = farGeometry(nC, nG).omega
+    const flux = new Float64Array(nC * nG).map((_, k) => omega[Math.floor(k / nC)])
+    const hits = Array.from({ length: 64 }, (_, i) => ({ pos: [(i % 8) / 8, Math.floor(i / 8) / 8, 0], dir: [0, 0, -1], flux: 1 / 64, tag: 3 }))
+    const v = x => ({ value: x, se: null })
+    const a = analysisOf({ results: { unit: 'lm', rays: 1, batches: 1, emitted: v(1), escaped: v(1), lost: v(0), absorbed: v(0), detected: v(0), volume: v(0), objects: [], materials: [] },
+                          far: { nC, nG, flux, se: null, emitted: 1, unit: 'lm', axis: [0, 0, 1], c0: [1, 0, 0] }, hits, metresPerUnit: 1, tagName: () => 'floor' })
+    for (const m of Object.getOwnPropertyNames(a)) have.add(`a.${m}`)
+    for (const m of Object.keys(a.map('floor', { cells: 4, area: 'lit' }))) have.add(`m.${m}`)
+    for (const m of ['value', 'info', 'path', 'get', 'set', 'length']) have.add(`p.${m}`)
+    const p = A.param('scene/n4/transform/position')
+    eq('every member a setting\'s handle names is one the walk knows', ['value', 'info', 'path', 'get', 'set'].every(k => k in p), true)
+    const doc = documentedNames()
+    // the parts of a handle are written p[i], p.x ... in the reference: not members to walk
+    const parts = ['p[i]', 'p.x', 'p.y', 'p.z', 'p.w', 'p.r', 'p.g', 'p.b', 'p.a']
+    eq('every name a script can reach has words in the reference', [...have].filter(n => !doc.has(n)).sort(), [])
+    eq('...and every name the reference has words for is one it can reach', [...doc].filter(n => !have.has(n) && !parts.includes(n)).sort(), [])
+    const AsyncFunction = (async () => { }).constructor
+    const bad = SCRIPT_REF.flatMap(s => s.items).filter(i => i.example).filter(i => { try { new AsyncFunction(...Object.keys(A), i.example); return false } catch { return true } })
+    eq('every example in it compiles', bad.map(i => i.sig), [])
+    eq('...written as a help page with a heading a section and one a name', [referenceMarkdown().split('\n## ').length - 1, referenceMarkdown().split('\n### ').length - 1],
+        [SCRIPT_REF.length, SCRIPT_REF.reduce((n, s) => n + s.items.length, 0)])
 }
 
 console.log(`script (the scene's script and its API): ${pass} passed, ${fail} failed`)
