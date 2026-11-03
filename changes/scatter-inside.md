@@ -51,12 +51,12 @@ over only the first guess, for a fresh map. This holds for the surface map too, 
 `volume-map` row pins the map's radius and capacity, and shows the map's columns: records, dropped, samples over, cut,
 kept and radius.
 
-Press `volume`, `volume-light` and `volume-map` in Tests and paste them back. On `volume-map`, kept should read about
-0.025 at 853 × 1186 (0.016 at 1384 × 1186) and map M about 1.7. The map's columns are read once the row's samples are
-done, not from the first sample.
+**Measured on the user's Ampere:** `volume-light` agreed on three presses (within 0.25 %). `volume-map` read 1.0006 at
+94a1903 (880 × 896), with the map at 0.85 of its room, kept 0.032, and nothing dropped or cut.
 
 **An image row in Tests waits for the kernels its settings ask for**, as a timing row did. Switching the photon map in a
 scene that scatters builds every kernel again. The row's samples were refused while that ran ("trace while the scene's
-pipelines are being built"), and a second press worked.
+pipelines are being built"), and a second press worked. The map's columns are read once the row's samples are done, not
+from the first sample.
 
- `sppm` and `dichroics` take the same plan.
+Press `volume` in Tests and paste it back. `sppm` and `dichroics` take the same plan for the keep.
