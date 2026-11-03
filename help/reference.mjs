@@ -46,11 +46,12 @@ export const FIELD_HELP = {
 
 /** WHAT EACH LIGHT SETTING DOES -- read in builder/lights.js (its header lists them). */
 export const LIGHT_HELP = {
-    colourBy: 'How the colour is given: as RGB, as a colour temperature (CCT, kelvin, with Duv), or as a CIE 1931 xy chromaticity -- as a datasheet gives it.',
+    colourBy: 'How the colour is given: as RGB, as a colour temperature (CCT, kelvin, with Duv), as a CIE 1931 xy chromaticity -- as a datasheet gives it -- or by its spectrum.',
     colour: 'The light\'s colour as linear RGB. Only its hue counts.',
     cct: 'The colour temperature in kelvin: 2700 a warm lamp, 4000 neutral, 6500 daylight.',
     duv: 'How far the colour is from the black-body line: 0 on it, positive greener, negative pinker.',
     xy: 'The CIE 1931 chromaticity, as an LED datasheet gives it.',
+    spectrum: 'The light\'s spectrum, for colour by spectrum: a blackbody at a temperature, Gaussian peaks (one line each: nm, FWHM in nm, share of the power -- one for a single-colour LED, a blue die and a broad phosphor hump for a white one), or a measured table of nm against relative power, pasted or loaded from a CSV. Its colour is exactly what the CIE 1931 observer\'s table makes of it, carried as a chromaticity is; the panel also says its luminous efficacy of radiation (lm per radiated W). The presets are models, not datasheets.',
     luminance: 'How bright the face is, in cd/m², straight out of it. Set this or the flux: the other follows from the face\'s area.',
     flux: 'The light\'s total output in lumens. When set, the luminance follows from it and the face\'s area, so resizing the face keeps the lumens.',
     distribution: 'How the light leaves the face: cosine (cos^n -- n 1 is a Lambertian, an LED or a diffuser), uniform (the same in every direction), or collimated (one direction: a laser, or a beam from far away).',

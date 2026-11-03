@@ -27,7 +27,8 @@ result into a luminaire and see where the light goes.
   spectrum, is planned.
 - **Dispersion** gives a refracted ray a wavelength and its colour. Detectors read the colour (XYZ) of what arrives,
   not the wavelength.
-- A Zemax ray file's spectral records are read, but light is still carried as colour, not as a spectrum.
+- A light given by its **spectrum** gets the spectrum's exact colour, but it is traced as that colour, not as a
+  spectrum. A Zemax ray file's spectral records give the light their colour, not a wavelength each.
 
 ## Physics not yet in the trace
 

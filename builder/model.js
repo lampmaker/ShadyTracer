@@ -156,6 +156,8 @@ export const MATERIAL_TYPES = ['surface', 'emitter', 'detector', 'limiter']
 /** The type of a material, with the default filled in. */
 export const typeOf = m => m?.type ?? 'surface'
 export { LIGHT_SHAPES, LIGHT_DEFAULTS, lightOf, hasFace, lightRGB, lightDisplayRGB, lightChromaticity } from './lights.js'
+/* a light's spectrum (0.next): its kinds, the presets, reading and writing its text -- for the panel (core/spd.js) */
+export { SPD_PRESETS, spdAt, spdProblems, spdSummary, parsePeaks, parseSpdCsv, peaksText, tableText } from '../lib/pathtracer/core/spd.js'
 import { LIGHT_SHAPES, LIGHT_DEFAULTS, lightOf, lightProblems, rotationTowards } from './lights.js'
 export { EXPORT_PARAMS, EXPORT_DEFAULTS, exportOf } from './exportbox.js'
 import { EXPORT_PARAMS, EXPORT_DEFAULTS, exportProblems } from './exportbox.js'

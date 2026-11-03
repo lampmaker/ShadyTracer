@@ -28,12 +28,20 @@ shrunk.
 
 ## Colour
 
-A light's colour can be given three ways, each exact:
+A light's colour can be given four ways, each exact:
 
 - **RGB**: a hue, linear;
 - **CCT and Duv**: a colour temperature in kelvin, and how far from the black-body line (positive greener, negative
   pinker), as white LEDs are specified;
-- **CIE 1931 xy**: a chromaticity, as a coloured LED's datasheet gives it.
+- **CIE 1931 xy**: a chromaticity, as a coloured LED's datasheet gives it;
+- **spectrum**: a blackbody at a temperature, Gaussian peaks (an LED's die, a phosphor's hump), or a measured table
+  of nm against relative power from a CSV. Its colour is what the CIE 1931 2° observer's table (the CIE's own, at 1 nm)
+  makes of it, and the panel says its **luminous efficacy of radiation**, lm per radiated W. The spectrum gives the
+  colour only, for now: the light is still traced as that colour, not wavelength by wavelength.
+
+A **Zemax ray file with a wavelength per ray** (its format 2) takes the colour its rays add up to, each at its own
+wavelength and by its flux. A flux-only file stays white, whatever wavelength its header names, because many
+photometric files put a placeholder there.
 
 Colours are carried exactly through the trace, **even outside the display's gamut** (a royal blue LED): only the
 picture clips them, once, at the screen. A detector reads what arrives as CIE xy, u′v′, CCT and Duv. Three LEDs mixed

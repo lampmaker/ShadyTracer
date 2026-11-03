@@ -37,9 +37,10 @@
 import { createOptics } from '../lib/pathtracer/optics/index.js'
 import { detectorMap } from '../lib/pathtracer/optics/detmap.js'
 import { UNITS } from '../lib/pathtracer/core/photometry.js'
-import { rgbToXYZ, XYZtoxy, xyToXYZ, xyToCctDuv, cctDuvToXy, mixToTarget } from '../lib/pathtracer/core/colorimetry.js'
+import { rgbToXYZ, XYZtoRGB, XYZtoxy, xyToXYZ, xyToCctDuv, cctDuvToXy, mixToTarget } from '../lib/pathtracer/core/colorimetry.js'
 import { sourceTable, faceSource } from '../builder/sources.js'
 import { placeRays } from '../lib/pathtracer/optics/sources.js'
+import { raysXYZ } from '../lib/pathtracer/optics/zemax.js'
 import { RAYFILES } from './rayfiles.js'
 import { intensity, planeCurve, farStats, intensityCSV } from '../lib/pathtracer/optics/farfield.js'
 import { drawPolar, polarAngleAt, nearestPoint, polarStyle } from '../lib/pathtracer/optics/polar.js'
@@ -52,6 +53,9 @@ import { chartStrip, saveCanvases, saveText } from '../lib/pathtracer/strip.js'
 import { stampedName } from '../lib/filename.js'
 import { icon, iconButton, iconPill, lit } from '../lib/pathtracer/icons.js'
 import { OPTICS_CHARTS, FAR_CHARTS, MAP_CHARTS, chartSet } from './charts.js'
+/* a spectral ray file's colour, worked out once a parsed file (its 100 000 rays: zemax.js raysXYZ) -- XYZ, or null */
+const FILE_COLOUR = new WeakMap()
+const fileColour = f => { if (!FILE_COLOUR.has(f)) FILE_COLOUR.set(f, raysXYZ(f)?.xyz ?? null); return FILE_COLOUR.get(f) }
 
 /* THE CHARTS' KINDS and the set of charts that exist (charts.js), for the host to register a panel per chart
    before its layout is restored (a saved layout names its panels, and one not registered yet is left out of
@@ -184,7 +188,11 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
                 O.setRayData(key, placeRays(f.rays, frame))
                 placedKey.set(own, key)
             }
-            sources.push({ ...x, rays: key, flux: x.flux ?? f.total, unit: f.header.fluxUnit, header: f.header })
+            /* A SPECTRAL FILE'S COLOUR (0.next; zemax.js raysXYZ): what its rays' wavelengths add up to, the light's own
+               otherwise (white, as a ray-file light has no colour rows) */
+            const fileXYZ = fileColour(f)
+            sources.push({ ...x, rays: key, flux: x.flux ?? f.total, unit: f.header.fluxUnit, header: f.header,
+                           ...(fileXYZ ? { colour: XYZtoRGB(fileXYZ) } : {}) })
         }
         // a sheet in the scene starts its rays off it (builder/sources.js faceSource, shared with the bench)
         const describe = x => x.kind === 'rayset' ? { type: 'rayset', rays: x.rays, flux: x.flux, emitN: x.emitN, colour: x.colour } : faceSource(x)

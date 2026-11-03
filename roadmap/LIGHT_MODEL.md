@@ -235,7 +235,7 @@ One PR a step, each with its change note, its Node and Dawn tests, and its `test
 |---|---|
 | **S0a** | **The Optical features block** and its presets. Dispersion, absorption and coating edges move into it and hide their fields when off; `dispersionOff` out of the render settings. Useful with no new physics. **Built (0.next), not yet seen on hardware.** |
 | **S0** | The `SPEC` type and the composed Ray, RGB byte for byte. Nothing visible; everything after rests on it. |
-| **S1** | Spectra as data (§3), the user's LED database among the sources, exact RGB. |
+| **S1** | Spectra as data (§3), the user's LED database among the sources, exact RGB. **Built (0.next), not yet seen on hardware:** colour by spectrum (a blackbody, peaks, a CSV table) through the CIE's own 1931 table at 1 nm, the efficacy said, a spectral Zemax file's colour; the user's LED database later (the user, 2026-11-03: "first generic CSV"). |
 | **S2** | Spectral (K = 4, and K = 1) in the optics trace, with spectral detectors. **The user's priority (2026-10-30):** response curves first (W, PPFD, melanopic, UV: weighted tallies), then a spectrum per cell for CRI and TM-30. |
 | **S3** | Spectral in the picture, the photon map included, and the same detectors in the measure tool. A photon's wavelengths are not the camera path's (PLAN.md C 4). A bench decides between one draw shared by a sample and bands for photons only: N bands, here and only here. |
 | S4 | Coating tables: stacks and measured curves. |

@@ -829,6 +829,22 @@ throws('another version is refused, not guessed at',
     throws('a CCT past the locus is refused', () => M.setLight(d, 'die', { colourBy: 'cct', cct: 20000 }), /cct/)
     throws('an xy outside the diagram is refused', () => M.setLight(d, 'die', { colourBy: 'xy', xy: { x: 0.7, y: 0.5 } }), /xy/)
     throws('an unknown colourBy is refused', () => M.setLight(d, 'die', { colourBy: 'hsv' }), /colourBy/)
+    /* ...AND BY ITS SPECTRUM (0.next; core/spd.js): its exact XYZ at Y = 1 (the CIE's table), the optics source the same,
+       a spectrum with no visible light refused, its efficacy said, saved and read back, the default dropped */
+    const red = { kind: 'peaks', peaks: [{ nm: 630, fwhm: 17, weight: 1 }] }
+    M.setLight(d, 'die', { colourBy: 'spectrum', spectrum: red })
+    const redRGB = M.lightRGB(M.lightOf(M.find(d, 'die').node))
+    const redXYZ = M.spdSummary(red)
+    const back = [0.4124 * redRGB[0] + 0.3576 * redRGB[1] + 0.1805 * redRGB[2], 0.2126 * redRGB[0] + 0.7152 * redRGB[1] + 0.0722 * redRGB[2]]
+    ok('a light by its spectrum: luminance 1 and the spectrum\'s own x', near(back[1], 1, 1e-12)
+        && near(back[0] / (back[0] + 1 + 0.0193 * redRGB[0] + 0.1192 * redRGB[1] + 0.9505 * redRGB[2]), redXYZ.xy[0], 1e-9), JSON.stringify([back, redXYZ.xy]))
+    ok('...the optics source carries it', S.sourceTable(d).sources.find(x => x.id === 'die').colour.every((v, i) => v === redRGB[i]))
+    ok('...its efficacy said with its chromaticity', near(M.lightChromaticity(M.lightOf(M.find(d, 'die').node)).ler, redXYZ.ler, 1e-9))
+    eq('...saved and read back', M.parse(M.serialize(d)).root.children.find(n => n.id === 'die').light.spectrum, red)
+    throws('a spectrum with no light the eye sees is refused', () => M.setLight(d, 'die', { spectrum: { kind: 'peaks', peaks: [{ nm: 950, fwhm: 10, weight: 1 }] } }), /no light the eye sees/)
+    throws('...and one of an unknown kind', () => M.setLight(d, 'die', { spectrum: { kind: 'laser', nm: 532 } }), /kind/)
+    M.setLight(d, 'die', { spectrum: { kind: 'planck', T: 4000 } })
+    ok('...the default spectrum is not stored', !('spectrum' in M.find(d, 'die').node.light))
     M.setLight(d, 'die', { colourBy: 'rgb', xy: { x: 0.3127, y: 0.329 } })
     ok('back to RGB at the defaults: nothing stored', !('colourBy' in M.find(d, 'die').node.light) && !('xy' in M.find(d, 'die').node.light))
     const bad = JSON.parse(M.serialize(d)); bad.root.children[0].material = 'scr'

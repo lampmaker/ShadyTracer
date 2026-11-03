@@ -729,6 +729,53 @@ ok('...and the radius row says so by itself (the panel redrawn), the number kept
     ok('...and the editor shows the colour as the three lines it is', /light.colour.r = tint.r\nlight.colour.g = tint.g\nlight.colour.b = tint.b/.test(lheld.bindText ?? ''), JSON.stringify(lheld.bindText))
 }
 
+/* A LIGHT BY ITS SPECTRUM (0.next; core/spd.js): colour by spectrum starts as a blackbody at the colour's own CCT; peaks
+   typed are checked as typed -- a problem said at its line, nothing put in -- and what reads clean is a live write of the
+   light (no compile) with its undo step; a preset puts one in; the readout says the efficacy. */
+{
+    await p.evaluate(() => { CHECK.M.addLight(CHECK.doc, 'root', { id: 'spl', shape: 'rectangle', label: 'spectral led' }) })
+    const light = () => p.evaluate(() => structuredClone(CHECK.M.lightOf(CHECK.M.find(CHECK.doc, 'spl').node)))
+    const said = () => p.evaluate(() => document.querySelector('.builder-spectrum-said')?.textContent ?? '')
+    const typeText = text => p.evaluate(text => {
+        const ta = [...document.querySelectorAll('textarea')].find(t => /\d+ \d+ \d+/.test(t.value) || t.dataset.spectrum)
+        if (!ta) return 'no textarea'
+        ta.dataset.spectrum = '1'
+        ta.value = text; ta.dispatchEvent(new Event('input', { bubbles: true }))
+        return 'typed'
+    }, text)
+    let rr = await rowsOf('spl')
+    ok('a light: colour by offers spectrum', rr.includes('colour by'))
+    ok('colour by spectrum chosen', await set('colour by', 'spectrum') === 'set')
+    await p.waitForTimeout(80)
+    let L = await light()
+    rr = await p.evaluate(() => [...document.querySelectorAll('.tp-lblv')].map(r => r.querySelector('.tp-lblv_l')?.textContent.trim().replace(/^[◇◆]/, '')))
+    ok('...a blackbody at the white it was (D65: about 6500 K), its rows: kind, start from, temperature', L.colourBy === 'spectrum'
+        && L.spectrum.kind === 'planck' && L.spectrum.T > 6400 && L.spectrum.T < 6600 && ['spectrum', 'start from', 'temperature (K)'].every(l => rr.includes(l)),
+        JSON.stringify([L.spectrum, rr]))
+    const readout = await p.evaluate(() => [...document.querySelectorAll('input')].map(i => i.value).find(v => /lm\/W radiated/.test(v)) ?? '')
+    ok('...the readout says its efficacy', /\d+ lm\/W radiated/.test(readout), readout)
+    ok('peaks chosen', await set('spectrum', 'peaks') === 'set')
+    await p.waitForTimeout(80)
+    L = await light()
+    ok('...a white LED to start from, its text in the box', L.spectrum.kind === 'peaks' && L.spectrum.peaks.length === 2
+        && /in use|2 peaks/.test(await said()), JSON.stringify([L.spectrum, await said()]))
+    const before = await state()
+    ok('a peak typed wrong', await typeText('630 17 1\n580 wide 2') === 'typed')
+    await p.waitForTimeout(450)
+    ok('...said at its line and column, nothing put in', /line 2, column 5/.test(await said()) && (await light()).spectrum.peaks.length === 2
+        && (await state()).live.length === before.live.length, await said())
+    ok('a red LED typed', await typeText('630 17 1') === 'typed')
+    await p.waitForTimeout(450)
+    L = await light()
+    const s2 = await state()
+    ok('...put in, live: the light pushed, no compile, its undo step', JSON.stringify(L.spectrum.peaks) === '[{"nm":630,"fwhm":17,"weight":1}]'
+        && s2.live.slice(before.live.length).includes('spl.light') && s2.structure === before.structure && s2.commits.at(-1) === 'spl.light'
+        && /in use/.test(await said()), JSON.stringify([L.spectrum, s2.live.slice(before.live.length), s2.commits.slice(-2), await said()]))
+    ok('a preset chosen: royal blue', await set('start from', 'LED royal blue') === 'set')
+    await p.waitForTimeout(80)
+    ok('...the light\'s spectrum the preset\'s', JSON.stringify((await light()).spectrum.peaks) === '[{"nm":450,"fwhm":20,"weight":1}]')
+}
+
 /* THE ASPHERIC LENS'S COEFFICIENTS (2026-10-04): numbers with no range, typed from a datasheet. Tweakpane showed such a
    number to its first value's decimals, two at least -- 0.00 for an a4 of 1.6e-5 and an a10 of 2e-13 -- and a step
    would have rounded them away. Typed, they are kept whole and shown as typed; its radii and conic keep their sliders. */
@@ -975,7 +1022,9 @@ ok('...and the visibility beside it follows: 3.912 x 4 m, 15.6 m', /^visibility 
     ok('opened, it stays open when the row is drawn again (remembered)', (await folderOf('camera'))?.open === true && (await folderOf('exposure'))?.open === false)
     const commits0 = (await state()).commits.length
     ok('typing a distance', await typeIn('camera', 'distance', 7.25) === 'set')
-    ok('...moves the camera, and is no undo step', await p.evaluate(() => CHECK.cam.get().distance) === 7.25 && (await state()).commits.length === commits0)
+    // within 1e-9: the camera keeps its pose, and the distance read back from it is 7.249999999999998 as often as 7.25
+    ok('...moves the camera, and is no undo step', Math.abs(await p.evaluate(() => CHECK.cam.get().distance) - 7.25) < 1e-9 && (await state()).commits.length === commits0,
+        JSON.stringify([await p.evaluate(() => CHECK.cam.get().distance), (await state()).commits.slice(commits0)]))
     ok('the exposure\'s EV typed', await typeIn('exposure', 'EV100 (manual)', 9) === 'set')
     ok('...is the exposure\'s', await p.evaluate(() => CHECK.exposure.values.exposureEV) === 9 && (await state()).commits.length === commits0)
     await p.evaluate(() => CHECK.cam.set({ distance: 12.5 })); await p.waitForTimeout(80)

@@ -6,11 +6,12 @@ A light object is a flat rectangle or disc that emits from its front (+z), or a 
 
 | setting | starts at | does |
 |---|---|---|
-| colourBy | rgb | How the colour is given: as RGB, as a colour temperature (CCT, kelvin, with Duv), or as a CIE 1931 xy chromaticity -- as a datasheet gives it. |
+| colourBy | rgb | How the colour is given: as RGB, as a colour temperature (CCT, kelvin, with Duv), as a CIE 1931 xy chromaticity -- as a datasheet gives it -- or by its spectrum. |
 | colour | 1, 1, 1 | The light's colour as linear RGB. Only its hue counts. |
 | cct | 4000 | The colour temperature in kelvin: 2700 a warm lamp, 4000 neutral, 6500 daylight. |
 | duv | 0 | How far the colour is from the black-body line: 0 on it, positive greener, negative pinker. |
 | xy | 0.3127, 0.329 | The CIE 1931 chromaticity, as an LED datasheet gives it. |
+| spectrum | planck, 4000 | The light's spectrum, for colour by spectrum: a blackbody at a temperature, Gaussian peaks (one line each: nm, FWHM in nm, share of the power -- one for a single-colour LED, a blue die and a broad phosphor hump for a white one), or a measured table of nm against relative power, pasted or loaded from a CSV. Its colour is exactly what the CIE 1931 observer's table makes of it, carried as a chromaticity is; the panel also says its luminous efficacy of radiation (lm per radiated W). The presets are models, not datasheets. |
 | luminance | 1000 | How bright the face is, in cd/m², straight out of it. Set this or the flux: the other follows from the face's area. |
 | flux | (not set) | The light's total output in lumens. When set, the luminance follows from it and the face's area, so resizing the face keeps the lumens. |
 | distribution | cosine | How the light leaves the face: cosine (cos^n -- n 1 is a Lambertian, an LED or a diffuser), uniform (the same in every direction), or collimated (one direction: a laser, or a beam from far away). |

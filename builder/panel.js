@@ -45,6 +45,8 @@ import { sourceTable } from './sources.js'
 import { shapesOf, isCsg } from './codegen.js'
 import { recipeOf, parseRecipe, applyRecipe } from './recipe.js'
 import { RAYFILES, rayBox } from '../optics/rayfiles.js'
+import { raysXYZ } from '../lib/pathtracer/optics/zemax.js'
+import { XYZtoxy, xyToCctDuv } from '../lib/pathtracer/core/colorimetry.js'
 import { UNITS } from '../lib/pathtracer/core/photometry.js'
 import { changeUnit } from './unitchange.js'
 import { openUnitDialog } from './unitdialog.js'
@@ -960,8 +962,9 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
                    `${parsed.header.count.toLocaleString()} rays, ${parsed.total.toPrecision(4)} ${parsed.header.fluxUnit}`
                    + `${parsed.header.fluxUnit === 'W' ? ' (taken as lm)' : ''}, units ${parsed.header.units}`
                    + `${parsed.header.wavelength ? `, ${(parsed.header.wavelength * 1000).toFixed(0)} nm` : ''}`,
-                   ...(parsed.header.rotated ? ['the file\'s rotation applied (x, y, z order: unverified)'] : [])].join('\n') }
-            f.addBinding(info, 'text', { readonly: true, label: '', multiline: true, rows: 3 })
+                   ...(parsed.header.rotated ? ['the file\'s rotation applied (x, y, z order: unverified)'] : []),
+                   ...spectralLine(parsed)].join('\n') }
+            f.addBinding(info, 'text', { readonly: true, label: '', multiline: true, rows: 3 + (parsed?.header?.format === 2 ? 1 : 0) })
             f.addButton({ title: 'Choose ray file (.DAT)...' }).on('click', () => {
                 const input = Object.assign(document.createElement('input'), { type: 'file', accept: '.dat,.DAT' })
                 input.onchange = async () => {
@@ -1009,6 +1012,16 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
        change here would be undone by the next resolve -- and so is the choice its binding holds (bind.js LIGHT_MODES:
        light.flux holds "brightness by", light.cct "colour by"), the binding on the label. opts(...settings) is the row's
        options, tip(row, ...settings) its label; a setting is a light's key, 'colour' for all three of light.colour.* */
+    /* A SPECTRAL RAY FILE'S COLOUR (0.next; zemax.js raysXYZ): what its rays' wavelengths add up to, said beside its
+       other numbers -- the colour the Optics page and the picture's photons give it. A flux-only file has none of its own. */
+    function spectralLine(parsed) {
+        const c = raysXYZ(parsed)
+        if (!c) return parsed?.header?.format === 2 ? ['its wavelengths are outside what the eye sees: traced white'] : []
+        const xy = XYZtoxy(c.xyz), cd = xyToCctDuv(xy[0], xy[1])
+        return [`colour from its ${c.rays.toLocaleString()} rays' wavelengths: x ${xy[0].toFixed(4)} y ${xy[1].toFixed(4)}`
+            + (cd.inRange && Math.abs(cd.duv) <= 0.05 ? ` · ${Math.round(cd.cct)} K` : '')]
+    }
+
     function lightHeld(node) {
         const lb = Object.entries(node.bind || {}).filter(([t]) => t.startsWith('light.'))
         const by = keys => lb.filter(([t]) => keys.some(k => t === `light.${k}` || t.startsWith(`light.${k}.`))).map(([t, e]) => `${t} = ${e}`)
@@ -1018,24 +1031,28 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
         }
     }
 
-    /* A LIGHT'S COLOUR, three ways (lights.js colourBy): an RGB hue, a CCT and Duv, or CIE xy -- the
-       last two as a datasheet gives an LED, and exact however far outside the display's gamut. Below
-       them, what it comes to in the other terms. Switching the way keeps the colour: the new fields
-       start at the current colour's own values. */
+    /* A LIGHT'S COLOUR, four ways (lights.js colourBy): an RGB hue, a CCT and Duv, CIE xy -- the
+       last two as a datasheet gives an LED, and exact however far outside the display's gamut -- or its
+       spectrum (0.next; core/spd.js), below in spectrumBindings. Below them, what it comes to in the other
+       terms. Switching the way keeps the colour: the new fields start at the current colour's own values
+       (a spectrum a blackbody at its CCT, or a table of the current spectrum). */
     function colourBindings(f, node, L, set, H = lightHeld(node)) {
         const ch = M.lightChromaticity(L)
         const C = { by: L.colourBy, colour: { ...L.colour }, cct: L.cct, duv: L.duv, x: L.xy.x, y: L.xy.y }
-        H.tip(f.addBinding(C, 'by', { label: 'colour by', options: { 'RGB': 'rgb', 'CCT + Duv': 'cct', 'CIE xy': 'xy' }, ...H.opts('colour', 'cct', 'duv', 'xy') }), 'colour', 'cct', 'duv', 'xy')
+        H.tip(f.addBinding(C, 'by', { label: 'colour by', options: { 'RGB': 'rgb', 'CCT + Duv': 'cct', 'CIE xy': 'xy', 'spectrum': 'spectrum' }, ...H.opts('colour', 'cct', 'duv', 'xy') }), 'colour', 'cct', 'duv', 'xy')
             .on('change', ev => {
                 const patch = { colourBy: ev.value }
                 if (ev.value === 'cct' && ch.inRange) Object.assign(patch, { cct: Math.round(ch.cct), duv: +Math.max(-0.05, Math.min(0.05, ch.duv)).toFixed(4) })
                 if (ev.value === 'xy') patch.xy = { x: +ch.x.toFixed(4), y: +ch.y.toFixed(4) }
                 if (ev.value === 'rgb') patch.colour = M.lightDisplayRGB(L)
+                if (ev.value === 'spectrum' && ch.inRange && Math.abs(ch.duv) < 0.01 && !node.light?.spectrum)    // none of its own yet
+                    patch.spectrum = { kind: 'planck', T: Math.round(ch.cct) }
                 set(patch, 'reshow')
             })
         // what the colour comes to, re-read from the document after every change
         const text = c => `x ${c.x.toFixed(4)} y ${c.y.toFixed(4)}`
             + (c.inRange ? ` · ${Math.round(c.cct)} K, Duv ${c.duv >= 0 ? '+' : ''}${c.duv.toFixed(4)}` : '')
+            + (c.ler !== undefined ? ` · ${c.ler.toFixed(0)} lm/W radiated` : '')
             + (c.outOfGamut ? ' · outside the display gamut: traced exactly, shown desaturated' : '')
         const info = { text: text(ch) }
         let infoB = null
@@ -1055,7 +1072,94 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
             H.tip(f.addBinding(C, 'x', { label: 'x', min: 0.001, max: 0.8, step: 0.0001, ...H.opts('xy') }).on('change', () => { if (C.x + C.y < 1) put({ xy: xy() }) }), 'xy')
             H.tip(f.addBinding(C, 'y', { label: 'y', min: 0.001, max: 0.9, step: 0.0001, ...H.opts('xy') }).on('change', () => { if (C.x + C.y < 1) put({ xy: xy() }) }), 'xy')
         }
+        if (C.by === 'spectrum') spectrumBindings(f, node, L, set, put)
         infoB = f.addBinding(info, 'text', { readonly: true, label: '' })
+    }
+
+    /* A LIGHT BY ITS SPECTRUM (0.next; core/spd.js, lights.js `spectrum`): a blackbody's temperature, peaks typed one a
+       line ("nm fwhm weight"), or a measured table pasted or loaded from a CSV -- and a starting point from the presets.
+       Every change live, as a colour is (its exact RGB at Y = 1: no compile), one undo step a light's edit. Text is
+       checked as it is typed, and only what reads clean is put in; a problem is said at its line and column, as the
+       recipe's are. Switching the kind keeps the colour where it can: a blackbody at the CCT it had, a table of the
+       spectrum it had, sampled every 5 nm. */
+    function spectrumBindings(f, node, L, set, put) {
+        const S = L.spectrum ?? M.LIGHT_DEFAULTS.spectrum
+        const K = { kind: S.kind, preset: '' }
+        rowTip(f.addBinding(K, 'kind', { label: 'spectrum', options: { 'blackbody': 'planck', 'peaks (LED)': 'peaks', 'measured table': 'table' } }),
+            'A blackbody at a temperature; Gaussian peaks, as a single-colour LED (one) or a white one (a blue die and a phosphor hump); '
+            + 'or a measured spectrum, nm against relative power, from a CSV.')
+            .on('change', ev => {
+                const ch = M.lightChromaticity(L)
+                let next
+                if (ev.value === 'planck') next = { kind: 'planck', T: ch.inRange ? Math.round(ch.cct) : 4000 }
+                if (ev.value === 'peaks') next = S.kind === 'peaks' ? S : structuredClone(M.SPD_PRESETS['LED white, about 4000 K (blue die and phosphor)'])
+                if (ev.value === 'table') {
+                    const points = []
+                    for (let l = 380; l <= 780; l += 5) points.push([l, +M.spdAt(S, l).toPrecision(6)])
+                    const top = Math.max(...points.map(q => q[1])) || 1
+                    next = { kind: 'table', name: '', points: points.map(([l, v]) => [l, +(v / top).toPrecision(6)]) }
+                }
+                if (next && !M.spdProblems(next).length) set({ spectrum: next }, 'reshow')
+            })
+        rowTip(f.addBinding(K, 'preset', { label: 'start from', options: { '(choose)': '', ...Object.fromEntries(Object.keys(M.SPD_PRESETS).map(k => [k, k])) } }),
+            'A model to start from, not a datasheet: a blackbody, CIE illuminant A, a single-colour LED as one Gaussian of its typical peak and width, a white LED as a blue die and a phosphor hump near 4000 K.')
+            .on('change', ev => { if (ev.value) set({ spectrum: structuredClone(M.SPD_PRESETS[ev.value]) }, 'reshow') })
+        const lp = `scene/${node.id}/light/spectrum`
+        if (S.kind === 'planck') {
+            const T = { T: S.T }
+            flagRow(rowTip(f.addBinding(T, 'T', { label: 'temperature (K)', min: 1000, max: 15000, step: 10 }).on('change', ev => {
+                const next = { kind: 'planck', T: ev.value }
+                if (!M.spdProblems(next).length) put({ spectrum: next })
+            }), 'A blackbody\'s temperature: its spectrum is Planck\'s law, its colour on the Planckian locus at that CCT exactly.'), lp)
+            return
+        }
+        // peaks or a table: text, checked as it is typed
+        const isPeaks = S.kind === 'peaks'
+        const draft = { text: isPeaks ? M.peaksText(S) : M.tableText(S) }
+        const b = f.addBinding(draft, 'text', { label: isPeaks ? 'peaks' : 'table', multiline: true, rows: Math.max(3, Math.min(10, draft.text.split('\n').length + 1)) })
+        rowTip(b, isPeaks ? 'One peak a line: its wavelength (nm), its full width at half maximum (nm), and its share of the power. 450 20 1 is a royal blue die; add 580 125 5.35 and it is a white LED near 4000 K.'
+            : 'A measured spectrum: nm and relative power a line, separated by a comma, a tab or a semicolon (then a comma may be the decimal point). Headings and # lines are skipped.')
+        const box = document.createElement('div')
+        Object.assign(box.style, { font: '12px/1.35 monospace', whiteSpace: 'pre-wrap', padding: '4px 6px', margin: '2px 4px 6px',
+                                   borderRadius: '3px', background: 'rgba(0,0,0,0.25)' })
+        box.className = 'builder-spectrum-said'          // what the check said, for test/panel.check.mjs to read
+        b.element.after(box)
+        const say = (text, color) => { box.textContent = text; box.style.color = color }
+        const take = text => {
+            let next
+            try { next = isPeaks ? { kind: 'peaks', ...M.parsePeaks(text) } : { kind: 'table', name: S.name ?? '', ...M.parseSpdCsv(text) } }
+            catch (e) { say(e.message, '#ff8a80'); return }
+            const bad = M.spdProblems(next)
+            if (bad.length) { say(bad.join('\n'), '#ff8a80'); return }
+            put({ spectrum: next })
+            say(isPeaks ? `${next.peaks.length} peak${next.peaks.length === 1 ? '' : 's'}: in use` : `${next.points.length} points, ${next.points[0][0]}-${next.points.at(-1)[0]} nm: in use`, '#81c784')
+        }
+        say(isPeaks ? `${S.peaks.length} peak${S.peaks.length === 1 ? '' : 's'}` : `${S.points.length} points, ${S.points[0][0]}-${S.points.at(-1)[0]} nm`, '#9aa7b0')
+        let timer = 0
+        // the textarea is Tweakpane's, rewired by PropertyTable on a zero timeout: attach after that (codeEditor)
+        setTimeout(() => {
+            const ta = b.element.querySelector('textarea')
+            if (ta) ta.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => take(ta.value), 300) })
+        })
+        if (!isPeaks) {
+            /* A CSV FROM A FILE: read as text into the table, which then reads it as typed text would be */
+            f.addButton({ title: 'Load CSV…' }).on('click', () => {
+                const inp = document.createElement('input')
+                inp.type = 'file'; inp.accept = '.csv,.txt,.tsv,text/csv,text/plain'
+                inp.onchange = async () => {
+                    const file = inp.files?.[0]
+                    if (!file) return
+                    const text = await file.text()
+                    let next
+                    try { next = { kind: 'table', name: file.name, ...M.parseSpdCsv(text) } }
+                    catch (e) { say(`${file.name}: ${e.message}`, '#ff8a80'); return }
+                    const bad = M.spdProblems(next)
+                    if (bad.length) { say(`${file.name}: ${bad.join('; ')}`, '#ff8a80'); return }
+                    set({ spectrum: next }, 'reshow')
+                }
+                inp.click()
+            })
+        }
     }
 
     /* AN EXPORT BOX (exportbox.js): its settings, what the grid comes to, and the two exports. The
