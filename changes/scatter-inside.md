@@ -37,12 +37,19 @@ it.
   it, the thick one glow.
 - On the Optics page, the light guide example with a scatter distance.
 
-**A medium's first samples no longer overflow the photon map.** A sample's keep is planned from the sample before. The very
-first had been planned from twice its photons, a surface's two stores. A photon walking milky glass stores at every
-collision, about 8.4 on the bench's sheet. So the first samples dropped 72 % of their stores past the room. With the map
-in a medium the first guess is now 256 stores a photon: too high costs a sample a sparser map, too low lost light. The
-user's first press of `volume-map` read 0.546. On Dawn, at the keep the user's size asks, it read 0.74 before the fix and
-about 0.97 after. The row now pins the map's radius and capacity, and shows the map's own columns: dropped, samples over,
-cut, kept and radius.
+**The photon map's keep is planned on the GPU, from the sample before.** When a sample's photons ask for more stores
+than the map holds, it keeps a share of them, planned from what the sample before stored. The host planned it from a
+readback. RT.step, which the Tests panel's image rows sample with, records every sample before the first readback
+lands, so every sample of such a row ran on the first guess, a surface's two stores a photon.
+- **Inside milky glass**, where a photon stores at every collision, every sample overflowed: `volume-map` read 0.546 on
+  the user's card.
+- **With a medium's higher guess** (256 a photon) it read 1.01, but on a map 30x too sparse: kept 0.00082 at the 64th
+  sample.
 
-Press `volume`, `volume-light` and `volume-map` in Tests and paste them back.
+A one-thread kernel now plans the keep at each sample's start, from the count still in the map's heads. The host hands
+over only the first guess, for a fresh map. This holds for the surface map too, in any row the Tests panel samples. The
+`volume-map` row pins the map's radius and capacity, and shows the map's columns: records, dropped, samples over, cut,
+kept and radius.
+
+Press `volume`, `volume-light` and `volume-map` in Tests and paste them back. On `volume-map`, kept should read about
+0.025 and map M about 1.7. `sppm` and `dichroics` take the same plan.
