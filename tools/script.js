@@ -23,6 +23,7 @@
 import { SCRIPT_EXAMPLES } from './scriptexamples.js'
 import { runScript, scriptLocation, formatValue, STOPPED, SCRIPT_NAMES } from './scriptapi.js'
 import { highlightJS } from './scripthighlight.js'
+import { PARAM_MIME, offsetAt, dropEdit } from './scriptdrop.js'
 
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e }
 
@@ -82,6 +83,51 @@ export function installScript(host, { scene, api, status = () => { } }) {
         sync()
     }
     ed.addEventListener('scroll', sync)
+
+    /* A SETTING DROPPED IN (tools/scriptdrop.js): the Parameters panel's row, as its binding or its call, where the pointer
+       lets go -- the caret follows the pointer while it is dragged over, so where it will go is seen. The point is a line
+       and a column by the editor's own metrics: one font, monospaced, so a column is a width (measured, not assumed). */
+    let charW = 0
+    const measure = () => {
+        if (charW) return charW
+        const m = el('span', null, '0'.repeat(40))
+        Object.assign(m.style, { position: 'absolute', visibility: 'hidden', whiteSpace: 'pre' })
+        colours.append(m)
+        charW = m.getBoundingClientRect().width / 40 || 7
+        m.remove()
+        return charW
+    }
+    const pointAt = e => {
+        const r = ed.getBoundingClientRect(), cs = globalThis.getComputedStyle(ed)
+        const lh = parseFloat(cs.lineHeight) || 17, tab = parseInt(cs.tabSize) || 4
+        const line = Math.floor((e.clientY - r.top - parseFloat(cs.paddingTop) + ed.scrollTop) / lh)
+        const col = (e.clientX - r.left - parseFloat(cs.paddingLeft) + ed.scrollLeft) / measure()
+        return offsetAt(ed.value, line, col, { tab })
+    }
+    const ours = e => [...(e.dataTransfer?.types ?? [])].includes(PARAM_MIME)
+    ed.addEventListener('dragover', e => {
+        if (!ours(e) || ctrl) return
+        e.preventDefault()
+        e.dataTransfer.dropEffect = 'copy'
+        const at = pointAt(e)
+        ed.focus(); ed.setSelectionRange(at.offset, at.offset)
+    })
+    ed.addEventListener('drop', e => {
+        if (!ours(e)) return
+        e.preventDefault()
+        if (ctrl) return status('a script is running: drop a setting in once it has stopped')
+        let item
+        try { item = JSON.parse(e.dataTransfer.getData(PARAM_MIME)) } catch { return }
+        if (!item?.path) return
+        const d = dropEdit(ed.value, pointAt(e), item)
+        ed.focus()
+        ed.setSelectionRange(d.from, d.to)
+        /* through the browser's own insert where it has one, so Ctrl Z takes the drop back; it fires `input` (kept) */
+        let done = false
+        try { done = document.execCommand?.('insertText', false, d.text) } catch { }
+        if (!done) { ed.setRangeText(d.text, d.from, d.to, 'end'); keep() }
+        ed.setSelectionRange(d.caret, d.caret)
+    })
     if (globalThis.ResizeObserver) new ResizeObserver(sync).observe(ed)
 
     let ctrl = null, t0 = 0

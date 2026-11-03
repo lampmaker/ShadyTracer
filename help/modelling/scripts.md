@@ -25,10 +25,37 @@ never waits for anything holds the page until it ends, and **Stop** cannot be pr
 ## Settings
 
 Every setting has a path, such as `scene/n4/radius`, `scene/n7/light/flux` or `view/camera/azimuth`. The
-[Parameters panel](show:parameters) lists them all, and **Ctrl K** finds one by name.
+[Parameters panel](show:parameters) lists them all, and **Ctrl K** finds one by name. A row's **⧉** (shown when the
+pointer is over it) copies its path; so does right-clicking the row.
+
+**Drag a setting's name from the Parameters panel into the script.** On an empty line it becomes a variable for it:
+
+```
+const lensPosition = param('scene/n4/transform/position')   // lens › position
+```
+
+Dropped inside code, after `const r = ` for instance, it becomes only `param('scene/n4/transform/position')`.
+
+A variable made by `param` is the setting, live: reading it reads the setting now, and writing it sets it.
+
+```
+lensPosition.value = [1, 2, 4]     // the whole of it
+let x = lensPosition[0]            // one part: [0] [1] [2], or .x .y .z (.r .g .b for a colour)
+lensPosition.z = 4                 // one part set, the others kept
+const radius = param('scene/n4/radius')
+radius.value *= 1.1                // a number
+log(radius * 2)                    // and in a calculation, its value
+```
+
+Writing `lensPosition = [1, 2, 4]` does not set the setting: in JavaScript that replaces the variable. Declared with
+`const`, as the dragged line is, it is reported as an error. `lensPosition.value[0] = 5` is an error too, because
+`.value` is a copy. Write `lensPosition[0] = 5`.
+
+The same can be done with paths:
 
 | | |
 |---|---|
+| `param(path)` | a variable for one setting, as above |
 | `params.list(path)` | every setting under a path (`'scene'`, `'scene/n4'`, `'renderer'`): each `{ path, label, value, min, max, unit, kind, animated }` |
 | `params.list(path, { animated: true })` | only the ones flagged animated (★ in Properties); `{ live: true }` only those that need no compile |
 | `params.animated()` | the settings flagged animated: the usual ones for a script to move |

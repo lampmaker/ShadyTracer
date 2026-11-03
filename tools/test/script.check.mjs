@@ -7,7 +7,9 @@
 // what the script logs and returns, a setting set; an error with its line, that line selected; ■ Stop ending a loop at
 // its next await, its finally run; Ctrl Enter running; Tab indenting; an example put in only once its question is
 // answered yes; files.save a real download. The colours under the text: the same text, in the same font and box, a
-// comment and the API's names coloured, scrolled with the editor, an error's line marked in the gutter until an edit. What the API does to a real picture is the user's to see.
+// comment and the API's names coloured, scrolled with the editor, an error's line marked in the gutter until an edit. A
+// setting dragged from the Parameters panel by its name: its binding on an empty line, its call inside code, the result
+// running; the row's ⧉ copying its path. What the API does to a real picture is the user's to see.
 //
 // OPTIONAL, AND LOUD ABOUT IT: it needs Playwright's Chromium.
 /* global CHECK -- the page's own, read inside page.evaluate() */
@@ -37,7 +39,9 @@ await new Promise(r => server.listen(0, r))
 const port = server.address().port
 
 const b = await chromium.launch({ args: ['--disable-gpu'] })
-const p = await (await b.newContext({ viewport: { width: 900, height: 700 }, acceptDownloads: true })).newPage()
+const ctx = await b.newContext({ viewport: { width: 1100, height: 700 }, acceptDownloads: true })
+await ctx.grantPermissions(['clipboard-read', 'clipboard-write'])
+const p = await ctx.newPage()
 const errs = []
 p.on('pageerror', e => errs.push('pageerror: ' + e.message)); p.on('console', m => { if (m.type() === 'error' && !/\[script\]/.test(m.text())) errs.push(m.text().slice(0, 300)) })
 let failed = 0
@@ -130,6 +134,26 @@ try {
     ok('...until the next edit', await until(() => p.evaluate(() => !document.querySelector('.rt-script-gutter .err'))))
     await ed.fill(await p.evaluate(() => CHECK.example('lens')))
     if (process.env.SHOT) await p.locator('#panel').screenshot({ path: process.env.SHOT })
+
+    // A SETTING DRAGGED IN from the Parameters panel by its name, and its path copied by the row's ⧉
+    await ed.fill('log(1)\n\nconst r = ')
+    const row = n => p.locator('.shell-param').filter({ hasText: n }).locator('.shell-param-label')
+    const box = await ed.boundingBox()
+    // the empty second line: 6 px of padding, then a line of 12 x 1.45 px
+    await row('position').dragTo(ed, { targetPosition: { x: 30, y: 6 + 17.4 * 1.5 } })
+    ok('dropped on an empty line: its binding there', (await ed.inputValue()).split('\n')[1] === "const lensPosition = param('scene/n4/transform/position')   // lens › position", JSON.stringify(await ed.inputValue()))
+    await row('radius').dragTo(ed, { targetPosition: { x: box.width - 20, y: 6 + 17.4 * 2.5 } })
+    ok('...after `const r = `: its call alone', (await ed.inputValue()).split('\n')[2] === "const r = param('scene/n4/radius')", JSON.stringify(await ed.inputValue()))
+    ok('...kept into the scene', (await p.evaluate(() => CHECK.scriptOf('a'))).includes("const r = param('scene/n4/radius')"))
+    await ed.press('Control+End')
+    await p.keyboard.type('\nlensPosition.value = [1, 2, 4]\nreturn [lensPosition[2], r * 1]')
+    await p.click('.rt-script-bar .run')
+    ok('...and it runs: the setting set and read by its handle', await until(async () => (await out()).includes(`→ [4, ${await p.evaluate(() => CHECK.S.radius)}]`)), JSON.stringify((await out()).slice(-2)))
+    ok('...the position written', JSON.stringify(await p.evaluate(() => CHECK.S.pos)) === '[1,2,4]')
+    await p.locator('.shell-param').filter({ hasText: 'radius' }).hover()
+    await p.locator('.shell-param').filter({ hasText: 'radius' }).locator('.shell-param-copy').click()
+    ok('the row\'s ⧉ copies its path', await until(async () => (await p.evaluate(() => navigator.clipboard.readText())) === 'scene/n4/radius'))
+    ok('...and says so', (await p.evaluate(() => CHECK.said())) === 'copied scene/n4/radius')
 
     ok('no page errors', !errs.length, errs.join(' | '))
 } catch (e) { failed++; console.log('FAIL  ' + (e.stack || e)) }

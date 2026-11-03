@@ -8,12 +8,13 @@
      camera, and the browser's real download for files.save. Everything the panel and the API do is their own. -->
 <link rel="stylesheet" href="../../lib/shell/shell.css">
 <link rel="stylesheet" href="../script.css">
-<style>html, body { height: 100%; margin: 0; } #panel { height: 600px; width: 700px; }</style>
+<style>html, body { height: 100%; margin: 0; } body { display: flex; } #panel { height: 600px; width: 700px; } #params { height: 600px; width: 340px; }</style>
 </head>
 <body>
-<div id="panel"></div>
+<div id="panel"></div><div id="params"></div>
 <script type="module">
 import { makeParams } from '../../lib/shell/params.js'
+import { installParamsPanel } from '../../lib/shell/paramspanel.js'
 import { installScript } from '../script.js'
 import { makeScriptApi } from '../scriptapi.js'
 import { download } from '../../lib/pathtracer/darkroom/export/run.js'
@@ -25,7 +26,11 @@ M.setScript(docs.a, 'log("from A")')
 let shown = 'a', keeps = 0
 const S = { radius: 1 }
 const PARAMS = makeParams()
-PARAMS.provide('scene', () => [{ path: 'scene/n4/radius', label: 'lens › radius', min: 0, max: 10, get: () => S.radius, set: v => { S.radius = v } }])
+S.pos = [0, 0, 0]
+PARAMS.provide('scene', () => [{ path: 'scene/n4/radius', label: 'lens › radius', min: 0, max: 10, get: () => S.radius, set: v => { S.radius = v } },
+    { path: 'scene/n4/transform/position', label: 'lens › position', dims: 3, get: () => S.pos, set: v => { S.pos = v } }])
+let said = ''
+installParamsPanel(document.getElementById('params'), PARAMS, { say: t => { said = t } })
 const cam = { azimuth: 0 }
 const RT = { view: () => ({ camera: { ...cam }, exposure: {} }), applyView: ({ camera }) => Object.assign(cam, camera ?? {}) }
 const panel = installScript(document.getElementById('panel'), {
@@ -37,6 +42,7 @@ window.CHECK = {
     show: k => { shown = k; panel.showScene(M.sceneScriptOf(docs[k])) },
     scriptOf: k => M.sceneScriptOf(docs[k]),
     keeps: () => keeps,
+    said: () => said,
     example: id => SCRIPT_EXAMPLES.find(x => x.id === id).code,
 }
 </script>

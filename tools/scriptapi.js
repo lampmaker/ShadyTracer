@@ -39,8 +39,11 @@ import { FORMATS, defaultExport } from '../lib/pathtracer/darkroom/export/index.
 
 /** The names a script is handed (makeScriptApi's keys, test/script.test.mjs holds the two together): what the editor
  *  colours as the script's own (tools/scripthighlight.js). */
-export const SCRIPT_NAMES = Object.freeze(['params', 'settled', 'scene', 'camera', 'exposure', 'picture', 'render', 'optics', 'files',
+export const SCRIPT_NAMES = Object.freeze(['param', 'params', 'settled', 'scene', 'camera', 'exposure', 'picture', 'render', 'optics', 'files',
     'log', 'warn', 'progress', 'sleep', 'frame', 'check', 'signal', 'st'])
+
+/** What marks a setting's handle (param): log prints its value, and a handle given as a value is read. */
+export const IS_PARAM = Symbol('param')
 
 /** The error a stopped script ends with: said as "stopped", not as a failure. */
 export const STOPPED = 'ScriptStopped'
@@ -51,6 +54,7 @@ export function formatValue(v, depth = 0) {
     if (typeof v === 'string') return depth ? JSON.stringify(v) : v
     if (typeof v === 'number') return Number.isFinite(v) ? String(+v.toPrecision(6)) : String(v)
     if (v == null || typeof v === 'boolean' || typeof v === 'bigint') return String(v)
+    if (v?.[IS_PARAM]) return formatValue(v.value, depth)
     if (typeof v === 'function') return `[function ${v.name || ''}]`.replace(' ]', ']')
     if (v instanceof Error) return `${v.name}: ${v.message}`
     if (depth > 4) return '…'
@@ -282,6 +286,66 @@ export function makeScriptApi({ PARAMS, RT, BUILDER = null, OPTICS = null, signa
         find: (q, limit = 20) => PARAMS.find(q, limit).map(entryOf),
     }
 
+    /*==================================================================================================================
+      A SETTING AS A VARIABLE (the user, 2026-11-03: "spherepos = params(...path...); spherepos = [1, 2, 4]; let x =
+      spherepos[0]"). That exact text cannot work in JavaScript: `spherepos = [1, 2, 4]` rebinds the variable, and nothing
+      sees it happen. The nearest is a handle whose parts are the setting, read and written live:
+          const spherepos = param('scene/n4/transform/position')
+          spherepos.value = [1, 2, 4]          // the whole of it
+          let x = spherepos[0]                 // a part: [0] [1] [2] [3], or x y z w, or r g b a
+          spherepos.z = 4                      // ...written alone, the rest kept
+          const radius = param('scene/n4/radius')
+          radius.value *= 1.1                  // a number: and in arithmetic, `radius * 2`, as itself
+      Declared const, `spherepos = [1, 2, 4]` is then an error ("assignment to constant variable") rather than nothing.
+      `.value` of a vector is a FROZEN copy: `spherepos.value[0] = 5` would change a copy and write nothing, so it throws
+      instead (strict mode), and the error says where to write. A path that does not exist throws here, at the binding,
+      not at the first use. The Parameters panel drags a setting into the editor as such a line (tools/scriptdrop.js).
+    ==================================================================================================================*/
+    const PARTS = { x: 0, y: 1, z: 2, w: 3, r: 0, g: 1, b: 2, a: 3 }
+    const param = path => {
+        known(path)
+        const p = () => known(path)
+        const dims = () => p().dims | 0 || 1
+        const read = () => PARAMS.current(path)
+        const write = v => PARAMS.write(path, v?.[IS_PARAM] ? v.value : v, { source: 'script', quiet: true })
+        const part = k => {
+            if (typeof k !== 'string') return null
+            const i = /^\d+$/.test(k) ? +k : PARTS[k]
+            return i != null && dims() > 1 && i < dims() ? i : null
+        }
+        const frozen = v => Array.isArray(v) ? Object.freeze(v.slice()) : v
+        const own = {
+            path, [IS_PARAM]: true,
+            get: () => read(),
+            set: (v, opts) => params.set(path, v?.[IS_PARAM] ? v.value : v, opts),
+            toJSON: () => read(),
+            toString: () => String(read()),
+            valueOf: () => read(),
+        }
+        return new Proxy(own, {
+            get(t, k) {
+                if (k === 'value') return frozen(read())
+                if (k === 'info') return entryOf(p())
+                if (k === 'length' && dims() > 1) return dims()
+                if (k === Symbol.iterator && dims() > 1) return function* () { yield* read() }
+                if (k === Symbol.toPrimitive) return hint => { const v = read(); return Array.isArray(v) ? (hint === 'number' ? NaN : v.join(', ')) : v }
+                if (k in t) return t[k]
+                const i = part(k)
+                return i == null ? undefined : read()[i]
+            },
+            set(t, k, v) {
+                if (k === 'value') { write(v); return true }
+                const i = part(k)
+                if (i == null) throw new Error(`${path}: '${String(k)}' is not a part of it -- write .value${dims() > 1 ? `, [0] to [${dims() - 1}] or ${'xyzw'.slice(0, dims()).split('').join(' ')}` : ''}`)
+                const a = read().slice()
+                a[i] = +(v?.[IS_PARAM] ? v.value : v)
+                write(a)
+                return true
+            },
+            has: (t, k) => k === 'value' || k in t || part(k) != null,
+        })
+    }
+
     /* SETTLED: no build under way, and none for a few frames -- a structural write's compile starts at once (the tree's
        apply), the bake's swap later; and the renderer's kernels for its settings built */
     const settled = guard(async ({ timeout = 300000 } = {}) => {
@@ -436,7 +500,7 @@ export function makeScriptApi({ PARAMS, RT, BUILDER = null, OPTICS = null, signa
     }
 
     const api = {
-        params, settled, scene, camera, exposure, picture, render, optics, files,
+        param, params, settled, scene, camera, exposure, picture, render, optics, files,
         log: (...a) => line('log', a),
         warn: (...a) => line('warn', a),
         /** a job in the status bar: progress(done, total, label), progress(null) to clear */

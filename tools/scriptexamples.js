@@ -19,8 +19,12 @@ for (const p of (mine.length ? mine : params.list('scene').slice(0, 10)))
 log('camera:', camera.get())
 log('nodes:', scene.nodes().map(n => \`\${n.label} (\${n.id})\`).join(', '))
 
-// Setting a value (no undo step; { undo: true } for one):
-// params.set('scene/n4/radius', 2.5)
+// A setting as a variable: drag its name from the Parameters panel onto an empty line, or write
+//     const radius = param('scene/n4/radius')
+//     radius.value = 2.5              radius.value *= 1.1           log(radius * 2)
+//     const pos = param('scene/n4/transform/position')
+//     pos.value = [1, 2, 4]           let x = pos[0]                pos.z = 4
+// Writes make no undo step (radius.set(2.5, { undo: true }) makes one).
 // camera.set({ azimuth: 30, elevation: 70 })
 `,
     },

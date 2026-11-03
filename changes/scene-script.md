@@ -4,7 +4,9 @@ bump: minor
 panel: an editor with JavaScript's colours and line numbers (an error's line marked), ▶ Run (Ctrl Enter), ■ Stop, Examples… and what the script prints. The script is the scene's, saved
 with it and in its file (`script` in the document, outside the undo history as the view and the timeline are; no
 format version change). It never runs on its own -- not when a scene is opened, shown or loaded -- because a scene is a
-file people pass around and a script has the page's whole reach. What it is handed (tools/scriptapi.js): every setting
+file people pass around and a script has the page's whole reach. What it is handed (tools/scriptapi.js): a setting as a
+variable (`const pos = param(path)`: `pos.value = [1, 2, 4]`, `pos[0]`, `pos.z = 4`, a number in arithmetic as itself --
+dragged in from the Parameters panel by its name, as that line on an empty line or the call inside code), every setting
 by its path (`params.list`, `get`, `set`, `apply`, the animated ones alone; a mistyped path an error naming what is near;
 `settled()` waits out a compile), the camera and the exposure, the live picture's samples and readings
 (`picture.wait`, `measure`, `region`), `render()` into the Darkroom and `.save()` in any of its formats with the view's
@@ -14,7 +16,10 @@ detector's illuminance map with its uniformity and encircled flux, the far field
 or text. Five examples: settings read and written, a generative series of renders, the analysis's numbers, a lens's
 setting searched by golden section for the highest peak, a turntable. Help › Scripts says all of it.
 
-**What to look at:** View › Script. The colours should sit exactly under the caret, scrolling included. Run each example on a scene of yours -- the generative one needs a few settings
+The Parameters panel's rows have a ⧉ that copies the path (right-clicking did, unseen).
+
+**What to look at:** View › Script. Drag a setting's name from the Parameters panel onto an empty line and into
+`const r = `. The colours should sit exactly under the caret, scrolling included. Run each example on a scene of yours -- the generative one needs a few settings
 flagged animated (★) with a range; the lens one a setting flagged or its path typed, and a light. A render should show
 in the Darkroom and download; an analysis should fill the pane and the charts as ▶ Run does, and the numbers the
 script prints should be the ones the cards show. ■ Stop during a render or an analysis should end it.

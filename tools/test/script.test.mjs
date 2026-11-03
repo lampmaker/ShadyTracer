@@ -15,6 +15,8 @@ import { makeParams } from '../../lib/shell/params.js'
 import { farGeometry } from '../../lib/pathtracer/optics/farfield.js'
 import { makeScriptApi, runScript, scriptLocation, analysisOf, toCSV, formatValue, fileBlob, STOPPED, SCRIPT_NAMES } from '../scriptapi.js'
 import { highlightJS } from '../scripthighlight.js'
+import { PARAM_MIME, nameFor, declaredNames, offsetAt, dropEdit } from '../scriptdrop.js'
+import { PARAM_DRAG } from '../../lib/shell/paramspanel.js'
 import { SCRIPT_EXAMPLES } from '../scriptexamples.js'
 import { chunk } from '../../lib/pathtracer/darkroom/export/png.js'
 
@@ -280,6 +282,71 @@ const api = (signal = new AbortController().signal) => makeScriptApi({ PARAMS, R
     await runScript(SCRIPT_EXAMPLES.find(x => x.id === 'generative').code, api())
     eq('the generative example renders its series and saves each', saved.map(s => s[0]), ['series-001.png', 'series-002.png', 'series-003.png', 'series-004.png'].map(n => n))
     eq('...and puts the settings back as they were', S.radius, 2)
+}
+
+// ---- A SETTING AS A VARIABLE: param(path) -----------------------------------------------------------------------------
+{
+    const A = api()
+    S.pos = [0, 0, 0]; S.radius = 1
+    const pos = A.param('scene/n4/transform/position')
+    pos.value = [1, 2, 4]
+    eq('the whole of it written through .value', S.pos, [1, 2, 4])
+    eq('...a part read by its index and by its name', [pos[0], pos.y, pos.z, pos.length], [1, 2, 4, 3])
+    pos.z = 9
+    eq('a part written alone, the rest kept', S.pos, [1, 2, 9])
+    pos[0] += 1
+    eq('...and added to', S.pos, [2, 2, 9])
+    eq('it destructures', (() => { const [a, b, c] = pos; return [a, b, c] })(), [2, 2, 9])
+    eq('it is live: a change from elsewhere read at once', (S.pos = [5, 5, 5], pos.x), 5)
+    let threw = null
+    try { pos.value[0] = 7 } catch (e) { threw = e.name }
+    eq('.value of a vector is a frozen copy: writing into it throws, never writes nothing', [threw, S.pos[0]], ['TypeError', 5])
+    await throws('a part it has not is refused, saying what it has', () => { pos.q = 1 }, /'q' is not a part of it -- write \.value, \[0\] to \[2\] or x y z/)
+    const r = A.param('scene/n4/radius')
+    eq('a number in arithmetic as itself', [r * 2, `${r} mm`, r > 0.5], [2, '1 mm', true])
+    r.value *= 3
+    eq('...and set, coerced to its range', [S.radius, (r.value = 99, S.radius)], [3, 5])
+    eq('a handle given as a value is read', (A.param('scene/n4/radius').value = r, S.radius), 5)
+    eq('log prints its value', formatValue(pos), '[5, 5, 5]')
+    eq('...JSON too', JSON.stringify({ pos }), '{"pos":[5,5,5]}')
+    eq('.set with an undo step, .info its entry', (r.set(2, { undo: true }), [writes.at(-1), r.info.max]), [['radius', 2, false], 5])
+    await throws('a path that does not exist throws at the binding', () => A.param('scene/n4/radiu'), /no parameter 'scene\/n4\/radiu'/)
+    eq('in a script, as the user wrote it nearly', await runScript(`const spherepos = param('scene/n4/transform/position')
+spherepos.value = [1, 2, 4]
+let x = spherepos[0]
+return [x, spherepos.z]`, api()), [1, 4])
+    await throws('...and spherepos = [1, 2, 4] on a const is an error, not nothing', () => runScript(`const spherepos = param('scene/n4/transform/position')
+spherepos = [1, 2, 4]`, api()), /constant/)
+}
+
+// ---- A SETTING DROPPED INTO THE EDITOR (tools/scriptdrop.js) -----------------------------------------------------------
+{
+    eq('the panel\'s drag type is the editor\'s', PARAM_DRAG, PARAM_MIME)
+    eq('a name from a label, camelCase', [nameFor('lens › radius'), nameFor('Sphere 2 › position'), nameFor('Één › kleur'), nameFor('3 › x')],
+        ['lensRadius', 'sphere2Position', 'eenKleur', 'p3X'])
+    eq('...never a keyword or the API\'s, never one taken', [nameFor('camera'), nameFor('new'), nameFor('lens › radius', new Set(['lensRadius', 'lensRadius2']))],
+        ['cameraParam', 'newParam', 'lensRadius3'])
+    eq('the names a script declares', [...declaredNames('const a = 1\nlet [b, c] = x\nvar { d, e: f } = y\nfunction g() {}')].sort(), ['a', 'b', 'c', 'd', 'f', 'g'])
+    eq('a point on screen to a place: a tab to its stop, past the end, below', [offsetAt('ab\n\tc', 1, 4.2), offsetAt('ab\ncd', 0, 9), offsetAt('ab', 5, 0)],
+        [{ offset: 4, past: false, below: false }, { offset: 2, past: true, below: false }, { offset: 2, past: true, below: true }])
+    const item = { path: 'scene/n4/radius', label: 'lens › radius', kind: 'live' }
+    const apply = (code, d) => code.slice(0, d.from) + d.text + code.slice(d.to)
+    const c1 = 'log(1)\n    \nlog(2)'
+    eq('on an empty line: the binding, at its indent', apply(c1, dropEdit(c1, offsetAt(c1, 1, 0), item)), "log(1)\n    const lensRadius = param('scene/n4/radius')   // lens › radius\nlog(2)")
+    const c2 = 'const r = '
+    eq('after a line that goes on: the call alone', apply(c2, dropEdit(c2, offsetAt(c2, 0, 20), item)), "const r = param('scene/n4/radius')")
+    const c3 = 'log(1)'
+    eq('right of a finished line: the binding on a line of its own', apply(c3, dropEdit(c3, offsetAt(c3, 0, 20), item)), "log(1)\nconst lensRadius = param('scene/n4/radius')   // lens › radius")
+    eq('...under the last line: the same', apply(c3, dropEdit(c3, offsetAt(c3, 4, 0), item)), "log(1)\nconst lensRadius = param('scene/n4/radius')   // lens › radius")
+    const c4 = 'log(, 2)'
+    eq('inside code: the call alone, where it landed', apply(c4, dropEdit(c4, offsetAt(c4, 0, 4), item)), "log(param('scene/n4/radius'), 2)")
+    const c5 = "const lensRadius = 1\n"
+    eq('a name already declared: another', apply(c5, dropEdit(c5, offsetAt(c5, 1, 0), { ...item, kind: 'structural' })),
+        "const lensRadius = 1\nconst lensRadius2 = param('scene/n4/radius')   // lens › radius, compiles")
+    const c6 = 'for (;;) {'
+    eq('after an opening brace, one indent more', apply(c6, dropEdit(c6, offsetAt(c6, 0, 30), item)).split('\n')[1].startsWith("    const lensRadius"), true)
+    const dropped = apply(c1, dropEdit(c1, offsetAt(c1, 1, 0), item))
+    eq('what is dropped runs', await runScript(dropped.replace(/log\(\d\)/g, '') + '\nreturn lensRadius.value', api()), 2)
 }
 
 // ---- THE EDITOR'S COLOURS (tools/scripthighlight.js) ------------------------------------------------------------------------
