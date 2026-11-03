@@ -146,7 +146,7 @@ export const FORMAT = 'raytracer-scene'
    diffuse base, which transmission 1 left none of -- the user, 2026-10-30, asked for controls with a realistic feel --
    and a diffuser film's spread, spreadX / spreadY, a thin-sheet model rather than a physical property, 2026-10-29: a
    film is rough glass.) */
-/* 26: SCATTER INSIDE A MATERIAL (0.next; core/haze.js THE MEDIUM'S WALK, roadmap/DIFFUSERS.md A): `scatterDistance`,
+/* 26: SCATTER INSIDE A MATERIAL (0.82.0; core/haze.js THE MEDIUM'S WALK, roadmap/DIFFUSERS.md A): `scatterDistance`,
    the mean free path between scatterings in the material's volume (real mm), and `scatterAnisotropy`, each scattering's
    asymmetry g -- milky glass, whose thickness shows. Every material has the two; version 25 files get them at 0, which
    is what they rendered: a clear volume (v25to26). A builder of 25 refuses a file of 26 rather than read the fields as
@@ -2476,7 +2476,7 @@ export function setTimeline(doc, t) {
 }
 
 /*======================================================================================================================
-  THE SCRIPT -- JavaScript that drives the scene and reads what it measures (0.next; tools/script.js, tools/scriptapi.js).
+  THE SCRIPT -- JavaScript that drives the scene and reads what it measures (0.82.0; tools/script.js, tools/scriptapi.js).
   The user, 2026-11-03: "a javascript code block (part of a scene) that can control and read everything": the parameters,
   the camera, a render kept in the darkroom and written to a file, an analysis run and its numbers read -- for a piece
   of generative art, or a lens tuned by a loop until a built-in optimiser exists.

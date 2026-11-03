@@ -1,5 +1,5 @@
 //======================================================================================================================
-// THE SCRIPT'S API -- what a scene's script (builder/model.js SCRIPT, 0.next) is handed: every setting by its path, the
+// THE SCRIPT'S API -- what a scene's script (builder/model.js SCRIPT, 0.82.0) is handed: every setting by its path, the
 // camera, the live picture and what it measures, a render kept in the darkroom and written to a file, an analysis run
 // and the numbers read off it, files to save.
 //

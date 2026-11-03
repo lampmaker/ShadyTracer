@@ -61,7 +61,7 @@ beyond*). What follows below was written before the build and is kept as it was,
   photons on or off, each way round. Opal and hazy-glass spheres vanish in the furnace (`core/test/transmission.gpu.mjs`).
   - **On hardware (Ampere, 2026-11-02, 86ed2ca):** `furnace-beyond` 14 of 14 (hazy glass 0.99975 and 0.99974, opal 1.0001
     and 1.0000) and `transmission-parity` 16 of 16 (`docs/TESTING.md` has the rows).
-- **A is built too (0.next, 2026-11-02), not yet seen on hardware:** scatter inside a material, a free path and g
+- **A is built too (0.82.0, 2026-11-02), not yet seen on hardware:** scatter inside a material, a free path and g
   beside the colour depth, walked in the march (`core/haze.js` THE MEDIUM'S WALK; the remedy "walk inside the march
   kernel" below). The Ray stays 112 bytes, its medium in f16. Measured on Dawn over lavapipe: an index-matched slab
   passes what a JS walk passes at depths 1, 3 and 6, the JS walk itself held to exp(-tau), T + R = 1 and the

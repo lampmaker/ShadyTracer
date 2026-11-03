@@ -1,5 +1,5 @@
 //======================================================================================================================
-// THE SCRIPT'S REFERENCE (0.next): every name a script is handed, what it does, what it gives back, and an example --
+// THE SCRIPT'S REFERENCE (0.82.0): every name a script is handed, what it does, what it gives back, and an example --
 // shown in the Script panel's Reference pane (tools/script.js) and written as Help › Reference › Script functions by
 // help/reference.mjs. One text, two places: the user asked for more help with the analysis beside the editor
 // (2026-11-03), and a help page and a pane written apart would drift.

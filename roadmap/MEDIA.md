@@ -75,7 +75,7 @@ What is in it, briefly (the README has the rest):
   A light's photon leaving its face starts a leg like any other (newRay: ltot and absLtot 0), so it collides as one;
   that is inferred from the code. The example puts its LED inside the box.
 
-## Phase 2 — a volume photon map (built 0.next for a scattering material; the haze box's points still open)
+## Phase 2 — a volume photon map (built 0.82.0 for a scattering material; the haze box's points still open)
 
 **STATUS (2026-11-02).** The user shone a collimated beam through slightly milky glass and saw nothing inside, "just
 like you'd see when using a laser and very slightly hazy acrylic". So the map now holds the volume for a scattering

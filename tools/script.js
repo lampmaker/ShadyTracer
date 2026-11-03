@@ -1,5 +1,5 @@
 //======================================================================================================================
-// THE SCRIPT PANEL -- the scene's script (builder/model.js SCRIPT, 0.next) edited, run and stopped, and what it says.
+// THE SCRIPT PANEL -- the scene's script (builder/model.js SCRIPT, 0.82.0) edited, run and stopped, and what it says.
 //
 //   const S = installScript(el, { scene: { script(), keep(text) }, api: signal => makeScriptApi({ ... }) })
 //   S.showScene(text)      // the scene shown changed: its script in the editor

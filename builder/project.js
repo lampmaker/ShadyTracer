@@ -133,7 +133,7 @@ const uniqueTitle = (p, t) => {
 export const serialize = (p, { app } = {}) => JSON.stringify(M.withApp(p, app), null, 2)
 
 /* WHAT A SCENE HAS THAT NO UNDO STEP HOLDS: its view (model.js VIEW), its timeline (model.js TIMELINE, 0.67.0) and its
-   script (model.js SCRIPT, 0.next: a text editor's lines, which an undo of the scene's must not take back). One list, read by every place that leaves them out or puts them back -- the history's text, a restore (carryOutside),
+   script (model.js SCRIPT, 0.82.0: a text editor's lines, which an undo of the scene's must not take back). One list, read by every place that leaves them out or puts them back -- the history's text, a restore (carryOutside),
    the builder's memory of a scene taken out and its comparison of a scene before and after a step (demo.js) -- so a
    third such part is one word here, not a fourth place found missing. */
 export const OUTSIDE_HISTORY = Object.freeze(['view', 'timeline', 'script'])

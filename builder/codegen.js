@@ -2127,7 +2127,7 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
 
     // the haze box in the world, if the scene has one (the tree is the root group here)
     const haze = hazeOf({ root: tree })
-    /* ...and whether a material scatters inside (materials.js scatterDistance, 0.next): the march has the walk's code
+    /* ...and whether a material scatters inside (materials.js scatterDistance, 0.82.0): the march has the walk's code
        only then (core/haze.js THE MEDIUM'S WALK), so it is the scene's text, as the haze box's presence is (sceneTextOf).
        A surface's or a detector's material with a scatter distance, as the shader is given it (`only`). A material's own
        code that sets m.scatterDistance is not seen here: such a scene says scatter itself, or its rays walk nothing. */

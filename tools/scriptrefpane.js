@@ -1,5 +1,5 @@
 //======================================================================================================================
-// THE SCRIPT PANEL'S REFERENCE PANE (0.next): tools/scriptref.js shown beside the editor -- found by words, a section
+// THE SCRIPT PANEL'S REFERENCE PANE (0.82.0): tools/scriptref.js shown beside the editor -- found by words, a section
 // a fold, each name's signature, what it does and gives back, and an example that one click puts in the editor (the
 // user, 2026-11-03: "the analysis needs more extensive help ... a help pane at the script").
 //

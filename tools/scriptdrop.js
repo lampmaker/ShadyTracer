@@ -1,5 +1,5 @@
 //======================================================================================================================
-// A SETTING DROPPED INTO THE SCRIPT (0.next; the user, 2026-11-03: "drag parameters from the parameter tab into the
+// A SETTING DROPPED INTO THE SCRIPT (0.82.0; the user, 2026-11-03: "drag parameters from the parameter tab into the
 // script"): the Parameters panel's row dragged onto the editor becomes code that names it -- the binding
 //
 //     const lensRadius = param('scene/n4/radius')   // lens › radius

@@ -1,5 +1,5 @@
 //======================================================================================================================
-// THE SCRIPT PANEL'S EXAMPLES (tools/script.js, 0.next): a start for each thing the user asked a script for (2026-11-03)
+// THE SCRIPT PANEL'S EXAMPLES (tools/script.js, 0.82.0): a start for each thing the user asked a script for (2026-11-03)
 // -- reading and writing the settings, a generative series rendered to files, a lens tuned by its analysis. Each works on
 // whatever scene it is run in: it finds what it moves (the settings flagged animated, a light, a detector) rather than
 // naming an id only one scene has, and says what is missing when the scene lacks it. tools/test/script.test.mjs compiles

@@ -1,6 +1,6 @@
 // node tools/test/script.check.mjs
 //
-// THE SCRIPT PANEL IN A BROWSER (0.next): tools/test/script.html -- the panel over two scenes that keep their script
+// THE SCRIPT PANEL IN A BROWSER (0.82.0): tools/test/script.html -- the panel over two scenes that keep their script
 // through the builder's model -- driven headless. The application's page stops at WebGPU here, so without this the
 // panel was code nothing ran. It checks: the scene's script in the editor and the line saying the scene has one; what is
 // typed kept into the scene shown at once; another scene shown, its script (and none for one without); ▶ Run printing

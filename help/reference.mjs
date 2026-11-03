@@ -348,7 +348,7 @@ export const referencePages = () => ({
     'reference/lights.md': lights(),
     'reference/haze.md': haze(),
     'reference/code.md': code(),
-    // a script's functions (0.next): tools/scriptref.js, which the Script panel's Reference pane shows too
+    // a script's functions (0.82.0): tools/scriptref.js, which the Script panel's Reference pane shows too
     'reference/script.md': scriptReference(),
 })
 

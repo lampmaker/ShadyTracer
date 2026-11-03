@@ -1,6 +1,6 @@
 // node tools/test/script.test.mjs
 //
-// THE SCENE'S SCRIPT (0.next; builder/model.js SCRIPT, tools/scriptapi.js), without a browser: the script kept in the
+// THE SCENE'S SCRIPT (0.82.0; builder/model.js SCRIPT, tools/scriptapi.js), without a browser: the script kept in the
 // scene and out of the undo history; the API it is handed driven against stand-ins for the registry, the renderer, the
 // builder and the Analysis pane -- a setting read and written (quietly, a typo thrown), several checked before any is
 // set, the camera, settled() waiting out a compile, a render kept and saved with the look asked for, a stale one

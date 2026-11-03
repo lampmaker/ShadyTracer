@@ -75,7 +75,7 @@ export const FIELDS = {
        Shown whatever transmission is (its help says it is a share of it): showing it only above 0 would rebuild the
        panel under a transmission slider being dragged up from 0. */
     haze:               { type: 'f32', def: 0.0, gui: { min: 0, max: 1, step: 0.001 }, only: v => v > 0 },
-    /* SCATTER INSIDE (0.next; core/materials.js scatterDistance, core/haze.js THE MEDIUM'S WALK, roadmap/DIFFUSERS.md A):
+    /* SCATTER INSIDE (0.82.0; core/materials.js scatterDistance, core/haze.js THE MEDIUM'S WALK, roadmap/DIFFUSERS.md A):
        the mean free path between scatterings in the material's volume, in REAL MILLIMETRES whatever the scene's unit (as
        the colour depth), and each scattering's asymmetry (Henyey-Greenstein's g: 0 evenly, towards 0.95 forward). Haze
        scatters at the faces, whatever the thickness; this in the volume, so a thick part is milkier than a thin one --

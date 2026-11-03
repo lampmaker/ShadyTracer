@@ -1938,7 +1938,7 @@ eq('uniformName', uniformName('n7', 'radius'), 'radius_n7')
 }
 
 //----------------------------------------------------------------------------------------------
-// SCATTER INSIDE A MATERIAL (0.next; materials.js scatterDistance, core/haze.js THE MEDIUM'S WALK): in the shader only
+// SCATTER INSIDE A MATERIAL (0.82.0; materials.js scatterDistance, core/haze.js THE MEDIUM'S WALK): in the shader only
 // while above 0, in real mm, its asymmetry only with it -- and the scene says it scatters (scene.scatter), which decides
 // whether the march has the walk (sceneTextOf), only then
 //----------------------------------------------------------------------------------------------

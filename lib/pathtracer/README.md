@@ -412,7 +412,7 @@ pdf, so light sampling and BSDF sampling can be weighted against each other hone
   (Dawn); now 0.9995 and 1.0001, at 2000 march steps. Light diffused in past the critical angle walks long:
   400 steps cut it to 0.992. Transmission between 0 and 1 without haze (half glass, half white) always had the same
   fault, and now reads 0.998 at the bounce cap of 40, as the cap's trend says (0.977 at 20, 0.994 at 30).
-- **Scatter inside** (0.next; `Material2.scatterDistance` and `scatterAnisotropy`, `roadmap/DIFFUSERS.md` A): a
+- **Scatter inside** (0.82.0; `Material2.scatterDistance` and `scatterAnisotropy`, `roadmap/DIFFUSERS.md` A): a
   material's volume scatters, its mean free path in real millimetres and Henyey-Greenstein's g, so a thick part is
   milkier than a thin one -- milky glass, a light guide's body. Pure scattering; the colour stays the colour depth's.
   THE MEDIUM'S WALK (`core/haze.js`) is in the march, not a shade vertex: inside a solid every shadow ray and photon
@@ -426,7 +426,7 @@ pdf, so light sampling and BSDF sampling can be weighted against each other hone
   march (read in code, `optics/index.js`; no test runs that page with it yet). Inside smooth glass light sampling cannot reach, so the light the glass scatters reaches the picture through the
   photon map in the volume (below) or, without it, by chance. Held by `test/volume.test.mjs` and, on Dawn,
   `test/volume.gpu.mjs`.
-- **The beam seen inside** (0.next; `core/haze.js` THE BEAM SEEN INSIDE, `sppm.js` `sppmGatherVolume`, MEDIA.md phase 2):
+- **The beam seen inside** (0.82.0; `core/haze.js` THE BEAM SEEN INSIDE, `sppm.js` `sppmGatherVolume`, MEDIA.md phase 2):
   the photon map in the volume. A photon stores a record where it collides, in the march (SPPM_VOL; the surface map's
   rules for who stores). A camera ray whose lens field is 1 hands its first collision to the shade queue (RAY_GATHER),
   the map's kernel gathers there, sum p Phi / (sigma_s 4/3 pi r^3) over n^2, and shade turns it -- the map's D, so the

@@ -1,5 +1,5 @@
 //======================================================================================================================
-// THE SCRIPT EDITOR'S COLOURS (tools/script.js, 0.next): JavaScript as HTML, each token in a span of its kind, for the
+// THE SCRIPT EDITOR'S COLOURS (tools/script.js, 0.82.0): JavaScript as HTML, each token in a span of its kind, for the
 // layer drawn under the editor's transparent text.
 //
 //   highlightJS(code, { globals: SCRIPT_NAMES }) -> html

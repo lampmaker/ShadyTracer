@@ -1457,7 +1457,7 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
     O.followScene = () => { followScene() }
 
     /*==================================================================================================================
-      FOR A SCRIPT (tools/scriptapi.js, 0.next): the analysis as ▶ Run runs it, its setup as the Analysis pane's data
+      FOR A SCRIPT (tools/scriptapi.js, 0.82.0): the analysis as ▶ Run runs it, its setup as the Analysis pane's data
       sets it, and what it found as data. THE PANE'S OWN, not a second analysis: a script's run is shown in the pane and
       the charts as a click's is, and a click's is what a script reads afterwards -- one result, never two that differ.
     ==================================================================================================================*/
