@@ -75,7 +75,20 @@ What is in it, briefly (the README has the rest):
   A light's photon leaving its face starts a leg like any other (newRay: ltot and absLtot 0), so it collides as one;
   that is inferred from the code. The example puts its LED inside the box.
 
-## Phase 2 — a volume photon map (open)
+## Phase 2 — a volume photon map (built 0.next for a scattering material; the haze box's points still open)
+
+**STATUS (2026-11-02).** The user shone a collimated beam through slightly milky glass and saw nothing inside, "just
+like you'd see when using a laser and very slightly hazy acrylic". So the map now holds the volume for a scattering
+material (core/haze.js THE BEAM SEEN INSIDE, sppm.js `sppmGatherVolume`):
+- **Photons store a record where they collide**, in the march, by the surface map's rules.
+- **A camera ray gathers at its first collision** while its lens field is 1; that collision is the map's D. This
+  is the estimate below with sigma_s, for pure scattering.
+- **The march takes the map's buffers** only where the stage has room for them (raytrace_main.js `volumeOf`).
+
+Measured on Dawn over lavapipe (volume.gpu.mjs): a sunlit milky slab seen side on reads 0.952 +- 0.042 of the camera's
+own paths. **The radius stays the surface map's** (r^2 shrinking); r^3's schedule is not derived yet. A radius near the
+part's size reads low, because the sphere sticks out of the face (0.747 at 7 cm). **Still open:** the haze box's points
+in the air as D, and a beam estimate along camera rays.
 
 The class light → delta+ → M → delta+ → eye: a beam seen through a lens or a window, or in a mirror. Photons would be
 stored at their medium vertices after TAG_PASSED, with a volume flag in the record (the record's normal unused). A

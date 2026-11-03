@@ -146,7 +146,12 @@ export const FORMAT = 'raytracer-scene'
    diffuse base, which transmission 1 left none of -- the user, 2026-10-30, asked for controls with a realistic feel --
    and a diffuser film's spread, spreadX / spreadY, a thin-sheet model rather than a physical property, 2026-10-29: a
    film is rough glass.) */
-export const VERSION = 25
+/* 26: SCATTER INSIDE A MATERIAL (0.next; core/haze.js THE MEDIUM'S WALK, roadmap/DIFFUSERS.md A): `scatterDistance`,
+   the mean free path between scatterings in the material's volume (real mm), and `scatterAnisotropy`, each scattering's
+   asymmetry g -- milky glass, whose thickness shows. Every material has the two; version 25 files get them at 0, which
+   is what they rendered: a clear volume (v25to26). A builder of 25 refuses a file of 26 rather than read the fields as
+   parameters of the material's own and render milky glass clear. */
+export const VERSION = 26
 /** The most copies an array has: each is a walk of its children at every step near them, until a BVH can tell which
  *  copies are near (call 4: chosen, not measured). */
 export const ARRAY_MAX = 16
@@ -2862,6 +2867,14 @@ export function upgrade(doc) {
     if (d.version === 22) d.version = 23          // nothing to change: a group's material is new
     if (d.version === 23) d.version = 24          // nothing to change: pattern frames are new
     if (d.version === 24) d = v24to25(d)
+    if (d.version === 25) d = v25to26(d)
+    return d
+}
+
+/** 25 -> 26: every material gets a scatter distance and its asymmetry at 0 -- a clear volume, as it rendered. */
+function v25to26(d) {
+    d.materials = (d.materials || []).map(m => withFieldDefaults(m))
+    d.version = 26
     return d
 }
 

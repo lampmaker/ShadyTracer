@@ -32,8 +32,9 @@ in its average no, it was unbiased; in its noise a lot). Built on one foundation
   physical property (the user: "keep the properties of materials as realistic / physical as possible"). The library's
   *diffuser film 10°* is polycarbonate at roughness 0.36; anisotropy makes a film elliptical, up to 10:1.
 - **Scene format 25.** Material2 is 112 bytes, about 3 % fewer rays a batch.
-- **Next, chosen with the user (2026-10-30):** scatter inside the volume, thickness-dependent (`DIFFUSERS.md` A), as a
-  walk in the march kernel: a scatter distance and anisotropy beside the colour depth. After this part is seen.
+- **Scatter inside (`DIFFUSERS.md` A), built 2026-11-02:** a scatter distance and asymmetry beside the colour depth,
+  walked in the march kernel. To press: `volume` and `volume-light`. To look at: the library's *milky glass*, a thin
+  sheet and a thick block of it side by side, and the light guide example on the Optics page with a scatter distance.
 
 How it works: README § *Materials*. What changed while it was built, and what was measured on Dawn over lavapipe:
 `DIFFUSERS.md` STATUS.
