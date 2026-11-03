@@ -52,4 +52,11 @@ over only the first guess, for a fresh map. This holds for the surface map too, 
 kept and radius.
 
 Press `volume`, `volume-light` and `volume-map` in Tests and paste them back. On `volume-map`, kept should read about
-0.025 and map M about 1.7. `sppm` and `dichroics` take the same plan.
+0.025 at 853 × 1186 (0.016 at 1384 × 1186) and map M about 1.7. The map's columns are read once the row's samples are
+done, not from the first sample.
+
+**An image row in Tests waits for the kernels its settings ask for**, as a timing row did. Switching the photon map in a
+scene that scatters builds every kernel again. The row's samples were refused while that ran ("trace while the scene's
+pipelines are being built"), and a second press worked.
+
+ `sppm` and `dichroics` take the same plan.
