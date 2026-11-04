@@ -14,21 +14,27 @@ or wavefront analysis, no tolerancing and no optimiser. You can see a lens's spo
 flux, but not its aberrations as numbers. For imaging-lens design, use a sequential tool. Use this one to put the
 result into a luminaire and see where the light goes.
 
-## Light is three colour channels, not a spectrum
+## Light is three colour channels, unless the scene traces by wavelength
 
 `lib/pathtracer/optics/README.md`, *Colour*; `FEATURES.md` §3.
 
+By default, and always in the picture:
 - Light is carried as **linear RGB**, exact for light that adds and passes through neutral optics: clear lenses,
   white reflectors, aluminium.
 - A **coloured material multiplies the three channels**: a filter's spectrum is approximated by three numbers.
 - A **coating's edge** (a dichroic) is averaged over each channel's wavelengths. That assumes the light in a channel is
   spread over its wavelengths as the channel's weights say, whatever the source really emits. A beam splitter's and
-  an AR layer's reflectance is flat, so they are exact. The exact method, a wavelength per ray from the source's
-  spectrum, is planned.
+  an AR layer's reflectance is flat, so they are exact.
 - **Dispersion** gives a refracted ray a wavelength and its colour. Detectors read the colour (XYZ) of what arrives,
   not the wavelength.
-- A light given by its **spectrum** gets the spectrum's exact colour, but it is traced as that colour, not as a
-  spectrum. A Zemax ray file's spectral records give the light their colour, not a wavelength each.
+
+With the scene's [spectral optics trace](../modelling/materials.md#the-spectral-optics-trace) on, the Analysis pane's rays carry three wavelengths each, from the
+light's spectrum: a coating's edge is exact at each, and a detector has a spectrum and a CRI. What is left:
+- a **material's colour** is still three numbers, made into a smooth spectrum of that colour, not a filter's measured
+  curve;
+- a light given by **RGB, xy or a CCT off the black-body line**, and a **Zemax ray file**, is traced as a spectrum
+  of exactly its colour, not its real one: its colour is right and its CRI is not its own;
+- each ray's brightness is a draw of its wavelengths, so a reading takes more rays to settle than in colour.
 
 ## Physics not yet in the trace
 

@@ -206,8 +206,11 @@
         dichroic edge at 500 nm, through an amber filter and through two filters met at a gather, the three channels read Y
         6 to 10% low and the colour 0.016 to 0.028 u′v′ off. One wavelength a ray has no such error, but each path's Y
         is then off by about its own size. Four wavelengths a ray, drawn stratified, need about 1,000 paths to settle the colour to
-        0.001 u′v′. Sixteen fixed bands per ray are about 1% off through these filters and 9% through a phosphor layer
-        (<code>core/test/spectralnoise.test.mjs</code>, exact sums in Node, 2026-10-29: arithmetic, no graphics card).</p>
+        0.001 u′v′, and three, what fits in the ray's three colour numbers, 1,200 to 2,700. Sixteen fixed bands per ray are about 1% off through these filters and 9% through a phosphor layer
+        (<code>core/test/spectralnoise.test.mjs</code>, exact sums in Node, 2026-10-29 and 2026-11-04: arithmetic, no graphics card).
+        The optics view offers the three as a scene's choice (chapter 31); on a simulated card a dichroic plate then
+        passes 0.9672 of a white LED's light against its integral 0.9677, where three channels read 0.8345
+        (<code>optics/test/spectral.gpu.mjs</code>, Dawn on a software driver: correctness, never speed).</p>
     </div>
     <div data-claim="measured">
       <p><strong>Checked on a simulated graphics card.</strong> The shading kernel's own bounce, 65,536 times a case, a

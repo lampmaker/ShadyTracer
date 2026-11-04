@@ -22,8 +22,9 @@ and 660 nm) and a white LED at 3990 K. These are models, not datasheets.
 rays add up to; the panel shows it under the file's numbers. A flux-only file stays white, whatever wavelength its
 header names, because many photometric files put a placeholder there.
 
-**What it does not change.** The light is still traced as that colour, not wavelength by wavelength: that is S2 in
-`roadmap/LIGHT_MODEL.md`. `lib/pathtracer/core/spd.js`, `core/cie1931.js`, `builder/lights.js`.
+**What it does not change.** The picture still traces the light as that colour, not wavelength by wavelength. The
+Optics page can trace it by its spectrum when the scene asks: the spectral optics trace, below.
+`lib/pathtracer/core/spd.js`, `core/cie1931.js`, `builder/lights.js`.
 
 **What to look at:**
 - A light set to *start from › LED red 630 nm* should look red. The Optics page's detector should read about x 0.704,

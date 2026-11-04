@@ -581,6 +581,14 @@ code, a look each.
          one shared draw a sample, a kernel in wavelength, or bands for photons only.
        What follows from here -- a ray that pays only for what the scene chooses, colour, polarisation, coatings,
        media and diffraction, and the order -- is `roadmap/LIGHT_MODEL.md` (2026-10-30).
+     - **Built since (0.next), not yet seen on hardware:** the scene's optical features (S0a); lights given by a spectrum
+       (S1); and the optics trace by wavelength with its Spectrum chart and CRI (S0 and S2 for the optics trace, the
+       user's choice of 2026-11-04: three hero wavelengths in the `beta` a ray already has, the renderer untouched).
+       On lavapipe the trace reads a white LED's colour within 2.2e-5 u'v' and a dichroic plate 0.9672 ± 0.0006
+       against its integral 0.9677, where the colour trace reads 0.8345 (`optics/test/spectral.gpu.mjs`). The row
+       for the user's cards is `optics-spectral`. What its speed costs is theirs to measure: per ray it adds a
+       spectrum lookup at the source, three table reads per material and coating, and four floats more per detector
+       hit (read in code; untimed).
 - **The camera's lens -- built (0.43.0), not yet seen; its photons removed (0.61.0)** (the user, 2026-10-09: "a more
   realistic camera model that has a lens with certain diameter, and that could work in parallel"). A thin lens (aperture,
   focus; `core/lens.js`): depth of field, and connections to a point of its disc. Until 0.61.0 it was also an area a

@@ -52,7 +52,7 @@ Presets: dichroic reflecting red, dichroic reflecting blue, a 50/50 beam splitte
 
 A beam splitter's and an AR layer's reflectance is the same at every wavelength, so the trace is exact for them. A
 dichroic's edge is averaged over each colour channel's wavelengths, which approximates the spectrum
-([limits](limits.md)).
+([limits](limits.md)); traced [by wavelength](../modelling/materials.md#the-spectral-optics-trace), it is exact at each.
 
 ## Detectors
 

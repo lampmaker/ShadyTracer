@@ -1,7 +1,7 @@
 bump: minor
 
 **Each scene chooses its optics: dispersion, absorption inside and coatings.** The scene's row in the tree has a new
-box, *optical features*. It has a switch for each of the three, and **Basic** (all off) and **Full** (all on) above
+box, *optical features*. It has a switch for each of the three, and **Basic** (all off) and **Full** (all three on) above
 them. A mix of the two reads Custom.
 - **A feature off is not traced at all,** in the picture or on the Optics page. The scene is compiled as if no
   material had those fields: byte for byte the shader of the same scene without the values.
