@@ -553,6 +553,7 @@ code, a look each.
      | 1 wavelength (p ~ x+y+z) | 0.94-1.71 | 20 000-90 000 | 8 800-29 000 | none | none |
      | hero 4, Wilkie (uniform, 100 nm apart) | 0.18-1.60 | 4 800-24 000 | 315-26 000 | none | none |
      | hero 4, pbrt-v4 (stratified in p's CDF) | 0.07-0.25 | 800-1 400 | 48-635 | none | none |
+     | hero 3, pbrt-v4 (added 2026-11-04: what the optics trace carries) | 0.12-0.40 | 1 200-2 700 | 150-1 600 | none | none |
      | bands 8 | 0 | - | - | -4.8 / +4.6 / -10.3 / -9.6 % | 0.009 / 0.013 / 0.019 / 0.044 |
      | bands 16 | 0 | - | - | -0.5 / +1.3 / -1.3 / -9.1 % | 0.001 / 0.004 / 0.003 / 0.038 |
      | bands 40 | 0 | - | - | -0.1 / +0.2 / -0.3 / -1.2 % | 2e-4 / 7e-4 / 6e-4 / 0.005 |
