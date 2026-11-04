@@ -78,6 +78,17 @@ let s = await state()
 ok('...reaches the document, as a compile with an undo step and a relabel',
     s.b[0] === 'intersect' && s.structure === before.structure + 1 && s.labels > before.labels && s.commits.at(-1) === null, JSON.stringify(s))
 
+// ITS EDGE (model version 27): smooth by default, round or chamfer a compile with an undo step, smooth again no field
+rows = await rowsOf('b')
+ok('a child shows its edge, smooth by default', rows.includes('edge') && await p.evaluate(() => !('joinShape' in CHECK.M.find(CHECK.doc, 'b').node)), JSON.stringify(rows))
+before = await state()
+ok('setting it round', await set('edge', 'round') === 'set')
+s = await state()
+ok('...reaches the document, as a compile with an undo step', await p.evaluate(() => CHECK.M.find(CHECK.doc, 'b').node.joinShape) === 'round'
+    && s.structure === before.structure + 1 && s.commits.at(-1) === null, JSON.stringify(s))
+await rowsOf('b')
+ok('...and back to smooth: no field', await set('edge', 'smooth') === 'set' && await p.evaluate(() => !('joinShape' in CHECK.M.find(CHECK.doc, 'b').node)))
+
 // THE BASE says so
 rows = await rowsOf('a')
 ok('the first shape is the base', rows.includes('join (base)'), JSON.stringify(rows))
