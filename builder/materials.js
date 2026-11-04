@@ -113,18 +113,31 @@ export const FEATURES = {
     coatings: { label: 'Coatings', fields: ['coating', ...Object.keys(FIELDS).filter(k => FIELDS[k].coat)], hides: 'a coating',
         help: 'Thin-film coatings in place of a surface\'s own reflection: dichroics, beam splitters, anti-reflective layers. '
             + 'Off, every surface reflects as its index says, and the coating box is not shown.' },
+    /* THE OPTICS TRACE BY WAVELENGTH (0.next; roadmap/LIGHT_MODEL.md S2; the user, 2026-11-04: "a feature 'spectral', off by
+       default", over an always-spectral trace). No material field of its own: it compiles the Optics page's trace
+       spectral (optics/kernels.js), and the picture stays RGB. OFF BY DEFAULT, the one feature that is: every scene
+       before it measured in RGB, and Full keeps it so; Expert is Full with it. */
+    spectral: { label: 'Spectral optics trace', fields: [], hides: null, def: false,
+        help: 'The Optics page traces each ray at three wavelengths of its light\'s spectrum, instead of as a colour: coatings '
+            + 'and coloured glass act by wavelength, and a detector records the spectrum it receives -- its Spectrum chart, its '
+            + 'colour rendering index. The picture is unchanged. A little more colour noise per ray than the colour trace; '
+            + 'off, the trace is the colour trace it always was.' },
 }
-/** The presets, in the order shown: Basic is none of them, Full all (the default). "Expert" comes when there is a feature
- *  Full should not have; "Optics" is Quality's word already (lib/pathtracer/quality.js). */
+/** A feature's default: on, but for one that says otherwise (spectral). */
+export const featureDefault = k => FEATURES[k]?.def ?? true
+/** The presets, in the order shown: Basic is none of them; Full every feature at its default -- every material field, the
+ *  colour trace -- the default and every scene before the features; Expert all of them (0.next: Full and the spectral
+ *  trace). "Optics" is Quality's word already (lib/pathtracer/quality.js). */
 export const FEATURE_PRESETS = {
-    basic: { label: 'Basic', values: Object.fromEntries(Object.keys(FEATURES).map(k => [k, false])) },
-    full:  { label: 'Full',  values: Object.fromEntries(Object.keys(FEATURES).map(k => [k, true])) },
+    basic:  { label: 'Basic',  values: Object.fromEntries(Object.keys(FEATURES).map(k => [k, false])) },
+    full:   { label: 'Full',   values: Object.fromEntries(Object.keys(FEATURES).map(k => [k, featureDefault(k)])) },
+    expert: { label: 'Expert', values: Object.fromEntries(Object.keys(FEATURES).map(k => [k, true])) },
 }
 const FEATURE_OF_FIELD = Object.fromEntries(Object.entries(FEATURES).flatMap(([f, d]) => d.fields.map(k => [k, f])))
 /** The feature a material field belongs to, or null for one every scene has. */
 export const featureOfField = k => FEATURE_OF_FIELD[k] ?? null
 /** Whether a field is part of a scene with these features (model.js featuresOf: every key there). */
-export const fieldOn = (features, k) => { const f = FEATURE_OF_FIELD[k]; return !f || features?.[f] !== false }
+export const fieldOn = (features, k) => { const f = FEATURE_OF_FIELD[k]; return !f || (features?.[f] ?? featureDefault(f)) !== false }
 /* ...the coating's values are in the shader exactly while it has one: a value of theirs is `only` its material's
    coating being on (codegen passes the material's params, demo.js and params.js ask the same) */
 for (const f of Object.values(FIELDS)) if (f.coat) f.only = (v, P) => P?.coating > 0

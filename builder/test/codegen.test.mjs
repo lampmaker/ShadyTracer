@@ -2061,9 +2061,9 @@ eq('uniformName', uniformName('n7', 'radius'), 'radius_n7')
     }
     const gen = d => generate(...Model.generateArgs(d, { id: 'feat' }))
     const full = make(), fullOut = gen(full)
-    for (const [k, f] of Object.entries(Model.FEATURES))
+    for (const [k, f] of Object.entries(Model.FEATURES)) if (f.fields.length)
         ok(`Full: ${k}'s fields are in the shader`, f.fields.some(n => Object.keys(fullOut.uniforms).some(u => u.endsWith(`_${n}`) || u === uniformName('flint', n) || u === uniformName('dich', n))))
-    for (const name of [...Object.keys(Model.FEATURES), 'basic']) {
+    for (const name of [...Object.keys(Model.FEATURES).filter(k => Model.FEATURES[k].fields.length), 'basic']) {
         const d = make()
         if (name === 'basic') Model.setFeatures(d, Model.FEATURE_PRESETS.basic.values)
         else Model.setFeatures(d, { [name]: false })
@@ -2078,6 +2078,10 @@ eq('uniformName', uniformName('n7', 'radius'), 'radius_n7')
             && d.materials.find(m => m.id === 'dich').params.coating === 1)
         ok(`${name} off: the shader differs from Full's`, a.wgsl !== fullOut.wgsl)
     }
+    // the spectral trace (0.next) is the Optics page's alone, no material field: the scene's shader is Full's, byte for byte
+    const sp = make()
+    Model.setFeatures(sp, { spectral: true })
+    ok('the spectral trace on: the scene\'s shader Full\'s, byte for byte', gen(sp).wgsl === fullOut.wgsl)
     // every feature on again is no key, and the text it was
     const back = make()
     Model.setFeatures(back, Model.FEATURE_PRESETS.basic.values)

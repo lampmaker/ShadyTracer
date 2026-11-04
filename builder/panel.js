@@ -849,7 +849,8 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
         const t = folder.element?.querySelector?.('.tp-fldv_t')
         if (t) t.title = 'Which optics this scene has. A feature off is not traced, in the picture or on the Optics page, and its '
             + 'fields are not shown on any material -- their values are kept, and come back when it is on. Basic: none of them, '
-            + 'for a scene that needs no more than colour and glass. Full: all of them. Each change is a compile.'
+            + 'for a scene that needs no more than colour and glass. Full: every material feature (the default). Expert: Full, '
+            + 'and the Optics page traced by wavelength. Each change is a compile.'
         const set = values => {
             const before = JSON.stringify(M.featuresOf(doc))
             try { M.setFeatures(doc, values) } catch (e) { console.warn('[builder]', e.message); return }
@@ -871,8 +872,9 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
             b.type = 'button'
             b.textContent = p.label
             b.dataset.preset = id
-            b.title = id === 'basic' ? 'No dispersion, absorption inside or coatings: their fields hidden on every material'
-                : 'Every optical feature, every field shown'
+            b.title = { basic: 'No dispersion, absorption inside or coatings: their fields hidden on every material',
+                        full: 'Every material field shown; the Optics page traces colour (the default)',
+                        expert: 'Full, and the Optics page traces by wavelength: spectra at the detectors, their CRI' }[id] ?? p.label
             Object.assign(b.style, SEGBTN, { padding: '0 9px' })
             lit(b, presetNow === id)
             b.setAttribute('aria-pressed', String(presetNow === id))
@@ -883,8 +885,9 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
         line.className = 'features-line'
         Object.assign(line.style, { font: '12px/1.35 var(--sh-sans, system-ui, sans-serif)', color: 'var(--sh-muted, #8fa3b3)',
                                     margin: '6px 2px 2px', whiteSpace: 'normal' })
-        line.textContent = presetNow === 'custom' ? 'Custom: some features on, some off.'
-            : presetNow === 'basic' ? 'Basic: no dispersion, absorption inside or coatings.' : 'Full: every optical feature.'
+        line.textContent = { custom: 'Custom: some features on, some off.', basic: 'Basic: no dispersion, absorption inside or coatings.',
+                             full: 'Full: every material feature; the Optics page traces colour.',
+                             expert: 'Expert: every feature, and the Optics page traces by wavelength.' }[presetNow]
         el.append(seg, line)
         for (const [k, f] of Object.entries(M.FEATURES)) {
             const H = { get on() { return M.featuresOf(doc)[k] }, set on(v) { set({ [k]: !!v }) } }

@@ -2152,6 +2152,9 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
            has one: whether it does decides the kernels' text (sceneTextOf), so a scene without one says nothing */
         ...(haze ? { haze } : {}),
         ...(scatter ? { scatter: true } : {}),
+        /* ...and whether the Optics page traces it by wavelength (0.next; model.js setFeatures `spectral`): the optics kernels'
+           text, never the picture's -- said only when it does, so every other scene's object is what it was */
+        ...(tree.features?.spectral ? { spectral: true } : {}),
         wgsl: e.lines.slice(preludeLines).join('\n'),
         uniforms,
         body: e.wgsl,

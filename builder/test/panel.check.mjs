@@ -941,12 +941,12 @@ ok('...and a conic typed to four places kept on its slider (its step\'s rounding
     rows = await rowsOf(root)
     let b = await box()
     ok('the scene\'s row: a box, optical features, Full lit, a switch a feature', b?.title === 'optical features' && JSON.stringify(b.lit) === '["full"]'
-        && ['dispersion', 'absorption inside', 'coatings'].every(l => rows.includes(l)) && /Full/.test(b.line), JSON.stringify([b, rows]))
+        && ['dispersion', 'absorption inside', 'coatings', 'spectral optics trace'].every(l => rows.includes(l)) && /Full/.test(b.line), JSON.stringify([b, rows]))
     before = await state()
     ok('Basic pressed', await press('basic') === 'pressed')
     await p.waitForTimeout(50)
     s = await state()
-    ok('...every feature off, one undo step and a compile', JSON.stringify(await features()) === '{"dispersion":false,"absorption":false,"coatings":false}'
+    ok('...every feature off, one undo step and a compile', JSON.stringify(await features()) === '{"dispersion":false,"absorption":false,"coatings":false,"spectral":false}'
         && s.commits.length === before.commits.length + 1 && s.commits.at(-1) === null && s.structure === before.structure + 1,
         JSON.stringify([await features(), s.commits.slice(before.commits.length), s.structure - before.structure]))
     b = await box()
@@ -976,6 +976,15 @@ ok('...and a conic typed to four places kept on its slider (its step\'s rounding
     await rowsOf(root)
     await press('full'); await p.waitForTimeout(50)
     ok('Full again: nothing written, no undo step', (await state()).commits.length === before.commits.length)
+    /* EXPERT (0.next): Full and the spectral optics trace, the one feature off by default -- saved as on, the glass the same */
+    ok('Expert pressed', await press('expert') === 'pressed')
+    await p.waitForTimeout(50)
+    b = await box()
+    ok('...the spectral trace on, saved as that alone, Expert lit, one undo step and a compile', JSON.stringify(await p.evaluate(() => CHECK.doc.features)) === '{"spectral":true}'
+        && b?.title === 'optical features · expert' && JSON.stringify(b.lit) === '["expert"]' && /Expert/.test(b.line)
+        && (await state()).commits.length === before.commits.length + 1, JSON.stringify(b))
+    await press('full'); await p.waitForTimeout(50)
+    ok('...Full again: no key', !(await p.evaluate(() => 'features' in CHECK.doc)))
     await p.evaluate(() => { CHECK.M.material(CHECK.doc, 'gl').params.abbe = 0 })
 }
 

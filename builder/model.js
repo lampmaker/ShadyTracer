@@ -31,7 +31,7 @@
 // and why the palette of scenes/common.js it replaced is gone.
 //======================================================================================================================
 
-import { FIELDS, FEATURES, FEATURE_PRESETS, fieldOn, defaults as materialDefaults, PALETTE_V3, PRESETS, MATERIAL_CODE_TEMPLATE, RELIEFS, RELIEF_SCOPE, reliefMaterialId, reliefOwner } from './materials.js'
+import { FIELDS, FEATURES, FEATURE_PRESETS, fieldOn, featureDefault, defaults as materialDefaults, PALETTE_V3, PRESETS, MATERIAL_CODE_TEMPLATE, RELIEFS, RELIEF_SCOPE, reliefMaterialId, reliefOwner } from './materials.js'
 import { NODE_TYPES, GROUP_SCOPE, isCsg, hasCode, isAfter } from './codegen.js'
 import { PRIMITIVES, primitiveObject } from './primitives.js'
 import { MODIFIERS, modifierGroup } from './modifiers.js'
@@ -2537,8 +2537,9 @@ export function setTolerance(doc, v) {
 
 /*======================================================================================================================
   THE SCENE'S OPTICAL FEATURES (0.next; materials.js FEATURES, roadmap/LIGHT_MODEL.md S0a): dispersion, absorption inside
-  and coatings, each on or off for the scene. Saved as `features`, holding only what is OFF -- every feature on is the
-  key absent, as every scene before it was -- so an old file is Full, and no example or fixture changes. NO VERSION
+  and coatings, each on or off for the scene, and the spectral optics trace (S2), off unless it is asked for. Saved as
+  `features`, holding only what differs from a feature's default -- every feature at its default is the key absent, as
+  every scene before it was -- so an old file is Full, and no example or fixture changes. NO VERSION
   CHANGE, as the environment and the view (above): validate() passes a top-level key it does not know through
   untouched, so a builder of this version that predates the key carries it along, and renders every feature on. An
   edit to it is an undo step: it is the scene's physics, as the tolerance is. What it does is toTree's (below): a
@@ -2555,14 +2556,14 @@ function featureProblems(f) {
     return p
 }
 /** Every feature, on or off, for a document: what it saves over all on. */
-export const featuresOf = doc => Object.fromEntries(Object.keys(FEATURES).map(k => [k, doc?.features?.[k] !== false]))
-/** Set some features (key: true or false); checked first, so a refusal changes nothing. Only what is off is kept, and
- *  nothing when everything is on. */
+export const featuresOf = doc => Object.fromEntries(Object.keys(FEATURES).map(k => [k, typeof doc?.features?.[k] === 'boolean' ? doc.features[k] : featureDefault(k)]))
+/** Set some features (key: true or false); checked first, so a refusal changes nothing. Only what differs from a
+ *  feature's default is kept (off for most, on for the spectral trace), and nothing when every one is at its default. */
 export function setFeatures(doc, values = {}) {
     const bad = featureProblems(values)
     if (bad.length) throw new ModelError(bad)
     const next = { ...featuresOf(doc), ...values }
-    const off = Object.fromEntries(Object.entries(next).filter(([, on]) => !on).map(([k]) => [k, false]))
+    const off = Object.fromEntries(Object.entries(next).filter(([k, on]) => on !== featureDefault(k)))
     if (Object.keys(off).length) doc.features = off
     else delete doc.features
     return doc
@@ -2731,7 +2732,7 @@ export function toTree(doc, { keepDisabled = false } = {}) {
        is `only` at (materials.js) -- so codegen, the scene as data and the bake leave them out of the shader exactly as
        for a material that never had them. The document keeps the values. */
     const features = featuresOf(doc)
-    if (Object.values(features).some(on => !on)) {
+    if (Object.entries(features).some(([k, on]) => on !== featureDefault(k))) {
         root.features = features
         for (const m of root.materials) if (m.params)
             for (const k of Object.keys(m.params)) if (!fieldOn(features, k)) m.params[k] = structuredClone(FIELDS[k].def)

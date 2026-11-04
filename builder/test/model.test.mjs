@@ -1695,10 +1695,11 @@ throws('another version is refused, not guessed at',
     const d = M.createDoc({ title: 'features' })
     M.addMaterial(d, { id: 'g', preset: 'glass', label: 'flint' })
     d.materials.find(m => m.id === 'g').params.abbe = 36
-    eq('a scene with no key: every feature on, Full', [M.featuresOf(d), M.featurePresetOf(d)], [{ dispersion: true, absorption: true, coatings: true }, 'full'])
+    eq('a scene with no key: every feature at its default (the spectral trace off), Full', [M.featuresOf(d), M.featurePresetOf(d)],
+        [{ dispersion: true, absorption: true, coatings: true, spectral: false }, 'full'])
     M.setFeatures(d, { dispersion: false })
     eq('dispersion off: only that saved, Custom', [d.features, M.featurePresetOf(d)], [{ dispersion: false }, 'custom'])
-    eq('...and read back from the file', M.featuresOf(M.parse(M.serialize(d))), { dispersion: false, absorption: true, coatings: true })
+    eq('...and read back from the file', M.featuresOf(M.parse(M.serialize(d))), { dispersion: false, absorption: true, coatings: true, spectral: false })
     ok('...the Abbe number not shown, the index still', !M.fieldShown(d, 'abbe') && M.fieldShown(d, 'ior') && M.fieldShown(d, 'attenuationDistance'))
     eq('...and said: the material whose value is kept, not traced', M.hiddenByFeatures(d), { dispersion: ['flint'] })
     const tree = M.toTree(d)
@@ -1718,6 +1719,17 @@ throws('another version is refused, not guessed at',
     eq('...and a refusal changes nothing', JSON.stringify(d.features), before)
     M.setFeatures(d, M.FEATURE_PRESETS.full.values)
     ok('Full again: no key at all, as every scene before', !('features' in d) && M.featurePresetOf(d) === 'full')
+    /* THE SPECTRAL TRACE (0.next): the one feature off by default -- on is what is saved; Expert is Full with it; it has no
+       field, so toTree's materials are as they were, and the root says it is on */
+    M.setFeatures(d, { spectral: true })
+    eq('the spectral trace on: that alone saved, Expert', [d.features, M.featurePresetOf(d)], [{ spectral: true }, 'expert'])
+    const st = M.toTree(d)
+    ok('...toTree: the root says so, every material as it was', st.features?.spectral === true && st.materials[0].params.abbe === 36)
+    M.setFeatures(d, M.FEATURE_PRESETS.full.values)
+    ok('...Full takes it off again: no key', !('features' in d))
+    M.setFeatures(d, M.FEATURE_PRESETS.expert.values)
+    eq('Expert: every feature on', M.featuresOf(d), { dispersion: true, absorption: true, coatings: true, spectral: true })
+    M.setFeatures(d, M.FEATURE_PRESETS.full.values)
     ok('toTree with every feature on: no features on the root, the value as it is', !('features' in M.toTree(d)) && M.toTree(d).materials[0].params.abbe === 36)
     ok('a file with a wrong feature is refused', M.validate({ ...M.createDoc(), features: { dispersion: 'no' } }).some(p => /features\.dispersion/.test(p))
         && M.validate({ ...M.createDoc(), features: [] }).some(p => /features must be/.test(p)))
