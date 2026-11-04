@@ -47,6 +47,8 @@ import { recipeOf, parseRecipe, applyRecipe } from './recipe.js'
 import { RAYFILES, rayBox } from '../optics/rayfiles.js'
 import { raysXYZ } from '../lib/pathtracer/optics/zemax.js'
 import { XYZtoxy, xyToCctDuv } from '../lib/pathtracer/core/colorimetry.js'
+import { drawSpectrum } from '../lib/pathtracer/optics/spectrumchart.js'
+import { cri } from '../lib/pathtracer/core/cri.js'
 import { UNITS } from '../lib/pathtracer/core/photometry.js'
 import { changeUnit } from './unitchange.js'
 import { openUnitDialog } from './unitdialog.js'
@@ -1102,14 +1104,39 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
                 if (next && !M.spdProblems(next).length) set({ spectrum: next }, 'reshow')
             })
         rowTip(f.addBinding(K, 'preset', { label: 'start from', options: { '(choose)': '', ...Object.fromEntries(Object.keys(M.SPD_PRESETS).map(k => [k, k])) } }),
-            'A model to start from, not a datasheet: a blackbody, CIE illuminant A, a single-colour LED as one Gaussian of its typical peak and width, a white LED as a blue die and a phosphor hump near 4000 K.')
+            'A spectrum to start from: a blackbody, CIE illuminant A, a single-colour LED as one Gaussian of its typical peak and width (a model, not a datasheet), a white LED as a blue die and a phosphor hump near 4000 K, or one of the CIE\'s measured LED lamps (CIE 015).')
             .on('change', ev => { if (ev.value) set({ spectrum: structuredClone(M.SPD_PRESETS[ev.value]) }, 'reshow') })
+        /* THE SPECTRUM, DRAWN (0.next; optics/spectrumchart.js), and what it renders colours like: its CRI (core/cri.js,
+           CIE 13.3) beside its CCT and efficacy -- redrawn as it changes (put below), in a separator blade as Quality's
+           buttons are (settingsui.js addQuality says why) */
+        const blade = f.addBlade({ view: 'separator' })
+        const el = blade.element
+        el.replaceChildren()
+        Object.assign(el.style, { padding: '4px 4px 2px', height: 'auto' })
+        const cv = document.createElement('canvas')
+        cv.className = 'builder-spectrum-plot'
+        Object.assign(cv.style, { width: '100%', height: '110px', display: 'block', borderRadius: '3px' })
+        const line = document.createElement('div')
+        line.className = 'builder-spectrum-line'
+        Object.assign(line.style, { font: '12px/1.35 var(--sh-sans, system-ui, sans-serif)', color: 'var(--sh-muted, #8fa3b3)', margin: '4px 2px 2px' })
+        el.append(cv, line)
+        const plot = s => {
+            const values = []
+            for (let l = 380; l <= 780; l += 2) values.push(M.spdAt(s, l))
+            try { drawSpectrum(cv, { values, lo: 380, step: 2, compact: true }) } catch (e) { console.warn('[panel] spectrum', e) }
+            const r = cri(s), sm = M.spdSummary(s)
+            line.textContent = [r ? `Ra ${r.Ra.toFixed(0)} · R9 ${r.R[8].toFixed(0)}${r.valid ? '' : ' (far off the locus: little meaning)'}` : 'no CRI (no CCT)',
+                sm?.cct ? `${Math.round(sm.cct)} K` : null, sm ? `${sm.ler.toFixed(0)} lm/W` : null].filter(Boolean).join(' · ')
+        }
+        // drawn once the canvas has its size (it is in the page after this call returns)
+        requestAnimationFrame(() => plot(S))
+        const putDrawn = patch => { put(patch); if (patch.spectrum) plot(patch.spectrum) }
         const lp = `scene/${node.id}/light/spectrum`
         if (S.kind === 'planck') {
             const T = { T: S.T }
             flagRow(rowTip(f.addBinding(T, 'T', { label: 'temperature (K)', min: 1000, max: 15000, step: 10 }).on('change', ev => {
                 const next = { kind: 'planck', T: ev.value }
-                if (!M.spdProblems(next).length) put({ spectrum: next })
+                if (!M.spdProblems(next).length) putDrawn({ spectrum: next })
             }), 'A blackbody\'s temperature: its spectrum is Planck\'s law, its colour on the Planckian locus at that CCT exactly.'), lp)
             return
         }
@@ -1131,7 +1158,7 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
             catch (e) { say(e.message, '#ff8a80'); return }
             const bad = M.spdProblems(next)
             if (bad.length) { say(bad.join('\n'), '#ff8a80'); return }
-            put({ spectrum: next })
+            putDrawn({ spectrum: next })
             say(isPeaks ? `${next.peaks.length} peak${next.peaks.length === 1 ? '' : 's'}: in use` : `${next.points.length} points, ${next.points[0][0]}-${next.points.at(-1)[0]} nm: in use`, '#81c784')
         }
         say(isPeaks ? `${S.peaks.length} peak${S.peaks.length === 1 ? '' : 's'}` : `${S.points.length} points, ${S.points[0][0]}-${S.points.at(-1)[0]} nm`, '#9aa7b0')

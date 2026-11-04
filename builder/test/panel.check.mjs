@@ -754,6 +754,11 @@ ok('...and the radius row says so by itself (the panel redrawn), the number kept
         JSON.stringify([L.spectrum, rr]))
     const readout = await p.evaluate(() => [...document.querySelectorAll('input')].map(i => i.value).find(v => /lm\/W radiated/.test(v)) ?? '')
     ok('...the readout says its efficacy', /\d+ lm\/W radiated/.test(readout), readout)
+    await p.waitForTimeout(50)
+    const plotLine = () => p.evaluate(() => ({ line: document.querySelector('.builder-spectrum-line')?.textContent ?? '', plot: !!document.querySelector('canvas.builder-spectrum-plot')?.width }))
+    let pl = await plotLine()
+    // a blackbody at D65's 6506 K: above 5000 K its reference is the CIE's daylight, which it is not quite -- Ra 98
+    ok('...its spectrum drawn, and its CRI: Ra 98 against daylight at 6506 K', pl.plot && /^Ra 98 · R9 96 · 650\d K · \d+ lm\/W$/.test(pl.line), JSON.stringify(pl))
     ok('peaks chosen', await set('spectrum', 'peaks') === 'set')
     await p.waitForTimeout(80)
     L = await light()
@@ -771,9 +776,16 @@ ok('...and the radius row says so by itself (the panel redrawn), the number kept
     ok('...put in, live: the light pushed, no compile, its undo step', JSON.stringify(L.spectrum.peaks) === '[{"nm":630,"fwhm":17,"weight":1}]'
         && s2.live.slice(before.live.length).includes('spl.light') && s2.structure === before.structure && s2.commits.at(-1) === 'spl.light'
         && /in use/.test(await said()), JSON.stringify([L.spectrum, s2.live.slice(before.live.length), s2.commits.slice(-2), await said()]))
+    pl = await plotLine()
+    ok('...redrawn as typed: a red LED has no CCT, so no CRI', /^no CRI/.test(pl.line), pl.line)
     ok('a preset chosen: royal blue', await set('start from', 'LED royal blue') === 'set')
     await p.waitForTimeout(80)
     ok('...the light\'s spectrum the preset\'s', JSON.stringify((await light()).spectrum.peaks) === '[{"nm":450,"fwhm":20,"weight":1}]')
+    ok('one of the CIE\'s LED lamps', await set('start from', 'CIE LED-B3') === 'set')
+    await p.waitForTimeout(100)
+    pl = await plotLine()
+    ok('...a measured table of 81 points, its CRI the CIE illuminant\'s: Ra 85, R9 24, 4103 K', (await light()).spectrum.points?.length === 81
+        && /^Ra 85 · R9 24 · 410\d K/.test(pl.line), JSON.stringify(pl))
 }
 
 /* THE ASPHERIC LENS'S COEFFICIENTS (2026-10-04): numbers with no range, typed from a datasheet. Tweakpane showed such a
