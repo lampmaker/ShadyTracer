@@ -51,7 +51,10 @@
     <p>The curves here are not the CIE's table but a fit to it, a few bell curves added together, which ShadyTracer
       uses for its coloured coatings and prisms (chapters 10 and 11); its test holds it against published values of the
       table. A fit has errors: a hot body at 3000 K through these curves comes out a hair off, as if it were a hot body
-      at 3024 K (section 2 says how a colour is given a temperature).</p>
+      at 3024 K (section 2 says how a colour is given a temperature). A light given by its spectrum is coloured by the
+      CIE's own table instead, every nanometre from 360 to 830
+      (<cite data-src="lib/pathtracer/core/spd.js" data-sym="export function spdXYZ(s)"></cite>), where the same hot body
+      reads 3000 K within half a kelvin.</p>
   </div>
   <figure class="fig" data-fig="match">
     <figcaption>The eye's three colour-matching functions, x̄, ȳ and z̄, over the wavelengths (spectral.js's fit), and a
@@ -167,10 +170,10 @@
     <p>Why the renderer carries a colour this way, in the words of the file that does it:</p>
     <pre data-src="lib/pathtracer/core/colorimetry.js" data-sym="// WHY THIS EXISTS. A light used to be a Rec.709 RGB hue and a luminance." data-to="// Only a DISPLAY has to clip, and does (gamutClip, luminance kept)."
          data-why="'Neutral optics' are materials that treat red, green and blue alike, as clear plastic and aluminium nearly do. PMMA is acrylic. 'Additive mixing is exact in XYZ' is the maths fold-out's linearity." data-hash="1b17258b"></pre>
-    <p>A light can be given three ways, and each becomes the same thing: its exact red, green and blue, scaled so its
+    <p>A light can be given four ways, and each becomes the same thing: its exact red, green and blue, scaled so its
       luminance is 1 (its brightness is set separately, chapter 5):</p>
     <pre data-src="builder/lights.js" data-sym="export function lightRGB(L)" data-to="return Y > 0 ? rgb.map(v => v / Y) : [1, 1, 1]"
-         data-why="colourBy is how the light was given: 'cct' a temperature and a Duv, 'xy' a chromaticity, 'rgb' three numbers. cctDuvToXy finds the point on the hot bodies' line and steps Duv at right angles to it; rgbFromXy is the fold-out's M⁻¹. Y is the luminance, by LUMA, the matrix's middle row." data-hash="1ecb685b"></pre>
+         data-why="colourBy is how the light was given: 'cct' a temperature and a Duv, 'xy' a chromaticity, 'spectrum' a spectrum (a hot body, peaks or a measured table, turned into its XYZ by the CIE's table: spdRGB), 'rgb' three numbers. cctDuvToXy finds the point on the hot bodies' line and steps Duv at right angles to it; rgbFromXy is the fold-out's M⁻¹. Y is the luminance, by LUMA, the matrix's middle row. 'file' and 'wavelength' are a ray file's own two (a lamp maker's list of rays, chapter 31): from the file, or every ray at the one wavelength its header names. What they come to depends on the file, which this function never sees, so here they are white; the light is coloured where the file is read." data-hash="47114ebc"></pre>
     <p>Where light is added into a pixel, a negative channel is let through and only a negative luminance refused:</p>
     <pre data-src="lib/pathtracer/core/wavefront.js" data-sym="/* A NEGATIVE CHANNEL IS ALLOWED, negative LUMINANCE is not." data-to="return badFloat(c.x) || badFloat(c.y)"
          data-why="WGSL, the graphics card's language (chapter 21). badFloat is true for infinity and 'not a number', the results of a division by zero; dot(c, LUMA) is the luminance. A deposit failing this test is dropped." data-hash="5bf9c0d9"></pre>
@@ -200,7 +203,8 @@
         colour noise everywhere" (<code>roadmap/PLAN.md</code>, <em>Colour, the hybrid</em>, agreed 2026-09-27). Three
         channels are exact for a light given by its chromaticity, through materials that treat the three alike. Only
         where a material sorts wavelengths, a prism or a coloured coating, does a ray take a wavelength (chapter
-        11).</p>
+        11). The optics view (chapter 31) can be asked for more: three wavelengths a ray, drawn from the light's own
+        spectrum, in the same three numbers. The picture stays three channels.</p>
     </div>
     <div data-claim="measured">
       <p><strong>Exact, measured.</strong> ShadyTracer's optics view traces rays from the lights themselves (photons,

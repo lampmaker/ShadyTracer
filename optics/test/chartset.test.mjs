@@ -1,6 +1,6 @@
 // node optics/test/chartset.test.mjs
 //
-// THE CHARTS THAT EXIST (optics/charts.js), without a DOM: the six kinds' first always, at the ids a saved
+// THE CHARTS THAT EXIST (optics/charts.js), without a DOM: the seven kinds' first always, at the ids a saved
 // layout knows; another of a kind numbered after the highest, its settings copied and not shared; the first
 // never removed; the list and every chart's settings kept and read back (the host registers a panel per entry
 // before the layout naming them is restored -- one lost here is a chart lost from the layout); and whatever
@@ -27,7 +27,7 @@ const memory = (init = {}) => { const m = { ...init }; return { m, getItem: k =>
 {
     const S = chartSet()
     const list = S.list()
-    ok('kept nowhere: the six kinds\' first, in order, at the ids saved layouts know',
+    ok('kept nowhere: the seven kinds\' first, in order, at the ids saved layouts know',
        list.map(c => c.id).join() === OPTICS_CHARTS.map(c => c.id).join() && list.every(c => c.n === 1), list.map(c => c.id).join())
     ok('...each with its kind\'s defaults, its own copy', list.every(c => JSON.stringify(c.s) === JSON.stringify(CHART_DEFAULTS[c.type]) && c.s !== CHART_DEFAULTS[c.type]))
     const map = S.get('optics.map')
@@ -37,7 +37,7 @@ const memory = (init = {}) => { const m = { ...init }; return { m, getItem: k =>
     m2.s.q = 'x'
     ok('...and not shared: changing one leaves the other', map.s.q === 'CCT')
     ok('another without settings: the defaults', S.add('map').s.q === 'E' && S.get('optics.map.3'))
-    ok('a kind that is not one is refused', throws(() => S.add('spectrum')))
+    ok('a kind that is not one is refused', throws(() => S.add('nonsense')))
     ok('the first of a kind is never removed', S.remove('optics.map') === false && S.get('optics.map'))
     ok('an added one is', S.remove('optics.map.2') === true && !S.get('optics.map.2') && S.remove('optics.map.2') === false)
     ok('numbered after the highest there is, not into a gap', S.add('map').id === 'optics.map.4')
@@ -55,7 +55,7 @@ const memory = (init = {}) => { const m = { ...init }; return { m, getItem: k =>
     A.save()
     A.add('profiles')
     const B = chartSet({ key: 'charts', storage: store })
-    ok('read back: the six and the two added, in order', B.list().map(c => c.id).join() === [...OPTICS_CHARTS.map(c => c.id), 'optics.map.2', 'optics.profiles.2'].join(),
+    ok('read back: the seven and the two added, in order', B.list().map(c => c.id).join() === [...OPTICS_CHARTS.map(c => c.id), 'optics.map.2', 'optics.profiles.2'].join(),
        B.list().map(c => c.id).join())
     ok('...each with its settings', B.get('optics.map.2').s.q === 'CCT' && B.get('optics.polar').s.planes === '0, 45, 90' && B.get('optics.map').s.q === 'E')
     A.remove('optics.map.2')
@@ -69,7 +69,7 @@ const memory = (init = {}) => { const m = { ...init }; return { m, getItem: k =>
         { type: 'map', n: 1, s: { q: 7, isolines: 'off', exposure: '2', gone: true } },
         { type: 'map', n: 2, s: null },
         { type: 'map', n: 2, s: { q: 'x' } },              // the same chart twice: the first kept
-        { type: 'spectrum', n: 2, s: {} },                 // a kind that is not one
+        { type: 'nonsense', n: 2, s: {} },                 // a kind that is not one
         { type: 'polar', n: 1.5, s: {} },                  // not a number of one
         { type: 'rings', n: 0 },
         null, 'map',

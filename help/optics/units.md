@@ -28,12 +28,29 @@ shrunk.
 
 ## Colour
 
-A light's colour can be given three ways, each exact:
+A light's colour can be given four ways, each exact:
 
 - **RGB**: a hue, linear;
 - **CCT and Duv**: a colour temperature in kelvin, and how far from the black-body line (positive greener, negative
   pinker), as white LEDs are specified;
-- **CIE 1931 xy**: a chromaticity, as a coloured LED's datasheet gives it.
+- **CIE 1931 xy**: a chromaticity, as a coloured LED's datasheet gives it;
+- **spectrum**: a blackbody at a temperature, Gaussian peaks (an LED's die, a phosphor's hump), or a measured table
+  of nm against relative power from a CSV. Its colour is what the CIE 1931 2° observer's table (the CIE's own, at 1 nm)
+  makes of it, and the panel draws it and says its **luminous efficacy of radiation**, lm per radiated W, and its
+  **CRI**. It is traced as that colour, unless the scene traces the Analysis pane's rays
+  [by wavelength](../modelling/materials.md#the-spectral-optics-trace): then by its spectrum.
+
+A **Zemax ray file with a wavelength per ray** (its format 2) takes the colour its rays add up to, each at its own
+wavelength and by its flux. A flux-only file stays white, whatever wavelength its header names, because many
+photometric files put a placeholder there; choose **its header's wavelength** as its colour when the header means it
+([sources](sources.md#zemax-ray-files)). **In the picture** each ray of such a file lights what it reaches in its
+own wavelength's colour, so where the colour of the light changes with direction (a white LED bluer straight on and
+yellower to the side, say) the picture shows it. Glass refracts each such ray at its own index, and a coating reflects
+it as its edge does at that wavelength. A ray outside what the eye sees carries no light. In a file in lumens each
+ray's flux is its luminous flux; in one in watts its luminous flux follows from its wavelength. The light's flux stays
+what you set, or the file's. Rays of single wavelengths add up to their colour only over many of them, so the picture
+starts out speckled in strong colours and settles as samples add up. The Analysis pane's own trace still traces such a
+file in its overall colour.
 
 Colours are carried exactly through the trace, **even outside the display's gamut** (a royal blue LED): only the
 picture clips them, once, at the screen. A detector reads what arrives as CIE xy, u′v′, CCT and Duv. Three LEDs mixed
@@ -44,7 +61,7 @@ or Δu′v′ per cell.
 
 ## Limits of the colour model
 
-Colours are three channels, not a spectrum. That is exact for light that only adds, through clear lenses, white
-reflectors and metals. A **coloured filter** multiplies three numbers, which approximates its spectrum. A
-**coating**'s edge is averaged over each channel's wavelengths. **Dispersion** gives each refracted ray a wavelength.
-See [What the optics trace does not do](limits.md).
+Colours are three channels, not a spectrum, unless the scene traces [by wavelength](../modelling/materials.md#the-spectral-optics-trace). That is exact for light
+that only adds, through clear lenses, white reflectors and metals. A **coloured filter** multiplies three numbers, which
+approximates its spectrum. A **coating**'s edge is averaged over each channel's wavelengths. **Dispersion** gives each
+refracted ray a wavelength. See [What the optics trace does not do](limits.md).

@@ -69,7 +69,7 @@ const worldFrames = (doc, id) => {
  * Every light in the scene, as the optics trace takes them:
  *   { sources: [...], skipped: [{ id, label, reason }] }
  * a face:     { id, label, kind: 'face', shape, origin, u, v, normal, half: [a, b], area, flux, ...settings }
- * a ray file: { id, label, kind: 'rayset', file, flux (null: the file's), emitN, origin, u, v, normal, scale }
+ * a ray file: { id, label, kind: 'rayset', file, flux (null: the file's), emitN, colour, colourBy, origin, u, v, normal, scale }
  * and inside an array, once a copy, with { copy, copies, key } (the header: INSIDE AN ARRAY).
  * half is the rectangle's half-width and half-height, or the disc's radius twice, in scene units;
  * area in scene units^2 (one face); flux in lm, both faces together. `normal`, not `n`: n is the
@@ -91,7 +91,8 @@ export function sourceTable(doc) {
         W.frames.forEach((F, j) => {
             const copy = K > 1 ? { copy: j, copies: K, key: `${n.id}#${j + 1}`, label: `${label} (copy ${j + 1} of ${K})` } : { label }
             if (L.shape === 'rayfile') {
-                sources.push({ id: n.id, ...copy, kind: 'rayset', file: L.file, flux: L.flux, emitN: L.emitN, colour: lightRGB(L),
+                // its colourBy too: what the file's wavelengths come to is decided where the file is (optics/sources.js rayFileColour)
+                sources.push({ id: n.id, ...copy, kind: 'rayset', file: L.file, flux: L.flux, emitN: L.emitN, colour: lightRGB(L), ...spectrumOf(L), colourBy: L.colourBy,
                                origin: F.origin, u: F.u, v: F.v, normal: F.normal, scale: F.scale })
                 return
             }
@@ -106,12 +107,17 @@ export function sourceTable(doc) {
                hue). It was left out here, and a coloured light lit its scene white. EXACT, whichever way
                it was given (lights.js lightRGB): out of the Rec.709 gamut it has a negative channel. */
             const { luminance, ...settings } = L
-            sources.push({ id: n.id, ...copy, kind: 'face', ...settings, colour: lightRGB(L), shape: L.shape, origin: F.origin, u: F.u, v: F.v,
+            sources.push({ id: n.id, ...copy, kind: 'face', ...settings, colour: lightRGB(L), ...spectrumOf(L), shape: L.shape, origin: F.origin, u: F.u, v: F.v,
                            normal: F.normal, half, area, flux, luminance })
         })
     })
     return { sources, skipped }
 }
+
+/** A LIGHT'S SPECTRUM for the spectral optics trace (0.next; optics/spectral.js sourceSpectrum): its own when it is given
+ *  by one, a blackbody's for a CCT on the locus, nothing otherwise (the trace makes a stand-in of its colour). */
+export const spectrumOf = L => L.colourBy === 'spectrum' && L.spectrum ? { spectrum: L.spectrum }
+    : L.colourBy === 'cct' && !(L.duv) && L.cct > 0 ? { planck: L.cct } : {}
 
 /** A FACE AS THE OPTICS MODULE TAKES IT (optics/sources.js sourceRecords), from a sourceTable entry:
  *  for the trace and for the picture's photons. One function, so the Optics page and the bench
@@ -119,7 +125,7 @@ export function sourceTable(doc) {
  *  the scene, so its rays start off it. */
 export const faceSource = x => ({ type: x.shape, pos: x.origin, axis: x.normal, u: x.u, size: x.half,
     distribution: x.distribution, halfAngle: x.halfAngle, n: x.n, flux: x.flux, emitN: x.emitN, twoSided: x.twoSided,
-    colour: x.colour, onSurface: true })
+    colour: x.colour, ...(x.spectrum ? { spectrum: x.spectrum } : x.planck ? { planck: x.planck } : {}), onSurface: true })
 
 /**
  * THE LUMINANCE OF A LIGHT GIVEN BY FLUX: flux / (k * its area in m^2 * its faces), k the

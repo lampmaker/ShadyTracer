@@ -829,6 +829,22 @@ throws('another version is refused, not guessed at',
     throws('a CCT past the locus is refused', () => M.setLight(d, 'die', { colourBy: 'cct', cct: 20000 }), /cct/)
     throws('an xy outside the diagram is refused', () => M.setLight(d, 'die', { colourBy: 'xy', xy: { x: 0.7, y: 0.5 } }), /xy/)
     throws('an unknown colourBy is refused', () => M.setLight(d, 'die', { colourBy: 'hsv' }), /colourBy/)
+    /* ...AND BY ITS SPECTRUM (0.next; core/spd.js): its exact XYZ at Y = 1 (the CIE's table), the optics source the same,
+       a spectrum with no visible light refused, its efficacy said, saved and read back, the default dropped */
+    const red = { kind: 'peaks', peaks: [{ nm: 630, fwhm: 17, weight: 1 }] }
+    M.setLight(d, 'die', { colourBy: 'spectrum', spectrum: red })
+    const redRGB = M.lightRGB(M.lightOf(M.find(d, 'die').node))
+    const redXYZ = M.spdSummary(red)
+    const back = [0.4124 * redRGB[0] + 0.3576 * redRGB[1] + 0.1805 * redRGB[2], 0.2126 * redRGB[0] + 0.7152 * redRGB[1] + 0.0722 * redRGB[2]]
+    ok('a light by its spectrum: luminance 1 and the spectrum\'s own x', near(back[1], 1, 1e-12)
+        && near(back[0] / (back[0] + 1 + 0.0193 * redRGB[0] + 0.1192 * redRGB[1] + 0.9505 * redRGB[2]), redXYZ.xy[0], 1e-9), JSON.stringify([back, redXYZ.xy]))
+    ok('...the optics source carries it', S.sourceTable(d).sources.find(x => x.id === 'die').colour.every((v, i) => v === redRGB[i]))
+    ok('...its efficacy said with its chromaticity', near(M.lightChromaticity(M.lightOf(M.find(d, 'die').node)).ler, redXYZ.ler, 1e-9))
+    eq('...saved and read back', M.parse(M.serialize(d)).root.children.find(n => n.id === 'die').light.spectrum, red)
+    throws('a spectrum with no light the eye sees is refused', () => M.setLight(d, 'die', { spectrum: { kind: 'peaks', peaks: [{ nm: 950, fwhm: 10, weight: 1 }] } }), /no light the eye sees/)
+    throws('...and one of an unknown kind', () => M.setLight(d, 'die', { spectrum: { kind: 'laser', nm: 532 } }), /kind/)
+    M.setLight(d, 'die', { spectrum: { kind: 'planck', T: 4000 } })
+    ok('...the default spectrum is not stored', !('spectrum' in M.find(d, 'die').node.light))
     M.setLight(d, 'die', { colourBy: 'rgb', xy: { x: 0.3127, y: 0.329 } })
     ok('back to RGB at the defaults: nothing stored', !('colourBy' in M.find(d, 'die').node.light) && !('xy' in M.find(d, 'die').node.light))
     const bad = JSON.parse(M.serialize(d)); bad.root.children[0].material = 'scr'
@@ -837,6 +853,18 @@ throws('another version is refused, not guessed at',
     eq('a ray file starts with no file', rf.light.file, '')
     M.setLight(d, rf.id, { file: 'ZEMAXRAYFILE.DAT', box: [[-2, -2, 0], [2, 2, 1.4]] })
     ok('...and round-trips with one', M.parse(M.serialize(d)).root.children.find(n => n.id === rf.id).light.file === 'ZEMAXRAYFILE.DAT')
+    /* A RAY FILE'S COLOUR (0.next; lights.js RAYFILE_COLOUR_BY): from the file by default, its header's wavelength, or a
+       rectangle's four ways -- its default its own, so RGB, the faces' default, is kept when chosen, not dropped as one */
+    ok('a ray file\'s colour is from its file by default, nothing stored', M.lightOf(rf).colourBy === 'file' && !('colourBy' in rf.light))
+    M.setLight(d, rf.id, { colourBy: 'rgb' })
+    ok('...RGB chosen is kept, and reads back RGB (a face\'s default, not a ray file\'s)', rf.light.colourBy === 'rgb'
+        && M.lightOf(M.parse(M.serialize(d)).root.children.find(n => n.id === rf.id)).colourBy === 'rgb')
+    M.setLight(d, rf.id, { colourBy: 'wavelength' })
+    ok('...its header\'s wavelength, kept', M.parse(M.serialize(d)).root.children.find(n => n.id === rf.id).light.colourBy === 'wavelength')
+    M.setLight(d, rf.id, { colourBy: 'file' })
+    ok('...back to from the file: nothing stored', !('colourBy' in rf.light))
+    throws('...the file\'s two are a ray file\'s alone: a rectangle at its header\'s wavelength refused', () => M.setLight(d, 'die', { colourBy: 'wavelength' }), /colourBy/)
+    ok('...and a light\'s colour by RGB on a face still stores nothing (its default)', (M.setLight(d, 'die', { colourBy: 'rgb' }), !('colourBy' in M.find(d, 'die').node.light)))
     M.setOpticsMaxDist(d, 15)
     ok('the optics maximum distance saves with the scene', M.parse(M.serialize(d)).optics.maxDist === 15)
     throws('a negative maximum distance is refused', () => M.setOpticsMaxDist(d, -1), /maxDist/)
@@ -1668,6 +1696,56 @@ throws('another version is refused, not guessed at',
     ok('...and an export setting that is no film\'s', M.validate({ ...M.createDoc(), timeline: { export: { bitrate: 12 } } }).some(p => /timeline\.export\.bitrate/.test(p)))
     M.setTimeline(d, null)
     ok('taken away: no timeline at all', !('timeline' in d))
+}
+
+//----------------------------------------------------------------------------------------------
+// THE SCENE'S OPTICAL FEATURES (0.next; setFeatures): every feature on is no key (an old file, every example), only what
+// is off saved, a refusal changing nothing, the presets, what is hidden said, and toTree putting a feature's fields at
+// their defaults without touching the document. No version change: an older builder of the same version carries the key along.
+//----------------------------------------------------------------------------------------------
+{
+    const d = M.createDoc({ title: 'features' })
+    M.addMaterial(d, { id: 'g', preset: 'glass', label: 'flint' })
+    d.materials.find(m => m.id === 'g').params.abbe = 36
+    eq('a scene with no key: every feature at its default (the spectral trace off), Full', [M.featuresOf(d), M.featurePresetOf(d)],
+        [{ dispersion: true, absorption: true, coatings: true, spectral: false }, 'full'])
+    M.setFeatures(d, { dispersion: false })
+    eq('dispersion off: only that saved, Custom', [d.features, M.featurePresetOf(d)], [{ dispersion: false }, 'custom'])
+    eq('...and read back from the file', M.featuresOf(M.parse(M.serialize(d))), { dispersion: false, absorption: true, coatings: true, spectral: false })
+    ok('...the Abbe number not shown, the index still', !M.fieldShown(d, 'abbe') && M.fieldShown(d, 'ior') && M.fieldShown(d, 'attenuationDistance'))
+    eq('...and said: the material whose value is kept, not traced', M.hiddenByFeatures(d), { dispersion: ['flint'] })
+    const tree = M.toTree(d)
+    ok('toTree: the Abbe number at its default for codegen, the features on the root', tree.materials[0].params.abbe === 0
+        && tree.features?.dispersion === false)
+    ok('...the document untouched', d.materials[0].params.abbe === 36)
+    M.setFeatures(d, M.FEATURE_PRESETS.basic.values)
+    eq('Basic: all three off', [d.features, M.featurePresetOf(d)], [{ dispersion: false, absorption: false, coatings: false }, 'basic'])
+    d.materials[0].params.coatEdge = 520
+    ok('...a coating\'s edge with no coating on hides no coating: only the Abbe number is said', JSON.stringify(M.hiddenByFeatures(d)) === JSON.stringify({ dispersion: ['flint'] }))
+    d.materials[0].params.coating = 1
+    eq('...one on is', M.hiddenByFeatures(d), { dispersion: ['flint'], coatings: ['flint'] })
+    d.materials[0].params.coating = 0
+    const before = JSON.stringify(d.features)
+    throws('an unknown feature is refused', () => M.setFeatures(d, { polarisation: true }), /not a feature/)
+    throws('...a feature not true or false', () => M.setFeatures(d, { dispersion: 0 }), /true or false/)
+    eq('...and a refusal changes nothing', JSON.stringify(d.features), before)
+    M.setFeatures(d, M.FEATURE_PRESETS.full.values)
+    ok('Full again: no key at all, as every scene before', !('features' in d) && M.featurePresetOf(d) === 'full')
+    /* THE SPECTRAL TRACE (0.next): the one feature off by default -- on is what is saved; Expert is Full with it; it has no
+       field, so toTree's materials are as they were, and the root says it is on */
+    M.setFeatures(d, { spectral: true })
+    eq('the spectral trace on: that alone saved, Expert', [d.features, M.featurePresetOf(d)], [{ spectral: true }, 'expert'])
+    const st = M.toTree(d)
+    ok('...toTree: the root says so, every material as it was', st.features?.spectral === true && st.materials[0].params.abbe === 36)
+    M.setFeatures(d, M.FEATURE_PRESETS.full.values)
+    ok('...Full takes it off again: no key', !('features' in d))
+    M.setFeatures(d, M.FEATURE_PRESETS.expert.values)
+    eq('Expert: every feature on', M.featuresOf(d), { dispersion: true, absorption: true, coatings: true, spectral: true })
+    M.setFeatures(d, M.FEATURE_PRESETS.full.values)
+    ok('toTree with every feature on: no features on the root, the value as it is', !('features' in M.toTree(d)) && M.toTree(d).materials[0].params.abbe === 36)
+    ok('a file with a wrong feature is refused', M.validate({ ...M.createDoc(), features: { dispersion: 'no' } }).some(p => /features\.dispersion/.test(p))
+        && M.validate({ ...M.createDoc(), features: [] }).some(p => /features must be/.test(p)))
+    ok('a file of this version with features reads them, one without reads Full', M.featurePresetOf(M.parse(M.serialize(M.createDoc()))) === 'full')
 }
 
 console.log(fail ? `\n${fail} FAILED, ${pass} passed` : `${pass} assertions pass.`)

@@ -14,7 +14,7 @@
 import { writeFileSync, mkdirSync } from 'node:fs'
 import { PRIMITIVES, SHAPE_GROUPS } from '../builder/primitives.js'
 import { MODIFIERS } from '../builder/modifiers.js'
-import { FIELDS, FIELD_LABELS, COAT_PRESETS, RELIEFS, PRESETS } from '../builder/materials.js'
+import { FIELDS, FIELD_LABELS, COAT_PRESETS, RELIEFS, PRESETS, FEATURES } from '../builder/materials.js'
 import { LIGHT_SHAPES, LIGHT_DEFAULTS } from '../builder/lights.js'
 import { HAZE_DEFAULTS, HAZE_G_MAX, KOSCHMIEDER } from '../builder/hazebox.js'
 import { codeOnly } from '../builder/codegen.js'
@@ -49,11 +49,12 @@ export const FIELD_HELP = {
 
 /** WHAT EACH LIGHT SETTING DOES -- read in builder/lights.js (its header lists them). */
 export const LIGHT_HELP = {
-    colourBy: 'How the colour is given: as RGB, as a colour temperature (CCT, kelvin, with Duv), or as a CIE 1931 xy chromaticity -- as a datasheet gives it.',
+    colourBy: 'How the colour is given: as RGB, as a colour temperature (CCT, kelvin, with Duv), as a CIE 1931 xy chromaticity -- as a datasheet gives it -- or by its spectrum. A ray file has two more, the first its default: from the file (a file with a wavelength on every ray lights the picture in each ray\'s own colour; one without is white) and at its header\'s wavelength (every ray at that one wavelength: outside what the eye sees, such as an 850 nm infrared LED, it lights nothing in the picture). Any of the other four colours every ray of the file alike.',
     colour: 'The light\'s colour as linear RGB. Only its hue counts.',
     cct: 'The colour temperature in kelvin: 2700 a warm lamp, 4000 neutral, 6500 daylight.',
     duv: 'How far the colour is from the black-body line: 0 on it, positive greener, negative pinker.',
     xy: 'The CIE 1931 chromaticity, as an LED datasheet gives it.',
+    spectrum: 'The light\'s spectrum, for colour by spectrum: a blackbody at a temperature, Gaussian peaks (one line each: nm, FWHM in nm, share of the power -- one for a single-colour LED, a blue die and a broad phosphor hump for a white one), or a measured table of nm against relative power, pasted or loaded from a CSV. Its colour is exactly what the CIE 1931 observer\'s table makes of it, carried as a chromaticity is; the panel also says its luminous efficacy of radiation (lm per radiated W). The presets are models, not datasheets.',
     luminance: 'How bright the face is, in cd/m², straight out of it. Set this or the flux: the other follows from the face\'s area.',
     flux: 'The light\'s total output in lumens. When set, the luminance follows from it and the face\'s area, so resizing the face keeps the lumens.',
     distribution: 'How the light leaves the face: cosine (cos^n -- n 1 is a Lambertian, an LED or a diffuser), uniform (the same in every direction), or collimated (one direction: a laser, or a beam from far away).',
@@ -268,6 +269,9 @@ function materials() {
         + '(a height on the surface, which is shape). Lengths in a material are real millimetres whatever the scene\'s unit.')
     s += '\n## Fields\n\n| field | panel label | does |\n|---|---|---|\n'
     for (const k of Object.keys(FIELDS)) s += `| ${k} | ${cell(FIELD_LABELS[k] ?? k)} | ${cell(FIELD_HELP[k] ?? '')} |\n`
+    s += '\n## Optical features\n\nThe scene\'s [optical features](../modelling/materials.md#optical-features) decide which of these a '
+        + 'scene has. With one off, its fields are not shown or traced, and their values are kept.\n\n| feature | fields | does |\n|---|---|---|\n'
+    for (const f of Object.values(FEATURES)) s += `| ${cell(f.label)} | ${f.fields.map(k => cell(FIELD_LABELS[k] ?? k)).join(', ') || '(none: the trace itself)'} | ${cell(f.help)} |\n`
     s += `\n## Starting points\n\nThe Properties panel's **+** makes a material from one of these: ${Object.values(PRESETS).map(p => `*${p.label}*`).join(', ')}. `
         + 'The Library has many more, with real values.\n'
     s += '\n## Coating presets\n\n' + Object.entries(COAT_PRESETS).map(([k, v]) => `- **${k}**: ${Object.entries(v).map(([f, x]) => `${FIELD_LABELS[f] ?? f} ${x}`).join(', ')}`).join('\n') + '\n'

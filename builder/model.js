@@ -31,7 +31,7 @@
 // and why the palette of scenes/common.js it replaced is gone.
 //======================================================================================================================
 
-import { FIELDS, defaults as materialDefaults, PALETTE_V3, PRESETS, MATERIAL_CODE_TEMPLATE, RELIEFS, RELIEF_SCOPE, reliefMaterialId, reliefOwner } from './materials.js'
+import { FIELDS, FEATURES, FEATURE_PRESETS, fieldOn, featureDefault, defaults as materialDefaults, PALETTE_V3, PRESETS, MATERIAL_CODE_TEMPLATE, RELIEFS, RELIEF_SCOPE, reliefMaterialId, reliefOwner } from './materials.js'
 import { NODE_TYPES, GROUP_SCOPE, isCsg, hasCode, isAfter } from './codegen.js'
 import { PRIMITIVES, primitiveObject } from './primitives.js'
 import { MODIFIERS, modifierGroup } from './modifiers.js'
@@ -167,8 +167,10 @@ export const ARRAY_MAX = 16
 export const MATERIAL_TYPES = ['surface', 'emitter', 'detector', 'limiter']
 /** The type of a material, with the default filled in. */
 export const typeOf = m => m?.type ?? 'surface'
-export { LIGHT_SHAPES, LIGHT_DEFAULTS, lightOf, hasFace, lightRGB, lightDisplayRGB, lightChromaticity } from './lights.js'
-import { LIGHT_SHAPES, LIGHT_DEFAULTS, lightOf, lightProblems, rotationTowards } from './lights.js'
+export { LIGHT_SHAPES, LIGHT_DEFAULTS, lightOf, lightDefaults, hasFace, lightRGB, lightDisplayRGB, lightChromaticity } from './lights.js'
+/* a light's spectrum (0.next): its kinds, the presets, reading and writing its text -- for the panel (core/spd.js) */
+export { SPD_PRESETS, spdAt, spdProblems, spdSummary, parsePeaks, parseSpdCsv, peaksText, tableText } from '../lib/pathtracer/core/spd.js'
+import { LIGHT_SHAPES, LIGHT_DEFAULTS, lightOf, lightDefaults, lightProblems, rotationTowards } from './lights.js'
 export { EXPORT_PARAMS, EXPORT_DEFAULTS, exportOf } from './exportbox.js'
 import { EXPORT_PARAMS, EXPORT_DEFAULTS, exportProblems } from './exportbox.js'
 export { HAZE_PARAMS, HAZE_DEFAULTS, hazeSettings } from './hazebox.js'
@@ -235,7 +237,7 @@ export const FUNCTIONS_TEMPLATE = [
 export { NODE_TYPES as OBJECT_TYPES, GROUP_CODE_TEMPLATE } from './codegen.js'
 export { PRIMITIVES } from './primitives.js'
 export { FIELDS as MATERIAL_FIELDS, PRESETS as MATERIAL_PRESETS, MATERIAL_CODE_TEMPLATE, FIELDS_OF as MATERIAL_FIELDS_OF, FIELD_LABELS as MATERIAL_FIELD_LABELS,
-         COAT_FIELDS, COAT_PRESETS, hasCoating,
+         COAT_FIELDS, COAT_PRESETS, hasCoating, FEATURES, FEATURE_PRESETS, featureOfField, fieldOn,
          RELIEFS, reliefOwner, reliefMaterialId, reliefPresetOf } from './materials.js'
 
 const ID = /^[A-Za-z][A-Za-z0-9]*$/            // no underscore -- see the header
@@ -2123,8 +2125,9 @@ export function setLight(doc, id, patch) {
 /* A LIGHT'S SETTINGS WITH `patch` OVER THEM, as stored (a setting at its default dropped) and checked: { next, bad } */
 function lightPatched(node, patch) {
     const next = { ...node.light, ...structuredClone(patch), shape: node.light.shape }
+    const D = lightDefaults(next.shape)                // per shape: a ray file's colour is from its file by default
     for (const [k, v] of Object.entries(next))
-        if (v === undefined || (k in LIGHT_DEFAULTS && JSON.stringify(v) === JSON.stringify(LIGHT_DEFAULTS[k]))) delete next[k]
+        if (v === undefined || (k in D && JSON.stringify(v) === JSON.stringify(D[k]))) delete next[k]
     return { next, bad: lightProblems({ ...node, light: next }) }
 }
 /* ...FOR A BINDING (bind.js applyBindings, 0.69.0): an object's components over what the light has now (a colour's r alone,
@@ -2561,6 +2564,60 @@ export function setTolerance(doc, v) {
     return doc
 }
 
+/*======================================================================================================================
+  THE SCENE'S OPTICAL FEATURES (0.next; materials.js FEATURES, roadmap/LIGHT_MODEL.md S0a): dispersion, absorption inside
+  and coatings, each on or off for the scene, and the spectral optics trace (S2), off unless it is asked for. Saved as
+  `features`, holding only what differs from a feature's default -- every feature at its default is the key absent, as
+  every scene before it was -- so an old file is Full, and no example or fixture changes. NO VERSION
+  CHANGE, as the environment and the view (above): validate() passes a top-level key it does not know through
+  untouched, so a builder of this version that predates the key carries it along, and renders every feature on. An
+  edit to it is an undo step: it is the scene's physics, as the tolerance is. What it does is toTree's (below): a
+  feature off puts its fields at their defaults in the materials codegen is given, which `only` leaves out of the
+  shader -- the scene compiled as if no material had them, the picture and the Optics page alike.
+======================================================================================================================*/
+function featureProblems(f) {
+    if (!f || typeof f !== 'object' || Array.isArray(f)) return ['features must be an object']
+    const p = []
+    for (const [k, v] of Object.entries(f)) {
+        if (!(k in FEATURES)) p.push(`features.${k}: not a feature (${Object.keys(FEATURES).join(', ')})`)
+        else if (typeof v !== 'boolean') p.push(`features.${k} must be true or false`)
+    }
+    return p
+}
+/** Every feature, on or off, for a document: what it saves over all on. */
+export const featuresOf = doc => Object.fromEntries(Object.keys(FEATURES).map(k => [k, typeof doc?.features?.[k] === 'boolean' ? doc.features[k] : featureDefault(k)]))
+/** Set some features (key: true or false); checked first, so a refusal changes nothing. Only what differs from a
+ *  feature's default is kept (off for most, on for the spectral trace), and nothing when every one is at its default. */
+export function setFeatures(doc, values = {}) {
+    const bad = featureProblems(values)
+    if (bad.length) throw new ModelError(bad)
+    const next = { ...featuresOf(doc), ...values }
+    const off = Object.fromEntries(Object.entries(next).filter(([k, on]) => on !== featureDefault(k)))
+    if (Object.keys(off).length) doc.features = off
+    else delete doc.features
+    return doc
+}
+/** Which preset the features are ('basic', 'full'), or 'custom'. */
+export function featurePresetOf(doc) {
+    const f = featuresOf(doc)
+    for (const [k, p] of Object.entries(FEATURE_PRESETS)) if (Object.keys(f).every(n => f[n] === p.values[n])) return k
+    return 'custom'
+}
+/** Whether a material field is part of this scene (a feature off hides its fields). */
+export const fieldShown = (doc, k) => fieldOn(featuresOf(doc), k)
+/** What a feature off leaves out: { feature: [material labels whose value it hides] } -- a material with a field the
+ *  shader would have had (its `only`: an Abbe number above 0, a coating on; a coating's edge with no coating is not
+ *  one), the rule toTree's defaults stand in for. */
+export function hiddenByFeatures(doc) {
+    const f = featuresOf(doc), out = {}
+    for (const [name, d] of Object.entries(FEATURES)) {
+        if (f[name]) continue
+        const mats = (doc.materials || []).filter(m => m.params && d.fields.some(k => FIELDS[k].only?.(m.params[k], m.params)))
+        if (mats.length) out[name] = mats.map(m => m.label ?? m.id)
+    }
+    return out
+}
+
 /** HIDING WITHOUT RECOMPILING (codegen's liveVisibility), saved with the scene: every node stays in the
  *  shader behind a uniform, so the eye in the tree is a uniform written. Off by default: the shader then
  *  has only what is shown, and nothing is evaluated for what is not. */
@@ -2701,6 +2758,15 @@ export function toTree(doc, { keepDisabled = false } = {}) {
     const root = go(doc.root) || { id: doc.root.id, kind: 'group', blend: 0, children: [] }
     root.csg = false             // the top level is always a plain union (codegen: culling rests on it)
     root.materials = structuredClone(doc.materials)
+    /* THE SCENE'S FEATURES (setFeatures): a feature off is its fields at their defaults here, which every one of them
+       is `only` at (materials.js) -- so codegen, the scene as data and the bake leave them out of the shader exactly as
+       for a material that never had them. The document keeps the values. */
+    const features = featuresOf(doc)
+    if (Object.entries(features).some(([k, on]) => on !== featureDefault(k))) {
+        root.features = features
+        for (const m of root.materials) if (m.params)
+            for (const k of Object.keys(m.params)) if (!fieldOn(features, k)) m.params[k] = structuredClone(FIELDS[k].def)
+    }
     root.functions = doc.functions ?? ''
     root.unit = doc.unit ?? 'm'
     // where the scene stops, in that unit (codegen hands it to the renderer); absent is the renderer's default
@@ -2770,6 +2836,7 @@ export function validate(doc) {
     if (doc.script !== undefined) p.push(...scriptProblems(doc.script))
     if (doc.tolerance !== undefined) p.push(...toleranceProblems(doc.tolerance))
     if (doc.liveVisibility !== undefined && typeof doc.liveVisibility !== 'boolean') p.push('liveVisibility must be true or false')
+    if (doc.features !== undefined) p.push(...featureProblems(doc.features))
     if (p.length) return p
 
     const seen = new Set()

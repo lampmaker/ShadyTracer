@@ -194,7 +194,7 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
    optics/fresnel.js refract), the flint against BK7 at least deviation; n(lambda) through n_d and V_d with BK7's
    catalogue against it; the wavelength draw and its weights averaging exactly 1, drawn live; a dichroic coat's edge
    moving with the tilt and each channel's reflectance (edgeAt, edgeRGB); the shading kernel's dispersion block and
-   its off switch (UB.dispersionOff, 0.74.0: every Abbe number read as 0, the picture only); the
+   its off switch (the scene's optical features, 0.next: every material compiled without its Abbe number, the picture and the Optics page alike; a render setting, UB.dispersionOff, from 0.74.0 until then); the
    comments' stale bit count, softplus count, red's range and BK7 accuracy; the green reflections of 0.44.1 ->
    spectral.js, materials_pbr.js. *Read:* wiki-dispersion, wiki-abbe, wiki-cauchy, pbr-spectra.
 
@@ -353,7 +353,8 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
     diagram, the peak read high by the largest of many noisy bins and the beam angle with it, and pooling round the
     axis; the same source over a floor mapped by detmap.js detectorMap, plain, Gaussian and the photon map's nearest
     hits, against E = I0 cos^(n+3) / h^2; a ray total in a 32-bit float stalling at 2^24 against the kernels' integer
-    pair (OPT_FX copied). -> kernels.js optAdd, farfield.js farBin, detmap.js's smoothing. Measured:
+    pair (OPT_FX copied); the trace by wavelength (0.next: three a ray in the colour's place, a detector's spectrum and
+    CRI). -> kernels.js optAdd, farfield.js farBin, detmap.js's smoothing, spectral.js, spectrum.js. Measured:
     optics-refraction (Pascal), the readbacks, the colour mix. Never run and said so: optics-farfield. *Read:*
     pbr-radiometry, wiki-photometry.
 

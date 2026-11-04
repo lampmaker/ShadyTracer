@@ -332,7 +332,7 @@
            where to start; what the user changes from there is kept between visits. Design is also the
            default, what View > Reset the layout returns to. The charts are Analyse's: the Analysis pane
            on the left, the charts beside it in two rows -- the map, polar and I-gamma over the profiles,
-           rings and encircled flux -- and the picture a tab behind the map. */
+           rings and encircled flux (the spectrum a tab behind it, 0.next) -- and the picture a tab behind the map. */
         const O = (id, at, size, opts) => SHELL.open(id, at, size, opts);
         const DESIGN = () => {
             O('viewport');
@@ -356,6 +356,8 @@
             O('optics.profiles', { referencePanel: 'optics.map', direction: 'below' });
             O('optics.rings', { referencePanel: 'optics.polar', direction: 'below' });
             O('optics.encircled', { referencePanel: 'optics.igamma', direction: 'below' });
+            O('optics.spectrum', { referencePanel: 'optics.encircled', direction: 'within' });
+            O('optics.encircled');
             O('optics.map');
         }, 'Measure and decide: the Analysis pane beside every chart, each in a panel of its own; the picture behind the map.');
         /* ANIMATE: the timeline across the whole foot of the window, under the picture and the tree -- opened

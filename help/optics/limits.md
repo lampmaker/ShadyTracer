@@ -14,20 +14,28 @@ or wavefront analysis, no tolerancing and no optimiser. You can see a lens's spo
 flux, but not its aberrations as numbers. For imaging-lens design, use a sequential tool. Use this one to put the
 result into a luminaire and see where the light goes.
 
-## Light is three colour channels, not a spectrum
+## Light is three colour channels, unless the scene traces by wavelength
 
 `lib/pathtracer/optics/README.md`, *Colour*; `FEATURES.md` §3.
 
+By default, and always in the picture:
 - Light is carried as **linear RGB**, exact for light that adds and passes through neutral optics: clear lenses,
   white reflectors, aluminium.
 - A **coloured material multiplies the three channels**: a filter's spectrum is approximated by three numbers.
 - A **coating's edge** (a dichroic) is averaged over each channel's wavelengths. That assumes the light in a channel is
   spread over its wavelengths as the channel's weights say, whatever the source really emits. A beam splitter's and
-  an AR layer's reflectance is flat, so they are exact. The exact method, a wavelength per ray from the source's
-  spectrum, is planned.
+  an AR layer's reflectance is flat, so they are exact.
 - **Dispersion** gives a refracted ray a wavelength and its colour. Detectors read the colour (XYZ) of what arrives,
   not the wavelength.
-- A Zemax ray file's spectral records are read, but light is still carried as colour, not as a spectrum.
+
+With the scene's [spectral optics trace](../modelling/materials.md#the-spectral-optics-trace) on, the Analysis pane's rays carry three wavelengths each, from the
+light's spectrum: a coating's edge is exact at each, and a detector has a spectrum and a CRI. What is left:
+- a **material's colour** is still three numbers, made into a smooth spectrum of that colour, not a filter's measured
+  curve;
+- a light given by **RGB, xy or a CCT off the black-body line**, and a **Zemax ray file**, is traced as a spectrum
+  of exactly its colour, not its real one: its colour is right and its CRI is not its own (the picture does use a
+  spectral file's own wavelength on each ray: [units](units.md));
+- each ray's brightness is a draw of its wavelengths, so a reading takes more rays to settle than in colour.
 
 ## Physics not yet in the trace
 
@@ -54,8 +62,9 @@ result into a luminaire and see where the light goes.
 
 - **Only light objects are sources**: a rectangle, a disc or a ray file. A shape with a glowing material lights the
   picture, but sends no rays into the optics trace and has no lumens.
-- **A ray file has no face**: the camera cannot see it glow, and with the lights' rays off it lights nothing in the
-  picture.
+- **A ray file has no face**: the camera's rays cannot meet it. It is seen only through a lens with an aperture, by the
+  rays of the file that cross the lens -- specks while few of them do, and nothing through a pinhole -- and with the
+  lights' rays off it lights nothing in the picture.
 - **A light inside group code is not a source**. That includes the *circular array* modifier, which is group code. A
   light inside an array (a group's *copies*) is a source at every copy, each with the light's flux. A ring of copies
   makes a ring of lights.

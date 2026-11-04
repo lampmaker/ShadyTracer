@@ -11,11 +11,18 @@
 // Transform gizmo's cube on each axis multiplies, as a preset's does (primitives.js STRETCH, stretch.js): the
 // rectangle's width is its x and its height its y, the disc's radius both; a light has no thickness to stretch.
 //
-//   colourBy      how the colour is given: 'rgb' (colour), 'cct' (cct + duv) or 'xy' (xy) -- a
-//                 datasheet gives a chromaticity, and additive mixing is exact in it
+//   colourBy      how the colour is given: 'rgb' (colour), 'cct' (cct + duv), 'xy' (xy) or 'spectrum'
+//                 (spectrum) -- a datasheet gives a chromaticity, and additive mixing is exact in it. A RAY FILE
+//                 (0.next) has two more, and the first is its default: 'file', what the file says (a spectral
+//                 file's own wavelength on each ray; a flux-only file says nothing, and is white), and
+//                 'wavelength', every ray at its header's one wavelength. The four above colour every ray of it
+//                 alike. The file's data is the host's, so what the two come to is worked out where the file is
+//                 (optics/sources.js rayFileColour).
 //   colour        the hue as linear Rec.709 RGB (normalised to luminance 1): colourBy 'rgb'
 //   cct, duv      kelvin and the signed distance from the Planckian locus (CIE 1960 uv): 'cct'
 //   xy            CIE 1931 chromaticity {x, y}: 'xy'
+//   spectrum      a blackbody { kind: 'planck', T }, peaks { kind: 'peaks', peaks: [{ nm, fwhm, weight }] } or
+//                 a measured table { kind: 'table', name, points: [[nm, power]] } (core/spd.js): 'spectrum'
 //   luminance     cd/m^2 straight out of the face -- or derived, when `flux` is given
 //   flux          lm, or null: the luminance rules
 //   distribution  'cosine' (cos^n, n = 1 Lambertian), 'uniform' (even in solid angle), 'collimated'
@@ -35,6 +42,7 @@
 
 import { LUMA } from '../lib/pathtracer/core/photometry.js'
 import { rgbFromXy, cctDuvToXy, gamutClip, rgbToXYZ, XYZtoxy, xyToCctDuv, CCT_MIN, CCT_MAX } from '../lib/pathtracer/core/colorimetry.js'
+import { spdRGB, spdProblems, spdLER } from '../lib/pathtracer/core/spd.js'
 // the optics kernels' codes for a distribution (0 collimated, 1 uniform, 2 cos^n): the face's beam uses them too
 import { DISTRIBUTIONS as SOURCE_CODES } from '../lib/pathtracer/optics/sources.js'
 
@@ -44,16 +52,29 @@ export const LIGHT_SHAPES = {
     rayfile: { params: {}, label: 'ray file' },
 }
 export const DISTRIBUTIONS = ['cosine', 'uniform', 'collimated']
-export const COLOUR_BY = ['rgb', 'cct', 'xy']
+/* ...and by its spectrum (0.next; core/spd.js, roadmap/LIGHT_MODEL.md S1): a blackbody, peaks or a measured table,
+   carried as the exact XYZ the CIE's table gives it, at luminance 1, as a chromaticity is. No version change, as colourBy
+   itself had none: a builder from before refuses 'spectrum' by name rather than reading the light as white. */
+export const COLOUR_BY = ['rgb', 'cct', 'xy', 'spectrum']
+/* ...and a ray file's own two (0.next, the header): from the file, or at its header's wavelength -- no version change, as
+   'spectrum' had none: a builder from before refuses them by name */
+export const RAYFILE_COLOUR_BY = ['file', 'wavelength', ...COLOUR_BY]
 export const LIGHT_DEFAULTS = Object.freeze({
     colourBy: 'rgb', colour: Object.freeze({ r: 1, g: 1, b: 1 }), cct: 4000, duv: 0, xy: Object.freeze({ x: 0.3127, y: 0.329 }),
+    spectrum: Object.freeze({ kind: 'planck', T: 4000 }),
     luminance: 1000, flux: null, distribution: 'cosine', n: 1, halfAngle: 90,
     twoSided: false, transparent: false, emitN: 1,
 })
 const KEYS = ['shape', ...Object.keys(LIGHT_DEFAULTS), 'file', 'box']
+/* A RAY FILE'S DEFAULTS (0.next): its colour from the file. Per shape, and in both places a default is read -- what a
+   setting not stored means (lightOf) and what is dropped as at its default when stored (model.js lightPatched): with one
+   table for both shapes a ray file set to RGB would be stored as nothing, and read back as from the file. */
+const RAYFILE_DEFAULTS = Object.freeze({ ...LIGHT_DEFAULTS, colourBy: 'file' })
+/** The defaults of a light of `shape`. */
+export const lightDefaults = shape => shape === 'rayfile' ? RAYFILE_DEFAULTS : LIGHT_DEFAULTS
 
 /** A light's settings with the defaults filled in. */
-export const lightOf = node => ({ ...LIGHT_DEFAULTS, ...(node?.light || {}) })
+export const lightOf = node => ({ ...lightDefaults(node?.light?.shape), ...(node?.light || {}) })
 /** Does this light have a face (and so geometry, a luminance, an area)? A ray file does not. */
 export const hasFace = light => light?.shape === 'rectangle' || light?.shape === 'disc'
 
@@ -66,6 +87,9 @@ export function lightRGB(L) {
     let rgb
     if (by === 'cct') rgb = rgbFromXy(...cctDuvToXy(L.cct ?? LIGHT_DEFAULTS.cct, L.duv ?? 0))
     else if (by === 'xy') rgb = rgbFromXy((L.xy ?? LIGHT_DEFAULTS.xy).x, (L.xy ?? LIGHT_DEFAULTS.xy).y)
+    else if (by === 'spectrum') rgb = spdRGB(L.spectrum ?? LIGHT_DEFAULTS.spectrum)
+    // a ray file's own two say nothing without the file: white here, its own where the file is (optics/sources.js rayFileColour)
+    else if (by === 'file' || by === 'wavelength') rgb = [1, 1, 1]
     else { const c = L.colour ?? LIGHT_DEFAULTS.colour; rgb = [c.r, c.g, c.b] }
     const Y = LUMA[0] * rgb[0] + LUMA[1] * rgb[1] + LUMA[2] * rgb[2]
     return Y > 0 ? rgb.map(v => v / Y) : [1, 1, 1]
@@ -84,7 +108,9 @@ export function lightDisplayRGB(L) {
 export function lightChromaticity(L) {
     const xy = XYZtoxy(rgbToXYZ(lightRGB(L))) ?? [0.3127, 0.329]
     const rgb = lightRGB(L)
-    return { x: xy[0], y: xy[1], ...xyToCctDuv(xy[0], xy[1]), outOfGamut: Math.min(...rgb) < -1e-9 }
+    // ...and a spectrum's luminous efficacy of radiation (lm/W), which only a spectrum has
+    const ler = L.colourBy === 'spectrum' ? spdLER(L.spectrum ?? LIGHT_DEFAULTS.spectrum) : undefined
+    return { x: xy[0], y: xy[1], ...xyToCctDuv(xy[0], xy[1]), outOfGamut: Math.min(...rgb) < -1e-9, ...(ler !== undefined ? { ler } : {}) }
 }
 
 const vec3ok = v => Array.isArray(v) && v.length === 3 && v.every(Number.isFinite)
@@ -97,9 +123,11 @@ export function lightProblems(n) {
     if (!(L.shape in LIGHT_SHAPES)) return [`'${id}': light shape must be one of ${Object.keys(LIGHT_SHAPES).join(', ')}`]
     for (const k of Object.keys(L)) if (!KEYS.includes(k)) p.push(`'${id}': unknown light setting '${k}'`)
     if (L.colour !== undefined && !rgbOk(L.colour)) p.push(`'${id}': light colour must be {r, g, b} numbers`)
-    if (L.colourBy !== undefined && !COLOUR_BY.includes(L.colourBy)) p.push(`'${id}': colourBy must be one of ${COLOUR_BY.join(', ')}`)
+    const by = L.shape === 'rayfile' ? RAYFILE_COLOUR_BY : COLOUR_BY
+    if (L.colourBy !== undefined && !by.includes(L.colourBy)) p.push(`'${id}': colourBy must be one of ${by.join(', ')}`)
     if (L.cct !== undefined && !(Number.isFinite(L.cct) && L.cct >= CCT_MIN && L.cct <= CCT_MAX)) p.push(`'${id}': cct must be ${CCT_MIN}-${CCT_MAX} K`)
     if (L.duv !== undefined && !(Number.isFinite(L.duv) && Math.abs(L.duv) <= 0.05)) p.push(`'${id}': duv must be within +-0.05`)
+    if (L.spectrum !== undefined) for (const q of spdProblems(L.spectrum)) p.push(`'${id}': ${q}`)
     if (L.xy !== undefined && !(L.xy && Number.isFinite(L.xy.x) && Number.isFinite(L.xy.y) && L.xy.x > 0 && L.xy.y > 0 && L.xy.x + L.xy.y < 1))
         p.push(`'${id}': xy must be {x, y}, both > 0 and x + y < 1`)
     if (L.luminance !== undefined && !(Number.isFinite(L.luminance) && L.luminance >= 0)) p.push(`'${id}': luminance must be cd/m^2 >= 0`)
