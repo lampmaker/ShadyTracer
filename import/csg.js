@@ -32,7 +32,10 @@
 //   7. CHECKED. The formula's sign against the solid at points it was not built from: mismatches is what it gets
 //      wrong (and import/test/csg.test.mjs holds every fixture to OpenCascade's own classification).
 //
-//   toCSG(B, { seed, volume, perFace })   B: brep.js's
+//   toCSG(B, { seed, volume, perFace, onProgress })   B: brep.js's
+//   onProgress({ stage: 'surfaces' | 'cells' | 'cover' | 'check', done, total }): as it goes, for the import's bar (the
+//   page's dialog); `done` never above `total`, and each stage ends with done === total. The cells and the cover take
+//   nearly all the time (the user's 121-face part, Node: 8.6 s classifying 27,320 points, 12.4 s covering 6650 cells)
 //     -> { halfspaces: [{ surface, from: 'face' | 'separator' }], tree, sdf(p), report }
 //   tree: { op: 'or' | 'and', kids } | { op: 'lit', j, s } (s = 1: g_j < 0, the inside; -1: the complement)
 //         | { op: 'box', lo, hi }
@@ -243,7 +246,8 @@ const dist = (box, h) => Math.abs(h.surface.g(box.lo.map((l, k) => 0.5 * (l + bo
    and would march as a formula of a thousand shapes. A CAD part of a few hundred faces is well inside it. */
 export const MAX_FACES = 400
 
-export function toCSG(B, { seed = 1, volume = 6000, perFace = 64, perEdgePoint = 2, check = 3000 } = {}) {
+export function toCSG(B, { seed = 1, volume = 6000, perFace = 64, perEdgePoint = 2, check = 3000, onProgress = null } = {}) {
+    const tell = (stage, done, total) => { if (onProgress) onProgress({ stage, done: Math.min(done, total), total }) }
     if (B.faces.length > MAX_FACES)
         throw new Error(`${B.name || 'the solid'} has ${B.faces.length} faces, more than ${MAX_FACES}: ${B.fitted ? 'a mesh whose curves fit no plane, cylinder, cone, sphere or torus (a scan or a sculpt, not a CAD part) is all facets, and ' : ''}a formula that big would be slow to build and slower to march`)
     if (B.unsupported.length) {
@@ -251,6 +255,7 @@ export function toCSG(B, { seed = 1, volume = 6000, perFace = 64, perEdgePoint =
         throw new Error(`${B.unsupported.length} face(s) of ${B.name || 'the solid'} lie on surfaces that are not planes, cylinders, cones, spheres or tori (${kinds}): no formula of exact shapes describes it`)
     }
     const t0 = Date.now()
+    tell('surfaces', 0, 1)
     const rnd = mulberry(seed)
     /* how far off a face the points go, and a band around the faces no point is taken in: a mesh's solid (fit.js) is
        its facets, which stray from the fitted surfaces by up to their sag (B.band), and there the two disagree */
@@ -313,7 +318,10 @@ export function toCSG(B, { seed = 1, volume = 6000, perFace = 64, perEdgePoint =
     const faceH = H.map((h, j) => h.from === 'face' ? j : -1).filter(j => j >= 0)
     const inBand = p => band > 0 && faceH.some(j => Math.abs(H[j].surface.g(p)) < 1.5 * band)
     let skipped = 0
-    for (const p of pts) {
+    tell('surfaces', 1, 1)
+    for (let i = 0; i < pts.length; i++) {
+        if (!(i & 255)) tell('cells', i, pts.length)
+        const p = pts[i]
         const w = inBand(p) ? null : signs(p)
         if (!w) { skipped++; continue }
         const key = w.join(',')
@@ -321,6 +329,7 @@ export function toCSG(B, { seed = 1, volume = 6000, perFace = 64, perEdgePoint =
         if (!c) cells.set(key, c = { w, in: 0, out: 0, p })
         if (B.inside(p)) c.in++; else c.out++
     }
+    tell('cells', pts.length, pts.length)
     const all = [...cells.values()]
     const conflicts = all.filter(c => c.in && c.out)
     const IN = all.filter(c => c.in > c.out), OUT = all.filter(c => c.in <= c.out)
@@ -354,10 +363,12 @@ export function toCSG(B, { seed = 1, volume = 6000, perFace = 64, perEdgePoint =
     const covers = (P, x) => P.every(l => !fails(x, l))
     const products = []
     const covered = new Uint8Array(items.length)
+    let nCovered = 0
     if (OUTG.length) {
         const order = items.map((_, i) => i).sort((a, b) => items[b].weight - items[a].weight)
         for (const i of order) {
             if (covered[i]) continue
+            tell('cover', nCovered, items.length)
             const it = items[i]
             /* EXPAND: from the item's own literals (the wall's surface left free), drop one at a time while no cell
                outside gets in: the one that covers most of what is not yet covered (Espresso's choice), the farthest
@@ -382,9 +393,10 @@ export function toCSG(B, { seed = 1, volume = 6000, perFace = 64, perEdgePoint =
                 for (let k = 0; k < items.length; k++) if (itemFails[k] > 0 && fails(items[k], best)) itemFails[k]--
             }
             products.push(P)
-            items.forEach((x, k) => { if (!covered[k] && covers(P, x)) covered[k] = 1 })
+            items.forEach((x, k) => { if (!covered[k] && covers(P, x)) { covered[k] = 1; nCovered++ } })
         }
     } else products.push([])
+    tell('cover', items.length, items.length)
     // IRREDUNDANT: a product whose items every other product covers goes
     const cov = products.map(P => items.map((x, k) => covers(P, x) ? k : -1).filter(k => k >= 0))
     const count = new Uint16Array(items.length)
@@ -415,6 +427,7 @@ export function toCSG(B, { seed = 1, volume = 6000, perFace = 64, perEdgePoint =
     let mismatches = 0, checked = 0
     const rc = mulberry(seed + 7919)
     for (let i = 0; i < check; i++) {
+        if (!(i & 127)) tell('check', i, check)
         let p
         if (i % 2) p = lo.map((l, k) => l + (hi[k] - l) * rc())
         else {
@@ -427,6 +440,7 @@ export function toCSG(B, { seed = 1, volume = 6000, perFace = 64, perEdgePoint =
         checked++
         if ((sdf(p) < 0) !== B.inside(p)) mismatches++
     }
+    tell('check', check, check)
     const report = {
         faces: B.faces.length, halfspaces: H.length, used: halfspaces.length, roundedRects: new Set([...claimed.values()].map(c => c.S)).size,
         separators: halfspaces.filter(h => h.from === 'separator').length,

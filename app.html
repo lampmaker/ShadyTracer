@@ -99,6 +99,8 @@
         import { installSceneStrip, sceneCards, seconds } from './builder/scenestrip.js'
         import { fileCommands, sceneCommands } from './builder/filemenu.js'
         import { installBuilderPanel } from './builder/panel.js'
+        import { openImportDialog, isClean } from './builder/importdialog.js'
+        import { withoutParts, withoutRed, MAX_DEVIATION as IMPORT_MAX_DEVIATION } from './import/asset.js'
         import { sceneParams, viewEntriesFlagged } from './builder/params.js'
         import { createBoxes, cullBoxes, cullUniforms, cullReport } from './builder/boxes.js'
         import { stepCacheBox } from './builder/stepbox.js'
@@ -1313,40 +1315,77 @@
                Worker, and pasted into the scene being worked on as one undo step, in mm converted to the scene's unit
                (model.js insertAsset), made of the scene's default material, standing on z = 0 of where it is pasted. What cannot be converted is said by name, with why: a face on a
                B-spline, a mesh that is not closed or whose curves fit no such surface. */
-            const convertCAD = (name, bytes, material) => new Promise((resolve, reject) => {
+            /* THE CONVERSION, in a Worker with its progress (import/worker.js), or -- no module workers -- here, the page
+               waiting: no bar moves then (the page does not draw while this runs), only the dialog's question at the
+               end. `bytes` is copied for the worker, so a Re-convert has them still. `stop()` ends a worker's run. */
+            let stopImport = null;
+            const convertCAD = (name, bytes, material, options, onProgress) => new Promise((resolve, reject) => {
                 let w;
                 try { w = new Worker(new URL('./import/worker.js', import.meta.url), { type: 'module' }); }
                 catch (e) {
-                    // no module workers: on this thread, the page waiting
-                    return import('./import/index.js').then(I => {
-                        const r = I.convert(Model, name, new Uint8Array(bytes), { material });
-                        resolve({ ok: true, kind: r.kind, asset: r.asset, parts: r.parts.map(p => ({ name: p.name, report: p.report })), refused: r.refused, warnings: r.warnings });
-                    }).catch(reject);
+                    return Promise.all([import('./import/index.js'), import('./import/progress.js')]).then(([I, P]) =>
+                        resolve(P.resultMessage(I.convert(Model, name, new Uint8Array(bytes), { ...options, material }))))
+                        .catch(reject);
                 }
-                w.onmessage = e => { w.terminate(); resolve(e.data); };
-                w.onerror = e => { w.terminate(); reject(new Error(e.message || 'the import worker failed')); };
-                w.postMessage({ name, bytes, material }, [bytes]);
+                stopImport = () => { w.terminate(); stopImport = null; resolve({ ok: false, cancelled: true }); };
+                w.onmessage = e => {
+                    if (e.data.progress) return onProgress(e.data.progress);
+                    w.terminate(); stopImport = null; resolve(e.data);
+                };
+                w.onerror = e => { w.terminate(); stopImport = null; reject(new Error(e.message || 'the import worker failed')); };
+                const copy = bytes.slice(0);
+                w.postMessage({ name, bytes: copy, material, options }, [copy]);
             });
+            /* A STEP OR STL FILE IN, THROUGH THE IMPORT DIALOG (builder/importdialog.js): its bar while it converts (and the
+               status bar's), then -- when it went cleanly -- pasted at once; otherwise the dialog says what happened to
+               each part and asks: leave parts out, a larger deviation for faces no regular shape fits and Re-convert,
+               the fitted faces red or not, Import or Cancel (the user, 2026-11-04). */
             const importCAD = async (name, bytes) => {
-                const t0 = performance.now();
-                status(`importing ${name}…`);
-                try {
-                    const mat = Model.defaultMaterial(BUILDER.doc);
-                    const r = await convertCAD(name, bytes, mat ? structuredClone(mat) : null);
-                    if (!r.ok) throw new Error(r.error);
+                const mat = Model.defaultMaterial(BUILDER.doc);
+                let options = { maxDeviation: IMPORT_MAX_DEVIATION, markRed: true };
+                const D = openImportDialog({ name, onCancel: () => { stopImport?.(); SHELL.progress('import', null); status(`import of ${name} cancelled`); } });
+                const run = async () => {
+                    const t0 = performance.now();
+                    status(`importing ${name}…`);
+                    try {
+                        const r = await convertCAD(name, bytes, mat ? structuredClone(mat) : null, options, p => {
+                            D.progress(p);
+                            SHELL.progress('import', { label: `importing ${name}: ${p.label}`, fraction: p.fraction });
+                        });
+                        SHELL.progress('import', null);
+                        if (r.cancelled) return;
+                        if (!r.ok) throw new Error(r.error);
+                        const s = (performance.now() - t0) / 1000;
+                        for (const p of r.parts) console.info(`[import] ${name} › ${p.name}:`, p.report);
+                        if (isClean(r)) { D.close(); return paste(r, [], s); }
+                        D.ask(r, {
+                            maxDeviation: options.maxDeviation, markRed: options.markRed,
+                            onImport: ({ leaveOut, markRed }) => paste(r, leaveOut, s, markRed),
+                            onReconvert: next => { options = { ...options, ...next }; D.restart(); run(); },
+                        });
+                        status(`${name}: converted in ${s.toFixed(1)} s, waiting for the import dialog's answer`);
+                    } catch (e) {
+                        SHELL.progress('import', null);
+                        console.error('[import]', e);
+                        D.error(`${name}: ${e.message}`);
+                        status(`IMPORT FAILED: ${name}: ${e.message}`);
+                    }
+                };
+                /* the paste: the tree's, one undo step, selected; a refusal it says itself (model.js insertAsset is all or
+                   nothing). The parts left out leave the asset first; the red material, unwanted, becomes the part's own */
+                const paste = (r, leaveOut, s, markRed = true) => {
+                    let asset = withoutParts(r.asset, leaveOut);
+                    if (asset && !markRed) asset = withoutRed(asset);
+                    const kept = r.parts.filter(p => !leaveOut.includes(p.id));
+                    if (!asset) return status(`IMPORT FAILED: ${name}: nothing left to import`);
+                    if (!builderTree.insertAsset(asset)) return;
+                    const shapes = kept.reduce((a, p) => a + p.report.shapes, 0);
                     const why = r.refused.map(x => `${x.name}: ${x.why}`).join('; ');
-                    if (!r.asset) return status(`IMPORT FAILED: ${name}: ${why || 'nothing in it to convert'}`);
-                    // the tree's paste: one undo step, selected; a refusal it says itself (model.js insertAsset is all or nothing)
-                    if (!builderTree.insertAsset(r.asset)) return;
-                    const shapes = r.parts.reduce((a, p) => a + p.report.shapes, 0);
-                    const s = performance.now() - t0;
-                    status(`${name}: ${r.parts.length} part${r.parts.length === 1 ? '' : 's'} as ${shapes} shapes in ${(s / 1000).toFixed(1)} s`
-                        + (why ? `; NOT CONVERTED: ${why}` : '') + (r.warnings.length ? `; ${r.warnings.join('; ')}` : ''));
-                    for (const p of r.parts) console.info(`[import] ${name} › ${p.name}:`, p.report);
-                } catch (e) {
-                    console.error('[import]', e);
-                    status(`IMPORT FAILED: ${name}: ${e.message}`);
-                }
+                    status(`${name}: ${kept.length} part${kept.length === 1 ? '' : 's'} as ${shapes} shapes in ${s.toFixed(1)} s`
+                        + (leaveOut.length ? `; ${leaveOut.length} left out` : '') + (why ? `; NOT CONVERTED: ${why}` : '')
+                        + (r.warnings.length ? `; ${r.warnings.join('; ')}` : ''));
+                };
+                await run();
             };
             const importFile = async () => {
                 const f = await pickFile();
