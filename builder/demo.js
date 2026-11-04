@@ -37,7 +37,8 @@
 //   BUILDER.views()   every scene's view { key: view } (model.js VIEW): what the browser's session keeps
 //   BUILDER.timeline()   the scene shown's timeline, whole (model.js TIMELINE); keepTimeline(t) writes it,
 //                     and BUILDER.onTimeline(t), the host's, is told the next scene's as it is shown
-//   BUILDER.exportPrint(id, '3mf' | 'stl')  export box `id`'s contents for a printer (exportbox.js)
+//   BUILDER.exportPrint({ subject, box, format, cell, colours })  an object, or the scene, for a printer (exportbox.js;
+//                     the File > Export > 3D print... dialog, printdialog.js)
 //   BUILDER.open()    pick a file, any of the three -- it says which it is: a scene or a project
 //                     is ADDED to the open scenes, a workspace replaces everything;
 //                     BUILDER.load(text) does the same from text, loadFile(file) from a File
@@ -56,7 +57,7 @@ import { createHistory } from './history.js'
 import * as P from './project.js'
 import { syncSources } from './sources.js'
 import { lightRGBObject, beamOf } from './lights.js'
-import { runExport } from './exportbox.js'
+import { runExport, subjectTree } from './exportbox.js'
 import { hazeOf } from './hazebox.js'
 import { copyPattern, codeOf as codeOfPattern } from './arrays.js'
 import { stamp } from '../version.js'
@@ -859,9 +860,9 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
             }
             const f = M.find(doc, id)
             if (!f || RT.scene?.id !== 'built') return false
-            /* THE HAZE BOX: moved and sized with whatever moved or sized it (its size uniform is declared as an export
-               box's is, and written below like any parameter); its settings are no uniform of the scene's -- the
-               engine's own (core/haze.js) -- so they are taken here or not at all */
+            /* THE HAZE BOX: moved and sized with whatever moved or sized it (its size uniform is declared, and written
+               below like any parameter); its settings are no uniform of the scene's -- the engine's own (core/haze.js) --
+               so they are taken here or not at all */
             const hazeTook = pushHaze(doc)
             if (f.node.type === 'haze' && k === 'haze') return hazeTook
             if (!RT.scene.writeData) return nodeLive(doc, f, id, k, !!doc.liveVisibility)
@@ -909,16 +910,22 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
             const id = RT.scene.tags?.[tag - 1]
             return id != null && M.find(P.scene(project, current).doc, id) ? id : null
         },
-        /** EXPORT FOR PRINTING (exportbox.js): everything solid inside export box `id`, as a 3MF with
-         *  colour or an STL, downloaded. The field is the renderer's, so the scene has to be the one
-         *  showing -- its uniforms are the ones the export kernel is compiled against. Resolves to
-         *  what runExport says (triangles, palette, bytes). */
-        async exportPrint(id, format = '3mf', onProgress = () => { }) {
+        /** EXPORT FOR PRINTING (exportbox.js, 0.next): what `subject` is -- an object's id, or null for the whole
+         *  scene -- inside `box` ({ frames, lo, hi }: exportbox.js fittedBox, as the print dialog has it), as a 3MF with
+         *  colour or an STL, downloaded. Nothing is added to the scene. The whole scene is the renderer's field; one
+         *  object is a scene of that object alone (subjectTree), generated here and sampled by a kernel of its own
+         *  (RT.sampleField's `own`). Either way the scene has to be the one showing: the engine's values -- the unit
+         *  the field is in, the tolerance -- are the ones it was given for it. Resolves to what runExport says
+         *  (triangles, palette, bytes). */
+        async exportPrint({ subject = null, box, format = '3mf', cell, colours } = {}, onProgress = () => { }) {
             if (current !== shown || RT.scene?.id !== 'built') throw new Error('this scene is not the one showing: show it first (its \u25B6 in the tree)')
             const d = doc()
-            const r = await runExport({ sample: (input, n) => RT.sampleField(input, n), doc: d, id, format, onProgress })
-            const label = M.find(d, id)?.node.label
-            const stem = fileName(`${d.title || 'scene'}${label && label !== 'export box' ? '-' + label : ''}`).replace(/\.json$/, '')
+            const one = subject != null && subject !== d.root.id
+            const own = one ? generate(subjectTree(d, subject), { id: 'print', title: d.title || 'print' }) : null
+            const sample = (input, n) => RT.sampleField(input, n, own)
+            const label = one ? M.find(d, subject)?.node.label : null
+            const r = await runExport({ sample, doc: d, box, format, cell, colours, name: label || d.title || 'scene', onProgress })
+            const stem = fileName(`${d.title || 'scene'}${label ? '-' + label : ''}`).replace(/\.json$/, '')
             saveBytes(`${stem}.${format}`, r.bytes, format === '3mf' ? 'model/3mf' : 'model/stl')
             return r
         },

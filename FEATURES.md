@@ -226,7 +226,8 @@ into batches, so **every number carries a standard error**. Target: LED and lumi
 
 | feature | status | evidence |
 |---|---|---|
-| **Detector** and **ray limiter** material types (a limiter is invisible in the picture: a cross-section of a beam) | **in use**: the user said it works on their hardware, 2026-10-27 -- before that: built | `builder/model.js` `MATERIAL_TYPES` |
+| **Detector** and **ray limiter** material types (a limiter is invisible in the picture: a cross-section of a beam) | **in use**: the user said it works on their hardware, 2026-10-27 -- before that: built. **Moved (0.next)**: an object's optics role now, not a material's type -- the next row | `builder/model.js` `MATERIAL_TYPES` |
+| **Detector** and **ray limiter** as an **object's role** (0.next): its Optics-Analysis box, each object its own detector (by its tag, a live change), a limiter a compile; shown with the scene's **optics analysis** feature, which also offers the rays overlay and the lux and luminance views; older files' detector materials become roles, analysis on | **built, NOT yet seen**: `model.test`, `codegen.test`, `hazebox.test`; check-shaders | `builder/model.js` `OPTICS_ROLES`, `lib/pathtracer/optics/kernels.js` `optIsDetectorTag` |
 | **Totals**: emitted, escaped, absorbed, on detectors, lost; per object and per material: arriving, absorbed, hits — each ± standard error | **in use**: the user said it works on their hardware, 2026-10-27 -- before that: built | `optics/page.js` |
 | **Refraction, Fresnel, total internal reflection** | **verified** (`optics-refraction`, Pascal, 400 k rays a row): slab at 0/45/70° within 2 SE, TIR exact, glass ball 0.9997, wedge exit angle to 2e-6°, balance 0 | TESTING.md |
 | Energy balance, absorbing and reflecting floors, integrating sphere | `optics-balance` pressed (0.77.0): all but the integrating sphere pass, whose scene was a solid ball; the hollow shell (0.78.0) not yet pressed | TESTING.md |
@@ -291,7 +292,8 @@ measured). (Aspheric and Fresnel lenses are shapes now: *Builder*.)
 
 | feature | status | evidence |
 |---|---|---|
-| An **export box** placed with the handles marks what to print | **in use**: the user said it works on their hardware, 2026-10-27 -- before that: built — "NOT yet seen on hardware or in a slicer" | PLAN.md *Export for 3D printing* |
+| An **export box** placed with the handles marks what to print | **in use**: the user said it works on their hardware, 2026-10-27 -- before that: built — "NOT yet seen on hardware or in a slicer". **Replaced (0.next)** by the next row | PLAN.md *Export for 3D printing* |
+| **File › Export ▸ 3D print…** asks: the **selected object** alone (a scene of it, compiled for the export) or the **whole scene**, cut by a box fitted to it (the measured boxes; lights and open floors left out), drawn while the dialog is open, resizable; nothing added to the scene | **built, NOT yet seen**: `exportbox.test` (the fitted box, the object alone, the grid, the whole export against a stand-in field) | `builder/printdialog.js`, `builder/exportbox.js` |
 | The SDF sampled on the GPU, meshed by **marching tetrahedra** into a closed surface, coloured per triangle from the materials, reduced to at most 16 colours | **in use**: the user said it works on their hardware, 2026-10-27 -- before that: built; Node-tested closed and outward; lib3mf opened a written file as manifold | |
 | **3MF with colour** (aimed at Bambu Studio's filament mapping) or **binary STL**, in mm | **in use**: the user said it works on their hardware, 2026-10-27 -- before that: built | |
 | Limits: features under one cell vanish; edges bevelled; ~3 M triangles for a 10 cm cube at 0.4 mm, no decimation; meshing on the main thread | stated in PLAN.md | |

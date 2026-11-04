@@ -1,5 +1,5 @@
 //======================================================================================================================
-// A JOIN'S SHAPE, IN JAVASCRIPT (model version 27, `joinShape`): the twin of scene_api.js's csgRound* and csgChamfer*,
+// A JOIN'S SHAPE, IN JAVASCRIPT (model version 28, `joinShape`): the twin of scene_api.js's csgRound* and csgChamfer*,
 // line for line, on [nx, ny, nz, d] as the WGSL is on VEC4 (normal, distance). The import builds its fillets with it
 // (import/fillet.js, geom.js `rounded`), import/test/docsdf.mjs mirrors the scene with it, and the tests hold the WGSL
 // to it on Dawn (builder/test/roundjoin.gpu.mjs).

@@ -79,7 +79,7 @@ export const LIGHT_VEC4S = 4
 /** The CSG nesting the evaluator makes room for: none without CSG, else rounded up to a multiple of 4, so the shader's
  *  text moves only when a scene crosses 4 or 8 (call 3, PERFORMANCE.md: at most 8). */
 export const STACK_MAX = 8
-/* A JOIN'S SHAPE (model version 27): a round or chamfer join's record is its op + 4 x its shape's code, and the
+/* A JOIN'S SHAPE (model version 28): a round or chamfer join's record is its op + 4 x its shape's code, and the
    evaluator calls their functions only when the scene has one (plan.shaped) -- a scene without keeps the text it had,
    and the first round join is a compile, as in codegen, where the shape picks the function */
 export const SHAPES = { smooth: 0, round: 1, chamfer: 2 }
@@ -162,7 +162,7 @@ const afterKind = n => isAfter(n, { straight: false })
    material's relief, and a CSG group with either anywhere below it -- the predicate, for planOf and for recordsOf (which
    checks a tree against a plan) */
 function compiledOf(tree, reliefMaterials, wantLocal = false) {
-    const reliefObject = n => n.kind === 'object' && reliefMaterials.has(n.material) && NODE_TYPES[n.type] && n.type !== 'light' && n.type !== 'export' && n.type !== 'haze'
+    const reliefObject = n => n.kind === 'object' && reliefMaterials.has(n.material) && NODE_TYPES[n.type] && n.type !== 'light' && n.type !== 'haze'
     /* A NODE IN ITS PATTERN FRAME (model.js setPattern, version 24; codegen patterned): compiled as before, its frame a
        uniform -- the records carry one frame a node, the shape's, and a hit on a record records that one. As an object
        wearing a relief is, and so is a CSG group above it. Only where the frame changes something: anywhere else the node
@@ -333,10 +333,10 @@ function descend(F, transform) {
  *   boxes   Map(top-level id -> { lo, hi }) in the node's own frame, padded (boxes.js cullBoxes): its culling box
  *   materialIndex(id) -> the material's id as getMaterial2 numbers it (codegen: 1 the default, the document's from 2)
  *   lightMaterial(i)  -> light i's material id (codegen: after the document's materials, MATID_BLACK and CLEAR)
- *   limiters          Set of material ids whose objects only the optics trace draws
+ *   limiter(n)        whether an object is one only the optics trace draws (its role, model.js OPTICS_ROLES)
  *   arrayWindow       false: no array has a window (arrays.js), every copy walked -- the bench's and the tests' comparison
  */
-export function recordsOf(tree, plan, { boxes = null, materialIndex, lightMaterial, limiters = new Set(), arrayWindow = true }) {
+export function recordsOf(tree, plan, { boxes = null, materialIndex, lightMaterial, limiter = n => n.opticsRole === 'limiter', arrayWindow = true }) {
     const recs = [], params = [], hoisted = []
     let ok = true
     /* THE TREE MUST FOLLOW THE PLAN: whatever is text the same -- each compiled subtree there by its root, the lights
@@ -429,7 +429,7 @@ export function recordsOf(tree, plan, { boxes = null, materialIndex, lightMateri
             return
         }
         if (n.kind === 'object') {
-            if (n.type === 'export' || n.type === 'haze') return      // boxes, not shapes: the haze is the renderer's (scene.haze)
+            if (n.type === 'haze') return      // a box, not a shape: the haze is the renderer's (scene.haze)
             if (n.type === 'light') {
                 if (!hasFace(n.light) || !lightIndex.has(n.id)) return
                 face(n, here, on)
@@ -442,7 +442,7 @@ export function recordsOf(tree, plan, { boxes = null, materialIndex, lightMateri
             if (block === undefined) { ok = false; return }
             const r = push()
             let flags = (visible(n) ? FLAG.VISIBLE : 0) | (plainAbove && csgDepth === 0 ? FLAG.CULLABLE : 0)
-            if (limiters.has(n.material)) flags |= FLAG.LIMITER
+            if (limiter(n)) flags |= FLAG.LIMITER
             head(r, KIND.OBJECT, block, materialIndex(n.material), flags)
             frameInto(r, here)
             r[5] = u(paramsOf(n)); r[6] = u(tagOf.get(n.id) ?? 0)
@@ -772,7 +772,7 @@ export function evaluatorWGSL({ blocks, befores = 0, afters = 0, subs, stack, ar
             w('            else if (op == 1u) { top.km = select(top.km, C.m, -C.s.w > top.k.w); top.k = csgSubtract(top.k, C.s, v1.w); }')
             w('            else { top.km = select(top.km, C.m, C.s.w > top.k.w); top.k = csgIntersect(top.k, C.s, v1.w); }')
         } else {
-            // ...its shape too (model version 27, SHAPES): op + 4 x shape, a round's or a chamfer's function for the smooth blend's
+            // ...its shape too (model version 28, SHAPES): op + 4 x shape, a round's or a chamfer's function for the smooth blend's
             w('            let op = scnU(v0.y) & 3u;')
             w('            let shp = scnU(v0.y) >> 2u;')
             w('            if (top.first != 0u) { top.k = C.s; top.km = C.m; top.first = 0u; }')

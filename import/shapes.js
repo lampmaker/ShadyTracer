@@ -407,7 +407,7 @@ export function addPart(model, doc, parentId, ir, { unit = 'mm', label = 'part',
            box intersected: everything is in it, so no point changes, and the group combines. One box test a step. */
     const child = (n, neg, parent, join) => {
         /* A FILLET: its two supports in a group, the second joined to the first by a round join of the fillet's radius
-           (model version 27); the group joins its parent as the fillet's literal does */
+           (model version 28); the group joins its parent as the fillet's literal does */
         if (n.kind === 'fillet') {
             const g = model.addGroup(doc, parent, { label: `fillet R${fmt(n.r)}`, join })
             child(n.kids[0].n, n.kids[0].neg, g.id)

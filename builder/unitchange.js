@@ -64,10 +64,10 @@ function builtinEntry(B) {
 }
 
 /* WHAT A NODE'S PARAMETERS ARE, for a unit: { lengths: Set, perLength: { name: power } } -- its block's lengths and
-   its built-in's powers; a light's size, and an export or haze box's, which are always lengths */
+   its built-in's powers; a light's size, and a haze box's, which are always lengths */
 function unitsOf(doc, n) {
     if (n.type === 'light') return { lengths: new Set(['width', 'height', 'radius']), perLength: {} }
-    if (n.type === 'export' || n.type === 'haze') return { lengths: new Set(['size']), perLength: {} }
+    if (n.type === 'haze') return { lengths: new Set(['size']), perLength: {} }
     const B = blockOf(doc, n)
     return { lengths: new Set(B?.lengths || n.lengths || []), perLength: { ...(builtinEntry(B)?.perLength || {}) } }
 }

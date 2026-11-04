@@ -13,7 +13,7 @@
 //   - ONE HALF-SPACE: the holder's rim around its rounded tray -- four cylinders and four tori -- one compound (its top
 //     face and the tray's rounded rectangle), so the formula has far fewer literals and separators than without;
 //   - IN THE DOCUMENT: a fillet a group of its two supports, the second joined by a round join of the fillet's radius
-//     (model version 27), in the scene's unit.
+//     (model version 28), in the scene's unit.
 // That the formula, the shapes and the document hold to OpenCascade's points is csg.test's (the holder is among its
 // parts); that the renderer marches them is import.gpu.mjs's.
 //======================================================================================================================

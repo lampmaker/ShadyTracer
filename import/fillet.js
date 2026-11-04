@@ -1,6 +1,6 @@
 //======================================================================================================================
 // FILLETS -- a CAD part's rounded edges found among its faces, each as the round join of the two faces it rounds
-// (builder/joins.js, model version 27), instead of a cylinder or torus with the separators where it ends (csg.js).
+// (builder/joins.js, model version 28), instead of a cylinder or torus with the separators where it ends (csg.js).
 //
 // WHY (the user's Onshape part, 2026-11-04: "especially the fillets are difficult"). 62 of its 121 faces were 1 mm
 // fillets, 34 cylinders and 28 tori. Each is a curved face that ends where the edge it rounds ends, and the formula needs

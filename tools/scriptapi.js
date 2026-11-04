@@ -115,7 +115,7 @@ export function analysisOf(S) {
     /* a detector by its tag (a number), or by the name of the object it is (a node's label, or id) */
     const tagOf = d => {
         const list = tags()
-        if (d == null) { if (!list.length) throw new Error('map: no detector hits in this analysis (give a surface a detector material)'); return list[0] }
+        if (d == null) { if (!list.length) throw new Error('map: no detector hits in this analysis (make an object a detector: its Optics-Analysis box)'); return list[0] }
         if (typeof d === 'number') { if (!list.includes(d)) throw new Error(`map: no hits on tag ${d} (hit: ${list.join(', ') || 'none'})`); return d }
         const t = list.find(x => tagName(x) === String(d))
         if (t == null) throw new Error(`map: no detector '${d}' was hit (hit: ${list.map(tagName).join(', ') || 'none'})`)
@@ -483,7 +483,7 @@ export function makeScriptApi({ PARAMS, RT, BUILDER = null, OPTICS = null, signa
     const optics = {
         /** what the next run traces with: { rays, from, axis, flip, dG, dC } and the choices (fromOptions, axisOptions) */
         setup: () => needOptics().analysisSetup(),
-        /** change it: { rays, from: 'escaped' | a detector material, axis: a light | [x, y, z], flip, dG, dC } */
+        /** change it: { rays, from: 'escaped' | a detector object, axis: a light | [x, y, z], flip, dG, dC } */
         configure: patch => needOptics().setupAnalysis(patch),
         /** run the analysis -- with `setup` first -- shown in the pane and charts as ▶ Run's, and return what it found */
         run: guard(async (setup = null) => {

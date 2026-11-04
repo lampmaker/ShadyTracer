@@ -258,7 +258,7 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
         if (d !== SRC.text) { SRC.text = d; try { table.refresh?.() } catch { } try { raysTable?.refresh?.() } catch { } }
         raysSay()
         oplFollowRange()
-        // the data's lists follow the scene's lights and detector materials
+        // the data's lists follow the scene's lights and detectors
         buildData()
         if (mixSeen) mixBuild()
     }, 500)
@@ -544,7 +544,7 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
     // THE DATA every chart is made from: in the Analysis pane, once -- not repeated on each chart
     //==================================================================================================================
     /* THE FAR FIELD (optics/farfield.js). WHAT FEEDS IT is a choice, because which rays count is the
-       user's question: every ray that leaves the scene, or every ray arriving at one DETECTOR material --
+       user's question: every ray that leaves the scene, or every ray arriving at one DETECTOR object --
        a surface made to catch the light of interest (the rays through the lens, not the ones off the
        mount). Either way a ray is binned by its DIRECTION alone: the luminaire seen from far away.
        THE FRAME is a light's: gamma = 0 along its axis (+z, where it shines), C = 0 along its +x.
@@ -565,11 +565,23 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
     const symmetry = () => F.rot ? 'rotational' : 'none'
     const DG = { '0.25°': 0.25, '0.5°': 0.5, '1°': 1, '2°': 2, '2.5°': 2.5, '5°': 5 }
     const DC = { '1°': 1, '2.5°': 2.5, '5°': 5, '10°': 10, '15°': 15, '22.5°': 22.5, '30°': 30, '45°': 45, '90°': 90 }
-    const detectorMats = () => (BUILDER?.doc?.materials || []).map((m, i) => ({ m, id: i + 2 }))
-        .filter(({ m }) => m.type === 'detector' || m.type === 'limiter')
+    /* THE DETECTORS: the scene's objects whose optics role is detector or limiter (0.next: an object's role, builder/model.js
+       OPTICS_ROLES -- a material's type before), each with the tag the optics trace knows it by (codegen detectorTags:
+       tag k is opticsTags[k - 1]). Only those the scene shown has compiled in: none while its analysis feature is off */
+    const detectorObjects = () => {
+        const tags = RT.scene?.opticsTags ?? RT.scene?.tags ?? [], out = []
+        for (const t of RT.scene?.detectorTags || []) {
+            const id = tags[t - 1]
+            if (id == null) continue
+            const find = n => n?.id === id ? n : (n?.children || []).map(find).find(Boolean)
+            const node = BUILDER?.doc ? find(BUILDER.doc.root) : null
+            out.push({ id, tag: t, label: node?.label || id })
+        }
+        return out
+    }
     const fromOptions = () => {
         const from = { 'escaping rays': 'escaped' }
-        for (const d of detectorMats()) from[`at ${d.m.label || `material ${d.id}`}`] = `mat:${d.id}`
+        for (const d of detectorObjects()) from[`at ${d.label}`] = `obj:${d.id}`
         return from
     }
     const lightOptions = () => {
@@ -581,8 +593,9 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
     }
     const farSettings = () => {
         const x = isCustom() ? null : (found.sources || [])[F.light]
-        const mode = F.from === 'escaped' ? 'escaped' : F.from.startsWith('mat:') ? 'detector' : 'off'
-        return { mode, material: mode === 'detector' ? +F.from.slice(4) : 0,
+        const det = F.from.startsWith('obj:') ? detectorObjects().find(d => d.id === F.from.slice(4)) : null
+        const mode = F.from === 'escaped' ? 'escaped' : det ? 'detector' : 'off'
+        return { mode, material: 0, tag: det ? det.tag : 0,
                  nC: Math.round(360 / F.dC), nG: Math.round(180 / F.dG) + 1,
                  axis: (isCustom() ? F.axisV : x?.normal ?? [0, 0, 1]).map(v => F.flip ? -v : v), c0: x?.u ?? [1, 0, 0] }
     }
@@ -613,7 +626,7 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
         opts['the far field on a plane'] = 'plane'
         return opts
     }
-    /* the lists follow the scene (its detector materials, its lights) and the analysis (the objects hit):
+    /* the lists follow the scene (its detectors, its lights) and the analysis (the objects hit):
        a choice that is no longer in its list goes back to the first */
     const keepChoices = () => {
         if (!Object.values(fromOptions()).includes(F.from)) F.from = 'escaped'
@@ -755,7 +768,7 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
             return v
         }
         const hits = lastMap?.hits
-        if (!hits?.length) return { why: 'No detector hits yet: give a surface a detector material (Builder), then ▶ Run in the Analysis pane.' }
+        if (!hits?.length) return { why: 'No detector hits yet: make an object a detector (Builder: its Optics-Analysis box; the scene\'s optics analysis on), then ▶ Run in the Analysis pane.' }
         /* WHAT IT COVERS: a zoom when there is one; else the whole detector, from its measured box --
            the node the hits' tag names, its box's corners in the world (boxes.js; null until measured,
            and then the map is where the light landed) -- else where the light landed */
@@ -1042,7 +1055,7 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
     /* the kept hits as a file: position, flux, the direction they arrived from, the object, the colour */
     const hitsCSV = () => {
         const hits = lastMap?.hits
-        if (!hits?.length) return say('no detector hits: give a surface a detector material (Builder), then ▶ Run')
+        if (!hits?.length) return say('no detector hits: make an object a detector (its Optics-Analysis box), then ▶ Run')
         const u = lastMap.unit
         const rows = [`# ${hits.length} detector hits${lastMap.note || ''}; flux in ${u} (each batch's share); X_, Z_ the colour in the same unit`,
                       'x,y,z,flux_' + u + ',dx,dy,dz,object,X_' + u + ',Z_' + u]
@@ -1523,7 +1536,7 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
                  dGOptions: Object.values(DG), dCOptions: Object.values(DC) }
     }
     /** Change the setup, any of { rays, from, axis, flip, dG, dC } -- each checked first, and a refusal (thrown, naming
-     *  what is allowed) changes nothing. `from`: 'escaped', a detector material by its label or id, or a value of
+     *  what is allowed) changes nothing. `from`: 'escaped', a detector object by its label or id, or a value of
      *  fromOptions; `axis`: a light by its label or its place in axisOptions, or a vector [x, y, z]. The pane follows. */
     O.setupAnalysis = (patch = {}) => {
         const known = ['rays', 'from', 'axis', 'flip', 'dG', 'dC']
@@ -1538,9 +1551,9 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
         }
         if (patch.from !== undefined) {
             const opts = fromOptions(), v = String(patch.from)
-            const mat = detectorMats().find(d => d.m.label === v || d.m.id === v)
-            const hit = Object.values(opts).includes(v) ? v : opts[v] ?? (mat ? `mat:${mat.id}` : null)
-            if (!hit) throw new Error(`analysis setup: from '${v}' is none of ${['escaped', ...detectorMats().map(d => d.m.label || d.m.id)].join(', ')}`)
+            const obj = detectorObjects().find(d => d.label === v || d.id === v)
+            const hit = Object.values(opts).includes(v) ? v : opts[v] ?? (obj ? `obj:${obj.id}` : null)
+            if (!hit) throw new Error(`analysis setup: from '${v}' is none of ${['escaped', ...detectorObjects().map(d => d.label)].join(', ')}`)
             next.from = hit
         }
         if (patch.axis !== undefined) {

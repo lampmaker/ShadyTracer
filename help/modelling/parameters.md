@@ -61,7 +61,7 @@ cannot take, such as a CCT out of range, is reported and the light keeps its las
 Some things cannot be bound:
 - **A material's fields.** A material is shared by every object that wears it, so one object cannot change its
   colour alone. To give each copy of a component its own colour, give each its own material.
-- **A haze box or an export box.** Neither has a *from parameters* box.
+- **A haze box.** It has no *from parameters* box.
 - **A light's choices:** its distribution, *both faces* and *transparent*.
 
 [Parametric part](example:parametric-part.json) is a heatsink built this way: change `fins` in its Properties.

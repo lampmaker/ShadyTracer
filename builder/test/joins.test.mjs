@@ -1,5 +1,5 @@
 //======================================================================================================================
-// Tests for a join's shape (model version 27, 0.next): the round join a circular fillet, the chamfer its chord, in
+// Tests for a join's shape (model version 28, 0.next): the round join a circular fillet, the chamfer its chord, in
 // JavaScript (builder/joins.js, the WGSL's twin) and through the builder. Run: node builder/test/joins.test.mjs
 //
 // What is held, no GPU:
@@ -12,7 +12,7 @@
 //   - ITS SLOPE at 60, 90 and 120 degrees: at most 1 at a right angle and sharper, sqrt(1 + c) obtuse; the normal the
 //     gradient, by differences, at random points about each edge;
 //   - THE CHAMFER at a right angle through the round's two tangent lines, its value a plane's distance;
-//   - THE BUILDER: the field (model.js setJoinShape, refused where a join is, a typo refused); a file of 26 read as 27;
+//   - THE BUILDER: the field (model.js setJoinShape, refused where a join is, a typo refused); a file of 27 read as 28;
 //     codegen calling the round's function and the old text byte for byte without one; the scene as data's records
 //     op + 4 x shape and its loop the old text without one, a shape added asking for a compile (recordsOf null); the
 //     tree's row and the recipe; a box padded by a round union's radius.
@@ -193,9 +193,9 @@ const docWith = shape => {
     try { M.setJoinShape(d, 'g', 'round') } catch (e) { msg = e.message }
     ok('...refused at the top level, as a join is', /top level/.test(msg), msg)
     const again = M.parse(M.serialize(d))
-    ok('...through a save and a load', again.version === M.VERSION && M.VERSION === 27 && M.find(again, 'b').node.joinShape === 'chamfer')
-    const old = JSON.parse(M.serialize(docWith(undefined))); old.version = 26
-    ok('a file of 26 read as 27, nothing else changed', M.parse(JSON.stringify(old)).version === 27)
+    ok('...through a save and a load', again.version === M.VERSION && M.VERSION === 28 && M.find(again, 'b').node.joinShape === 'chamfer')
+    const old = JSON.parse(M.serialize(docWith(undefined))); old.version = 27
+    ok('a file of 27 read as 28, nothing else changed', M.parse(JSON.stringify(old)).version === 28)
 }
 {
     const plain = generate(...M.generateArgs(docWith(undefined), { id: 't', title: 't' })).wgsl

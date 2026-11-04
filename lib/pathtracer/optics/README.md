@@ -85,10 +85,10 @@ The UI is `optics/page.js`, the Optics page beside Builder: the **Rays** (one ra
 
 ## Detectors, tracing N steps, Live, path length
 
-**Detectors and limiters: a material's type** (model version 10; Builder, material → type: surface, glowing surface, optics detector, ray limiter).
-- **detector:** a surface of that material stops every ray that arrives at it from outside, whatever its fields say. Its flux counts as DETECTED, and each hit is recorded (position, flux, arriving direction, object) for analysis elsewhere; `readHits()` returns the records and the page saves them as CSV. The picture renders it as its fields say.
-- **ray limiter:** the same in the trace, and not in the picture at all: codegen leaves its objects out of the render and pick copies and gives the trace copies of its own (`opticsWgsl` for the march, `opticsPickWgsl` / `opticsTags` for the shade). For cutting the rays off where a cross-section is wanted.
-- The kernels test the hit's MATERIAL id (codegen `detectors`, a 256-bit mask), so a detector needs no pick tag. It was an object flag in files from the optics branch; loading such a file gives the flag to the material, or to a copy where the material was shared (model.js `branchToV10`).
+**Detectors and limiters: an object's role** (0.next, model version 27: builder/model.js `OPTICS_ROLES`, the object's Optics-Analysis box in Properties, shown while the scene's `analysis` feature is on; a material's type from version 10 to 26).
+- **detector:** the object stops every ray that arrives at it from outside, whatever its material's fields say. Its flux counts as DETECTED, and each hit is recorded (position, flux, arriving direction, object) for analysis elsewhere; `readHits()` returns the records and the page saves them as CSV. The picture renders it as its fields say.
+- **ray limiter:** the same in the trace, and not in the picture at all: codegen leaves its objects out of the render and pick copies and gives the trace copies of its own (`opticsWgsl` for the march, `opticsPickWgsl` / `opticsTags` for the shade). For cutting the rays off where a cross-section is wanted. A CSG group whose base is one takes the role for every shape in it, as it takes the base's material: an aperture's hole wall stops rays too.
+- The kernels test the hit's TAG (codegen `detectorTags`, the optics copy's numbering, a 256-bit mask `optDetTagA/B`; the tag is found before the test, `kernels.js`), so a role given or taken changes no text: it is the scene's data (`SCENE_DATA_KEYS`), no compile, a limiter aside. A tag past 255 is clamped by the kernel and so refused by codegen (`opticsProblem`). The mask by MATERIAL id (codegen `detectors`, `optDetA/B`) stays for a scene written by hand, the benches'. A detector was an object flag in files from the optics branch, a material's type from 10 to 26; loading such a file gives the role to every object that wore it (model.js `branchToV10`, then `v26to27`).
 
 **The detector map** (`detmap.js`; the page's Analysis → detector map) turns the hits on each detector into an illuminance map: a plane fitted to the hits (squared up to the world axes when it is within a degree of them), square cells over their extent, E = flux / cell area in m², so lux for a source in lm. With it: E max, mean and min over the lit cells, U0, the flux, and the hits per cell, which says how noisy each cell is (about 1/√hits). An analysis maps every batch's hits together, each carrying its batch's share, up to half a million hits. The hits' own extent is a little short of the lit area, so edge cells read slightly high; `range` fixes a known extent.
 
@@ -128,7 +128,7 @@ caps), C bins on 0, ΔC, … A trace that does not ask for it has no grid and pa
 
 **What feeds it** (`O.setFar({ mode })`):
 - `'escaped'`: every ray that leaves the scene.
-- `'detector'`: every ray arriving at one detector MATERIAL (`material`, its id). This is how the
+- `'detector'`: every ray arriving at one detector OBJECT (`tag`, its tag; 0.next), or, with no tag, at one detector MATERIAL (`material`, its id: a scene written by hand). This is how the
   user says which rays count: a surface placed to catch the light through the lens and not the
   light off the mount.
 

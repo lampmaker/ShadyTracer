@@ -10,8 +10,8 @@ distances alone, never their normals: the first version read the angle between t
 distance-only march does not have, so the march stopped on the sharp corner while the shading saw the fillet, and the
 fillets rendered black in every mode (your scene of 2026-11-04). It is also held to what it adds on the fillet itself,
 so far from it, where the two sides no longer meet squarely, it never reads more than the true distance. **Chamfer** is the flat cut between the same two lines on the faces. Scene files go to
-version 27 (`joinShape` on a node; absent is smooth, so older files read unchanged, and a builder of 26 refuses a file
-of 27). The WGSL is scene_api.js `csgRound*` / `csgChamfer*`; builder/joins.js is its JS twin and has the derivation.
+version 28 (`joinShape` on a node; absent is smooth, so older files read unchanged, and a builder of 27 refuses a file
+of 28). The WGSL is scene_api.js `csgRound*` / `csgChamfer*`; builder/joins.js is its JS twin and has the derivation.
 Codegen calls them for such a join, and the scene as data does only when the scene has one, so every other scene's
 shader text is unchanged.
 

@@ -73,7 +73,7 @@ function combined(n, q, blocks, csg, upto, S = 1) {
         if (C === null) { C = v; continue }
         if (!csg) { if (Math.abs(v) < Math.abs(C)) C = v; continue }
         const join = c.join ?? 'union'
-        /* A ROUND OR CHAMFERED JOIN (model version 27) reads both sides' normals: the shader's are analytic, these the
+        /* A ROUND OR CHAMFERED JOIN (model version 28) reads both sides' normals: the shader's are analytic, these the
            gradients of the two values by central differences -- the same wherever each is a distance's */
         if (c.joinShape === 'round' || c.joinShape === 'chamfer') {
             const r = (c.joinBlend ?? n.blend ?? 0) / S

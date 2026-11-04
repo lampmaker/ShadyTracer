@@ -739,7 +739,7 @@ anyway? ... indicate those surfaces with a different (red) material? maybe propo
   9 over their distance, 4 seams; 235 shapes in 85 groups; 24-29 s. The 6 wrong were near where the slanted slots
   cut the U's fillet tori and at the U's mouth: where a fillet face ends on a boundary that is neither a radial plane
   nor a cone, which is all a separator can be. *Inferred, not seen:* those are the render's black notches.
-- **A join's shape (builder, model version 27).** `joinShape: 'round' | 'chamfer'`. The round join is the circle of
+- **A join's shape (builder, model version 28).** `joinShape: 'round' | 'chamfer'`. The round join is the circle of
   radius r tangent to both sides where they meet at a right angle (two planes, a plane met squarely by a cylinder or a
   prism: the fillet CAD makes), from the two distances alone (builder/joins.js). Held to closed forms in JS and on Dawn
   (joins.test, roundjoin.gpu).

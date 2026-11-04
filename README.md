@@ -286,11 +286,10 @@ for the help.
     capped torus, link, tube, **dome** (standing on its base), plane;
   - *Optics:* **lens** (diameter, thickness, two signed radii), **aspheric lens** (a radius, a conic
     constant and a4 to a10 on each face, typed from a datasheet), **Fresnel lens**, **parabolic
-    reflector** (its focus at its origin), rectangle and disc (detectors, limiters);
+    reflector** (its focus at its origin), rectangle and disc (screens: detectors, limiters);
   - *From points:* extrusion, revolution, **bent tube**, **light guide**, **twisted bar**; or a blank
     one.
-- **Lights, a haze box and an export box** are nodes in the tree too, placed and stretched with the
-  same handles.
+- **Lights and a haze box** are nodes in the tree too, placed and stretched with the same handles.
 - **Shapes from points**: a profile parameter is an outline, one point a line -- `x, y`, and a fillet
   radius to round that corner -- which a node's code extrudes or revolves; a **path** parameter is an open
   line, `x, y, z` and a fillet a point, which it sweeps a tube or a profile along, and a point can scale
@@ -319,8 +318,9 @@ for the help.
   what a drag changes. **Lock** a node's position or its parameters against the hand.
 - **Undo and redo** across the whole project, 100 steps; **copy, paste, duplicate**;
   **hide and show** without recompiling.
-- **Four material types**: surface, glowing, **optics detector**, **ray limiter** (seen by the
-  optics trace, invisible in the picture).
+- **Two material types**, surface and glowing; and an object's **optics role**, **detector** or
+  **ray limiter** (seen by the optics trace, invisible in the picture), shown while the scene's
+  **optics analysis** is on.
 - **A group's material**: one material for everything in a group, over their own; an object with
   **own material** keeps its own, as a child's own blend keeps its own.
 - **Files**: **Export ▸** a scene, the project (every scene with its view, and the render settings),
@@ -381,7 +381,8 @@ number carries its standard error**.
 - **Coatings and dispersion** as in the picture: a dichroic sends one band one way and the rest the
   other, a prism fans white light into its colours.
 - **Detectors** stop and record every ray that reaches them; **ray limiters** do the same but are
-  invisible in the picture, for a cross-section of a beam.
+  invisible in the picture, for a cross-section of a beam. Each is an object's role, and each object
+  its own detector, with its own map.
 - **Totals**: emitted, escaped, absorbed, on detectors, lost, and per object and per material what
   arrives and what is absorbed, each ± its error.
 - **See the rays**: up to 20 000 rays drawn over the picture and retraced live while you move
@@ -426,7 +427,8 @@ number carries its standard error**.
 
 ### Export for 3D printing
 
-- Put an **export box** around what you want to print, placed with the handles.
+- **File › Export ▸ 3D print**: the selected object alone, or the whole scene, cut by a box fitted to
+  it that you can resize. Nothing is added to the scene.
 - The distance field is sampled on the GPU and meshed into a **closed surface** (marching
   tetrahedra), each triangle coloured from its material and reduced to at most 16 colours.
 - Saved as **3MF with colour**, made for Bambu Studio's filament mapping, or as **STL**, in mm.

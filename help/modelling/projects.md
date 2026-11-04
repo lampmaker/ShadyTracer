@@ -33,7 +33,7 @@ The browser's storage is per browser and per computer. To move work elsewhere or
 | **File › Import from file…** (Ctrl O), or drop a file on the page | a scene file joins this project; a project file asks: open it as a project of its own, or add its scenes to this one |
 | **File › Export ▸ Scene file…** | the scene being worked on, alone (a card's ⋯ exports another) |
 | **File › Export ▸ Project file…** | every scene, with their cameras and the render settings: exactly what you see |
-| **File › Export ▸ 3D print (3MF / STL)…** | the scene's export box: its Properties hold the two exports (below) |
+| **File › Export ▸ 3D print (3MF / STL)…** | the selected object or the whole scene, as a mesh to print (below) |
 
 Files from older versions are upgraded when opened. A file with problems is refused, with every problem listed.
 
@@ -64,15 +64,22 @@ optics parts. Each has a rendered picture. Rest the pointer on one to see it ren
 
 ## Export for 3D printing
 
-Put an **export box** (+ in the tree) around what you want printed, and size it with its handles. Its Properties
-export:
+**File › Export ▸ 3D print (3MF / STL)…** asks what to print:
+
+- **Selected object**: that object alone -- or a group and everything in it -- with nothing of its neighbours, in its
+  own frame: its z is up on the print bed.
+- **Whole scene**: everything solid, as the picture shows it, in the world's frame. Lights and an endless floor are
+  left out of the box it starts with.
+
+The box is fitted to it, and drawn dashed in the picture while the dialog is open. Type another **size** to cut it, or
+**Fit** to fit it again. Nothing is added to the scene. Then:
 
 - **3MF with colour**: each triangle coloured from its material, reduced to as many colours as your printer holds
   (*colours*, 4 to start), for a slicer's filament mapping;
 - **STL**, in millimetres.
 
-The shape is sampled on a grid -- the box's **cell**, in millimetres of the printed part, 0.4 to start -- and made into
-a closed mesh. What to expect:
+The shape is sampled on a grid -- the **cell**, in millimetres of the printed part, 0.4 to start -- and made into
+a closed mesh, cut by the box. The cell, the colours and the format are remembered for the next export. What to expect:
 
 - features thinner than a cell disappear;
 - sharp edges are bevelled by up to a cell;

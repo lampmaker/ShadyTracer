@@ -22,8 +22,8 @@ See [How shapes are made](sdf.md) for why booleans and blends are free here.
   [tree](tree.md) or in the picture.
 - **Sketches with constraints.** Dimensions are parameters: numbers in Properties, and component
   parameters that drive what is inside a group ([Parameters and code](parameters.md)).
-- **Exact export.** A file for a slicer is made by sampling the shape on a grid and meshing it (the
-  [export box](projects.md#export-for-3d-printing)). Edges come out bevelled by up to a cell, and features
+- **Exact export.** A file for a slicer is made by sampling the shape on a grid and meshing it (File ›
+  Export ▸ [3D print](projects.md#export-for-3d-printing)). Edges come out bevelled by up to a cell, and features
   thinner than a cell disappear.
 - **Importing meshes or CAD files.** Not there yet (`roadmap/IMPORT.md` has the routes looked at).
 
