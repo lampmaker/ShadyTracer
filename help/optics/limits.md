@@ -33,7 +33,8 @@ light's spectrum: a coating's edge is exact at each, and a detector has a spectr
 - a **material's colour** is still three numbers, made into a smooth spectrum of that colour, not a filter's measured
   curve;
 - a light given by **RGB, xy or a CCT off the black-body line**, and a **Zemax ray file**, is traced as a spectrum
-  of exactly its colour, not its real one: its colour is right and its CRI is not its own;
+  of exactly its colour, not its real one: its colour is right and its CRI is not its own (the picture does use a
+  spectral file's own wavelength on each ray: [units](units.md));
 - each ray's brightness is a draw of its wavelengths, so a reading takes more rays to settle than in colour.
 
 ## Physics not yet in the trace
@@ -61,8 +62,9 @@ light's spectrum: a coating's edge is exact at each, and a detector has a spectr
 
 - **Only light objects are sources**: a rectangle, a disc or a ray file. A shape with a glowing material lights the
   picture, but sends no rays into the optics trace and has no lumens.
-- **A ray file has no face**: the camera cannot see it glow, and with the lights' rays off it lights nothing in the
-  picture.
+- **A ray file has no face**: the camera's rays cannot meet it. It is seen only through a lens with an aperture, by the
+  rays of the file that cross the lens -- specks while few of them do, and nothing through a pinhole -- and with the
+  lights' rays off it lights nothing in the picture.
 - **A light inside group code is not a source**. That includes the *circular array* modifier, which is group code. A
   light inside an array (a group's *copies*) is a source at every copy, each with the light's flux. A ring of copies
   makes a ring of lights.

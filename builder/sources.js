@@ -69,7 +69,7 @@ const worldFrames = (doc, id) => {
  * Every light in the scene, as the optics trace takes them:
  *   { sources: [...], skipped: [{ id, label, reason }] }
  * a face:     { id, label, kind: 'face', shape, origin, u, v, normal, half: [a, b], area, flux, ...settings }
- * a ray file: { id, label, kind: 'rayset', file, flux (null: the file's), emitN, origin, u, v, normal, scale }
+ * a ray file: { id, label, kind: 'rayset', file, flux (null: the file's), emitN, colour, colourBy, origin, u, v, normal, scale }
  * and inside an array, once a copy, with { copy, copies, key } (the header: INSIDE AN ARRAY).
  * half is the rectangle's half-width and half-height, or the disc's radius twice, in scene units;
  * area in scene units^2 (one face); flux in lm, both faces together. `normal`, not `n`: n is the
@@ -91,7 +91,8 @@ export function sourceTable(doc) {
         W.frames.forEach((F, j) => {
             const copy = K > 1 ? { copy: j, copies: K, key: `${n.id}#${j + 1}`, label: `${label} (copy ${j + 1} of ${K})` } : { label }
             if (L.shape === 'rayfile') {
-                sources.push({ id: n.id, ...copy, kind: 'rayset', file: L.file, flux: L.flux, emitN: L.emitN, colour: lightRGB(L), ...spectrumOf(L),
+                // its colourBy too: what the file's wavelengths come to is decided where the file is (optics/sources.js rayFileColour)
+                sources.push({ id: n.id, ...copy, kind: 'rayset', file: L.file, flux: L.flux, emitN: L.emitN, colour: lightRGB(L), ...spectrumOf(L), colourBy: L.colourBy,
                                origin: F.origin, u: F.u, v: F.v, normal: F.normal, scale: F.scale })
                 return
             }

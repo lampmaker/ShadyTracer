@@ -853,6 +853,18 @@ throws('another version is refused, not guessed at',
     eq('a ray file starts with no file', rf.light.file, '')
     M.setLight(d, rf.id, { file: 'ZEMAXRAYFILE.DAT', box: [[-2, -2, 0], [2, 2, 1.4]] })
     ok('...and round-trips with one', M.parse(M.serialize(d)).root.children.find(n => n.id === rf.id).light.file === 'ZEMAXRAYFILE.DAT')
+    /* A RAY FILE'S COLOUR (0.next; lights.js RAYFILE_COLOUR_BY): from the file by default, its header's wavelength, or a
+       rectangle's four ways -- its default its own, so RGB, the faces' default, is kept when chosen, not dropped as one */
+    ok('a ray file\'s colour is from its file by default, nothing stored', M.lightOf(rf).colourBy === 'file' && !('colourBy' in rf.light))
+    M.setLight(d, rf.id, { colourBy: 'rgb' })
+    ok('...RGB chosen is kept, and reads back RGB (a face\'s default, not a ray file\'s)', rf.light.colourBy === 'rgb'
+        && M.lightOf(M.parse(M.serialize(d)).root.children.find(n => n.id === rf.id)).colourBy === 'rgb')
+    M.setLight(d, rf.id, { colourBy: 'wavelength' })
+    ok('...its header\'s wavelength, kept', M.parse(M.serialize(d)).root.children.find(n => n.id === rf.id).light.colourBy === 'wavelength')
+    M.setLight(d, rf.id, { colourBy: 'file' })
+    ok('...back to from the file: nothing stored', !('colourBy' in rf.light))
+    throws('...the file\'s two are a ray file\'s alone: a rectangle at its header\'s wavelength refused', () => M.setLight(d, 'die', { colourBy: 'wavelength' }), /colourBy/)
+    ok('...and a light\'s colour by RGB on a face still stores nothing (its default)', (M.setLight(d, 'die', { colourBy: 'rgb' }), !('colourBy' in M.find(d, 'die').node.light)))
     M.setOpticsMaxDist(d, 15)
     ok('the optics maximum distance saves with the scene', M.parse(M.serialize(d)).optics.maxDist === 15)
     throws('a negative maximum distance is refused', () => M.setOpticsMaxDist(d, -1), /maxDist/)
