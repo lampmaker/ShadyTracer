@@ -35,9 +35,12 @@ const fixture = n => new URL(`./fixtures/${n}`, import.meta.url)
 
 /* the most each part's formula may hold, and its shapes: what it holds now, the plate and the lens what a hand would
    write (the plate: box, four holes, pocket; the lens: two spheres and its edge) */
-const LIMITS = { plate: { literals: 16, shapes: 6 }, bracket: { literals: 17, shapes: 9 }, boss: { literals: 14, shapes: 9 },
+/* (0.next: the bracket's and the boss's fillets round joins (fillet.js), 17 literals and 9 shapes, and 14 and 9, before;
+   the holder, made like the user's part of 2026-11-04, 209 and 178 without its fillets as round joins; 46 and 61 while
+   the round join read its sides' normals, 49 and 64 since it reads their distances alone, as the renderer's march must) */
+const LIMITS = { plate: { literals: 16, shapes: 6 }, bracket: { literals: 9, shapes: 7 }, boss: { literals: 8, shapes: 7 },
                  lens: { literals: 4, shapes: 3 }, roundbox: { literals: 18, shapes: 14 }, cup: { literals: 10, shapes: 7 },
-                 onshape: { literals: 10, shapes: 7 } }
+                 onshape: { literals: 10, shapes: 7 }, holder: { literals: 49, shapes: 64 } }
 
 /* A VALUE HELD TO OPENCASCADE at every point it classified: on its side; never more than its distance (a bound); and
    nowhere far from the surface near zero -- inside, a seam; OUTSIDE, A SKIN or nearly one: a shape less another that

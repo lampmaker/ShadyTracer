@@ -55,7 +55,10 @@ Each child of a group **joins what is above it** in that group. The mark in fron
 | ∩ | intersect: only where both are |
 
 Click a mark to change it. A group's **blend** smooths every join in it, and a child's own blend overrides that for
-its join. A subtraction cuts only what is above it in the same group: to cut one part, put the part and the cutter in
+its join. A child's **edge** says what its blend makes of the edge where it meets what is above it: a *smooth blend*
+(the default), *round*, a circular fillet whose radius is the blend, or *chamfer*, a flat cut between the same two
+lines. Round is an exact circle where the two meet at a right angle -- two flat faces, or a flat face across a cylinder,
+so a hole's rim, set to round with a blend of 0.5 mm, is a 0.5 mm fillet -- and a rounded corner at other angles. A subtraction cuts only what is above it in the same group: to cut one part, put the part and the cutter in
 a group of their own. A group among the children is one shape there, all of its children together: a group of two
 overlapping cylinders, set to subtract, cuts away both, overlap and all. An array's copies count as one shape too.
 
@@ -69,9 +72,11 @@ A group's Properties also show its joins as a **recipe**, text you can read and 
 blend 0.1
 union a, b, c
 subtract d  blend 0.02
+subtract e  round 0.5
 ```
 
-The letters are the children in order, as the tree labels them.
+The letters are the children in order, as the tree labels them. A line ends with its own blend (`blend 0.02`), the
+same in a shape (`round 0.5`, `chamfer 0.5`), or a shape alone at the group's blend (`round`).
 
 ## Hiding, locking, copying
 

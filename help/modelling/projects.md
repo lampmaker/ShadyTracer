@@ -37,6 +37,21 @@ The browser's storage is per browser and per computer. To move work elsewhere or
 
 Files from older versions are upgraded when opened. A file with problems is refused, with every problem listed.
 
+**A STEP or STL file** (`.step`, `.stp`, `.stl`) is converted into the builder's own shapes and pasted into the scene
+being worked on. A box shows how far the conversion is, with Cancel. When everything converted exactly it closes by
+itself; otherwise it says, part by part, what happened before anything is pasted:
+
+- how many of the conversion's own check points disagree with the part: small errors are possible there;
+- the part's **fillets**, which come in as *round* joins of the two faces each one rounds (a group called *fillet R1*),
+  and any it could not make one;
+- faces on **freeform** (B-spline) surfaces: each is fitted with the nearest plane, cylinder, cone, sphere or torus.
+  One that fits exactly is that surface. One that does not, but is within **Max surface deviation** (0.05 mm unless
+  you change it), comes in **red** and is called *fitted* in the tree. A part with a face further off is left out,
+  and the box says the deviation it would import at: type it and press **Re-convert**. Untick *Show the fitted faces
+  in red* to give them the part's material;
+- parts that could not be converted, and why. Each part of an assembly has a box: untick one to leave it out, then
+  **Import what converted**.
+
 ## The library
 
 The [Library](show:library) holds things to put in: every shape, modifier and light; materials with real values;

@@ -155,7 +155,15 @@ export const FORMAT = 'raytracer-scene'
    exportbox.js); a detector and a limiter an object's `opticsRole`, not a material's type, shown and traced while the
    scene's `analysis` feature is on (materials.js FEATURES). v26to27. A builder of 26 refuses a file of 27 rather than
    read a detector as a plain surface. */
-export const VERSION = 27
+/* 28: A JOIN'S SHAPE (0.next; the user, 2026-11-04: fillets and chamfers "are often used in designs ... a modifier or
+   operation specifically for those"): `joinShape` on a child, 'round' or 'chamfer' -- absent is 'smooth', the
+   polynomial blend every join had -- says what its blend radius makes of the edge where it meets what is above it: a
+   circular fillet of that radius where the two meet at a right angle -- two planes, a plane across a cylinder or a
+   prism -- a rounded corner at other angles (scene_api.js csgRoundIntersect), or the flat cut between the same two tangent lines. The import makes CAD fillets
+   with it (import/fillet.js). Nothing in a version 27 file changes; a builder of 27 refuses a file of 28 rather than
+   load a fillet as a smooth blend. (Written as 27 while its branch was apart; dev took 27 for the special objects
+   first, 2026-11-04.) */
+export const VERSION = 28
 /** The most copies an array has: each is a walk of its children at every step near them, until a BVH can tell which
  *  copies are near (call 4: chosen, not measured). */
 export const ARRAY_MAX = 16
@@ -207,6 +215,9 @@ import { targetsOf, lookupIn, parseBindings, bindingsText as bindText, applyBind
  *  farther, a subtraction's cutter where it carves (codegen isCsg, children(), MAT_WINS). The base's
  *  own join is kept but dormant, as is a join at the top level, which is always a plain union. */
 export const OPS = ['union', 'subtract', 'intersect']
+/** What a join's blend makes of the edge (version 28): the polynomial blend (stored as no field), a circular fillet, a
+ *  flat chamfer -- each of the blend's radius. */
+export const JOIN_SHAPES = ['smooth', 'round', 'chamfer']
 
 export { identity, matrixOf } from './transform.js'
 import { identity, matrixOf } from './transform.js'
@@ -658,7 +669,7 @@ const finiteValue = v => typeof v === 'number' ? Number.isFinite(v)
  *  still passing op: 'subtract' would otherwise get a union without a word. */
 export function addGroup(doc, parentId, opts = {}, index) {
     if ('op' in opts) throw new ModelError(`a group has no op since version 14: each child's join says how it combines (setJoin, or join: in addObject / addGroup)`)
-    const { label = 'group', id, blend = 0, transform, code, params, constants, ranges, lengths, join, joinBlend, block: blockId } = opts
+    const { label = 'group', id, blend = 0, transform, code, params, constants, ranges, lengths, join, joinBlend, joinShape, block: blockId } = opts
     const parent = groupOf(doc, parentId)
     const node = { id: checkNewId(doc, id), kind: 'group', label, enabled: true, blend,
                    transform: structuredClone(transform ?? identity()), children: [] }
@@ -671,7 +682,7 @@ export function addGroup(doc, parentId, opts = {}, index) {
         spec = { kind: 'group', label, code: String(code ?? ''), params: structuredClone(params ?? {}), constants, ranges, lengths }
         node.params = structuredClone(spec.params)
     }
-    const bad = [...joinOnto(node, join, joinBlend, parent === doc.root),
+    const bad = [...joinOnto(node, join, joinBlend, parent === doc.root, joinShape),
                  ...(spec ? blockProblems({ ...spec, id: node.id }).map(m => m.replace(`block '${node.id}'`, `'${node.id}'`)) : []),
                  ...(B ? userProblems(node, B) : [])]
     if (!(Number.isFinite(blend) && blend >= 0)) bad.push(`'${node.id}': blend must be a number >= 0`)
@@ -684,11 +695,12 @@ export function addGroup(doc, parentId, opts = {}, index) {
 
 /* A new node's join, given at its creation: set if sound, and the problems otherwise. Union and no
    own blend are stored as no field, like a surface material's type. */
-function joinOnto(node, join, joinBlend, atTop) {
+function joinOnto(node, join, joinBlend, atTop, joinShape) {
     if (join != null && join !== 'union') node.join = join
     if (joinBlend != null) node.joinBlend = joinBlend
+    if (joinShape != null && joinShape !== 'smooth') node.joinShape = joinShape
     const p = joinProblems(node)
-    if (atTop && (node.join !== undefined || node.joinBlend !== undefined)) p.push(TOP_LEVEL(node.id))
+    if (atTop && (node.join !== undefined || node.joinBlend !== undefined || node.joinShape !== undefined)) p.push(TOP_LEVEL(node.id))
     return p
 }
 const TOP_LEVEL = id => `'${id}' is at the top level, which is always a plain union: put it in a group to join it`
@@ -698,7 +710,9 @@ function joinProblems(n) {
     const p = []
     if (n.join !== undefined && !OPS.includes(n.join)) p.push(`'${n.id}': join must be one of ${OPS.join(', ')}`)
     if (n.joinBlend !== undefined && !(Number.isFinite(n.joinBlend) && n.joinBlend >= 0)) p.push(`'${n.id}': joinBlend must be a number >= 0`)
-    if ((n.join !== undefined || n.joinBlend !== undefined) && (n.type === 'light' || isBoxType(n.type)))
+    if (n.joinShape !== undefined && !JOIN_SHAPES.slice(1).includes(n.joinShape))
+        p.push(`'${n.id}': joinShape must be one of ${JOIN_SHAPES.slice(1).join(', ')} (smooth is no field)`)
+    if ((n.join !== undefined || n.joinBlend !== undefined || n.joinShape !== undefined) && (n.type === 'light' || isBoxType(n.type)))
         p.push(`'${n.id}': a ${n.type === 'light' ? 'light' : BOX_WORDS[n.type]} is not one of its group's shapes, so it has no join`)
     return p
 }
@@ -725,6 +739,21 @@ export function setBlend(doc, id, x) {
     if (node.kind !== 'group' || !parent) throw new ModelError(`'${id}' is not a group of the scene; only a group has a blend`)
     if (!(Number.isFinite(x) && x >= 0)) throw new ModelError(`'${id}': blend must be a number >= 0`)
     node.blend = x
+    return node
+}
+/** What a node's join makes of its edge (version 28): 'smooth' (stored as no field), 'round' or 'chamfer', of the
+ *  join's blend -- its own, or its group's. Refused where setJoin is. Structural: codegen calls another function. */
+export function setJoinShape(doc, id, shape) {
+    const { node, parent } = must(doc, id)
+    if (!parent) throw new ModelError('the root joins nothing')
+    if (parent === doc.root) throw new ModelError(TOP_LEVEL(id))
+    const next = { ...node }
+    if (shape == null || shape === 'smooth') delete next.joinShape
+    else next.joinShape = shape
+    const bad = joinProblems(next)
+    if (bad.length) throw new ModelError(bad)
+    if (next.joinShape === undefined) delete node.joinShape
+    else node.joinShape = next.joinShape
     return node
 }
 /** A node's own join blend, or null to take its group's `blend` again. Refused where setJoin is. */
@@ -780,7 +809,7 @@ function groupParamProblems(n) {
  * `type` is refused unless it is 'code': it used to name the primitive, and a caller still saying
  * type: 'box' would otherwise get a sphere without a word.
  */
-export function addObject(doc, parentId, { primitive, type, label, material: mat, params, code, id, transform, constants, ranges, lengths, join, joinBlend, block: blockId } = {}, index) {
+export function addObject(doc, parentId, { primitive, type, label, material: mat, params, code, id, transform, constants, ranges, lengths, join, joinBlend, joinShape, block: blockId } = {}, index) {
     const parent = groupOf(doc, parentId)
     if (type === 'light') throw new ModelError('a light is added with addLight')
     if (type === 'export') throw new ModelError('there is no export box any more: File > Export > 3D print... asks what to print')
@@ -814,7 +843,7 @@ export function addObject(doc, parentId, { primitive, type, label, material: mat
     }
     checkParams(node)
     const bad = [...(spec ? blockProblems({ ...spec, id: node.id }).map(m => m.replace(`block '${node.id}'`, `'${node.id}'`)) : []),
-                 ...userProblems(node, B ?? spec), ...joinOnto(node, join, joinBlend, parent === doc.root)]
+                 ...userProblems(node, B ?? spec), ...joinOnto(node, join, joinBlend, parent === doc.root, joinShape)]
     if (bad.length) throw new ModelError(bad)
     node.block = (B ?? blockFor(doc, spec)).id
     insert(parent.children, node, index)
@@ -2702,6 +2731,7 @@ export function toTree(doc, { keepDisabled = false } = {}) {
             if (node.enabled === false) n.enabled = false
             if (node.join !== undefined) n.join = node.join
             if (node.joinBlend !== undefined) n.joinBlend = node.joinBlend
+            if (node.joinShape !== undefined) n.joinShape = node.joinShape
             return n
         }
         if (node.kind === 'group') {
@@ -2859,7 +2889,7 @@ export function validate(doc) {
         for (const key of Object.values(LOCKS)) if (n[key] !== undefined && (n === doc.root || n[key] !== true))
             p.push(n === doc.root ? `the root has no ${key}` : `'${n.id}': ${key} is true or absent`)
         // a join anywhere but on the root; at the top level it is dormant (moved or pasted there), not wrong
-        if (n === doc.root && (n.join !== undefined || n.joinBlend !== undefined)) p.push('the root joins nothing')
+        if (n === doc.root && (n.join !== undefined || n.joinBlend !== undefined || n.joinShape !== undefined)) p.push('the root joins nothing')
         else p.push(...joinProblems(n))
         // version 18: what a node's bindings say, the names aside (resolveBindings)
         if (n === doc.root && n.bind !== undefined) p.push('the root binds nothing')
@@ -3022,6 +3052,7 @@ export function upgrade(doc) {
     if (d.version === 24) d = v24to25(d)
     if (d.version === 25) d = v25to26(d)
     if (d.version === 26) d = v26to27(d)
+    if (d.version === 27) d.version = 28          // nothing to change: a join's shape is new
     return d
 }
 

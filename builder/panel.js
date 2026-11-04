@@ -1892,6 +1892,16 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
             try { M.setJoin(doc, node.id, ev.value) } catch (e) { console.warn('[builder]', e.message); return }
             edited(null); onLabel(); onStructure()
         })
+        /* ITS SHAPE (model version 28): what its blend makes of the edge -- the smooth blend, a circular fillet, a flat
+           chamfer -- of its own blend or its group's. Structural: another function is called (codegen joinFn) */
+        const S = { shape: node.joinShape ?? 'smooth' }
+        const sb = folder.addBinding(S, 'shape', { label: 'edge', options: { 'smooth blend': 'smooth', 'round (fillet)': 'round', 'chamfer': 'chamfer' } })
+        const sl = sb.element.querySelector('.tp-lblv_l')
+        if (sl) sl.title = 'what the blend radius makes of the edge where it meets what is above it: smooth, a circular fillet, or a flat cut between the same two lines'
+        sb.on('change', ev => {
+            try { M.setJoinShape(doc, node.id, ev.value) } catch (e) { console.warn('[builder]', e.message); return }
+            edited(null); onLabel(); onStructure()
+        })
         const O = { own: node.joinBlend != null }
         folder.addBinding(O, 'own', { label: 'own blend' }).on('change', ev => {
             try { M.setJoinBlend(doc, node.id, ev.value ? parent.blend : null) } catch (e) { console.warn('[builder]', e.message); return }

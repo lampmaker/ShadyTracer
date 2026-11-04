@@ -79,6 +79,17 @@ export const LIGHT_VEC4S = 4
 /** The CSG nesting the evaluator makes room for: none without CSG, else rounded up to a multiple of 4, so the shader's
  *  text moves only when a scene crosses 4 or 8 (call 3, PERFORMANCE.md: at most 8). */
 export const STACK_MAX = 8
+/* A JOIN'S SHAPE (model version 28): a round or chamfer join's record is its op + 4 x its shape's code, and the
+   evaluator calls their functions only when the scene has one (plan.shaped) -- a scene without keeps the text it had,
+   and the first round join is a compile, as in codegen, where the shape picks the function */
+export const SHAPES = { smooth: 0, round: 1, chamfer: 2 }
+const shapedOf = (tree, compiled) => {
+    let any = false
+    const walk = n => { if (any || (n !== tree && compiled(n))) return; if (n.joinShape && n.joinShape !== 'smooth') any = true; for (const c of n.children || []) walk(c) }
+    walk(tree)
+    return any
+}
+const joinCode = c => (OPS[joinOf(c)] ?? 0) + 4 * (SHAPES[c.joinShape ?? 'smooth'] ?? 0)
 export const stackFor = depth => depth <= 0 ? 0 : depth <= 4 ? 4 : 8
 
 /* RECORDS_IN_UNIFORM (0.22.19, the test of what a record costs): the header and the records, copied into a uniform buffer
@@ -294,7 +305,7 @@ export function planOf(tree, { reliefMaterials = new Set(), wantLocal = false, c
     const sub = new Map(subs.map((n, i) => [n.id, i]))
     const depth = depthOf(tree, compiled), arrayDepth = arrayDepthOf(tree, compiled)
     return { reliefMaterials, wantLocal, sub, subs, blocks, blockIndex, befores, beforeIndex, afters, afterIndex, lights: lightsOf(tree), handles: handlesOf(tree),
-             tags: tagsOf(tree, compiled), depth, stack: stackFor(depth), arrayDepth, arrays: stackFor(arrayDepth) }
+             tags: tagsOf(tree, compiled), depth, stack: stackFor(depth), arrayDepth, arrays: stackFor(arrayDepth), shaped: shapedOf(tree, compiled) }
 }
 
 /* frames: { M: [c0, c1, c2] columns (local -> world), t, S }; descending one transform T turns (M, S, t) into
@@ -344,6 +355,7 @@ export function recordsOf(tree, plan, { boxes = null, materialIndex, lightMateri
     if (JSON.stringify(handlesOf(tree)) !== JSON.stringify(plan.handles)) return null
     if (stackFor(depthOf(tree, compiled)) !== plan.stack) return null
     if (stackFor(arrayDepthOf(tree, compiled)) !== (plan.arrays ?? 0)) return null
+    if (shapedOf(tree, compiled) !== !!plan.shaped) return null
     const handles = new Map(plan.handles)
     const tags = tagsOf(tree, compiled)
     const tagOf = new Map(tags.map((id, i) => [id, i + 1]))
@@ -521,7 +533,7 @@ export function recordsOf(tree, plan, { boxes = null, materialIndex, lightMateri
                     node(c, IDENTITY, on, false, csgDepth + 1)
                     const base = c === shape[0]
                     const j = push()
-                    head(j, KIND.JOIN, base ? OPS.union : OPS[joinOf(c)] ?? 0, 0, visible(c) ? FLAG.VISIBLE : 0)
+                    head(j, KIND.JOIN, base ? OPS.union : joinCode(c), 0, visible(c) ? FLAG.VISIBLE : 0)
                     j[7] = base || c.joinBlend == null ? n.blend ?? 0 : c.joinBlend
                     j[4] = u(recs.length)
                     if (recs.length - 1 > start && !visible(c)) recs[start][4] = u(recs.length)
@@ -560,7 +572,7 @@ export function recordsOf(tree, plan, { boxes = null, materialIndex, lightMateri
                 // ITS JOIN: its op and its blend (its own, or the group's), after its shape
                 const j = push()
                 const own = c.joinBlend != null ? c.joinBlend : n.blend ?? 0
-                head(j, KIND.JOIN, OPS[joinOf(c)] ?? 0, 0, visible(c) ? FLAG.VISIBLE : 0)
+                head(j, KIND.JOIN, joinCode(c), 0, visible(c) ? FLAG.VISIBLE : 0)
                 j[7] = own
                 j[4] = u(recs.length)
                 /* a hidden shape is ABSENT, its join too (codegen liveVisibility): the shape's first record skips past it */
@@ -660,7 +672,7 @@ function pathTo(root, target) {
 // that folds -- every one sets the frame it folds in -- and XF_M, XF_S are put back to the identity at the end, as the
 // last block's leave() left them.
 //======================================================================================================================
-export function evaluatorWGSL({ blocks, befores = 0, afters = 0, subs, stack, arrays = 0, wantLocal = false, keepK = false, straight = false, pick = false, optics = false, cull = true, count = false, recs = 'sceneData', arrayWindow = true }) {
+export function evaluatorWGSL({ blocks, befores = 0, afters = 0, subs, stack, arrays = 0, shaped = false, wantLocal = false, keepK = false, straight = false, pick = false, optics = false, cull = true, count = false, recs = 'sceneData', arrayWindow = true }) {
     const L = []
     const w = s => L.push(s)
     const culling = cull && !pick && !optics
@@ -753,11 +765,27 @@ export function evaluatorWGSL({ blocks, befores = 0, afters = 0, subs, stack, ar
     if (stack > 0) {
         w(`        if (kind == ${KIND.JOIN}u) {`)
         w('            // this shape into its group\'s: the first shown is the base, each after it joins by its op and blend')
-        w('            let op = scnU(v0.y);')
-        w('            if (top.first != 0u) { top.k = C.s; top.km = C.m; top.first = 0u; }')
-        w('            else if (op == 0u) { top.km = select(top.km, C.m, C.s.w < top.k.w); top.k = csgUnion(top.k, C.s, v1.w); }')
-        w('            else if (op == 1u) { top.km = select(top.km, C.m, -C.s.w > top.k.w); top.k = csgSubtract(top.k, C.s, v1.w); }')
-        w('            else { top.km = select(top.km, C.m, C.s.w > top.k.w); top.k = csgIntersect(top.k, C.s, v1.w); }')
+        if (!shaped) {
+            w('            let op = scnU(v0.y);')
+            w('            if (top.first != 0u) { top.k = C.s; top.km = C.m; top.first = 0u; }')
+            w('            else if (op == 0u) { top.km = select(top.km, C.m, C.s.w < top.k.w); top.k = csgUnion(top.k, C.s, v1.w); }')
+            w('            else if (op == 1u) { top.km = select(top.km, C.m, -C.s.w > top.k.w); top.k = csgSubtract(top.k, C.s, v1.w); }')
+            w('            else { top.km = select(top.km, C.m, C.s.w > top.k.w); top.k = csgIntersect(top.k, C.s, v1.w); }')
+        } else {
+            // ...its shape too (model version 28, SHAPES): op + 4 x shape, a round's or a chamfer's function for the smooth blend's
+            w('            let op = scnU(v0.y) & 3u;')
+            w('            let shp = scnU(v0.y) >> 2u;')
+            w('            if (top.first != 0u) { top.k = C.s; top.km = C.m; top.first = 0u; }')
+            w('            else {')
+            w('                if (op == 0u) { top.km = select(top.km, C.m, C.s.w < top.k.w); }')
+            w('                else if (op == 1u) { top.km = select(top.km, C.m, -C.s.w > top.k.w); }')
+            w('                else { top.km = select(top.km, C.m, C.s.w > top.k.w); }')
+            w('                let b = select(C.s, -C.s, op == 1u);            // a subtraction intersects the cutter turned out')
+            w('                if (shp == 1u) { if (op == 0u) { top.k = csgRoundUnion(top.k, b, v1.w); } else { top.k = csgRoundIntersect(top.k, b, v1.w); } }')
+            w('                else if (shp == 2u) { if (op == 0u) { top.k = csgChamferUnion(top.k, b, v1.w); } else { top.k = csgChamferIntersect(top.k, b, v1.w); } }')
+            w('                else { if (op == 0u) { top.k = csgUnion(top.k, b, v1.w); } else { top.k = csgIntersect(top.k, b, v1.w); } }')
+            w('            }')
+        }
         w('            C = emptyHit(r);          // the next shape alone')
         w(`            i = i + ${REC}u;`)
         w('            continue;')

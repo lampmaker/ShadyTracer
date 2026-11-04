@@ -96,6 +96,12 @@ export const CODE_HELP = [
         csgUnion: 'Both shapes; `k` above 0 melts them together where they come within `k` of each other.',
         csgIntersect: 'Only where both are.',
         csgSubtract: '`a` with `b` cut out of it.',
+        csgRoundUnion: 'A join set to *round* (version 28): both shapes, the concave edge where they meet filled by a fillet of radius `r` -- a circle where they meet at a right angle (two flat faces, a flat face across a cylinder or a prism), a rounded corner at other angles. Its distance reads the two distances alone; its normal is analytic, and with a shape that gives no normal the result has none.',
+        csgRoundIntersect: 'Only where both are, the edge rounded by a circle of radius `r`: a convex fillet, as `csgRoundUnion`.',
+        csgRoundSubtract: '`a` with `b` cut out, the rim of the cut rounded by radius `r`: a hole\'s filleted edge.',
+        csgChamferUnion: 'A join set to *chamfer*: the concave edge filled with the flat cut between the lines a round of radius `r` would touch.',
+        csgChamferIntersect: 'Only where both are, the edge cut flat between the lines a round of radius `r` would touch.',
+        csgChamferSubtract: '`a` with `b` cut out, the rim of the cut chamfered.',
     } },
     { title: 'Older joins', intro: 'Kept for the code that calls them; new code is better off with the `csg` three above.', fns: {
         Nsmin: 'A smooth union with the normals blended. `k` must be above 0 (it is divided by), and both shapes need a normal: an `sd` shape\'s zero normal can make it NaN, and a NaN normal deletes the surface. `csgUnion` has neither problem.',
@@ -197,6 +203,7 @@ export const CODE_HELP = [
 export const CODE_SHAPED = /^(N[a-z]|sd[A-Z]?|op[A-Z]|csg[A-Z]|g2[A-Z])/
 export const CODE_UNLISTED = {
     csgNormal: 'the csg joins\' own blended normal',
+    csgShapedCap: 'the round and chamfer joins\' own cap on how far they go over the hard op',
     sheetNormal: 'Nrectangle\'s and Ndisc\'s own',
     lensFace: 'Nlens\'s own, one face',
 }

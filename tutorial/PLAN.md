@@ -129,7 +129,16 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
    need none), no two products only touching inside the solid (a seam a ray in glass would stop at), the formula a
    bound by min and max of exact distances, a cut that shares a cap with what it cuts worth only the distance to that
    cap across the opening (so what is cut away reaches past it), four corner cylinders one rounded prism, and the
-   facets of an STL fitted back to the cylinders they were -> import/csg.js, shapes.js, fit.js. *Read:* iq-distfunctions, iq-interior, iq-fbmsdf,
+   facets of an STL fitted back to the cylinders they were -> import/csg.js, shapes.js, fit.js. Planned for it too (0.next):
+   a join's shape -- the round join a circular fillet where two faces meet at a right angle (two planes, a plane met
+   squarely by a cylinder or a prism), from the two distances alone: a first version read the normals' angle into the
+   distance, the renderer's distance-only march had none, and the fillets came out black (march and shading on two
+   surfaces); its rounding capped at what it adds on the fillet, so far off it is never above the true distance; the
+   chamfer its chord -- and a CAD fillet read as the round
+   join of its two supports, one half-space with no separators; the two sheets such half-spaces make possible (a
+   fillet with the other side of its support: zero along the support; walls across a surface a fillet shares) and
+   how the cover keeps them out; a freeform face fitted with the nearest regular surface, and the deviation shown
+   -> builder/joins.js, scene_api.js csgRound*, import/fillet.js, import/freeform.js. *Read:* iq-distfunctions, iq-interior, iq-fbmsdf,
    iq-smin; Shapiro and Vossler 1991 (named in words, not yet in kit/reading.js).
 4. **Which way is up** (draft): the normal as the field's gradient; a shape's own against forward differences (the
    shade kernel's 3 looks) and central ones (the pick's 6), their errors as h and h², a crease; the same differences
