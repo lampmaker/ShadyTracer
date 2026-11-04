@@ -192,10 +192,12 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
                otherwise (white, as a ray-file light has no colour rows) */
             const fileXYZ = fileColour(f)
             sources.push({ ...x, rays: key, flux: x.flux ?? f.total, unit: f.header.fluxUnit, header: f.header,
-                           ...(fileXYZ ? { colour: XYZtoRGB(fileXYZ) } : {}) })
+                           ...(fileXYZ ? { colour: XYZtoRGB(fileXYZ), fileColour: true } : {}) })
         }
         // a sheet in the scene starts its rays off it (builder/sources.js faceSource, shared with the bench)
-        const describe = x => x.kind === 'rayset' ? { type: 'rayset', rays: x.rays, flux: x.flux, emitN: x.emitN, colour: x.colour } : faceSource(x)
+        const describe = x => x.kind === 'rayset' ? { type: 'rayset', rays: x.rays, flux: x.flux, emitN: x.emitN, colour: x.colour,
+            /* a file's own colour (its wavelengths) wins over the light's settings: the stand-in of that colour */
+            ...(x.fileColour ? {} : x.spectrum ? { spectrum: x.spectrum } : x.planck ? { planck: x.planck } : {}) } : faceSource(x)
         // the trace starts from every light, and the picture light-traces every one (codegen LIGHTS:
         // the camera's paths count a light's face only where these photons cannot connect)
         const list = sources.map(describe)
