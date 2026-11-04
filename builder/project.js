@@ -132,11 +132,11 @@ const uniqueTitle = (p, t) => {
    (demo.js), never by undo's snapshots or the start-up copy, which are the project itself */
 export const serialize = (p, { app } = {}) => JSON.stringify(M.withApp(p, app), null, 2)
 
-/* WHAT A SCENE HAS THAT NO UNDO STEP HOLDS: its view (model.js VIEW) and its timeline (model.js TIMELINE, 0.67.0).
-   One list, read by every place that leaves them out or puts them back -- the history's text, a restore (carryOutside),
+/* WHAT A SCENE HAS THAT NO UNDO STEP HOLDS: its view (model.js VIEW), its timeline (model.js TIMELINE, 0.67.0) and its
+   script (model.js SCRIPT, 0.82.0: a text editor's lines, which an undo of the scene's must not take back). One list, read by every place that leaves them out or puts them back -- the history's text, a restore (carryOutside),
    the builder's memory of a scene taken out and its comparison of a scene before and after a step (demo.js) -- so a
    third such part is one word here, not a fourth place found missing. */
-export const OUTSIDE_HISTORY = Object.freeze(['view', 'timeline'])
+export const OUTSIDE_HISTORY = Object.freeze(['view', 'timeline', 'script'])
 /** A scene's document without what no undo step holds (OUTSIDE_HISTORY), a shallow copy. */
 export const withoutOutside = doc => Object.fromEntries(Object.entries(doc).filter(([k]) => !OUTSIDE_HISTORY.includes(k)))
 /** What a scene's document has of OUTSIDE_HISTORY, copied: { view, timeline }, each only when it has one. */

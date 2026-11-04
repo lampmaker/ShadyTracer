@@ -250,7 +250,13 @@
       <p><strong>Only air.</strong> A ray in glass or water inside the box never meets a particle (its medium's index is
         not 1): the user asked for dust that "does not add scattering in transparent materials" (haze.js's header). In
         Sketch and the Optics view the dust is off; in Draft a path ends at its first point in the dust, so only light
-        scattered once is seen (<code>mediumVertex</code>).</p>
+        scattered once is seen (<code>mediumVertex</code>). A material can scatter inside itself, milky glass (version
+        0.82.0), and that is the same free flight and the same phase function, but no vertex: inside a solid every shadow
+        ray is stopped by its own wall, so a collision there only turns the ray, and the march does it and marches on
+        (<cite data-src="lib/pathtracer/core/haze.js" data-sym="THE MEDIUM'S WALK (0.82.0; roadmap/DIFFUSERS.md A)"></cite>).
+        What the glass scatters reaches the eye through the photon map instead (chapter 19): photons are stored where
+        they collide, and a camera ray's first collision, handed out of the march, gathers them
+        (<cite data-src="lib/pathtracer/core/haze.js" data-sym="THE BEAM SEEN INSIDE (0.82.0; roadmap/MEDIA.md phase 2"></cite>).</p>
     </div>
     <div data-claim="code">
       <p><strong>A scene without a box pays nothing.</strong> The haze's code goes into the kernels only for a scene that

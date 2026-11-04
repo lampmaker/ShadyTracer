@@ -103,6 +103,8 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
     /* ...AND A TIMELINE KEPT (keepTimeline): written with the project as an edit is, but no undo step and nothing the
        bake waits out -- a key set changes no shader -- so counted apart from `revision`, which those two read */
     let timelineKept = 0
+    /* ...AND A SCRIPT KEPT (keepScript, model.js SCRIPT): the same, for the same reasons */
+    let scriptKept = 0
 
     /* A RESTORED PROJECT, and what the renderer needs to follow it. AN EDIT INSIDE A SCENE: the scene the step
        changed becomes current -- undoing an edit made in another scene shows that scene, rather than changing
@@ -231,6 +233,25 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
         /* ...AND ITS TIMELINE (model.js TIMELINE), whole too: the host's panel loads it (tools/timeline.js showScene).
            Said here, where the view changes hands, so the keys and the camera they move always belong to one scene. */
         try { BUILDER.onTimeline?.(M.sceneTimelineOf(d)) } catch (e) { console.warn('[builder] onTimeline', e) }
+        /* ...AND ITS SCRIPT (model.js SCRIPT): the Script panel shows the one of the scene the renderer shows, whose
+           parameters it names. Shown, never run (tools/script.js). */
+        try { BUILDER.onScript?.(M.sceneScriptOf(d)) } catch (e) { console.warn('[builder] onScript', e) }
+    }
+    /* THE SCRIPT KEPT, into the scene the renderer shows, as the timeline is (keepTimeline below). */
+    let scriptRefused = null
+    const keepScript = text => {
+        const d = shown != null ? P.scene(project, shown)?.doc : null
+        if (!d) return false
+        if (M.sceneScriptOf(d) === (text ?? '')) return true
+        try { M.setScript(d, text) }
+        catch (e) {
+            const why = `[builder] the script of '${d.title}' not kept: ${e.message}`
+            if (why !== scriptRefused) console.warn(scriptRefused = why)
+            return false
+        }
+        memorize(shown, d)
+        scriptKept++
+        return true
     }
     /* THE TIMELINE KEPT, into the scene the renderer SHOWS, as its view is (keepView): the one the panel was handed
        (markShown) and whose picture the keys move. Refused as one reason is said once, not at every key. */
@@ -628,7 +649,7 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
         /** WHAT THE AUTOSAVE LOOKS AT (workspace/autosave.js): `revision`, and one more for every timeline kept -- saved
          *  as an edit is, so a key set is in the project within the second and makes a second tab's copy, without
          *  being an undo step or an edit the bake waits out (`timelineKept` above). */
-        get saveRevision() { return `${revision}.${timelineKept}` },
+        get saveRevision() { return `${revision}.${timelineKept}.${scriptKept}` },
         /** Every scene's view: { key: view }, what the browser's session keeps between the project's writes. The one
          *  shown is written as it changes (keepView), so this is it as it is now. */
         views: () => P.viewsOf(project),
@@ -644,6 +665,15 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
         keepTimeline,
         /** The host's: told the timeline of each scene as it is shown (markShown), whole. */
         onTimeline: null,
+        /** THE SCRIPT OF THE SCENE SHOWN (model.js SCRIPT), '' for none or while none of the project's is shown. */
+        script() {
+            const d = shown != null ? P.scene(project, shown)?.doc : null
+            return M.sceneScriptOf(d ?? null)
+        },
+        /** Keep `text` as the scene shown's script ('' takes it away). False when none is shown or the model refused it. */
+        keepScript,
+        /** The host's: told the script of each scene as it is shown (markShown). */
+        onScript: null,
         /** ANOTHER PROJECT ALTOGETHER -- one kept in the browser, opened from the list (workspace/session.js): its
          *  scenes, each with its view, and the one to work on. Its own undo history from here: undoing into the
          *  project before would write that one's scenes into this one. The renderer still shows the last

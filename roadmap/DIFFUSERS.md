@@ -61,7 +61,14 @@ beyond*). What follows below was written before the build and is kept as it was,
   photons on or off, each way round. Opal and hazy-glass spheres vanish in the furnace (`core/test/transmission.gpu.mjs`).
   - **On hardware (Ampere, 2026-11-02, 86ed2ca):** `furnace-beyond` 14 of 14 (hazy glass 0.99975 and 0.99974, opal 1.0001
     and 1.0000) and `transmission-parity` 16 of 16 (`docs/TESTING.md` has the rows).
-- **Still open:** A (volume scattering) and MEDIA.md phase 2, as below.
+- **A is built too (0.82.0, 2026-11-02), not yet seen on hardware:** scatter inside a material, a free path and g
+  beside the colour depth, walked in the march (`core/haze.js` THE MEDIUM'S WALK; the remedy "walk inside the march
+  kernel" below). The Ray stays 112 bytes, its medium in f16. Measured on Dawn over lavapipe: an index-matched slab
+  passes what a JS walk passes at depths 1, 3 and 6, the JS walk itself held to exp(-tau), T + R = 1 and the
+  diffusion regime's 1 / (tau + 2q); milky spheres vanish in the furnace. Found while building it: a flight drawn after
+  shade's step off the surface made a slab pass 3.6 % too much; drawn from the vertex it agrees.
+- **MEDIA.md phase 2 built for it (2026-11-02):** the photon map in the volume, so a collimated beam's track in milky
+  glass shows (the user's laser in hazy acrylic). The haze box's points in the air are still open.
   - **The lights' photons through these faces (CLS_LIGHTS)** are checked only on hardware, by `light-vs-emitter`'s
     frosted and opal diffuser pairs. The node tests have no builder light.
 

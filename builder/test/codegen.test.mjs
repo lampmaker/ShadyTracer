@@ -14,7 +14,7 @@ import { typedColumn } from '../emit.js'
 import * as Model from '../model.js'
 import { resolve, mapMessages } from '../emit.js'
 import { lineOffsetOf, finish, BODY_MARKER } from '../validate.js'
-import { uniformToGPU } from '../../lib/pathtracer/core/uniforms.schema.js'
+import { uniformToGPU, sceneTextOf } from '../../lib/pathtracer/core/uniforms.schema.js'
 import { carryAcross } from '../../lib/pathtracer/index.js'
 import { PRIMITIVES } from '../../lib/pathtracer/core/sdf.js'
 import { DEFINITIONS } from '../../lib/pathtracer/core/tracebasics.js'
@@ -1935,6 +1935,38 @@ eq('uniformName', uniformName('n7', 'radius'), 'radius_n7')
     const made = { ...structuredClone(old.materials[0]) }
     made.params = Object.fromEntries(Object.entries(Model.withFieldDefaults(made).params).reverse())
     ok('...and the same material whatever order its fields are in', Model.sameMaterial(Model.withFieldDefaults(old.materials[0]), made))
+}
+
+//----------------------------------------------------------------------------------------------
+// SCATTER INSIDE A MATERIAL (0.82.0; materials.js scatterDistance, core/haze.js THE MEDIUM'S WALK): in the shader only
+// while above 0, in real mm, its asymmetry only with it -- and the scene says it scatters (scene.scatter), which decides
+// whether the march has the walk (sceneTextOf), only then
+//----------------------------------------------------------------------------------------------
+{
+    const d = Model.createDoc({ title: 'milky' })
+    Model.addMaterial(d, { id: 'glass', preset: 'glass' })
+    Model.addObject(d, 'root', { id: 'box', primitive: 'box', material: 'glass' })
+    const P = d.materials.find(m => m.id === 'glass').params
+    ok('a new material has both fields, at 0', P.scatterDistance === 0 && P.scatterAnisotropy === 0)
+    const ud = uniformName('glass', 'scatterDistance'), ug = uniformName('glass', 'scatterAnisotropy')
+    const off = generate(...Model.generateArgs(d, { id: 'sc' }))
+    ok('at 0: neither declared nor assigned, and the scene does not say it scatters', !(ud in off.uniforms) && !(ug in off.uniforms)
+        && !off.wgsl.includes('scatterDistance') && !('scatter' in off))
+    P.scatterAnisotropy = 0.6
+    const gOnly = generate(...Model.generateArgs(d, { id: 'sc' }))
+    ok('...its asymmetry alone puts nothing in the shader', !(ug in gOnly.uniforms) && !('scatter' in gOnly))
+    P.scatterDistance = 3
+    const on = generate(...Model.generateArgs(d, { id: 'sc' }))
+    ok('above 0: both uniforms with their values, the distance through mm() (real millimetres whatever the unit)',
+        on.uniforms[ud]?.def === 3 && on.uniforms[ug]?.def === 0.6 && on.wgsl.includes(`m.scatterDistance = mm(UB.${ud});`)
+        && on.wgsl.includes(`m.scatterAnisotropy = UB.${ug};`))
+    ok('...and the scene says it scatters, which makes its text another (sceneTextOf)', on.scatter === true && sceneTextOf(on) !== sceneTextOf({ ...on, scatter: undefined }))
+    // an emitter's fields are emission alone: a scatter distance on one scatters nothing
+    Model.addMaterial(d, { id: 'lamp', preset: 'emissive' })
+    P.scatterDistance = 0
+    d.materials.find(m => m.id === 'lamp').params.scatterDistance = 2
+    const em = generate(...Model.generateArgs(d, { id: 'sc' }))
+    ok('...an emitter\'s scatter distance does not make the scene scatter', !('scatter' in em))
 }
 
 //----------------------------------------------------------------------------------------------

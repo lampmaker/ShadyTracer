@@ -1,0 +1,74 @@
+/* THE SCRIPT PANEL (tools/script.js): a bar, the editor, the output under it. In the page's sheets, not inline: a
+   popped-out panel gets the main window's sheets (lib/shell). */
+.rt-script { display: flex; flex-direction: column; height: 100%; min-height: 0; background: var(--sh-panel); color: var(--sh-ink);
+             font-family: var(--sh-sans); font-size: 12px; }
+.rt-script-bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 5px 6px; background: var(--sh-raised);
+                 border-bottom: 1px solid var(--sh-line); }
+.rt-script-bar button, .rt-script-bar select { background: #26303a; color: var(--sh-ink); border: 1px solid var(--sh-line);
+                 border-radius: 3px; padding: 2px 8px; font: inherit; cursor: pointer; }
+.rt-script-bar button:hover:not(:disabled) { background: #2f3b47; }
+.rt-script-bar button:disabled, .rt-script-bar select:disabled { opacity: 0.45; cursor: default; }
+.rt-script-bar .run { background: #2f5d3e; }
+.rt-script-bar .stop:not(:disabled) { background: #7a3b2e; }
+.rt-script-bar .state { color: var(--sh-muted); margin-left: auto; }
+.rt-script.running .rt-script-bar .state { color: var(--sh-warn); }
+.rt-script-edit { position: relative; flex: 3 1 0; min-height: 60px; overflow: hidden; background: var(--sh-bg); }
+/* THE COLOURS UNDER THE TEXT (tools/script.js): the layer and the textarea in one font, one box, one padding -- a
+   pixel's difference and the caret is beside the letter it is in */
+.rt-script-hl, .rt-script-code { position: absolute; top: 0; left: 40px; right: 0; bottom: 0; margin: 0; border: 0; padding: 6px 8px;
+                  box-sizing: border-box; font: 12px/1.45 var(--sh-mono); tab-size: 4; white-space: pre; letter-spacing: 0;
+                  font-variant-ligatures: none; }
+.rt-script-hl { overflow: hidden; pointer-events: none; color: var(--sh-ink); }
+.rt-script-code { resize: none; outline: none; overflow: auto; background: transparent; color: transparent;
+                  -webkit-text-fill-color: transparent; caret-color: var(--sh-ink); }
+.rt-script-code::selection { background: rgba(120, 150, 175, 0.35); }
+.rt-script-code::placeholder { color: var(--sh-faint); -webkit-text-fill-color: var(--sh-faint); }
+.rt-script-gutter { position: absolute; top: 0; left: 0; bottom: 0; width: 40px; padding: 6px 6px 6px 0; box-sizing: border-box;
+                    overflow: hidden; text-align: right; color: var(--sh-faint); font: 12px/1.45 var(--sh-mono); user-select: none;
+                    border-right: 1px solid var(--sh-line); background: var(--sh-panel); }
+.rt-script-gutter .err { color: #fff; background: #7a3b2e; }
+.rt-script-hl .hl-com { color: #6a9955; }
+.rt-script-hl .hl-str { color: #ce9178; }
+.rt-script-hl .hl-tpl { color: #569cd6; }
+.rt-script-hl .hl-num { color: #b5cea8; }
+.rt-script-hl .hl-kw { color: #c586c0; }
+.rt-script-hl .hl-lit { color: #569cd6; }
+.rt-script-hl .hl-api { color: #4ec9b0; }
+.rt-script-hl .hl-fn { color: #dcdcaa; }
+.rt-script-hl .hl-prop { color: #9cdcfe; }
+.rt-script-hl .hl-re { color: #d16969; }
+.rt-script-out { flex: 2 1 0; min-height: 40px; overflow: auto; padding: 4px 8px; border-top: 1px solid var(--sh-line);
+                 font: 11.5px/1.4 var(--sh-mono); white-space: pre-wrap; word-break: break-word; }
+.rt-script-out .line.warn { color: var(--sh-warn); }
+.rt-script-out .line.error { color: #e0796a; }
+.rt-script-out .line.mark { color: var(--sh-faint); }
+.rt-script-out .line.result { color: var(--sh-accent); }
+/* THE BODY: the editor and its output, and the reference beside them -- or under them in a narrow panel */
+.rt-script-body { flex: 1 1 0; min-height: 0; display: flex; }
+.rt-script-main { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; }
+.rt-script.narrow .rt-script-body { flex-direction: column; }
+.rt-script-bar .ref.on { background: var(--sh-strong); }
+.rt-script-ref { display: none; flex: 0 0 44%; min-width: 0; min-height: 0; flex-direction: column; border-left: 1px solid var(--sh-line);
+                 background: var(--sh-panel); }
+.rt-script.ref-open .rt-script-ref { display: flex; }
+.rt-script.narrow .rt-script-ref { flex-basis: 45%; border-left: 0; border-top: 1px solid var(--sh-line); }
+.rt-script-ref > input { margin: 6px; padding: 3px 6px; font: inherit; color: var(--sh-ink); background: var(--sh-bg);
+                         border: 1px solid var(--sh-line); border-radius: 3px; }
+.rt-script-ref-list { flex: 1 1 0; overflow: auto; padding: 0 8px 12px; }
+.rt-script-ref-none { padding: 8px; color: var(--sh-muted); }
+.rt-script-ref .sec > summary { cursor: pointer; padding: 6px 0 4px; font-weight: 600; color: var(--sh-ink); }
+.rt-script-ref .intro { color: var(--sh-muted); line-height: 1.45; margin: 0 0 6px; }
+.rt-script-ref .item { padding: 6px 0 7px; border-top: 1px solid var(--sh-line); line-height: 1.45; }
+.rt-script-ref .sig { font: 12px/1.4 var(--sh-mono); color: var(--sh-ink); white-space: pre-wrap; margin-bottom: 2px; }
+.rt-script-ref .ret { color: var(--sh-muted); margin-top: 2px; }
+.rt-script-ref code { font: 11.5px var(--sh-mono); color: #d7ba7d; }
+.rt-script-ref .ex { position: relative; margin-top: 4px; }
+.rt-script-ref .ex pre { margin: 0; padding: 5px 7px; background: var(--sh-bg); border: 1px solid var(--sh-line); border-radius: 3px;
+                         font: 11.5px/1.4 var(--sh-mono); white-space: pre; overflow-x: auto; color: var(--sh-ink); }
+.rt-script-ref .ex button { position: absolute; top: 3px; right: 3px; font: 11px var(--sh-sans); color: var(--sh-ink); background: #26303a;
+                            border: 1px solid var(--sh-line); border-radius: 3px; padding: 1px 6px; cursor: pointer; opacity: 0.75; }
+.rt-script-ref .ex button:hover { opacity: 1; background: #2f3b47; }
+.rt-script-ref .hl-com { color: #6a9955; } .rt-script-ref .hl-str { color: #ce9178; } .rt-script-ref .hl-tpl { color: #569cd6; }
+.rt-script-ref .hl-num { color: #b5cea8; } .rt-script-ref .hl-kw { color: #c586c0; } .rt-script-ref .hl-lit { color: #569cd6; }
+.rt-script-ref .hl-api { color: #4ec9b0; } .rt-script-ref .hl-fn { color: #dcdcaa; } .rt-script-ref .hl-prop { color: #9cdcfe; }
+.rt-script-ref .hl-re { color: #d16969; }

@@ -2,8 +2,8 @@
 //
 // THE REFERENCE PAGES, MADE FROM THE PROGRAM'S OWN LISTS: every shape (builder/primitives.js), every modifier
 // (builder/modifiers.js), every material field, relief and coating (builder/materials.js), every light setting
-// (builder/lights.js), every haze box setting (builder/hazebox.js), and the functions code can call (the scene prelude: CODE_HELP
-// below). A shape's or a modifier's text is the comment its code starts with -- what its properties panel
+// (builder/lights.js), every haze box setting (builder/hazebox.js), the functions code can call (the scene prelude: CODE_HELP
+// below), and the functions a scene's script can call (tools/scriptref.js, which tools/test/script.test.mjs holds to the API). A shape's or a modifier's text is the comment its code starts with -- what its properties panel
 // shows -- so it is written once. Material fields and light settings have no text of their own in the code; theirs is
 // below, one a key, and test/coverage.test.mjs fails on a key with none. So a shape, modifier, field or setting
 // added to the program without words fails the tests, rather than shipping undocumented -- the "second caller" this
@@ -19,6 +19,7 @@ import { LIGHT_SHAPES, LIGHT_DEFAULTS } from '../builder/lights.js'
 import { HAZE_DEFAULTS, HAZE_G_MAX, KOSCHMIEDER } from '../builder/hazebox.js'
 import { codeOnly } from '../builder/codegen.js'
 import { SCENE_PRELUDE } from '../lib/pathtracer/core/scene_api.js'
+import { referenceMarkdown as scriptReference } from '../tools/scriptref.js'
 import { TOKENS, SHORT_TOKENS } from '../lib/wgsl_shorthand.js'
 
 /** WHAT EACH MATERIAL FIELD DOES -- read in builder/materials.js FIELDS and lib/pathtracer/core/materials_pbr.js. */
@@ -40,6 +41,8 @@ export const FIELD_HELP = {
     coatWidth: 'How sharp the switch is: nm from 10 % to 90 % of the way.',
     coatIndex: 'The coating stack\'s effective index: how fast the edge moves with the angle -- higher moves it less.',
     haze: 'Of the light that passes through (transmission), how much is diffused -- spread evenly on the far side -- instead of going straight on: what a datasheet calls haze (ASTM D1003). 0 clear, 1 all of it (an opal diffuser, paper, a lampshade). Clear acrylic with haze 0.06 keeps a sharp image behind it under a veil; roughness is the other, narrow blur (frosting). Each face a ray crosses scatters it, so a sheet scatters twice. A clear sheet of n 1.49 whose faces have haze 0.01, 0.03, 0.06, 0.1, 0.2, 0.5 has about 1.7, 5, 10, 17, 33, 72 % haze itself, passing 92 to 84 % (a walk of the sheet in core/transmission.js). An opal sheet whose datasheet gives a total transmittance T (white, specular 0) is transmission 2T / (1 + T) a face with haze 1 -- 0.667 for 50 %. Thickness does not change it: it scatters at the faces. Light sampling and the lights\' rays reach through it in Standard and High; Draft follows it as it follows frosted glass. Turning it on is a compile.',
+    scatterDistance: 'How far light travels inside the material, on average, before something in it scatters it: in millimetres, whatever the scene\'s unit, as the colour depth. 0 a clear volume. Haze scatters at the faces, whatever the thickness; this scatters inside, so a thick part is milkier than a thin one -- milky or opal glass by the block, a light guide\'s diffusing body, frosted ice. A few millimetres in a part a few centimetres thick is milky; a free path well under the part\'s size makes it glow through, like opal. It only acts where light travels inside, so with transmission. Each scattering is a step of the march, so a dense, thick part walks long: raise Max Iterations if it reads dark. Light sampling cannot reach inside smooth glass, so what the glass scatters -- a beam\'s track, a lamp\'s glow -- shows through the photon map (Light sources), sharpening as samples come in, and without it only by chance; the Optics page\'s rays walk it too. Turning it on is a compile.',
+    scatterAnisotropy: 'Which way each scattering inside sends the light (Henyey-Greenstein\'s g): 0 evenly in every direction, towards 0.95 mostly onwards, as large particles do (milk about 0.8, fine particles nearer 0). Forward scattering lets light through deeper, so a forward-scattering part is clearer for the same scatter distance. Only with a scatter distance.',
     emissive: 'An emitter\'s colour. Only its hue counts: the brightness is the luminance.',
     emissiveLuminance: 'An emitter\'s brightness in cd/m²: 300 a monitor, 5000 a frosted bulb, 20 000 a fluorescent tube, 1.6 billion the sun.',
 }
@@ -349,6 +352,8 @@ export const referencePages = () => ({
     'reference/lights.md': lights(),
     'reference/haze.md': haze(),
     'reference/code.md': code(),
+    // a script's functions (0.82.0): tools/scriptref.js, which the Script panel's Reference pane shows too
+    'reference/script.md': scriptReference(),
 })
 
 if (import.meta.url === `file://${process.argv[1]}`) {

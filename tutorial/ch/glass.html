@@ -169,7 +169,7 @@
       surface it meets says nothing about what lies behind it: glass in water, a bubble in glass. So a transparent
       surface asks the scene, at a point a hair beyond it, which material is there:</p>
     <pre data-src="lib/pathtracer/core/tracebasics.js" data-sym="// THE MEDIUM BEYOND: the material a hair along d from the ray's point" data-to="return materialAt(SDFd(r, d * offsetTol(r.pos) * 2.0), true);"
-         data-why="SDFd evaluates the scene, the distance field of chapter 2, at the ray's point moved a little along d; materialAt reads which material that point is in. The little step is twice offsetTol, the renderer's step off a surface (ten march tolerances): far enough to be past the surface the march stopped at, near enough to be in the next material, not beyond it. Its index (ior) is the n on the other side." data-hash="87e958c8"></pre>
+         data-why="SDFd evaluates the scene, the distance field of chapter 2, at the ray's point moved a little along d; materialAt reads which material that point is in. The little step is twice offsetTol, the renderer's step off a surface (ten march tolerances): far enough to be past the surface the march stopped at, near enough to be in the next material, not beyond it. Its index (ior) is the n on the other side." data-hash="0d5c5306"></pre>
     <p>An opaque surface does not ask: it uses its own index, and never less than the material the ray is in
       (<cite data-src="lib/pathtracer/core/materials_pbr.js" data-sym="/* THE MEDIA ON EITHER SIDE."></cite>), since
       asking cost a scene evaluation at every hit, and once made a mirror of an ordinary surface under water (section

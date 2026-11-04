@@ -692,7 +692,7 @@ function emitMaterials(e, materials, matIdOf, uniforms, wantLocal, lights = []) 
                values are declared above only then */
             if (k === 'coating' || f.coat) continue
             // the colour depth is in real mm, whatever the scene's unit: the material's side is in the scene's
-            if (k === 'attenuationDistance') { e.raw(`            m.${k} = mm(UB.${name});`); continue }
+            if (k === 'attenuationDistance' || k === 'scatterDistance') { e.raw(`            m.${k} = mm(UB.${name});`); continue }
             /* the colour is a hue, normalised to Y = 1 here, and the luminance carries the
                magnitude -- so the number on the panel IS the surface's cd/m^2 (materials.js) */
             if (k === 'emissive') e.raw(`            m.emissive = UB.${name} / max(dot(UB.${name}, LUMA_709), 1e-6) * UB.${uniformName(mat.id, 'emissiveLuminance')};`)
@@ -2127,6 +2127,12 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
 
     // the haze box in the world, if the scene has one (the tree is the root group here)
     const haze = hazeOf({ root: tree })
+    /* ...and whether a material scatters inside (materials.js scatterDistance, 0.82.0): the march has the walk's code
+       only then (core/haze.js THE MEDIUM'S WALK), so it is the scene's text, as the haze box's presence is (sceneTextOf).
+       A surface's or a detector's material with a scatter distance, as the shader is given it (`only`). A material's own
+       code that sets m.scatterDistance is not seen here: such a scene says scatter itself, or its rays walk nothing. */
+    const scatter = (tree.materials || []).some(m => (FIELDS_OF[m.type ?? 'surface'] ?? FIELDS_OF.surface).includes('scatterDistance')
+                                                    && m.params?.scatterDistance > 0)
     /* `wgsl` for the scene contract is the materials onwards -- the same place the three
        hand-written scenes put there, since the kernels prepend the engine prelude themselves
        and would otherwise see it twice. `body` is the whole file, which is what the probe
@@ -2145,6 +2151,7 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
         /* ...and its haze box (hazebox.js hazeOf: in the world, in that unit; the renderer's core/haze.js), only when it
            has one: whether it does decides the kernels' text (sceneTextOf), so a scene without one says nothing */
         ...(haze ? { haze } : {}),
+        ...(scatter ? { scatter: true } : {}),
         wgsl: e.lines.slice(preludeLines).join('\n'),
         uniforms,
         body: e.wgsl,
