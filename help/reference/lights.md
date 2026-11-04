@@ -6,7 +6,7 @@ A light object is a flat rectangle or disc that emits from its front (+z), or a 
 
 | setting | starts at | does |
 |---|---|---|
-| colourBy | rgb | How the colour is given: as RGB, as a colour temperature (CCT, kelvin, with Duv), as a CIE 1931 xy chromaticity -- as a datasheet gives it -- or by its spectrum. |
+| colourBy | rgb | How the colour is given: as RGB, as a colour temperature (CCT, kelvin, with Duv), as a CIE 1931 xy chromaticity -- as a datasheet gives it -- or by its spectrum. A ray file has two more, the first its default: from the file (a file with a wavelength on every ray lights the picture in each ray's own colour; one without is white) and at its header's wavelength (every ray at that one wavelength: outside what the eye sees, such as an 850 nm infrared LED, it lights nothing in the picture). Any of the other four colours every ray of the file alike. |
 | colour | 1, 1, 1 | The light's colour as linear RGB. Only its hue counts. |
 | cct | 4000 | The colour temperature in kelvin: 2700 a warm lamp, 4000 neutral, 6500 daylight. |
 | duv | 0 | How far the colour is from the black-body line: 0 on it, positive greener, negative pinker. |

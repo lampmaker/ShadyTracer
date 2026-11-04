@@ -142,7 +142,10 @@ macro (`lib/wgsl_shorthand.js:19`).
     temperature and spectra digitised from datasheets. A light is then chosen by name, with its spectrum and its flux.
     Its format is read when that step comes, not before (inferred: not seen yet). Current and temperature are a step
     after, because they change the source, not the ray;
-  - a Zemax ray file's wavelength, read and dropped today (`optics/sources.js:107-121`, `optics/zemax.js:52, 81`).
+  - a Zemax ray file's wavelength: kept since 0.next (`optics/sources.js placeRays`, the direction's fourth slot) and
+    used by the picture's photons, each in its own wavelength's colour and carrying it in its tag
+    (`optics/kernels.js RAY_COLOUR`); the spectral optics trace still draws a ray file's wavelengths from the stand-in
+    of its colour.
 
   In RGB a spectrum becomes its exact XYZ, then RGB, as a chromaticity does today, so the step is useful before any
   spectral kernel exists.
@@ -269,6 +272,14 @@ After S3 the user chooses the order of S4-S8.
 - [ ] PPFD, melanopic EDI and the other weighted tallies (the user, 2026-11-04: "later").
 - [ ] TM-30.
 - [ ] A spectral Zemax file's own wavelength per ray in the spectral trace (traced as a stand-in of its colour now).
+  **The picture's half is built (0.next), not yet seen on hardware:** a ray file's photon for the picture carries its
+  ray's wavelength in its tag and that wavelength's exact colour (the CIE table at 1 nm), lumens a ray's luminous flux and
+  watts its radiant, a ray the eye cannot see carrying nothing, the set's mean luminance kept by a K a set
+  (`optics/sources.js` RAY COLOURS; `optics.test.mjs` holds the colours' sum to `raysXYZ`, `lenslight.gpu.mjs` a 450 nm
+  half of a disc seen in a mirror to that wavelength's colour within 1e-3). A coating meets a ray with a wavelength of
+  its own -- these, and a dispersed one -- at that wavelength exactly, R(lambda) in every channel (`materials_pbr.js`
+  makeLobes's `lam`; `coating.gpu.mjs`). What is left for the trace: its generator to start such a ray collapsed to its
+  file's wavelength, as dispersion collapses one.
 - [ ] A spectrum per map cell (the chart bins the whole detector, or its zoom).
 - [ ] The user's LED database as a source of spectra (S1: "first generic CSV").
 - [ ] Glowing materials coloured by spectrum, CCT or xy, as lights are.

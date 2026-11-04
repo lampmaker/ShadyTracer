@@ -788,6 +788,40 @@ ok('...and the radius row says so by itself (the panel redrawn), the number kept
         && /^Ra 85 · R9 24 · 410\d K/.test(pl.line), JSON.stringify(pl))
 }
 
+/* A RAY FILE'S COLOUR (0.next; lights.js RAYFILE_COLOUR_BY, optics/sources.js rayFileColour): a rectangle's four ways and two
+   of its own first -- from the file (its default) and its header's wavelength, the nm said in the choice -- the line under
+   them saying what each comes to for the file loaded: a flux-only file at 854 nm, as the user's infrared LED's says */
+{
+    await p.evaluate(async () => {
+        const { RAYFILES } = await import('/optics/rayfiles.js')
+        const { writeZemax } = await import('/lib/pathtracer/optics/zemax.js')
+        const rays = [0, 1, 2].map(k => ({ pos: [k, 0, 0], dir: [0, 0, 1], flux: 1 }))
+        await RAYFILES.load(new File([writeZemax(rays, { fluxType: 0, wavelength: 0.854 })], 'ir854.DAT'))
+        CHECK.M.addLight(CHECK.doc, 'root', { id: 'rfc', shape: 'rayfile', label: 'ir led', file: 'ir854.DAT' })
+    })
+    const light = () => p.evaluate(() => structuredClone(CHECK.M.find(CHECK.doc, 'rfc').node.light))
+    const line = () => p.evaluate(() => [...document.querySelectorAll('textarea[readonly], .tp-mllv textarea')].map(t => t.value).join(' | '))
+    const options = () => p.evaluate(() => {
+        const row = [...document.querySelectorAll('.tp-lblv')].find(r => r.querySelector('.tp-lblv_l')?.textContent.trim() === 'colour by')
+        return row ? [...row.querySelector('select').options].map(o => o.textContent.trim()) : []
+    })
+    let rr = await rowsOf('rfc')
+    const opts = await options()
+    ok('a ray file: colour by, from the file first, its header\'s wavelength with its nm, then a rectangle\'s four',
+        rr.includes('colour by') && opts[0] === 'from the file' && opts[1] === "its header's wavelength (854 nm)"
+        && ['RGB', 'CCT + Duv', 'CIE xy', 'spectrum'].every(o => opts.includes(o)), JSON.stringify(opts))
+    ok('...from the file by default, nothing stored, and said: this file gives no colour', !('colourBy' in await light()) && /gives no colour/.test(await line()), await line())
+    ok('its header\'s wavelength chosen', await set('colour by', "its header's wavelength") === 'set')
+    await p.waitForTimeout(80)
+    rr = await rowsOf('rfc')
+    ok('...stored, and said: 854 nm, outside what the eye sees, nothing in the picture', (await light()).colourBy === 'wavelength'
+        && /854 nm: outside what the eye sees/.test(await line()), JSON.stringify([await light(), await line()]))
+    ok('RGB chosen', await set('colour by', 'RGB') === 'set')
+    await p.waitForTimeout(80)
+    rr = await rowsOf('rfc')
+    ok('...kept as RGB (a ray file\'s default is its file), its colour row shown', (await light()).colourBy === 'rgb' && rr.includes('colour'), JSON.stringify([await light(), rr]))
+}
+
 /* THE ASPHERIC LENS'S COEFFICIENTS (2026-10-04): numbers with no range, typed from a datasheet. Tweakpane showed such a
    number to its first value's decimals, two at least -- 0.00 for an a4 of 1.6e-5 and an a10 of 2e-13 -- and a step
    would have rounded them away. Typed, they are kept whole and shown as typed; its radii and conic keep their sliders. */
