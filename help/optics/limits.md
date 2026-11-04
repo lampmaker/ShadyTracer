@@ -33,7 +33,8 @@ light's spectrum: a coating's edge is exact at each, and a detector has a spectr
 - a **material's colour** is still three numbers, made into a smooth spectrum of that colour, not a filter's measured
   curve;
 - a light given by **RGB, xy or a CCT off the black-body line**, and a **Zemax ray file**, is traced as a spectrum
-  of exactly its colour, not its real one: its colour is right and its CRI is not its own;
+  of exactly its colour, not its real one: its colour is right and its CRI is not its own (the picture does use a
+  spectral file's own wavelength on each ray: [units](units.md));
 - each ray's brightness is a draw of its wavelengths, so a reading takes more rays to settle than in colour.
 
 ## Physics not yet in the trace

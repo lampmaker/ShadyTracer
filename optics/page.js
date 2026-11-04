@@ -187,7 +187,7 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
             const key = `${own}|${x.file}|${JSON.stringify(frame)}`
             if (placedKey.get(own) !== key) {
                 if (placedKey.has(own)) O.dropRayData(placedKey.get(own))
-                O.setRayData(key, placeRays(f.rays, frame))
+                O.setRayData(key, placeRays(f.rays, { ...frame, wavelengths: f.header.format === 2 }))
                 placedKey.set(own, key)
             }
             /* A SPECTRAL FILE'S COLOUR (0.next; zemax.js raysXYZ): what its rays' wavelengths add up to, the light's own
@@ -197,7 +197,7 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
                            ...(fileXYZ ? { colour: XYZtoRGB(fileXYZ), fileColour: true } : {}) })
         }
         // a sheet in the scene starts its rays off it (builder/sources.js faceSource, shared with the bench)
-        const describe = x => x.kind === 'rayset' ? { type: 'rayset', rays: x.rays, flux: x.flux, emitN: x.emitN, colour: x.colour,
+        const describe = x => x.kind === 'rayset' ? { type: 'rayset', rays: x.rays, flux: x.flux, emitN: x.emitN, colour: x.colour, unit: x.unit,
             /* a file's own colour (its wavelengths) wins over the light's settings: the stand-in of that colour */
             ...(x.fileColour ? {} : x.spectrum ? { spectrum: x.spectrum } : x.planck ? { planck: x.planck } : {}) } : faceSource(x)
         // the trace starts from every light, and the picture light-traces every one (codegen LIGHTS:

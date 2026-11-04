@@ -142,7 +142,11 @@
       edge, near 550 nm: about 41% of its response lies below 600 nm.</p>
     <p data-step="coat:straight">Exact for a coating that reflects the same at every wavelength; at an edge, an
       approximation: a laser's pure 650 nm light is, to the renderer, mostly red channel, and reflects 0.584 of it, where
-      the real coating would reflect nearly all of it.</p>
+      the real coating would reflect nearly all of it. A ray that already carries a wavelength of its own is different:
+      one a prism has split (section 3), or a ray from a lamp maker's ray file that lists each ray's wavelength. Since
+      version 0.next such a ray is reflected as the coating reflects that one wavelength, the same share in all three
+      channels, because the average would be about light spread over many wavelengths, and this ray has one
+      (<code>materials_pbr.js</code>, "A ray with a wavelength of its own").</p>
     <p data-step="coat:tilted">Tilt the light, and the edge moves towards blue, as real coatings do: at 45° it is at
       551.8 nm, and now most of the red and a third of the green reflect. The renderer moves it by the usual first-order
       rule, edge × √(1 − (sin θ / <var>n</var><sub>eff</sub>)²), with <var>n</var><sub>eff</sub> the layers' average

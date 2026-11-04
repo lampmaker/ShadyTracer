@@ -215,6 +215,7 @@ into batches, so **every number carries a standard error**. Target: LED and lumi
 | feature | status | evidence |
 |---|---|---|
 | **Read Zemax OpticStudio binary source files** (.DAT): flux-only and spectral records, m / in / cm / ft / mm, the file's own placement; refused with the numbers if malformed | built; Node round-trip test; the real OSRAM sample's checks skip here (file absent) | `optics/zemax.js` |
+| **A spectral ray file's rays in their own colours** (0.next): in the picture each ray of a file with a wavelength a ray lights what it reaches in that wavelength's exact colour and refracts at its own index; a coating meets any ray with its own wavelength at that wavelength exactly; lm and W files, a ray the eye cannot see carrying nothing | built; Node-tested (`optics.test.mjs`: the colours add up to the file's own); checked on Dawn over lavapipe (`lenslight.gpu.mjs`, `coating.gpu.mjs`); **not seen on hardware** | `optics/kernels.js` RAY_COLOUR, `optics/sources.js` RAY COLOURS |
 | Kept in the browser (IndexedDB) by name, so a reload keeps it | built | `optics/rayfiles.js` |
 | Limits: the rotation convention is unverified; the wavelength is read and discarded; rays are resampled with replacement | stated in the code | |
 | Writing ray files | script (test only) | `zemax.js` `writeZemax` |

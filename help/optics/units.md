@@ -42,7 +42,14 @@ A light's colour can be given four ways, each exact:
 
 A **Zemax ray file with a wavelength per ray** (its format 2) takes the colour its rays add up to, each at its own
 wavelength and by its flux. A flux-only file stays white, whatever wavelength its header names, because many
-photometric files put a placeholder there.
+photometric files put a placeholder there. **In the picture** each ray of such a file lights what it reaches in its
+own wavelength's colour, so where the colour of the light changes with direction (a white LED bluer straight on and
+yellower to the side, say) the picture shows it. Glass refracts each such ray at its own index, and a coating reflects
+it as its edge does at that wavelength. A ray outside what the eye sees carries no light. In a file in lumens each
+ray's flux is its luminous flux; in one in watts its luminous flux follows from its wavelength. The light's flux stays
+what you set, or the file's. Rays of single wavelengths add up to their colour only over many of them, so the picture
+starts out speckled in strong colours and settles as samples add up. The Analysis pane's own trace still traces such a
+file in its overall colour.
 
 Colours are carried exactly through the trace, **even outside the display's gamut** (a royal blue LED): only the
 picture clips them, once, at the screen. A detector reads what arrives as CIE xy, u′v′, CCT and Duv. Three LEDs mixed
