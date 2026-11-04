@@ -124,8 +124,7 @@ const own = () => {
     const lum = M.addGroup(d, 'root', { label: 'lamp', transform: { pos: { x: 0, y: 5, z: 4 }, rot: { x: 180, y: 0, z: 15 }, scale: 3 } })
     M.addLight(d, lum.id, { shape: 'rectangle', params: { width: 0.4, height: 0.2 }, luminance: 5000 })
     M.addLight(d, 'root', { shape: 'disc', params: { radius: 0.3 }, flux: 120, transform: { pos: { x: 1, y: 1, z: 6 }, rot: { x: 0, y: 0, z: 0 }, scale: 1 } })
-    M.addHazeBox(d, 'root', { size: { x: 4, y: 4, z: 3 } })
-    M.addExportBox(d, 'root', { size: { x: 2, y: 2, z: 2 } })
+    M.setHazeOn(d, true, { lo: [-2, -2, -1.5], hi: [2, 2, 1.5] })
     M.setView(d, { camera: { ...M.CAMERA_DEFAULTS, distance: 30, target: [1, 2, 3], aperture: 0.5, focus: 25 } })
     return d
 }

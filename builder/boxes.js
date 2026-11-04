@@ -190,12 +190,12 @@ export function geometryKey(doc, id) {
  *  nearer surface (scene_api.js, HIT_TAG_D), so the tag stays that child's -- read in code, not measured: its points
  *  are its children's, its box their boxes (get). With a blend it is a CSG group, and measured. */
 export const foldsItself = (doc, n) => n?.kind === 'group' && (groupHasCode(doc, n) || isCsg(n))
-/** The nodes the tool measures: objects with a surface (not an export box or a haze box, not a ray file), and the groups
+/** The nodes the tool measures: objects with a surface (not a ray file), and the groups
  *  that fold a shape of their own (see the header). */
 export const measured = doc => {
     const out = []
     walk(doc, n => {
-        if (n.kind === 'object' && n.type !== 'export' && n.type !== 'haze' && !(n.type === 'light' && n.light?.shape === 'rayfile')) out.push(n.id)
+        if (n.kind === 'object' && !(n.type === 'light' && n.light?.shape === 'rayfile')) out.push(n.id)
         else if (n !== doc.root && foldsItself(doc, n)) out.push(n.id)
     })
     return out
@@ -577,12 +577,12 @@ export function cullBoxes(doc, B, { nested = false } = {}) {
     return out
 }
 /* an array's children's boxes in a copy's frame: each child's corners through its own transform. A child that draws
-   nothing (an export or a haze box, a ray file) takes up nothing. A hidden one makes it unknown, as its own box is
+   nothing (a ray file) takes up nothing. A hidden one makes it unknown, as its own box is
    (above): emitted with live visibility, it can be shown again by a uniform, before anything measures it. */
 function contentOf(g, all) {
     const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity]
     for (const c of g.children || []) {
-        if (c.type === 'export' || c.type === 'haze' || (c.type === 'light' && c.light?.shape === 'rayfile')) continue
+        if ((c.type === 'light' && c.light?.shape === 'rayfile')) continue
         const b = c.enabled === false ? null : all.get(c.id)
         if (!b) return null
         for (let k = 0; k < 8; k++) {

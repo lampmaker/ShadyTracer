@@ -100,8 +100,8 @@ round, shell, displace and relief.
   find is set by how far a point is from the scene's origin: about 15 µm at 1 m, 0.15 mm at 10 m
   (`lib/pathtracer/PRECISION.md`). The unit does not change this; distance from the origin does. Keep small,
   precise parts near the origin.
-- **Getting a mesh out is a conversion.** Export for printing samples the shape on a grid (Properties of an
-  *export box*); the result is as fine as the grid.
+- **Getting a mesh out is a conversion.** Export for printing samples the shape on a grid (File › Export ▸ 3D
+  print); the result is as fine as the grid.
 
 Next: open [Combining shapes](example:combining-shapes.json) and [Modifiers](example:modifiers.json) and take
 them apart in the tree.

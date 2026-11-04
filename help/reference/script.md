@@ -238,13 +238,13 @@ log('I max', a.peak().I, 'cd')
 
 ### `optics.configure({ rays, from, axis, flip, dG, dC })`
 
-Change the setup without running. `rays`: 1 to 50 million. `from`: what feeds the far field -- 'escaped' (the rays leaving the scene) or a detector material by its name (the rays reaching it; a closed scene needs one). `axis`: γ = 0, the photometric axis -- a light by its name (its +z) or its number in `axisOptions`, or a direction [x, y, z]; `flip`: its −z instead. `dG`: the γ step, one of 0.25, 0.5, 1, 2, 2.5, 5 degrees; `dC`: the C step, one of 1, 2.5, 5, 10, 15, 22.5, 30, 45, 90. A finer grid has smaller bins, each with fewer rays and more noise.
+Change the setup without running. `rays`: 1 to 50 million. `from`: what feeds the far field -- 'escaped' (the rays leaving the scene) or a detector object by its name (the rays reaching it; a closed scene needs one). `axis`: γ = 0, the photometric axis -- a light by its name (its +z) or its number in `axisOptions`, or a direction [x, y, z]; `flip`: its −z instead. `dG`: the γ step, one of 0.25, 0.5, 1, 2, 2.5, 5 degrees; `dC`: the C step, one of 1, 2.5, 5, 10, 15, 22.5, 30, 45, 90. A finer grid has smaller bins, each with fewer rays and more noise.
 
 Gives: the setup as it is after
 
 ### `optics.setup()`
 
-The setup now, and the choices this scene offers: its detector materials (fromOptions) and its lights (axisOptions).
+The setup now, and the choices this scene offers: its detectors (fromOptions) and its lights (axisOptions).
 
 Gives: { rays, from, axis, flip, dG, dC, fromOptions, axisOptions, dGOptions, dCOptions }
 
@@ -270,7 +270,7 @@ True when the scene has changed since the run: its numbers are of a scene that i
 
 ### `a.note`
 
-What the run could not trace (a haze box), or ''.
+What the run could not trace (the scene's haze), or ''.
 
 ### `a.totals`
 
@@ -394,7 +394,7 @@ Gives: a map, m
 
 ## The analysis: detectors and maps
 
-A detector is an object with a detector (or limiter) material: rays stop on it and are recorded where they land. A map is those hits as illuminance (lx; W/m² for watts) on square cells over a plane fitted to them -- a flat detector's own plane, laid out along the world's axes when it is square to one. A cell's noise is about 1 / √(its hits): with few hits a fine map is noise, so use fewer cells or smoothing. At most 500 000 hits are kept for maps.
+A detector is an object whose optics role is detector (or ray limiter: its Optics-Analysis box, with the scene's optics analysis on): rays stop on it and are recorded where they land. A map is those hits as illuminance (lx; W/m² for watts) on square cells over a plane fitted to them -- a flat detector's own plane, laid out along the world's axes when it is square to one. A cell's noise is about 1 / √(its hits): with few hits a fine map is noise, so use fewer cells or smoothing. At most 500 000 hits are kept for maps.
 
 ### `a.detectors()`
 

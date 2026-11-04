@@ -162,13 +162,13 @@ drop('a top-level node, up to the first place', 'a', 'g', 'before')
     {
         const d = M.createDoc()
         M.addGroup(d, 'root', { id: 'g' })
-        M.addLight(d, 'g', { id: 'lamp' }); M.addObject(d, 'g', { id: 'a', primitive: 'box' }); M.addExportBox(d, 'g', { id: 'out' })
+        M.addLight(d, 'g', { id: 'lamp' }); M.addObject(d, 'g', { id: 'a', primitive: 'box' })
         M.addObject(d, 'g', { id: 'b', primitive: 'sphere', join: 'intersect' })
         M.setEnabled(d, 'a', false)
         const k = contents(P.createProject([d])).find(r => r.mid === 'g').children
-        eq('a light and an export box: no join, no letter; a hidden first shape keeps its letter, the next shown is the base',
+        eq('a light: no join, no letter; a hidden first shape keeps its letter, the next shown is the base',
             k.map(r => [r.mid, r.toggles.join, r.label.split('  ')[0]]),
-            [['lamp', null, 'rectangle light'], ['a', 'union', '∪ a'], ['out', null, 'export box'], ['b', 'base', '● b']])
+            [['lamp', null, 'rectangle light'], ['a', 'union', '∪ a'], ['b', 'base', '● b']])
         eq('...and the group\'s row counts the shown shapes only', contents(P.createProject([d])).find(r => r.mid === 'g').label, 'group  · b')
     }
 }

@@ -41,8 +41,8 @@ const LOCAL = 'm.baseColor = fract(p_local);'
     given.pos.x = 99
     ok('setPattern: kept, a copy of what it was given', o.pattern.pos.x === 1 && o.pattern.rot.y === 90 && M.validate(d).length === 0)
     ok('setPattern(null): taken away', (M.setPattern(d, o.id, null), !('pattern' in o)))
-    const L = M.addLight(d, 'root', { shape: 'disc' }), E = M.addExportBox(d, 'root', {})
-    ok('refused: the root, a light, an export box, a scale, a number that is none, a field it has not',
+    const L = M.addLight(d, 'root', { shape: 'disc' }), E = M.setHazeOn(d, true)
+    ok('refused: the root, a light, the scene\'s haze, a scale, a number that is none, a field it has not',
         throws(() => M.setPattern(d, 'root', P1)) && throws(() => M.setPattern(d, L.id, P1)) && throws(() => M.setPattern(d, E.id, P1))
         && throws(() => M.setPattern(d, o.id, { ...P1, scale: 2 })) && throws(() => M.setPattern(d, o.id, { pos: { x: NaN, y: 0, z: 0 }, rot: P1.rot }))
         && throws(() => M.setPattern(d, o.id, { pos: P1.pos })) && !('pattern' in o))

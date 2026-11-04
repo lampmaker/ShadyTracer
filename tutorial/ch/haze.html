@@ -18,7 +18,9 @@
     <h1>Dust in the air</h1>
     <p class="lede">So far light has travelled in straight lines from one surface to the next, and the air between has
       done nothing. Dust changes that: a sunbeam in a dusty room is visible because specks in the air turn a little of
-      its light towards the eye. ShadyTracer has one box of dust, a <em>haze box</em>, inside which the air scatters.
+      its light towards the eye. ShadyTracer has one box of dust a scene, its <em>haze</em>, inside which the air scatters.
+      It is no material: a material scatters inside a solid, whose surface would stop the shadow rays that find a beam
+      in air, and dust has no surface.
       This chapter is how a ray meets a particle, which way the light goes then, how a beam becomes visible, and how to
       check that dust neither makes nor loses light.</p>
   </div>
@@ -80,7 +82,7 @@
       circle round the point; the chart counts 3000 by their angle from straight on. Most are near 90°, not because
       the dust prefers it but because a sphere has more directions there than near its poles (the same reason as
       chapter 8's cosine).</p>
-    <p data-step="phase:forward">Dust and fog scatter mostly forwards: <var>g</var> = 0.7, the haze box's own default.
+    <p data-step="phase:forward">Dust and fog scatter mostly forwards: <var>g</var> = 0.7, the haze's own default.
       ShadyTracer uses the Henyey–Greenstein phase function (1941, written for dust between the stars), one number
       <var>g</var> setting its shape, which is also the average cosine of the angle it turns light through: the drawn
       directions' average cosine is in the readout. It is drawn exactly, from the inverse of its distribution (the
@@ -303,8 +305,9 @@
       <li>In the third, with the sun aimed at, slide <var>g</var> from 0.95 down to −0.9. Where is the beam brightest, and
         why does the floor's patch change too?</li>
       <li>In the fourth, set the dust's albedo to 0.9 with the disc white. How far below 1 does it read?</li>
-      <li>In ShadyTracer, open the example <em>Beam in dusty air</em>, or add a <strong>Haze box (dust in the air)</strong>
-        to a scene in the builder's tree, and move its mean free path while the picture refines.</li>
+      <li>In ShadyTracer, open the example <em>Beam in dusty air</em>, or switch on <strong>haze in the air</strong> in a
+        scene's environment (the scene's row in the builder's tree), and move its mean free path while the picture
+        refines.</li>
     </ul>
     <aside class="refs"><span class="tag">Read more</span><ul>
       <li data-ref="wiki-crepuscular">Sunbeams in dusty or hazy air, photographed.</li>

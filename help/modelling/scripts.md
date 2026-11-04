@@ -106,7 +106,7 @@ The browser may ask once whether this page may download several files.
 charts show it. It returns what it found. `optics.last()` is the pane's last analysis, a click's or a script's.
 
 Before a run you can set what feeds it, with the same choices as the pane's **Intensity** box:
-`{ rays, from: 'escaped' or a detector material's name, axis: a light's name or [x, y, z], flip, dG, dC }`.
+`{ rays, from: 'escaped' or a detector's name, axis: a light's name or [x, y, z], flip, dG, dC }`.
 `optics.setup()` lists what the scene offers. What every number means, what its error says and how many rays you
 need are in [Script functions](../reference/script.md#the-analysis-running-it).
 

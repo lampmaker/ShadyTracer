@@ -106,10 +106,10 @@ export const SCRIPT_REF = [
               text: 'Run it, with any setup given first (the rest as the pane has it).',
               example: "const a = await optics.run({ rays: 1e6 })\nlog('I max', a.peak().I, 'cd')" },
             { names: ['optics.configure'], sig: 'optics.configure({ rays, from, axis, flip, dG, dC })', returns: 'the setup as it is after',
-              text: 'Change the setup without running. `rays`: 1 to 50 million. `from`: what feeds the far field -- \'escaped\' (the rays leaving the scene) or a detector material by its name (the rays reaching it; a closed scene needs one). '
+              text: 'Change the setup without running. `rays`: 1 to 50 million. `from`: what feeds the far field -- \'escaped\' (the rays leaving the scene) or a detector object by its name (the rays reaching it; a closed scene needs one). '
                   + '`axis`: γ = 0, the photometric axis -- a light by its name (its +z) or its number in `axisOptions`, or a direction [x, y, z]; `flip`: its −z instead. '
                   + '`dG`: the γ step, one of 0.25, 0.5, 1, 2, 2.5, 5 degrees; `dC`: the C step, one of 1, 2.5, 5, 10, 15, 22.5, 30, 45, 90. A finer grid has smaller bins, each with fewer rays and more noise.' },
-            { names: ['optics.setup'], sig: 'optics.setup()', returns: '{ rays, from, axis, flip, dG, dC, fromOptions, axisOptions, dGOptions, dCOptions }', text: 'The setup now, and the choices this scene offers: its detector materials (fromOptions) and its lights (axisOptions).',
+            { names: ['optics.setup'], sig: 'optics.setup()', returns: '{ rays, from, axis, flip, dG, dC, fromOptions, axisOptions, dGOptions, dCOptions }', text: 'The setup now, and the choices this scene offers: its detectors (fromOptions) and its lights (axisOptions).',
               example: 'log(optics.setup().fromOptions)' },
             { names: ['optics.last'], sig: 'optics.last()', text: 'The pane\'s last analysis -- a click\'s or a script\'s -- or null.' },
         ],
@@ -120,7 +120,7 @@ export const SCRIPT_REF = [
         items: [
             { names: ['a.rays', 'a.batches', 'a.at', 'a.unit'], sig: 'a.rays  a.batches  a.at  a.unit', text: 'How many rays, in how many batches, when, and the flux unit.' },
             { names: ['a.stale'], sig: 'a.stale', text: 'True when the scene has changed since the run: its numbers are of a scene that is no longer there.' },
-            { names: ['a.note'], sig: 'a.note', text: 'What the run could not trace (a haze box), or \'\'.' },
+            { names: ['a.note'], sig: 'a.note', text: 'What the run could not trace (the scene\'s haze), or \'\'.' },
             { names: ['a.totals'], sig: 'a.totals', returns: '{ emitted, escaped, lost, absorbed, detected, volume }, each { value, se }',
               text: 'Every lumen booked. escaped: left the scene. absorbed: taken by surfaces (and the media between them, `volume`). detected: caught by detectors. lost: ended by a limit -- the maximum distance, the march steps or the bounces. Together they are what was emitted.',
               example: "const t = a.totals\nlog(`escaped ${t.escaped.value.toFixed(1)} ± ${t.escaped.se?.toFixed(1)} of ${t.emitted.value.toFixed(1)} lm`)" },
@@ -159,7 +159,7 @@ export const SCRIPT_REF = [
     },
     {
         title: 'The analysis: detectors and maps', id: 'maps',
-        intro: 'A detector is an object with a detector (or limiter) material: rays stop on it and are recorded where they land. A map is those hits as illuminance '
+        intro: 'A detector is an object whose optics role is detector (or ray limiter: its Optics-Analysis box, with the scene\'s optics analysis on): rays stop on it and are recorded where they land. A map is those hits as illuminance '
             + '(lx; W/m² for watts) on square cells over a plane fitted to them -- a flat detector\'s own plane, laid out along the world\'s axes when it is square to one. '
             + 'A cell\'s noise is about 1 / √(its hits): with few hits a fine map is noise, so use fewer cells or smoothing. At most 500 000 hits are kept for maps.',
         items: [

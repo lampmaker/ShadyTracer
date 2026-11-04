@@ -46,7 +46,7 @@ Nothing to install and no server. The page runs on your own graphics card.
   sending **✓**; and what is **seen through glass or in a mirror**, lit right, by a photon map
 - **Any glowing surface is a light**, with nothing declared: found by the paths that hit it,
   sampled directly, and sending photons for its own caustics **✓**
-- **Dust in the air**: a haze box whose air scatters light in real units, so a beam shows in it;
+- **Dust in the air**: the scene's haze, whose air scatters light in real units, so a beam shows in it;
   it loses no light, to 0.02 % **✓**
 - **Glass the way glass behaves**: dispersion that splits white light in a prism, dichroic and
   anti-reflection coatings, colour that deepens with thickness; and a **camera lens** with depth of
@@ -156,9 +156,10 @@ for the help.
   camera's own rays that reach that surface the same way, within a radius that shrinks every sample.
   A floor through a window and a caustic in a mirror are lit as they should be. On by default
   (Light sources › *Seen through glass and mirrors*), and idle when nothing in view is seen that way.
-- **Dust in the air: a haze box.** The air inside one box scatters light: a mean free path in
-  metres, a colour, and how far forward it scatters (Henyey–Greenstein g). Beams show in it, lit by
-  light sampling and by photons; glass and water inside the box stay clear. Its values change live.
+- **Dust in the air: the scene's haze.** The air of a box-shaped region scatters light: a mean free
+  path in metres, a colour, and how far forward it scatters (Henyey–Greenstein g). Set in the scene's
+  environment, its region fitted to the scene and moved with the handles. Beams show in it, lit by
+  light sampling and by photons; glass and water inside it stay clear. Its values change live.
   Albedo-1 dust loses no light: within 0.024 % with next-event estimation, 0.002 % without **✓**
 - Russian roulette, unbiased **✓**
 - **Signed-distance scenes**: every surface is exact distance code, so a sphere is a sphere at any
@@ -286,11 +287,11 @@ for the help.
     capped torus, link, tube, **dome** (standing on its base), plane;
   - *Optics:* **lens** (diameter, thickness, two signed radii), **aspheric lens** (a radius, a conic
     constant and a4 to a10 on each face, typed from a datasheet), **Fresnel lens**, **parabolic
-    reflector** (its focus at its origin), rectangle and disc (detectors, limiters);
+    reflector** (its focus at its origin), rectangle and disc (screens: detectors, limiters);
   - *From points:* extrusion, revolution, **bent tube**, **light guide**, **twisted bar**; or a blank
     one.
-- **Lights, a haze box and an export box** are nodes in the tree too, placed and stretched with the
-  same handles.
+- **Lights** are nodes in the tree too, placed and stretched with the same handles; so is the
+  scene's haze region, from its environment, though it is in no tree.
 - **Shapes from points**: a profile parameter is an outline, one point a line -- `x, y`, and a fillet
   radius to round that corner -- which a node's code extrudes or revolves; a **path** parameter is an open
   line, `x, y, z` and a fillet a point, which it sweeps a tube or a profile along, and a point can scale
@@ -319,8 +320,9 @@ for the help.
   what a drag changes. **Lock** a node's position or its parameters against the hand.
 - **Undo and redo** across the whole project, 100 steps; **copy, paste, duplicate**;
   **hide and show** without recompiling.
-- **Four material types**: surface, glowing, **optics detector**, **ray limiter** (seen by the
-  optics trace, invisible in the picture).
+- **Two material types**, surface and glowing; and an object's **optics role**, **detector** or
+  **ray limiter** (seen by the optics trace, invisible in the picture), shown while the scene's
+  **optics analysis** is on.
 - **A group's material**: one material for everything in a group, over their own; an object with
   **own material** keeps its own, as a child's own blend keeps its own.
 - **Files**: **Export ▸** a scene, the project (every scene with its view, and the render settings),
@@ -353,7 +355,7 @@ for the help.
 ![An LED package modelled in the builder, its chip, silicone dome and gold leads, with the optics trace's rays drawn over the picture](docs/screenshots/optics-rays.jpg)
 
 A **non-sequential Monte Carlo trace** over the same scene, geometry and materials the picture uses,
-so the numbers and the picture cannot disagree (the dust of a haze box is the one thing it leaves
+so the numbers and the picture cannot disagree (the scene's dust in the air is the one thing it leaves
 out, and says so). Rays are weighted, never discarded; every lumen is
 booked (emitted = escaped + lost + absorbed, to zero); a run is split into batches, so **every
 number carries its standard error**.
@@ -381,7 +383,8 @@ number carries its standard error**.
 - **Coatings and dispersion** as in the picture: a dichroic sends one band one way and the rest the
   other, a prism fans white light into its colours.
 - **Detectors** stop and record every ray that reaches them; **ray limiters** do the same but are
-  invisible in the picture, for a cross-section of a beam.
+  invisible in the picture, for a cross-section of a beam. Each is an object's role, and each object
+  its own detector, with its own map.
 - **Totals**: emitted, escaped, absorbed, on detectors, lost, and per object and per material what
   arrives and what is absorbed, each ± its error.
 - **See the rays**: up to 20 000 rays drawn over the picture and retraced live while you move
@@ -426,7 +429,8 @@ number carries its standard error**.
 
 ### Export for 3D printing
 
-- Put an **export box** around what you want to print, placed with the handles.
+- **File › Export ▸ 3D print**: the selected object alone, or the whole scene, cut by a box fitted to
+  it that you can resize. Nothing is added to the scene.
 - The distance field is sampled on the GPU and meshed into a **closed surface** (marching
   tetrahedra), each triangle coloured from its material and reduced to at most 16 colours.
 - Saved as **3MF with colour**, made for Bambu Studio's filament mapping, or as **STL**, in mm.

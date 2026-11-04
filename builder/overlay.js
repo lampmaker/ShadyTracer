@@ -40,8 +40,9 @@
 // still waiting.
 //
 // NO BOX. A bounding box was drawn around the selection once, measured from the object's type; every
-// object is code now and has none (bounds.js). The one exception is an export box (exportbox.js),
-// whose outline is drawn dashed when it is selected: it is known exactly and invisible in the picture.
+// object is code now and has none (bounds.js). The one exception is the scene's haze region (hazebox.js), whose
+// outline is drawn dashed when it is selected (Edit region): it is known exactly and invisible in the picture. And a
+// host's outline (outline() below): the print dialog's box (printdialog.js), which is no node at all.
 //
 // AND ALL OF IT CAN BE SWITCHED OFF with the Edit button at the bottom left: then nothing is drawn,
 // a click in the picture is only the camera's, and Esc is left alone -- the picture is only a
@@ -102,7 +103,8 @@
 //======================================================================================================================
 
 import { projectPoint, rayThrough, clipToView } from '../lib/pathtracer/core/genrays.js'
-import { boxCorners, BOX_EDGES } from './exportbox.js'
+import { BOX_EDGES } from './exportbox.js'
+import { boxCorners } from './hazebox.js'
 import { selectionGeometry } from './bounds.js'
 import { clickTarget, parentOf, pathTo } from './selection.js'
 import { moveFrame, dragTo, worldPerPixels, AXES, nearestOnLine, stretchFactor,
@@ -275,6 +277,9 @@ export function installSelectionOverlay({ stage, canvas, RT, BUILDER, onPick = (
         const wantBoxes = boxes && (boxMode === 'all' || (boxMode === 'active' && selected != null))
         const V0 = wantBoxes ? viewNow() : null
         if (V0) { g.setTransform(dpr, 0, 0, dpr, 0, 0); paintBoxes(V0) }
+        /* OUTLINES A HOST ASKS FOR (outline() below): the print dialog's box, which is no node and so never the selection */
+        const V1 = outlines.size ? V0 || viewNow() : null
+        if (V1) { g.setTransform(dpr, 0, 0, dpr, 0, 0); paintOutlines(V1) }
         /* POINTS: offered only for an object with a path or a profile, and told every frame what it is editing */
         const pointsHere = enabled && selected != null && points.available(selected)
         // offered while its parameters are locked, so the mode is not simply gone, but not to be chosen (LOCKED above)
@@ -291,7 +296,7 @@ export function installSelectionOverlay({ stage, canvas, RT, BUILDER, onPick = (
         if (selected == null || !enabled) {
             showBar(false)
             readout.show(null)
-            if (wantBoxes) frame = requestAnimationFrame(draw)     // the camera moves
+            if (wantBoxes || outlines.size) frame = requestAnimationFrame(draw)     // the camera moves
             return
         }
 
@@ -302,6 +307,31 @@ export function installSelectionOverlay({ stage, canvas, RT, BUILDER, onPick = (
             paint(geo, V)
         } else readout.show(null)
         frame = requestAnimationFrame(draw)
+    }
+
+    /* AN OUTLINE: a box's eight world corners (exportbox.js corners), dashed -- something known exactly that the picture
+       does not show. Each a function, asked every frame, so it follows what it outlines (the dialog's typed size). */
+    const outlines = new Map()
+    function paintOutlines(V) {
+        const { U, camtype, near, screen } = V
+        g.save()
+        g.beginPath(); g.rect(V.ox, V.oy, V.dw, V.dh); g.clip()
+        g.strokeStyle = COLOR.box; g.lineWidth = 1.5; g.setLineDash([6, 4])
+        for (const get of outlines.values()) {
+            let C = null
+            try { C = get() } catch { C = null }
+            if (!C) continue
+            g.beginPath()
+            for (const [a, b] of BOX_EDGES) {
+                const seg = clipToView(C[a], C[b], U, camtype, near)
+                if (!seg) continue
+                const A = screen(seg[0]), B = screen(seg[1])
+                g.moveTo(A[0], A[1]); g.lineTo(B[0], B[1])
+            }
+            g.stroke()
+        }
+        g.setLineDash([])
+        g.restore()
     }
 
     /* A BOX: its twelve edges, clipped to what is in front of the camera and to the picture. An open
@@ -343,10 +373,9 @@ export function installSelectionOverlay({ stage, canvas, RT, BUILDER, onPick = (
         g.rect(V.ox, V.oy, V.dw, V.dh)   // never over the letterbox bars
         g.clip()
 
-        /* AN EXPORT BOX HAS A BOX, unlike every other object (NO BOX above): it is known exactly and
-           draws nothing in the picture, so its outline is the only way to see what will be printed. A haze box
-           too (hazebox.js): the dust shows only where light crosses it */
-        if (geo.node.type === 'export' || geo.node.type === 'haze') {
+        /* THE HAZE'S REGION HAS A BOX, unlike every object (NO BOX above): it is known exactly and draws nothing in the
+           picture -- the dust shows only where light crosses it -- so its outline is the only way to see it (hazebox.js) */
+        if (geo.node.type === 'haze') {
             const C = boxCorners(BUILDER.doc, geo.node.id)
             g.beginPath()
             g.strokeStyle = COLOR.box
@@ -684,6 +713,13 @@ export function installSelectionOverlay({ stage, canvas, RT, BUILDER, onPick = (
             const res = await RT.pick(x, y)
             if (!res) return null
             return { hit: !!res.hit, pos: res.hit ? res.pos : null, id: res.hit ? BUILDER.nodeOfTag?.(res.tag) ?? null : null }
+        },
+        /** A DASHED OUTLINE under `key`: `corners` a function giving a box's eight world corners (exportbox.js corners)
+         *  or null, asked every frame; null for `corners` takes the outline away. The print dialog's box. */
+        outline(key, corners) {
+            if (corners) outlines.set(key, corners)
+            else outlines.delete(key)
+            if (!frame) frame = requestAnimationFrame(draw)
         },
         /** Draw again (new boxes measured), leaving the selection and any drag as they are. */
         redraw() { if (!frame) frame = requestAnimationFrame(draw) },

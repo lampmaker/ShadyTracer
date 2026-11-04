@@ -16,7 +16,7 @@
 //
 // NAMES. Labels are not unique (three Ribs), so a name is a HANDLE: a letter by position among the group's shapes
 // -- a, b ... z, aa, ab -- counting hidden ones, so hiding a child renames nothing; the tree shows the same
-// letters. "A label" in quotes and @id are accepted too. A light and an export box are not shapes of the group
+// letters. "A label" in quotes and @id are accepted too. A light is no shape of the group
 // (codegen shapesOf: never combined) and are not in the recipe; they keep their places among the children.
 //
 // PURE, like model.js: no DOM, no device. test/recipe.test.mjs.
@@ -190,8 +190,8 @@ export function parseRecipe(text, g) {
 }
 
 /**
- * The plan into the document, through the model's operations: the shapes into the plan's order (a light or an
- * export box keeps its place among the children), each one's join and own blend, the group's blend. Tried on a
+ * The plan into the document, through the model's operations: the shapes into the plan's order (a light keeps its
+ * place among the children), each one's join and own blend, the group's blend. Tried on a
  * copy first, so a plan the model refuses changes nothing; then for real. Returns the group.
  */
 export function applyRecipe(doc, gid, plan) {

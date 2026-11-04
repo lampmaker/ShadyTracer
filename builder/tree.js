@@ -93,10 +93,6 @@ const NODE_MENU = [
     { label: 'Modifiers', items: Object.entries(MODIFIERS).map(([k, m]) => ({ label: m.label, type: 'group', value: `mod:${k}` })) },
     /* a light is not a code node (lights.js): its shape has to stay known */
     { label: 'Lights', items: Object.entries(LIGHT_SHAPES).map(([k, s]) => ({ label: s.label, type: 'light', value: `light:${k}` })) },
-    /* the part of the scene a 3MF / STL export takes (exportbox.js): draws nothing */
-    { label: 'Export box (3MF / STL)', type: 'export', value: 'export' },
-    /* dust in the air inside it (hazebox.js, the renderer's core/haze.js): draws nothing; one a scene */
-    { label: 'Haze box (dust in the air)', type: 'haze', value: 'haze' },
     /* everything above and more -- a lens in its glass, an LED, one's own -- in the Library panel */
     { label: 'From the library…', type: 'library', value: 'library' },
 ]
@@ -151,7 +147,7 @@ const TOGGLES = {
        TreeView cycles a toggle's values itself (treeview.js _handleToggleClick) and onToggleClick writes the
        model. On every shape of a group, a plain one's too: a click there is how a plain group becomes a
        boolean one. The base shows ● and joins nothing (a click on it is refused); hidden (null) at the top
-       level, which is always a plain union, and on a light or an export box, which are not shapes of it. */
+       level, which is always a plain union, and on a light, which is no shape of it. */
     join: {
         label: 'How it joins the others in its group (click: union, subtract, intersect)', values: ['union', 'subtract', 'intersect'],
         icons: { union: GLYPH.union, subtract: GLYPH.subtract, intersect: GLYPH.intersect, base: GLYPH.base },
@@ -201,8 +197,7 @@ export function rowsFor(project, { current = project.scenes[0]?.key, collapsed =
             n.material != null ? matLabel(n.material) : null].filter(Boolean).join(', ')
         /* WHAT AN OBJECT WEARS (model.js wornMaterial): `over` is the material a group above gives it, which it wears
            unless it keeps its own -- said "(own)" there, the one that stands out from its group */
-        const objectNote = (n, over) => n.type === 'export' ? 'export' : n.type === 'haze' ? 'haze'
-            : n.type === 'light' || over == null ? matLabel(n.material)
+        const objectNote = (n, over) => n.type === 'light' || over == null ? matLabel(n.material)
             : n.ownMaterial === true ? `${matLabel(n.material)} (own)` : matLabel(over)
         /* A CHILD OF A GROUP (model version 14): its join as a toggle (TOGGLES.join) on every shape of a group;
            and in a boolean group, read top to bottom in the label too -- `● a  Plate`, `− d  Hole · blend 0.02`
@@ -211,7 +206,7 @@ export function rowsFor(project, { current = project.scenes[0]?.key, collapsed =
         const handles = new Map()
         const handleIn = (g, id) => { if (!handles.has(g)) handles.set(g, handlesOf(g)); return handles.get(g).get(id) }
         const joinOn = (n, parent) => {
-            if (!parent || parent === doc.root || n.type === 'light' || n.type === 'export' || n.type === 'haze') return { toggle: null, mark: '', own: '' }
+            if (!parent || parent === doc.root || n.type === 'light') return { toggle: null, mark: '', own: '' }
             const base = baseOf(parent)?.id === n.id, how = base ? 'base' : joinOf(n)
             if (!isCsg(parent)) return { toggle: how, mark: '', own: '' }
             return { toggle: how, mark: `${GLYPH[how]} ${handleIn(parent, n.id)}  `, own: !base && n.joinBlend != null ? `  · blend ${n.joinBlend}` : '' }
@@ -386,12 +381,6 @@ export function installBuilderTree(container, BUILDER, { onStatus = () => { }, o
         if (typeof value === 'string' && value.startsWith('light:'))
             return edit(`add ${value.slice(6)} light`, () => M.addLight(doc(), parentRow.mid, { shape: value.slice(6) }),
                 { scene, select: n => n.id })
-        /* an export box draws nothing, but declares uniforms (its transform, its size), so it applies */
-        if (value === 'export')
-            return edit('add export box', () => M.addExportBox(doc(), parentRow.mid), { scene, select: n => n.id })
-        /* a haze box draws nothing either, but its presence is the kernels' text (core/haze.js): it applies */
-        if (value === 'haze')
-            return edit('add haze box', () => M.addHazeBox(doc(), parentRow.mid), { scene, select: n => n.id })
         const prim = typeof value === 'string' && value.startsWith('prim:') ? primitiveObject(value.slice(5)) : null
         // wearing the scene's default material (model.defaultMaterial: the first surface in its list)
         edit(`add ${prim ? prim.label : 'code'}`, () => M.addObject(doc(), parentRow.mid,
@@ -814,7 +803,7 @@ export function installBuilderTree(container, BUILDER, { onStatus = () => { }, o
             return edit('material dropped', () => {
                 const doc = BUILDER.doc
                 const node = M.find(doc, row.mid).node
-                if (node.kind === 'object' && (node.type === 'light' || node.type === 'export' || node.type === 'haze'))
+                if (node.kind === 'object' && node.type === 'light')
                     throw new Error('a light or a box takes no material (a light has its own)')
                 // the one already there if it is the same: a material dropped twice is one material
                 const m = doc.materials.find(d => M.sameMaterial(d, asset.material)) ?? M.insertAsset(doc, asset)

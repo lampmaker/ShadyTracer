@@ -123,16 +123,29 @@ export const FEATURES = {
             + 'colour rendering index. The picture is unchanged. Each ray\'s brightness is now a draw of its wavelengths, so a '
             + 'reading takes more rays to settle (1 200 to 2 700 rays for a colour within 0.001 u\'v\', on the cases worked out), where '
             + 'the colour trace was off by 6 to 10 % through a sharp filter; off, the trace is the colour trace it always was.' },
+    /* OPTICS ANALYSIS (0.next; the user, 2026-11-04: detectors and ray limiters "should be an object property ... Maybe make
+       a new scene setting 'optical features -> analysis' that hides or shows these. Maybe it also hides the rays overlay
+       and illuminance, luminance views"). No material field: it is whether the scene's objects may be detectors and ray
+       limiters (model.js OPTICS_ROLES) -- off, every role is kept and does nothing, and the Optics-Analysis box, the rays
+       in the view's drawer and the illuminance and luminance views are not offered. OFF FOR A NEW SCENE (the user's
+       choice), on for an older one that had a detector or a limiter (model.js v26to27). NOT IN THE PRESETS (`preset:
+       false`): Basic, Full and Expert are about the physics traced, and leave it as it is. */
+    analysis: { label: 'Optics analysis', fields: [], hides: null, def: false, preset: false,
+        help: 'Objects can be detectors and ray limiters for the Optics page (each object\'s Optics-Analysis box), and the view '
+            + 'offers the rays drawn over it and the illuminance and luminance views. Off, none of it is shown and a role an '
+            + 'object has does nothing, though it is kept. The picture is unchanged.' },
 }
 /** A feature's default: on, but for one that says otherwise (spectral). */
 export const featureDefault = k => FEATURES[k]?.def ?? true
 /** The presets, in the order shown: Basic is none of them; Full every feature at its default -- every material field, the
  *  colour trace -- the default and every scene before the features; Expert all of them (0.next: Full and the spectral
  *  trace). "Optics" is Quality's word already (lib/pathtracer/quality.js). */
+/** ...of the features a preset sets: not one that says `preset: false` (analysis), which the presets leave alone */
+export const PRESET_FEATURES = Object.keys(FEATURES).filter(k => FEATURES[k].preset !== false)
 export const FEATURE_PRESETS = {
-    basic:  { label: 'Basic',  values: Object.fromEntries(Object.keys(FEATURES).map(k => [k, false])) },
-    full:   { label: 'Full',   values: Object.fromEntries(Object.keys(FEATURES).map(k => [k, featureDefault(k)])) },
-    expert: { label: 'Expert', values: Object.fromEntries(Object.keys(FEATURES).map(k => [k, true])) },
+    basic:  { label: 'Basic',  values: Object.fromEntries(PRESET_FEATURES.map(k => [k, false])) },
+    full:   { label: 'Full',   values: Object.fromEntries(PRESET_FEATURES.map(k => [k, featureDefault(k)])) },
+    expert: { label: 'Expert', values: Object.fromEntries(PRESET_FEATURES.map(k => [k, true])) },
 }
 const FEATURE_OF_FIELD = Object.fromEntries(Object.entries(FEATURES).flatMap(([f, d]) => d.fields.map(k => [k, f])))
 /** The feature a material field belongs to, or null for one every scene has. */
@@ -228,15 +241,13 @@ export const PRESETS = {
  *  codegen assigns. Every field is still a uniform for every material, so switching the type
  *  back and forth loses nothing and never writes to a uniform that is not there. An emitter is
  *  emission alone -- a surface that emits ends every path that reaches it (materials_pbr.js), so
- *  its other fields never did anything; a surface and a detector have no emission; a limiter is
- *  not in the picture at all. */
+ *  its other fields never did anything; a surface has no emission. (A detector and a limiter were types too until 0.next:
+ *  an object's optics role now, model.js OPTICS_ROLES.) */
 const SURFACE_FIELDS = ['baseColor', 'metallic', 'roughness', 'anisotropy', 'specular', 'specularTint', 'transmission', 'haze', 'ior',
     'abbe', 'attenuationDistance', 'scatterDistance', 'scatterAnisotropy', 'coating', 'coatLow', 'coatHigh', 'coatEdge', 'coatWidth', 'coatIndex']
 export const FIELDS_OF = {
     surface: SURFACE_FIELDS,
-    detector: SURFACE_FIELDS,
     emitter: ['emissive', 'emissiveLuminance'],
-    limiter: [],
 }
 /** What the panel calls a field, where its name says too little */
 export const FIELD_LABELS = { emissive: 'colour', emissiveLuminance: 'luminance (cd/m\u00b2)',

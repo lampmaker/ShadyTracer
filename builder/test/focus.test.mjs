@@ -39,10 +39,10 @@ const plane = M.addObject(d, 'root', { primitive: 'plane' })
     ok('a group: its enabled objects together, in the world (a hidden one left out)', nearV(G.lo, [-0.5, 9.5, -0.5]) && nearV(G.hi, [3.5, 10.5, 0.5]), JSON.stringify(G))
     ok('nothing for the root, an id not in the scene, or a plane (no size known)', [d.root.id, 'nope', plane.id, null].every(id => focusBox(d, id) === null))
     void g1; void g2; void off
-    const e = M.addExportBox(d, 'root', { transform: { ...M.identity(), pos: { x: 0, y: 0, z: 2 } } })
+    const e = M.setHazeOn(d, true, { lo: [-0.5, -0.5, 1.5], hi: [0.5, 0.5, 2.5] })
     const E = focusBox(d, e.id)
-    ok('an export box: its own box, which the estimate leaves out', !!E && nearV(E.lo, [-0.5, -0.5, 1.5]) && nearV(E.hi, [0.5, 0.5, 2.5]), JSON.stringify(E))
-    M.remove(d, e.id)
+    ok('the scene\'s haze: its region\'s own box, which the estimate has nothing of', !!E && nearV(E.lo, [-0.5, -0.5, 1.5]) && nearV(E.hi, [0.5, 0.5, 2.5]), JSON.stringify(E))
+    delete d.haze
 }
 {
     // the measured box: only when it is for the node as it is now (boxes.js fresh); else the estimate

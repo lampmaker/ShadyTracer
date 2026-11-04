@@ -45,7 +45,7 @@ M.addObject(doc, 'root', { id: 'pa', label: 'pipe', params: { route: { path: [[0
 // and a glass material, for its coating (0.39.0)
 M.addMaterial(doc, { id: 'gl', label: 'glass', preset: 'glass' })
 // and a haze box, for its dust (0.62.0)
-M.addHazeBox(doc, 'root', { id: 'hz', label: 'dust' })
+M.setHazeOn(doc, true)
 const T = { live: [], commits: [], structure: 0, labels: 0, pushed: [], showing: true, help: [] }
 const BUILDER = {
     model: M, get doc() { return doc },

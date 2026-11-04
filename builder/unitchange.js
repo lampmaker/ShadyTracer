@@ -64,10 +64,10 @@ function builtinEntry(B) {
 }
 
 /* WHAT A NODE'S PARAMETERS ARE, for a unit: { lengths: Set, perLength: { name: power } } -- its block's lengths and
-   its built-in's powers; a light's size, and an export or haze box's, which are always lengths */
+   its built-in's powers; a light's size, and the scene's haze region's (convert above), which are always lengths */
 function unitsOf(doc, n) {
     if (n.type === 'light') return { lengths: new Set(['width', 'height', 'radius']), perLength: {} }
-    if (n.type === 'export' || n.type === 'haze') return { lengths: new Set(['size']), perLength: {} }
+    if (n.type === 'haze') return { lengths: new Set(['size']), perLength: {} }
     const B = blockOf(doc, n)
     return { lengths: new Set(B?.lengths || n.lengths || []), perLength: { ...(builtinEntry(B)?.perLength || {}) } }
 }
@@ -207,6 +207,11 @@ export function changeUnit(doc, to, how = 'keep') {
         if (d.envRadius > 0) d.envRadius = round(d.envRadius * k)
         if (d.tolerance > 0) d.tolerance = round(d.tolerance * k)
         if (d.optics?.maxDist > 0) d.optics.maxDist = round(d.optics.maxDist * k)
+        /* THE SCENE'S HAZE (hazebox.js): its region where it was and as big, its place and its size by the factor, either
+           way -- it is in no tree, so neither a scale on the top level nor the walk below reaches it; its mean free path
+           is real metres and stays */
+        if (d.haze?.transform) for (const a of AXES) d.haze.transform.pos[a] = round(d.haze.transform.pos[a] * k)
+        if (d.haze?.params?.size) for (const a of AXES) d.haze.params.size[a] = round(d.haze.params.size[a] * k)
         convertOutside(d, from, to, how)
         if (how === 'scale') scaleTop(d, k)
         else dimensions(d, k, skipped)

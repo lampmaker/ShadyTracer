@@ -56,14 +56,27 @@ dichroic's edge is averaged over each colour channel's wavelengths, which approx
 
 ## Detectors
 
-A material of type **detector** (the material's *type* in Properties) **stops every ray that arrives at it** and
-records it: where, how much flux, from which direction, and its colour. The Analysis pane's map is made from these
-hits. In the picture, a detector looks as its fields say, so it can be a visible screen, a wall or a work plane.
+A detector is an **object**, not a material: select it, and in its **optics analysis** box in Properties set its
+**role** to **detector**. The box is there while the scene's **optics analysis** is on (the scene's row, *optical
+features*): off for a new scene, on for one that has detectors. A detector **stops every ray that arrives at it** and
+records it: where, how much flux, from which direction, and its colour. In the picture, it looks as its material says,
+so it can be a visible screen, a wall or a work plane.
 
-A detector stops rays whatever its fields say: it does not reflect or transmit them. A **rectangle** or **disc**
-shape with a detector material makes a flat screen of no thickness.
+Each object is a detector of its own, with its own map in the Analysis pane: two screens of one material can be one
+detector and one plain screen, or two detectors read apart. Making an object a detector is live: no compile.
+
+A detector stops rays whatever its material says: it does not reflect or transmit them. A **rectangle** or **disc**
+shape made a detector is a flat screen of no thickness.
 
 ## Ray limiters
 
-A material of type **ray limiter** does what a detector does in the trace, and is **not in the picture at all**.
-Use it to cut a beam where you want a cross-section, without anything showing in the render.
+An object whose **role** is **ray limiter** does what a detector does in the trace, and is **not in the picture at
+all**. Use it to cut a beam where you want a cross-section, without anything showing in the render. A plate with a
+hole cut from it (a group subtracting the hole) is an aperture: give the plate the role, and the hole's wall stops
+rays too. Making an object a limiter is a compile, since the picture leaves it out.
+
+## Optics analysis off
+
+With the scene's optics analysis off, no object is a detector or a limiter -- a role an object has is kept and does
+nothing -- and the view offers neither the rays drawn over the picture nor the lux and luminance views. The Optics page
+still runs, and still reads the far field of the rays that escape.

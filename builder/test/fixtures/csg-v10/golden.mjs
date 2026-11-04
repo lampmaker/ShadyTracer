@@ -205,6 +205,17 @@
 // (arrays.js arrWindowOf). codegen.test failed scenes/parametric-part.json alone before this freeze, both modes -- its
 // wgsl and opticsWgsl by the window's functions, its pickWgsl and opticsPickWgsl by the copy number -- the one document
 // with an array.
+//
+// THE SPECIAL OBJECTS STOP BEING ADD-ONS (0.next, scene format 27; the user, 2026-11-04). Three agreed changes, the
+// documents compared key by key before this freeze, each against the codegen of the commit before (be7b523):
+// - THE ROLES ARE THE OBJECTS' (a detector, a limiter: model.js OPTICS_ROLES): the fingerprint's `roles` now holds
+//   `detectorTags` beside `detectors` and `passes`, so it moved for EVERY document, and only that key for all but two.
+// - cases.json: its export box is dropped on load (v26to27), so its comment and uniforms (xf_exbox, size_exbox) left
+//   every text and its `vis_exbox` block the live text; and its limiter material is a surface now (the role went to
+//   the object wearing it), so getMaterial2 assigns that material's fields (baseColor_lim and the rest, declared).
+//   Nothing else in its texts moved (cases.*.wgsl, diffed by hand).
+// - scenes/dusty-beam.json: its haze box is the scene's haze (hazebox.js), so its node's comment and uniforms (xf_n13,
+//   size_n13) left the texts; the `haze` handed to the renderer is the same to the number, its id `#haze`.
 //======================================================================================================================
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
@@ -238,7 +249,7 @@ export function fingerprint(scene) {
     return {
         wgsl: sha(scene.wgsl), pickWgsl: sha(scene.pickWgsl), opticsWgsl: sha(scene.opticsWgsl), opticsPickWgsl: sha(scene.opticsPickWgsl),
         uniforms: sha(sorted(scene.uniforms)), tags: sha(JSON.stringify([scene.tags, scene.opticsTags])),
-        roles: sha(JSON.stringify([scene.detectors, scene.passes])),
+        roles: sha(JSON.stringify([scene.detectors, scene.passes, scene.detectorTags ?? []])),
     }
 }
 

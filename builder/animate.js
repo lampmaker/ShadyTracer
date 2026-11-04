@@ -44,6 +44,8 @@ export function liveKeyOfPath(path) {
  */
 export function liveUniformsOf(doc, id, k, scene = null) {
     if (id === M.ENVIRONMENT_ID) return []
+    // the scene's haze (hazebox.js): its region and dust are the engine's own values (scene.haze, demo.js pushHaze), no uniform
+    if (id === M.HAZE_ID) return []
     if (id === doc.root.id) return []
     if (M.reliefMaterialId(id) != null) return [paramUniform(id, k)]
     if (M.material(doc, id)) return [uniformName(id, k)]
