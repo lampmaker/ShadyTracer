@@ -154,8 +154,8 @@ export const FORMAT = 'raytracer-scene'
 /* 27: A JOIN'S SHAPE (0.next; the user, 2026-11-04: fillets and chamfers "are often used in designs ... a modifier or
    operation specifically for those"): `joinShape` on a child, 'round' or 'chamfer' -- absent is 'smooth', the
    polynomial blend every join had -- says what its blend radius makes of the edge where it meets what is above it: a
-   circular fillet of that radius, exact for two planes at any angle and for a plane across a cylinder or a prism
-   (scene_api.js csgRoundIntersect), or the flat cut between the same two tangent lines. The import makes CAD fillets
+   circular fillet of that radius where the two meet at a right angle -- two planes, a plane across a cylinder or a
+   prism -- a rounded corner at other angles (scene_api.js csgRoundIntersect), or the flat cut between the same two tangent lines. The import makes CAD fillets
    with it (import/fillet.js). Nothing in a version 26 file changes; a builder of 26 refuses a file of 27 rather than
    load a fillet as a smooth blend. */
 export const VERSION = 27

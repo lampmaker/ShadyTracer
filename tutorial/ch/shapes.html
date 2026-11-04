@@ -46,9 +46,12 @@
       fillet of a given radius, as a machined or moulded part does, ShadyTracer has two more shapes a join can take:
       a <strong>round</strong> join, the circle of radius <var>r</var> touching both shapes, and a <strong>chamfer</strong>,
       the straight cut between the same two touching lines. The circle's centre is where both distances are −<var>r</var>,
-      and a point's offset from it, measured along the two normals, gives its distance to the arc: exact for two flat
-      faces at any angle, and for a flat face meeting a cylinder squarely (a hole's rim), which is the fillet CAD makes
-      (<code>builder/joins.js</code> works it through).</p>
+      and where the two faces meet at a right angle the two distances plus <var>r</var> are a point's coordinates from
+      it, so its distance to the arc is their length less <var>r</var>: exact for two flat faces square to each other,
+      and for a flat face meeting a cylinder squarely (a hole's rim), which is the fillet CAD makes. At other angles the
+      corner is rounded but not a circle. The two normals are not used: the renderer marches with distances alone
+      (chapter 26), and a join whose distance read them stopped the march on the sharp corner while the shading saw the
+      fillet (<code>builder/joins.js</code> works it through, and says what went black).</p>
     <p data-step="csg:carve">A blended subtraction rounds the edges of the cut, where the circle's bite meets the box's
       sides (in 3D: the rim of a hole drilled into a block). Move the <strong>blend k</strong> slider to see how far the
       rounding reaches. At the lower right the circle's edge runs close to the box's bottom edge, and the strip of box

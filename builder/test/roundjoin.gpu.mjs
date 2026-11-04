@@ -8,6 +8,11 @@
 // scaled, and as data -- the scene's SDF at points in and around each against the document as import/test/docsdf.mjs
 // computes it in JS: the presets' exact distances, combined by builder/joins.js (the WGSL's twin), with each side's
 // normal its gradient. And the hole's rim against its closed form, the torus a filleted rim is.
+//   THE TWO BUILDS ONE DISTANCE: the renderer marches, and casts every ray that leaves a surface, in the distance-only
+// build (scene_api.js FOLD_DIST), and shades with the full one. At every point, codegen and as data, the two must give
+// the same distance. They did not: the joins read their inputs' normals into the distance, and the distance-only build
+// has none -- the user's fillets came out black in every mode (2026-11-04); its scene is among the documents here, and
+// the whole renderer draws it with no black pixel.
 // WHAT IT CANNOT SHOW: the picture, which is the user's.
 //======================================================================================================================
 import { execSync } from 'node:child_process'
@@ -24,7 +29,7 @@ if (!webgpu) { console.log('(round join GPU check SKIPPED: no webgpu package. np
 const M = await import('../model.js')
 const { generate } = await import('../codegen.js')
 const { WEBGPU } = await import('../../lib/tinywebgpu/src/tinywebgpu.js')
-const { SCENE_PRELUDE } = await import('../../lib/pathtracer/core/scene_api.js')
+const { SCENE_PRELUDE, SCENE_PRELUDE_DIST } = await import('../../lib/pathtracer/core/scene_api.js')
 const { computeUniformTypes, sceneConstantsWGSL, UniformSpec } = await import('../../lib/pathtracer/core/uniforms.schema.js')
 const { derive } = await import('../../lib/pathtracer/core/photometry.js')
 const { defines, TOKENS, SHORT_TOKENS } = await import('../../lib/wgsl_shorthand.js')
@@ -55,8 +60,8 @@ function uniformBag(scene) {
     return out
 }
 /* THE SCENE'S SDF AT A LIST OF POINTS: its distance and material, each point with a direction of its own */
-async function field(scene, pts, dirs) {
-    const prog = await WG.makeCompute(`${SCENE_PRELUDE}${sceneConstantsWGSL(scene)}${scene.wgsl}`, `
+async function field(scene, pts, dirs, prelude = SCENE_PRELUDE) {
+    const prog = await WG.makeCompute(`${prelude}${sceneConstantsWGSL(scene)}${scene.wgsl}`, `
         _ = UB.res;
         let i = gid.x;
         if (i >= arrayLength(&evalIn) / 2u) { return; }
@@ -122,7 +127,17 @@ const DOCS = {
         box(d, 'part', 'b', [0.3, 1.2, 0.5], { joinBlend: 0.3, joinShape: 'chamfer', transform: T(-0.9, 0.9, 0, 0, 0.9) })
         return d
     },
+    /* THE USER'S SCENE (2026-11-04, its fillet black): a cylinder standing in a rounded box, a round union */
+    USER: () => {
+        const d = doc()
+        M.addGroup(d, 'root', { id: 'part' })
+        M.addObject(d, 'part', { id: 'base', primitive: 'box', params: { size: { x: 1, y: 1, z: 0.5 }, rounding: 0.02 } })
+        M.addObject(d, 'part', { id: 'post', primitive: 'cylinder', params: { radius: 0.5, height: 1 }, joinBlend: 0.174, joinShape: 'round', transform: T(0, 0, 0.5035392) })
+        return d
+    },
 }
+const USER = 'a cylinder standing in a rounded box, a round union (the user\'s scene)'
+DOCS[USER] = DOCS.USER; delete DOCS.USER
 
 let seed = 4242
 const rnd = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296
@@ -158,6 +173,11 @@ for (const [name, make] of Object.entries(DOCS)) {
             `${off} of ${N} points off by more than 1e-3 (${sign} on the wrong side), worst ${worst.toFixed(4)} at `
             + `(${pts[at].map(v => v.toFixed(3)).join(', ')}): ${got[2 * at].toFixed(4)} for ${want[at].toFixed(4)}`)
         if (off) console.log(`      (${name}, ${how}: ${off} of ${N} past 1e-3, ${sign} on the wrong side)`)
+        const dist = await field(scene, pts, dirs, SCENE_PRELUDE_DIST)
+        let differ = 0, most = 0
+        for (let i = 0; i < N; i++) { const e = Math.abs(dist[2 * i] - got[2 * i]); if (e > 1e-6) differ++; most = Math.max(most, e) }
+        ok(`${name} (${how}): the distance-only build's distance the full build's everywhere (what the march and the shading each see)`,
+            differ === 0, `${differ} of ${N} points differ, by up to ${most}`)
     }
 }
 
@@ -176,6 +196,50 @@ for (const [name, make] of Object.entries(DOCS)) {
     let worst = 0
     for (let i = 0; i < P.length; i++) worst = Math.max(worst, Math.abs(got[2 * i] - E[i]))
     ok('the hole\'s rim: the torus a fillet of radius 0.3 is, to 1e-5', worst < 1e-5, worst)
+}
+
+/* THE WHOLE RENDERER ON THE USER'S SCENE (raytrace_main.js R.trace, every kernel): its fillet black was every path
+   from it starting inside the solid, so no pixel may be black (the background is the sky's), Final and Sketch */
+{
+    const { RAYTRACER } = await import('../../lib/pathtracer/core/raytrace_main.js')
+    const { CAMERA } = await import('../../lib/camera.js')
+    const { engineCamera } = await import('../../lib/pathtracer/core/units.js')
+    const { effective } = await import('../../lib/pathtracer/quality.js')
+    const U = await import('../../lib/pathtracer/core/uniforms.schema.js')
+    const { LUMA } = await import('../../lib/pathtracer/core/photometry.js')
+    const quietly = async f => { const e = console.error, w = console.warn, l = console.log, i = console.info
+        console.error = console.warn = console.log = console.info = () => { }; try { return await f() } finally { console.error = e; console.warn = w; console.log = l; console.info = i } }
+    const d = DOCS[USER]()
+    const scene = generate(...M.generateArgs(d, { id: 'roundjoin-user' }))
+    const W = 48, H = 48
+    const target = WG.device.createTexture({ size: [W, H], format: WG.format, usage: GPUTextureUsage.RENDER_ATTACHMENT }).createView()
+    const cam = CAMERA({ aspect: W / H, fov: 40, up: [0, 0, 1] })
+    cam.setPose({ pos: [1.6, -3.2, 2.2], target: [0, 0, 0.6], up: [0, 0, 1] })
+    for (const [mode, renderMode] of [['Final', 0], ['Sketch', 2]]) {
+        const Q = { w: W, h: H, resetframecount: 1 }
+        const R = RAYTRACER(WG, null, Q, scene)
+        R.hud = () => { }
+        let err = null
+        try { await quietly(() => R.init()) } catch (e) { err = e?.message ?? String(e) }
+        const traced = effective({ ...U.defaultUniformValues(), maxaverages: 0, autoExposure: 0, renderMode, maxbounce: 4 })
+        const derived = derive(traced, { unit: scene.unit, extent: scene.extent, envRadius: scene.envRadius, tolerance: scene.tolerance })
+        const EC = engineCamera(cam.getUniforms(), 0, derived.sceneUnit)
+        const bag = Object.fromEntries(Object.entries({ ...Object.fromEntries(Object.entries(traced).map(([k, x]) => [k, U.uniformToGPU(x, U.UniformSpec[k]?.type)])),
+            ...derived, invView: EC.invView, invProjection: EC.invProjection, camPos: EC.camPos, camLens: EC.camLens, camtype: 0 })
+            .filter(([k]) => k in U.ComputeUniformTypes || k in U.UniformSpec))
+        for (const [k, u] of Object.entries(scene.uniforms || {})) bag[k] = flat(u.def)
+        if (!err) try {
+            R.kernelOptions = R.kernelOptionsOf(bag)
+            await quietly(() => R.applyKernelOptions())
+            await quietly(() => R.trace(Q, bag, 16, target))
+            await WG.device.queue.onSubmittedWorkDone()
+        } catch (e) { err = e?.message ?? String(e) }
+        const a = err ? null : await R.accumulation_u32.r(W * H * 16, 0, Uint32Array)
+        const f = a && new Float32Array(a.buffer, a.byteOffset, a.length)
+        const img = f ? Array.from({ length: W * H }, (_, i) => LUMA[0] * f[i * 4] + LUMA[1] * f[i * 4 + 1] + LUMA[2] * f[i * 4 + 2]) : []
+        const mx = Math.max(...img.filter(Number.isFinite)), black = img.filter(x => !(x >= 1e-3 * mx)).length
+        ok(`the user's scene through the whole renderer (${mode}): no black pixel`, !err && img.length && black === 0, err ?? `${black} of ${W * H} black`)
+    }
 }
 
 console.log(`round joins on a GPU: ${pass} passed, ${fail} failed`)

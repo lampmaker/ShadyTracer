@@ -57,8 +57,8 @@ Each child of a group **joins what is above it** in that group. The mark in fron
 Click a mark to change it. A group's **blend** smooths every join in it, and a child's own blend overrides that for
 its join. A child's **edge** says what its blend makes of the edge where it meets what is above it: a *smooth blend*
 (the default), *round*, a circular fillet whose radius is the blend, or *chamfer*, a flat cut between the same two
-lines. Round is exact where two flat faces meet at any angle and where a flat face meets a cylinder squarely, so a
-hole's rim, set to round with a blend of 0.5 mm, is a 0.5 mm fillet. A subtraction cuts only what is above it in the same group: to cut one part, put the part and the cutter in
+lines. Round is an exact circle where the two meet at a right angle -- two flat faces, or a flat face across a cylinder,
+so a hole's rim, set to round with a blend of 0.5 mm, is a 0.5 mm fillet -- and a rounded corner at other angles. A subtraction cuts only what is above it in the same group: to cut one part, put the part and the cutter in
 a group of their own. A group among the children is one shape there, all of its children together: a group of two
 overlapping cylinders, set to subtract, cuts away both, overlap and all. An array's copies count as one shape too.
 

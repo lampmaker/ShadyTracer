@@ -95,7 +95,7 @@ export const CODE_HELP = [
         csgUnion: 'Both shapes; `k` above 0 melts them together where they come within `k` of each other.',
         csgIntersect: 'Only where both are.',
         csgSubtract: '`a` with `b` cut out of it.',
-        csgRoundUnion: 'A join set to *round* (version 27): both shapes, the concave edge where they meet filled by a circular fillet of radius `r` -- exact where two flat faces meet at any angle and where a flat face meets a cylinder or a prism squarely. Its normal is analytic; with a shape that gives no normal it is taken as square and the result has none.',
+        csgRoundUnion: 'A join set to *round* (version 27): both shapes, the concave edge where they meet filled by a fillet of radius `r` -- a circle where they meet at a right angle (two flat faces, a flat face across a cylinder or a prism), a rounded corner at other angles. Its distance reads the two distances alone; its normal is analytic, and with a shape that gives no normal the result has none.',
         csgRoundIntersect: 'Only where both are, the edge rounded by a circle of radius `r`: a convex fillet, as `csgRoundUnion`.',
         csgRoundSubtract: '`a` with `b` cut out, the rim of the cut rounded by radius `r`: a hole\'s filleted edge.',
         csgChamferUnion: 'A join set to *chamfer*: the concave edge filled with the flat cut between the lines a round of radius `r` would touch.',
@@ -202,6 +202,7 @@ export const CODE_HELP = [
 export const CODE_SHAPED = /^(N[a-z]|sd[A-Z]?|op[A-Z]|csg[A-Z]|g2[A-Z])/
 export const CODE_UNLISTED = {
     csgNormal: 'the csg joins\' own blended normal',
+    csgShapedCap: 'the round and chamfer joins\' own cap on how far they go over the hard op',
     sheetNormal: 'Nrectangle\'s and Ndisc\'s own',
     lensFace: 'Nlens\'s own, one face',
 }

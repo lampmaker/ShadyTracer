@@ -12,7 +12,7 @@ distance (a slower march there, not a wrong surface: each is above the hit toler
 it was 302, the part 139 shapes where it was 235 -- in 87 groups, as many as before, each fillet being a group of two --
 and it converts in 15 to 17 s instead of 24 to 29 (the container). A part made like it in
 OpenCascade, the holder (import/test/fixtures/holder.step: a filleted tray, an upright with a U slot and two slanted
-slots, 40 fillets), was 7 points wrong and 178 shapes; it is 0 and 61. A fillet that is not exactly two faces' round
+slots, 40 fillets), was 7 points wrong and 178 shapes; it is 0 and 64. A fillet that is not exactly two faces' round
 join -- one between a plane and a curved face met obliquely, the bottom of a U between parallel walls -- is left as
 before and counted in the import dialog. The conversion also keeps two new kinds of thin sheet out of the formula
 (import/csg.js: a fillet's anti-supports, and walls across a surface a fillet shares), and samples where each

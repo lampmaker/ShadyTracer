@@ -740,9 +740,18 @@ anyway? ... indicate those surfaces with a different (red) material? maybe propo
   cut the U's fillet tori and at the U's mouth: where a fillet face ends on a boundary that is neither a radial plane
   nor a cone, which is all a separator can be. *Inferred, not seen:* those are the render's black notches.
 - **A join's shape (builder, model version 27).** `joinShape: 'round' | 'chamfer'`. The round join is the circle of
-  radius r tangent to both sides, from the two normals' angle (builder/joins.js derives it): exact for two planes at any
-  angle and for a plane met squarely by a cylinder or a prism, which is the fillet CAD makes. Held to closed forms in
-  JS and on Dawn (joins.test, roundjoin.gpu).
+  radius r tangent to both sides where they meet at a right angle (two planes, a plane met squarely by a cylinder or a
+  prism: the fillet CAD makes), from the two distances alone (builder/joins.js). Held to closed forms in JS and on Dawn
+  (joins.test, roundjoin.gpu).
+  - **The fillets came out black, every mode (the user, 2026-11-04; found then).** The first version read the angle
+    between the two sides' normals into the distance. The renderer marches, and casts every ray leaving a surface, in
+    the distance-only build, where a shape's normal is the empty hit's (0, 0, 1): the angle read "parallel", the join
+    was the hard op, the march stopped on the sharp corner, and the shading (the full build) found that point inside
+    the fillet. Measured on Dawn on the user's scene: 76 black pixels, 0 with the fix. roundjoin.gpu.mjs now holds the
+    two builds to one distance at every point, and draws the user's scene with no black pixel.
+  - **Capped.** Without the angle, the round read more than the true distance far from a fillet whose sides were a
+    box's and a prism's (0.48 mm over 6.4 mm out on the user's part). Its rounding is held to what it adds on the
+    fillet itself and fades to the hard op by 2 r: none over, both parts.
 - **Fillets (import/fillet.js).** A cylinder or torus face tangent across its rails to exactly two faces is their round
   join: one half-space (geom.js `rounded`), no separators, checked to be zero on its own face first. A rounded
   rectangle of a fillet chain's cylinders is left to the fillets, so a rim round a rounded tray is one compound.
@@ -759,7 +768,7 @@ anyway? ... indicate those surfaces with a different (red) material? maybe propo
   | the user's, before | 121 | 6 | 9 | 4 / 1 | 302 | 235 / 85 | 24-29 s |
   | the user's, now | 121 | 0 | 0 | 0 / 3 | 95 | 139 / 87 | 15-17 s |
   | holder (make.py), before | 81 | 7 | 11 | 0 / 2 | 209 | 178 / 76 | 11 s |
-  | holder, now | 81 | 0 | 0 | 0 / 0 | 46 | 61 / 38 | 8-11 s |
+  | holder, now | 81 | 0 | 0 | 0 / 0 | 49 | 64 / 39 | 9-14 s |
 
   On Dawn the holder's 256 rays end where the formula's do, codegen, as data and baked (import.gpu.mjs). The groups
   did not fall on the user's part: each fillet is a group of two.

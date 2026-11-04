@@ -130,8 +130,11 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
    bound by min and max of exact distances, a cut that shares a cap with what it cuts worth only the distance to that
    cap across the opening (so what is cut away reaches past it), four corner cylinders one rounded prism, and the
    facets of an STL fitted back to the cylinders they were -> import/csg.js, shapes.js, fit.js. Planned for it too (0.next):
-   a join's shape -- the round join an exact circular fillet, derived from the two normals' angle (exact for two planes,
-   and for a plane met squarely by a cylinder or a prism), the chamfer its chord -- and a CAD fillet read as the round
+   a join's shape -- the round join a circular fillet where two faces meet at a right angle (two planes, a plane met
+   squarely by a cylinder or a prism), from the two distances alone: a first version read the normals' angle into the
+   distance, the renderer's distance-only march had none, and the fillets came out black (march and shading on two
+   surfaces); its rounding capped at what it adds on the fillet, so far off it is never above the true distance; the
+   chamfer its chord -- and a CAD fillet read as the round
    join of its two supports, one half-space with no separators; the two sheets such half-spaces make possible (a
    fillet with the other side of its support: zero along the support; walls across a surface a fillet shares) and
    how the cover keeps them out; a freeform face fitted with the nearest regular surface, and the deviation shown

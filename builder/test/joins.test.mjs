@@ -3,19 +3,21 @@
 // JavaScript (builder/joins.js, the WGSL's twin) and through the builder. Run: node builder/test/joins.test.mjs
 //
 // What is held, no GPU:
-//   - THE ROUND, against closed forms: two planes at 60, 90 and 120 degrees between their faces, inside and outside --
-//     on the arc's circle the value 0 and the normal the radius' direction, beyond the tangent lines a plane's distance,
-//     everywhere the exact distance to the rounded wedge (worked out here in 2D by brute force over its boundary);
-//     a plane across a cylinder (a hole's filleted rim) the torus it should be; the union and the subtraction the
-//     intersection turned out; a missing normal taken as square with none given back; parallel normals the hard op;
-//   - LIPSCHITZ 1 and the normal the gradient, by differences, at random points about each edge;
-//   - THE CHAMFER through the round's two tangent lines, its value a plane's distance;
+//   - THE DISTANCE NEVER READS THE NORMALS: with none, or every one (0, 0, 1) as the distance-only build's are, the
+//     same value -- it did, and the march and the shading disagreed: the user's fillets black (2026-11-04);
+//   - THE ROUND at a right angle against closed forms: two planes, in and out -- on the arc's circle the value 0 and the
+//     normal the radius' direction, everywhere the exact distance to the rounded wedge (worked out here in 2D by brute
+//     force over its boundary); a plane across a cylinder (a hole's filleted rim) the torus it should be; the union and
+//     the subtraction the intersection turned out; a missing normal the same distance with none given back;
+//   - ITS SLOPE at 60, 90 and 120 degrees: at most 1 at a right angle and sharper, sqrt(1 + c) obtuse; the normal the
+//     gradient, by differences, at random points about each edge;
+//   - THE CHAMFER at a right angle through the round's two tangent lines, its value a plane's distance;
 //   - THE BUILDER: the field (model.js setJoinShape, refused where a join is, a typo refused); a file of 26 read as 27;
 //     codegen calling the round's function and the old text byte for byte without one; the scene as data's records
 //     op + 4 x shape and its loop the old text without one, a shape added asking for a compile (recordsOf null); the
 //     tree's row and the recipe; a box padded by a round union's radius.
 //======================================================================================================================
-import { roundIntersect, roundUnion, roundSubtract, chamferIntersect, joinShaped } from '../joins.js'
+import { roundIntersect, roundUnion, roundSubtract, chamferIntersect, joinShaped, ROUND_CAP, capOf } from '../joins.js'
 import * as M from '../model.js'
 import { generate } from '../codegen.js'
 import { planOf, recordsOf, SHAPES, KIND, REC, HEADER } from '../scenedata.js'
@@ -70,31 +72,49 @@ function roundedWedgeDistance(W, r, p) {
     return { d: inside ? -best : best, C }
 }
 
-// THE ROUND, two planes
+// THE ROUND, two planes: at a right angle the exact distance to the filleted wedge; at any angle the distance the two
+// distances alone give (never their normals: the distance-only build has none), Lipschitz 1 where the edge is square or
+// sharper and up to sqrt(1 + c) where it is obtuse, its normal the gradient
 for (const deg of [60, 90, 120]) {
     const W = wedge(deg * Math.PI / 180), r = 0.7
-    let worst = 0, worstN = 0, worstL = 0
-    const f = q => roundIntersect([W.n1[0], W.n1[1], 0, q[0] * W.n1[0] + q[1] * W.n1[1]], [W.n2[0], W.n2[1], 0, q[0] * W.n2[0] + q[1] * W.n2[1]], r)
+    const c = W.n1[0] * W.n2[0] + W.n1[1] * W.n2[1]
+    let worst = 0, worstN = 0, worstL = 0, worstNoN = 0, capOver = 0, capWorst = -Infinity
+    const sides = q => [[W.n1[0], W.n1[1], 0, q[0] * W.n1[0] + q[1] * W.n1[1]], [W.n2[0], W.n2[1], 0, q[0] * W.n2[0] + q[1] * W.n2[1]]]
+    const f = q => roundIntersect(...sides(q), r)
     const { C } = roundedWedgeDistance(W, r, [0, 0])
     for (let i = 0; i < 400; i++) {
         const p = [C[0] + (rnd() - 0.5) * 6, C[1] + (rnd() - 0.5) * 6]
-        const v = f(p), e = roundedWedgeDistance(W, r, p).d
-        // inside only near the fillet (the arc or the faces near it): far inside, max(a, b) is the wedge's (no arc)
-        worst = Math.max(worst, Math.abs(v[3] - e))
-        // the normal against the gradient
+        const v = f(p)
+        // THE NORMALS NOT READ: none, or every one (0, 0, 1) as the distance-only build's are, the same distance
+        const [a, b] = sides(p)
+        /* at a right angle: the exact distance wherever the cap does not hold it, and never more than it where it does
+           (far out of the corner, the edge's distance more than the cap over the hard op) */
+        if (deg === 90) {
+            const e = roundedWedgeDistance(W, r, p).d
+            const m = Math.max(a[3], b[3])
+            if (v[3] - m < capOf(m, r, ROUND_CAP) - 1e-12) worst = Math.max(worst, Math.abs(v[3] - e))
+            else if (v[3] > e + 2e-3) capOver++
+        }
+        // THE CAP: never more than the hard op plus the faded cap, at any angle
+        capWorst = Math.max(capWorst, v[3] - Math.max(a[3], b[3]) - capOf(Math.max(a[3], b[3]), r, ROUND_CAP))
+        for (const [na, nb] of [[[0, 0, 0], [0, 0, 0]], [[0, 0, 1], [0, 0, 1]]]) worstNoN = Math.max(worstNoN, Math.abs(roundIntersect([...na, a[3]], [...nb, b[3]], r)[3] - v[3]))
         const h = 1e-6, gx = (f([p[0] + h, p[1]])[3] - f([p[0] - h, p[1]])[3]) / (2 * h), gy = (f([p[0], p[1] + h])[3] - f([p[0], p[1] - h])[3]) / (2 * h)
         worstL = Math.max(worstL, Math.hypot(gx, gy))
-        if (Math.hypot(v[0], v[1]) > 0.5) worstN = Math.max(worstN, Math.hypot(v[0] - gx, v[1] - gy))
+        const gl = Math.hypot(gx, gy)
+        if (Math.hypot(v[0], v[1]) > 0.5) worstN = Math.max(worstN, Math.hypot(v[0] - gx / gl, v[1] - gy / gl))
     }
-    ok(`round, two planes ${deg} degrees apart: the exact distance to the filleted wedge, in and out`, worst < 2e-3, worst)
-    ok(`...Lipschitz 1`, worstL < 1 + 1e-5, worstL)
+    if (deg === 90) ok('round, two planes at a right angle: the exact distance to the filleted wedge, in and out (where uncapped), never more where capped', worst < 2e-3 && capOver === 0, [worst, capOver])
+    ok(`round, ${deg} degrees: never more than the hard op plus the cap`, capWorst <= 1e-12, capWorst)
+    ok(`round, ${deg} degrees: the distance the same whatever the normals (none, or all (0, 0, 1) as in the distance-only build)`, worstNoN === 0, worstNoN)
+    ok(`...its slope at most ${c <= 0 ? '1' : 'sqrt(1 + c)'}`, worstL < Math.sqrt(1 + Math.max(c, 0)) + 1e-5, worstL)
     ok(`...its normal the gradient`, worstN < 1e-4, worstN)
-    // on the circle between the tangent points: 0, the normal the radius'
-    const mid = [W.n1[0] + W.n2[0], W.n1[1] + W.n2[1]], ml = Math.hypot(...mid), at = [C[0] + r * mid[0] / ml, C[1] + r * mid[1] / ml]
-    const v = f(at)
-    ok(`...the arc's middle on the surface, its normal along the radius`, near(v[3], 0, 1e-12) && near(v[0], mid[0] / ml, 1e-9) && near(v[1], mid[1] / ml, 1e-9), v)
+    if (deg === 90) {
+        // on the circle between the tangent points: 0, the normal the radius'
+        const mid = [W.n1[0] + W.n2[0], W.n1[1] + W.n2[1]], ml = Math.hypot(...mid), at = [C[0] + r * mid[0] / ml, C[1] + r * mid[1] / ml]
+        const v = f(at)
+        ok(`...at a right angle the arc's middle on the surface, its normal along the radius`, near(v[3], 0, 1e-12) && near(v[0], mid[0] / ml, 1e-9) && near(v[1], mid[1] / ml, 1e-9), v)
+    }
 }
-
 // a plane across a cylinder's axis: a hole's rim filleted is a torus. The plate's top z = 0 (solid below), the hole's
 // wall rho = R (solid outside it): its fillet the torus about the axis, ring R + r, at height -r
 {
@@ -106,6 +126,7 @@ for (const deg of [60, 90, 120]) {
         if (rho < 1e-3) continue
         const top = [0, 0, 1, p[2]], wall = [-p[0] / rho, -p[1] / rho, 0, R - rho]
         const v = roundIntersect(top, wall, r)[3]
+        if (v - Math.max(top[3], wall[3]) >= capOf(Math.max(top[3], wall[3]), r, ROUND_CAP) - 1e-12) continue     // capped: a bound, the joins' own test
         // exact: in the (rho, z) half-plane, the plate less the hole with its rim rounded is the wedge rho >= R, z <= 0
         const q = [rho - R, p[2]]
         // toward the corner from the fillet's centre (q = (r, -r)) the torus is nearest; elsewhere the face either side
@@ -123,25 +144,32 @@ for (const deg of [60, 90, 120]) {
     const s = roundSubtract(a, b, 0.5), j = roundIntersect(a, b.map(x => -x), 0.5)
     ok('...the subtraction the intersection with the cutter turned out', s.every((x, k) => near(x, j[k])))
     const m = roundIntersect([0, 0, 0, -0.1], [1, 0, 0, -0.1], 0.5)
-    ok('a missing normal: taken as square, none given back', near(m[3], Math.hypot(0.4, 0.4) - 0.5) && m[0] === 0 && m[1] === 0 && m[2] === 0, m)
-    const par = roundIntersect([1, 0, 0, -0.1], [1, 0, 0, -0.3], 0.5)
-    ok('parallel normals: the hard op', par[3] === -0.1)
+    ok('a missing normal: the same distance, none given back', m[3] === roundIntersect([0, 1, 0, -0.1], [1, 0, 0, -0.1], 0.5)[3] && m[0] === 0 && m[1] === 0 && m[2] === 0, m)
     ok('joinShaped: by op and shape', joinShaped('subtract', 'round', a, b, 0.5).every((x, k) => near(x, s[k])))
     let refused = false
     try { joinShaped('union', 'smooth', a, b, 0.5) } catch { refused = true }
     ok('...the smooth blend not its', refused)
 }
 
-// THE CHAMFER: the chord between the round's tangent lines
+// THE CHAMFER: at a right angle the chord between the round's tangent lines; at any angle its distance not reading the
+// normals
 for (const deg of [60, 90, 120]) {
     const W = wedge(deg * Math.PI / 180), r = 0.7
     const { C } = roundedWedgeDistance(W, r, [0, 0])
-    const f = q => chamferIntersect([W.n1[0], W.n1[1], 0, q[0] * W.n1[0] + q[1] * W.n1[1]], [W.n2[0], W.n2[1], 0, q[0] * W.n2[0] + q[1] * W.n2[1]], r)
+    const sides = q => [[W.n1[0], W.n1[1], 0, q[0] * W.n1[0] + q[1] * W.n1[1]], [W.n2[0], W.n2[1], 0, q[0] * W.n2[0] + q[1] * W.n2[1]]]
+    const f = q => chamferIntersect(...sides(q), r)
+    let worstNoN = 0
+    for (let i = 0; i < 200; i++) {
+        const p = [C[0] + (rnd() - 0.5) * 6, C[1] + (rnd() - 0.5) * 6], [a, b] = sides(p)
+        worstNoN = Math.max(worstNoN, Math.abs(chamferIntersect([0, 0, 1, a[3]], [0, 0, 1, b[3]], r)[3] - f(p)[3]))
+    }
+    ok(`chamfer ${deg} degrees: the distance the same whatever the normals`, worstNoN === 0, worstNoN)
+    if (deg !== 90) continue
     const t1 = [C[0] + r * W.n1[0], C[1] + r * W.n1[1]], t2 = [C[0] + r * W.n2[0], C[1] + r * W.n2[1]]
-    ok(`chamfer ${deg} degrees: through both of the round's tangent points`, near(f(t1)[3], 0, 1e-12) && near(f(t2)[3], 0, 1e-12), [f(t1)[3], f(t2)[3]])
+    ok('chamfer at a right angle: through both of the round\'s tangent points', near(f(t1)[3], 0, 1e-12) && near(f(t2)[3], 0, 1e-12), [f(t1)[3], f(t2)[3]])
     const mid = [(t1[0] + t2[0]) / 2, (t1[1] + t2[1]) / 2], v = f(mid)
     const n = [W.n1[0] + W.n2[0], W.n1[1] + W.n2[1]], l = Math.hypot(...n)
-    ok('...its normal the two faces\' halfway, a point off it at its distance', near(v[0], n[0] / l, 1e-12) && near(f([mid[0] + 0.3 * n[0] / l, mid[1] + 0.3 * n[1] / l])[3], 0.3, 1e-12))
+    ok('...its normal the two faces\' halfway, a point off it at its distance', near(v[0], n[0] / l, 1e-12) && near(f([mid[0] + 0.05 * n[0] / l, mid[1] + 0.05 * n[1] / l])[3], 0.05, 1e-12))
 }
 
 // THE BUILDER
