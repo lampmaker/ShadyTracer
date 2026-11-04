@@ -23,7 +23,13 @@ given by its spectrum is coloured by (`lib/pathtracer/core/spd.js`):
 - `lib/pathtracer/core/cie1931.js`, the same numbers written as a module by `data/cie1931.make.mjs`.
 
 Both are under the [Creative Commons Attribution-ShareAlike 4.0 International](https://creativecommons.org/licenses/by-sa/4.0/)
-licence, the CIE's for the table, not MIT. Source: CIE 2019, *Colour-matching functions of CIE 1931 standard
+licence, the CIE's for the table, not MIT. So are four more of the CIE's tables, unchanged in `lib/pathtracer/core/data/`,
+and `lib/pathtracer/core/ciedata.js`, written from them by `data/ciedata.make.mjs`, for the colour rendering index
+(`core/cri.js`) and the LED presets:
+- `CIE_srf_cri.csv`: the 14 test colour samples (CIE 1995, DOI 10.25039/CIE.DS.wuiuu9cz);
+- `CIE_illum_Dxx_comp.csv`: the components of daylight (CIE 2018);
+- `CIE_illum_FLs.csv`: the fluorescent illuminants (CIE 2018, DOI 10.25039/CIE.DS.ukaymjdn);
+- `CIE_illum_LEDs.csv`: the LED illuminants (CIE 2018, DOI 10.25039/CIE.DS.vgssnyfg). Source: CIE 2019, *Colour-matching functions of CIE 1931 standard
 colorimetric observer*, International Commission on Illumination (CIE), Vienna, AT,
 [DOI 10.25039/CIE.DS.xvudnb9b](https://doi.org/10.25039/CIE.DS.xvudnb9b) (CIE 018:2019, Table 6).
 
