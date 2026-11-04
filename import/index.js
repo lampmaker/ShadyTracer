@@ -29,6 +29,8 @@ import { toCSG } from './csg.js'
 import { shapesOf, addPart, countShapes, shapeSDF } from './shapes.js'
 import { readSTL } from './stl.js'
 import { meshSolid } from './fit.js'
+import { fitSolid } from './freeform.js'
+import { APPROX_ID, MAX_DEVIATION } from './asset.js'
 export { withoutParts, withoutRed, APPROX_ID, MAX_DEVIATION } from './asset.js'
 
 /** Which reader a file is for, by its name and then its first bytes. */
@@ -66,7 +68,25 @@ export function convertSolid(B, { seed = 1, onProgress = null, fillets = true } 
    parts keep their places in it, so an assembly stays put together. `place: 'file'` leaves it where the file has it.
    The file's axes are kept either way: STEP says nothing of which way is up, and one exporter's up is another's
    front, so a part modelled along y comes in lying along y. */
-export function convert(model, name, bytes, { material = null, seed = 1, place = 'floor', onProgress = null, fillets = true } = {}) {
+/* FREEFORM FACES (freeform.js, 0.next): fitted with a regular surface before the B-rep is made; within `maxDeviation`
+   (mm) a face takes it -- exactly, or APPROXIMATED and red (APPROX_ID) -- and beyond it the solid is refused with the
+   deviation it would need, which the import dialog offers to allow */
+function fitted(s, maxDeviation) {
+    let lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity]
+    for (const f of s.faces) for (const l of f.loops) for (const p of l.points) for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], p[k]); hi[k] = Math.max(hi[k], p[k]) }
+    const scale = Math.max(1e-9, Math.hypot(...hi.map((h, k) => h - lo[k])))
+    if (!s.faces.some(f => f.surface.unsupported)) return { solid: s, approximated: [] }
+    const r = fitSolid(s, { maxDeviation, exact: 1e-6 * scale })
+    if (r.over.length) {
+        const worst = Math.max(...r.over.map(x => x.deviation))
+        const e = new Error(`${r.over.length} freeform face(s): the nearest plane, cylinder, cone, sphere or torus is up to ${+worst.toPrecision(2)} mm off, more than the ${maxDeviation} mm allowed`)
+        e.needs = Math.ceil(worst * 1000) / 1000
+        throw e
+    }
+    return r
+}
+
+export function convert(model, name, bytes, { material = null, seed = 1, place = 'floor', onProgress = null, fillets = true, maxDeviation = MAX_DEVIATION } = {}) {
     const kind = kindOf(name, bytes)
     if (!kind) throw new Error(`${name}: not a STEP or STL file (by its name or its first line)`)
     const base = String(name).replace(/\.[^.]+$/, '') || 'part'
@@ -83,7 +103,7 @@ export function convert(model, name, bytes, { material = null, seed = 1, place =
         /* NAMED: a part on its own by its file, which the user chose -- what an exporter writes for its product is often
            its own name ("Open CASCADE STEP translator 7.9 1"); an assembly's parts by their products, the group by the
            file */
-        solids = r.solids.map(s => ({ name: r.solids.length === 1 ? base : s.name || base, B: () => brep(s) }))
+        solids = r.solids.map(s => ({ name: r.solids.length === 1 ? base : s.name || base, B: () => brep(fitted(s, maxDeviation).solid) }))
     } else {
         // an STL's header is the exporter's ("STL Exported by ...", "binary STL"): the file's name
         const mesh = readSTL(bytes)
@@ -96,6 +116,15 @@ export function convert(model, name, bytes, { material = null, seed = 1, place =
     doc.unit = 'mm'
     let mat = null
     if (material) { mat = { ...structuredClone(material), id: 'mimport' }; doc.materials.push(mat) }
+    /* THE RED, made once a part has a face fitted (shapes.js gives it to that face's shapes); the page takes it back
+       when the dialog's box is cleared (asset.js withoutRed) */
+    let approxMat = null
+    const red = () => {
+        if (approxMat) return approxMat
+        approxMat = model.addMaterial(doc, { id: APPROX_ID, label: 'approximated face', preset: 'diffuse' })
+        approxMat.params.baseColor = { r: 0.9, g: 0.05, b: 0.05 }
+        return approxMat
+    }
     const holder = solids.length > 1 ? model.addGroup(doc, 'root', { label: base }) : null
     solids.forEach((s, k) => {
         const share = (1 - READ) / solids.length, at = READ + k * share
@@ -105,14 +134,15 @@ export function convert(model, name, bytes, { material = null, seed = 1, place =
             const B = s.B()
             warnings.push(...(B.warnings || []))
             const part = convertSolid(B, { seed, fillets, onProgress: p => tell(`${who}: ${STAGE_WORDS[p.stage]}`, at + share * p.fraction, k + 1, solids.length) })
-            const g = addPart(model, doc, holder ? holder.id : 'root', part.ir, { unit: 'mm', label: s.name, material: mat?.id ?? null })
+            const g = addPart(model, doc, holder ? holder.id : 'root', part.ir, { unit: 'mm', label: s.name, material: mat?.id ?? null,
+                approxMaterial: B.faces.some(f => f.approx) ? red().id : null })
             // the shapes and groups as pasted (addPart makes the formula's unions into folds, and may close one with a box)
             const n = { shapes: 0, groups: 0 }
             const count = x => { if (x.kind === 'object') n.shapes++; else { n.groups++; x.children.forEach(count) } }
             count(g)
             parts.push({ name: s.name, id: g.id, report: { ...part.report, ...n }, ir: part.ir, csg: part.csg, box: B.box })
         } catch (e) {
-            refused.push({ name: s.name, why: e.message || String(e) })
+            refused.push({ name: s.name, why: e.message || String(e), ...(e.needs != null ? { needs: e.needs } : {}) })
         }
     })
     const top = holder ?? (parts.length ? model.find(doc, parts[0].id).node : null)

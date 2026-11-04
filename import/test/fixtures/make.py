@@ -56,7 +56,19 @@ def parts():
     cup = outer.cut(cq.Workplane('XY').rect(40, 40).extrude(25).edges('|Z').fillet(1))
     cup = cup.faces('>Z').workplane(centerOption='ProjectedOrigin').pushPoints([(13.79, 13.79), (-13.79, -13.79)]).hole(2)
     cup = cup.rotate((0, 0, 0), (1, 0, 0), -90)
-    return {'plate': plate, 'bracket': bracket, 'boss': boss, 'lens': lens, 'roundbox': roundbox, 'cup': cup, 'holder': holder()}
+    return {'plate': plate, 'bracket': bracket, 'boss': boss, 'lens': lens, 'roundbox': roundbox, 'cup': cup, 'holder': holder(),
+            'nurbsplate': nurbs(plate), 'twisted': twisted()}
+
+def nurbs(part):
+    # EVERY FACE A B-SPLINE (0.next, import/freeform.js): the plate's planes and cylinders converted to NURBS, as some
+    # exporters write every face -- the same solid, each face exactly the regular surface it was
+    from OCP.BRepBuilderAPI import BRepBuilderAPI_NurbsConvert
+    return cq.Workplane('XY').add(cq.Shape.cast(BRepBuilderAPI_NurbsConvert(part.val().wrapped, True).Shape()))
+
+def twisted():
+    # A TRULY FREEFORM FACE (0.next, import/freeform.js): a 20 mm square block 10 mm tall, its top turned 3 degrees on
+    # its bottom, the sides ruled between them -- each a hyperbolic paraboloid, a B-spline no plane fits exactly
+    return (cq.Workplane('XY').rect(20, 20).workplane(offset=10).transformed(rotate=(0, 0, 3)).rect(20, 20).loft(ruled=True))
 
 def holder():
     # A HOLDER LIKE THE USER'S ONSHAPE PART OF 2026-11-04 (a tray with filleted uprights, a U slot and two slanted slots

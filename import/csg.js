@@ -291,6 +291,8 @@ export function toCSG(B, { seed = 1, volume = 6000, perFace = 64, perEdgePoint =
         const c = claimed.get(i)
         const { j, s } = addSurface(c ? c.S : f.surface, 'face')
         if (H[j].from !== 'face') H[j].from = 'face'
+        // a face fitted with a regular surface not exactly its own (freeform.js): its half-space shows red (shapes.js)
+        if (f.approx) H[j].approx = Math.max(H[j].approx ?? 0, f.approx)
         return c ? { j, s: c.s * s } : { j, s: f.sense ? s : -s }
     })
     const onSurface = new Map()
@@ -542,6 +544,7 @@ export function toCSG(B, { seed = 1, volume = 6000, perFace = 64, perEdgePoint =
         faces: B.faces.length, halfspaces: H.length, used: halfspaces.length,
         roundedRects: new Set([...claimed.values()].filter(c => c.S.type === 'rrect').map(c => c.S)).size,
         fillets: F.found.length, filletsKept: F.kept.length,
+        approximated: B.faces.filter(f => f.approx).length, deviation: Math.max(0, ...B.faces.map(f => f.approx ?? 0)),
         separators: halfspaces.filter(h => h.from === 'separator').length,
         cells: all.length, conflicts: conflicts.length, lone, global: G.length, products: kept.length, uncovered, literals: literalCount(tree),
         points: pts.length, skipped, checked, mismatches, ms: Date.now() - t0,

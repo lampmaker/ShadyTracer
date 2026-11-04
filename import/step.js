@@ -29,7 +29,7 @@
 //======================================================================================================================
 
 import { frame, line, circle, ellipse, bspline, sampleCurve, makeSurface, moveSurface, fromFrame, compose, invert, apply,
-         IDENTITY, sub, len } from './geom.js'
+         IDENTITY, sub, len, bsplineSurface, extrusionSurface, applyDir } from './geom.js'
 
 //----------------------------------------------------------------------------------------------------------------------
 // PART 21: records, then values
@@ -256,6 +256,29 @@ function geometry(E, U) {
         if ((a = part(e, 'SPHERICAL_SURFACE'))) return makeSurface('sphere', placement(a[1]), { r: a[2] * U.mm })
         if ((a = part(e, 'TOROIDAL_SURFACE')) || (a = part(e, 'DEGENERATE_TOROIDAL_SURFACE')))
             return makeSurface('torus', placement(a[1]), { R: a[2] * U.mm, r: a[3] * U.mm })
+        /* A FREEFORM SURFACE (0.next): still no half-space, but evaluable, so a regular shape can be fitted to the face
+           on it (freeform.js) -- a B-spline, rational or not, in the simple form or the complex one; a curve extruded */
+        if ((a = part(e, 'B_SPLINE_SURFACE_WITH_KNOTS'))) try {
+            const simple = e.type === 'B_SPLINE_SURFACE_WITH_KNOTS'
+            // simple: (name, u_degree, v_degree, points, form, u_closed, v_closed, self, u_mults, v_mults, u_knots, v_knots, spec)
+            // complex: B_SPLINE_SURFACE(u_degree, v_degree, points, ...) and B_SPLINE_SURFACE_WITH_KNOTS(u_mults, v_mults, u_knots, v_knots, spec)
+            const b = simple ? a : part(e, 'B_SPLINE_SURFACE')
+            const off = simple ? 1 : 0
+            const uDeg = b[off], vDeg = b[off + 1], P = b[off + 2].map(row => row.map(point))
+            const [um, vm, uk, vk] = simple ? [a[8], a[9], a[10], a[11]] : [a[0], a[1], a[2], a[3]]
+            const knots = (m, k) => { const out = []; m.forEach((x, i) => { for (let j = 0; j < x; j++) out.push(k[i]) }); return out }
+            const w = part(e, 'RATIONAL_B_SPLINE_SURFACE')
+            return bsplineSurface(uDeg, vDeg, P, knots(um, uk), knots(vm, vk), w ? w[0] : null)
+        } catch {
+            // one that cannot be read (a point that is not one, a knot vector that does not fit): kept, and not evaluable
+            return { type: 'bspline', unsupported: true }
+        }
+        if ((a = part(e, 'SURFACE_OF_LINEAR_EXTRUSION'))) {
+            const c = curve(a[1]), v = part(E.get(a[2]), 'VECTOR')
+            if (c.type === 'unsupported') return { type: 'extrusion', unsupported: true }
+            const d = direction(v[1]), m = v[2] * U.mm
+            return extrusionSurface(c, [d[0] * m, d[1] * m, d[2] * m])
+        }
         const kind = e.type ?? Object.keys(e.parts).find(k => /SURFACE/.test(k)) ?? 'surface'
         const name = /B_SPLINE/.test(kind) ? 'bspline' : /REVOLUTION/.test(kind) ? 'revolution' : /EXTRUSION/.test(kind) ? 'extrusion'
             : /OFFSET/.test(kind) ? 'offset' : kind.toLowerCase()
@@ -284,6 +307,11 @@ function edgePoints(E, G, edgeRef, forward, warnings) {
         if (c.periodic) {
             if (len(sub(v1, v2)) < 1e-9 * (1 + len(v1))) b = a + c.periodic          // a closed edge: the whole circle
             else { while (b <= a) b += c.periodic; while (b - a > c.periodic) b -= c.periodic }
+        } else if (c.type === 'bspline' && len(sub(v1, v2)) < 1e-9 * (1 + len(v1))) {
+            /* A CLOSED B-SPLINE EDGE (0.next): one vertex at both ends, the whole curve between -- a NURBS circle's. Its
+               two ends' parameters are one point's, so it was the stretch from that point to itself: no edge at all
+               (the plate made all NURBS: its holes' rims) */
+            a = c.lo; b = c.hi
         } else if (b < a) [a, b] = [b, a]
         pts = sampleCurve(c, a, b)
         if (!same) pts.reverse()
@@ -355,7 +383,10 @@ function readSolid(E, G, ref, warnings) {
 /** A solid moved by a rigid transform: its surfaces' frames and its loops' points. */
 function moveSolid(s, T) {
     return { ...s, faces: s.faces.map(f => ({ ...f,
-        surface: f.surface.unsupported ? f.surface : moveSurface(f.surface, T),
+        surface: !f.surface.unsupported ? moveSurface(f.surface, T)
+            // an evaluable freeform surface moved with it: its points and its normal (0.next, freeform.js)
+            : f.surface.at ? { ...f.surface, at: (u, v) => apply(T, f.surface.at(u, v)), normal: (u, v) => applyDir(T, f.surface.normal(u, v)) }
+            : f.surface,
         loops: f.loops.map(l => ({ ...l, points: l.points.map(p => apply(T, p)),
                                    edges: l.edges.map(e => ({ ...e, points: e.points.map(p => apply(T, p)) })) })) })) }
 }

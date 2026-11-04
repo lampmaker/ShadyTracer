@@ -131,15 +131,68 @@ export function bspline(degree, P, knots, weights = null) {
     return { type: 'bspline', degree, P, knots, weights, lo, hi, spans, at, paramOf }
 }
 
+/* de Boor on homogeneous points [x w, y w, z w, w]: the point of a B-spline of `degree` at t, its knot span found */
+function deBoor(degree, H, knots, t) {
+    const n = H.length - 1
+    let k = degree
+    while (k < n && t >= knots[k + 1]) k++
+    const d = []
+    for (let j = 0; j <= degree; j++) d.push(H[k - degree + j].slice())
+    for (let r = 1; r <= degree; r++)
+        for (let j = degree; j >= r; j--) {
+            const i = k - degree + j, den = knots[i + degree - r + 1] - knots[i]
+            const a = den > 0 ? (t - knots[i]) / den : 0
+            for (let c = 0; c < 4; c++) d[j][c] = (1 - a) * d[j - 1][c] + a * d[j][c]
+        }
+    return d[degree]
+}
+
+/** A FREEFORM SURFACE A FACE MAY LIE ON (0.next, import/freeform.js): not a half-space the renderer has a shape for,
+ *  so it stays `unsupported` -- brep.js cannot classify against it -- but it can be EVALUATED, which is what fitting a
+ *  regular shape to the face needs: at(u, v), its parameters' domain, and the normal du x dv (ISO 10303-42's: the face's
+ *  own when same_sense). A B-spline surface, rational if weights are given (P[i][j], W[i][j]: i along u). */
+export function bsplineSurface(uDeg, vDeg, P, uKnots, vKnots, W = null) {
+    const nu = P.length - 1, nv = P[0].length - 1
+    const H = P.map((row, i) => row.map((p, j) => { const w = W ? W[i][j] : 1; return [p[0] * w, p[1] * w, p[2] * w, w] }))
+    const uLo = uKnots[uDeg], uHi = uKnots[nu + 1], vLo = vKnots[vDeg], vHi = vKnots[nv + 1]
+    const at = (u, v) => {
+        u = Math.min(Math.max(u, uLo), uHi); v = Math.min(Math.max(v, vLo), vHi)
+        const col = H.map(row => deBoor(vDeg, row, vKnots, v))
+        const h = deBoor(uDeg, col, uKnots, u)
+        return [h[0] / h[3], h[1] / h[3], h[2] / h[3]]
+    }
+    return evaluable({ type: 'bspline', unsupported: true, at, uLo, uHi, vLo, vHi })
+}
+/** A SURFACE OF LINEAR EXTRUSION: a curve swept along a vector, at(u, v) = curve(u) + v d. Its v has no ends of its
+ *  own: the face's loops give them (freeform.js). */
+export function extrusionSurface(curve, d) {
+    const uLo = curve.periodic ? 0 : curve.lo ?? 0, uHi = curve.periodic ? curve.periodic : curve.hi ?? 1
+    return evaluable({ type: 'extrusion', unsupported: true, at: (u, v) => add(curve.at(u), mul(d, v)), uLo, uHi, vLo: -Infinity, vHi: Infinity, d })
+}
+/* the normal du x dv by central differences, a hair inside the domain at its ends */
+function evaluable(S) {
+    const span = (lo, hi) => Number.isFinite(hi - lo) ? hi - lo : 1
+    S.normal = (u, v) => {
+        const hu = 1e-6 * span(S.uLo, S.uHi), hv = 1e-6 * span(S.vLo, S.vHi)
+        const u0 = Math.max(S.uLo, u - hu), u1 = Math.min(S.uHi, u + hu), v0 = Math.max(S.vLo, v - hv), v1 = Math.min(S.vHi, v + hv)
+        const du = mul(sub(S.at(u1, v), S.at(u0, v)), 1 / (u1 - u0)), dv = mul(sub(S.at(u, v1), S.at(u, v0)), 1 / (v1 - v0))
+        return norm(cross(du, dv))
+    }
+    return S
+}
+
 /** Points along a curve from parameter a to b (b > a), dense enough to stand for it in a face's parameter plane:
- *  a circle or an ellipse every 5 degrees, a spline eight times a knot span per degree, a line its two ends. */
+ *  a circle or an ellipse every 5 degrees, a spline eight times a knot span per degree and 48 at least, a line its
+ *  two ends. */
 export function sampleCurve(c, a, b) {
     if (c.type === 'line') return [c.at(a), c.at(b)]
     let n
     if (c.type === 'circle' || c.type === 'ellipse') n = Math.max(2, Math.ceil((b - a) / (5 * Math.PI / 180)))
     else {
+        /* ...and never fewer than 48: a NURBS circle is a span or two of degree 2 -- 16 points, a gap of 22 degrees,
+           which csg.js's separators took for where a hole's face ends (the plate made all NURBS, 2026-11-04) */
         const inside = c.spans.filter(([s0, s1]) => s1 > a && s0 < b).length
-        n = Math.max(4, inside * 8 * c.degree)
+        n = Math.max(48, inside * 8 * c.degree)
     }
     const out = []
     for (let i = 0; i <= n; i++) out.push(c.at(a + (b - a) * i / n))

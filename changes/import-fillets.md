@@ -7,7 +7,7 @@ a group of two shapes labelled *fillet R1*. Before, each was a curved surface wi
 where it ends, and those were where the import went wrong: on your Onshape part of 2026-11-04 (121 faces, 62 of them
 1 mm fillets) 6 of OpenCascade's 3000 classified points came out on the wrong side, 4 deep inside read near zero (a
 seam) and 9 read more than their distance (measured, Node; the black notches in your render are likely these, not
-seen). Now: 0 on the wrong side, 0 over the distance, 0 seams; 9 points outside still read under a fifth of their
+seen). Now: 0 on the wrong side, 0 over the distance, 0 seams; 3 points outside still read under a fifth of their
 distance (a slower march there, not a wrong surface: each is above the hit tolerance). The formula is 95 literals where
 it was 302, the part 139 shapes where it was 235 -- in 87 groups, as many as before, each fillet being a group of two --
 and it converts in 15 to 17 s instead of 24 to 29 (the container). A part made like it in

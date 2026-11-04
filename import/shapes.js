@@ -37,9 +37,12 @@ const MM = { m: 1000, cm: 10, mm: 1 }
 /* one literal: a plane faced the way its inside is (always positive), any other surface positive or a complement */
 function literal(h, s) {
     const S = h.surface
-    if (S.type === 'plane') return { n: { kind: 'plane', o: S.F.o, normal: s > 0 ? S.F.z : mul(S.F.z, -1) }, neg: false }
+    /* APPROXIMATED (freeform.js): a face fitted with a surface not exactly its own -- its shape is red (addPart) and,
+       a plane, kept out of the boxes other planes make (bounded), so the red is that face's alone */
+    const approx = h.approx ? { approx: true } : {}
+    if (S.type === 'plane') return { n: { kind: 'plane', o: S.F.o, normal: s > 0 ? S.F.z : mul(S.F.z, -1), ...approx }, neg: false }
     if (S.type === 'rounded') return fillet(S, s)
-    return { n: { kind: S.type, S }, neg: s < 0 }
+    return { n: { kind: S.type, S, ...approx }, neg: s < 0 }
 }
 const flip = k => k.n.kind === 'plane' ? { n: { ...k.n, normal: mul(k.n.normal, -1) }, neg: false } : { n: k.n, neg: !k.neg }
 
@@ -122,7 +125,9 @@ function bounded(g, box, cut = false) {
     if (g.kind === 'and') {
         let kids = g.kids.map(k => ({ n: bounded(k.n, box, cut || k.neg), neg: k.neg }))
         // planes, and the part's own box, into oriented boxes: the first plane's normal and one across it make a frame
-        let planes = kids.filter(k => k.n.kind === 'plane').map(k => k.n)
+        // (an approximated plane a box of its own: literal above)
+        const lone = kids.filter(k => k.n.kind === 'plane' && k.n.approx).map(k => ({ n: { ...boxFrom(frame(k.n.o, k.n.normal, null), [k.n], box, cut), approx: true }, neg: false }))
+        let planes = kids.filter(k => k.n.kind === 'plane' && !k.n.approx).map(k => k.n)
         const boxes = kids.filter(k => k.n.kind === 'box' && !k.neg).map(k => k.n)
         kids = kids.filter(k => k.n.kind !== 'plane' && !(k.n.kind === 'box' && !k.neg))
         const made = []
@@ -155,7 +160,7 @@ function bounded(g, box, cut = false) {
             k.n = nappe({ ...k.n, lo: along[0], hi: along[1] })
             made.splice(made.indexOf(b), 1)
         }
-        kids = [...made.map(n => ({ n, neg: false })), ...kids]
+        kids = [...made.map(n => ({ n, neg: false })), ...lone, ...kids]
         // a box another bounded shape lies inside adds nothing
         kids = kids.filter(k => !(k.n.kind === 'box' && !k.neg && kids.some(o => o !== k && !o.neg && o.n.kind !== 'box' && inside(o.n, k.n))))
         return { kind: 'and', kids: kids.map(k => ({ ...k, n: cap(k.n, box, cut || k.neg) })) }
@@ -374,13 +379,15 @@ function nodeOf(n, neg, at, s) {
  * @param unit   the scene's unit, 'm' | 'cm' | 'mm'; the shapes are in mm
  * @returns the part's group
  */
-export function addPart(model, doc, parentId, ir, { unit = 'mm', label = 'part', material = null, index } = {}) {
+export function addPart(model, doc, parentId, ir, { unit = 'mm', label = 'part', material = null, approxMaterial = null, index } = {}) {
     const s = 1 / (MM[unit] ?? 1)
     const at = ir.box.lo.map((l, k) => round(0.5 * (l + ir.box.hi[k]), 1e3))
     const top = model.addGroup(doc, parentId, { label, transform: { pos: vec(mul(at, s)), rot: { x: 0, y: 0, z: 0 }, scale: 1 } }, index)
     const object = (n, neg, parent, join, name) => {
         const o = nodeOf(n, neg, at, s)
-        return model.addObject(doc, parent, { ...o, label: name ?? o.label, material, join })
+        // a fitted face's shape says so in the tree, as its red does in the picture (freeform.js)
+        return model.addObject(doc, parent, { ...o, label: name ?? (n.approx ? `fitted ${o.label}` : o.label),
+                                              material: n.approx && approxMaterial ? approxMaterial : material, join })
     }
     const bySize = (a, b) => size(b.n) - size(a.n)
     /* EVERY GROUP ONE SHAPE. A group whose children all join by union is a plain group to codegen (isCsg): its children
