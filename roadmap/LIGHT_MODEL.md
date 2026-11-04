@@ -245,3 +245,40 @@ One PR a step, each with its change note, its Node and Dawn tests, and its `test
 | S8 | Gratings and DOEs. The Darkroom's aperture diffraction is independent and can come at any time. |
 
 After S3 the user chooses the order of S4-S8.
+
+### Still open (2026-11-04, after S0 and S2 for the optics trace)
+
+**For the user's cards** (nothing below has been seen on hardware):
+- [ ] `optics-spectral` (Tests, Optics trace group): its verdicts, and how much longer its run takes than
+  `optics-coating`'s at the same ray count. The speed is unmeasured; read in code, a ray adds a spectrum lookup at
+  the source, three table reads per material and coating, and four floats per detector hit.
+- [ ] The Spectrum chart on *Dichroic combiner* with Expert pressed: first the stand-in note (its lights are given
+  by xy), then with the lights on *LED red 630 nm* and *LED royal blue 450 nm*, two peaks and an xy agreeing with the
+  map's.
+- [ ] A light's spectrum and CRI in its Properties (*CIE LED-B3*: about Ra 85 · R9 24 · 4103 K).
+- [ ] With the spectral trace off, the Optics page reading what it did before.
+- [ ] S0a and S1's own checks (their change notes' *What to look at*), and `optics-colour`'s two rows of lights by
+  their spectrum.
+
+**Not run in the container:**
+- [ ] check-shaders pass 4 (naga): installing naga-cli was refused here. The spectral kernels were compiled and
+  run by Dawn's Tint on lavapipe instead (`optics/test/spectral.gpu.mjs`, 13 of 13).
+- [ ] `tutorial/test/pages.check.mjs`: the tutorial's changes are prose only, and `tutorial.test.mjs` passes.
+
+**To build** (S2's rest, then on):
+- [ ] PPFD, melanopic EDI and the other weighted tallies (the user, 2026-11-04: "later").
+- [ ] TM-30.
+- [ ] A spectral Zemax file's own wavelength per ray in the spectral trace (traced as a stand-in of its colour now).
+- [ ] A spectrum per map cell (the chart bins the whole detector, or its zoom).
+- [ ] The user's LED database as a source of spectra (S1: "first generic CSV").
+- [ ] Glowing materials coloured by spectrum, CCT or xy, as lights are.
+- [ ] A material's measured transmission or reflectance curve (a material's colour is a smooth spectrum of its RGB
+  now).
+- [ ] S3-S8: spectral in the picture, coating tables, the phosphor layer, polarisation, scattering in solids,
+  gratings.
+
+**Known limits** (read in code):
+- `opt_shade_spectral` over a scene as data binds 9 storage buffers, over the spec's floor of 8 (check-shaders says
+  so 48 times). Data mode already needs 9, so no adapter that runs data mode is newly refused.
+- A detector hit is 14 words (`optics/kernels.js` DET_WORDS) and the readback's group 48 MiB
+  (`optics/index.js` SNAP_GROUP_BYTES), so a run keeps fewer hits per MiB than before: 10 words a hit until 0.next.
