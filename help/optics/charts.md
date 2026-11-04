@@ -1,6 +1,6 @@
 # The charts
 
-Six kinds of chart, each a panel of its own. Open them from **Analysis › Open chart ▸**, or all at once with **Layout:
+Seven kinds of chart, each a panel of its own. Open them from **Analysis › Open chart ▸**, or all at once with **Layout:
 Analyse**. Each chart has a line of its own settings along its top, and a readout under the pointer.
 
 - **⧉** makes another chart of the same kind with its settings, so you can compare an illuminance map beside a CCT map.
@@ -36,6 +36,20 @@ rather than a line of cells.
 The share of the map's flux within each radius of its point, with **r50** and **r90**, the radii holding half and
 nine tenths of it: how tight a spot is.
 
+## Spectrum
+
+What the map's detector received by wavelength, 380 to 780 nm: the whole detector, or the part of it the map is zoomed
+to. The area under the line is filled in each wavelength's colour, and the eye's sensitivity (ȳ) is drawn faintly behind
+it. **rel** shows the power relative to its peak, **W/nm** in watts per nanometre. Point at it to read a wavelength.
+
+Under it: the light's **xy**, **CCT** and **Duv**, its colour rendering index **Ra** and **R9** (CIE 13.3) with
+their error bars, its watts and how many hits it is made of. The index is read from the spectrum in 5 nm bins. With few
+hits that spectrum is noisy, and noise reads as a lower index, so run more rays until the error bar is small. Past a
+Duv of 0.0054 CIE 13.3 calls the index meaningless, and the readout says so.
+
+It needs the [spectral optics trace](../modelling/materials.md#the-spectral-optics-trace), one of the scene's optical
+features (or **Expert**). Without it the chart says where to switch it on. It saves as a **CSV** of nm and W/nm.
+
 ## Polar
 
 Luminous intensity against angle, in **C planes** about the photometric axis (*planes*: `0, 90` by default, up to
@@ -49,5 +63,5 @@ Intensity against γ, each C plane a line, zooming itself to a narrow beam. The 
 
 ## Saving
 
-Each chart saves as a **PNG**. The far field's intensity table, the illuminance map and every detector hit save as
-**CSV**, for a spreadsheet or another tool.
+Each chart saves as a **PNG**. The far field's intensity table, the illuminance map, every detector hit and the
+spectrum save as **CSV**, for a spreadsheet or another tool.

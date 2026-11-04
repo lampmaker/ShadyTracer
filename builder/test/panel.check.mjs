@@ -729,6 +729,65 @@ ok('...and the radius row says so by itself (the panel redrawn), the number kept
     ok('...and the editor shows the colour as the three lines it is', /light.colour.r = tint.r\nlight.colour.g = tint.g\nlight.colour.b = tint.b/.test(lheld.bindText ?? ''), JSON.stringify(lheld.bindText))
 }
 
+/* A LIGHT BY ITS SPECTRUM (0.next; core/spd.js): colour by spectrum starts as a blackbody at the colour's own CCT; peaks
+   typed are checked as typed -- a problem said at its line, nothing put in -- and what reads clean is a live write of the
+   light (no compile) with its undo step; a preset puts one in; the readout says the efficacy. */
+{
+    await p.evaluate(() => { CHECK.M.addLight(CHECK.doc, 'root', { id: 'spl', shape: 'rectangle', label: 'spectral led' }) })
+    const light = () => p.evaluate(() => structuredClone(CHECK.M.lightOf(CHECK.M.find(CHECK.doc, 'spl').node)))
+    const said = () => p.evaluate(() => document.querySelector('.builder-spectrum-said')?.textContent ?? '')
+    const typeText = text => p.evaluate(text => {
+        const ta = [...document.querySelectorAll('textarea')].find(t => /\d+ \d+ \d+/.test(t.value) || t.dataset.spectrum)
+        if (!ta) return 'no textarea'
+        ta.dataset.spectrum = '1'
+        ta.value = text; ta.dispatchEvent(new Event('input', { bubbles: true }))
+        return 'typed'
+    }, text)
+    let rr = await rowsOf('spl')
+    ok('a light: colour by offers spectrum', rr.includes('colour by'))
+    ok('colour by spectrum chosen', await set('colour by', 'spectrum') === 'set')
+    await p.waitForTimeout(80)
+    let L = await light()
+    rr = await p.evaluate(() => [...document.querySelectorAll('.tp-lblv')].map(r => r.querySelector('.tp-lblv_l')?.textContent.trim().replace(/^[◇◆]/, '')))
+    ok('...a blackbody at the white it was (D65: about 6500 K), its rows: kind, start from, temperature', L.colourBy === 'spectrum'
+        && L.spectrum.kind === 'planck' && L.spectrum.T > 6400 && L.spectrum.T < 6600 && ['spectrum', 'start from', 'temperature (K)'].every(l => rr.includes(l)),
+        JSON.stringify([L.spectrum, rr]))
+    const readout = await p.evaluate(() => [...document.querySelectorAll('input')].map(i => i.value).find(v => /lm\/W radiated/.test(v)) ?? '')
+    ok('...the readout says its efficacy', /\d+ lm\/W radiated/.test(readout), readout)
+    await p.waitForTimeout(50)
+    const plotLine = () => p.evaluate(() => ({ line: document.querySelector('.builder-spectrum-line')?.textContent ?? '', plot: !!document.querySelector('canvas.builder-spectrum-plot')?.width }))
+    let pl = await plotLine()
+    // a blackbody at D65's 6506 K: above 5000 K its reference is the CIE's daylight, which it is not quite -- Ra 98
+    ok('...its spectrum drawn, and its CRI: Ra 98 against daylight at 6506 K', pl.plot && /^Ra 98 · R9 96 · 650\d K · \d+ lm\/W$/.test(pl.line), JSON.stringify(pl))
+    ok('peaks chosen', await set('spectrum', 'peaks') === 'set')
+    await p.waitForTimeout(80)
+    L = await light()
+    ok('...a white LED to start from, its text in the box', L.spectrum.kind === 'peaks' && L.spectrum.peaks.length === 2
+        && /in use|2 peaks/.test(await said()), JSON.stringify([L.spectrum, await said()]))
+    const before = await state()
+    ok('a peak typed wrong', await typeText('630 17 1\n580 wide 2') === 'typed')
+    await p.waitForTimeout(450)
+    ok('...said at its line and column, nothing put in', /line 2, column 5/.test(await said()) && (await light()).spectrum.peaks.length === 2
+        && (await state()).live.length === before.live.length, await said())
+    ok('a red LED typed', await typeText('630 17 1') === 'typed')
+    await p.waitForTimeout(450)
+    L = await light()
+    const s2 = await state()
+    ok('...put in, live: the light pushed, no compile, its undo step', JSON.stringify(L.spectrum.peaks) === '[{"nm":630,"fwhm":17,"weight":1}]'
+        && s2.live.slice(before.live.length).includes('spl.light') && s2.structure === before.structure && s2.commits.at(-1) === 'spl.light'
+        && /in use/.test(await said()), JSON.stringify([L.spectrum, s2.live.slice(before.live.length), s2.commits.slice(-2), await said()]))
+    pl = await plotLine()
+    ok('...redrawn as typed: a red LED has no CCT, so no CRI', /^no CRI/.test(pl.line), pl.line)
+    ok('a preset chosen: royal blue', await set('start from', 'LED royal blue') === 'set')
+    await p.waitForTimeout(80)
+    ok('...the light\'s spectrum the preset\'s', JSON.stringify((await light()).spectrum.peaks) === '[{"nm":450,"fwhm":20,"weight":1}]')
+    ok('one of the CIE\'s LED lamps', await set('start from', 'CIE LED-B3') === 'set')
+    await p.waitForTimeout(100)
+    pl = await plotLine()
+    ok('...a measured table of 81 points, its CRI the CIE illuminant\'s: Ra 85, R9 24, 4103 K', (await light()).spectrum.points?.length === 81
+        && /^Ra 85 · R9 24 · 410\d K/.test(pl.line), JSON.stringify(pl))
+}
+
 /* THE ASPHERIC LENS'S COEFFICIENTS (2026-10-04): numbers with no range, typed from a datasheet. Tweakpane showed such a
    number to its first value's decimals, two at least -- 0.00 for an a4 of 1.6e-5 and an a10 of 2e-13 -- and a step
    would have rounded them away. Typed, they are kept whole and shown as typed; its radii and conic keep their sliders. */
@@ -791,8 +850,8 @@ ok('...and a conic typed to four places kept on its slider (its step\'s rounding
         f.querySelector(':scope > .tp-fldv_b .tp-fldv_t').textContent.trim(), f.classList.contains('pt-box'),
         [...f.querySelectorAll(':scope > .tp-fldv_c > .tp-lblv .tp-lblv_l')].map(l => l.textContent.trim().replace(/^[◇◆]/, ''))]))
     let SB = await sceneBoxes()
-    ok('...in boxes: the animated values\' first, then the scene\'s own with its rows, then environment and functions',
-       JSON.stringify(SB.map(b => b[0].replace(/\s+◆$/, ''))) === '["animated · 1","Scene","environment","functions"]' && SB.every(b => b[1])
+    ok('...in boxes: the animated values\' first, then the scene\'s own with its rows, then environment, optical features and functions',
+       JSON.stringify(SB.map(b => b[0].replace(/\s+◆$/, ''))) === '["animated · 1","Scene","environment","optical features","functions"]' && SB.every(b => b[1])
        && ['label', 'unit', 'instant hide / show'].every(l => SB[1][2].includes(l)) && SB[1][2].some(l => l.startsWith('environment radius')), JSON.stringify(SB))
     await p.evaluate(() => CHECK.flagPanel.show(CHECK.doc.root.id))
     ok('...drawn again: the same boxes, none left over', JSON.stringify(await sceneBoxes()) === JSON.stringify(SB), JSON.stringify(await sceneBoxes()))
@@ -861,6 +920,74 @@ ok('...and a conic typed to four places kept on its slider (its step\'s rounding
     ok('...taken off: written, and the panel without its values', (await P()).coating === 0 && !VALUES.some(l => rows.includes(l)), JSON.stringify(rows))
 }
 
+/* THE SCENE'S OPTICAL FEATURES (0.next; model.js setFeatures): a box on the scene's row, Basic and Full over a switch a
+   feature. A feature off hides its fields on every material; each change is one undo step and a compile; what a feature
+   off hides is said once, in the box. */
+{
+    const FIELDS = ['Abbe number (dispersion)', 'colour depth (mm)', 'coating']
+    const root = await p.evaluate(() => CHECK.doc.root.id)
+    const box = () => p.evaluate(() => {
+        const f = [...document.querySelectorAll('#t .tp-fldv')].find(x => x.querySelector(':scope > .tp-fldv_b .tp-fldv_t')?.textContent.trim().startsWith('optical features'))
+        if (!f) return null
+        return { title: f.querySelector(':scope > .tp-fldv_b .tp-fldv_t').textContent.trim(),
+                 lit: [...f.querySelectorAll('button[data-preset]')].filter(b => b.getAttribute('aria-pressed') === 'true').map(b => b.dataset.preset),
+                 line: f.querySelector('.features-line')?.textContent ?? '', notes: [...f.querySelectorAll('textarea')].map(t => t.value) }
+    })
+    const press = id => p.evaluate(id => { const b = document.querySelector(`#t button[data-preset="${id}"]`); if (!b) return 'no button'; b.click(); return 'pressed' }, id)
+    const features = () => p.evaluate(() => CHECK.M.featuresOf(CHECK.doc))
+    await p.evaluate(() => { CHECK.M.material(CHECK.doc, 'gl').params.abbe = 36 })
+    rows = await rowsOf('gl')
+    ok('Full, the default: the glass shows its Abbe number, colour depth and coating', FIELDS.every(l => rows.includes(l)), JSON.stringify(rows))
+    rows = await rowsOf(root)
+    let b = await box()
+    ok('the scene\'s row: a box, optical features, Full lit, a switch a feature', b?.title === 'optical features' && JSON.stringify(b.lit) === '["full"]'
+        && ['dispersion', 'absorption inside', 'coatings', 'spectral optics trace'].every(l => rows.includes(l)) && /Full/.test(b.line), JSON.stringify([b, rows]))
+    before = await state()
+    ok('Basic pressed', await press('basic') === 'pressed')
+    await p.waitForTimeout(50)
+    s = await state()
+    ok('...every feature off, one undo step and a compile', JSON.stringify(await features()) === '{"dispersion":false,"absorption":false,"coatings":false,"spectral":false}'
+        && s.commits.length === before.commits.length + 1 && s.commits.at(-1) === null && s.structure === before.structure + 1,
+        JSON.stringify([await features(), s.commits.slice(before.commits.length), s.structure - before.structure]))
+    b = await box()
+    ok('...the box redrawn: titled basic, Basic lit, the hidden Abbe number said', b?.title === 'optical features · basic' && JSON.stringify(b.lit) === '["basic"]'
+        && b.notes.some(n => /glass has an Abbe number/.test(n)), JSON.stringify(b))
+    rows = await rowsOf('gl')
+    ok('...and the glass without the three, its index still there', !FIELDS.some(l => rows.includes(l)) && rows.includes('ior'), JSON.stringify(rows))
+    ok('...its value kept', await p.evaluate(() => CHECK.M.material(CHECK.doc, 'gl').params.abbe) === 36)
+    await rowsOf(root)
+    before = await state()
+    ok('dispersion ticked on its own', await set('dispersion', true) === 'set')
+    await p.waitForTimeout(50)
+    s = await state()
+    b = await box()
+    ok('...dispersion on, Custom, nothing lit, one undo step', (await features()).dispersion === true && b?.title === 'optical features · custom'
+        && b.lit.length === 0 && /Custom/.test(b.line) && s.commits.length === before.commits.length + 1, JSON.stringify([b, await features()]))
+    rows = await rowsOf('gl')
+    ok('...the Abbe number back on the glass, the colour depth and coating still not', rows.includes('Abbe number (dispersion)')
+        && !rows.includes('colour depth (mm)') && !rows.includes('coating'), JSON.stringify(rows))
+    await rowsOf(root)
+    ok('Full pressed', await press('full') === 'pressed')
+    await p.waitForTimeout(50)
+    ok('...every feature on: no key in the document', !(await p.evaluate(() => 'features' in CHECK.doc)))
+    rows = await rowsOf('gl')
+    ok('...and the glass shows all three again', FIELDS.every(l => rows.includes(l)), JSON.stringify(rows))
+    before = await state()
+    await rowsOf(root)
+    await press('full'); await p.waitForTimeout(50)
+    ok('Full again: nothing written, no undo step', (await state()).commits.length === before.commits.length)
+    /* EXPERT (0.next): Full and the spectral optics trace, the one feature off by default -- saved as on, the glass the same */
+    ok('Expert pressed', await press('expert') === 'pressed')
+    await p.waitForTimeout(50)
+    b = await box()
+    ok('...the spectral trace on, saved as that alone, Expert lit, one undo step and a compile', JSON.stringify(await p.evaluate(() => CHECK.doc.features)) === '{"spectral":true}'
+        && b?.title === 'optical features · expert' && JSON.stringify(b.lit) === '["expert"]' && /Expert/.test(b.line)
+        && (await state()).commits.length === before.commits.length + 1, JSON.stringify(b))
+    await press('full'); await p.waitForTimeout(50)
+    ok('...Full again: no key', !(await p.evaluate(() => 'features' in CHECK.doc)))
+    await p.evaluate(() => { CHECK.M.material(CHECK.doc, 'gl').params.abbe = 0 })
+}
+
 // A HAZE BOX (0.62.0; builder/hazebox.js): where it is, its size, and its dust -- live, the renderer's own uniforms
 rows = await rowsOf('hz')
 ok('a haze box shows its size and its dust (mean free path, albedo, g), no material and no join',
@@ -916,7 +1043,9 @@ ok('...and the visibility beside it follows: 3.912 x 4 m, 15.6 m', /^visibility 
     ok('opened, it stays open when the row is drawn again (remembered)', (await folderOf('camera'))?.open === true && (await folderOf('exposure'))?.open === false)
     const commits0 = (await state()).commits.length
     ok('typing a distance', await typeIn('camera', 'distance', 7.25) === 'set')
-    ok('...moves the camera, and is no undo step', await p.evaluate(() => CHECK.cam.get().distance) === 7.25 && (await state()).commits.length === commits0)
+    // within 1e-9: the camera keeps its pose, and the distance read back from it is 7.249999999999998 as often as 7.25
+    ok('...moves the camera, and is no undo step', Math.abs(await p.evaluate(() => CHECK.cam.get().distance) - 7.25) < 1e-9 && (await state()).commits.length === commits0,
+        JSON.stringify([await p.evaluate(() => CHECK.cam.get().distance), (await state()).commits.slice(commits0)]))
     ok('the exposure\'s EV typed', await typeIn('exposure', 'EV100 (manual)', 9) === 'set')
     ok('...is the exposure\'s', await p.evaluate(() => CHECK.exposure.values.exposureEV) === 9 && (await state()).commits.length === commits0)
     await p.evaluate(() => CHECK.cam.set({ distance: 12.5 })); await p.waitForTimeout(80)

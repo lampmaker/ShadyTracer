@@ -785,8 +785,11 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
             const took = BUILDER.liveValue(id, k)
             /* A MATERIAL FIELD ONLY IN THE SHADER WHILE IN USE (materials.js `only`: the colour depth) that the compiled
                scene does not declare yet: its first value in use is a compile, asked as pushBound asks one. Back to
-               unused is no compile -- the uniform stays declared and its 0 means none until the next one. */
-            if (!took && current === shown && applying === 0 && M.MATERIAL_FIELDS[k]?.only && M.material(P.scene(project, current).doc, id)
+               unused is no compile -- the uniform stays declared and its 0 means none until the next one. Not for a field
+               of a feature the scene has off (model.js setFeatures): toTree keeps it out of every build, so a compile
+               asked for it would declare nothing, and a timeline track on it would ask one every frame. */
+            const sceneDoc = P.scene(project, current).doc
+            if (!took && current === shown && applying === 0 && M.MATERIAL_FIELDS[k]?.only && M.material(sceneDoc, id) && M.fieldShown(sceneDoc, k)
                 && BUILDER.onRestructure) {
                 try { BUILDER.onRestructure() } catch (e) { console.warn('[builder] onRestructure', e) }
             }

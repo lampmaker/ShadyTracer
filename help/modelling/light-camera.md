@@ -23,8 +23,9 @@ LED, a softbox. Its settings in Properties:
 
 - **how bright**: a **flux** in lumens, or a **luminance** in cd/m². Set one and the other follows from the face's
   area. With a flux set, resizing the face keeps the lumens;
-- **colour**: as RGB, as a colour temperature (2700 K warm, 4000 K neutral, 6500 K daylight), or as a CIE xy
-  chromaticity from a datasheet;
+- **colour**: as RGB, as a colour temperature (2700 K warm, 4000 K neutral, 6500 K daylight), as a CIE xy
+  chromaticity from a datasheet, or by its **spectrum**: a blackbody, an LED's peaks, or a measured table from a CSV
+  ([Light in numbers](../optics/units.md#colour));
 - **distribution**: cosine (Lambertian: a diffuser, a panel, an LED), a narrower cosⁿ, uniform, or collimated,
   limited to a cone if you like;
 - **two-sided**, **transparent** (a sheet of light that does not block the view), and the index it emits into.

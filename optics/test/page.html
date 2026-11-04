@@ -48,8 +48,16 @@ const batchHits = () => Array.from({ length: 5000 }, () => {
     const r = Math.sqrt(-2 * Math.log(rnd() + 1e-12)), t = 2 * Math.PI * rnd(), core = rnd() < 0.55
     const rr = core ? 5 * Math.sqrt(rnd()) : 4.5 * r, f = Math.min(1, rr / 10)
     const flux = 0.16 / 5000
-    return { pos: [rr * Math.cos(t) * 1.25 + 3, rr * Math.sin(t), 0], flux, dir: [0, 0, -1], tag: 1,
-             xyz: xyToXYZ(warm[0] + (cool[0] - warm[0]) * f, warm[1] + (cool[1] - warm[1]) * f, flux) }
+    const h = { pos: [rr * Math.cos(t) * 1.25 + 3, rr * Math.sin(t), 0], flux, dir: [0, 0, -1], tag: 1,
+                xyz: xyToXYZ(warm[0] + (cool[0] - warm[0]) * f, warm[1] + (cool[1] - warm[1]) * f, flux) }
+    /* BY WAVELENGTH (0.next), when a check asks (O.spectralHits): three wavelengths a hit, as the trace by wavelength
+       reads them back (index.js hitsOf), made up -- a blue peak and a phosphor's hump, as a white LED's */
+    if (O.spectralHits) {
+        const u = rnd()
+        h.lam = [0, 1, 2].map(k => 380 + 400 * ((u + k / 3) % 1))
+        h.w = h.lam.map(l => flux * 6 * (Math.exp(-(((l - 450) / 12) ** 2)) + 0.6 * Math.exp(-(((l - 570) / 60) ** 2))))
+    }
+    return h
 })
 const v = x => ({ value: x, se: x * 0.01 })
 const RESULTS = { unit: 'lm', rays: 0, batches: 0, emitted: v(1000), escaped: v(860), absorbed: v(100), lost: v(0), detected: v(40),
@@ -101,7 +109,7 @@ const O = {
 
 const S = createShell(document.getElementById('app'), { title: 'check', menus: ['View'], storageKey: null })
 const pane = S.panel({ id: 'optics', title: 'Analysis', module: 'optics', menu: false })   // as app.html: the Analysis menu's, not View's
-/* THE CHARTS: kept nowhere (no key), so every run starts from the six */
+/* THE CHARTS: kept nowhere (no key), so every run starts from the seven */
 const CHARTS = chartSet()
 const el = {}
 const chartPanel = c => (el[c.id] = S.panel({ id: c.id, title: c.title, module: 'optics', menu: false, help: c.help }))
@@ -116,6 +124,8 @@ S.layout.setDefault(() => {
     S.open('optics.profiles', { referencePanel: 'optics.map', direction: 'below' })
     S.open('optics.rings', { referencePanel: 'optics.polar', direction: 'below' })
     S.open('optics.encircled', { referencePanel: 'optics.igamma', direction: 'below' })
+    // under the profiles: the view's corner (below) covers the right-hand foot of the page
+    S.open('optics.spectrum', { referencePanel: 'optics.profiles', direction: 'below' })
     S.open('optics.map')                          // the preset ends on the map, as app.html's Analyse does
     S.dock.getPanel('optics')?.group?.api?.setSize?.({ width: 330 })
 })
