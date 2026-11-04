@@ -9,7 +9,7 @@
 //   - CLEAN -- every solid converted, every face exact, no point of the self-check disagreeing, nothing to warn of: the
 //     dialog closes and the part is pasted, as before it existed (the host decides, `isClean`).
 //   - OTHERWISE it stays and asks: each part with what happened to it -- its shapes; how many of the check's points
-//     disagree (csg.js step 7: the user's part had 6 of 2965 and nobody was told, and those were its black notches);
+//     disagree (csg.js step 7: the user's part had 6 of 2965 and nobody was told; where its black notches come from, inferred and not yet shown);
 //     its faces fitted to a regular shape and how far off (import/freeform.js); or why it was refused, and the deviation
 //     it would import at -- with a box per part to leave it out, the deviation allowed and Re-convert, whether
 //     approximated faces are red, and Import (what converted, less what was left out) or Cancel.
