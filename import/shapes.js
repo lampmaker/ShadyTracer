@@ -27,6 +27,7 @@
 //======================================================================================================================
 
 import { add, sub, mul, dot, frame, toLocal } from './geom.js'
+import { joinShaped } from '../builder/joins.js'
 
 const MM = { m: 1000, cm: 10, mm: 1 }
 
@@ -37,9 +38,26 @@ const MM = { m: 1000, cm: 10, mm: 1 }
 function literal(h, s) {
     const S = h.surface
     if (S.type === 'plane') return { n: { kind: 'plane', o: S.F.o, normal: s > 0 ? S.F.z : mul(S.F.z, -1) }, neg: false }
+    if (S.type === 'rounded') return fillet(S, s)
     return { n: { kind: S.type, S }, neg: s < 0 }
 }
 const flip = k => k.n.kind === 'plane' ? { n: { ...k.n, normal: mul(k.n.normal, -1) }, neg: false } : { n: k.n, neg: !k.neg }
+
+/* A FILLET (fillet.js, geom.js rounded): its two supports, as literals, met by a round join of its radius -- a group of
+   two shapes in the scene, the second joined to the first by intersect, subtract or union with joinShape 'round'. A
+   join's base is a shape that is there, so the supports are put the way a builder group can have them (De Morgan: the
+   round join is its own dual, roundUnion(a, b) = -roundIntersect(-a, -b), joins.js):
+     and(A, B)    A, B intersect         and(A, not B)   A, B subtract        and(not A, not B)   not or(A, B)
+     or(A, B)     A, B union             or(A, not B)    not and(B, not A)    or(not A, not B)    not and(A, B)
+   and the whole is the fillet's complement where the literal is (s < 0), or where that turned it. */
+function fillet(S, s) {
+    let op = S.op, whole = s < 0
+    let kids = [literal({ surface: S.A }, S.sA), literal({ surface: S.B }, S.sB)]
+    if (op === 'and' && kids.every(k => k.neg)) { kids = kids.map(flip); op = 'or'; whole = !whole }
+    else if (op === 'or' && kids.some(k => k.neg)) { kids = kids.map(flip); op = 'and'; whole = !whole }
+    if (kids[0].neg) kids.reverse()
+    return { n: { kind: 'fillet', op, r: S.r, kids }, neg: whole }
+}
 
 function normal(node, H) {
     if (node.op === 'lit') return literal(H[node.j], node.s)
@@ -97,6 +115,10 @@ function boxFrom(F, planes, box, cut = false) {
 }
 
 function bounded(g, box, cut = false) {
+    /* a fillet's supports each a bounded shape of its own -- never one box of two planes, which would leave no edge for
+       the join to round -- and reaching a quarter of the part's size beyond its box, so the edges their far faces make
+       with each other, rounded too, are out where nothing is (the whole formula is inside the part's box) */
+    if (g.kind === 'fillet') return { ...g, kids: g.kids.map(k => ({ n: cap(bounded(k.n, box, true), box, true), neg: k.neg })) }
     if (g.kind === 'and') {
         let kids = g.kids.map(k => ({ n: bounded(k.n, box, cut || k.neg), neg: k.neg }))
         // planes, and the part's own box, into oriented boxes: the first plane's normal and one across it make a frame
@@ -219,7 +241,7 @@ function simplify(g) {
 
 /** Shapes and groups in it, counted: what a step evaluates. */
 export function countShapes(n) {
-    if (n.kind === 'and' || n.kind === 'or') return n.kids.reduce((a, k) => { const c = countShapes(k.n); return { shapes: a.shapes + c.shapes, groups: a.groups + c.groups } }, { shapes: 0, groups: 1 })
+    if (n.kind === 'and' || n.kind === 'or' || n.kind === 'fillet') return n.kids.reduce((a, k) => { const c = countShapes(k.n); return { shapes: a.shapes + c.shapes, groups: a.groups + c.groups } }, { shapes: 0, groups: 1 })
     return { shapes: 1, groups: 0 }
 }
 
@@ -246,8 +268,20 @@ export function shapeSDF(n, p) {
         }
         case 'sphere': case 'torus': return n.S.g(p)
         case 'plane': return dot(sub(p, n.o), n.normal)
+        case 'fillet': {
+            // as the scene computes it: each side's value and normal (its gradient here), the round join of the two
+            const side = k => { const f = q => k.neg ? -shapeSDF(k.n, q) : shapeSDF(k.n, q); return [...gradOf(f, p), f(p)] }
+            const [a, b] = n.kids.map(side)
+            return joinShaped(n.op === 'and' ? 'intersect' : 'union', 'round', a, b, n.r)[3]
+        }
     }
     throw new Error(`shapes: no ${n.kind}`)
+}
+const gradOf = (f, p) => {
+    const h = 1e-6 * (1 + Math.hypot(...p))
+    const g = [0, 1, 2].map(k => { const a = p.slice(), b = p.slice(); a[k] += h; b[k] -= h; return (f(a) - f(b)) / (2 * h) })
+    const l = Math.hypot(...g)
+    return l > 1e-12 ? g.map(x => x / l) : [0, 0, 0]
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -365,6 +399,17 @@ export function addPart(model, doc, parentId, ir, { unit = 'mm', label = 'part',
          - a union that is neither -- a part's own group, a second one in an intersection -- is closed with the part's
            box intersected: everything is in it, so no point changes, and the group combines. One box test a step. */
     const child = (n, neg, parent, join) => {
+        /* A FILLET: its two supports in a group, the second joined to the first by a round join of the fillet's radius
+           (model version 27); the group joins its parent as the fillet's literal does */
+        if (n.kind === 'fillet') {
+            const g = model.addGroup(doc, parent, { label: `fillet R${fmt(n.r)}`, join })
+            child(n.kids[0].n, n.kids[0].neg, g.id)
+            const second = n.op === 'or' ? 'union' : n.kids[1].neg ? 'subtract' : 'intersect'
+            const k = n.kids[1], made = child(k.n, k.neg, g.id, second)
+            model.setJoinBlend(doc, made.id, round(n.r * s))
+            model.setJoinShape(doc, made.id, 'round')
+            return g
+        }
         if (n.kind !== 'and' && n.kind !== 'or') return object(n, neg, parent, join)
         const g = model.addGroup(doc, parent, { label: n.kind === 'and' ? 'intersection' : 'union', join })
         fill(n, g.id)
@@ -392,7 +437,7 @@ export function addPart(model, doc, parentId, ir, { unit = 'mm', label = 'part',
         if (count > 1 && !combines) object({ kind: 'box', F: frame([0, 0, 0], [0, 0, 1], [1, 0, 0]), lo: ir.box.lo, hi: ir.box.hi }, false, gid, 'intersect', 'the part\'s box')
     }
     if (ir.root.kind === 'and' || ir.root.kind === 'or') fill(ir.root, top.id)
-    else object(ir.root, false, top.id)
+    else child(ir.root, false, top.id)
     return top
 }
 /* how big a shape is, for choosing a group's base (its material is the group's): a box's or a cylinder's volume */
@@ -405,6 +450,7 @@ function size(n) {
     if (n.kind === 'torus') return 2 * Math.PI ** 2 * n.S.R * n.S.r ** 2
     if (n.kind === 'and') return Math.min(...n.kids.filter(k => !k.neg).map(k => size(k.n)))
     if (n.kind === 'or') return n.kids.reduce((a, k) => a + size(k.n), 0)
+    if (n.kind === 'fillet') return size(n.kids[0].n)
     return 0
 }
 

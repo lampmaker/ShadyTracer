@@ -50,12 +50,12 @@ const STAGE_WORDS = { surfaces: 'finding its surfaces', cells: 'classifying poin
 
 /** One solid (brep.js's) as a part: its formula, its shapes, and how well they hold to the solid. `onProgress` gets
  *  csg.js's stages as { stage, done, total, fraction (0 to 1 of this solid) }. */
-export function convertSolid(B, { seed = 1, onProgress = null } = {}) {
+export function convertSolid(B, { seed = 1, onProgress = null, fillets = true } = {}) {
     const tell = onProgress && (({ stage, done, total }) => {
         const [a, b] = PROGRESS[stage]
         onProgress({ stage, done, total, fraction: a + (b - a) * (total ? done / total : 1) })
     })
-    const csg = toCSG(B, { seed, onProgress: tell })
+    const csg = toCSG(B, { seed, onProgress: tell, fillets })
     const ir = shapesOf(csg)
     return { csg, ir, report: { ...csg.report, ...countShapes(ir.root) } }
 }
@@ -66,7 +66,7 @@ export function convertSolid(B, { seed = 1, onProgress = null } = {}) {
    parts keep their places in it, so an assembly stays put together. `place: 'file'` leaves it where the file has it.
    The file's axes are kept either way: STEP says nothing of which way is up, and one exporter's up is another's
    front, so a part modelled along y comes in lying along y. */
-export function convert(model, name, bytes, { material = null, seed = 1, place = 'floor', onProgress = null } = {}) {
+export function convert(model, name, bytes, { material = null, seed = 1, place = 'floor', onProgress = null, fillets = true } = {}) {
     const kind = kindOf(name, bytes)
     if (!kind) throw new Error(`${name}: not a STEP or STL file (by its name or its first line)`)
     const base = String(name).replace(/\.[^.]+$/, '') || 'part'
@@ -104,7 +104,7 @@ export function convert(model, name, bytes, { material = null, seed = 1, place =
             tell(`${who}: ${s.fits ? 'fitting surfaces to the mesh' : 'its faces'}`, at, k + 1, solids.length)
             const B = s.B()
             warnings.push(...(B.warnings || []))
-            const part = convertSolid(B, { seed, onProgress: p => tell(`${who}: ${STAGE_WORDS[p.stage]}`, at + share * p.fraction, k + 1, solids.length) })
+            const part = convertSolid(B, { seed, fillets, onProgress: p => tell(`${who}: ${STAGE_WORDS[p.stage]}`, at + share * p.fraction, k + 1, solids.length) })
             const g = addPart(model, doc, holder ? holder.id : 'root', part.ir, { unit: 'mm', label: s.name, material: mat?.id ?? null })
             // the shapes and groups as pasted (addPart makes the formula's unions into folds, and may close one with a box)
             const n = { shapes: 0, groups: 0 }

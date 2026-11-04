@@ -44,6 +44,7 @@
 import { add, sub, mul, dot, len, cross, norm, TAU, frame, plane, cylinder, cone, roundedRect, toLocal, sameSurface } from './geom.js'
 export { sameSurface }
 import { mulberry, outward } from './brep.js'
+import { fillets as findFillets, chained, edgeOwners } from './fillet.js'
 
 //----------------------------------------------------------------------------------------------------------------------
 // SEPARATORS: where a curved face ends
@@ -246,7 +247,7 @@ const dist = (box, h) => Math.abs(h.surface.g(box.lo.map((l, k) => 0.5 * (l + bo
    and would march as a formula of a thousand shapes. A CAD part of a few hundred faces is well inside it. */
 export const MAX_FACES = 400
 
-export function toCSG(B, { seed = 1, volume = 6000, perFace = 64, perEdgePoint = 2, check = 3000, onProgress = null } = {}) {
+export function toCSG(B, { seed = 1, volume = 6000, perFace = 64, perEdgePoint = 2, perCompound = 64, check = 3000, onProgress = null, fillets = true } = {}) {
     const tell = (stage, done, total) => { if (onProgress) onProgress({ stage, done: Math.min(done, total), total }) }
     if (B.faces.length > MAX_FACES)
         throw new Error(`${B.name || 'the solid'} has ${B.faces.length} faces, more than ${MAX_FACES}: ${B.fitted ? 'a mesh whose curves fit no plane, cylinder, cone, sphere or torus (a scan or a sculpt, not a CAD part) is all facets, and ' : ''}a formula that big would be slow to build and slower to march`)
@@ -274,11 +275,18 @@ export function toCSG(B, { seed = 1, volume = 6000, perFace = 64, perEdgePoint =
     }
     /* a face a rounded rectangle claims is its: on the prism's inside when the face's outward normal is the prism's */
     const claimed = new Map()
-    for (const R of roundedRects(B, tol, B.surfaceAngle ?? 1e-9)) for (const i of R.faces) {
+    /* ...but not one whose cylinders are a fillet chain's pieces (fillet.js chained): those are the fillets' below */
+    const owners = fillets ? edgeOwners(B) : null
+    const rects = roundedRects(B, tol, B.surfaceAngle ?? 1e-9).filter(R => !fillets || !R.faces.some(i => chained(B, i, owners)))
+    for (const R of rects) for (const i of R.faces) {
         const f = B.faces[i], q = [...f.sample(5, rnd), ...f.loops.flatMap(l => l.points).slice(0, 5)]
         const vote = q.reduce((v, p) => v + Math.sign(dot(outward(f, p), R.surface.grad(p))), 0)
         claimed.set(i, { S: R.surface, s: vote >= 0 ? 1 : -1 })
     }
+    /* FILLETS (fillet.js, 0.next): a rounded edge's face is its two supports' round join, the solid's side of it inside
+       by construction -- one half-space with no separators, and in the scene a round join (shapes.js) */
+    const F = fillets ? findFillets(B, claimed, { tol, scale }) : { found: [], kept: [] }
+    for (const x of F.found) claimed.set(x.face, { S: x.S, s: 1 })
     const faceLit = B.faces.map((f, i) => {
         const c = claimed.get(i)
         const { j, s } = addSurface(c ? c.S : f.surface, 'face')
@@ -304,6 +312,25 @@ export function toCSG(B, { seed = 1, volume = 6000, perFace = 64, perEdgePoint =
             pts.push(add(L.points[i], mul(d, delta * (1 + 2 * rnd()))))
         }
     for (let i = 0; i < volume; i++) pts.push(lo.map((l, k) => l + (hi[k] - l) * rnd()))
+    /* WHERE A FILLET'S SUPPORTS MEET, all along (0.next): a fillet's half-space rounds the corner of its two supports
+       wherever they meet, not only where its face is -- the holder's U-edge fillet's supports, the upright's face and
+       the U's straight wall, meet on below the U, in the solid, and the rounded corner there is a cell a millimetre
+       across that the points above missed: a point of OpenCascade's 0.14 mm inside read outside (2026-11-04). So
+       points are put on that line (alternating projections onto the two surfaces from points through the box) and
+       scattered round it within twice the radius. */
+    for (const h of H) {
+        const S = h.surface
+        if (S.type !== 'rounded') continue
+        for (let i = 0; i < perCompound; i++) {
+            let p = lo.map((l, k) => l + (hi[k] - l) * rnd())
+            for (let it = 0; it < 30; it++) {
+                p = sub(p, mul(S.A.grad(p), S.A.g(p)))
+                p = sub(p, mul(S.B.grad(p), S.B.g(p)))
+            }
+            if (Math.abs(S.A.g(p)) > 1e-3 * S.r || Math.abs(S.B.g(p)) > 1e-3 * S.r || p.some((x, k) => x < lo[k] || x > hi[k])) continue
+            for (let k = 0; k < 4; k++) pts.push(add(p, mul(norm([rnd() - 0.5, rnd() - 0.5, rnd() - 0.5]), 2 * S.r * rnd())))
+        }
+    }
 
     const cells = new Map()
     const signs = p => {
@@ -331,7 +358,13 @@ export function toCSG(B, { seed = 1, volume = 6000, perFace = 64, perEdgePoint =
     }
     tell('cells', pts.length, pts.length)
     const all = [...cells.values()]
-    const conflicts = all.filter(c => c.in && c.out)
+    /* A CONFLICT: a cell with points both in and out, which no formula of these half-spaces can describe. A cell whose
+       one point disagrees with all the rest is said apart (`lone`): that is the classifier's (brep.js) at a point a
+       hair off an edge, not the half-spaces' -- the bracket's hole rim, 2e-4 mm from its two faces, inside by brep.js
+       and outside by OpenCascade's own classifier, among 148 points outside (2026-11-04). The cover takes the majority
+       either way. */
+    const conflicts = all.filter(c => Math.min(c.in, c.out) > 1)
+    const lone = all.filter(c => Math.min(c.in, c.out) === 1).length
     const IN = all.filter(c => c.in > c.out), OUT = all.filter(c => c.in <= c.out)
 
     // 4: the cover
@@ -348,18 +381,79 @@ export function toCSG(B, { seed = 1, volume = 6000, perFace = 64, perEdgePoint =
     // ...and of those, only the ones needed to keep out the cells outside the solid the others do not
     G = prime(G, OUT.filter(c => !G.every(l => sat(c.w, l))), l => dist(B.box, H[l.j]))
     const inG = new Set(G.map(l => l.j))
+    /* A FILLET'S ANTI-SUPPORTS (0.next): a fillet's half-space (fillet.js, geom.js rounded) is its two supports joined;
+       a product holding it -- or under it, when it is global -- and the OTHER side of one of its supports is, in the
+       air beyond the fillet, max(-S, S) = |S|: zero along S's whole surface, a sheet nothing modelled that a ray
+       stops at. The holder fixture's pocket floor fillet (the walls' outside or the floor's underside, rounded) was
+       global, and a product of the pocket's own prism alone made the floor with it: 175 of OpenCascade's points far
+       outside the part read within a fifth of their distance, one 17.8 mm away read 0.005 (2026-11-04). Such a literal
+       is dropped from a product first whenever it can be: the product then bounds itself by the fillet's other
+       support, which is positive in that air. */
+    const antiOf = lits => {
+        const out = new Set()
+        for (const l of lits) {
+            const S = H[l.j].surface
+            if (S.type !== 'rounded') continue
+            for (const [T, t] of [[S.A, S.sA], [S.B, S.sB]]) for (let k = 0; k < n; k++) {
+                const same = sameSurface(H[k].surface, T, tol, B.surfaceAngle ?? 1e-9)
+                if (same) out.add(`${k}:${-l.s * t * same}`)
+            }
+        }
+        return out
+    }
     const free = [...Array(n).keys()].filter(j => !inG.has(j))
 
     /* ITEMS: every cell inside, and every pair of cells inside that differ by one surface -- a wall, which a product
        must hold whole (the header, NO SEAMS) */
-    const items = IN.map((c, i) => ({ w: c.w, free: -1, weight: c.in, p: c.p, _i: i }))
+    const NONE = new Set()
+    const items = IN.map((c, i) => ({ w: c.w, free: NONE, weight: c.in, p: c.p, _i: i }))
     const byKey = new Map(IN.map(c => [c.w.join(','), c]))
     for (const c of IN) for (const j of free) {
         if (getBit(c.w, j)) continue                   // each pair once: from the cell outside surface j
         const w2 = c.w.slice(); w2[j >>> 5] |= 1 << (j & 31)
-        if (byKey.has(w2.join(','))) items.push({ w: c.w, free: j, weight: 0, p: c.p, _i: items.length })
+        if (byKey.has(w2.join(','))) items.push({ w: c.w, free: new Set([j]), weight: 0, p: c.p, _i: items.length })
     }
-    const fails = (x, l) => l.j === x.free || !sat(x.w, l)      // a product fixing the wall's surface cannot hold both sides
+    /* ...AND ACROSS A SURFACE A FILLET SHARES (0.next): a fillet's half-space is zero on its supports' surfaces, away
+       from the fillet, so crossing a support there flips it as well as the support -- two literals, one wall. Cells
+       either side differ in both and were no pair above, and the products either side met in a seam inside the solid:
+       the holder fixture's floor, under its pocket's wall, read 0.05 where it was 0.69 from any surface (2026-11-04). So
+       a surface's FAMILY is it and every fillet built on it (rounded, its supports, through fillets on fillets), and two
+       cells inside that differ only in one family's literals are a wall too: a product holding both fixes none of those
+       literals that differ. */
+    const families = new Map()                          // a non-fillet surface's index -> its family's indices
+    const supportsOf = S => S.type !== 'rounded' ? [S] : [...supportsOf(S.A), ...supportsOf(S.B)]
+    for (let j = 0; j < n; j++) {
+        const S = H[j].surface
+        if (S.type !== 'rounded') continue
+        for (const T of supportsOf(S)) for (let k = 0; k < n; k++) {
+            if (H[k].surface.type === 'rounded' || !sameSurface(H[k].surface, T, tol, B.surfaceAngle ?? 1e-9)) continue
+            if (!families.has(k)) families.set(k, new Set([k]))
+            families.get(k).add(j)
+        }
+    }
+    for (const fam of families.values()) {
+        const members = [...fam].filter(j => !inG.has(j))
+        if (members.length < 2) continue
+        const mask = new Uint32Array(W)
+        for (const j of members) mask[j >>> 5] |= 1 << (j & 31)
+        /* ...but only where no cell OUTSIDE agrees with them on everything else: a product free of the family's
+           literals could not keep it out (across one surface that cannot happen -- such a cell would be one of the two) */
+        const key = c => Array.from(c.w, (x, k) => x & ~mask[k]).join(',')
+        const blocked = new Set(OUT.map(key))
+        const groups = new Map()
+        for (const c of IN) {
+            const k = key(c)
+            if (blocked.has(k)) continue
+            if (!groups.has(k)) groups.set(k, [])
+            groups.get(k).push(c)
+        }
+        for (const g of groups.values()) for (let a = 0; a < g.length; a++) for (let b = a + 1; b < g.length; b++) {
+            const differ = members.filter(j => getBit(g[a].w, j) !== getBit(g[b].w, j))
+            if (differ.length < 2) continue             // one literal: the pair above already
+            items.push({ w: g[a].w, free: new Set(differ), weight: 0, p: g[a].p, _i: items.length })
+        }
+    }
+    const fails = (x, l) => x.free.has(l.j) || !sat(x.w, l)     // a product fixing the wall's surface cannot hold both sides
     const covers = (P, x) => P.every(l => !fails(x, l))
     const products = []
     const covered = new Uint8Array(items.length)
@@ -373,7 +467,8 @@ export function toCSG(B, { seed = 1, volume = 6000, perFace = 64, perEdgePoint =
             /* EXPAND: from the item's own literals (the wall's surface left free), drop one at a time while no cell
                outside gets in: the one that covers most of what is not yet covered (Espresso's choice), the farthest
                surface on a tie. Per cell outside, how many of P's literals it fails: one failed alone cannot go. */
-            let P = free.filter(j => j !== it.free).map(j => ({ j, s: getBit(it.w, j) ? 1 : -1 }))
+            let P = free.filter(j => !it.free.has(j)).map(j => ({ j, s: getBit(it.w, j) ? 1 : -1 }))
+            const anti = antiOf([...G, ...P])
             const outFails = OUTG.map(c => P.reduce((k, l) => k + (sat(c.w, l) ? 0 : 1), 0))
             const itemFails = items.map(x => covered[x._i] ? -1 : P.reduce((k, l) => k + (fails(x, l) ? 1 : 0), 0))
             for (;;) {
@@ -385,7 +480,9 @@ export function toCSG(B, { seed = 1, volume = 6000, perFace = 64, perEdgePoint =
                     let gain = 0
                     for (let k = 0; k < items.length; k++) if (itemFails[k] === 1 && fails(items[k], l)) gain += 1 + items[k].weight
                     const d = Math.abs(H[l.j].surface.g(it.p))
-                    if (gain > bestGain || (gain === bestGain && d > bestDist)) { best = l; bestGain = gain; bestDist = d }
+                    // an anti-support (antiOf) goes first, whatever it gains: kept, it makes a zero sheet in the air
+                    const g2 = anti.has(`${l.j}:${l.s}`) ? Infinity : gain
+                    if (g2 > bestGain || (g2 === bestGain && d > bestDist)) { best = l; bestGain = g2; bestDist = d }
                 }
                 if (!best) break
                 P = P.filter(l => l !== best)
@@ -442,9 +539,11 @@ export function toCSG(B, { seed = 1, volume = 6000, perFace = 64, perEdgePoint =
     }
     tell('check', check, check)
     const report = {
-        faces: B.faces.length, halfspaces: H.length, used: halfspaces.length, roundedRects: new Set([...claimed.values()].map(c => c.S)).size,
+        faces: B.faces.length, halfspaces: H.length, used: halfspaces.length,
+        roundedRects: new Set([...claimed.values()].filter(c => c.S.type === 'rrect').map(c => c.S)).size,
+        fillets: F.found.length, filletsKept: F.kept.length,
         separators: halfspaces.filter(h => h.from === 'separator').length,
-        cells: all.length, conflicts: conflicts.length, global: G.length, products: kept.length, uncovered, literals: literalCount(tree),
+        cells: all.length, conflicts: conflicts.length, lone, global: G.length, products: kept.length, uncovered, literals: literalCount(tree),
         points: pts.length, skipped, checked, mismatches, ms: Date.now() - t0,
     }
     return { halfspaces, tree, sdf, report, faceLiterals: faceLit }

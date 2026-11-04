@@ -134,7 +134,7 @@ const gradJS = (f, p, h = 1e-4) => {
     return g.map(x => x / l)
 }
 
-const PARTS = ['plate', 'bracket', 'boss', 'lens', 'roundbox', 'cup', 'onshape']      // the last the user's own file
+const PARTS = ['plate', 'bracket', 'boss', 'lens', 'roundbox', 'cup', 'onshape', 'holder']   // onshape the user's own file; the holder made like another (0.next: its fillets round joins)
 const RAYS = 256, SHARE = 0.02
 const fixture = n => new URL(`./fixtures/${n}`, import.meta.url)
 const uA = derive({}, { unit: 'mm' }).sceneUnit

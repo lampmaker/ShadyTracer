@@ -1,6 +1,6 @@
 {
   "format": "raytracer-scene",
-  "version": 26,
+  "version": 27,
   "title": "Menger cubes",
   "nextId": 3,
   "materials": [

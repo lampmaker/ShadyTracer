@@ -25,6 +25,8 @@
 //   torus      S(u, v) = C + (R + r cos v) (cos u x + sin u y) + r sin v z
 //======================================================================================================================
 
+import { roundIntersect, roundUnion } from '../builder/joins.js'
+
 export const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]]
 export const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
 export const mul = (a, s) => [a[0] * s, a[1] * s, a[2] * s]
@@ -273,6 +275,28 @@ export function roundedRect(F, hx, hy, r) {
     }
 }
 
+/** A FILLET'S SURFACE, ITS TWO SUPPORTS' TOGETHER (import/fillet.js, 0.next): the faces either side of a CAD fillet
+ *  (two planes, a plane and a cylinder, a plane and a rounded rectangle's prism, a plane and another fillet) on the
+ *  sides the solid is -- sA gA < 0, sB gB < 0 -- met by builder/joins.js's round join of radius r: their intersection
+ *  for a convex fillet ('and'), their union for a concave one ('or'). One half-space where the fillet's face and its
+ *  separators were (csg.js), and in the scene the round join the builder has for it (shapes.js). g is the join's
+ *  value: the exact distance for two planes, or a plane met squarely by the other, which is the fillet CAD makes; the
+ *  import checks it against the fillet's own face before using it. */
+export function rounded(A, sA, B, sB, r, op) {
+    const side = (S, s, p) => { const n = S.grad(p); return [s * n[0], s * n[1], s * n[2], s * S.g(p)] }
+    const at = p => (op === 'and' ? roundIntersect : roundUnion)(side(A, sA, p), side(B, sB, p), r)
+    return {
+        type: 'rounded', A, sA, B, sB, r, op, periodicU: false, periodicV: false,
+        g: p => at(p)[3],
+        grad: p => {
+            const v = at(p)
+            if (v[0] || v[1] || v[2]) return [v[0], v[1], v[2]]
+            const h = 1e-7 * (1 + len(p)), f = q => at(q)[3]
+            return norm([0, 1, 2].map(k => { const a = p.slice(), b = p.slice(); a[k] += h; b[k] -= h; return (f(a) - f(b)) / (2 * h) }))
+        },
+    }
+}
+
 /** A surface moved by a rigid transform (an assembly's placement): its frame moved, its sizes kept. */
 export function moveSurface(S, T) {
     const F = frame(apply(T, S.F.o), applyDir(T, S.F.z), applyDir(T, S.F.x))
@@ -324,6 +348,12 @@ export function sameSurface(A, B, tol, angle = 1e-9) {
             const turned = Math.abs(dot(A.F.x, B.F.x)) < 0.5
             const [bx, by] = turned ? [B.hy, B.hx] : [B.hx, B.hy]
             return (parallel(A.F.x, turned ? B.F.y : B.F.x, angle) && Math.abs(A.hx - bx) < tol && Math.abs(A.hy - by) < tol) ? 1 : 0
+        }
+        case 'rounded': {
+            // the same supports on the same sides (or both turned, the other way round), radius and kind
+            if (A.op !== B.op || Math.abs(A.r - B.r) >= tol) return 0
+            const same = (S, s, T, t) => { const k = sameSurface(S, T, tol, angle); return k !== 0 && k * s === t }
+            return (same(A.A, A.sA, B.A, B.sA) && same(A.B, A.sB, B.B, B.sB)) || (same(A.A, A.sA, B.B, B.sB) && same(A.B, A.sB, B.A, B.sA)) ? 1 : 0
         }
         case 'cone': {
             const a = coneShape(A), b = coneShape(B)

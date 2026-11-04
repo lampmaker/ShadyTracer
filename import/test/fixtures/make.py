@@ -56,7 +56,29 @@ def parts():
     cup = outer.cut(cq.Workplane('XY').rect(40, 40).extrude(25).edges('|Z').fillet(1))
     cup = cup.faces('>Z').workplane(centerOption='ProjectedOrigin').pushPoints([(13.79, 13.79), (-13.79, -13.79)]).hole(2)
     cup = cup.rotate((0, 0, 0), (1, 0, 0), -90)
-    return {'plate': plate, 'bracket': bracket, 'boss': boss, 'lens': lens, 'roundbox': roundbox, 'cup': cup}
+    return {'plate': plate, 'bracket': bracket, 'boss': boss, 'lens': lens, 'roundbox': roundbox, 'cup': cup, 'holder': holder()}
+
+def holder():
+    # A HOLDER LIKE THE USER'S ONSHAPE PART OF 2026-11-04 (a tray with filleted uprights, a U slot and two slanted slots
+    # under it; 62 of its 121 faces 1 mm fillets), made here so the fillets' import (import/fillet.js) is held to
+    # OpenCascade on a part of that kind: a tray rounded 5 mm at its corners, hollowed by a pocket rounded 2 mm at its
+    # corners and 1 mm along its floor, its rim rounded 1 mm outside and in; an upright on its rim at one end, 3 mm
+    # thick, with a U slot from its top, the U's mouth rounded 3 mm, two 3.5 mm slots under the U at 31 degrees either
+    # side of down, and the U's edges on both faces rounded 1 mm.
+    tray = cq.Workplane('XY').rect(54.5, 75.5).extrude(20).edges('|Z').fillet(5)
+    pocket = cq.Workplane('XY').workplane(offset=3).rect(48.5, 69.5).extrude(20).edges('|Z').fillet(2).edges('<Z').fillet(1)
+    tray = tray.cut(pocket)
+    tray = tray.edges(cq.selectors.BoxSelector((-40, -50, 19.5), (40, 50, 20.5))).fillet(1)
+    up = cq.Workplane('XZ').workplane(offset=-34.75).center(0, 20).rect(48.5, 35, centered=(True, False)).extrude(-3)
+    u = (cq.Workplane('XZ').workplane(offset=-30).center(0, 50).rect(15, 25).extrude(-10)
+         .union(cq.Workplane('XZ').workplane(offset=-30).center(0, 37.5).circle(7.5).extrude(-10)))
+    up = up.cut(u)
+    up = up.edges('|Y').edges(cq.selectors.BoxSelector((-11, 30, 54), (11, 40, 56))).fillet(3)
+    for sx in (-1, 1):
+        up = up.cut(cq.Workplane('XZ').workplane(offset=-30).center(0, 30).transformed(rotate=(0, 0, 31 * sx))
+                    .center(0, -3).slot2D(8, 3.5, angle=90).extrude(-10))
+    part = tray.union(up)
+    return part.edges(cq.selectors.BoxSelector((-12, 34.5, 29.5), (12, 38, 56))).fillet(1)
 
 def lens_solid(D, t, R1, R2):
     s1 = cq.Workplane('XY').sphere(R1).translate((0, 0, t / 2 - R1))
