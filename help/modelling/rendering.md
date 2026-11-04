@@ -81,6 +81,8 @@ so do the sun's shafts and a lamp's glow. Whatever is seen through it, or lit th
   direction: real dust scatters mostly forward, so a beam is brightest when you look into it. The panel shows the
   **visibility** beside the mean free path. See [Haze box settings](../reference/haze.md).
 - **One box a scene.** Its outline shows when it is selected; stretch it with the Transform gizmo's cubes.
+- **Why it is a box and not a material.** A material can scatter inside too (its *scatter distance*), but only inside
+  a solid: its surface would stop the light sampling that makes a beam in air show. The haze box has no surface.
 
 **What a small scene can show.** Physical dust is faint at the size of a lamp. A beam a centimetre or two across,
 seen from the side in dust with a 10 m mean free path, is thousands of times dimmer than the spot it lights on a white

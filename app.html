@@ -107,6 +107,8 @@
         import { installToolbar } from './builder/toolbar.js'
         import { installSelectionOverlay } from './builder/overlay.js'
         import { focusBox, focusPose, glidePose } from './builder/focus.js'
+        import { openPrintDialog } from './builder/printdialog.js'
+        import { estimateBox } from './builder/bounds.js'
         import { installOpticsPage, OPTICS_CHARTS, chartSet } from './optics/page.js'
         import { installMeasureTool } from './lib/pathtracer/measure/tool.js'
         import { installFocusPick } from './lib/pathtracer/focuspick.js'
@@ -1055,7 +1057,10 @@
                     open: notWhileEditing(k => ops.enter(k)), duplicate: notWhileEditing(k => ops.duplicate(k, { go: false })),
                     exportScene: k => BUILDER.saveScene(undefined, k), remove: notWhileEditing(k => ops.remove(k)), rename: (k, t) => ops.rename(k, t) } });
             };
+            /* WHAT IS SELECTED, for the print dialog's "Selected object" (0.next): the row the tree and the picture last chose */
+            let selectedId = null;
             const selectRow = id => {
+                selectedId = id ?? null;
                 if (id == null && cardKey && cardKey !== BUILDER.current && Project.scene(BUILDER.project, cardKey)) { showCard(cardKey); overlay.select(null); return; }
                 cardKey = null; STRIP?.select(null);
                 panel?.show(id); overlay.select(id);
@@ -1378,15 +1383,15 @@
                 const i = SESSION.info();
                 status(i.id ? `saved in this browser: ${i.name} (it is saved as it changes)` : `nothing changed yet: this tab's copy of '${i.copy}' is kept once something is`);
             };
-            /* EXPORT ▸ 3D PRINT: the scene's Export box, whose Properties hold Export 3MF and Export STL (panel.js) */
-            const exportPrint = () => {
-                let box = null;
-                Model.walk(BUILDER.doc, n => { if (!box && n.type === 'export') box = n; });
-                if (!box) return status('this scene has no Export box: ＋ on a group\'s row › Export box (3MF / STL) adds one; its Properties hold Export 3MF and Export STL');
-                builderTree.select(box.id);
-                SHELL.open('properties');
-                status(`${box.label}: Export 3MF and Export STL are in its Properties`);
-            };
+            /* EXPORT ▸ 3D PRINT (0.next): a dialog asking what to print -- the selected object or the whole scene -- with
+               the box fitted to it, drawn in the picture while it is open (builder/printdialog.js). Nothing is added to
+               the scene: the export box this was, a node in the tree only so its panel could hold the buttons, is gone */
+            const exportPrint = () => openPrintDialog({
+                doc: () => BUILDER.doc, selected: selectedId, boxes: BOXES,
+                estimate: id => id == null ? estimateBox(BUILDER.doc.root, null, BUILDER.doc) : focusBox(BUILDER.doc, id, BOXES),
+                outline: get => overlay.outline('print', get),
+                onExport: (o, say) => BUILDER.exportPrint(o, say),
+            });
             ACTIONS = {
                 undo: () => step('undo'), redo: () => step('redo'),
                 importFile: notWhileEditing(importFile), open: notWhileEditing(importFile),
@@ -1433,6 +1438,23 @@
         const mixing = { el: mixingEl, onVisible: fn => SHELL.onVisible('tools.mixing', fn) };
         window.OPTICS = installOpticsPage(opticsEl, { RT, WG, BUILDER, tableIn, charts, mixing,
             onEdit: () => builderPanel?.refresh(), boxes: window.BOXES, view: VIEW });
+        /* THE SCENE'S OPTICS ANALYSIS (0.next, builder/materials.js FEATURES.analysis): off, the view offers no rays drawn
+           over it and no lux or luminance view (the user, 2026-11-04). Read from the scene worked on twice a second, as the
+           optics page reads it: a switch, an undo, a scene opened or a project loaded all change it, and one look at the
+           document catches every one of them where a hook in each would miss the next way in. */
+        {
+            let analysisShown = null;
+            const followAnalysis = () => {
+                let on = true;
+                try { on = !BUILDER?.doc || Model.featuresOf(BUILDER.doc).analysis === true; } catch { }
+                VIEW.analyse?.show?.('rays', on);       // every time: the optics page may add its group later
+                if (on === analysisShown) return;
+                analysisShown = on;
+                VIEW.measureViews?.(on);
+            };
+            followAnalysis();
+            setInterval(followAnalysis, 500);
+        }
 
         /*=========================================================================================
           THE PARAMETERS, seen: where each is set (reveal), the Parameters panel, the palette.

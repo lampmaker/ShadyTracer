@@ -10,8 +10,7 @@
 //======================================================================================================================
 import * as M from '../model.js'
 import { generate } from '../codegen.js'
-import { hazeOf, hazeNode, hazeProblems, hazeSettings, HAZE_DEFAULTS, visibilityOf, HAZE_G_MAX } from '../hazebox.js'
-import { boxCorners } from '../exportbox.js'
+import { hazeOf, hazeNode, hazeProblems, hazeSettings, HAZE_DEFAULTS, visibilityOf, HAZE_G_MAX, boxCorners } from '../hazebox.js'
 import { stretchOf } from '../stretch.js'
 import { focusBox } from '../focus.js'
 import { sceneParams } from '../params.js'
@@ -64,7 +63,7 @@ const T = (pos = [0, 0, 0], rot = [0, 0, 0], scale = 1) => ({ pos: { x: pos[0], 
     const after = generate(...M.generateArgs(d))
     ok('it draws nothing: the SDF is the one without it, plus a comment', after.wgsl.replace(/^\s*\/\/ node \w+ \(haze\).*\n/gm, '') === before.wgsl,
         after.wgsl.split('\n').filter(l => !before.wgsl.includes(l)).join('\n'))
-    ok('...its transform and size declared uniforms, as an export box\'s, so a drag or a slider is not refused', ['xf_dust', 'size_dust'].every(k => k in after.uniforms))
+    ok('...its transform and size declared uniforms, so a drag or a slider is not refused', ['xf_dust', 'size_dust'].every(k => k in after.uniforms))
     eq('it does not change the scene\'s size estimate', after.extent, before.extent)
     ok('the scene hands the renderer its haze', after.haze?.id === 'dust' && after.haze.on === true && after.haze.mfp === 5 && after.haze.g === 0.3
         && JSON.stringify(after.haze.albedo) === JSON.stringify([0.9, 0.9, 0.9]), JSON.stringify(after.haze))
@@ -123,7 +122,7 @@ const T = (pos = [0, 0, 0], rot = [0, 0, 0], scale = 1) => ({ pos: { x: pos[0], 
     ok('the outline\'s corners: eight, around the centre', C?.length === 8 && C.reduce((s, c) => s.map((v, k) => v + c[k] / 8), [0, 0, 0]).every((v, k) => near(v, h.centre[k], 1e-9)))
     const F = focusBox(d, 'dust')
     ok('a double-click frames the box itself', !!F && F.measured === true, JSON.stringify(F))
-    eq('the Transform gizmo\'s cubes stretch its size, as an export box\'s', Object.keys(stretchOf(M.find(d, 'dust').node) || {}).sort(), ['x', 'y', 'z'])
+    eq('the Transform gizmo\'s cubes stretch its size', Object.keys(stretchOf(M.find(d, 'dust').node) || {}).sort(), ['x', 'y', 'z'])
     ok('the visibility: 3.912 mean free paths (Koschmieder)', near(visibilityOf(10), 39.12, 0.01))
 }
 
@@ -144,6 +143,26 @@ const T = (pos = [0, 0, 0], rot = [0, 0, 0], scale = 1) => ({ pos: { x: pos[0], 
     const g = out.find(e => e.path === 'scene/dust/haze/g')
     g.set(2)
     ok('...and held within its limit', hazeSettings(M.find(d, 'dust').node).g === HAZE_G_MAX)
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// a file of 27 from the while in 0.next when the haze was the scene's (doc.haze, in its environment): a haze box again
+//----------------------------------------------------------------------------------------------------------------------
+{
+    const d = M.createDoc(); d.unit = 'mm'
+    M.addObject(d, 'root', { id: 'ball', primitive: 'sphere' })
+    const f = JSON.parse(M.serialize(d))
+    f.haze = { enabled: false, transform: T([1, 2, 3], [0, 0, 30], 1), params: { size: { x: 4, y: 5, z: 6 } }, haze: { mfp: 7 },
+               animate: ['haze/mfp'], lockPosition: true }
+    f.timeline = { fps: 30, duration: 8, tracks: [{ prop: 'scene/#haze/haze/mfp', interp: 'linear', keys: [{ t: 0, v: 7 }] }] }
+    const r = M.parse(JSON.stringify(f))
+    const h = hazeNode(r)
+    ok('a file of 27 with the scene\'s haze reads it back as a haze box under the root, sound', !!h && M.find(r, h.id).parent === r.root
+        && !('haze' in r) && M.validate(r).length === 0, JSON.stringify(h))
+    ok('...where the region was, its size, dust, flags, lock, and switched off as it was', h.transform.pos.y === 2 && h.transform.rot.z === 30
+        && h.params.size.z === 6 && h.haze.mfp === 7 && JSON.stringify(h.animate) === '["haze/mfp"]' && h.lockPosition === true && h.enabled === false)
+    ok('...its id one the scene had free, and its timeline track following it', h.id !== 'ball' && r.timeline.tracks[0].prop === `scene/${h.id}/haze/mfp`)
+    ok('...and a file with no such haze reads as it was', !hazeNode(M.parse(M.serialize(d))))
 }
 
 console.log(`hazebox: ${pass} passed, ${fail} failed`)

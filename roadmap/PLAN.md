@@ -16,6 +16,29 @@ photon map, scattering inside materials, an Optics-view beam view -- has its own
 (2026-10-16). **Translucent and scattering materials** -- opal sheets, diffuser films, light guides, milky glass:
 the options in `DIFFUSERS.md` (2026-10-29), the first two built (below).
 
+## The special objects stop being add-ons — built 2026-11-04 (0.next), NOT yet seen
+
+The user (2026-11-04): detectors, ray limiters, the haze box and the STL export "feel like add-ons, weird hacks and are not
+always properly placed". Decided with the user, from options each:
+- **3D print export:** no export box. File › Export ▸ 3D print… asks for the selected object (alone, a scene of it
+  compiled for the export) or the whole scene, with a box fitted to it from the measured boxes and editable
+  (`builder/printdialog.js`, `exportbox.js` `fittedBox`, `subjectTree`; `RT.sampleField(…, own)`).
+- **Haze: not a material.** A box of index-1 scattering material walks correctly (`volume.gpu.mjs`), but its walls stop
+  every shadow ray and the walk inside samples no light (`core/haze.js` THE MEDIUM'S WALK): a beam in such air shows
+  only by chance. So it stays a box. For a while it was the scene's, in its environment; the user wanted the box back
+  ("a useful tool to visualize light in a specific region"), so it is the haze box node it was, and a file saved in
+  between with the scene's haze reads it back as one (`model.js` `hazeNodeFromDoc`).
+- **Detectors and limiters: an object's role** (`model.js` `OPTICS_ROLES`), tested by the object's tag in the optics
+  kernel (`optIsDetectorTag`), so a detector given or taken is live. Shown with a new feature, **optics analysis**, off
+  for new scenes, out of the presets, which also hides the rays overlay and the lux and luminance views (the user kept
+  the measure tool and the Analysis pane).
+Scene format 27 (`model.js` v26to27). Checked without a GPU: `exportbox`, `hazebox`, `model`, `codegen` (the golden
+refrozen for this: its header says what moved), every `*.test.mjs`, check-shaders with naga; headless: `panel.check`,
+`printdialog.check`, `page.check`. **Not seen on hardware.**
+
+**What to look at** (the user, on hardware): the two change notes (`changes/print-export-dialog.md`,
+`changes/optics-roles.md`), each's *What to look at*; and that + › Haze box adds one, as before.
+
 ## Transmission and haze, frosted glass evaluated — built 2026-10-29/30 (0.81.0), its benches pass on hardware, the picture NOT yet seen
 
 The user chose `DIFFUSERS.md` B1 and B2 first ("do B1 and B2 first. It will make rough glass more correct too right?" --

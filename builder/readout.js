@@ -7,7 +7,7 @@
 // ONE PANEL FOR BOTH MODES (overlay.js).
 //   TRANSFORM: the node's position, rotation and scale, the numbers the properties panel shows; its LENGTHS, the
 //   parameters marked as lengths in the scene's unit (a box's size and rounding, a cylinder's radius and height), and
-//   any a stretch cube changes (a light's width, an export box's size); and
+//   any a stretch cube changes (a light's width, a haze box's size); and
 //   its BOUNDS, measured; and what of it is LOCKED or bound (model.js heldOf), the reason its handles are missing. While a handle is held, a row for what the drag has done so far, and every number it has
 //   changed lit; over a stretch cube, the numbers that cube would change lit more softly.
 //   POINTS (pointsmode.js): the selected point's numbers, the step to the one before, its fillet, the grid, and what
@@ -74,7 +74,7 @@ export function transformReadout(doc, id, { drag = null, preview = null, box = n
         { label: 'scale', cells: [cell(null, fmt(t.scale), !!s && t.scale !== s.scale)] },
     ]
     /* THE LENGTHS, in the order the node has them: numbers and vectors (a profile or a path has its own mode) -- and
-       what a stretch cube changes, a length or not (a light's width, an export box's size: neither is marked one) */
+       what a stretch cube changes, a length or not (a light's width, a haze box's size: neither is marked one) */
     const p0 = drag?.kind === 'stretch' ? drag.params0 : null
     const lit = (k, c) => !!preview?.some(r => r.k === k && (r.c ?? null) === (c ?? null))
     const stretchy = new Set(Object.values(stretchOf(node) || {}).flat().map(r => r.k))

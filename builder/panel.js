@@ -53,13 +53,11 @@ import { cri } from '../lib/pathtracer/core/cri.js'
 import { UNITS } from '../lib/pathtracer/core/photometry.js'
 import { changeUnit } from './unitchange.js'
 import { openUnitDialog } from './unitdialog.js'
-import { exportGrid, gridProblem, EXPORT_DEFAULTS } from './exportbox.js'
 import { visibilityOf, HAZE_G_MAX } from './hazebox.js'
 import { makeAfter } from './params.js'
 import { codeOnly } from './codegen.js'
 import { SEG, SEGBTN } from '../lib/pathtracer/strip.js'
 import { lit } from '../lib/pathtracer/icons.js'
-const EXPORT_CELL = EXPORT_DEFAULTS.cell
 
 /** WHAT EACH ENVIRONMENT SETTING DOES (model.js ENVIRONMENT, the renderer's Lighting schema), said on its row. Every key
  *  has one (test/panel.check.mjs): a setting added to the schema with none fails there. Numbers are typical values, not
@@ -404,17 +402,14 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
                roughness changes the next frame without a compile. Only the code is structural,
                and it applies on request like a code node's. */
             /* ---- ITS TYPE (model version 11), and then only the settings that type uses
-               (materials.js FIELDS_OF): a surface has no emission, a glowing surface (emitter) is its emission alone,
-               a detector is a surface the optics trace stops on and records, a ray limiter is
-               invisible and stops it too -- to cut the rays off where a cross-section is wanted.
-               Structural: the shader assigns only the type's fields, and the optics kernels are
-               built knowing the detectors. The panel is rebuilt so the list follows the type. */
+               (materials.js FIELDS_OF): a surface has no emission, a glowing surface (emitter) is its emission alone.
+               (A detector and a ray limiter were types too until 0.next: an object's role now, its Optics-Analysis box.)
+               Structural: the shader assigns only the type's fields. The panel is rebuilt so the list follows the type. */
             const Ty = { type: M.typeOf(mat) }
-            const tyB = folder.addBinding(Ty, 'type', { label: 'type', options: {
-                'surface': 'surface', 'glowing': 'emitter', 'detector': 'detector', 'ray limiter': 'limiter' } })
+            const tyB = folder.addBinding(Ty, 'type', { label: 'type', options: { 'surface': 'surface', 'glowing': 'emitter' } })
             // the long explanations were the option names; they are the tooltip now
             const tyL = tyB.element.querySelector('.tp-lblv_l')
-            if (tyL) tyL.title = 'glowing: emits light\ndetector: the optics trace stops on it and records the rays\nray limiter: a detector the picture does not show'
+            if (tyL) tyL.title = 'glowing: emits light\n(a detector or a ray limiter is an object\'s role: its Optics-Analysis box)'
             tyB.on('change', ev => {
                 M.setMaterialType(doc, mat.id, ev.value)
                 edited(null)
@@ -431,7 +426,6 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
                     bind(folder, mat.params, k, { label: M.MATERIAL_FIELD_LABELS[k] ?? k, ...(M.MATERIAL_FIELDS[k].gui || {}) }, () => live(mat.id, k), `scene/${mat.id}/${k}`)
             }
             if (all.includes('coating')) coatingFolder(folder, mat)
-            if (M.typeOf(mat) === 'limiter') return          // nothing of it is drawn: no code either
             // and its own, for its code to read: added, edited and deleted like a code node's
             paramsFolder(folder, mat, M.customParams(mat), {}, true)
             // an empty block shows how to use one; comments alone compile to nothing
@@ -593,13 +587,6 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
             return
         }
 
-        // ---- an export box: where it is, how big, and the export it drives (exportbox.js)
-        if (node.type === 'export') {
-            transform(folder, node)
-            paramsFolder(folder, node, ['size'], {}, false)
-            exportFolder(folder, node)
-            return
-        }
         // ---- a haze box: where it is, how big, and its dust (hazebox.js; the renderer's core/haze.js)
         if (node.type === 'haze') {
             transform(folder, node)
@@ -614,6 +601,8 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
         // ---- placement right under the material, then where its pattern is laid out, then the parameters
         transform(folder, node)
         patternFolder(folder, doc, node)
+        // ---- what it does for the optics trace, while the scene's analysis is on (model.js OPTICS_ROLES)
+        opticsRoleFolder(folder, doc, node)
 
         // ---- parameters: live. Bound to the document's own values, so the document IS what
         //      the slider edits; the renderer is told afterwards.
@@ -842,6 +831,36 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
        separator blade, since Tweakpane places each blade by its index). A feature off hides its material fields and
        leaves them out of the shader; the line under the switches says which materials have a value hidden. Every
        change is one undo step and a compile -- "everything through the compile" (the user, 2026-11-02). */
+    /* AN OBJECT'S OPTICS ROLE (0.next, model.js OPTICS_ROLES): a box of its own, offered while the scene's optics analysis is
+       on (its optical features). A detector is a live change -- the trace finds it by the object's tag, so the shader's text
+       is the same and the scene's data carries it (codegen detectorTags) -- a ray limiter a compile, since the picture
+       leaves its object out. Each object is its own detector: its own map on the Optics page. */
+    function opticsRoleFolder(parent, doc, node) {
+        if (!M.featuresOf(doc).analysis || !M.canHaveRole(node)) return
+        const role = M.roleOf(node)
+        const f = parent.addFolder({ title: `optics analysis${role ? ` · ${role === 'limiter' ? 'ray limiter' : 'detector'}` : ''}`,
+            expanded: role != null || !!foldState()['object.optics'] })
+        f.on('fold', ev => keepFold('object.optics', ev.expanded))
+        const t = f.element?.querySelector?.('.tp-fldv_t')
+        if (t) t.title = 'What this object does for the Optics page\'s trace. Detector: the trace stops on it and records every ray '
+            + 'that arrives -- its own illuminance map and far field. Ray limiter: the same, and the picture does not show it, to cut '
+            + 'the rays off where a cross-section is wanted. Each object is a detector of its own.'
+        const R = { role: role ?? 'none' }
+        rowTip(f.addBinding(R, 'role', { label: 'role', options: { none: 'none', detector: 'detector', 'ray limiter': 'limiter' } })
+            .on('change', ev => {
+                const was = M.roleOf(node)
+                try { M.setOpticsRole(doc, node.id, ev.value === 'none' ? null : ev.value) } catch (e) { console.warn('[builder]', e.message); return }
+                if (M.roleOf(node) === was) return
+                edited(null)
+                onStructure()
+                setTimeout(() => { if (shownId === node.id) show(node.id) })
+            }), 'none: an ordinary object\ndetector: the optics trace stops on it and records the rays (no compile)\nray limiter: a detector the picture does not show (a compile)')
+        const note = { note: role === 'limiter' ? 'Not in the picture; the Optics page\'s rays stop on it and are recorded.'
+            : role === 'detector' ? 'Drawn as its material says; the Optics page\'s rays stop on it and are recorded: its map and far field.'
+            : 'An ordinary object. A detector records the Optics page\'s rays that reach it.' }
+        f.addBinding(note, 'note', { readonly: true, multiline: true, rows: 2, label: '' })
+    }
+
     function featuresFolder(parent, doc) {
         const presetNow = M.featurePresetOf(doc)
         const folder = parent.addFolder({ title: `optical features${presetNow === 'full' ? '' : ` · ${presetNow}`}`,
@@ -890,7 +909,11 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
                              full: 'Full: every material feature; the Optics page traces colour.',
                              expert: 'Expert: every feature, and the Optics page traces by wavelength.' }[presetNow]
         el.append(seg, line)
-        for (const [k, f] of Object.entries(M.FEATURES)) {
+        // the presets' features, then those the presets leave alone (analysis), after a line
+        const keys = Object.keys(M.FEATURES)
+        for (const k of [...M.PRESET_FEATURES, ...keys.filter(k => !M.PRESET_FEATURES.includes(k))]) {
+            const f = M.FEATURES[k]
+            if (!M.PRESET_FEATURES.includes(k) && k === keys.filter(n => !M.PRESET_FEATURES.includes(n))[0]) folder.addBlade({ view: 'separator' })
             const H = { get on() { return M.featuresOf(doc)[k] }, set on(v) { set({ [k]: !!v }) } }
             rowTip(folder.addBinding(H, 'on', { label: f.label.toLowerCase() }), f.help)
         }
@@ -938,6 +961,7 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
             flagRow(b, `scene/environment/${k}`)
         }
     }
+
 
     /* A LIGHT (model version 10, lights.js): a rectangle, a disc or a Zemax ray file. Its size is its
        parameters (live, like any node's); then how it looks to the camera -- colour, and luminance or
@@ -1207,11 +1231,6 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
         }
     }
 
-    /* AN EXPORT BOX (exportbox.js): its settings, what the grid comes to, and the two exports. The
-       grid line is a getter the monitor re-reads, so it follows a size or a scale dragged anywhere.
-       The export runs against the renderer (BUILDER.exportPrint), which has to be showing this
-       scene; it downloads the file and says what it made. One at a time. */
-    let exporting = false
     /* A HAZE BOX'S DUST (hazebox.js): its mean free path in real metres whatever the scene's unit, its albedo, its g --
        live, as the renderer's own uniforms (makeAfter's haze, demo.js pushHaze). The visibility beside the mean free path
        is the number a weather report gives (Koschmieder), and the scale note is why a small scene shows little. */
@@ -1220,6 +1239,8 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
         const S = M.hazeSettings(node)
         const V = { mfp: S.mfp, albedo: { ...S.albedo }, g: S.g }
         const f = folder.addFolder({ title: 'dust in the air' })
+        const ft = f.element?.querySelector?.('.tp-fldv_t')
+        if (ft) ft.title = 'The dust: how far light goes between particles, what they scatter of it, and which way. Every value live'
         const vis = { get text() { const m = M.hazeSettings(node).mfp
             return `visibility ${visibilityOf(m) < 1 ? `${(visibilityOf(m) * 100).toPrecision(3)} cm` : `${visibilityOf(m).toPrecision(3)} m`}; `
                 + 'only the air inside scatters (not glass or solids). Real room dust is tens of metres; a small scene shows a beam '
@@ -1230,55 +1251,16 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
             for (const k of Object.keys(patch)) said(`scene/${node.id}/haze/${k}`)
             try { visLine?.refresh() } catch { }
         }
-        f.addBinding(V, 'mfp', { label: 'mean free path (m)', min: 0.001, max: 1000, step: 0.001 })
+        rowTip(f.addBinding(V, 'mfp', { label: 'mean free path (m)', min: 0.001, max: 1000, step: 0.001 }),
+            'How far light goes, on average, before it meets a particle: real metres, whatever the scene\'s unit. Smaller is denser')
             .on('change', ev => put({ mfp: Math.max(0.001, +ev.value || S.mfp) }))
         visLine = f.addBinding(vis, 'text', { readonly: true, label: '', multiline: true, rows: 3 })
-        f.addBinding(V, 'albedo', { label: 'albedo (colour)', color: { type: 'float' } })
+        rowTip(f.addBinding(V, 'albedo', { label: 'albedo (colour)', color: { type: 'float' } }),
+            'What a particle scatters of the light it meets, per channel; the rest it absorbs. White dust is 1')
             .on('change', () => put({ albedo: { r: Math.min(1, Math.max(0, V.albedo.r)), g: Math.min(1, Math.max(0, V.albedo.g)), b: Math.min(1, Math.max(0, V.albedo.b)) } }))
-        f.addBinding(V, 'g', { label: 'g (forward scattering)', min: -HAZE_G_MAX, max: HAZE_G_MAX, step: 0.01 })
+        rowTip(f.addBinding(V, 'g', { label: 'g (forward scattering)', min: -HAZE_G_MAX, max: HAZE_G_MAX, step: 0.01 }),
+            'Which way it scatters: 0 evenly, towards 1 forward (real dust, about 0.7: a beam brightest looking into it), towards -1 back')
             .on('change', ev => put({ g: Math.min(HAZE_G_MAX, Math.max(-HAZE_G_MAX, +ev.value || 0)) }))
-    }
-
-    function exportFolder(folder, node) {
-        const doc = BUILDER.doc
-        const E = M.exportOf(node)
-        const V = { cell: E.cell, colours: E.colours }
-        const f = folder.addFolder({ title: 'export for printing' })
-        const set = patch => {
-            try { M.setExport(doc, node.id, patch) } catch (e) { console.warn('[builder]', e.message); return }
-            edited(`${node.id}.export`)
-        }
-        f.addBinding(V, 'cell', { label: 'cell (mm)', min: 0.05, max: 5, step: 0.01 }).on('change', ev => set({ cell: Math.max(0.01, +ev.value || EXPORT_CELL) }))
-        f.addBinding(V, 'colours', { label: 'colours (3MF)', min: 1, max: 16, step: 1 }).on('change', ev => set({ colours: Math.max(1, Math.round(+ev.value || 1)) }))
-        const grid = { get text() {
-            try {
-                const g = exportGrid(BUILDER.doc, node.id)
-                const cells = g.n.map(k => k - 2)
-                return `${g.sizeMm.map(v => v.toPrecision(4)).join(' x ')} mm, ${cells.join(' x ')} cells of ~${g.spacing[0].toPrecision(3)} mm`
-                    + (gridProblem(g) ? `\n${gridProblem(g)}` : '')
-            } catch (e) { return e.message }
-        } }
-        f.addBinding(grid, 'text', { readonly: true, label: '', multiline: true, rows: 2 })
-        const status = { text: 'everything solid inside the box, cut by it; z up, in mm' }
-        const line = f.addBinding(status, 'text', { readonly: true, label: '', multiline: true, rows: 2 })
-        const say = t => { status.text = t; try { line.refresh() } catch { } }
-        const run = format => async () => {
-            if (exporting) return say('an export is already running')
-            exporting = true
-            const t0 = performance.now()
-            try {
-                const r = await BUILDER.exportPrint(node.id, format, say)
-                say(`${format.toUpperCase()}: ${r.triangles.toLocaleString()} triangles, ${(r.bytes.length / 1048576).toFixed(1)} MB`
-                    + (r.palette ? `, ${r.palette.length} colour(s)` : '')
-                    + (r.open ? `, ${r.open}+ OPEN EDGES (a mesher bug: please report)` : '')
-                    + `, ${((performance.now() - t0) / 1000).toFixed(1)} s`)
-            } catch (e) {
-                console.error('[builder] export failed:', e)
-                say(`export failed: ${e.message}`)
-            } finally { exporting = false }
-        }
-        f.addButton({ title: 'Export 3MF (with colour)' }).on('click', run('3mf'))
-        f.addButton({ title: 'Export STL (no colour)' }).on('click', run('stl'))
     }
 
     /* THE PARAMETERS FOLDER, an object's or a material's: bound to the document's own values,

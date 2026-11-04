@@ -980,7 +980,7 @@ ok('...and a conic typed to four places kept on its slider (its step\'s rounding
     ok('Basic pressed', await press('basic') === 'pressed')
     await p.waitForTimeout(50)
     s = await state()
-    ok('...every feature off, one undo step and a compile', JSON.stringify(await features()) === '{"dispersion":false,"absorption":false,"coatings":false,"spectral":false}'
+    ok('...every feature off -- every one a preset sets: optics analysis is none of theirs -- one undo step and a compile', JSON.stringify(await features()) === '{"dispersion":false,"absorption":false,"coatings":false,"spectral":false,"analysis":false}'
         && s.commits.length === before.commits.length + 1 && s.commits.at(-1) === null && s.structure === before.structure + 1,
         JSON.stringify([await features(), s.commits.slice(before.commits.length), s.structure - before.structure]))
     b = await box()
@@ -1020,6 +1020,30 @@ ok('...and a conic typed to four places kept on its slider (its step\'s rounding
     await press('full'); await p.waitForTimeout(50)
     ok('...Full again: no key', !(await p.evaluate(() => 'features' in CHECK.doc)))
     await p.evaluate(() => { CHECK.M.material(CHECK.doc, 'gl').params.abbe = 0 })
+}
+
+// AN OBJECT'S OPTICS ROLE (0.next; builder/model.js OPTICS_ROLES): its own box, offered while the scene's optics analysis is
+// on -- a feature of its own, which the presets leave alone -- the role set, one undo step and an apply, taken away again
+{
+    const off = await p.evaluate(() => { CHECK.M.setFeatures(CHECK.doc, { analysis: false }); return CHECK.M.featuresOf(CHECK.doc).analysis })
+    rows = await rowsOf('b')
+    ok('analysis off: an object has no role row', off === false && !rows.includes('role'), JSON.stringify(rows))
+    rows = await rowsOf('root')
+    ok('...and the scene\'s optical features has the optics analysis switch', rows.includes('optics analysis'), JSON.stringify(rows))
+    await p.evaluate(() => CHECK.M.setFeatures(CHECK.doc, { analysis: true }))
+    rows = await rowsOf('b')
+    ok('analysis on: the role row', rows.includes('role'), JSON.stringify(rows))
+    before = await state()
+    ok('detector chosen', await set('role', 'detector') === 'set')
+    await p.waitForTimeout(50)
+    s = await state()
+    const role = () => p.evaluate(() => CHECK.M.find(CHECK.doc, 'b').node.opticsRole ?? null)
+    ok('...the object a detector, with its undo step and an apply', await role() === 'detector' && s.commits.length === before.commits.length + 1
+        && s.structure === before.structure + 1, JSON.stringify([await role(), s.commits.slice(-2), s.structure, before.structure]))
+    ok('...its box titled by it', await p.evaluate(() => [...document.querySelectorAll('.tp-fldv_t')].some(t => t.textContent.trim() === 'optics analysis · detector')))
+    await set('role', 'none'); await p.waitForTimeout(50)
+    ok('none takes it away', await role() === null)
+    await p.evaluate(() => CHECK.M.setFeatures(CHECK.doc, { analysis: false }))
 }
 
 // A HAZE BOX (0.62.0; builder/hazebox.js): where it is, its size, and its dust -- live, the renderer's own uniforms

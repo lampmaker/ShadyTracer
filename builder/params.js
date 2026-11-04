@@ -60,7 +60,7 @@ export function sceneParams(doc, hooks = {}) {
             const r = owner.ranges?.[k] || gui(k) || {}
             /* a length is in the scene's unit (model.js setLength); a light's size and an export box's
                always are -- shown beside it, as the position's is. A relief's are real millimetres. */
-            const length = M.isLength(owner, k) || owner.type === 'light' || owner.type === 'export' || owner.type === 'haze'
+            const length = M.isLength(owner, k) || owner.type === 'light' || owner.type === 'haze'
             const base = { path: `scene/${owner.id}/${k}`, label: `${where} › ${gui(k).label ?? k}`, group: `scene · ${where}`,
                            reveal: reveal(owner.reveal ?? owner.id), kind: constant ? 'structural' : 'live',
                            ...(length ? { unit: owner.unit ?? unit } : {}) }
@@ -149,7 +149,6 @@ export function sceneParams(doc, hooks = {}) {
             return
         }
         transform(node, where)
-        if (node.type === 'export') { params(node, free(node, ['size']), where); return }
         if (node.type === 'haze') { params(node, free(node, ['size']), where); haze(node, where); return }
         if (node.type === 'light') {
             if (M.hasFace(node.light)) params(node, free(node, Object.keys(node.params || {})), where)

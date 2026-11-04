@@ -21,7 +21,7 @@ lights' rays also light the picture: a lens's spot on a screen shows in the pict
 ## A first run
 
 1. Open [LED, lens and screen](example:led-lens-screen.json): a 1 × 1 mm LED of 100 lm, a PMMA lens 25 mm across,
-   and a screen 250 mm away whose material is a **detector**.
+   and a screen 250 mm away that is a **detector** (its *optics analysis* box in Properties).
 2. **Analysis › Analysis setup** ([open it](cmd:analysis.setup)) opens the Analysis pane.
 3. Press **▶ Run**. The charts fill: the screen's illuminance map in lux, its profiles and rings, and the far field.
 4. Move the lens up or down in the picture, and press ▶ Run again, or switch **Live** on to have the analysis follow

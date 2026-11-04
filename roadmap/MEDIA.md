@@ -50,7 +50,8 @@ This is why a thin-limit "beam view" for the Optics view is phase 4, a visualisa
 ## Phase 1 — a haze box (0.62.0, built)
 
 What is in it, briefly (the README has the rest):
-- **Builder:** a `haze` node (`builder/hazebox.js`, scene format 22), one a scene, a box like the export box.
+- **Builder:** a `haze` node (`builder/hazebox.js`, scene format 22), one a scene. Asked in 0.next whether it could be a
+  material instead: no -- `hazebox.js`'s header says why (a material's walls stop the shadow rays the dust is lit by).
 - **Scene:** codegen hands it over as `scene.haze`, in the world, in the scene's unit.
 - **Engine:** DERIVED uniforms, and the kernels' code only for a scene with a box.
 - **The collision:** drawn as a leg starts and kept in the ray's `tmax`; the march stops the ray there (`RAY_SCATTER`).
@@ -102,7 +103,7 @@ checked. A JS mirror against a closed form would come first (`sppm.test.mjs`'s s
 glass slab. A beam radiance estimate along camera rays (Jarosz 2008) is far less noisy, but walks the hash grid along a
 ray. It is a later choice, measured.
 
-## Phase 3 — scattering inside materials (open)
+## Phase 3 — scattering inside materials (built 0.82.0: core/haze.js THE MEDIUM'S WALK; what follows was the plan)
 
 Milky glass, smoke in a dome, an opal diffuser at low density. The ray has to carry σ_s and g as well as the absorption
 it carries now (`muR/G/B`). That takes the Ray from 112 to 128 bytes: (2·112 + 272) = 496 → 544 bytes a ray, about 9 %

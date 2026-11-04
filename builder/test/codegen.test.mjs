@@ -406,11 +406,14 @@ ok('and none of scenes/common.js\'s override uniforms', !('matColorR' in built.u
        would become the base and be drawn. The optics copy has the plate. */
     {
         const d4 = Model.createDoc()
-        const lim = Model.addMaterial(d4, { id: 'lim', preset: 'diffuse' }); Model.setMaterialType(d4, lim.id, 'limiter')
+        Model.addMaterial(d4, { id: 'lim', preset: 'diffuse' })
         Model.addGroup(d4, 'root', { id: 'ap' })
         Model.addObject(d4, 'ap', { id: 'plate', primitive: 'box', material: 'lim' })
         Model.addObject(d4, 'ap', { id: 'hole', primitive: 'cylinder', join: 'subtract' })
+        Model.setOpticsRole(d4, 'plate', 'limiter'); Model.setFeatures(d4, { analysis: true })
         const g4 = generate(Model.toTree(d4))
+        eq('...the hole\'s wall stops the optics trace too: the group\'s shape takes its base\'s role, as its material',
+            g4.detectorTags.map(t => g4.opticsTags[t - 1]).sort(), ['hole', 'plate'])
         const render = g4.wgsl.slice(g4.wgsl.indexOf('fn SDF('))
         ok('a limiter base is an empty shape in the picture: its block draws nothing, then the base is taken',
             /node plate \(code\): an optics limiter, not in the picture[\s\S]*?k_ap = C\.s; km_ap = C\.m;/.test(render))
@@ -439,7 +442,7 @@ ok('and none of scenes/common.js\'s override uniforms', !('matColorR' in built.u
         ok(`${key}: in a group the menu and the library know`, SHAPE_GROUPS.some(g => g.key === def.group), String(def.group))
     }
     eq('code is the only kind of shape; a light, an export box and a haze box are the other object types (their shapes have to stay known)',
-        Object.keys(NODE_TYPES).sort(), ['code', 'export', 'haze', 'light'])
+        Object.keys(NODE_TYPES).sort(), ['code', 'haze', 'light'])
 
     /* A NEW PRIMITIVE AND A VERSION 8 NODE OF THE SAME TYPE COMPILE ALIKE. The upgrade gives an old
        file the code its type emitted (model.js v8to9); the library is where new ones start. Apart
@@ -630,13 +633,13 @@ eq('uniformName', uniformName('n7', 'radius'), 'radius_n7')
     const g = Model.addGroup(doc, 'root', { label: 'cut', blend: 0.1 })
     Model.addObject(doc, g.id, { primitive: 'box', label: 'base' })
     Model.addObject(doc, g.id, { primitive: 'sphere', label: 'hole', join: 'subtract' })
-    const x = Model.addExportBox(doc, 'root', { label: 'print' })
+    const x = Model.addHazeBox(doc, 'root', { label: 'dust' })
     const tree = Model.toTree(doc)
     const s = generate(tree, { cull: 'all' }), plain = generate(tree, { cull: false })
-    const top = tree.children.filter(n => n.type !== 'export')
+    const top = tree.children.filter(n => n.type !== 'haze')
     const tested = [...s.wgsl.matchAll(/let bd_(\w+) = cullDist\(/g)].map(m => m[1])
     eq('one box test per top-level node that draws something, and no deeper', tested.sort(), top.map(n => n.id).sort())
-    ok('...not for an export box (it draws nothing)', !tested.includes(x.id))
+    ok('...not for a haze box (it draws nothing)', !tested.includes(x.id))
     ok('...a CSG group tested as a whole, its children not', tested.includes(g.id) && !g.children?.some?.(c => tested.includes(c.id)))
     ok('each tested node\'s box declared, unknown (lo.w 0) until measured', top.every(n =>
         s.uniforms[boxLoName(n.id)]?.type === 'vec4<f32>' && JSON.stringify(s.uniforms[boxLoName(n.id)].def) === '[0,0,0,0]'
@@ -666,8 +669,9 @@ eq('uniformName', uniformName('n7', 'radius'), 'radius_n7')
 }
 
 //----------------------------------------------------------------------------------------------
-// OPTICS AND LIGHT (model version 10): detectors and limiters by MATERIAL id; a limiter only in the
-// optics copies; lights drawn as sheets with their own material, glowing for the camera's first look
+// OPTICS AND LIGHT: detectors and limiters by the OBJECT'S tag (0.next, version 27: its role; its material's type from
+// 10 to 26); a limiter only in the optics copies; lights drawn as sheets with their own material, glowing for the camera's
+// first look
 //----------------------------------------------------------------------------------------------
 {
     const at = z => ({ pos: { x: 0, y: 0, z }, rot: { x: 0, y: 0, z: 0 }, scale: 1 })
@@ -679,16 +683,23 @@ eq('uniformName', uniformName('n7', 'radius'), 'radius_n7')
     Model.addObject(d, 'root', { id: 'screen', primitive: 'disc', material: 'scr' })
     Model.addObject(d, 'root', { id: 'plane', primitive: 'rectangle', material: 'cut', transform: at(2) })
     const before = generate(Model.toTree(d))
-    eq('no roles, no detectors', before.detectors, [])
+    eq('no roles, no detectors', [before.detectors, before.detectorTags], [[], []])
     ok('no limiter: the optics copies are the render and pick copies',
         before.opticsWgsl === before.wgsl && before.opticsPickWgsl === before.pickWgsl)
-    Model.setMaterialType(d, 'scr', 'detector')
+    Model.setOpticsRole(d, 'screen', 'detector')
+    eq('a role with the scene\'s analysis off: nothing', generate(Model.toTree(d)).detectorTags, [])
+    Model.setFeatures(d, { analysis: true })
     const g = generate(Model.toTree(d))
-    eq('a detector is listed by its material id (the document\'s materials from 2)', g.detectors, [3])
-    ok('the render kernels compile the same text: a detector only matters to the optics trace', g.wgsl === before.wgsl)
-    Model.setMaterialType(d, 'cut', 'limiter')
+    const named = s => s.detectorTags.map(t => s.opticsTags[t - 1])
+    eq('a detector is listed by its tag in the optics copy (opticsTags[t - 1]), no material', [named(g), g.detectors], [['screen'], []])
+    ok('EVERY text the same: a detector is the scene\'s data, not its code (no compile)', ['wgsl', 'pickWgsl', 'opticsWgsl', 'opticsPickWgsl'].every(k => g[k] === before[k]))
+    Model.addObject(d, 'root', { id: 'screen2', primitive: 'disc', material: 'scr', transform: at(-2) })
+    eq('a second object of the same material is no detector until it is made one', named(generate(Model.toTree(d))), ['screen'])
+    Model.setOpticsRole(d, 'screen2', 'detector')
+    eq('...then two independent detectors', named(generate(Model.toTree(d))), ['screen', 'screen2'])
+    Model.setOpticsRole(d, 'plane', 'limiter')
     const h = generate(Model.toTree(d))
-    eq('a limiter is listed too', h.detectors, [3, 4])
+    eq('a limiter is listed too', named(h).sort(), ['plane', 'screen', 'screen2'])
     ok('...and is not in the picture', !/Nrectangle/.test(h.wgsl) && /Nrectangle/.test(h.opticsWgsl))
     ok('...nor in the pick copy, so a click never selects what cannot be seen', !h.tags.includes('plane') && h.opticsTags.includes('plane'))
     ok('its transform and parameters are still declared, for the builder to write', 'xf_plane' in h.uniforms && 'width_plane' in h.uniforms)
@@ -1866,7 +1877,6 @@ eq('uniformName', uniformName('n7', 'radius'), 'radius_n7')
     Model.addGroup(d, 'root', { id: 'pair' })
     Model.addObject(d, 'pair', { primitive: 'sphere' })
     Model.addLight(d, 'root', { id: 'lamp' })
-    Model.addExportBox(d, 'root', { id: 'print' })
     const tested = s => [...s.wgsl.matchAll(/let bd_(\w+) = cullDist\(/g)].map(m => m[1]).sort()
     const boxes = s => Object.keys(s.uniforms).filter(n => /^bx(lo|hi)_/.test(n)).sort()
     const on = generate(...Model.generateArgs(d, { id: 'dear', cull: 'all' })), dear = generate(...Model.generateArgs(d, { id: 'dear' }))

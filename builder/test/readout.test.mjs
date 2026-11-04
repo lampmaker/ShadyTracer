@@ -91,13 +91,11 @@ eq('...a node scaled: sizes to their own step', transformReadout(d, 'bx', { snap
     'grid 0.05 -- Ctrl snaps moves to it, sizes to 0.02; turns to 15\u00b0, scale to 0.1')
 eq('...and nothing said without one', transformReadout(d, 'pr').notes, [])
 
-// WHAT A CUBE CHANGES is shown, a length or not: a light's width and height, an export box's size
+// WHAT A CUBE CHANGES is shown, a length or not: a light's width and height
 {
     const L = M.addLight(d, 'root', { id: 'lamp', shape: 'rectangle', params: { width: 2, height: 0.5 } })
     const R = transformReadout(d, L.id)
     eq('a rectangle light: its width and height, though neither is marked a length', R.rows.slice(3).map(r => [r.label, texts(r)]), [['width', ['2.0000']], ['height', ['0.5000']]])
-    const X = M.addExportBox(d, 'root', { id: 'print' })
-    eq('an export box: its size', transformReadout(d, X.id).rows.slice(3).map(r => [r.label, texts(r)]), [['size', ['1.0000', '1.0000', '1.0000']]])
 }
 
 // LOCKED (model.js lockOf): said first among the notes, as it is why the picture has no handles for it

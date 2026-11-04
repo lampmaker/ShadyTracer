@@ -454,7 +454,15 @@ function productShot() {
 // OPTICAL DESIGN -- lights in lumens, detectors to read, the Analysis pane to run. All in mm but the luminaire.
 //----------------------------------------------------------------------------------------------------------------------
 
-const detector = (doc, label = 'detector') => own(doc, label, 'diffuse', { baseColor: RGB(0.8, 0.8, 0.8) }, 'detector')
+/* A DETECTOR IS AN OBJECT'S ROLE (0.next, builder/model.js OPTICS_ROLES): its material is a grey surface, and every object
+   wearing it is made a detector once the scene is built (detectorRoles below), with the scene's optics analysis on */
+const detector = (doc, label = 'detector') => { const id = own(doc, label, 'diffuse', { baseColor: RGB(0.8, 0.8, 0.8) }); (doc.$detectors ??= new Set()).add(id); return id }
+/** Every object wearing a detector() material made a detector, and the analysis that shows it on. */
+function detectorRoles(doc) {
+    if (!doc.$detectors?.size) return
+    M.walk(doc, n => { if (n.kind === 'object' && doc.$detectors.has(n.material)) M.setOpticsRole(doc, n.id, 'detector') })
+    M.setFeatures(doc, { analysis: true })
+}
 const black = doc => own(doc, 'black', 'diffuse', { baseColor: RGB(0.02, 0.02, 0.02) })
 
 /* LED, LENS, SCREEN: a 1 x 1 mm LED of 100 lm, a PMMA lens 25 mm across 30 mm above it, and a detector 200 mm away
@@ -691,7 +699,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
             continue
         }
         const { doc, camera, exposure } = make()
+        detectorRoles(doc)
         delete doc.$mats
+        delete doc.$detectors
         // the view in the file, whole (viewOf above): what the example is seen with whatever was shown before it
         M.setView(doc, viewOf(camera, exposure))
         const bad = M.validate(doc)
