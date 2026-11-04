@@ -32,7 +32,7 @@ sends twice the rays.
 
 ## Colour
 
-As **RGB**, as **CCT + Duv**, or as **CIE xy**, carried exactly ([Light in numbers](units.md#colour)). Several sources
+As **RGB**, as **CCT + Duv**, as **CIE xy**, or by its **spectrum**, carried exactly ([Light in numbers](units.md#colour)). Several sources
 of different colours mix exactly: [RGBW colour mixing](example:rgbw-mixing.json) has four. **Analysis › Colour
 mixing** picks three of the scene's lights, a target colour and a total flux, and sets their fluxes for it, in one
 undo step.

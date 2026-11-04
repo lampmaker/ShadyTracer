@@ -28,7 +28,9 @@ The library's optical materials, with catalogue values:
 **abbe**, the Abbe number V_d, makes the index depend on the wavelength (a Cauchy fit through n_d and V_d). A ray
 refracted into such a material takes a wavelength and that wavelength's colour, so white light fans out by colour. 0
 is no dispersion. Lower is more. Turning it on compiles once.
-See [Dispersion in a prism](example:prism-dispersion.json).
+See [Dispersion in a prism](example:prism-dispersion.json). The scene can switch dispersion off as a whole, in its
+[optical features](../modelling/materials.md#optical-features): every glass then refracts at n_d, here and in the
+picture, and the Abbe number is not shown. The same goes for the colour depth and coatings.
 
 ## Absorption: colour depth
 
@@ -50,7 +52,7 @@ Presets: dichroic reflecting red, dichroic reflecting blue, a 50/50 beam splitte
 
 A beam splitter's and an AR layer's reflectance is the same at every wavelength, so the trace is exact for them. A
 dichroic's edge is averaged over each colour channel's wavelengths, which approximates the spectrum
-([limits](limits.md)).
+([limits](limits.md)); traced [by wavelength](../modelling/materials.md#the-spectral-optics-trace), it is exact at each.
 
 ## Detectors
 

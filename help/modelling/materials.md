@@ -43,6 +43,38 @@ coatings, glow -- are in the [Material fields](../reference/materials.md) refere
 the picture follows. Three turn a feature on and compile the first time: the Abbe number, the colour depth, and a
 coating.
 
+## Optical features
+
+Those three are also the scene's to have or not. The scene's row in the tree has a box, **optical features**, with a
+switch for each:
+- **dispersion**: the Abbe number;
+- **absorption inside**: the colour depth;
+- **coatings**: the coating box;
+- **spectral optics trace**: the [Analysis pane](../optics/analysis.md)'s rays traced by wavelength rather than in
+  colour (below). It has no field of its own.
+
+A feature switched off is not traced at all, in the picture or on the Optics page, and its fields are not shown on any
+material. Their values are kept: switch it on and they are back. The box says which materials have a value it is
+hiding, for instance one a library glass brought in.
+
+**Basic** switches the first three off, for a scene that needs no more than colour and glass. **Full**, the default and
+every older scene, switches them on. **Expert** is Full with the spectral optics trace. Anything between reads Custom.
+Each change is a compile and one undo step.
+
+### The spectral optics trace
+
+Off, the Analysis pane's rays carry a colour, as the picture's do: red, green and blue. On, each ray carries three
+wavelengths, drawn afresh for every ray, and everything it meets is worked out at those wavelengths:
+- a material's colour, as a smooth spectrum of that colour;
+- a coating, at each wavelength rather than averaged over a channel (a dichroic's edge falls where it is);
+- dispersion, a ray taking one of its wavelengths at the first glass with an Abbe number.
+
+A detector then knows the [spectrum](../optics/charts.md#spectrum) it received, and its colour rendering index. A
+light given by its spectrum is traced with that spectrum, and one given by a CCT with Duv 0 as that blackbody. Any
+other light, a ray file's included, is traced as a spectrum of its exact colour, which the Spectrum chart says.
+
+The picture stays in colour whichever way this is set: it changes only the Analysis pane's trace.
+
 ## Glowing
 
 A **glowing** material makes any shape a light. Its brightness is a luminance in cd/m²: 300 is a monitor, 5000 a

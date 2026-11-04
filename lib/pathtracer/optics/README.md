@@ -38,7 +38,9 @@ The UI is `optics/page.js`, the Optics page beside Builder: the **Rays** (one ra
 | `illum.js` | illuminance read off a map: profiles, the radial profile, encircled flux (r50, r90), isolux lines, and the far field projected onto a plane (`virtualPlane`) |
 | `xychart.js`, `heatmap.js` | the raytracer's Profiles, Rings and Encircled flux panels, and its Map with isolux lines; a map of another quantity is drawn over its own range (`lo`..`hi`), a line chart can start where its values are (`yMin: 'auto'`) and breaks where a value is missing |
 | `quantities.js` | what a map shows: E, and from a map with colour each cell's CCT, x, y, Duv or Δu′v′ from a target (`quantityMap`), as a map of the same shape; or the light itself, painted in its own colour (`paint`: true colour, or colour only); adding a quantity is an entry in `MAP_QUANTITIES` |
-| `test/illum.test.mjs`, `test/charts.test.mjs` | the illuminance arithmetic against known maps; every chart drawn into a recording fake canvas |
+| `spectral.js` | the trace by wavelength: the draw, its tables (one storage buffer, `optSpectral`), a light's spectrum or a stand-in of its colour, and the spectral texts derived from the colour trace's |
+| `spectrum.js`, `spectrumchart.js` | what a detector received by wavelength (5 nm bins, xy, CCT, Duv, CRI with error bars), and a spectrum drawn: the Spectrum chart's and a light's in its Properties |
+| `test/illum.test.mjs`, `test/charts.test.mjs`, `test/spectrum.test.mjs` | the illuminance arithmetic against known maps; every chart drawn into a recording fake canvas; a detector's spectrum against the light's |
 | `cartesian.js` | I against γ on a signed angle axis that zooms to the light: for beams too narrow for the polar diagram (the I – γ panel) |
 | `test/farfield.test.mjs` | the far field against closed forms (Lambertian, cosⁿ), the binning, the polar scale (Node, no GPU) |
 | `test/optics.test.mjs` | the sampling against closed forms, and the tally decoding (Node, no GPU) |
@@ -191,11 +193,21 @@ ordinary emitter. The page turns the scene's lights into descriptions (`builder/
     channel's wavelengths (`core/spectral.js`). A beam splitter's or an AR layer's R is the same at every
     wavelength, so the trace is exact for it; a dichroic's edge is an approximation of the spectrum, the
     "looks right" method: it assumes the light in a channel is spread over its wavelengths as the channel's
-    weights say, whatever the source really emits. The exact way -- a wavelength per ray from the source's own
-    spectrum, CMFs at the detector -- is planned for this module (PLAN.md C). Bench: `optics-coating`.
+    weights say, whatever the source really emits. The exact way is the trace by wavelength (below). Bench:
+    `optics-coating`.
   - **Dispersion (0.40.0).** A material's Abbe number makes its index n(λ); a ray refracted into it takes a wavelength
     and that wavelength's colour, so a prism fans white light out by colour. The detectors read the colour (XYZ) of
     what arrives, as before -- not the wavelength. Bench: `optics-dispersion`.
+  - **By wavelength (0.next; `spectral.js`, `roadmap/LIGHT_MODEL.md` S0 and S2).** A scene with its optical feature
+    *Spectral optics trace* on (codegen's `scene.spectral`) compiles `prog_opt_gen` and `prog_opt_shade` from spectral
+    texts: each ray carries three wavelengths, u, u + 1/3 and u + 2/3 through the CDF of x̄ + ȳ + z̄ (u in the tag's
+    wavelength bits), and its `beta`'s three channels are their weights, S(λ)/(3 p(λ)), the light's spectrum at
+    luminance 1. A material's colour becomes a smooth spectrum at those wavelengths when it is read (`specMaterial`),
+    a coating's edge is evaluated at each, and dispersion collapses a ray to its first (tag bit 16). The tallies weigh
+    a ray by Σ c ȳ(λ), so lumens stay lumens; a detector hit keeps its weights (`DET_WORDS` 14), and `spectrum.js`
+    bins them for the Spectrum chart and the CRI. The texts are the colour trace's with anchors replaced, each exactly
+    once or a throw (`specialise`); the renderer and `prog_opt_photons` never see them, and with the feature off the
+    trace is byte for byte the colour trace. Bench: `optics-spectral`; on Dawn: `test/spectral.gpu.mjs`.
   - The maths is `core/colorimetry.js`: the Planckian locus (Krystek, as in the user's older luminaire
     tool), CCT and Duv both ways, and `mixToTarget`, three lights' fluxes for a target colour.
 - **Off the sheet, in its medium.** A sheet is geometry, so its rays start two march tolerances off it

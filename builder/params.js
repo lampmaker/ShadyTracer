@@ -112,7 +112,9 @@ export function sceneParams(doc, hooks = {}) {
         params({ id: mat.id, unit: 'mm', params: mat.params, constants: mat.constants, ranges: mat.ranges, lengths: mat.lengths },
                /* a coating's values only while it has one (materials.js coating): otherwise none is in the shader, and a
                   value moved would be a compile that changes nothing */
-               [...(M.MATERIAL_FIELDS_OF[M.typeOf(mat)] || []).filter(k => !M.MATERIAL_FIELDS[k].coat || M.hasCoating(mat.params)),
+               /* ...and a field of a feature the scene has off (model.js setFeatures): it is not in the shader at all */
+               [...(M.MATERIAL_FIELDS_OF[M.typeOf(mat)] || []).filter(k => (!M.MATERIAL_FIELDS[k].coat || M.hasCoating(mat.params))
+                   && M.fieldShown(doc, k)),
                 ...M.customParams(mat)], where,
                k => k in M.MATERIAL_FIELDS ? gui(k) : {})
         /* ITS RELIEF's, live as the material's own: the owner `<id>#relief`, whose uniforms are its own
@@ -179,6 +181,19 @@ export function sceneParams(doc, hooks = {}) {
         } else if (L.colourBy === 'xy') {
             add('xy', { label: 'CIE x, y', dims: 2, min: 0.001, max: 0.9, step: 0.0001,
                         get: () => { const c = M.lightOf(node).xy; return [c.x, c.y] } }, ([x, y]) => (x + y < 1 ? { xy: { x, y } } : {}))
+        } else if (L.colourBy === 'spectrum') {
+            /* A SPECTRUM (0.next; core/spd.js): a blackbody's temperature, or each peak's nm, FWHM and weight -- live, a
+               colour; a measured table's points are not numbers to move one at a time, so it has none here */
+            const S = L.spectrum ?? M.LIGHT_DEFAULTS.spectrum
+            if (S.kind === 'planck') add('spectrum', { label: 'blackbody temperature', unit: 'K', min: 1000, max: 15000, step: 10,
+                get: () => M.lightOf(node).spectrum?.T }, x => ({ spectrum: { kind: 'planck', T: Math.min(50000, Math.max(500, x)) } }))
+            if (S.kind === 'peaks') S.peaks.forEach((_, i) => add(`spectrum/peak${i + 1}`, { label: `peak ${i + 1} (nm, FWHM nm, weight)`, dims: 3, min: 0,
+                get: () => { const q = M.lightOf(node).spectrum?.peaks?.[i]; return q ? [q.nm, q.fwhm, q.weight] : [0, 0, 0] } }, ([nm, fwhm, weight]) => {
+                const peaks = structuredClone(M.lightOf(node).spectrum.peaks)
+                peaks[i] = { nm: Math.min(2500, Math.max(200, nm)), fwhm: Math.min(400, Math.max(0.001, fwhm)), weight: Math.max(0, weight) }
+                const next = { kind: 'peaks', peaks }
+                return M.spdProblems(next).length ? {} : { spectrum: next }
+            }))
         } else add('colour', { label: 'colour', dims: 3, min: 0, get: () => toArray(M.lightOf(node).colour) },
                    x => ({ colour: { r: x[0], g: x[1], b: x[2] } }))
         if (L.distribution === 'cosine') add('n', { label: 'n (cosⁿ)', min: 0, max: 200, step: 0.1, get: () => M.lightOf(node).n }, x => ({ n: x }))

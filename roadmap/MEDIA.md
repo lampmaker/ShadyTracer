@@ -113,7 +113,8 @@ to the camera through another. A dense diffuser (tens of scatters or more) is a 
 **The options and their costs are in `DIFFUSERS.md`** (2026-10-29), beside this file. It covers a translucent surface lobe
 for opal sheets, a forward lobe for narrow-angle films, and this phase as a material's medium for light guides and thick
 milky glass. It also explains why a scatter inside smooth glass can never sample a light, and why the Optics page needs
-no connections at all.
+no connections at all. Its colour axis (σ(λ), colour over angle, a phosphor in silicone) is `roadmap/LIGHT_MODEL.md`
+§4.3, step S7.
 
 ## Phase 4 — beams in the Optics view, and less noise (open)
 

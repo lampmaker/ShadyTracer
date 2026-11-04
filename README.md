@@ -174,7 +174,10 @@ for the help.
   glowing objects, the sun and sky off.
 - **Max Diffuse Bounces**, beside Max Bounces: a cap on the bounces off matte and glossy surfaces
   and dust only, so mirrors and glass are still followed; at 0 the picture is the direct light,
-  through lenses and mirrors too. And a **Dispersion** switch, for the picture only.
+  through lenses and mirrors too.
+- **Optical features per scene**: dispersion, absorption inside and coatings, each on or off for the
+  scene (Basic: none, Full: all). One off is not traced, in the picture or the optics, and its fields
+  are not shown on any material.
 - **⚡ Fast while moving**: Draft or Sketch while the camera, a handle or a value moves, the full
   picture again when it stops.
 - **The bake**: once your edits stand still, the scene is compiled again with its values as

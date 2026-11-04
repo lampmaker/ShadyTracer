@@ -30,6 +30,17 @@ What each field of a material does. Every field is live -- a slider moves the pi
 | emissive | colour | An emitter's colour. Only its hue counts: the brightness is the luminance. |
 | emissiveLuminance | luminance (cd/m²) | An emitter's brightness in cd/m²: 300 a monitor, 5000 a frosted bulb, 20 000 a fluorescent tube, 1.6 billion the sun. |
 
+## Optical features
+
+The scene's [optical features](../modelling/materials.md#optical-features) decide which of these a scene has. With one off, its fields are not shown or traced, and their values are kept.
+
+| feature | fields | does |
+|---|---|---|
+| Dispersion | Abbe number (dispersion) | Glass with an Abbe number splits white light into its colours where it refracts: prisms, a lens's colour fringes. Off, every glass bends all colours alike, at its index, and its Abbe number is not shown -- no fringes, and none of the colour noise they take to settle. |
+| Absorption inside | colour depth (mm) | A material's colour depth: light inside glass or a liquid filtered to its colour over that depth, so a thick part is deeper in colour than a thin one. Off, the colour tints a ray at each crossing, whatever the thickness, and the colour depth is not shown. |
+| Coatings | coating, R below edge, R above edge, edge (nm), edge width (nm), stack index | Thin-film coatings in place of a surface's own reflection: dichroics, beam splitters, anti-reflective layers. Off, every surface reflects as its index says, and the coating box is not shown. |
+| Spectral optics trace | (none: the trace itself) | The Optics page traces each ray at three wavelengths of its light's spectrum, instead of as a colour: coatings and coloured glass act by wavelength, and a detector records the spectrum it receives -- its Spectrum chart, its colour rendering index. The picture is unchanged. Each ray's brightness is now a draw of its wavelengths, so a reading takes more rays to settle (1 200 to 2 700 rays for a colour within 0.001 u'v', on the cases worked out), where the colour trace was off by 6 to 10 % through a sharp filter; off, the trace is the colour trace it always was. |
+
 ## Starting points
 
 The Properties panel's **+** makes a material from one of these: *diffuse*, *plastic*, *metal*, *mirror*, *glass*, *glowing*. The Library has many more, with real values.
