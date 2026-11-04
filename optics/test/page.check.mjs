@@ -65,7 +65,7 @@ let failed = 0
 const ok = (n, c, x = '') => { if (!c) failed++; console.log((c ? 'ok    ' : 'FAIL  ') + n + (c ? '' : '  ' + x)) }
 await p.goto(`http://localhost:${port}/optics/test/page.html`); await p.waitForTimeout(900)
 
-const KEYS = ['map', 'polar', 'igamma', 'profiles', 'rings', 'encircled']
+const KEYS = ['map', 'polar', 'igamma', 'profiles', 'rings', 'encircled', 'spectrum']
 /* a chart by its id less 'optics.': 'map' is the first map, 'map.2' the one made after it. Its strip
    (lib/pathtracer/strip.js): each control SHOWN, by what it sets (data-key), and what it says -- a dropdown's
    chosen text, a segmented choice's lit word, a field's value; its actions shown, by their tooltips */
@@ -184,7 +184,7 @@ ok('back to the light\'s axis: the vector\'s row goes', await dataSelect('axis',
    && await asked() === JSON.stringify([[0, 0, 1], [1, 0, 0]]), `${await asked()} ${(await paneRows()).join('|')}`)
 // EACH CHART'S OWN CONTROLS, on it (the user, 2026-10-02), and none of them in the pane
 const WANT = { map: ['q', 'isolines'], polar: ['planes', 'log', 'view'], igamma: ['planes', 'log', 'span'],
-               profiles: ['about', 'q'], rings: ['about', 'q'], encircled: ['about'] }
+               profiles: ['about', 'q'], rings: ['about', 'q'], encircled: ['about'], spectrum: ['scale'] }
 ok('every chart has its own strip, first, with its controls and only those that apply', KEYS.every(k => st.bars[k]?.first && WANT[k].join() === st.bars[k].labels.join()),
    JSON.stringify(Object.fromEntries(KEYS.map(k => [k, st.bars[k]?.labels]))))
 ok('...each saying its value itself', st.bars.map.fields.q === 'Illuminance' && st.bars.map.fields.isolines === 'steps' && st.bars.polar.fields.planes === '0, 90'
@@ -245,6 +245,38 @@ st = await state()
 ok('pointing at the map reads the cell', /lx/.test(st.readouts.map), JSON.stringify(st.readouts))
 ok('...and the rings and encircled flux read the same radius', /ring at r/.test(st.readouts.rings) && /within r/.test(st.readouts.encircled), JSON.stringify(st.readouts))
 ok('...and the far field\'s charts let go of theirs', !st.readouts.polar, JSON.stringify(st.readouts))
+
+// THE SPECTRUM (0.next): a trace in colour has none -- the chart says where to switch it on, and reads nothing
+ok('a trace in colour: the spectrum reads nothing', st.readouts.spectrum === '', JSON.stringify(st.readouts.spectrum))
+ok('...its strip: rel or W/nm, and a CSV to save', st.bars.spectrum.fields.scale === 'rel' && st.bars.spectrum.tools.some(t => t.startsWith('Save the spectrum (CSV)')),
+   JSON.stringify(st.bars.spectrum))
+const specPx0 = await pixels('spectrum')
+await p.evaluate(() => { CHECK.O.spectralHits = true })
+await p.click('.shell-runbar button'); await p.waitForTimeout(1200)
+st = await state()
+ok('a trace by wavelength: the spectrum drawn, its colour and CRI said, of the detector\'s hits', (await pixels('spectrum')) !== specPx0
+   && /x 0\.\d{4} y 0\.\d{4}/.test(st.readouts.spectrum) && /Ra -?\d+ ± \d+ · R9 -?\d+ ± \d+/.test(st.readouts.spectrum) && /\d+ hits/.test(st.readouts.spectrum),
+   st.readouts.spectrum)
+;[x, y] = await at('spectrum', 0.5, 0.5)
+await p.mouse.move(x, y); await p.waitForTimeout(150)
+const specHover = await pixels('spectrum')
+;[x, y] = await at('spectrum', 0.3, 0.5)
+await p.mouse.move(x, y); await p.waitForTimeout(150)
+ok('...pointed at, drawn again at the wavelength under the pointer', (await pixels('spectrum')) !== specHover)
+ok('...W/nm: its own axis', await choose('spectrum', 'scale', 'W/nm') && (await p.waitForTimeout(150), (await state()).bars.spectrum.fields.scale === 'W/nm'))
+const spDl = p.waitForEvent('download', { timeout: 5000 }).catch(() => null)
+await p.evaluate(() => [...CHECK.el['optics.spectrum'].querySelectorAll('.chart-strip > button')].find(b => b.title.startsWith('Save the spectrum'))?.click())
+const spFile = await spDl
+const spText = spFile ? await (await import('node:fs/promises')).readFile(await spFile.path(), 'utf8') : ''
+ok('...saved: nm and W/nm, every 5 nm from 360 to 830', spFile?.suggestedFilename() === 'spectrum.csv' && /^nm,W_per_nm$/m.test(spText)
+   && /^360,/m.test(spText) && /^830,/m.test(spText) && spText.trim().split('\n').length === 2 + 95, spText.slice(0, 200))
+await p.evaluate(() => { CHECK.O.layout = { ownSpectrum: [false] } })
+await choose('spectrum', 'scale', 'rel'); await p.waitForTimeout(150)
+ok('...a light given by its colour said as a stand-in', /stands in/.test((await state()).readouts.spectrum), (await state()).readouts.spectrum)
+await p.evaluate(() => { CHECK.O.layout = undefined; CHECK.O.spectralHits = false })
+await p.click('.shell-runbar button'); await p.waitForTimeout(1200)
+st = await state()
+ok('...and a trace in colour again: nothing', st.readouts.spectrum === '', st.readouts.spectrum)
 
 // A CHART'S STRIP: a choice that brings a control of its own, a field typed
 ok('I – γ\'s log scale', await choose('igamma', 'log', 'log')); await p.waitForTimeout(200)

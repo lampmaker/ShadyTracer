@@ -17,8 +17,8 @@
 //             number the mean over the batches with the standard error from their spread. Its result
 //             is kept here (ANA), apart from the module's own, which every trace -- the rays' too --
 //             replaces.
-//   CHARTS    PANELS OF THEIR OWN, of six kinds: the map, the polar diagram, I against gamma, the
-//             profiles, the rings, the encircled flux. Each is a line of ITS OWN CONTROLS -- what it
+//   CHARTS    PANELS OF THEIR OWN, of seven kinds: the map, the polar diagram, I against gamma, the
+//             profiles, the rings, the encircled flux, the spectrum. Each is a line of ITS OWN CONTROLS -- what it
 //             shows and how, its saves, ⧉ and ✕ -- over a canvas, with one line of readout under the
 //             pointer. One of each always; MORE OF A KIND MADE AT WILL (a chart's ⧉, or Optics › New
 //             chart), each with its own settings -- an illuminance map beside a CCT map (charts.js: the
@@ -50,6 +50,8 @@ import { drawXY, xyAt, nearestX, ticks } from '../lib/pathtracer/optics/xychart.
 import { drawHeatmap, heatmapAt } from '../lib/pathtracer/optics/heatmap.js'
 import { quantityMap, quantitiesOf, MAP_QUANTITIES, cellChroma } from '../lib/pathtracer/optics/quantities.js'
 import { chartStrip, saveCanvases, saveText } from '../lib/pathtracer/strip.js'
+import { detectorSpectrum, spectrumCSV } from '../lib/pathtracer/optics/spectrum.js'
+import { drawSpectrum, spectrumAt } from '../lib/pathtracer/optics/spectrumchart.js'
 import { stampedName } from '../lib/filename.js'
 import { icon, iconButton, iconPill, lit } from '../lib/pathtracer/icons.js'
 import { OPTICS_CHARTS, FAR_CHARTS, MAP_CHARTS, chartSet } from './charts.js'
@@ -94,7 +96,7 @@ const RAYS_MAX = 5e7
  * @param tableIn   (el, opts) -> a property table in it, in the host's style; opts the table's own (`boxes`)
  * @param charts    { set, el: { [id]: the chart panel's element }, onVisible(id, fn(seen)),
  *                  add(chart, nearId) -> element, remove(id) } -- the host's panels, one per chart of `set`
- *                  (charts.js chartSet; without one, the six kinds' first alone). `add` registers a panel for a
+ *                  (charts.js chartSet; without one, the seven kinds' first alone). `add` registers a panel for a
  *                  chart made here and opens it beside nearId's; `remove` lets an added one's go. Without `add`
  *                  no chart is made here. A chart without an element is simply not drawn.
  * @param optics    optional: the optics module to use instead of making one (a test's stand-in)
@@ -676,7 +678,7 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
     /* THE POINTER, shared: an angle on the far field's charts, and on the map's a place on the map (every map
        marks it: two maps side by side are read at the same place), a radius about its point (rings and encircled
        flux mark the same one) or a profile's x */
-    const hover = { angle: null, pos: null, r: null, px: null }
+    const hover = { angle: null, pos: null, r: null, px: null, nm: null }
     const draw = (...ids) => {
         for (const id of ids) {
             const p = panes[id]
@@ -775,7 +777,7 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
             const offB = m0.axisNames ? m0.origin[0] * m0.v[0] + m0.origin[1] * m0.v[1] + m0.origin[2] * m0.v[2] : 0
             const m = { ...m0, range: { a: [m0.range.a[0] + offA, m0.range.a[1] + offA], b: [m0.range.b[0] + offB, m0.range.b[1] + offB] },
                         lengthUnit: RT.scene?.unit ?? 'units', axisNames: m0.axisNames ?? ['u (fitted)', 'v (fitted)'] }
-            v = { m, covers, name: nameOfTag(tag, `tag ${tag}`) }
+            v = { m, list, covers, name: nameOfTag(tag, `tag ${tag}`) }
         }
         ilMemo = { key, hits, v }
         return v
@@ -826,6 +828,29 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
         : s.isolines === 'relative' ? [0.1, 0.25, 0.5, 0.75, 0.9].map(f => V.isE ? f * V.qm.hi : V.qm.lo + f * (V.qm.hi - V.qm.lo))
         : ticks(V.isE ? 0 : V.qm.lo, V.qm.hi, 5).filter(v => v > (V.isE ? 0 : V.qm.lo) && v < V.qm.hi)
     const pos = (V, v) => `${num(v)} ${V.lu}`
+    /* WHAT THE MAP'S PLACE RECEIVED BY WAVELENGTH (0.next): the hits the map is made of -- the detector chosen, zoomed or
+       whole -- binned (optics/spectrum.js), once a map. A trace in colour has no wavelengths to bin: the chart says where
+       the trace by wavelength is switched on. */
+    let SPM = { m: null, S: null }
+    const spectrumView = () => {
+        if (isPlane()) return { why: 'The far field on a plane has no spectrum: choose a detector (Detector › map of) for the light it received.' }
+        const cur = currentIllum()
+        if (!cur?.m) return { why: cur?.why ?? '' }
+        if (SPM.m !== cur.m) SPM = { m: cur.m, S: detectorSpectrum(cur.list.filter((h, i) => cur.m.within[i])) }
+        if (!SPM.S) return { why: 'This trace was in colour, not by wavelength. For the spectrum a detector received, switch on '
+                                  + 'Spectral optics trace in the scene\'s Optical features (Builder, the scene\'s row; or Expert), then ▶ Run.' }
+        return { cur, S: SPM.S }
+    }
+    const standIn = () => (O.layout?.ownSpectrum ?? []).some(own => !own)
+    const spectrumLine = (V, S) => {
+        const r = S.cri, se = S.criSe, f = (v, e) => `${Math.round(v)}${e != null ? ` ± ${Math.max(1, Math.round(e))}` : ''}`
+        return [S.xy ? `x ${S.xy[0].toFixed(4)} y ${S.xy[1].toFixed(4)}` : '',
+                S.cct != null ? `${Math.round(S.cct)} K Duv ${S.duv >= 0 ? '+' : ''}${S.duv.toFixed(4)}` : 'no CCT',
+                r ? `Ra ${f(r.Ra, se?.Ra)} · R9 ${f(r.R[8], se?.R9)}${r.valid ? '' : ` (DC ${r.dc.toExponential(1)}: past 5.4e-3, the index means little)`}` : 'no CRI (no CCT)',
+                `${num(S.W)} W · ${S.hits} hits`, V.cur.covers === 'zoomed' ? 'zoomed' : '',
+                standIn() ? 'a light given by its colour stands in as a spectrum of that colour: give it a spectrum for its own' : '']
+            .filter(Boolean).join(' · ')
+    }
 
     const DRAW = {
         polar: farChart((c, o, s) => drawPolar(c, { ...o, view: s.view })),
@@ -869,6 +894,14 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
             p.readout.textContent = q ? `ring at r ${pos(V, q.x)}: ${pm(q.y, q.se)} ${V.qm.unit} (${q.cells} cells${q.full ? '' : ', past the map\'s edge'})` : ''
             return L
         },
+        spectrum: p => {
+            const V = spectrumView()
+            if (!V.S) return blank(p, V.why)
+            const L = drawSpectrum(p.c, { values: V.S.values, lo: V.S.lo, step: V.S.step, hover: hover.nm,
+                                          unit: p.s.scale === 'absolute' ? 'W/nm' : '', title: V.cur.name })
+            p.readout.textContent = spectrumLine(V, V.S)
+            return L
+        },
         encircled: p => {
             const V = mapView()
             if (!V.m) return blank(p, V.why)
@@ -899,6 +932,7 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
         profiles: (p, L, x, y) => { hover.px = xyAt(L, x, y); drawKinds('profiles') },
         rings: (p, L, x, y) => { hover.r = xyAt(L, x, y); hover.pos = null; drawKinds('rings', 'encircled') },
         encircled: (p, L, x, y) => { hover.r = xyAt(L, x, y); hover.pos = null; drawKinds('rings', 'encircled') },
+        spectrum: (p, L, x) => { const nm = spectrumAt(L, x); if (nm !== hover.nm) { hover.nm = nm; drawKinds('spectrum') } },
     }
 
     /* A CHART'S PANEL, filled: the host's, at the start or when a chart is made here. Its own strip along the
@@ -919,7 +953,7 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
         cv.addEventListener('pointermove', e => { const r = cv.getBoundingClientRect(); if (p.layout) MOVE[p.type](p, p.layout, e.clientX - r.left, e.clientY - r.top) })
         cv.addEventListener('pointerleave', () => {
             if (p.drag) return                    // held: the pointer is captured, and comes back
-            Object.assign(hover, { angle: null, pos: null, r: null, px: null })
+            Object.assign(hover, { angle: null, pos: null, r: null, px: null, nm: null })
             if (FAR_CHARTS.includes(p.type)) drawFarCharts(); else drawMapCharts()
         })
         if (p.type === 'map') mapPointer(p)
@@ -1020,6 +1054,11 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
         igamma: [['table', 'Save the intensity table (CSV)', farCSV]],
         map: [['table', 'Save the map (CSV)', ilCSV],
               ['download', 'Save the detector hits the analysis kept (CSV): position, flux, direction, object, colour', hitsCSV]],
+        spectrum: [['table', 'Save the spectrum (CSV): nm, W/nm', () => {
+            const V = spectrumView()
+            if (!V.S) return say(V.why)
+            saveText(spectrumCSV(V.S, V.cur.name), 'spectrum.csv')
+        }]],
     }
     /* A CHART'S OWN STRIP (lib/pathtracer/strip.js), on the chart: the user, 2026-10-02, "put the controls for the
        chart (what it shows) into the chart itself. Not in the analysis pane" -- with two maps side by side, each
@@ -1088,6 +1127,9 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
                 options: [{ value: 'lux', text: 'steps', tip: 'Isolines at round steps' }, { value: 'relative', text: '%', tip: 'Isolines at 10, 25, 50, 75 and 90 % of the range' },
                           { value: 'off', text: 'off', tip: 'No isolines' }] })
             back = S.action('back', 'Zoomed: back to the whole detector (or double-click the map)', () => { IL.zoom = null; mapChanged() })
+        } else if (type === 'spectrum') {
+            S.choice('scale', { tip: 'The power axis', get: () => s.scale, set: keep('scale', go),
+                options: [{ value: 'relative', text: 'rel', tip: 'Relative to its peak' }, { value: 'absolute', text: 'W/nm', tip: 'Watts per nanometre' }] })
         } else {
             S.choice('about', { tip: 'The point the profiles, rings and encircled flux are taken about: one for all of them. Press on a map to put it there.',
                 get: () => IL.through, set: v => { IL.through = v; syncAbout(); drawMapCharts(); results() },
@@ -1366,7 +1408,7 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
                              secs, live, rounds })
         if (map) {
             const n = Math.max(1, kept)
-            lastMap = { hits: hits.map(h => ({ ...h, flux: h.flux / n, xyz: h.xyz?.map(v => v / n) })), unit: 'lm', note: ` from ${kept} of ${r.batches} batches` }
+            lastMap = { hits: hits.map(h => ({ ...h, flux: h.flux / n, xyz: h.xyz?.map(v => v / n), ...(h.w ? { w: h.w.map(v => v / n) } : {}) })), unit: 'lm', note: ` from ${kept} of ${r.batches} batches` }
         }
         buildData()
         render(r); farRead(); if (map) drawMapCharts(); results(); sayWhen()

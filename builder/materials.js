@@ -120,8 +120,9 @@ export const FEATURES = {
     spectral: { label: 'Spectral optics trace', fields: [], hides: null, def: false,
         help: 'The Optics page traces each ray at three wavelengths of its light\'s spectrum, instead of as a colour: coatings '
             + 'and coloured glass act by wavelength, and a detector records the spectrum it receives -- its Spectrum chart, its '
-            + 'colour rendering index. The picture is unchanged. A little more colour noise per ray than the colour trace; '
-            + 'off, the trace is the colour trace it always was.' },
+            + 'colour rendering index. The picture is unchanged. Each ray\'s brightness is now a draw of its wavelengths, so a '
+            + 'reading takes more rays to settle (1 200 to 2 700 rays for a colour within 0.001 u\'v\', on the cases worked out), where '
+            + 'the colour trace was off by 6 to 10 % through a sharp filter; off, the trace is the colour trace it always was.' },
 }
 /** A feature's default: on, but for one that says otherwise (spectral). */
 export const featureDefault = k => FEATURES[k]?.def ?? true
