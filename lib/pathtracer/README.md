@@ -383,7 +383,7 @@ pdf, so light sampling and BSDF sampling can be weighted against each other hone
 - **Dispersion** (0.40.0; `Material2.abbe`, `core/spectral.js`): an Abbe number beside the index (n_d), n(λ)
   Cauchy's through both. A ray refracted INTO a dispersive medium draws a wavelength there and weighs its channels by
   it (mean 1 in each); every index it meets after is n(that wavelength). It rides in `Ray.tag`'s upper 16 bits
-  (`TAG_LAMBDA_MASK`: a new flag stays below bit 16). The pick and Fresnel at that first refraction are the d line's,
+  (`TAG_LAMBDA_MASK`: a new flag stays below bit 17, and bit 16 is `TAG_LENS_X` since 0.next). The pick and Fresnel at that first refraction are the d line's,
   so reflections stay white.
 - **Transmission** refracts with the same IOR (the ray's current IOR from the path, the other
   side's from the material, or an SDF probe for glass), reflecting by the exact Fresnel. Rough
@@ -616,6 +616,18 @@ went in 0.61.0, when the photon map (below) went on by default and owned the cla
 **The manifold connection (0.44.0 to 0.60.0)** went with it: a photon landing on a surface *inside* glass joined to the
 camera through one refraction, found by Newton's method on the face in the surface kernel (12.7k characters of WGSL
 there, and 16 bytes of every shade-queue item). The map gathers that light too, through any chain of glass and mirrors.
+**A light with no face, seen through the lens (0.next; `lens.js`).** The lens's photons came back for one kind of light:
+a ray file, or a source that is only a description, which is no geometry -- no camera ray can meet it, nothing lands on
+it for the map to gather, and its photons connected only from the surfaces they landed on, so through any aperture the
+light itself was dark (the user, 2026-11-04). Such a photon carries `Ray.ltMis` `LT_FACELESS` (-2) while only delta
+events have turned it (-1 after any other: `pathEnd`, a point in the dust, a collision in a material). The march marks
+the step that takes it across the disc (`lensCrossed`: a step is free space, so a crossing is unblocked) with
+`TAG_LENS_X`, bit 16; shade, where the leg ends, queues a connection of length 0 at the crossing carrying
+`Phi / (A_px A_L cos^4)` for the pixel its ray through the lens meets (`lensArrival`), and a photon that left the scene
+short of the lens -- a camera outside the scene's radius -- is tested ahead of it, since nothing is out there. The
+occlusion kernel deposits it unclamped: it is the light itself. A pinhole has no disc to cross: still dark. A ray file
+is its rays, and only those that point into the aperture can ever be seen there (`lenslight.gpu.mjs`: of a file of 2^20
+rays from a 25 cm disc, 4965 crossed a 10 cm lens at 1 m).
 
 **Through glass and mirrors, the photon map (0.60.0, on by default since 0.61.0; `core/sppm.js`).** The class light ->
 delta+ -> D -> delta+ -> eye -- a floor in air behind a glass pane, lit through it and seen through it (the user's picture,

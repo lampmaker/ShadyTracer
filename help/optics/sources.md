@@ -51,5 +51,9 @@ flux-only and spectral records, in any of their units, in the file's own placeme
 flux is the file's unless you give one. The file is kept in the browser by its name, so a reload keeps it. A
 malformed file is refused, with the numbers that are wrong.
 
-A ray file has no face: the camera does not see it glow, and only its rays light the picture. With **Render settings ›
-Lights' rays** off, it lights nothing ([limits](limits.md)).
+A ray file has no face: the camera's rays cannot meet it, and only its rays light the picture. **Through a lens with an
+aperture** (the Camera's aperture above 0) you see the light itself: each of its rays that crosses the lens lands on the
+picture where a real camera would put it, straight from the file or in a mirror or through clear glass. Only the
+file's rays that point into the aperture can ever do that, so a small aperture, or a file of few rays, shows the light
+as specks; a larger aperture shows more of them. Through a pinhole (aperture 0) it does not show at all. With
+**Render settings › Lights' rays** off, it lights nothing ([limits](limits.md)).
