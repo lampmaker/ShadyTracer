@@ -42,7 +42,8 @@ A light's colour can be given four ways, each exact:
 
 A **Zemax ray file with a wavelength per ray** (its format 2) takes the colour its rays add up to, each at its own
 wavelength and by its flux. A flux-only file stays white, whatever wavelength its header names, because many
-photometric files put a placeholder there. **In the picture** each ray of such a file lights what it reaches in its
+photometric files put a placeholder there; choose **its header's wavelength** as its colour when the header means it
+([sources](sources.md#zemax-ray-files)). **In the picture** each ray of such a file lights what it reaches in its
 own wavelength's colour, so where the colour of the light changes with direction (a white LED bluer straight on and
 yellower to the side, say) the picture shows it. Glass refracts each such ray at its own index, and a coating reflects
 it as its edge does at that wavelength. A ray outside what the eye sees carries no light. In a file in lumens each

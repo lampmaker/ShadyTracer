@@ -160,10 +160,10 @@ export const ARRAY_MAX = 16
 export const MATERIAL_TYPES = ['surface', 'emitter', 'detector', 'limiter']
 /** The type of a material, with the default filled in. */
 export const typeOf = m => m?.type ?? 'surface'
-export { LIGHT_SHAPES, LIGHT_DEFAULTS, lightOf, hasFace, lightRGB, lightDisplayRGB, lightChromaticity } from './lights.js'
+export { LIGHT_SHAPES, LIGHT_DEFAULTS, lightOf, lightDefaults, hasFace, lightRGB, lightDisplayRGB, lightChromaticity } from './lights.js'
 /* a light's spectrum (0.next): its kinds, the presets, reading and writing its text -- for the panel (core/spd.js) */
 export { SPD_PRESETS, spdAt, spdProblems, spdSummary, parsePeaks, parseSpdCsv, peaksText, tableText } from '../lib/pathtracer/core/spd.js'
-import { LIGHT_SHAPES, LIGHT_DEFAULTS, lightOf, lightProblems, rotationTowards } from './lights.js'
+import { LIGHT_SHAPES, LIGHT_DEFAULTS, lightOf, lightDefaults, lightProblems, rotationTowards } from './lights.js'
 export { EXPORT_PARAMS, EXPORT_DEFAULTS, exportOf } from './exportbox.js'
 import { EXPORT_PARAMS, EXPORT_DEFAULTS, exportProblems } from './exportbox.js'
 export { HAZE_PARAMS, HAZE_DEFAULTS, hazeSettings } from './hazebox.js'
@@ -2097,8 +2097,9 @@ export function setLight(doc, id, patch) {
 /* A LIGHT'S SETTINGS WITH `patch` OVER THEM, as stored (a setting at its default dropped) and checked: { next, bad } */
 function lightPatched(node, patch) {
     const next = { ...node.light, ...structuredClone(patch), shape: node.light.shape }
+    const D = lightDefaults(next.shape)                // per shape: a ray file's colour is from its file by default
     for (const [k, v] of Object.entries(next))
-        if (v === undefined || (k in LIGHT_DEFAULTS && JSON.stringify(v) === JSON.stringify(LIGHT_DEFAULTS[k]))) delete next[k]
+        if (v === undefined || (k in D && JSON.stringify(v) === JSON.stringify(D[k]))) delete next[k]
     return { next, bad: lightProblems({ ...node, light: next }) }
 }
 /* ...FOR A BINDING (bind.js applyBindings, 0.69.0): an object's components over what the light has now (a colour's r alone,

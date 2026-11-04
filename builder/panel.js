@@ -46,6 +46,7 @@ import { shapesOf, isCsg } from './codegen.js'
 import { recipeOf, parseRecipe, applyRecipe } from './recipe.js'
 import { RAYFILES, rayBox } from '../optics/rayfiles.js'
 import { raysXYZ } from '../lib/pathtracer/optics/zemax.js'
+import { rayFileColour } from '../lib/pathtracer/optics/sources.js'
 import { XYZtoxy, xyToCctDuv } from '../lib/pathtracer/core/colorimetry.js'
 import { drawSpectrum } from '../lib/pathtracer/optics/spectrumchart.js'
 import { cri } from '../lib/pathtracer/core/cri.js'
@@ -984,6 +985,10 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
                 }
                 input.click()
             })
+            /* ITS COLOUR (0.next): from the file, its header's wavelength, or any of a rectangle's four ways -- the same rows,
+               with the file's two first (lights.js RAYFILE_COLOUR_BY; optics/sources.js rayFileColour says what each
+               comes to, and the line under them says it for this file) */
+            colourBindings(f, node, L, set, H, parsed)
             const V = { own: L.flux != null, flux: L.flux ?? parsed?.total ?? 0, emitN: L.emitN }
             H.tip(f.addBinding(V, 'own', { label: 'set the flux', ...H.opts('flux') }).on('change', ev => set({ flux: ev.value ? (V.flux || 1) : null }, 'reshow')), 'flux')
             const lp = k => `scene/${node.id}/light/${k}`
@@ -1021,7 +1026,8 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
        other numbers -- the colour the Optics page and the picture's photons give it. A flux-only file has none of its own. */
     function spectralLine(parsed) {
         const c = raysXYZ(parsed)
-        if (!c) return parsed?.header?.format === 2 ? ['its wavelengths are outside what the eye sees: traced white'] : []
+        // (what that means for its colour is the colour rows' line, below: rayFileColour)
+        if (!c) return parsed?.header?.format === 2 ? ['its wavelengths are outside what the eye sees'] : []
         const xy = XYZtoxy(c.xyz), cd = xyToCctDuv(xy[0], xy[1])
         return [`colour from its ${c.rays.toLocaleString()} rays' wavelengths: x ${xy[0].toFixed(4)} y ${xy[1].toFixed(4)}`
             + (cd.inRange && Math.abs(cd.duv) <= 0.05 ? ` · ${Math.round(cd.cct)} K` : '')]
@@ -1041,10 +1047,16 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
        spectrum (0.next; core/spd.js), below in spectrumBindings. Below them, what it comes to in the other
        terms. Switching the way keeps the colour: the new fields start at the current colour's own values
        (a spectrum a blackbody at its CCT, or a table of the current spectrum). */
-    function colourBindings(f, node, L, set, H = lightHeld(node)) {
+    /* A RAY FILE (0.next; `parsed`, its file as RAYFILES holds it, or null): two more ways first, from the file and at its
+       header's wavelength, and for those the line says what this file comes to (optics/sources.js rayFileColour) */
+    function colourBindings(f, node, L, set, H = lightHeld(node), parsed = undefined) {
         const ch = M.lightChromaticity(L)
         const C = { by: L.colourBy, colour: { ...L.colour }, cct: L.cct, duv: L.duv, x: L.xy.x, y: L.xy.y }
-        H.tip(f.addBinding(C, 'by', { label: 'colour by', options: { 'RGB': 'rgb', 'CCT + Duv': 'cct', 'CIE xy': 'xy', 'spectrum': 'spectrum' }, ...H.opts('colour', 'cct', 'duv', 'xy') }), 'colour', 'cct', 'duv', 'xy')
+        const rayfile = L.shape === 'rayfile'
+        const hdr = parsed?.header?.wavelength
+        const options = { ...(rayfile ? { 'from the file': 'file', [`its header's wavelength${hdr ? ` (${(hdr * 1000).toFixed(0)} nm)` : ''}`]: 'wavelength' } : {}),
+                          'RGB': 'rgb', 'CCT + Duv': 'cct', 'CIE xy': 'xy', 'spectrum': 'spectrum' }
+        H.tip(f.addBinding(C, 'by', { label: 'colour by', options, ...H.opts('colour', 'cct', 'duv', 'xy') }), 'colour', 'cct', 'duv', 'xy')
             .on('change', ev => {
                 const patch = { colourBy: ev.value }
                 if (ev.value === 'cct' && ch.inRange) Object.assign(patch, { cct: Math.round(ch.cct), duv: +Math.max(-0.05, Math.min(0.05, ch.duv)).toFixed(4) })
@@ -1059,7 +1071,10 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
             + (c.inRange ? ` · ${Math.round(c.cct)} K, Duv ${c.duv >= 0 ? '+' : ''}${c.duv.toFixed(4)}` : '')
             + (c.ler !== undefined ? ` · ${c.ler.toFixed(0)} lm/W radiated` : '')
             + (c.outOfGamut ? ' · outside the display gamut: traced exactly, shown desaturated' : '')
-        const info = { text: text(ch) }
+        const fileSays = () => !parsed ? 'what it comes to is the file\'s: choose or load it'
+            : rayFileColour(parsed, { colourBy: C.by }).say
+        const own = C.by === 'file' || C.by === 'wavelength'
+        const info = { text: own ? fileSays() : text(ch) }
         let infoB = null
         const put = patch => {
             set(patch)
@@ -1078,7 +1093,7 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
             H.tip(f.addBinding(C, 'y', { label: 'y', min: 0.001, max: 0.9, step: 0.0001, ...H.opts('xy') }).on('change', () => { if (C.x + C.y < 1) put({ xy: xy() }) }), 'xy')
         }
         if (C.by === 'spectrum') spectrumBindings(f, node, L, set, put)
-        infoB = f.addBinding(info, 'text', { readonly: true, label: '' })
+        infoB = f.addBinding(info, 'text', { readonly: true, label: '', ...(own ? { multiline: true, rows: 2 } : {}) })
     }
 
     /* A LIGHT BY ITS SPECTRUM (0.next; core/spd.js, lights.js `spectrum`): a blackbody's temperature, peaks typed one a

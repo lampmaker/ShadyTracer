@@ -49,8 +49,15 @@ undo step.
 A light of shape **ray file** reads a **Zemax OpticStudio binary source file** (`.DAT`), as LED makers publish them:
 flux-only and spectral records, in any of their units, in the file's own placement. Place it with its handles. Its
 flux is the file's unless you give one. The file is kept in the browser by its name, so a reload keeps it. A
-malformed file is refused, with the numbers that are wrong. A file with a wavelength on every ray lights the picture
-in each ray's own colour ([units](units.md)).
+malformed file is refused, with the numbers that are wrong.
+
+**Its colour** is chosen as a rectangle's is, with two more ways first:
+- **from the file** (the default): a file with a wavelength on every ray lights the picture in each ray's own colour
+  ([units](units.md)); a flux-only file has no colour of its own and is white;
+- **its header's wavelength**: every ray at the one wavelength the file's header names. Outside what the eye sees (an
+  850 nm infrared LED, say) the light shows nothing in the picture, as a camera would see it, and lights nothing; it
+  still traces on the Optics page, in its file's unit;
+- **RGB, CCT + Duv, CIE xy or a spectrum**: every ray of the file in that colour, its own wavelengths left aside.
 
 A ray file has no face: the camera's rays cannot meet it, and only its rays light the picture. **Through a lens with an
 aperture** (the Camera's aperture above 0) you see the light itself: each of its rays that crosses the lens lands on the
