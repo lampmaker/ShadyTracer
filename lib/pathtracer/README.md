@@ -754,9 +754,8 @@ scene's environment is not touched, so the builder's Environment shows and keeps
 
 ### Dust in the air: a haze box (0.62.0; `core/haze.js`)
 
-**A homogeneous participating medium in the air inside one box**, the scene's (`scene.haze`, from the builder's
-scene's haze -- a region in its environment since 0.next, a haze box node before: `builder/hazebox.js`, whose header
-says why it is no material: a material's surface would stop the shadow rays that sample light from the air). It has a grey extinction σ_t = 1/mfp (the mean free path, in real metres), an albedo per
+**A homogeneous participating medium in the air inside one box**, the scene's (`scene.haze`, from the builder's haze
+box: `builder/hazebox.js`). It has a grey extinction σ_t = 1/mfp (the mean free path, in real metres), an albedo per
 channel, and a Henyey-Greenstein phase function of asymmetry g (|g| ≤ 0.95). Only air scatters: a ray whose medium's
 index is not 1 never sees the haze, so glass and water inside the box stay clear. Nothing beyond the scene's radius
 scatters either. That keeps the sun's photons, which start on it, and a camera path escaping along the same line

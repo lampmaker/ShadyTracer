@@ -995,8 +995,7 @@ ok('...and a conic typed to four places kept on its slider (its step\'s rounding
     rows = await rowsOf('b')
     ok('analysis off: an object has no role row', off === false && !rows.includes('role'), JSON.stringify(rows))
     rows = await rowsOf('root')
-    ok('...and the scene\'s optical features has the optics analysis switch, and the environment haze in the air',
-        rows.includes('optics analysis') && rows.includes('haze in the air'), JSON.stringify(rows))
+    ok('...and the scene\'s optical features has the optics analysis switch', rows.includes('optics analysis'), JSON.stringify(rows))
     await p.evaluate(() => CHECK.M.setFeatures(CHECK.doc, { analysis: true }))
     rows = await rowsOf('b')
     ok('analysis on: the role row', rows.includes('role'), JSON.stringify(rows))
@@ -1013,18 +1012,17 @@ ok('...and a conic typed to four places kept on its slider (its step\'s rounding
     await p.evaluate(() => CHECK.M.setFeatures(CHECK.doc, { analysis: false }))
 }
 
-// THE SCENE'S HAZE (0.next; builder/hazebox.js), as Edit region selects it: where its region is, its size, and its dust --
-// live, the renderer's own uniforms
-rows = await rowsOf('#haze')
-ok('the scene\'s haze shows its size and its dust (mean free path, albedo, g), no material and no join',
+// A HAZE BOX (0.62.0; builder/hazebox.js): where it is, its size, and its dust -- live, the renderer's own uniforms
+rows = await rowsOf('hz')
+ok('a haze box shows its size and its dust (mean free path, albedo, g), no material and no join',
     ['size', 'mean free path (m)', 'albedo (colour)', 'g (forward scattering)'].every(l => rows.includes(l)) && !rows.includes('material') && !rows.includes('join'),
     JSON.stringify(rows))
 before = await state()
 ok('setting its mean free path', await set('mean free path (m)', 4) === 'set')
 s = await state()
-const hzNow = await p.evaluate(() => CHECK.M.hazeSettings(CHECK.M.find(CHECK.doc, '#haze').node))
-ok('...reaches the document, live (its dust), with its undo step and no compile', hzNow.mfp === 4 && s.live.at(-1) === '#haze.haze'
-    && s.commits.at(-1) === '#haze.haze' && s.structure === before.structure, JSON.stringify([hzNow, s.live.slice(-2), s.commits.slice(-2)]))
+const hzNow = await p.evaluate(() => CHECK.M.hazeSettings(CHECK.M.find(CHECK.doc, 'hz').node))
+ok('...reaches the document, live (its dust), with its undo step and no compile', hzNow.mfp === 4 && s.live.at(-1) === 'hz.haze'
+    && s.commits.at(-1) === 'hz.haze' && s.structure === before.structure, JSON.stringify([hzNow, s.live.slice(-2), s.commits.slice(-2)]))
 const visText = await p.evaluate(() => [...document.querySelectorAll('textarea')].map(t => t.value).find(v => v.startsWith('visibility')) ?? '')
 ok('...and the visibility beside it follows: 3.912 x 4 m, 15.6 m', /^visibility 15\.6 m/.test(visText), visText)
 

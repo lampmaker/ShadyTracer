@@ -12,6 +12,7 @@ const doc = M.createDoc({ title: 'print' }); doc.unit = 'mm'
 M.addObject(doc, 'root', { id: 'a', primitive: 'box', label: 'part', transform: T([10, 0, 0], [0, 0, 90]) })
 M.addObject(doc, 'root', { id: 'b', primitive: 'sphere', transform: T([-10, 0, 0]) })
 M.addLight(doc, 'root', { id: 'lamp', shape: 'disc', transform: T([0, 0, 50]) })
+M.addHazeBox(doc, 'root', { id: 'dust', size: { x: 100, y: 100, z: 100 } })
 const own = { a: { lo: [-2, -1, -3], hi: [2, 1, 3] }, b: { lo: [-1, -1, -1], hi: [1, 1, 1] }, lamp: { lo: [-1, -1, 0], hi: [1, 1, 0] } }
 const T_ = { outline: [], exports: [] }
 const boxes = { get: id => own[id] ?? null, request: () => { } }

@@ -80,22 +80,24 @@ const world = (c, s) => boxOf([], c, s)
     M.addObject(d, 'root', { id: 'a', primitive: 'box', transform: T([10, 0, 0]) })
     M.addObject(d, 'root', { id: 'floor', primitive: 'plane' })
     M.addLight(d, 'root', { id: 'lamp', shape: 'disc', transform: T([0, 0, 50]) })
+    M.addHazeBox(d, 'root', { id: 'dust', size: { x: 1000, y: 1000, z: 1000 } })
     M.addGroup(d, 'root', { id: 'room', transform: T([0, 0, 5]) })
     M.addObject(d, 'room', { id: 'chair', primitive: 'box', transform: T([0, 20, 0], [0, 0, 90]) })
     M.addObject(d, 'room', { id: 'rug', primitive: 'plane' })
-    const own = { a: { lo: [-1, -1, -1], hi: [1, 1, 1] }, floor: { lo: [-100, -100, -1], hi: [100, 100, 0], open: true },
+    const own = { a: { lo: [-1, -1, -1], hi: [1, 1, 1] }, dust: { lo: [-500, -500, -500], hi: [500, 500, 500] }, floor: { lo: [-100, -100, -1], hi: [100, 100, 0], open: true },
         lamp: { lo: [-1, -1, 0], hi: [1, 1, 0] }, room: { lo: [-100, -100, -1], hi: [100, 100, 3], open: true },
         chair: { lo: [-2, -1, -3], hi: [2, 1, 3] }, rug: { lo: [-100, -100, -1], hi: [100, 100, 0], open: true } }
     const B = { get: id => own[id] ?? null }
     const sc = fittedBox(d, B, null)
     ok('the whole scene: in the world', sc && sc.frames.length === 0)
     // a: x 9..11; the chair turned 90 degrees about z at (0, 20, 5): x -1..1, y 18..22, z 2..8; floor, lamp, rug out
-    vnear('...the union of what is solid: the lights and the open floors left out, an open group looked into', [...sc.lo, ...sc.hi], [-1, -1, -1, 11, 22, 8], 1e-12)
+    vnear('...the union of what is solid: the lights, a haze box and the open floors left out, an open group looked into', [...sc.lo, ...sc.hi], [-1, -1, -1, 11, 22, 8], 1e-12)
     ok('the root is the whole scene too', JSON.stringify(fittedBox(d, B, 'root')) === JSON.stringify(sc))
     const ch = fittedBox(d, B, 'chair')
     eq('one object: its own box, in its own frame', [ch.lo, ch.hi], [[-2, -1, -3], [2, 1, 3]])
     ok('...the frames from it to the world, its own first', ch.frames.length === 2 && ch.frames[0].rot.z === 90 && ch.frames[1].pos.z === 5)
-    ok('nothing for a light, or a node not measured', fittedBox(d, B, 'lamp') === null && fittedBox(d, { get: () => null }, 'a') === null)
+    ok('nothing for a light, a haze box, or a node not measured', fittedBox(d, B, 'lamp') === null && fittedBox(d, { get: () => ({ lo: [0, 0, 0], hi: [1, 1, 1] }) }, 'dust') === null
+        && fittedBox(d, { get: () => null }, 'a') === null)
     ok('nothing for a scene of nothing measured', fittedBox(d, { get: () => null }, null) === null)
 }
 
@@ -136,6 +138,8 @@ const world = (c, s) => boxOf([], c, s)
     eq('a group: everything under it', ids(subjectTree(d, 'cut')), ['root', 'cut', 'base', 'hole'])
     eq('the root: the whole scene', ids(subjectTree(d, 'root')).length, ids(M.toTree(d)).length)
     throws('a light is refused', () => subjectTree(d, 'lamp'), /light/)
+    M.addHazeBox(d, 'root', { id: 'dust' })
+    throws('...a haze box too: dust, nothing to print', () => subjectTree(d, 'dust'), /haze box/)
     M.setEnabled(d, 'cut', false)
     throws('a hidden object is refused, saying so', () => subjectTree(d, 'hole'), /hidden/)
     throws('one not in the scene too', () => subjectTree(d, 'nope'), /not in this scene/)

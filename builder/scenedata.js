@@ -151,7 +151,7 @@ const afterKind = n => isAfter(n, { straight: false })
    material's relief, and a CSG group with either anywhere below it -- the predicate, for planOf and for recordsOf (which
    checks a tree against a plan) */
 function compiledOf(tree, reliefMaterials, wantLocal = false) {
-    const reliefObject = n => n.kind === 'object' && reliefMaterials.has(n.material) && NODE_TYPES[n.type] && n.type !== 'light'
+    const reliefObject = n => n.kind === 'object' && reliefMaterials.has(n.material) && NODE_TYPES[n.type] && n.type !== 'light' && n.type !== 'haze'
     /* A NODE IN ITS PATTERN FRAME (model.js setPattern, version 24; codegen patterned): compiled as before, its frame a
        uniform -- the records carry one frame a node, the shape's, and a hit on a record records that one. As an object
        wearing a relief is, and so is a CSG group above it. Only where the frame changes something: anywhere else the node
@@ -417,6 +417,7 @@ export function recordsOf(tree, plan, { boxes = null, materialIndex, lightMateri
             return
         }
         if (n.kind === 'object') {
+            if (n.type === 'haze') return      // a box, not a shape: the haze is the renderer's (scene.haze)
             if (n.type === 'light') {
                 if (!hasFace(n.light) || !lightIndex.has(n.id)) return
                 face(n, here, on)

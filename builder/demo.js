@@ -401,8 +401,8 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
         const env = M.environmentOf(doc())
         if (env && current === shown) RT.set(env)
     }
-    /* THE SCENE'S HAZE (hazebox.js; the renderer's core/haze.js), from the document, after any live value of its own --
-       its region moved or sized, its dust -- into the scene the engine holds (RT.updateScene): uniforms, no compile.
+    /* THE HAZE BOX (hazebox.js; the renderer's core/haze.js), from the document, after any live value -- its own, or a
+       group's above it, which moves it -- into the scene the engine holds (RT.updateScene): uniforms, no compile.
        Whether, and taken: true when there is nothing to change. Only for a scene shown with one: whether there is one is
        the shader's text, a compile, which the caller makes when this is refused. */
     let hazeShown = null
@@ -860,9 +860,11 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
             }
             const f = M.find(doc, id)
             if (!f || RT.scene?.id !== 'built') return false
-            /* THE SCENE'S HAZE (hazebox.js hazeRegion, seen as an object): its region and its dust are no uniform of the
-               scene's -- the engine's own (core/haze.js) -- so whatever of it moved is taken here or not at all */
-            if (f.node.type === 'haze') return pushHaze(doc)
+            /* THE HAZE BOX: moved and sized with whatever moved or sized it (its size uniform is declared, and written
+               below like any parameter); its settings are no uniform of the scene's -- the engine's own (core/haze.js) --
+               so they are taken here or not at all */
+            const hazeTook = pushHaze(doc)
+            if (f.node.type === 'haze' && k === 'haze') return hazeTook
             if (!RT.scene.writeData) return nodeLive(doc, f, id, k, !!doc.liveVisibility)
             /* THE SCENE SHOWN IS DATA: a node's frame, visibility, parameters and joins are in its records, made again
                whole and written (pushData); what is still a uniform -- a light's look, everything in a compiled subtree --

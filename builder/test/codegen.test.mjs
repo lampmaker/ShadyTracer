@@ -442,7 +442,7 @@ ok('and none of scenes/common.js\'s override uniforms', !('matColorR' in built.u
         ok(`${key}: in a group the menu and the library know`, SHAPE_GROUPS.some(g => g.key === def.group), String(def.group))
     }
     eq('code is the only kind of shape; a light, an export box and a haze box are the other object types (their shapes have to stay known)',
-        Object.keys(NODE_TYPES).sort(), ['code', 'light'])
+        Object.keys(NODE_TYPES).sort(), ['code', 'haze', 'light'])
 
     /* A NEW PRIMITIVE AND A VERSION 8 NODE OF THE SAME TYPE COMPILE ALIKE. The upgrade gives an old
        file the code its type emitted (model.js v8to9); the library is where new ones start. Apart
@@ -633,11 +633,13 @@ eq('uniformName', uniformName('n7', 'radius'), 'radius_n7')
     const g = Model.addGroup(doc, 'root', { label: 'cut', blend: 0.1 })
     Model.addObject(doc, g.id, { primitive: 'box', label: 'base' })
     Model.addObject(doc, g.id, { primitive: 'sphere', label: 'hole', join: 'subtract' })
+    const x = Model.addHazeBox(doc, 'root', { label: 'dust' })
     const tree = Model.toTree(doc)
     const s = generate(tree, { cull: 'all' }), plain = generate(tree, { cull: false })
-    const top = tree.children
+    const top = tree.children.filter(n => n.type !== 'haze')
     const tested = [...s.wgsl.matchAll(/let bd_(\w+) = cullDist\(/g)].map(m => m[1])
     eq('one box test per top-level node that draws something, and no deeper', tested.sort(), top.map(n => n.id).sort())
+    ok('...not for a haze box (it draws nothing)', !tested.includes(x.id))
     ok('...a CSG group tested as a whole, its children not', tested.includes(g.id) && !g.children?.some?.(c => tested.includes(c.id)))
     ok('each tested node\'s box declared, unknown (lo.w 0) until measured', top.every(n =>
         s.uniforms[boxLoName(n.id)]?.type === 'vec4<f32>' && JSON.stringify(s.uniforms[boxLoName(n.id)].def) === '[0,0,0,0]'

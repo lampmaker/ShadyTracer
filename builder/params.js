@@ -149,6 +149,7 @@ export function sceneParams(doc, hooks = {}) {
             return
         }
         transform(node, where)
+        if (node.type === 'haze') { params(node, free(node, ['size']), where); haze(node, where); return }
         if (node.type === 'light') {
             if (M.hasFace(node.light)) params(node, free(node, Object.keys(node.params || {})), where)
             light(node, where)
@@ -156,17 +157,6 @@ export function sceneParams(doc, hooks = {}) {
         }
         params(M.viewOf(doc, node), free(node, Object.keys(node.params || {})), where)
     })
-    /* THE SCENE'S HAZE (hazebox.js), which walk() does not visit: its region moved and sized like an object, its dust --
-       all live (demo.js pushHaze). Offered while it is on: off, it is in no shader */
-    {
-        const H = M.hazeRegion(doc)
-        if (H && H.enabled !== false) {
-            const where = 'haze'
-            transform(H, where)
-            params(H, free(H, ['size']), where)
-            haze(H, where)
-        }
-    }
 
     // ---- a light's own settings: the ones that are numbers. The colour and brightness reach the
     //      picture as its face's uniforms (live(id, 'light')); the rest are read by the optics trace
@@ -210,7 +200,7 @@ export function sceneParams(doc, hooks = {}) {
             add('halfAngle', { label: 'cone half angle', unit: '°', min: 0.5, max: 90, step: 0.5, get: () => M.lightOf(node).halfAngle }, x => ({ halfAngle: x }))
         add('emitN', { label: 'emits into n', min: 1, max: 3, step: 0.001, get: () => M.lightOf(node).emitN }, x => ({ emitN: x }))
     }
-    // ---- the scene's haze's settings (hazebox.js): the renderer's own uniforms, live (demo.js pushHaze)
+    // ---- a haze box's settings (hazebox.js): the renderer's own uniforms, live (demo.js pushHaze)
     function haze(node, where) {
         const add = (key, e, patch) => out.push({ path: `scene/${node.id}/haze/${key}`, label: `${where} › ${e.label ?? key}`,
             group: `scene · ${where}`, reveal: reveal(node.id), ...e,
@@ -302,7 +292,7 @@ export function makeAfter({ live = () => { }, commit = () => { }, structure = ()
             if (!o.quiet) commit(`${node.id}.light`)
             return true
         },
-        /** the scene's haze's settings (hazebox.js): through the model, which checks them, then to the renderer live */
+        /** a haze box's settings (hazebox.js): through the model, which checks them, then to the renderer live */
         haze(doc, node, patch, o = {}) {
             if (!Object.keys(patch).length) return false
             try { M.setHaze(doc, node.id, patch) } catch (e) { console.warn('[builder]', e.message); return false }

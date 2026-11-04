@@ -87,7 +87,7 @@ ok('Export: the object, its box in its frame, STL, the cell', asked?.subject ===
     && near(asked.box.lo, [-2, -1, -3]) && asked.box.frames.length === 1 && asked.box.frames[0].rot.z === 90, JSON.stringify(asked))
 s = await shown()
 ok('...and what it made said', /STL: 1,234 triangles, 2\.0 MB/.test(s.text), s.text)
-ok('the scene is untouched: nothing added to it', await p.evaluate(() => CHECK.doc.root.children.map(c => c.id).join() === 'a,b,lamp'))
+ok('the scene is untouched: nothing added to it', await p.evaluate(() => CHECK.doc.root.children.map(c => c.id).join() === 'a,b,lamp,dust'))
 
 // ---- the whole scene: the world, the light left out; the settings remembered
 await p.evaluate(() => document.querySelector('.print-dialog input[data-what="scene"]').click())
@@ -106,6 +106,9 @@ await p.keyboard.press('Escape')
 ok('Escape, in the dialog, closes it', !(await p.evaluate(() => CHECK.isOpen())))
 await p.evaluate(() => CHECK.open('lamp'))
 ok('a light selected: only the whole scene', (await shown())?.objectOffered === false)
+await p.evaluate(() => CHECK.open('dust'))
+ok('a haze box selected: only the whole scene, and its dust left out of the scene\'s box', (await shown())?.objectOffered === false
+    && near((await shown()).sizes, [22, 4, 6]), JSON.stringify(await shown()))
 await p.evaluate(() => CHECK.close())
 
 ok('no page errors', !errs.length, errs.join('\n'))

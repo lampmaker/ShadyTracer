@@ -142,7 +142,7 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
     const say = t => { noteEl.textContent = t; noteEl.title = t }
     /* A HAZE BOX (0.62.0; builder/hazebox.js) is the picture's alone: this trace (optics/kernels.js) has a chain of its own
        and does not see the dust yet, so a run over a scene with one says so where its result is read */
-    const hazeNote = () => RT.scene?.haze ? 'the scene\'s haze is not traced here: these numbers are without its dust (the picture has it)' : ''
+    const hazeNote = () => RT.scene?.haze ? 'the haze box is not traced here: these numbers are without its dust (the picture has it)' : ''
 
     /* rays: the look -- traced and drawn, so few enough to retrace on every change.
        steps: how many interactions each follows. count x times: the analysis's rays (TIMES). */

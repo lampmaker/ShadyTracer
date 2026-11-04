@@ -1,8 +1,8 @@
-# Haze settings
+# Haze box settings
 
 > Made by `help/reference.mjs` from the program's own lists: edit that, not this page.
 
-The scene's haze (the scene's row, *environment*, **haze in the air**) fills the air of a box-shaped region with dust that scatters and absorbs light: beams show in it, the sun's shafts, a lamp's glow; what is seen through it is dimmer. Only the air inside scatters -- glass, water and solids inside the region stay clear. Switched on, the region fills the scene; **Fit to scene** fits it again, and **Edit region…** moves, turns and stretches it in the picture (the Transform gizmo and its cubes), its size in the scene's unit. One a scene. It is no material: a material's scattering is inside a solid, whose surface would stop the light sampling a beam in air needs. See [Render settings](../modelling/rendering.md#dust-in-the-air) for how it is drawn and what a small scene can show.
+A haze box (the **+** menu, *Haze box*) fills the air inside it with dust that scatters and absorbs light: beams show in it, the sun's shafts, a lamp's glow; what is seen through it is dimmer. Only the air inside scatters -- glass, water and solids inside the box stay clear. Its size is its `size` parameter, in the scene's unit (the Transform gizmo's cubes stretch it); one a scene. See [Render settings](../modelling/rendering.md#dust-in-the-air) for how it is drawn and what a small scene can show.
 
 | setting | starts at | does |
 |---|---|---|

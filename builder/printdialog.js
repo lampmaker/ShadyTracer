@@ -25,7 +25,7 @@ let open = null
 
 /**
  * @param doc        () => the document worked on (BUILDER.doc)
- * @param selected   the selected node's id, or null: what "Selected object" means. The root, a light or nothing
+ * @param selected   the selected node's id, or null: what "Selected object" means. The root, a light, a haze box or nothing
  *                   leaves only the whole scene.
  * @param boxes      the page's measured boxes (boxes.js: get, request), for the fitted box
  * @param estimate   (id | null) => { lo, hi } in the WORLD, or null: the guess while nothing is measured
@@ -37,7 +37,7 @@ export function openPrintDialog({ doc, selected = null, boxes = null, estimate =
     close()
     const d0 = doc()
     const node = selected != null ? findNode(d0.root, selected) : null
-    const canObject = !!node && node !== d0.root && !(node.kind === 'object' && node.type === 'light')
+    const canObject = !!node && node !== d0.root && !(node.kind === 'object' && (node.type === 'light' || node.type === 'haze'))
     const unit = d0.unit ?? 'm'
     const R = remembered()
     const S = {

@@ -108,7 +108,6 @@
         import { installSelectionOverlay } from './builder/overlay.js'
         import { focusBox, focusPose, glidePose } from './builder/focus.js'
         import { openPrintDialog } from './builder/printdialog.js'
-        import { fittedBox } from './builder/exportbox.js'
         import { estimateBox } from './builder/bounds.js'
         import { installOpticsPage, OPTICS_CHARTS, chartSet } from './optics/page.js'
         import { installMeasureTool } from './lib/pathtracer/measure/tool.js'
@@ -1158,8 +1157,6 @@
                 // a code box's "Functions you can call…": the Help panel opened at that page (help/reference/code.md)
                 help: (page, anchor) => { openHelp(); window.HELP?.open(page, anchor); },
                 params: PARAMS, environment: () => RT.get(),
-                // the scene's haze (builder/hazebox.js): the box fitted to the scene, and Edit region selecting it
-                fitScene: d => fittedBox(d, BOXES, null), onSelect: id => selectRow(id),
                 // the scene row's camera and exposure (builder/panel.js cameraFolder, exposureFolder): the renderer's own fields
                 view: { cameraBindings: () => RT.cameraBindings(), cameraShown: () => RT.cameraShown(), exposure: () => RT.view().exposure,
                         setExposure: (k, v) => RT.applyView({ exposure: { [k]: v } }), watch: f => RT.watchView(f) },

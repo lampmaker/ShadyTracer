@@ -40,8 +40,8 @@
 // still waiting.
 //
 // NO BOX. A bounding box was drawn around the selection once, measured from the object's type; every
-// object is code now and has none (bounds.js). The one exception is the scene's haze region (hazebox.js), whose
-// outline is drawn dashed when it is selected (Edit region): it is known exactly and invisible in the picture. And a
+// object is code now and has none (bounds.js). The one exception is a haze box (hazebox.js), whose outline is
+// drawn dashed when it is selected: it is known exactly and invisible in the picture. And a
 // host's outline (outline() below): the print dialog's box (printdialog.js), which is no node at all.
 //
 // AND ALL OF IT CAN BE SWITCHED OFF with the Edit button at the bottom left: then nothing is drawn,
@@ -373,7 +373,7 @@ export function installSelectionOverlay({ stage, canvas, RT, BUILDER, onPick = (
         g.rect(V.ox, V.oy, V.dw, V.dh)   // never over the letterbox bars
         g.clip()
 
-        /* THE HAZE'S REGION HAS A BOX, unlike every object (NO BOX above): it is known exactly and draws nothing in the
+        /* A HAZE BOX HAS A BOX, unlike every other object (NO BOX above): it is known exactly and draws nothing in the
            picture -- the dust shows only where light crosses it -- so its outline is the only way to see it (hazebox.js) */
         if (geo.node.type === 'haze') {
             const C = boxCorners(BUILDER.doc, geo.node.id)

@@ -362,6 +362,38 @@
           "height": 160
         },
         "block": "b12"
+      },
+      {
+        "id": "n13",
+        "kind": "object",
+        "type": "haze",
+        "label": "dust",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -10,
+            "y": 0,
+            "z": 100
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": null,
+        "params": {
+          "size": {
+            "x": 560,
+            "y": 220,
+            "z": 200
+          }
+        },
+        "haze": {
+          "mfp": 0.3,
+          "g": 0.7
+        }
       }
     ]
   },
@@ -418,33 +450,6 @@
       "contrast": 0,
       "saturation": 0,
       "brightness": 0
-    }
-  },
-  "haze": {
-    "enabled": true,
-    "transform": {
-      "pos": {
-        "x": -10,
-        "y": 0,
-        "z": 100
-      },
-      "rot": {
-        "x": 0,
-        "y": 0,
-        "z": 0
-      },
-      "scale": 1
-    },
-    "params": {
-      "size": {
-        "x": 560,
-        "y": 220,
-        "z": 200
-      }
-    },
-    "haze": {
-      "mfp": 0.3,
-      "g": 0.7
     }
   }
 }

@@ -317,6 +317,12 @@ export const NODE_TYPES = {
         params: {},
         body: () => '',
     },
+    /** A HAZE BOX (hazebox.js, version 22): dust in the air inside it -- the renderer's (lib/pathtracer/core/haze.js),
+     *  handed over as the scene's `haze`. Not geometry: emitted as a comment, its uniforms declared like anything left out. */
+    haze: {
+        params: {},
+        body: () => '',
+    },
     /** Whatever the user typed. `p` is the sample point, `C` the Hit being folded into, and
      *  the node's own parameters are in scope under their bare names. */
     code: {
@@ -357,7 +363,7 @@ export const patName = id => uniformName(id, 'pat')
  *  one does: a CSG group, or group code on its children's result (isAfter: a round, a shell). Anywhere else it is
  *  nothing, and the scene's text is what it was without it. The scene as data compiles a node it is in (scenedata.js). */
 export const patterned = (n, { wantLocal = false, relief = false } = {}) => !!n?.pattern
-    && (n.kind === 'object' ? (wantLocal || relief) && !!NODE_TYPES[n.type] && n.type !== 'light'
+    && (n.kind === 'object' ? (wantLocal || relief) && !!NODE_TYPES[n.type] && n.type !== 'light' && n.type !== 'haze'
         : n.kind === 'group' && wantLocal && (isCsg(n) || isAfter(n, { straight: false })))
 /** An array's copy i (model.js copies, version 17): its transform, one mat4 uniform a copy (uniforms are not arrays) */
 export const copyName = (id, i) => uniformName(id, `cp${i}`)
@@ -384,9 +390,9 @@ export const joinBlendName = id => uniformName(id, 'jblend')
 /** How a node joins what is above it in its group (model.js OPS; absent = union). */
 export const joinOf = c => c?.join ?? 'union'
 /** The children of a group that are its SHAPES: a light (drawn after a CSG group's combine, outside it:
- *  emitScene collectLights) is not, and is left out of the combine (children() below). (An export box and a haze box
- *  were not either, until they stopped being nodes: 0.next.) */
-export const shapesOf = g => (g?.children || []).filter(c => c.type !== 'light')
+ *  emitScene collectLights) and a haze box (draws nothing) are not, and are left out of the combine (children() below).
+ *  (An export box was not either, until it stopped being a node: 0.next.) */
+export const shapesOf = g => (g?.children || []).filter(c => c.type !== 'haze' && c.type !== 'light')
 
 /** Does this group combine its children into one shape (and so need the CSG path)? Not when every
  *  shape after the first joins by union with no blend of its own and the group has none: each child
@@ -1444,10 +1450,11 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
            tinywebgpu refuses a name the pipeline does not declare. A limiter outside the optics
            copies, a ray file (no geometry), a light that cannot be drawn where it says. */
         const L = node.type === 'light' ? lightOfId.get(node.id) : null
-        if (hidden(node) || (node.type === 'light' && !L)) {
+        if (hidden(node) || (node.type === 'light' && !L) || node.type === 'haze') {
             if (node.transform) uniforms[xfName(node.id)] = { type: 'mat4x4<f32>', def: matrixOf(node.transform) }
             if (patterned(node, { wantLocal, relief: reliefOf.has(node.material) })) patDecl(node)
-            const why = node.type !== 'light' ? 'an optics limiter, not in the picture'
+            const why = node.type === 'haze' ? 'a haze box: draws nothing (the renderer\'s dust, scene.haze)'
+                : node.type !== 'light' ? 'an optics limiter, not in the picture'
                 : warpedLights.get(node.id) ?? 'a ray file: no geometry'
             line(d, `// node ${node.id} (${node.type}): ${why}`)
             return
@@ -1572,7 +1579,10 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
     }
     /* A COMBINE IN PARTS, so an array's copies can share one (group(): open before its loop, the rest and the shapes
        once a copy, close after it). In this order for any other group, which is the order its text has always had.
-         A LIGHT IS NOT A CHILD OF THE SHAPE: it was combined until 2026-09-30 (as the
+         A HAZE BOX IS NOT A CHILD OF THE SHAPE (nor was an export box, until 0.next). It emits nothing but its uniforms,
+       and as a CSG child it would still be combined -- as an empty Hit, 1e7 away, which an intersect takes as the
+       result and so deletes the group's whole shape. Emitted for its uniforms, then left out of the combine. NOR IS A
+       LIGHT, which was combined the same way until 2026-09-30 (as the
        base it emptied the group): it is drawn after the combine, outside it (collectLights,
        emitHoisted) -- the ones this group is the outermost CSG group of, from anywhere below it.
        One hoisted to an outer CSG group, or under group code (not drawn), is left where it is.
@@ -1738,7 +1748,7 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
         return !terms.length ? '0.0' : `1.25 * ${terms.length > 1 ? `(${terms.join(' + ')})` : terms[0]}`
     }
     const wrapped = n => n.kind === 'object' && reliefOf.has(n.material) && NODE_TYPES[n.type]
-        && !hidden(n) && n.type !== 'light'
+        && !hidden(n) && n.type !== 'light' && n.type !== 'haze'
     const chains = (n, chain, coded) => {
         if (n.kind !== 'group') {
             if (chain.length && wrapped(n)) { reliefChain.set(n.id, chain); reliefTops.add(chain[0].g.id) }
@@ -1937,7 +1947,7 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
        THE BOUND AGAINST |d|: fold keeps the nearest surface by |d| (inside a glass, d is negative), and the
        march steps by |d|, so a skipped node limits the step whenever its bound is nearer than that. A bound
        is always above the margin, so it never passes the march's hit test and is never shaded. */
-    const drawsNothing = n => n.kind === 'object' && (!NODE_TYPES[n.type] || hidden(n)
+    const drawsNothing = n => n.kind === 'object' && (!NODE_TYPES[n.type] || hidden(n) || n.type === 'haze'
         || (n.type === 'light' && !lightOfId.get(n.id)))
     /* ONLY THE DEAR ONES (cull 'dear': Tests > boxcost's fourth row in 0.33.8; THE BUILDER'S WAY since 0.34.0, the user,
        2026-10-07: "yes, make dear-only the default and remove the setting"). Measured on the user's Pascal (Tests >
@@ -2134,8 +2144,8 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
     e.raw('}')
     }
 
-    // the scene's haze in the world, if it has one on (hazebox.js: toTree puts it at the root, the tree here)
-    const haze = hazeOf(tree)
+    // the haze box in the world, if the scene has one (the tree is the root group here)
+    const haze = hazeOf({ root: tree })
     /* ...and whether a material scatters inside (materials.js scatterDistance, 0.82.0): the march has the walk's code
        only then (core/haze.js THE MEDIUM'S WALK), so it is the scene's text, as the haze box's presence is (sceneTextOf).
        A surface's or a detector's material with a scatter distance, as the shader is given it (`only`). A material's own
@@ -2157,8 +2167,8 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
         /* ...and its surface tolerance, in that unit (model.js setTolerance, 0.66.0): the renderer takes it as the one it
            traces with (photometry.js sceneEps). null is the automatic one, as every scene before it had. */
         tolerance: tree.tolerance ?? null,
-        /* ...and its haze (hazebox.js hazeOf: in the world, in that unit; the renderer's core/haze.js), only when it has one:
-           whether it does decides the kernels' text (sceneTextOf), so a scene without one says nothing */
+        /* ...and its haze box (hazebox.js hazeOf: in the world, in that unit; the renderer's core/haze.js), only when it
+           has one: whether it does decides the kernels' text (sceneTextOf), so a scene without one says nothing */
         ...(haze ? { haze } : {}),
         ...(scatter ? { scatter: true } : {}),
         /* ...and whether the Optics page traces it by wavelength (0.next; model.js setFeatures `spectral`): the optics kernels'

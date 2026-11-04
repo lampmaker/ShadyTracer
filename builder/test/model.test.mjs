@@ -270,6 +270,8 @@ throws('another version is refused, not guessed at',
     throws('...by setJoin too', () => M.setJoin(d, 'g', 'subtract'), /top level/)
     const lamp = M.addLight(d, 'g', { id: 'lamp', shape: 'disc' })
     throws('a light is no shape of its group: no join', () => M.setJoin(d, lamp.id, 'subtract'), /no join/)
+    const box = M.addHazeBox(d, 'g', { id: 'box' })
+    throws('nor a haze box', () => M.setJoinBlend(d, box.id, 0.1), /no join/)
     M.setJoin(d, 'c', 'intersect'); M.setJoin(d, 'b', 'union'); M.setJoinBlend(d, 'b', null)
     eq('setJoin and setJoinBlend: union and null store nothing', [c.join, 'join' in b, 'joinBlend' in b], ['intersect', false, false])
     throws('setJoin refuses an unknown join', () => M.setJoin(d, 'c', 'minus'), /join must be one of/)
@@ -286,7 +288,7 @@ throws('another version is refused, not guessed at',
     eq('move keeps a join, and at the top level the document is still sound', [M.find(d, 'c').node.join, M.validate(d)], ['intersect', []])
     M.move(d, 'c', 'g')
     eq('...and back in a group it joins again', M.toTree(d).children[0].children.map(n => [n.id, n.join ?? 'union']),
-        [['a', 'union'], ['b', 'union'], ['lamp', 'union'], ['c', 'intersect']])
+        [['a', 'union'], ['b', 'union'], ['lamp', 'union'], ['box', 'union'], ['c', 'intersect']])
 
     /* whether a group combines is decided on the document: hiding its only non-union child must not turn it
        into a plain union in the tree while params.js, reading the document, still writes its blend live */
@@ -1762,6 +1764,8 @@ throws('another version is refused, not guessed at',
     eq('...the document sound, saved and read back', [M.validate(d), M.find(M.parse(M.serialize(d)), 'a').node.opticsRole], [[], 'detector'])
     throws('a group has none', () => M.setOpticsRole(d, 'g', 'detector'), /group/)
     throws('nor a light', () => M.setOpticsRole(d, 'lamp', 'limiter'), /light/)
+    M.addHazeBox(d, 'root', { id: 'dust' })
+    throws('nor a haze box', () => M.setOpticsRole(d, 'dust', 'detector'), /haze box/)
     throws('an unknown role is refused', () => M.setOpticsRole(d, 'b', 'mirror'), /optics role/)
     ok('...a file with one on a group refused', M.validate({ ...structuredClone(d), root: { ...structuredClone(d.root), children: d.root.children.map(c => c.id === 'g' ? { ...structuredClone(c), opticsRole: 'detector' } : structuredClone(c)) } }).some(p => /group has no optics role/.test(p)))
     ok('analysis off: the role kept, not in the tree', M.toTree(d).children.find(n => n.id === 'a').opticsRole === undefined)

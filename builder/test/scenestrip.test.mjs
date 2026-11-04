@@ -20,7 +20,7 @@ const g = M.addGroup(a, a.root.id, { label: 'holder' })
 M.addObject(a, g.id, { ...primitiveObject('sphere'), label: 'ball' })
 M.addObject(a, a.root.id, { ...primitiveObject('box'), label: 'floor' })
 M.addLight(a, a.root.id, { shape: 'disc' })
-M.setHazeOn(a, true)
+M.addHazeBox(a, a.root.id)
 item.libraryItem = { id: 'x', kind: 'object' }
 const p = P.createProject([a, b, item])
 const cards = sceneCards(p, p.scenes[1].key)

@@ -107,8 +107,7 @@ export const EXPOSURE_HELP = {
 }
 
 export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStructure = () => { }, onApply = () => { }, params = null,
-                                                      environment = () => ({}), itemSample = null, view = null, help = null,
-                                                      fitScene = () => null, onSelect = () => { } } = {}) {
+                                                      environment = () => ({}), itemSample = null, view = null, help = null } = {}) {
     const M = BUILDER.model
     // the selection's own box, and the boxes of its categories after it (show says why they are apart)
     let folder = null, boxes = [], shownId = null
@@ -362,7 +361,7 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
         const node = mat || found.node
 
         const title = mat ? 'Material' : node.id === doc.root.id ? 'Scene'
-            : node.kind === 'group' ? 'Group' : node.id === M.HAZE_ID ? 'Haze in the air' : 'Object'
+            : node.kind === 'group' ? 'Group' : 'Object'
         // the kind, not the id: the id is internal, and the label -- the name -- is the first row
         folder = table.addFolder({ title })
         /* EVERY CATEGORY A BOX OF ITS OWN, as the Render settings' are (the user, 2026-10-17: "a similar layout as the
@@ -587,8 +586,7 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
             return
         }
 
-        // ---- the scene's haze, as Edit region selects it: where its region is, how big, and its dust (hazebox.js; the
-        //      renderer's core/haze.js). Its label is no name to change: the region is the scene's.
+        // ---- a haze box: where it is, how big, and its dust (hazebox.js; the renderer's core/haze.js)
         if (node.type === 'haze') {
             transform(folder, node)
             paramsFolder(folder, node, ['size'], {}, false)
@@ -961,46 +959,8 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
             if (vec) b.on('change', () => put(H.v))
             flagRow(b, `scene/environment/${k}`)
         }
-        hazeSection(folder, doc)
     }
 
-    /* THE SCENE'S HAZE (hazebox.js, 0.next): dust in the air, part of what surrounds the scene and so in its environment --
-       a haze box in the tree, added from +, until 0.next. On: its dust, and the region it fills -- fitted to the scene when
-       it is first switched on (fitScene: the measured boxes, lights and floors left out, exportbox.js fittedBox), fitted
-       again by a press, and moved, turned and stretched in the picture by Edit region, which selects it (the Transform
-       gizmo and the numbers' panel move it as an object, hazebox.js hazeRegion). On or off is a compile -- whether there
-       is dust is the kernels' text (core/haze.js) -- and everything else live. */
-    function hazeSection(folder, doc) {
-        const H = doc.haze, on = !!H && H.enabled !== false
-        folder.addBlade({ view: 'separator' })
-        const toggle = x => {
-            if (!!x === on) return
-            try { M.setHazeOn(doc, !!x, doc.haze ? null : fitScene(doc)) } catch (e) { console.warn('[builder]', e.message); return }
-            edited(null)
-            onStructure()
-            setTimeout(() => { if (shownId === doc.root.id) show(shownId) })
-        }
-        rowTip(folder.addBinding({ get v() { return on }, set v(x) { toggle(x) } }, 'v', { label: 'haze in the air' }),
-            'Dust in the air, in a box: a beam of light shows in it, and things fade with distance. Only the air scatters -- glass '
-            + 'and solids inside stay clear. Switched on, it fills the scene; Edit region moves and stretches it. A compile to switch.')
-        if (!on) return
-        const R = M.hazeRegion(doc)
-        const u = doc.unit ?? 'm', n = v => +(+v).toPrecision(4)
-        const where = { get text() { const t = R.transform, z = R.params.size
-            return `region ${n(z.x)} x ${n(z.y)} x ${n(z.z)} ${u} at ${n(t.pos.x)}, ${n(t.pos.y)}, ${n(t.pos.z)}` } }
-        const line = folder.addBinding(where, 'text', { readonly: true, label: '' })
-        const box = fitScene(doc)
-        folder.addButton({ title: 'Fit to scene' }).on('click', () => {
-            const b = fitScene(doc)
-            if (!b) return
-            try { M.fitHaze(doc, b) } catch (e) { console.warn('[builder]', e.message); return }
-            live(M.HAZE_ID, 'transform')
-            edited(`${M.HAZE_ID}.transform`)
-            try { line.refresh() } catch { }
-        }).disabled = !box
-        folder.addButton({ title: 'Edit region…' }).on('click', () => onSelect(M.HAZE_ID))
-        hazeFolder(folder, R)
-    }
 
     /* A LIGHT (model version 10, lights.js): a rectangle, a disc or a Zemax ray file. Its size is its
        parameters (live, like any node's); then how it looks to the camera -- colour, and luminance or
@@ -1256,7 +1216,7 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
         }
     }
 
-    /* THE HAZE'S DUST (hazebox.js): its mean free path in real metres whatever the scene's unit, its albedo, its g --
+    /* A HAZE BOX'S DUST (hazebox.js): its mean free path in real metres whatever the scene's unit, its albedo, its g --
        live, as the renderer's own uniforms (makeAfter's haze, demo.js pushHaze). The visibility beside the mean free path
        is the number a weather report gives (Koschmieder), and the scale note is why a small scene shows little. */
     function hazeFolder(folder, node) {

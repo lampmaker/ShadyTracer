@@ -2,7 +2,7 @@
 //
 // THE REFERENCE PAGES, MADE FROM THE PROGRAM'S OWN LISTS: every shape (builder/primitives.js), every modifier
 // (builder/modifiers.js), every material field, relief and coating (builder/materials.js), every light setting
-// (builder/lights.js), every haze setting (builder/hazebox.js), the functions code can call (the scene prelude: CODE_HELP
+// (builder/lights.js), every haze box setting (builder/hazebox.js), the functions code can call (the scene prelude: CODE_HELP
 // below), and the functions a scene's script can call (tools/scriptref.js, which tools/test/script.test.mjs holds to the API). A shape's or a modifier's text is the comment its code starts with -- what its properties panel
 // shows -- so it is written once. Material fields and light settings have no text of their own in the code; theirs is
 // below, one a key, and test/coverage.test.mjs fails on a key with none. So a shape, modifier, field or setting
@@ -65,7 +65,7 @@ export const LIGHT_HELP = {
     emitN: 'The index of what the face emits into: 1 in air, about 1.41 for an LED die in silicone. It changes how the light refracts as it leaves.',
 }
 
-/** WHAT EACH HAZE SETTING DOES -- read in builder/hazebox.js (its header lists them) and lib/pathtracer/core/haze.js. */
+/** WHAT EACH HAZE BOX SETTING DOES -- read in builder/hazebox.js (its header lists them) and lib/pathtracer/core/haze.js. */
 export const HAZE_HELP = {
     mfp: 'The mean free path, in real metres whatever the scene\'s unit: how far light goes, on average, before it meets a particle. Smaller is denser. '
         + `Visibility -- the distance at which a dark object fades to 2 % contrast, a weather report's number -- is ${KOSCHMIEDER.toFixed(2)} of these: `
@@ -284,13 +284,11 @@ function lights() {
 }
 
 function haze() {
-    let s = HEAD('Haze settings', 'The scene\'s haze (the scene\'s row, *environment*, **haze in the air**) fills the air of a box-shaped '
-        + 'region with dust that scatters and absorbs light: beams show in it, the sun\'s shafts, a lamp\'s glow; what is seen through it is '
-        + 'dimmer. Only the air inside scatters -- glass, water and solids inside the region stay clear. Switched on, the region fills the '
-        + 'scene; **Fit to scene** fits it again, and **Edit region…** moves, turns and stretches it in the picture (the Transform gizmo and '
-        + 'its cubes), its size in the scene\'s unit. One a scene. It is no material: a material\'s scattering is inside a solid, whose '
-        + 'surface would stop the light sampling a beam in air needs. See [Render settings](../modelling/rendering.md#dust-in-the-air) for '
-        + 'how it is drawn and what a small scene can show.')
+    let s = HEAD('Haze box settings', 'A haze box (the **+** menu, *Haze box*) fills the air inside it with dust that scatters and absorbs light: '
+        + 'beams show in it, the sun\'s shafts, a lamp\'s glow; what is seen through it is dimmer. Only the air inside scatters -- glass, '
+        + 'water and solids inside the box stay clear. Its size is its `size` parameter, in the scene\'s unit (the Transform gizmo\'s cubes '
+        + 'stretch it); one a scene. See [Render settings](../modelling/rendering.md#dust-in-the-air) for how it is drawn and what a small '
+        + 'scene can show.')
     s += '\n| setting | starts at | does |\n|---|---|---|\n'
     for (const [k, v] of Object.entries(HAZE_DEFAULTS)) s += `| ${k} | ${cell(value(v))} | ${cell(HAZE_HELP[k] ?? '')} |\n`
     return s

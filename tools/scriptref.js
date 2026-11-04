@@ -120,7 +120,7 @@ export const SCRIPT_REF = [
         items: [
             { names: ['a.rays', 'a.batches', 'a.at', 'a.unit'], sig: 'a.rays  a.batches  a.at  a.unit', text: 'How many rays, in how many batches, when, and the flux unit.' },
             { names: ['a.stale'], sig: 'a.stale', text: 'True when the scene has changed since the run: its numbers are of a scene that is no longer there.' },
-            { names: ['a.note'], sig: 'a.note', text: 'What the run could not trace (the scene\'s haze), or \'\'.' },
+            { names: ['a.note'], sig: 'a.note', text: 'What the run could not trace (a haze box), or \'\'.' },
             { names: ['a.totals'], sig: 'a.totals', returns: '{ emitted, escaped, lost, absorbed, detected, volume }, each { value, se }',
               text: 'Every lumen booked. escaped: left the scene. absorbed: taken by surfaces (and the media between them, `volume`). detected: caught by detectors. lost: ended by a limit -- the maximum distance, the march steps or the bounces. Together they are what was emitted.',
               example: "const t = a.totals\nlog(`escaped ${t.escaped.value.toFixed(1)} ± ${t.escaped.se?.toFixed(1)} of ${t.emitted.value.toFixed(1)} lm`)" },

@@ -155,8 +155,8 @@ export function estimateBox(root, only = null, doc = null) {
     }
     const visit = (n, frames) => {
         const here = n !== root && n.transform ? [n.transform, ...frames] : frames
-        // (an export box and a haze box, which were nodes until 0.next and are not in the picture, are in no tree now)
-        if (n.kind === 'object' && (!only || n === only)) {
+        // a haze box is not in the picture, and a big one would make the tolerance coarse for nothing
+        if (n.kind === 'object' && n.type !== 'haze' && (!only || n === only)) {
             const toWorld = p => here.reduce((q, t) => toParent(t, q), p)
             const scale = here.reduce((s, t) => s * (t.scale ?? 1), 1)
             grow(toWorld([0, 0, 0]), size(n) * scale)

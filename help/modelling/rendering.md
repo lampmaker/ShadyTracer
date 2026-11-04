@@ -69,23 +69,20 @@ Each row has a tooltip.
 
 ## Dust in the air
 
-**Haze in the air** (the scene's row in the tree, its *environment* box) fills the air of a box-shaped region with
-dust. Light that crosses it is partly
+A **haze box** (the **+** menu, *Haze box*) fills the air inside it with dust. Light that crosses it is partly
 scattered and partly absorbed, as in a dusty room, fog or a stage's haze. Beams from lamps and lenses show in it, and
 so do the sun's shafts and a lamp's glow. Whatever is seen through it, or lit through it, is dimmer. The example
 *Beam in dusty air* (an example: the Project panel) shows an LED's beam through a lens.
 
-- **Only the air inside scatters.** Glass, water and solids inside the region stay clear, so a lens in dusty air
+- **Only the air inside scatters.** Glass, water and solids inside the box stay clear, so a lens in a dusty box
   still looks like glass.
 - **Real units.** The **mean free path** is in metres, whatever the scene's unit: how far light goes, on average,
   before it meets a particle. The **albedo** is the share a particle scatters rather than absorbs. **g** sets the
   direction: real dust scatters mostly forward, so a beam is brightest when you look into it. The panel shows the
-  **visibility** beside the mean free path. See [Haze settings](../reference/haze.md).
-- **Its region.** Switched on, it fills the scene (what the scene's objects measure, lights and an endless floor left
-  out). **Fit to scene** fits it again; **Edit region…** selects it, so its outline shows and the Transform gizmo
-  moves, turns and stretches it. One a scene. Switching it on or off is a compile; everything else is live.
-- **Why it is not a material.** A material can scatter inside too (its *scatter distance*), but only inside a solid:
-  its surface would stop the light sampling that makes a beam in air show, so dust is the scene's.
+  **visibility** beside the mean free path. See [Haze box settings](../reference/haze.md).
+- **One box a scene.** Its outline shows when it is selected; stretch it with the Transform gizmo's cubes.
+- **Why it is a box and not a material.** A material can scatter inside too (its *scatter distance*), but only inside
+  a solid: its surface would stop the light sampling that makes a beam in air show. The haze box has no surface.
 
 **What a small scene can show.** Physical dust is faint at the size of a lamp. A beam a centimetre or two across,
 seen from the side in dust with a 10 m mean free path, is thousands of times dimmer than the spot it lights on a white

@@ -86,7 +86,7 @@ export const BOX_EDGES = [[0, 1], [2, 3], [4, 5], [6, 7], [0, 2], [1, 3], [4, 6]
  * THE BOX FITTED TO WHAT IS PRINTED, from the measured boxes (boxes.js: `B` has its get), or null when nothing is
  * measured yet -- the dialog then says so, and the user can type a size.
  *   id null or the root: THE WHOLE SCENE, in the world: the union of the top-level nodes' boxes, leaving out the
- *       lights (a sheet, nothing to print) and an OPEN box -- a floor plane's, which goes on to where the search
+ *       lights (a sheet, nothing to print), a haze box (dust) and an OPEN box -- a floor plane's, which goes on to where the search
  *       stopped (boxes.js) and would print a slab the size of a room. A group whose box is open is looked into
  *       instead, so a floor grouped with the furniture leaves the furniture.
  *   an object or a group: ITS OWN box in its own frame, the frames from it to the world, so the print is upright
@@ -99,7 +99,7 @@ export function fittedBox(doc, B, id = null) {
         let lo = null, hi = null
         const grow = p => { lo = lo ? lo.map((v, k) => Math.min(v, p[k])) : p.slice(); hi = hi ? hi.map((v, k) => Math.max(v, p[k])) : p.slice() }
         const visit = (c, frames) => {
-            if (c.enabled === false || (c.kind === 'object' && c.type === 'light')) return
+            if (c.enabled === false || (c.kind === 'object' && (c.type === 'light' || c.type === 'haze'))) return
             const here = c.transform ? [c.transform, ...frames] : frames
             const b = B.get(c.id)
             if (b && !b.open) { for (const p of corners({ frames: here, lo: b.lo, hi: b.hi })) grow(p); return }
@@ -109,7 +109,7 @@ export function fittedBox(doc, B, id = null) {
         for (const c of doc.root.children) visit(c, [])
         return lo ? { frames: [], lo, hi } : null
     }
-    if (n.kind === 'object' && n.type === 'light') return null
+    if (n.kind === 'object' && (n.type === 'light' || n.type === 'haze')) return null
     const b = B.get(n.id)
     return b ? { frames: framesTo(doc, n.id), lo: b.lo.slice(), hi: b.hi.slice() } : null
 }
@@ -122,13 +122,14 @@ export function fittedBox(doc, B, id = null) {
  * itself), their blends, their code (a modifier), and the copies of an array (one copy is printed: the first,
  * where the object is shown and moved). Its materials are the ones it wears (toTree resolves a group's), and a
  * pattern frame above it stays where it was (pattern.test: where a material lays its pattern out).
- * Throws for a hidden object, a light, or one not in the document.
+ * Throws for a hidden object, a light, a haze box, or one not in the document.
  */
 export function subjectTree(doc, id) {
     const f = find(doc, id)
     if (!f) throw new Error(`'${id}' is not in this scene`)
     if (f.node === doc.root) return toTree(doc)
     if (f.node.kind === 'object' && f.node.type === 'light') throw new Error('a light is a sheet with nothing to print')
+    if (f.node.kind === 'object' && f.node.type === 'haze') throw new Error('a haze box is dust: nothing to print')
     const tree = toTree(doc)
     const findIn = (n, want) => n.id === want ? n : (n.children || []).reduce((r, c) => r || findIn(c, want), null)
     const own = findIn(tree, id)

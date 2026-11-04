@@ -152,7 +152,7 @@ export const FORMAT = 'raytracer-scene'
    is what they rendered: a clear volume (v25to26). A builder of 25 refuses a file of 26 rather than read the fields as
    parameters of the material's own and render milky glass clear. */
 /* 27: THE SPECIAL OBJECTS STOP BEING ADD-ONS (0.next): no export box (the print export's box is its dialog's,
-   exportbox.js); no haze box -- the scene's `haze`, its region and dust (hazebox.js); a detector and a limiter an object's `opticsRole`, not a material's type, shown and traced while the
+   exportbox.js); a detector and a limiter an object's `opticsRole`, not a material's type, shown and traced while the
    scene's `analysis` feature is on (materials.js FEATURES). v26to27. A builder of 26 refuses a file of 27 rather than
    read a detector as a plain surface. */
 export const VERSION = 27
@@ -181,12 +181,11 @@ export { LIGHT_SHAPES, LIGHT_DEFAULTS, lightOf, hasFace, lightRGB, lightDisplayR
 /* a light's spectrum (0.next): its kinds, the presets, reading and writing its text -- for the panel (core/spd.js) */
 export { SPD_PRESETS, spdAt, spdProblems, spdSummary, parsePeaks, parseSpdCsv, peaksText, tableText } from '../lib/pathtracer/core/spd.js'
 import { LIGHT_SHAPES, LIGHT_DEFAULTS, lightOf, lightProblems, rotationTowards } from './lights.js'
-export { HAZE_PARAMS, HAZE_DEFAULTS, HAZE_ID, hazeSettings, hazeRegion, newHaze } from './hazebox.js'
-import { HAZE_PARAMS, HAZE_DEFAULTS, HAZE_ID, hazeProblems, hazeRegion, newHaze, legacyHazeBox } from './hazebox.js'
-/** The object types that are boxes rather than shapes: no material, no code, no join -- a size in their own frame and
- *  settings of their own. Since 0.next none is a node: the scene's haze (hazebox.js hazeRegion) is seen as one, and an
- *  export box is gone (the print export's box is its dialog's, exportbox.js); a file of 26 or older has its haze box
- *  made the scene's haze and its export box dropped (v26to27). */
+export { HAZE_PARAMS, HAZE_DEFAULTS, hazeSettings } from './hazebox.js'
+import { HAZE_PARAMS, HAZE_DEFAULTS, hazeProblems, hazeNode } from './hazebox.js'
+/** The object types that are boxes rather than shapes (a haze box): no material, no code, no join -- a size in their
+ *  own frame and settings of their own. (An export box was one until 0.next: the print export's box is its dialog's
+ *  now, exportbox.js, and a file of 26 or older that has one opens without it: v26to27.) */
 export const BOX_TYPES = Object.freeze(['haze'])
 const isBoxType = t => BOX_TYPES.includes(t)
 const BOX_WORDS = { haze: 'haze box' }
@@ -211,7 +210,6 @@ export const OPS = ['union', 'subtract', 'intersect']
 
 export { identity, matrixOf } from './transform.js'
 import { identity, matrixOf } from './transform.js'
-import { eulerOf } from './gizmo.js'
 import { INTERPS, EASES } from '../lib/timeline/timeline.js'
 
 /** Parameter names that would collide with what codegen declares for every node:
@@ -302,9 +300,6 @@ export function walk(doc, fn) {
 /** { node, parent, index } or null. The root has parent null and index -1. */
 export function find(doc, id) {
     if (doc.root.id === id) return { node: doc.root, parent: null, index: -1 }
-    /* THE SCENE'S HAZE, seen as an object (hazebox.js hazeRegion): under the root, at no place in it -- what moves or sizes
-       an object moves and sizes it; remove, move and duplicate refuse it (inTree) */
-    if (id === HAZE_ID) return doc.haze ? { node: hazeRegion(doc), parent: doc.root, index: -1, region: true } : null
     let out = null
     walk(doc, n => {
         if (out || n.kind !== 'group') return
@@ -317,12 +312,6 @@ export function find(doc, id) {
 const must = (doc, id) => {
     const f = find(doc, id)
     if (!f) throw new ModelError(`no node '${id}'`)
-    return f
-}
-/* ...one with a place in the tree: not the scene's haze, which has none (find) */
-const inTree = (doc, id) => {
-    const f = must(doc, id)
-    if (f.region) throw new ModelError('the scene\'s haze is not in the tree: switch it on or off in the scene\'s environment')
     return f
 }
 const groupOf = (doc, id) => {
@@ -354,7 +343,7 @@ export const BLOCK_KINDS = ['object', 'group']
 export const BUILTIN_VERSION = 1
 /** The block with id `id`, or null. */
 export const block = (doc, id) => (doc?.blocks || []).find(b => b.id === id) || null
-/** The block a node uses, or null (a light, the scene's haze, a group without code). */
+/** The block a node uses, or null (a light, a haze box, a group without code). */
 export const blockOf = (doc, node) => node?.block != null ? block(doc, node.block) : null
 /** A node's code: its block's ('' for none). */
 export const codeOf = (doc, node) => blockOf(doc, node)?.code ?? ''
@@ -703,7 +692,7 @@ function joinOnto(node, join, joinBlend, atTop) {
     return p
 }
 const TOP_LEVEL = id => `'${id}' is at the top level, which is always a plain union: put it in a group to join it`
-/** Everything wrong with a node's join and own blend. A light (and the scene's haze region) is no shape of
+/** Everything wrong with a node's join and own blend. A light and a haze box are not shapes of
  *  their group (codegen leaves them out of the combine), so they have neither. */
 function joinProblems(n) {
     const p = []
@@ -714,7 +703,7 @@ function joinProblems(n) {
     return p
 }
 /** How a node joins what is above it in its group: union, subtract or intersect (version 14). Refused
- *  at the top level, which is always a plain union, and on a light. */
+ *  at the top level, which is always a plain union, and on a light or a haze box. */
 export function setJoin(doc, id, join) {
     const { node, parent } = must(doc, id)
     if (!parent) throw new ModelError('the root joins nothing')
@@ -795,7 +784,7 @@ export function addObject(doc, parentId, { primitive, type, label, material: mat
     const parent = groupOf(doc, parentId)
     if (type === 'light') throw new ModelError('a light is added with addLight')
     if (type === 'export') throw new ModelError('there is no export box any more: File > Export > 3D print... asks what to print')
-    if (type === 'haze') throw new ModelError('the haze is the scene\'s since version 27: setHazeOn, the scene\'s environment')
+    if (type === 'haze') throw new ModelError('a haze box is added with addHazeBox')
     if (type !== undefined && !NODE_TYPES[type])
         throw new ModelError(`unknown object type '${type}' (a shape is a primitive now: { primitive: '${type}' })`)
     let B = blockId != null ? block(doc, blockId) : null
@@ -969,7 +958,7 @@ const checkOwner = (doc, owner, id = owner.id) => {
 }
 
 /* A NODE WHOSE PARAMETERS' SCHEMA IS A BLOCK'S (version 16): a code object, or a group (one without code gets a block
-   with none the first time it is given a parameter). Lights and the haze region keep theirs: their parameters are the
+   with none the first time it is given a parameter). Lights and haze boxes keep theirs: their parameters are the
    model's own, not a block's. */
 const schemaNode = (doc, id) => {
     if (reliefMaterialId(id) != null || material(doc, id)) return null
@@ -1359,7 +1348,7 @@ function setConstantOf(doc, id, key, type) {
 }
 
 export function remove(doc, id) {
-    const { node, parent, index } = inTree(doc, id)
+    const { node, parent, index } = must(doc, id)
     if (!parent) throw new ModelError('the root cannot be removed')
     parent.children.splice(index, 1)
     return node
@@ -1400,7 +1389,7 @@ export function ensureMaterial(doc) {
 export const defaultMaterial = doc => doc.materials.find(m => typeOf(m) === 'surface'
     && !doc.libraryItem?.stageMaterials?.includes(m.id)) ?? null
 
-/** Every object in `node` without a material (not a light, which has none) wears
+/** Every object in `node` without a material (not a light or a haze box, which have none) wears
  *  the scene's default. For what the + menu makes and the library's shapes of no size of their own;
  *  a copy of the user's keeps what it had, "none" included. */
 export function wearDefault(doc, node) {
@@ -1415,7 +1404,7 @@ export function wearDefault(doc, node) {
  *  The index is into the list AFTER the node has been taken out, so moving within the same
  *  group means what it reads as. */
 export function move(doc, id, parentId, index) {
-    const { node, parent } = inTree(doc, id)
+    const { node, parent } = must(doc, id)
     if (!parent) throw new ModelError('the root cannot be moved')
     const target = groupOf(doc, parentId)
     let inside = false
@@ -1442,7 +1431,7 @@ const walkNode = (node, fn) => {
 /** A deep copy with fresh ids, placed right after the original. Materials are shared, not
  *  copied: a duplicated object is the same stuff in a second place. */
 export function duplicate(doc, id) {
-    const { node, parent, index } = inTree(doc, id)
+    const { node, parent, index } = must(doc, id)
     if (!parent) throw new ModelError('the root cannot be duplicated')
     const copy = structuredClone(node)
     walkNode(copy, n => { n.id = newId(doc) })
@@ -1769,8 +1758,6 @@ export function animatedPaths(doc) {
     for (const k of flagsOf(doc.root)) if (k.startsWith('view/')) out.push(k)
     for (const k of flagsOf(doc.root)) if (k.startsWith('environment/')) out.push(`scene/${k}`)
     walk(doc, n => { if (n !== doc.root) for (const k of flagsOf(n)) out.push(`scene/${n.id}/${k}`) })
-    // the scene's haze, which walk() does not visit (hazebox.js hazeRegion)
-    if (doc.haze) for (const k of flagsOf(hazeRegion(doc))) out.push(`scene/${HAZE_ID}/${k}`)
     for (const m of doc.materials) {
         const own = flagsOf(m)
         for (const k of own) if (!k.startsWith(RELIEF_FLAG)) out.push(`scene/${m.id}/${k}`)
@@ -2167,30 +2154,26 @@ function lightBound(node, patch) {
     return { changed, problems: [] }
 }
 
-/** THE SCENE'S HAZE ON OR OFF (hazebox.js, 0.next; a node of its own, a haze box, from version 22 to 26). The first time,
- *  a new one filling `box` ({ lo, hi } in the world: the scene's fitted box, exportbox.js fittedBox) or a unit cube at the
- *  origin; after that its settings and region are kept, off as on. Returns the region's view (hazeRegion) or null. */
-export function setHazeOn(doc, on, box = null) {
-    if (!doc.haze) {
-        if (!on) return null
-        doc.haze = newHaze(box)
+/** A HAZE BOX (hazebox.js, version 22): dust in the air inside it, for the renderer (core/haze.js). Draws nothing.
+ *  `size` its edges in its own frame; `settings` over HAZE_DEFAULTS (mfp m, albedo {r, g, b}, g). One a scene. */
+export function addHazeBox(doc, parentId, { id, label, transform, size, ...settings } = {}, index) {
+    const parent = groupOf(doc, parentId)
+    if (hazeNode(doc)) throw new ModelError(`this scene has a haze box already ('${hazeNode(doc).id}'): one a scene`)
+    const node = {
+        id: checkNewId(doc, id), kind: 'object', type: 'haze', label: label ?? 'haze box', enabled: true,
+        transform: structuredClone(transform ?? identity()), material: null,
+        params: { size: { ...HAZE_PARAMS.size, ...(size || {}) } },
     }
-    doc.haze.enabled = !!on
-    return hazeRegion(doc)
+    if (Object.keys(settings).length) node.haze = structuredClone(settings)
+    const bad = hazeProblems(node)
+    if (bad.length) throw new ModelError(bad)
+    insert(parent.children, node, index)
+    return node
 }
-/** ...and its region made `box` again ({ lo, hi } in the world, as setHazeOn takes it): the Environment box's Fit to
- *  scene. Unturned, at scale 1. */
-export function fitHaze(doc, box) {
-    if (!doc.haze) throw new ModelError('this scene has no haze: switch it on first')
-    const n = newHaze(box)
-    doc.haze.transform = n.transform
-    doc.haze.params = n.params
-    return hazeRegion(doc)
-}
-/** Change the haze's settings (its id HAZE_ID): `patch` over what it has; a setting at its default is dropped. */
+/** Change a haze box's settings: `patch` over what it has; a setting at its default is dropped. */
 export function setHaze(doc, id, patch) {
     const { node } = must(doc, id)
-    if (node.type !== 'haze') throw new ModelError(`'${id}' is not the scene's haze`)
+    if (node.type !== 'haze') throw new ModelError(`'${id}' is not a haze box`)
     const next = { ...(node.haze || {}), ...structuredClone(patch) }
     for (const [k, v] of Object.entries(next))
         if (v === undefined || JSON.stringify(v) === JSON.stringify(HAZE_DEFAULTS[k])) delete next[k]
@@ -2747,6 +2730,7 @@ export function toTree(doc, { keepDisabled = false } = {}) {
         if (node.pattern) n.pattern = structuredClone(node.pattern)
         if (analysis && roleOf(node) && canHaveRole(node)) n.opticsRole = node.opticsRole
         if (node.type === 'light') n.light = structuredClone(node.light)
+        else if (node.type === 'haze') n.haze = structuredClone(node.haze ?? {})
         else n.code = B ? B.code : node.code
         const schema = B ?? node
         if (schema.constants) n.constants = { ...schema.constants }
@@ -2768,12 +2752,6 @@ export function toTree(doc, { keepDisabled = false } = {}) {
         root.features = features
         for (const m of root.materials) if (m.params)
             for (const k of Object.keys(m.params)) if (!fieldOn(features, k)) m.params[k] = structuredClone(FIELDS[k].def)
-    }
-    /* THE SCENE'S HAZE (hazebox.js): at the root, while it is on -- or off with live visibility (keepDisabled), where its
-       density is 0 and switching it is no compile, as a hidden node's would be */
-    if (doc.haze && (doc.haze.enabled !== false || keepDisabled)) {
-        const { animate: _a, lockPosition: _p, lockParams: _q, ...H } = doc.haze
-        root.haze = structuredClone(H)
     }
     root.functions = doc.functions ?? ''
     root.unit = doc.unit ?? 'm'
@@ -2845,7 +2823,6 @@ export function validate(doc) {
     if (doc.tolerance !== undefined) p.push(...toleranceProblems(doc.tolerance))
     if (doc.liveVisibility !== undefined && typeof doc.liveVisibility !== 'boolean') p.push('liveVisibility must be true or false')
     if (doc.features !== undefined) p.push(...featureProblems(doc.features))
-    if (doc.haze !== undefined) p.push(...hazeDocProblems(doc.haze))
     if (p.length) return p
 
     const seen = new Set()
@@ -2869,6 +2846,7 @@ export function validate(doc) {
         if (B.kind !== kind) return p.push(`'${n.id}': block '${n.block}' is ${B.kind === 'group' ? 'a group\'s' : 'an object\'s'} code`)
         p.push(...userProblems(n, B))
     }
+    let hazeSeen = 0                       // one haze box a scene (version 22)
     const walkCheck = (n, where) => {
         if (!n || typeof n !== 'object') { p.push(`${where}: not a node`); return }
         seeId(n.id, where)
@@ -2917,7 +2895,9 @@ export function validate(doc) {
                 p.push(...lightProblems(n))
                 if (n.material != null) p.push(`'${n.id}': a light has no material`)
             } else if (n.type === 'haze') {
-                p.push(`'${n.id}': a haze box is the scene's haze since version 27 (doc.haze), not a node`)
+                p.push(...hazeProblems(n))
+                if (n.light !== undefined || n.export !== undefined) p.push(`'${n.id}': light or export settings on a haze box`)
+                if (hazeSeen++) p.push(`'${n.id}': a second haze box -- one a scene`)
             } else {
                 // version 16: its code and its parameters' schema are its block's, its values its own
                 if (typeof n.block !== 'string') p.push(`'${n.id}': a code node names its block (version 16)`)
@@ -2946,26 +2926,12 @@ export function validate(doc) {
     return p
 }
 
-/* THE SCENE'S HAZE (hazebox.js, version 27): its region a transform and a size, its settings, and what a node has that
-   it keeps (its animated flags, its locks) -- nothing else */
-const HAZE_KEYS = ['enabled', 'transform', 'params', 'haze', 'animate', 'lockPosition', 'lockParams']
-function hazeDocProblems(H) {
-    if (!H || typeof H !== 'object' || Array.isArray(H)) return ['haze must be an object']
-    const p = []
-    for (const k of Object.keys(H)) if (!HAZE_KEYS.includes(k)) p.push(`haze.${k}: not part of the scene's haze (${HAZE_KEYS.join(', ')})`)
-    if (typeof H.enabled !== 'boolean') p.push('haze.enabled must be true or false')
-    checkTransform({ id: HAZE_ID, transform: H.transform }, p)
-    p.push(...hazeProblems(hazeRegion({ haze: H })))
-    for (const k of ['lockPosition', 'lockParams']) if (H[k] !== undefined && H[k] !== true) p.push(`haze.${k} is true or absent`)
-    if (H.animate !== undefined && !(Array.isArray(H.animate) && H.animate.every(x => typeof x === 'string'))) p.push('haze.animate must be a list of keys')
-    return p
-}
-
 /** Text in, a sound document out -- or a ModelError listing everything wrong with it. */
 export function parse(text) {
     let doc
     try { doc = withoutApp(JSON.parse(text)) } catch (e) { throw new ModelError(`not JSON: ${e.message}`) }
     doc = upgrade(doc)
+    doc = hazeNodeFromDoc(doc)
     const problems = validate(doc)
     if (problems.length) throw new ModelError(problems)
     return doc
@@ -2990,6 +2956,36 @@ function patternProblems(n, root) {
     if (!finite3(t.rot)) p.push(`'${n.id}': pattern.rot must be {x, y, z} numbers (degrees)`)
     for (const k of Object.keys(t)) if (k !== 'pos' && k !== 'rot') p.push(`'${n.id}': pattern.${k}: a pattern frame is a place and a turn only`)
     return p
+}
+
+/** THE SCENE'S HAZE AS IT WAS FOR A WHILE IN 0.next: `doc.haze`, in its environment, not a node -- a file of 27 saved by a
+ *  build of that time (never released, but the user tried it). The user wanted the box back ("a useful tool to visualize
+ *  light in a specific region"), so such a file has it as a haze box again, under the root, where the region was: its
+ *  place and turn in the world, its size, its dust, its animated flags and locks, shown as it was switched. Unchanged when
+ *  there is no `doc.haze`, or the tree has a haze box already (one a scene: validate says so). */
+function hazeNodeFromDoc(doc) {
+    const H = doc?.haze
+    if (!H || typeof H !== 'object' || Array.isArray(H) || !doc.root || !Array.isArray(doc.root.children)) return doc
+    const d = { ...doc }
+    delete d.haze
+    if (hazeNode(d)) return d
+    let n = 1
+    const ids = new Set(), see = x => { if (x && typeof x === 'object') { ids.add(x.id); for (const c of x.children || []) see(c) } }
+    see(d.root)
+    for (const m of d.materials || []) ids.add(m?.id)
+    while (ids.has(`n${n}`)) n++
+    const node = { id: `n${n}`, kind: 'object', type: 'haze', label: 'haze box', enabled: H.enabled !== false,
+                   transform: structuredClone(H.transform ?? identity()), material: null,
+                   params: { size: structuredClone(H.params?.size ?? HAZE_PARAMS.size) } }
+    if (H.haze && Object.keys(H.haze).length) node.haze = structuredClone(H.haze)
+    if (Array.isArray(H.animate) && H.animate.length) node.animate = [...H.animate]
+    for (const k of ['lockPosition', 'lockParams']) if (H[k] === true) node[k] = true
+    d.root = { ...d.root, children: [...d.root.children, node] }
+    if (!(d.nextId > n)) d.nextId = n + 1
+    // a timeline track on the region names it '#haze': the node's id now
+    if (Array.isArray(d.timeline?.tracks)) d.timeline = { ...d.timeline, tracks: d.timeline.tracks.map(t =>
+        typeof t?.prop === 'string' && t.prop.startsWith('scene/#haze/') ? { ...t, prop: `scene/${node.id}/${t.prop.slice(12)}` } : t) }
+    return d
 }
 
 /** Older files, brought up to VERSION one version at a time, by filling in what they could not
@@ -3032,14 +3028,11 @@ export function upgrade(doc) {
  *  - AN EXPORT BOX GOES: the print export asks what to print and fits its own box (exportbox.js, printdialog.js), so a
  *    box in the scene says nothing any more. Its settings (a cell, a colour count) were the export's, which the dialog
  *    now remembers per browser.
- *  - A HAZE BOX IS THE SCENE'S HAZE (hazebox.js): the first one -- the one the renderer used -- where it was in the
- *    world, its settings, flags and locks; on as it was shown. Every haze box leaves the tree.
  *  - A DETECTOR OR A LIMITER IS AN OBJECT'S ROLE, not a material's type (OPTICS_ROLES): each object wearing such a
  *    material takes its role and the material is a surface; and the scene's `analysis` feature, off for a new scene, is
  *    on for one that had any -- so it shows and measures what it did. */
 function v26to27(d) {
     dropExportBoxes(d.root)
-    hazeFromBox(d)
     // a scene that had a detector or a limiter has them as roles, and the analysis that shows them on
     if (rolesFromMaterials(d.root, d.materials)) d.features = { ...(d.features || {}), analysis: true }
     d.version = 27
@@ -3073,31 +3066,6 @@ function assetWithRoles(asset) {
     const a = structuredClone(asset)
     rolesFromMaterials(a.node, a.materials)
     return a
-}
-
-/** A FILE'S HAZE BOX MADE ITS HAZE (v26to27): where it was in the world -- its place, its turn from its three axes, its
- *  size times every scale above it, scale 1 -- so the dust is exactly where it was; a timeline track or a flag on it
- *  follows it to HAZE_ID. Then every haze box leaves the tree. */
-function hazeFromBox(d) {
-    const B = legacyHazeBox(d.root)
-    if (B) {
-        const R = [0, 1, 2].map(r => [0, 1, 2].map(c => B.axes[c][r]))          // columns its axes: R = Rz Ry Rx
-        const rot = eulerOf(R)
-        const n = B.node
-        d.haze = { enabled: B.shown, transform: { pos: { x: B.centre[0], y: B.centre[1], z: B.centre[2] }, rot, scale: 1 },
-                   params: { size: { x: 2 * B.half[0], y: 2 * B.half[1], z: 2 * B.half[2] } } }
-        if (n.haze && Object.keys(n.haze).length) d.haze.haze = structuredClone(n.haze)
-        if (Array.isArray(n.animate) && n.animate.length) d.haze.animate = [...n.animate]
-        for (const k of ['lockPosition', 'lockParams']) if (n[k] === true) d.haze[k] = true
-        const from = `scene/${n.id}/`, to = `scene/${HAZE_ID}/`
-        for (const t of d.timeline?.tracks || []) for (const k of Object.keys(t)) if (typeof t[k] === 'string' && t[k].startsWith(from)) t[k] = to + t[k].slice(from.length)
-    }
-    const drop = g => {
-        if (!g || !Array.isArray(g.children)) return
-        g.children = g.children.filter(c => !(c && c.kind === 'object' && c.type === 'haze'))
-        for (const c of g.children) drop(c)
-    }
-    drop(d.root)
 }
 
 /** Every export box under `n` taken out (v26to27; an asset, which has no version, as it goes in: insertAsset). */

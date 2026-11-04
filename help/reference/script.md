@@ -270,7 +270,7 @@ True when the scene has changed since the run: its numbers are of a scene that i
 
 ### `a.note`
 
-What the run could not trace (the scene's haze), or ''.
+What the run could not trace (a haze box), or ''.
 
 ### `a.totals`
 

@@ -214,8 +214,8 @@
 //   every text and its `vis_exbox` block the live text; and its limiter material is a surface now (the role went to
 //   the object wearing it), so getMaterial2 assigns that material's fields (baseColor_lim and the rest, declared).
 //   Nothing else in its texts moved (cases.*.wgsl, diffed by hand).
-// - scenes/dusty-beam.json: its haze box is the scene's haze (hazebox.js), so its node's comment and uniforms (xf_n13,
-//   size_n13) left the texts; the `haze` handed to the renderer is the same to the number, its id `#haze`.
+// (For a while the haze box was the scene's too, and dusty-beam.json's texts moved with it; the user wanted the box
+// back, so they are base's again, its `roles` key aside.)
 //======================================================================================================================
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
