@@ -173,10 +173,11 @@ export function geometryKey(doc, id) {
     // ...and with a relief, its pattern frame (model.js setPattern): where the relief is read
     const own = (n, over) => ({ type: n.type, code: codeOf(doc, n), params: n.params, constants: blockOf(doc, n)?.constants, enabled: n.enabled,
                         shape: n.light?.shape, twoSided: n.light?.twoSided, relief: reliefOf(n, over), join: n.join, joinBlend: n.joinBlend,
+                        ...(n.joinShape ? { joinShape: n.joinShape } : {}),     // model version 27; absent, the key it had
                         ...(reliefOf(n, over) && n.pattern ? { pattern: n.pattern } : {}) })
     // straightMaterial too: it moves where a relief inside is read, and a relief is shape
     const above = n => ({ code: codeOf(doc, n), params: n.params, blend: n.blend, enabled: n.enabled, straight: n.straightMaterial, copies: n.copies,
-                          joins: (n.children || []).map(c => [c.join, c.joinBlend]) })
+                          joins: (n.children || []).map(c => c.joinShape ? [c.join, c.joinBlend, c.joinShape] : [c.join, c.joinBlend]) })
     /* A GROUP'S OWN SURFACE is made of its children, where they are in it: a child's radius, or a child moved
        inside a relief, moves the surface the group folds -- so its key is its whole subtree, transforms of
        the children included (its own transform still not: the box is in its frame) */
@@ -512,7 +513,9 @@ export function createBoxes({ sample, doc, ready = () => true, wanted = () => nu
 //----------------------------------------------------------------------------------------------------------------------
 // THE BOXES THE RENDERER CULLS WITH (codegen's root: each top-level node skipped while farther than its box)
 //----------------------------------------------------------------------------------------------------------------------
-/** How far a smooth union can bulge past its children, summed over the subtree: csgUnion is
+/** How far a smooth union can bulge past its children, summed over the subtree. A ROUND OR CHAMFERED UNION (model
+ *  version 27) fills a corner with what is within r of the fillet's centre, which is inside both children (a = b = -r,
+ *  builder/joins.js): so within r of them, and r is what it adds (derived). A smooth one: csgUnion is
  *  min(a, b) - h*h/(4k), h = max(k - |a - b|, 0), at most k/4 below the nearer of what it joins (scene_api.js). In
  *  WORLD units, as the blend is -- the CSG combine works on distances already taken to the world. Smooth subtraction
  *  and intersection only take away (max(...) + h*h/(4k)): nothing to add for them.
@@ -520,7 +523,8 @@ export function createBoxes({ sample, doc, ready = () => true, wanted = () => nu
  *  each can go k/4 below what the last one gave. It was k/4 per group, which three equal spheres already exceed --
  *  about 0.39k where all three meet, by the formula; with two children it is the same k/4. */
 export const smoothBulge = n => (n.enabled === false || n.kind !== 'group' || !isCsg(n) ? 0
-        : shapesOf(n).slice(1).filter(c => joinOf(c) === 'union').reduce((a, c) => a + Math.max(0, c.joinBlend ?? n.blend) / 4, 0))
+        : shapesOf(n).slice(1).filter(c => joinOf(c) === 'union')
+            .reduce((a, c) => a + Math.max(0, c.joinBlend ?? n.blend) / (c.joinShape === 'round' || c.joinShape === 'chamfer' ? 1 : 4), 0))
     + (n.children || []).reduce((a, c) => a + smoothBulge(c), 0)
 
 /**

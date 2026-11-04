@@ -5,9 +5,12 @@
 //     blend 0.1                  # the group's blend: the smoothness of every join without one of its own
 //     union a, b, c              # a Plate, b Rib, c Rib
 //     subtract d  blend 0.02     # d Hole
+//     subtract e  round 1        # e Pocket, its edge filleted with radius 1 (model version 27: a join's shape)
 //
 // The first name of the first line is the BASE, the shape the others meet; each line's op is the join of every
-// other name on it, and `blend x` at its end is their own blend. Read top to bottom, as codegen combines them.
+// other name on it, and `blend x` at its end is their own blend -- `round x` or `chamfer x` the same with that shape
+// (a fillet, a flat cut), and `round` or `chamfer` alone the shape at the group's blend. Read top to bottom, as codegen
+// combines them.
 //
 // A VIEW ONTO THE MODEL, NEVER A SECOND SOURCE OF TRUTH. Nothing here is stored: recipeOf() writes the text from
 // the document, parseRecipe() reads text into a plan, and applyRecipe() replays the plan through the model's own
@@ -58,7 +61,7 @@ export function recipeOf(g) {
     const out = []
     if (g.blend > 0) out.push(`blend ${g.blend}`)
     if (!shapes.length) return out.join('\n')
-    const how = c => `${joinOf(c)} ${c.joinBlend ?? ''}`
+    const how = c => `${joinOf(c)} ${c.joinBlend ?? ''} ${c.joinShape ?? ''}`
     /* THE BASE OPENS A `union` LINE, which the shapes after it join while they join by union: "a less b" is
        `union a` / `subtract b`, not `subtract a, b` -- which reads as "subtract a and b" to anyone who has not
        read that the first name is the base. (The parser takes either: the first line's op is only ever its
@@ -67,15 +70,16 @@ export function recipeOf(g) {
     for (const c of shapes.slice(1)) {
         const last = lines[lines.length - 1]
         if (last.kids.length === 1 && lines.length === 1) {
-            if (joinOf(c) === 'union') { last.blend = c.joinBlend; last.kids.push(c) }
-            else lines.push({ op: joinOf(c), blend: c.joinBlend, kids: [c] })
+            if (joinOf(c) === 'union') { last.blend = c.joinBlend; last.shape = c.joinShape; last.kids.push(c) }
+            else lines.push({ op: joinOf(c), blend: c.joinBlend, shape: c.joinShape, kids: [c] })
         } else if (how(c) === how(last.kids[last.kids.length - 1])) last.kids.push(c)
-        else lines.push({ op: joinOf(c), blend: c.joinBlend, kids: [c] })
+        else lines.push({ op: joinOf(c), blend: c.joinBlend, shape: c.joinShape, kids: [c] })
     }
-    const pad = Math.max(...lines.map(l => l.op.length + 1 + l.kids.map(c => h.get(c.id)).join(', ').length
-        + (l.blend != null ? `  blend ${l.blend}`.length : 0)))
+    // the end of a line: its own blend, in its shape's word -- or the shape's word alone, at the group's blend
+    const tail = l => l.blend != null ? `  ${l.shape ?? 'blend'} ${l.blend}` : l.shape ? `  ${l.shape}` : ''
+    const pad = Math.max(...lines.map(l => l.op.length + 1 + l.kids.map(c => h.get(c.id)).join(', ').length + tail(l).length))
     for (const l of lines) {
-        const text = `${l.op} ${l.kids.map(c => h.get(c.id)).join(', ')}${l.blend != null ? `  blend ${l.blend}` : ''}`
+        const text = `${l.op} ${l.kids.map(c => h.get(c.id)).join(', ')}${tail(l)}`
         out.push(`${text.padEnd(pad)}  # ${l.kids.map(c => `${h.get(c.id)} ${c.label}`).join(', ')}`)
     }
     return out.join('\n')
@@ -105,12 +109,15 @@ function tokens(line, lineNo, errors) {
     return out
 }
 
+/* the words a line may end with: a blend, and its shape (model version 27) */
+const TAIL_WORDS = ['blend', 'round', 'chamfer']
 const isBlendValue = t => t?.type === 'word' && /^[0-9]*\.?[0-9]+(e[+-]?[0-9]+)?$/i.test(t.value)
 
 /**
  * Text into a plan for group `g` (a document's group). Returns { plan, errors }: plan is null while there are
  * errors, each { line, col, message } at the place it is about.
- * plan: { blend, order: [shape ids], joins: { id: op }, blends: { id: number | null } } -- every shape once.
+ * plan: { blend, order: [shape ids], joins: { id: op }, blends: { id: number | null }, shapes: { id: 'round' | 'chamfer' |
+ * null } } -- every shape once.
  */
 export function parseRecipe(text, g) {
     const errors = []
@@ -136,13 +143,19 @@ export function parseRecipe(text, g) {
         const op = head.type === 'word' ? OP_WORDS[head.value] : null
         if (!op) return errors.push({ line: lineNo, col: head.col,
             message: `a line starts with union, subtract or intersect (or ∪ − ∩), not '${head.value ?? head.type}'` })
-        // `blend x` at the end: this line's own blend
-        let rest = t.slice(1), own = null
-        if (rest.length >= 2 && rest[rest.length - 2].type === 'word' && rest[rest.length - 2].value === 'blend') {
-            const v = rest[rest.length - 1]
-            if (!isBlendValue(v)) return errors.push({ line: lineNo, col: v.col, message: 'blend takes one number, 0 or more' })
+        /* `blend x` at the end: this line's own blend; `round x` or `chamfer x` the same in that shape, and `round` or
+           `chamfer` alone the shape at the group's blend */
+        let rest = t.slice(1), own = null, shape = null
+        const endWord = k => rest.length >= k && rest[rest.length - k].type === 'word' && TAIL_WORDS.includes(rest[rest.length - k].value)
+        if (endWord(2)) {
+            const v = rest[rest.length - 1], w = rest[rest.length - 2].value
+            if (!isBlendValue(v)) return errors.push({ line: lineNo, col: v.col, message: `${w} takes one number, 0 or more` })
             own = Number(v.value)
+            shape = w === 'blend' ? null : w
             rest = rest.slice(0, -2)
+        } else if (endWord(1) && rest[rest.length - 1].value !== 'blend') {
+            shape = rest[rest.length - 1].value
+            rest = rest.slice(0, -1)
         }
         if (!rest.length) return errors.push({ line: lineNo, col: head.col, message: `nothing after '${head.value}': name the children it joins` })
         // names, separated by commas
@@ -154,7 +167,8 @@ export function parseRecipe(text, g) {
             }
             let c = null
             if (tok.type === 'word') {
-                if (tok.value === 'blend') return errors.push({ line: lineNo, col: tok.col, message: 'blend goes at the end of a line, with its number' })
+                if (TAIL_WORDS.includes(tok.value) && !byHandle.has(tok.value))
+                    return errors.push({ line: lineNo, col: tok.col, message: `${tok.value} goes at the end of a line${tok.value === 'blend' ? ', with its number' : ''}` })
                 c = byHandle.get(tok.value)
                 if (!c) return errors.push({ line: lineNo, col: tok.col,
                     message: `no child '${tok.value}' in this group (its children are ${names || 'none'}; a label goes in quotes)` })
@@ -173,7 +187,7 @@ export function parseRecipe(text, g) {
                 return errors.push({ line: lineNo, col: tok.col, message: `${h.get(c.id)} (${c.label}) is listed twice: first at line ${at.line}` })
             }
             seen.set(c.id, { line: lineNo })
-            entries.push({ id: c.id, op, own })
+            entries.push({ id: c.id, op, own, shape })
         })
         if (rest.length % 2 === 0) errors.push({ line: lineNo, col: rest[rest.length - 1].col, message: 'a comma with no name after it' })
     })
@@ -184,8 +198,8 @@ export function parseRecipe(text, g) {
         message: `${h.get(c.id)} (${c.label}) is not in the recipe: every child of the group is listed once` })
     if (errors.length) return { plan: null, errors }
     // the first is the base: it joins nothing, and its own blend is nobody's (applyRecipe: one that stays keeps its own)
-    const plan = { blend: blend ?? 0, order: entries.map(e => e.id), joins: {}, blends: {} }
-    entries.forEach((e, i) => { plan.joins[e.id] = i === 0 ? 'union' : e.op; plan.blends[e.id] = i === 0 ? null : e.own })
+    const plan = { blend: blend ?? 0, order: entries.map(e => e.id), joins: {}, blends: {}, shapes: {} }
+    entries.forEach((e, i) => { plan.joins[e.id] = i === 0 ? 'union' : e.op; plan.blends[e.id] = i === 0 ? null : e.own; plan.shapes[e.id] = i === 0 ? null : e.shape })
     return { plan, errors: [] }
 }
 
@@ -216,6 +230,7 @@ export function applyRecipe(doc, gid, plan) {
         for (const id of stays ? plan.order.slice(1) : plan.order) {
             M.setJoin(d, id, plan.joins[id])
             M.setJoinBlend(d, id, plan.blends[id])
+            M.setJoinShape(d, id, plan.shapes?.[id] ?? null)
         }
         M.setBlend(d, gid, plan.blend)
         const bad = M.validate(d)

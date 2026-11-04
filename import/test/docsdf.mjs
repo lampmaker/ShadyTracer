@@ -18,6 +18,7 @@ import { matrixOf } from '../../builder/transform.js'
 import { isCsg } from '../../builder/codegen.js'
 import { PRIMITIVES } from '../../builder/primitives.js'
 import { CONE_CODE, RRECT_CODE } from '../shapes.js'
+import { joinShaped } from '../../builder/joins.js'
 
 const len2 = (x, y) => Math.hypot(x, y)
 const PRESETS = new Map([
@@ -48,7 +49,7 @@ const PRESETS = new Map([
 /** The distance of a document node (a part's group, as an asset holds it) at a point of its parent's frame. `blocks`:
  *  the asset's or document's blocks, by which an object's code is found. `shape`: the node is one of a combining
  *  group's shapes (combinedGroups), so a plain group combines its own as a union. */
-export function nodeSDF(n, p, blocks, shape = false) {
+export function nodeSDF(n, p, blocks, shape = false, S = 1) {
     const m = matrixOf(n.transform), s = m[15]
     const d = [p[0] - m[12], p[1] - m[13], p[2] - m[14]]
     const q = [0, 1, 2].map(c => (d[0] * m[4 * c] + d[1] * m[4 * c + 1] + d[2] * m[4 * c + 2]) / s)
@@ -58,14 +59,35 @@ export function nodeSDF(n, p, blocks, shape = false) {
         if (!f) throw new Error(`docsdf: no distance written for the code of '${n.label}'`)
         return f(q, n.params) * s
     }
+    return combined(n, q, blocks, isCsg(n) || shape, Infinity, S * s) * s
+}
+
+/* the group's first `upto` children combined, at q in its own frame; `S` the frame's scale to the world: a blend is a
+   world length (codegen combines world distances), so it is r / S here */
+function combined(n, q, blocks, csg, upto, S = 1) {
     let C = null
-    const csg = isCsg(n) || shape
-    for (const c of n.children.filter(c => c.enabled !== false)) {
-        const v = nodeSDF(c, q, blocks, csg)
+    const kids = n.children.filter(c => c.enabled !== false)
+    for (let i = 0; i < Math.min(upto, kids.length); i++) {
+        const c = kids[i]
+        const v = nodeSDF(c, q, blocks, csg, S)
         if (C === null) { C = v; continue }
         if (!csg) { if (Math.abs(v) < Math.abs(C)) C = v; continue }
         const join = c.join ?? 'union'
+        /* A ROUND OR CHAMFERED JOIN (model version 27) reads both sides' normals: the shader's are analytic, these the
+           gradients of the two values by central differences -- the same wherever each is a distance's */
+        if (c.joinShape === 'round' || c.joinShape === 'chamfer') {
+            const r = (c.joinBlend ?? n.blend ?? 0) / S
+            const a = [...grad(x => combined(n, x, blocks, csg, i, S), q), C], b = [...grad(x => nodeSDF(c, x, blocks, csg, S), q), v]
+            C = joinShaped(join, c.joinShape, a, b, r)[3]
+            continue
+        }
         C = join === 'union' ? Math.min(C, v) : join === 'intersect' ? Math.max(C, v) : Math.max(C, -v)
     }
-    return (C ?? Infinity) * s
+    return C ?? Infinity
+}
+const H = 1e-5
+const grad = (f, q) => {
+    const g = [0, 1, 2].map(k => { const a = q.slice(), b = q.slice(); a[k] += H; b[k] -= H; return (f(a) - f(b)) / (2 * H) })
+    const l = Math.hypot(...g)
+    return l > 1e-9 ? g.map(x => x / l) : [0, 0, 0]
 }

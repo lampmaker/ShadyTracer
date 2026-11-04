@@ -436,6 +436,19 @@ export function combinedGroups(tree) {
 }
 
 const CSG_FN = { union: 'csgUnion', subtract: 'csgSubtract', intersect: 'csgIntersect' }
+/* A JOIN'S SHAPE (model version 27, joinShape): a round's or a chamfer's functions in place of the smooth blend's,
+   scene_api.js csgRound* / csgChamfer* (builder/joins.js is their JS twin) */
+const SHAPED_FN = {
+    round: { union: 'csgRoundUnion', subtract: 'csgRoundSubtract', intersect: 'csgRoundIntersect' },
+    chamfer: { union: 'csgChamferUnion', subtract: 'csgChamferSubtract', intersect: 'csgChamferIntersect' },
+}
+/** The WGSL function a child joins by: its op's, in its shape (smooth, absent, the csg* every join had). */
+export const joinFn = c => (SHAPED_FN[c?.joinShape] ?? CSG_FN)[joinOf(c)]
+/** How far off a child's own surface its join reads it, per unit of the blend: a smooth blend 5/4 (csgUnion: min -
+ *  h^2/4k, h nonzero within k); a round or a chamfer as far as the fillet's surface is from the edge's two faces,
+ *  r (1 / sin(theta / 2) - 1) for an edge of interior angle theta -- 0.41 r at a right angle, 3 r at 29 degrees. 3:
+ *  edges sharper than 29 degrees are not what fillets are made on (chosen, not measured). */
+export const READS_PER_BLEND = { smooth: 1.25, round: 3, chamfer: 3 }
 // when the child just combined makes the surface, and so gives the group its material (combine below)
 const MAT_WINS = { union: k => `C.s.w < ${k}.w`, subtract: k => `-C.s.w > ${k}.w`, intersect: k => `C.s.w > ${k}.w` }
 
@@ -1601,7 +1614,7 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
                is the farther. Before 0.57.2 only a union switched, so a subtraction's carved walls kept the base's
                material (the die's pips in combining-shapes came out white). Hard at the middle of a blend. */
             line(dd, `${km} = select(${km}, C.m, ${MAT_WINS[joinOf(c)](k)});`)
-            line(dd, `${k} = ${CSG_FN[joinOf(c)]}(${k}, C.s, ${blendOf(c)});`)
+            line(dd, `${k} = ${joinFn(c)}(${k}, C.s, ${blendOf(c)});`)
         }
         shape.forEach((c, i) => {
             // live: the whole child skipped when hidden -- absent, not an empty shape (see emitScene)
@@ -1617,7 +1630,7 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
                    exactly the text it had (test/fixtures/csg-v10). IN AN ARRAY IT IS, at every copy after the first:
                    a union of the copies, at the group's blend -- a plain group's, 0 -- whatever join and blend the
                    base keeps dormant (isCsg reads neither). */
-                combine(d + 2, copies && i === 0 ? { ...c, join: 'union', joinBlend: undefined } : i === 0 && shape[1] ? { ...c, join: shape[1].join } : c)
+                combine(d + 2, copies && i === 0 ? { ...c, join: 'union', joinBlend: undefined, joinShape: undefined } : i === 0 && shape[1] ? { ...c, join: shape[1].join } : c)
                 line(d + 1, '}')
             } else if (i === 0) {
                 line(d + 1, `${k} = C.s; ${km} = C.m;`)
@@ -1719,13 +1732,16 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
        reads the running result up to its blend away and the next reads that. The base is read by every join. */
     const linkOf = (g, c) => {
         const shape = shapesOf(g), i = shape.indexOf(c)
-        return { g, reads: shape.slice(Math.max(i, 1)).map(x => `UB.${x.joinBlend != null ? joinBlendName(x.id) : blendName(g.id)}`) }
+        return { g, reads: shape.slice(Math.max(i, 1)).map(x => ({ u: `UB.${x.joinBlend != null ? joinBlendName(x.id) : blendName(g.id)}`,
+                                                                    per: READS_PER_BLEND[x.joinShape ?? 'smooth'] })) }
     }
     const reachOf = chain => {
-        // a blend read by several joins (the group's, the default) counts for each: n x, written once
+        /* a blend read by several joins (the group's, the default) counts for each: n x, written once. Each times what
+           its join's shape reads per unit (READS_PER_BLEND): smooth joins alone are written as they always were */
         const count = new Map()
-        for (const b of chain.flatMap(l => l.reads)) count.set(b, (count.get(b) || 0) + 1)
-        const terms = [...count].map(([b, n]) => n > 1 ? `${n}.0 * ${b}` : b)
+        for (const { u, per } of chain.flatMap(l => l.reads)) count.set(u, (count.get(u) || 0) + per / 1.25)
+        const num = x => Number.isInteger(x) ? `${x}.0` : `${+x.toPrecision(6)}`
+        const terms = [...count].map(([b, n]) => n !== 1 ? `${num(n)} * ${b}` : b)
         return !terms.length ? '0.0' : `1.25 * ${terms.length > 1 ? `(${terms.join(' + ')})` : terms[0]}`
     }
     const wrapped = n => n.kind === 'object' && reliefOf.has(n.material) && NODE_TYPES[n.type]
@@ -2087,7 +2103,7 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
         /* the arrays' window (arrays.js), wherever the walk culls and the scene has an array: which arrays are rows or rings
            is in their records, so a copy dragged off its row is a write, not a compile */
         if (plan.arrays > 0 && cull !== false && !pick && !optics && arrayWindow !== false) e.raw(ARRAY_WINDOW_WGSL)
-        for (const l of evaluatorWGSL({ blocks: plan.blocks.length, befores: plan.befores.length, afters: plan.afters.length, subs: plan.subs.length, stack: plan.stack, arrays: plan.arrays, wantLocal, keepK, straight, pick, optics, cull,
+        for (const l of evaluatorWGSL({ blocks: plan.blocks.length, befores: plan.befores.length, afters: plan.afters.length, subs: plan.subs.length, stack: plan.stack, arrays: plan.arrays, shaped: plan.shaped, wantLocal, keepK, straight, pick, optics, cull,
             count, recs: 'scnRecs', arrayWindow: arrayWindow !== false })) e.raw(l)
         // the nodes inside compiled subtrees: their values are those subtrees' uniforms, never records (demo.js liveValue)
         const compiledIds = new Set()

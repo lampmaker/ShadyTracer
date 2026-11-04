@@ -214,7 +214,7 @@ export function rowsFor(project, { current = project.scenes[0]?.key, collapsed =
             if (!parent || parent === doc.root || n.type === 'light' || n.type === 'export' || n.type === 'haze') return { toggle: null, mark: '', own: '' }
             const base = baseOf(parent)?.id === n.id, how = base ? 'base' : joinOf(n)
             if (!isCsg(parent)) return { toggle: how, mark: '', own: '' }
-            return { toggle: how, mark: `${GLYPH[how]} ${handleIn(parent, n.id)}  `, own: !base && n.joinBlend != null ? `  · blend ${n.joinBlend}` : '' }
+            return { toggle: how, mark: `${GLYPH[how]} ${handleIn(parent, n.id)}  `, own: base ? '' : n.joinBlend != null ? `  · ${n.joinShape ?? 'blend'} ${n.joinBlend}` : n.joinShape ? `  · ${n.joinShape}` : '' }
         }
         /* ◆ AFTER A ROW WITH A VALUE FLAGGED ANIMATED (model.js setAnimated): where to look for it, from the tree */
         const anim = o => Array.isArray(o?.animate) && o.animate.length ? '  \u25C6' : ''
