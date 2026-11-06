@@ -1,5 +1,43 @@
 # Images on surfaces: a proposal
 
+**STATUS (2026-11-06, later).** **T1 is built (0.next), not yet seen on hardware.** The user: *"go with your proposals,
+build T1"*, after the four decisions below were put to them, so each is taken as proposed: a surface under the glow
+(way 1), pictures in the file, 4096 px and 8-bit, one picture per material placed by the pattern frame. What was built
+differs from the proposal in these places, each for a reason found while building:
+
+- **A slot, not a parameter kind.** A material's pictures are `m.images`, a list of slots beside its parameters
+  (`builder/images.js`), not a fifth kind of parameter. The parameter kinds are read in some 40 places
+  (`model.js paramKind`), each of which would have had to learn what a picture is. A slot's uniform is
+  `img_<name>_<material>`, and a material's own parameter may not be called `img_...`.
+- **The picture is in the scene document, outside every undo step** (`project.js OUTSIDE_HISTORY`), rather than in a
+  store of its own. That makes a file, an export, a copy, a library item and a drag between scenes whole with no code
+  of their own. A snapshot does not carry megabytes: no undo step holds a picture, and a restore carries them across. A
+  file keeps only the pictures its materials use (`model.js withUsedPictures`). The document in memory keeps all of
+  them, since an undo may bring back a slot that names one.
+- **Each kernel gets its own texel read** (`core/images.js withImages`, `sceneCompute`): the atlas where `main`
+  reaches a material, a stub where it does not. The renderer's march and shadow rays ask the distance alone, and a
+  texture named in a function `main` never calls is an invalid bind group (check-shaders pass 2). Found while planning
+  the binding, before anything was run.
+- **The screen's surface replaces whatever an emitter held** in base colour, metallic, roughness, specular and specular
+  tint, on its first glowing picture. An emitter never read those fields before (`materials.js fieldsOf`), and a preset's
+  roughness is not the field's default, so "only where still the default" left the diffuse preset's roughness 1 under
+  the glass (`builder/test/images.gpu.mjs` found it).
+- **Not in T1:** a slot's settings as parameters of the registry and the timeline (a scrolling sign is T2), *Fit to
+  object* (T2 as planned), HDR pictures (T2), a picture's bytes freed on the GPU (an atlas no scene holds is the
+  browser's to free: `builder/images.js` ATLASES).
+
+**What is verified, and where (Dawn over lavapipe, this container):** the WGSL lookup against its JS twin in every
+projection, wrap, filter and face setting (`core/test/images.gpu.mjs`); the scene's own `getMaterial2`, codegen and as
+data, against the twin: a glowing picture's emission times the luminance, the pattern frame moving it, a slot's live
+uniform moving it (`builder/test/images.gpu.mjs`); and the whole renderer: a floor under a glowing 8 x 8 checker reads
+0.9905 +- 0.0078 of the floor under a uniform grey of its mean with light sampling on, and 0.9956 +- 0.0063 with it
+off, against the means' ratio of 0.9943. **Not seen:** any picture, on any screen; its speed. Both are the user's.
+
+**What to look at first:** File › Examples › *Pictures*. The test card's bars should read white, yellow, cyan, green,
+magenta, red, blue from the left on the screen, the poster and the can, with the ring round its centre. The
+television's black ramp end should look like dark glass. Then a material's **pictures** box: + picture…, and its
+settings dragged.
+
 **STATUS (2026-11-06).** A proposal, nothing built. The user: *"think about textures. how could these be applied.
 What I'd like short-term is a texture that can act as an emitting surface as well. So maybe it's a material where
 the rgb color is given by the texture image. With code, users can easily convert the texture rgb to basecolor or

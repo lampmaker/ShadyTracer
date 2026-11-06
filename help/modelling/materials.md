@@ -110,6 +110,52 @@ intersection, a blend, a round, a shell), the material is laid out in the **grou
 pattern frame. The
 box on one of its shapes says so, and there it moves only that shape's relief.
 
+## Pictures
+
+A material can show a **picture**: a PNG, JPEG or WebP, up to 4096 pixels on its longer side (a larger one is scaled
+down, and the console says so). In a material's Properties, **pictures** › **+ picture…** chooses one. The picture is kept
+in the scene, so a saved file, an exported scene, a copy and a library item all carry it.
+
+**What it does.** The first picture is the material's colour:
+- on a surface, its **base colour**;
+- on a **glowing** material, its **glow**. A white pixel glows at the material's luminance, a pixel half as bright half as
+  much, and a black one not at all. It works like a screen showing the picture at that brightness: 200 cd/m² is a
+  television, 300 an office monitor.
+
+Where the picture is transparent, the material's own colour or glow shows. A second picture, or one set to *code only*,
+is for the material's code: `sample(picture)` is the picture at the hit, `mapped(picture)` the position on it, and
+`sampleAt(picture, uv)` the picture at a position of your own ([Functions for code](../reference/code.md#a-materials-pictures)).
+
+**Where it goes.** A shape has no built-in picture coordinates, so the picture is projected onto it, in the object's
+[pattern frame](#turning-a-pattern-the-pattern-frame). It moves and turns with the object, and *pattern at* and *pattern
+turn* move and turn it like any pattern. The **projection** says how:
+- **planar**: along the frame's z, the picture's top towards +y. For a screen, a sign, a poster or a floor.
+- **box**: one of six faces, picked by the direction the surface faces. Each reads the right way round from outside.
+- **triplanar**: the three directions blended, for stone or concrete on any shape with no visible seam.
+- **cylindrical**: round the frame's z. Across the picture is the distance round in mm, so a label of 207 mm goes once
+  round a 66 mm can.
+- **spherical**: the whole picture once over a sphere.
+
+Then the picture is placed:
+- **width** and **height** are one copy, in real millimetres whatever the scene's unit; *Height from the picture's
+  shape* keeps its proportions.
+- **offset** is where its centre is, in mm, and **turn** turns it in its own plane.
+- **wrap**, across and up separately: *repeat*, *mirror* (every other copy flipped, so the edges meet with no seam),
+  *clamp* (the edge pixels go on) or *none* (one copy, the material's own value outside it).
+- **filter**: *smooth* mixes between pixels; *pixels* keeps each one a sharp square, for an LED wall or pixel art.
+- **faces**, for planar: the *front* faces only (where the surface faces +z), *both* (the back mirrored, as a slide seen
+  from behind) or *all*.
+- **colour (sRGB)**: on for a colour picture. Off reads it as data, for a roughness map or a mask.
+
+Every one of these is live. Choosing another picture, renaming it, changing its use or taking it away is a compile.
+
+**A glowing picture's dark parts.** A black pixel emits nothing, so there the material is not a light, and its surface
+shows. A glowing material with a picture keeps a surface's base colour, metallic, roughness and specular for that. They
+start as a screen's dark glass, so a black pixel looks like a switched-off screen reflecting the room. A pixel that
+glows reflects nothing, as every glowing surface: on a real screen the reflection is small next to the glow.
+
+Try [Pictures](example:pictures.json): one test card on a glowing screen, on a poster, round a can and on a ball.
+
 ## Relief
 
 A material can have a **relief**: a height on the surface of everything that wears it, in real millimetres. Plaster,

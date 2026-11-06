@@ -80,6 +80,13 @@ export const EXAMPLES = [
   "description": "A tumbler of water, a green bottle, a flint prism in the sun"
  },
  {
+  "file": "pictures.json",
+  "title": "Pictures",
+  "audience": "Modelling and rendering",
+  "group": "Materials",
+  "description": "A test card glowing on a screen, on a poster, round a can and on a ball"
+ },
+ {
   "file": "lighting-room.json",
   "title": "Lighting a room",
   "audience": "Modelling and rendering",

@@ -42,6 +42,7 @@
 //======================================================================================================================
 
 import { mapMessages, formatMessages } from './emit.js'
+import { IMAGE_RESOURCE, imageTexelWGSL } from '../lib/pathtracer/core/images.js'
 
 /** A body that forces the compiler to look at SDF. Without a caller it is dead code and a
  *  broken SDF can compile clean -- which would make this whole file a decoration. Exported for
@@ -54,6 +55,11 @@ export const PROBE_MAIN = /*wgsl*/`
     let h = SDF(r);
     probe[0] = h.s.w + f32(h.m) + f32(h.a);
 `
+
+/** THE PROBE'S TEXT: the body, and for a scene with a picture the texel read each kernel defines for itself
+ *  (core/images.js withImages) -- the atlas read, since the probe is a module and never bound -- after the body, where no
+ *  line the user wrote moves. check-shaders compiles the probe from this too, so its copy is this one. */
+export const probeBody = (body, resources = {}) => resources[IMAGE_RESOURCE] ? body + imageTexelWGSL(true) : body
 
 /**
  * Compile a generated scene body and return what is wrong with it, in the user's terms.
@@ -68,6 +74,7 @@ export const PROBE_MAIN = /*wgsl*/`
  * @returns { ok, messages, report, wgsl, offset }
  */
 export async function validate(gpu, body, map, uniformTypes = {}, resources = {}) {
+    body = probeBody(body, resources)
     let final = body, module
     try {
         ({ wgsl: final, module } = gpu.makeCompute(body, PROBE_MAIN, uniformTypes,

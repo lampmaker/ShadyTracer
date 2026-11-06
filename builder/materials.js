@@ -19,6 +19,8 @@
 // renders as it did.
 //======================================================================================================================
 
+import { colourSlot, SCREEN_FIELDS } from './images.js'
+
 /** Every field of Material2 a material sets -- only those the shader reads, since each is a
  *  control in the panel (`model` and `clearcoat` were here and did nothing; model.js 7, 8) -- in
  *  declaration order, with its uniform type and
@@ -248,6 +250,14 @@ const SURFACE_FIELDS = ['baseColor', 'metallic', 'roughness', 'anisotropy', 'spe
 export const FIELDS_OF = {
     surface: SURFACE_FIELDS,
     emitter: ['emissive', 'emissiveLuminance'],
+}
+/** THE FIELDS ONE MATERIAL USES: its type's (FIELDS_OF), and for an emitter whose glow is a picture (images.js
+ *  colourSlot) a surface's first few too, which show where the picture is dark (images.js SCREEN_FIELDS says why). What
+ *  codegen assigns, the panel shows and the parameter registry offers -- one list, read by all three. */
+export const fieldsOf = m => {
+    const t = m?.type ?? 'surface'
+    const own = FIELDS_OF[t] ?? FIELDS_OF.surface
+    return t === 'emitter' && colourSlot(m) ? [...SCREEN_FIELDS, ...own] : own
 }
 /** What the panel calls a field, where its name says too little */
 export const FIELD_LABELS = { emissive: 'colour', emissiveLuminance: 'luminance (cd/m\u00b2)',

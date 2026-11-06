@@ -1,0 +1,569 @@
+{
+  "format": "raytracer-scene",
+  "version": 29,
+  "title": "Pictures",
+  "nextId": 15,
+  "unit": "mm",
+  "materials": [
+    {
+      "id": "m1",
+      "label": "charcoal",
+      "params": {
+        "baseColor": {
+          "r": 0.05,
+          "g": 0.05,
+          "b": 0.05
+        },
+        "metallic": 0,
+        "roughness": 1,
+        "anisotropy": 0,
+        "specular": 0,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "haze": 0,
+        "scatterDistance": 0,
+        "scatterAnisotropy": 0
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
+    },
+    {
+      "id": "m4",
+      "label": "screen",
+      "params": {
+        "baseColor": {
+          "r": 0.02,
+          "g": 0.02,
+          "b": 0.02
+        },
+        "metallic": 0,
+        "roughness": 0.05,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "haze": 0,
+        "scatterDistance": 0,
+        "scatterAnisotropy": 0,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 200
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   R_local  that frame's rotation to the world, for a direction written in it\n//   S_local  its scale: p_local * S_local is in scene units; metres(x) is x m in them, mm(x) x mm\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe; one marked\n//            as a length is in real mm, whatever the scene's unit -- read the point in mm too:\n//   let q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. brushed along the object's x, for an anisotropy above 0 (or turned: grainAround):\n//   m.tangent = grainAlong(R_local, VEC3(1.0, 0.0, 0.0));\n// e.g. with a length width (mm) and a colour stripe added with +, and q as above:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(q.x / width), 0.5));\n// every function there is to call -- noise, grains, streaks: Help > Reference > Functions for code\n",
+      "type": "emitter",
+      "images": [
+        {
+          "name": "picture",
+          "image": "i1770fa81aa743e28e4cd613c",
+          "use": "colour",
+          "projection": "planar",
+          "size": {
+            "x": 400,
+            "y": 225
+          },
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "turn": 0,
+          "wrapU": "clamp",
+          "wrapV": "clamp",
+          "filter": "smooth",
+          "faces": "front",
+          "colour": true,
+          "sharpness": 4
+        }
+      ]
+    },
+    {
+      "id": "m7",
+      "label": "poster",
+      "params": {
+        "baseColor": {
+          "r": 0.8,
+          "g": 0.8,
+          "b": 0.8
+        },
+        "metallic": 0,
+        "roughness": 0.6,
+        "anisotropy": 0,
+        "specular": 0,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "haze": 0,
+        "scatterDistance": 0,
+        "scatterAnisotropy": 0,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   R_local  that frame's rotation to the world, for a direction written in it\n//   S_local  its scale: p_local * S_local is in scene units; metres(x) is x m in them, mm(x) x mm\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe; one marked\n//            as a length is in real mm, whatever the scene's unit -- read the point in mm too:\n//   let q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. brushed along the object's x, for an anisotropy above 0 (or turned: grainAround):\n//   m.tangent = grainAlong(R_local, VEC3(1.0, 0.0, 0.0));\n// e.g. with a length width (mm) and a colour stripe added with +, and q as above:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(q.x / width), 0.5));\n// every function there is to call -- noise, grains, streaks: Help > Reference > Functions for code\n",
+      "images": [
+        {
+          "name": "picture",
+          "image": "i1770fa81aa743e28e4cd613c",
+          "use": "colour",
+          "projection": "planar",
+          "size": {
+            "x": 240,
+            "y": 135
+          },
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "turn": 0,
+          "wrapU": "none",
+          "wrapV": "none",
+          "filter": "smooth",
+          "faces": "front",
+          "colour": true,
+          "sharpness": 4
+        }
+      ]
+    },
+    {
+      "id": "m9",
+      "label": "can label",
+      "params": {
+        "baseColor": {
+          "r": 0.8,
+          "g": 0.2,
+          "b": 0.2
+        },
+        "metallic": 0,
+        "roughness": 0.25,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "haze": 0,
+        "scatterDistance": 0,
+        "scatterAnisotropy": 0,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   R_local  that frame's rotation to the world, for a direction written in it\n//   S_local  its scale: p_local * S_local is in scene units; metres(x) is x m in them, mm(x) x mm\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe; one marked\n//            as a length is in real mm, whatever the scene's unit -- read the point in mm too:\n//   let q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. brushed along the object's x, for an anisotropy above 0 (or turned: grainAround):\n//   m.tangent = grainAlong(R_local, VEC3(1.0, 0.0, 0.0));\n// e.g. with a length width (mm) and a colour stripe added with +, and q as above:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(q.x / width), 0.5));\n// every function there is to call -- noise, grains, streaks: Help > Reference > Functions for code\n",
+      "images": [
+        {
+          "name": "picture",
+          "image": "i1770fa81aa743e28e4cd613c",
+          "use": "colour",
+          "projection": "cylindrical",
+          "size": {
+            "x": 207.34511513692635,
+            "y": 80
+          },
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "turn": 0,
+          "wrapU": "repeat",
+          "wrapV": "none",
+          "filter": "smooth",
+          "faces": "front",
+          "colour": true,
+          "sharpness": 4
+        }
+      ]
+    },
+    {
+      "id": "m12",
+      "label": "ball",
+      "params": {
+        "baseColor": {
+          "r": 0.8,
+          "g": 0.2,
+          "b": 0.2
+        },
+        "metallic": 0,
+        "roughness": 0.35,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "haze": 0,
+        "scatterDistance": 0,
+        "scatterAnisotropy": 0,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   R_local  that frame's rotation to the world, for a direction written in it\n//   S_local  its scale: p_local * S_local is in scene units; metres(x) is x m in them, mm(x) x mm\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe; one marked\n//            as a length is in real mm, whatever the scene's unit -- read the point in mm too:\n//   let q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. brushed along the object's x, for an anisotropy above 0 (or turned: grainAround):\n//   m.tangent = grainAlong(R_local, VEC3(1.0, 0.0, 0.0));\n// e.g. with a length width (mm) and a colour stripe added with +, and q as above:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(q.x / width), 0.5));\n// every function there is to call -- noise, grains, streaks: Help > Reference > Functions for code\n",
+      "images": [
+        {
+          "name": "picture",
+          "image": "i1770fa81aa743e28e4cd613c",
+          "use": "colour",
+          "projection": "triplanar",
+          "size": {
+            "x": 80,
+            "y": 45
+          },
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "turn": 0,
+          "wrapU": "mirror",
+          "wrapV": "mirror",
+          "filter": "smooth",
+          "faces": "front",
+          "colour": true,
+          "sharpness": 4
+        }
+      ]
+    }
+  ],
+  "blocks": [
+    {
+      "id": "b3",
+      "label": "plane",
+      "kind": "object",
+      "code": "// The plane z = 0, solid below.\nC = add_new(C, Nplane(p), MATERIAL);",
+      "params": {},
+      "builtin": "plane@1"
+    },
+    {
+      "id": "b6",
+      "label": "box",
+      "kind": "object",
+      "code": "// A box: size is the HALF-size along each axis; the rounding stays inside it.\nC = add_new(C, NboxRounded(p, size, rounding), MATERIAL);",
+      "params": {
+        "size": {
+          "x": 0.5,
+          "y": 0.5,
+          "z": 0.5
+        },
+        "rounding": 0.02
+      },
+      "ranges": {
+        "rounding": {
+          "min": 0,
+          "max": 2,
+          "step": 0.005
+        }
+      },
+      "lengths": [
+        "size",
+        "rounding"
+      ],
+      "builtin": "box@1"
+    },
+    {
+      "id": "b11",
+      "label": "cylinder",
+      "kind": "object",
+      "code": "// A cylinder along z, centred on this node's origin.\nC = add_new(C, Ncylinder(p, height * 0.5, radius), MATERIAL);",
+      "params": {
+        "radius": 0.5,
+        "height": 1
+      },
+      "ranges": {
+        "radius": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        },
+        "height": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "radius",
+        "height"
+      ],
+      "builtin": "cylinder@1"
+    },
+    {
+      "id": "b14",
+      "label": "sphere",
+      "kind": "object",
+      "code": "// A sphere around this node's origin.\nC = add_new(C, Nsphere(p, radius), MATERIAL);",
+      "params": {
+        "radius": 0.5
+      },
+      "ranges": {
+        "radius": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "radius"
+      ],
+      "builtin": "sphere@1"
+    }
+  ],
+  "root": {
+    "id": "root",
+    "kind": "group",
+    "label": "Pictures",
+    "enabled": true,
+    "blend": 0,
+    "children": [
+      {
+        "id": "n2",
+        "kind": "object",
+        "type": "code",
+        "label": "floor",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m1",
+        "params": {},
+        "block": "b3"
+      },
+      {
+        "id": "n5",
+        "kind": "object",
+        "type": "code",
+        "label": "television",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -150,
+            "y": 0,
+            "z": 200
+          },
+          "rot": {
+            "x": 90,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m4",
+        "params": {
+          "size": {
+            "x": 400,
+            "y": 225,
+            "z": 12
+          },
+          "rounding": 2
+        },
+        "block": "b6"
+      },
+      {
+        "id": "n8",
+        "kind": "object",
+        "type": "code",
+        "label": "poster",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 230,
+            "y": 30,
+            "z": 160
+          },
+          "rot": {
+            "x": 90,
+            "y": 0,
+            "z": -15
+          },
+          "scale": 1
+        },
+        "material": "m7",
+        "params": {
+          "size": {
+            "x": 260,
+            "y": 155,
+            "z": 4
+          },
+          "rounding": 0
+        },
+        "block": "b6"
+      },
+      {
+        "id": "n10",
+        "kind": "object",
+        "type": "code",
+        "label": "can",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 60,
+            "y": -160,
+            "z": 57.5
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": -90
+          },
+          "scale": 1
+        },
+        "material": "m9",
+        "params": {
+          "radius": 33,
+          "height": 115
+        },
+        "block": "b11"
+      },
+      {
+        "id": "n13",
+        "kind": "object",
+        "type": "code",
+        "label": "ball",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -20,
+            "y": -200,
+            "z": 45
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m12",
+        "params": {
+          "radius": 45
+        },
+        "block": "b14"
+      }
+    ]
+  },
+  "functions": "// Functions: WGSL helpers any code node or material in this scene can call.\n// Compiled once, before the materials and the SDF; errors show here at their own lines.\n// e.g. a gyroid, usable in a code node as  C = add_new(C, sd(gyroid(p, 4.0)), MATERIAL);\n//   fn gyroid(p: VEC3, s: f32) -> f32 {\n//       let q = p * s;\n//       return abs(dot(sin(q), cos(q.zxy))) / s - 0.03;\n//   }\n// what is already there to call: Help > Reference > Functions for code\n",
+  "envRadius": 3000,
+  "environment": {
+    "envMode": 1,
+    "studioIlluminance": 60,
+    "studioColor": {
+      "r": 1,
+      "g": 1,
+      "b": 1
+    },
+    "studioTop": 0.6,
+    "sunIlluminance": 100000,
+    "sunDiameter": 0.53,
+    "skyIlluminance": 15000,
+    "uSunAzimuth": 45,
+    "uSunElevation": 45,
+    "uSkyTurbidity": 0.7
+  },
+  "images": {
+    "i1770fa81aa743e28e4cd613c": {
+      "name": "test card.png",
+      "type": "image/png",
+      "width": 320,
+      "height": 180,
+      "data": "iVBORw0KGgoAAAANSUhEUgAAAUAAAAC0CAYAAADl5PURAAALe0lEQVR42u3ddbBVVRsH4KuiIrbYhZjY3dhgN3YXKha2go0YoNhdqKCA3a3XTsDCTuzurvebuxy++YJzuVy5+6xzzvPO/P5mhpnzzG/fvfa76urr66MyU1eRqauvr9DUVVzq6+orNHUVmbq6+soLAAEIQAACEIAABCAAAQhAAAIQgAAEIAABCEAAAhCAAAQgAAEIQAACEIAABCAAAQhAAAIQgAAEIAABCEAAAhCAAAQgAAEIQAACEIAABCAAAQhAAAIQgAAEIAABCEAAAhCAAAQgAAEIQAACEIAABCAAAQhAAAIQgAAEIAABCEAAAhCAAAQgAAEIQAACEIAABCAAAQhAAAIQgAAEIAABCEAAAhCAAAQgAAEIQAACEIAABCAAAQhAAAIQgAAEIAABCEAAAhCAAAQgAAEIQAACEIAABCAAAQhAAAIQgAAEIAABCEAAAhCAAAQgAAEIQAACEIAABCAAAQhAAAIQgAAEIAABONo0dwAIQAACsKIAbOkBIAABCMBsACz3ABCAAARgoQDmOgAEIAAB2GIAFv23vH/67wEQgAAE4D9OkS8uxiWKAAQgAAHY4vCV65hL9UIIQAACMGv4cjvzV10QAhCAAMwSv9wPP1cHggAEIADBV7MQAhCAAMwCv0r/FK4yEQQgAAGYCXzV8S1wZUEIQAACMCP8qmMZQuUgCEAAArBw/GplG0z+CAIQgADMCL/qW4eVN4IABCAAM8KvOvcB5osgAAEIwIzwq96FqHkiCEAAAjAj/Kp7I3R+CAIQgADMCL/qX4mfF4IABCAAM8KvNu4EyQdBAAIQgC0CoEuRxh5BAAIQgBUG4LjFr7ZuhSs/ggAEIAAzwq/2rsUsL4IABCAAxxmA7gUeNwgCEIAAzBzAlml/ACwWQQACEIAZ4VebAJYPQQACEICZPPrWNoDleRQGIAABmFH7A2CxCAIQgADMqP3VNoDFt0AAAhCAGbU/ABbbAgEIQABm1P4AWGwLBCAAAZhR+wNgsS0QgAAEYEbtD4DFtkAAAhCAGbU/ABbbAgEIQABm1P4AWGwLBCAAAQhAAAIQgAAs/+MvAIt9DAYgAAGYUfsDYLEtEIAABCAAAQhAAAIQgAAEIAABWDb8AFgsggAEIAABCEAAAhCAAAQgAAEIQAACEIAABCAAAQhAANYggOXBD4DFIghAAAIQgAAEIAABCEAAAhCAAAQgAAEIQAACEIAABCAAAQhAAAIQgAAEIAABCEAAAhCAAAQgAAEIQAACEIAABCAAAQhAAAIQgAAEIAABCEAAAhCAAAQgAAEIQAAC0DosAFqHBUAAAhCAAAQgAAEIQAACEIAABCAAAQhAAAIQgAAEoIvRXYzuYnQAAhCAAAQgAAEIQAACEIAALB7AlkcQgKXwAyAAAVgwgMW3QAAW0/4ACEAAAhCAAAQgAPN5DAZgMY+/AAQgADNsgQAspv0BEIAAzLAFArCY9gdAAAIwwxYIwGLwAyAAAZhhC6xtAItrfwAEIAAzbIEALAY/AAIQgBm2wNoFsNj2B0AAAjDDFgjAYvADIAABmGELrE0Ai29/AAQgADNEsPYALA9+AAQgADN8FAZgMfgBEIAAzLAF1haA5Wt/ACw2dXUx3njjxfjjj58ywQQTRKtWrWLCCSeMiSaaKGXiiSeO1q1bxySTTBJt2rRJmXTSSWOyySaLySefPKaYYoqUKaecMqaaaqqYeuqpY5pppklp27ZtTDvttDHddNPF9NNPnzLDDDPEjDPOGDPNNFPMPPPMKbPMMkvMOuusMdtss8Xss8+e0q5du5hjjjmiffv2Meecc6bMNddcMffcc8c888wT8847b8p8880XHTp0iPnnnz8WWGCBlAUXXDAWWmihWHjhhWORRRZJWXTRRWOxxRaLxRdfPJZYYomUJZdcMpZaaqlYeumlY5lllklZdtllY7nllovll18+VlhhhZQVV1wxOnbsGCuttFKsvPLKKausskqsuuqqsdpqq8Xqq6+essYaa0SnTp2ic+fOseaaa6astdZasfbaa8c666wT6667bsp6660X66+/fmywwQax4YYbpmy00Uax8cYbxyabbBKbbrppSpcuXWKzzTaLzTffPLbYYouULbfcMrbaaqvYeuutY5tttknZdtttY7vttovtt98+dthhh9H+gHfZZZfYddddY7fddouuXbvG7rvvnrLHHnvEnnvuGd26dYu99torZe+994599tkn9t1339hvv/1SunfvHvvvv38ccMABceCBB6YcdNBBcfDBB8chhxwShx56aMphhx0Whx9+ePTo0SN69uyZcsQRR8SRRx4ZRx11VBx99NEpxxxzTBx77LFx3HHHpfTq1SuOP/746N27d5xwwgkpJ554Ypx00klx8sknR58+fVL69u0bp5xySpx66qnRr1+/lNNOOy1OP/30OOOMM+LMM89MOeuss+Lss8+Oc845J84999yU8847L84///y44IIL4sILL0y56KKL4uKLL45LLrkkLr300tH+311xxRVx5ZVXxoABA2LgwIFx1VVXpVx99dUxaNCgGDx4cAwZMiTlmmuuiWuvvTauu+66uP7661NuuOGGuPHGG+Omm26Km2++OeWWW26JW2+9NW677ba4/fbbU+644464884746677oq777475Z577ol777037rvvvrj//vtTHnjggVQEHnzwwXjooYdSHn744XjkkUfi0Ucfjcceeyzl8ccfjyeeeCKefPLJeOqpp1KefvrpeOaZZ2Lo0KExbNiwlOHDh8ezzz4bzz33XDz//PMpL7zwQrz44osxYsSIeOmll1JefvnleOWVV+LVV1+N1157LeX111+PN954I95888146623Ut5+++1455134t13342RI0emvPfee/H+++/HBx98EB9++GHKRx99FB9//HF88skn8emnn6Z89tln8fnnn8cXX3wRX375ZcpXX30VX3/9dXzzzTfx7bffpnz33Xfx/fffxw8//BA//vhjyk8//RQ///xz/PLLL/Hrr7+m/Pbbb/H777/HH3/8EX/++WfKX3/99XcxAGB1AlgKQQA2DmAp/AAIQABWAYANA8DRA1hqAAhAAFYggDvuuGPJHzUA/xvAUnP55ZcDEIAArFQAd9ppp5I/bgD+DWCp6d+/PwABCMBKB3DnnXduFMFaBrDUXHbZZQAEIACrBcCGN8ClplYBLDUNb4IBCEAAVhmAjSFYawA2hh8AAQjAKgWw4RhMqakVAEvNqHOAAAQgAKsYwIZjMI1NtQLY2PznQWgAAhCAVQ5gwzGYxqbaAGxs/vdLEAACEIA1AOCoYzCNTaUD2NiU+hQOgAAEYA0B2PAWeExTaQCOaRr7FhiAAARgjQE46i3wmCZ3AMc0TVmGAEAAArBGAWx4AdKUyQ3ApkxTt8EAEIAArGEAR70FbuqUC8CmztiuwwIgAAEIwH+/BR6baWkAx2aauw8QgAAEIAD/7xhMc6e5ADZ3/ulCVAACEIAALHkOMNcZVxuhAQhAAAKwSQehyz0tsRIfgAAEIACb9SVIS08Rd4IAEIAABOA4+xSuuVOuS5EACEAAArBmb4UDIAABCEAAAhCAAAQgAAEIQAACEIAABCAAAQhAAAIQgAAEIAABCEAAAhCAAAQgAAEIQAACEIAABCAAAQhAAAIQgAAEIAABCEAAAhCAAAQgAAEIQAACEIAABCAAAQhAAAIQgAAEIAABCEAAAhCAAAQgAAEIQAACEIAABCAAAQhAAAIQgAAEIAABCEAAAhCAAAQgAAEIQAACEIAABCAAAQhAAAIQgAAEIAABCEAAAhCAAAQgAAEIQAACEIAABCAAAQhAAAIQgAAEIAABCEAAAhCAAAQgAAEIQAACEIAABCAAAQhAAAIQgAAEIAABCEAAAhCAAAQgAAEIQAACEIAABGDmAP4L8tqP9xpwb6AAAAAASUVORK5CYII="
+    }
+  },
+  "view": {
+    "camera": {
+      "mode": "orbit",
+      "camtype": 0,
+      "fov": 40,
+      "dimensions": 1100,
+      "target": [
+        20,
+        -40,
+        120
+      ],
+      "azimuth": -90,
+      "elevation": 78,
+      "distance": 1100,
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "aperture": 0,
+      "focus": 0
+    },
+    "exposure": {
+      "exposureEV": 15,
+      "autoExposure": 1,
+      "exposureComp": 0,
+      "aeSpeed": 0.1,
+      "aeHeadroom": 2,
+      "toneMap": 1,
+      "contrast": 0,
+      "saturation": 0,
+      "brightness": 0
+    }
+  }
+}

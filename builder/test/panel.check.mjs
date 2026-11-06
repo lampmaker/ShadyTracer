@@ -1185,6 +1185,80 @@ ok('...and the visibility beside it follows: 3.912 x 4 m, 15.6 m', /^visibility 
     await p.evaluate(() => { CHECK.panel.show(null); CHECK.flagPanel.show(null) })
 }
 
+// A MATERIAL'S PICTURES (0.next; builder/images.js): + picture… reads a PNG through the browser's own decoder into the scene
+// and the material, a compile with an undo step; each setting of its placement live; its use a compile; a file that is no
+// picture said in the box; taken away again
+{
+    const { deflateSync } = await import('node:zlib')
+    // a 3 x 2 PNG, written here from its specification (8-bit RGBA, no interlace)
+    const crcT = new Uint32Array(256).map((_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; return c >>> 0 })
+    const crc = b => { let c = 0xFFFFFFFF; for (const x of b) c = crcT[(c ^ x) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0 }
+    const chunk = (t, d) => { const o = Buffer.alloc(12 + d.length); o.writeUInt32BE(d.length, 0); o.write(t, 4, 'ascii'); d.copy(o, 8); o.writeUInt32BE(crc(o.subarray(4, 8 + d.length)), 8 + d.length); return o }
+    const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(3, 0); ihdr.writeUInt32BE(2, 4); ihdr[8] = 8; ihdr[9] = 6
+    const raw = Buffer.from([0, 255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 0, 255, 255, 255, 255, 0, 0, 0, 255, 128, 128, 128, 255])   // a filter byte a row, then its pixels
+    const png = Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', deflateSync(raw)), chunk('IEND', Buffer.alloc(0))])
+    const button = (title, id = 'scr') => p.evaluate(([title, id]) => {
+        const b = [...document.querySelectorAll('#t button')].find(x => x.textContent.trim().startsWith(title))
+        if (!b) return `no button '${title}'`
+        b.click(); return 'clicked'
+    }, [title, id])
+    const pick = async (title, file) => {
+        const [chooser] = await Promise.all([p.waitForEvent('filechooser', { timeout: 5000 }), button(title)])
+        await chooser.setFiles(file)
+        await p.waitForTimeout(300)
+    }
+    rows = await rowsOf('scr')
+    const has = await p.evaluate(() => [...document.querySelectorAll('#t button')].some(x => x.textContent.includes('+ picture')))
+    ok('a material has + picture… under its pictures', has)
+    before = await state()
+    await pick('+ picture', { name: 'logo.png', mimeType: 'image/png', buffer: png })
+    const got = await p.evaluate(() => {
+        const m = CHECK.M.material(CHECK.doc, 'scr')
+        const k = m.images?.[0]?.image
+        // (the scene's problems that are not the screen's: a step above left one of its own, which is not this check's)
+        return { slot: m.images?.[0], entry: k && CHECK.doc.images?.[k] && { ...CHECK.doc.images[k], data: CHECK.doc.images[k].data.length }, base: m.params.baseColor, rough: m.params.roughness,
+                 valid: CHECK.M.validate(CHECK.doc) }
+    })
+    s = await state()
+    ok('...a PNG chosen: in the scene by its key, its size the decoder\'s, a slot that is the glow -- a compile and an undo step',
+        got.entry?.width === 3 && got.entry?.height === 2 && got.entry?.type === 'image/png' && got.slot?.use === 'colour' && got.slot?.name === 'picture'
+        && s.structure === before.structure + 1 && s.commits.at(-1) === null && got.valid.every(x => !/scr|image|picture/.test(x)), JSON.stringify([got, s.structure, before.structure]))
+    ok('...the screen\'s surface under the glow its dark glass', got.base?.r === 0.02 && got.rough === 0.05, JSON.stringify(got))
+    await p.waitForTimeout(50)
+    rows = await p.evaluate(() => [...document.querySelectorAll('#t .tp-lblv')].map(r => r.querySelector('.tp-lblv_l')?.textContent.trim()))
+    ok('...its rows: use, projection, size, offset, turn, wraps, filter, faces, colour; and the surface below the glow',
+        ['use', 'projection', 'width (mm)', 'height (mm)', 'offset x (mm)', 'offset y (mm)', 'turn (deg)', 'wrap across', 'wrap up', 'filter', 'faces', 'colour (sRGB)', 'baseColor', 'roughness']
+            .every(r => rows.includes(r)), JSON.stringify(rows))
+    before = await state()
+    ok('the width typed', await set('width (mm)', 55) === 'set')
+    s = await state()
+    ok('...is the slot\'s uniform, live, with its undo step: no compile', s.live.at(-1) === 'scr.img_picture' && s.commits.at(-1) === 'scr.img_picture'
+        && s.structure === before.structure && await p.evaluate(() => CHECK.M.material(CHECK.doc, 'scr').images[0].size.x) === 55, JSON.stringify(s))
+    ok('wrap across: mirror', await set('wrap across', 'mirror') === 'set')
+    s = await state()
+    ok('...live too', s.live.at(-1) === 'scr.img_picture' && s.structure === before.structure
+        && await p.evaluate(() => CHECK.M.material(CHECK.doc, 'scr').images[0].wrapU) === 'mirror')
+    ok('the projection: triplanar', await set('projection', 'triplanar') === 'set')
+    await p.waitForTimeout(50)
+    rows = await p.evaluate(() => [...document.querySelectorAll('#t .tp-lblv')].map(r => r.querySelector('.tp-lblv_l')?.textContent.trim()))
+    ok('...live, and the box shows its blend\'s sharpness and no faces', (await state()).structure === before.structure && rows.includes('blend sharpness') && !rows.includes('faces'), JSON.stringify(rows))
+    ok('its use: code only', await set('use', 'code only') === 'set')
+    s = await state()
+    ok('...a compile', s.structure === before.structure + 1 && await p.evaluate(() => CHECK.M.material(CHECK.doc, 'scr').images[0].use) === 'none')
+    // a file that is no picture: said in the box, nothing added
+    await p.waitForTimeout(50)
+    await pick('+ picture', { name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('hello') })
+    await p.waitForTimeout(50)
+    const said = await p.evaluate(() => [...document.querySelectorAll('#t .tp-lblv')].find(r => r.querySelector('.tp-lblv_l')?.textContent.trim() === 'not read')?.querySelector('textarea')?.value ?? null)
+    ok('a text file chosen: said in the box, nothing added', /not a PNG, JPEG or WebP/.test(said ?? '') && await p.evaluate(() => CHECK.M.material(CHECK.doc, 'scr').images.length) === 1, said)
+    before = await state()
+    ok('Take it away', await button('Take it away') === 'clicked')
+    s = await state()
+    ok('...the slot gone, the picture kept in the scene (no undo step holds it), a compile', s.structure === before.structure + 1
+        && await p.evaluate(() => !CHECK.M.material(CHECK.doc, 'scr').images && Object.keys(CHECK.doc.images).length === 1))
+    await p.evaluate(() => CHECK.panel.show(null))
+}
+
 ok('no page errors', !errs.length, errs.join('\n'))
 await b.close(); server.close()
 console.log(failed ? `${failed} FAILED` : 'builder panel: all passed')

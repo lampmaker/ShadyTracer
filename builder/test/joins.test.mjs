@@ -193,9 +193,9 @@ const docWith = shape => {
     try { M.setJoinShape(d, 'g', 'round') } catch (e) { msg = e.message }
     ok('...refused at the top level, as a join is', /top level/.test(msg), msg)
     const again = M.parse(M.serialize(d))
-    ok('...through a save and a load', again.version === M.VERSION && M.VERSION === 28 && M.find(again, 'b').node.joinShape === 'chamfer')
+    ok('...through a save and a load', again.version === M.VERSION && M.VERSION >= 28 && M.find(again, 'b').node.joinShape === 'chamfer')
     const old = JSON.parse(M.serialize(docWith(undefined))); old.version = 27
-    ok('a file of 27 read as 28, nothing else changed', M.parse(JSON.stringify(old)).version === 28)
+    ok('a file of 27 read at the current version (28 a join\'s shape, 29 pictures: nothing else changed)', M.parse(JSON.stringify(old)).version === M.VERSION)
 }
 {
     const plain = generate(...M.generateArgs(docWith(undefined), { id: 't', title: 't' })).wgsl

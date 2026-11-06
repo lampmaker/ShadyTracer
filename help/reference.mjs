@@ -18,6 +18,8 @@ import { FIELDS, FIELD_LABELS, COAT_PRESETS, RELIEFS, PRESETS, FEATURES } from '
 import { LIGHT_SHAPES, LIGHT_DEFAULTS } from '../builder/lights.js'
 import { HAZE_DEFAULTS, HAZE_G_MAX, KOSCHMIEDER } from '../builder/hazebox.js'
 import { codeOnly } from '../builder/codegen.js'
+import { SLOT_DEFAULTS, SLOT_HELP, IMAGE_TYPES } from '../builder/images.js'
+import { IMAGE_MAX_EDGE } from '../lib/pathtracer/core/images.js'
 import { SCENE_PRELUDE } from '../lib/pathtracer/core/scene_api.js'
 import { referenceMarkdown as scriptReference } from '../tools/scriptref.js'
 import { TOKENS, SHORT_TOKENS } from '../lib/wgsl_shorthand.js'
@@ -275,6 +277,13 @@ function materials() {
     s += `\n## Starting points\n\nThe Properties panel's **+** makes a material from one of these: ${Object.values(PRESETS).map(p => `*${p.label}*`).join(', ')}. `
         + 'The Library has many more, with real values.\n'
     s += '\n## Coating presets\n\n' + Object.entries(COAT_PRESETS).map(([k, v]) => `- **${k}**: ${Object.entries(v).map(([f, x]) => `${FIELD_LABELS[f] ?? f} ${x}`).join(', ')}`).join('\n') + '\n'
+    s += '\n## Pictures\n\nA material can show pictures (' + IMAGE_TYPES.map(t => t.slice(6).toUpperCase()).join(', ') + ', up to '
+        + `${IMAGE_MAX_EDGE} pixels on the longer side; a larger one is scaled down), each placed on every object wearing it by a projection in `
+        + 'the object\'s [pattern frame](../modelling/materials.md#turning-a-pattern-the-pattern-frame). One can be the material\'s colour; '
+        + 'the others are for its code (`sample(name)`: [Functions for code](code.md#a-materials-pictures)). Every setting is live but the '
+        + 'picture itself, its name and its use: a compile. See [Pictures](../modelling/materials.md#pictures).\n\n'
+        + '| setting | starts at | does |\n|---|---|---|\n'
+    for (const [k, v] of Object.entries(SLOT_DEFAULTS)) s += `| ${k} | ${cell(value(v))} | ${cell(SLOT_HELP[k] ?? '')} |\n`
     s += '\n## Reliefs\n\nA relief is a height on every object wearing the material, in real mm -- part of the shape, so it shows in the '
         + 'silhouette, and paid for at every march step near the object.\n\n'
     for (const R of Object.values(RELIEFS)) s += `### ${R.label}\n\n${firstComment(R.code)}\n\n`
@@ -326,6 +335,7 @@ function code() {
         + '`XF_S` this frame\'s units in world units, `SURFACE_ONLY`, `READ_REACH`, `DIVIDED_ABOVE` |\n'
         + '| a material\'s | once where a ray hits | `m` the material to change, `p` and `n` the hit and its normal in the world, `C`, '
         + 'and `p_local`, `R_local`, `S_local` the hit in the object\'s frame, its turn and its scale |\n'
+        + '| a material\'s pictures | -- | `sample(name)`, `mapped(name)` and `sampleAt(name, uv)` in its code: [below](#a-materials-pictures) |\n'
         + '| a material\'s relief | at every march step near an object wearing it | `q` the point in mm in that object\'s frame, '
         + '`world` the same in the scene\'s; it sets `h`, the height in mm outward, and `slope`, a bound on how steep `h` is |\n'
         + '| the scene\'s functions | -- | its functions are called from any of the others |\n'
@@ -338,6 +348,16 @@ function code() {
         + 'more than the true distance to the surface, or the march steps through it. `C = add_new(C, Nsphere(p, 0.5), MATERIAL);` '
         + 'is a sphere. `C = add_new(C, sd((p.z - 0.1 * sin(p.x * 10.0)) / 1.5), MATERIAL);` is a wavy floor: the height\'s slope '
         + 'reaches 1, so the field\'s reaches √2, and divided by 1.5 it is never more than the distance.\n'
+    /* A MATERIAL'S PICTURES (0.next; lib/pathtracer/core/images.js): not in the scene prelude -- a scene without a picture has
+       none of them -- so written here, not in CODE_HELP, whose every name the prelude must have */
+    s += '\n## A material\'s pictures\n\nIn a material whose **pictures** box has any, each is in its code by its name, and three '
+        + 'functions read them. The point is the hit\'s in the object\'s pattern frame, in mm.\n\n'
+        + '- `sample(picture) -> vec4<f32>` -- the picture at the hit by its own projection, size, offset, turn, wrap and filter: linear '
+        + 'rgb (a colour picture decoded from sRGB) and alpha; 0 where it does not show (outside a copy that does not wrap, a face it is not on).\n'
+        + '- `mapped(picture) -> vec2<f32>` -- where on the picture the hit is, in copies of it: (0, 0) its bottom left, (1, 1) its top right.\n'
+        + '- `sampleAt(picture, uv: vec2<f32>) -> vec4<f32>` -- the picture at a position of your own, in copies, with its wrap and filter.\n'
+        + '\nFor instance a data picture as the roughness, `m.roughness = sample(rough).r;`, or a picture twice as small, '
+        + '`m.baseColor = sampleAt(picture, mapped(picture) * 2.0).rgb;`.\n'
     for (const sec of CODE_HELP) {
         s += `\n## ${sec.title}\n\n${sec.intro}\n\n`
         for (const [name, words] of Object.entries(sec.fns)) {

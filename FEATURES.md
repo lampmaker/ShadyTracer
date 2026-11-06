@@ -94,6 +94,7 @@ on the user's own GPU; there is no server.
 | **Diffuser films as rough glass** (0.81.0): a thin sheet frosted on both faces, anisotropy for an elliptical one (up to 10:1); library *diffuser film 10° (frosted polycarbonate)*, roughness 0.36 from a walk of two rough faces | built; the walk held by `transmission.test.mjs` (10° within 0.6); **not seen on hardware** | README § *Materials*; DIFFUSERS.md |
 | Glass, mirror, metal, plastic, Lambertian, emitter presets | in use | `builder/materials.js` |
 | **Material code**: any material field can be WGSL (checker, stripes, grain examples ship) | in use | `builder/codegen.js` |
+| **Pictures on surfaces** (0.next; roadmap/TEXTURES.md T1): a PNG, JPEG or WebP kept in the scene by its bytes, placed by a projection in the object's pattern frame -- planar, box, triplanar, cylindrical, spherical -- with a size in mm, an offset, a turn, a wrap per axis (repeat, mirror, clamp, none), smooth or pixels, its faces; a surface's base colour, a glowing material's glow (its white at the luminance, a screen's dark glass under its black), or read by code (`sample`, `mapped`, `sampleAt`); every image of a scene in one atlas read by four loads; example *Pictures* | built; **verified on Dawn over lavapipe**: the WGSL lookup its JS twin's in every setting (`core/test/images.gpu.mjs`), the scene's getMaterial2 the twin's, codegen and as data (`builder/test/images.gpu.mjs`), a floor under a glowing checker 0.9905 +- 0.0078 and 0.9956 +- 0.0063 of under a grey of its mean against the means' 0.9943, light sampling on and off; **not seen on hardware** | `core/images.js`, `builder/images.js`; help *Materials* › *Pictures* |
 | **Surface noise library**: value, gradient, fBm, Worley, each with its analytic gradient and a proved or measured Lipschitz bound | **in use**: the user said it works on their hardware, 2026-10-27 -- before that: built; Node-tested | `core/noise.js`, `core/test/noise.test.mjs` |
 | Weathering masks and mixtures (patchy rust, edge wear, dust cover, wet), bump that conserves energy, sheen, a clear coat over anything, interference films (tarnish, anodised titanium), hair | planned (SURFACES.md phases 3–9). Dichroic, beam-splitter and AR coatings are in: §3.6 | |
 
@@ -357,10 +358,10 @@ closed-form answers on real hardware, and every number carries its error bar.
 
 ## 9. Bundled scenes
 
-**The Project panel's examples** (`scenes/index.js`), each opened as a copy into the project with a camera of its own: 25 scenes
-made in code (`scenes/make.mjs`) in real sizes, and one the user made in the page (Dichroics, 0.78.0), by audience -- **Modelling and rendering** (Start; Shapes: the gallery,
+**The Project panel's examples** (`scenes/index.js`), each opened as a copy into the project with a camera of its own: 26 scenes
+made in code (`scenes/make.mjs`) in real sizes (Pictures, 0.next, among them), and one the user made in the page (Dichroics, 0.78.0), by audience -- **Modelling and rendering** (Start; Shapes: the gallery,
 combining, modifiers, from points, a parametric part, infinite detail; Materials: the board, relief and texture,
-glass and liquid; Light and camera: a room, depth of field, animation, a product shot) and **Optical design** (an
+glass and liquid, pictures; Light and camera: a room, depth of field, animation, a product shot) and **Optical design** (an
 LED and lens, a beam in dusty air (0.62.0), an aspheric condenser, Fresnel against plano-convex, a parabolic
 reflector, a light guide, RGBW mixing, a prism's dispersion, a dichroic combiner, dichroics, office lighting). **Built (0.54.0)**;
 the geometry and cameras were reasoned, not looked at, when they were made. The README's screenshots (2026-10-21)

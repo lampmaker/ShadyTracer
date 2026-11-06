@@ -11,6 +11,7 @@ What the code of an object, a group, a material or the scene's functions can cal
 | an object's | at every march step | `p` the point in the node's own frame, `C` the Hit to fold into, `MATERIAL` its material |
 | a group's | at every march step, around its children | `p` (which it may change), `C`, `r` the ray, `children(C, p)`, `XF_S` this frame's units in world units, `SURFACE_ONLY`, `READ_REACH`, `DIVIDED_ABOVE` |
 | a material's | once where a ray hits | `m` the material to change, `p` and `n` the hit and its normal in the world, `C`, and `p_local`, `R_local`, `S_local` the hit in the object's frame, its turn and its scale |
+| a material's pictures | -- | `sample(name)`, `mapped(name)` and `sampleAt(name, uv)` in its code: [below](#a-materials-pictures) |
 | a material's relief | at every march step near an object wearing it | `q` the point in mm in that object's frame, `world` the same in the scene's; it sets `h`, the height in mm outward, and `slope`, a bound on how steep `h` is |
 | the scene's functions | -- | its functions are called from any of the others |
 
@@ -42,6 +43,16 @@ Before it compiles, every whole word below is replaced -- in your code too, so d
 ## What a shape is
 
 A shape is a `VEC4`: `xyz` its outward normal, unit length, and `w` its signed distance -- negative inside. A zero normal means *none*, and the renderer then takes the normal by differences. A distance must never be more than the true distance to the surface, or the march steps through it. `C = add_new(C, Nsphere(p, 0.5), MATERIAL);` is a sphere. `C = add_new(C, sd((p.z - 0.1 * sin(p.x * 10.0)) / 1.5), MATERIAL);` is a wavy floor: the height's slope reaches 1, so the field's reaches √2, and divided by 1.5 it is never more than the distance.
+
+## A material's pictures
+
+In a material whose **pictures** box has any, each is in its code by its name, and three functions read them. The point is the hit's in the object's pattern frame, in mm.
+
+- `sample(picture) -> vec4<f32>` -- the picture at the hit by its own projection, size, offset, turn, wrap and filter: linear rgb (a colour picture decoded from sRGB) and alpha; 0 where it does not show (outside a copy that does not wrap, a face it is not on).
+- `mapped(picture) -> vec2<f32>` -- where on the picture the hit is, in copies of it: (0, 0) its bottom left, (1, 1) its top right.
+- `sampleAt(picture, uv: vec2<f32>) -> vec4<f32>` -- the picture at a position of your own, in copies, with its wrap and filter.
+
+For instance a data picture as the roughness, `m.roughness = sample(rough).r;`, or a picture twice as small, `m.baseColor = sampleAt(picture, mapped(picture) * 2.0).rgb;`.
 
 ## Putting shapes into the scene
 

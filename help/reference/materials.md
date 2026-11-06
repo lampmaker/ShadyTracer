@@ -53,6 +53,24 @@ The Properties panel's **+** makes a material from one of these: *diffuse*, *pla
 - **beam splitter 50/50**: R below edge 0.5, R above edge 0.5
 - **anti-reflective**: R below edge 0, R above edge 0
 
+## Pictures
+
+A material can show pictures (PNG, JPEG, WEBP, up to 4096 pixels on the longer side; a larger one is scaled down), each placed on every object wearing it by a projection in the object's [pattern frame](../modelling/materials.md#turning-a-pattern-the-pattern-frame). One can be the material's colour; the others are for its code (`sample(name)`: [Functions for code](code.md#a-materials-pictures)). Every setting is live but the picture itself, its name and its use: a compile. See [Pictures](../modelling/materials.md#pictures).
+
+| setting | starts at | does |
+|---|---|---|
+| use | colour | colour: the material's colour with no code -- a surface's base colour, a glowing material's glow (its white at the luminance, its black dark, the surface below it showing there); none: only its code reads it. A compile. |
+| projection | planar | How the point is put on the picture, in the object's pattern frame: planar along its z; box, one of six faces by the normal, each read the right way round from outside; triplanar, the three blended by the normal; cylindrical round its z, across being the distance round in mm; spherical, the whole picture once over a sphere. |
+| size | 100, 100 | One copy of the picture, across and up, in real millimetres whatever the scene's unit (spherical: unused). |
+| offset | 0, 0 | Where the picture's centre is in its plane, in mm. |
+| turn | 0 | The picture turned in its own plane, anticlockwise, in degrees. |
+| wrapU | repeat | Across: repeat (copies side by side), mirror (every other copy flipped, no seam), clamp (the edge pixels go on) or none (one copy; the material's own value outside it). |
+| wrapV | repeat | Up: the same four. |
+| filter | smooth | smooth: mixed between pixels; pixels: each pixel a sharp square. |
+| faces | front | Planar only: front (where the surface faces +z), both (front and back, the back mirrored as a slide seen from behind) or all (every face; the edges smear across the sides). |
+| colour | true | true: a colour picture, decoded from sRGB to light; false: data (a roughness map, a mask), read as its numbers. |
+| sharpness | 4 | Triplanar only: how quickly the three projections hand over where the surface turns, 1 to 64. |
+
 ## Reliefs
 
 A relief is a height on every object wearing the material, in real mm -- part of the shape, so it shows in the silhouette, and paid for at every march step near the object.

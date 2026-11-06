@@ -41,7 +41,9 @@
 // after a builtin. Worth a warning once there is a UI to warn in.
 //======================================================================================================================
 
-import { FIELDS as MATERIAL_FIELDS, FIELDS_OF, COAT_FIELDS, hasCoating, reliefMaterialId, reliefOwner } from './materials.js'
+import { FIELDS as MATERIAL_FIELDS, FIELDS_OF, COAT_FIELDS, hasCoating, reliefMaterialId, reliefOwner, fieldsOf } from './materials.js'
+import { hasSlots, slotOf, colourSlot, slotKey, attachImages } from './images.js'
+import { IMAGES_WGSL, IMAGE_RESOURCE, IMAGE_TYPE, packImages, slotMatrix } from '../lib/pathtracer/core/images.js'
 import { hasFace, lightOf, lightRGBObject, beamOf, arraysOf, copyCount, arrayedLightProblem } from './lights.js'
 import { copyPattern, codeOf, contentKey, ARRAY_WINDOW_WGSL } from './arrays.js'
 import { sceneExtent } from './bounds.js'
@@ -338,6 +340,16 @@ export const NODE_TYPES = {
  *  "p_local" must not buy an SDF evaluation per hit. */
 export const codeOnly = s => String(s || '').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '')
 export const readsLocal = s => /\b(p_local|R_local|S_local)\b/.test(codeOnly(s))
+/** Does a MATERIAL read its point in its frame: its code says so, or it has a picture (images.js), which is laid out
+ *  there (core/images.js: the point in the pattern frame, in mm). Every question "does a material read p_local" asks
+ *  this, so a picture with no code pays the same one SDF evaluation per hit a pattern does, and is turned by the pattern
+ *  frame as a pattern is. */
+export const materialReadsLocal = m => readsLocal(m?.code) || hasSlots(m)
+/** THE SCENE'S ATLAS (core/images.js packImages): where each of its pictures sits in the one texture. The same for the
+ *  same pictures, so codegen's rectangles and scene.init's pixels agree. */
+export const atlasOf = tree => packImages(Object.entries(tree?.images ?? {}).map(([key, e]) => ({ key, width: e.width, height: e.height })))
+/** Whether a tree has a picture in any material: then every copy of its text holds the lookup, and the atlas is bound. */
+export const hasPictures = tree => (tree?.materials ?? []).some(hasSlots)
 /** Does a relief's code read the scene's point (materials.js, the relief header)? */
 export const readsWorld = s => /\bworld\b/.test(codeOnly(s))
 
@@ -629,7 +641,7 @@ export const GROUP_CODE_TEMPLATE = [
  * of its own. Its text goes in untouched and
  * flush left, in a block of its own, and is mapped back to the material's id like a node's.
  */
-function emitMaterials(e, materials, matIdOf, uniforms, wantLocal, lights = []) {
+function emitMaterials(e, materials, matIdOf, uniforms, wantLocal, lights = [], atlas = null) {
     e.raw('const MATID_DEFAULT: u32 = 1u;')
     for (const m of materials) e.raw(`const matid_${m.id}: u32 = ${matIdOf.get(m.id)}u;`)
     /* the back of a one-sided light: black, emitting nothing (see LIGHTS in emitScene) -- and CLEAR,
@@ -670,7 +682,7 @@ function emitMaterials(e, materials, matIdOf, uniforms, wantLocal, lights = []) 
        the IOR is read. R_local and S_local are the same capture's (scene_api.js HIT_FRAME,
        HIT_SCALE): the object's rotation to the world, for a direction in its frame -- a grain --
        and its scale, for a pattern in real units: p_local * S_local is in scene units. */
-    const localIds = wantLocal ? materials.filter(m => readsLocal(m.code)).map(m => `idx == ${matIdOf.get(m.id)}u`) : []
+    const localIds = wantLocal ? materials.filter(materialReadsLocal).map(m => `idx == ${matIdOf.get(m.id)}u`) : []
     if (localIds.length) {
         e.raw('    var p_local = C.r.pos;')
         e.raw('    var R_local = mat3x3<f32>(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0);')
@@ -688,7 +700,7 @@ function emitMaterials(e, materials, matIdOf, uniforms, wantLocal, lights = []) 
         e.raw('            var m = makeDefaultMaterial();')
         /* ONLY WHAT ITS TYPE USES is assigned (materials.js FIELDS_OF): a surface emits nothing, an
            emitter is its emission alone. Every field is declared, whatever the type. */
-        const uses = new Set(FIELDS_OF[mat.type ?? 'surface'] ?? FIELDS_OF.surface)
+        const uses = new Set(fieldsOf(mat))
         for (const [k, f] of Object.entries(MATERIAL_FIELDS)) {
             const name = uniformName(mat.id, k)
             /* A FIELD ONLY THERE WHILE IN USE (materials.js `only`: the colour depth): neither declared nor assigned
@@ -709,6 +721,25 @@ function emitMaterials(e, materials, matIdOf, uniforms, wantLocal, lights = []) 
         }
         if (uses.has('coating') && hasCoating(P))
             e.raw(`            m = coatMaterial(m, ${['coating', ...COAT_FIELDS].map(k => `UB.${uniformName(mat.id, k)}`).join(', ')});`)
+        /* ITS PICTURES (version 29; images.js, core/images.js): a slot a uniform, its picture's place in the atlas and its
+           settings, so every setting is live and only a new picture or slot is a compile. Where the picture is read
+           from: the point in the object's pattern frame, in mm, and the normal in it -- for sample() and mapped(), which
+           read them from IMG_Q and IMG_N. The slot that is the material's COLOUR is read here, before its code, so the
+           code can still change it: a surface's base colour, an emitter's glow -- the picture's white at the luminance
+           on the panel, a pixel half as bright half as much (not normalised as the plain colour is, or every pixel
+           would glow alike). Where it is transparent, the material's own value. */
+        const slots = (mat.images ?? []).map(slotOf)
+        for (const sl of slots) uniforms[uniformName(mat.id, slotKey(sl.name))] = { type: 'mat4x4<f32>', def: slotMatrix(sl, atlas?.rects.get(sl.image) ?? null) }
+        if (slots.length) {
+            e.raw('            IMG_Q = p_local * S_local / mm(1.0); IMG_N = transpose(R_local) * n;')
+            const cs = colourSlot(mat)
+            if (cs) {
+                const u = `UB.${uniformName(mat.id, slotKey(cs.name))}`
+                if ((mat.type ?? 'surface') === 'emitter')
+                    e.raw(`            { let ic = sample(${u}); m.emissive = mix(m.emissive, ic.rgb * UB.${uniformName(mat.id, 'emissiveLuminance')}, ic.a); }`)
+                else e.raw(`            { let ic = sample(${u}); m.baseColor = mix(m.baseColor, ic.rgb, ic.a); }`)
+            }
+        }
         /* ITS OWN PARAMETERS, the keys that are not fields: uniforms (or consts) under the same
            `<name>_<id>` scheme as a node's, put in scope for the code by the same aliases. Their
            uniforms are declared even with no code to read them, so dragging one is never a
@@ -721,6 +752,7 @@ function emitMaterials(e, materials, matIdOf, uniforms, wantLocal, lights = []) 
         if (codeOnly(code).trim()) {
             e.raw('            {')
             for (const a of aliasPrelude(mat.id, own, null, consts)) e.raw('            ' + a)
+            for (const sl of slots) e.raw(`            let ${sl.name} = UB.${uniformName(mat.id, slotKey(sl.name))};`)
             e.from(mat.id, code)
             e.raw('            }')
         }
@@ -941,7 +973,7 @@ export function generate(tree, opts = {}) {
     let dataRefused = null
     if (opts.data && !Array.isArray(tree)) {
         const pl = planOf(tree, { reliefMaterials: new Set((tree.materials || []).filter(m => m.relief).map(m => m.id)),
-                                  wantLocal: (tree.materials || []).some(m => readsLocal(m.code)) })
+                                  wantLocal: (tree.materials || []).some(materialReadsLocal) })
         const depth = pl.depth, deepArrays = pl.arrayDepth
         if (depth > STACK_MAX || deepArrays > STACK_MAX) {
             dataRefused = `${depth > STACK_MAX ? `CSG groups ${depth}` : `arrays and modifiers ${deepArrays}`} deep inside one another, and the scene as data has room for ${STACK_MAX}: compiled as before`
@@ -1019,6 +1051,15 @@ export function generate(tree, opts = {}) {
         Object.defineProperty(result, 'compiledIds', { enumerable: false, value: _data.compiledIds })
     }
     if (dataRefused) Object.defineProperty(result, 'dataRefused', { enumerable: false, value: dataRefused })
+    /* ITS PICTURES (version 29; core/images.js): the atlas, a scene resource every kernel holding the scene declares (each
+       given its own texel read: core/images.js withImages), made by setScene through scene.init -- composed with the scene
+       as data's when it has both. `imageRects`, where each picture sits, is what a slot's live value is written with
+       (demo.js liveValue): a slot naming a picture not in it is a compile. */
+    if (hasPictures(tree)) {
+        const atlas = atlasOf(tree)
+        result.resources = { ...(result.resources || {}), [IMAGE_RESOURCE]: IMAGE_TYPE }
+        attachImages(result, atlas, tree.images ?? {})
+    }
     /* WHICH ARRAYS' COPIES HAVE A WINDOW, AND HOW (arrays.js): id -> the pattern's code, as the render copy's text compiles
        it in -- a copies edit that makes another pattern of one needs that text again (demo.js nodeLive) */
     Object.defineProperty(result, 'arrayWindows', { enumerable: false, value: new Map([..._windows].map(([id, p]) => [id, codeOf(p)])) })
@@ -1070,7 +1111,7 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
     /* LOCAL POINTS ONLY IF SOMETHING READS ONE. Tracking the current frame's point costs a
        store per frame entered, at every SDF evaluation; a scene whose materials never say
        p_local does not pay it (see localPoint in scene_api.js). */
-    const wantLocal = materials.some(m => readsLocal(m.code))
+    const wantLocal = materials.some(materialReadsLocal)
     const tags = []
     // the groups whose children combine into one shape: the CSG groups and their shapes that are plain groups
     const combined = combinedGroups(tree)
@@ -1182,7 +1223,11 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
        Mapped to 'functions' (a reserved id) so an error in it is reported at its own lines. */
     const functions = String(tree.functions || '')
     if (codeOnly(functions).trim()) e.from('functions', functions)
-    emitMaterials(e, materials, matIdOf, uniforms, wantLocal, lights)
+    /* THE PICTURES' LOOKUP (core/images.js), once, before the materials that call it -- only in a scene with a picture:
+       every other compiles to the text it always did */
+    const pictures = materials.some(hasSlots)
+    if (pictures) e.raw(IMAGES_WGSL)
+    emitMaterials(e, materials, matIdOf, uniforms, wantLocal, lights, pictures ? atlasOf(tree) : null)
     // the faces light sampling aims at: only with a light -- without, the stub (uniforms.schema.js sceneConstantsWGSL)
     if (lights.length && data) for (const l of lightFacesWGSL(lights, (L, k) => uniformName(L.id, k))) e.raw(l)
     else if (lights.length) emitLightFaces(e, lights, liveVisibility)

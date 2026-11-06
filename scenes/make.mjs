@@ -31,6 +31,8 @@ import { modifierGroup } from '../builder/modifiers.js'
 import { rotationTowards } from '../builder/lights.js'
 import { COAT_PRESETS } from '../builder/materials.js'
 import { convert } from '../import/index.js'
+import { entryFromBytes } from '../builder/images.js'
+import { deflateSync } from 'node:zlib'
 
 const here = new URL('./', import.meta.url)
 const LIB = JSON.parse(readFileSync(new URL('../library/items/materials.json', import.meta.url), 'utf8')).items
@@ -353,6 +355,57 @@ function reliefTexture() {
     return { doc, camera: orbit([0, -40, 60], -90, 12, 950) }
 }
 
+/* A PICTURE AS A PNG (8-bit RGBA, no interlace), written here from its specification: the examples' pictures are made
+   in code like everything else in them, so what each pixel is can be read */
+function png(w, h, pixel) {
+    const crcT = new Uint32Array(256).map((_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; return c >>> 0 })
+    const crc = b => { let c = 0xFFFFFFFF; for (const x of b) c = crcT[(c ^ x) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0 }
+    const chunk = (t, d) => { const o = Buffer.alloc(12 + d.length); o.writeUInt32BE(d.length, 0); o.write(t, 4, 'ascii'); d.copy(o, 8); o.writeUInt32BE(crc(o.subarray(4, 8 + d.length)), 8 + d.length); return o }
+    const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4); ihdr[8] = 8; ihdr[9] = 6
+    const raw = Buffer.alloc(h * (1 + 4 * w))
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) raw.set(pixel(x, y), y * (1 + 4 * w) + 1 + 4 * x)
+    return new Uint8Array(Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', deflateSync(raw, { level: 9 })), chunk('IEND', Buffer.alloc(0))]))
+}
+/* A TEST CARD, 320 x 180 (16:9): colour bars at 75 % across its top two thirds -- white, yellow, cyan, green, magenta,
+   red, blue, in that order from the left, so which way round it lies is plain -- a grey ramp below them from black on
+   the left to white on the right, and a white ring on its centre. sRGB, as a picture is. */
+function testCard() {
+    const W = 320, H = 180, bars = [[191, 191, 191], [191, 191, 0], [0, 191, 191], [0, 191, 0], [191, 0, 191], [191, 0, 0], [0, 0, 191]]
+    return png(W, H, (x, y) => {
+        const r = Math.hypot(x + 0.5 - W / 2, y + 0.5 - H / 2)
+        if (Math.abs(r - 50) < 2) return [255, 255, 255, 255]
+        if (y < H * 2 / 3) return [...bars[Math.min(6, Math.floor(x / W * 7))], 255]
+        const v = Math.round(255 * x / (W - 1))
+        return [v, v, v, 255]
+    })
+}
+
+/* PICTURES (0.next; builder/images.js, roadmap/TEXTURES.md T1): one test card, shown four ways. A television's screen
+   (400 x 225 mm, 16:9) GLOWS with it at 200 cd/m^2 -- its white at that, its black dark, the screen's dark glass showing
+   there -- standing on the floor and facing the camera: the panel turned 90 degrees about x, so its own +z, along which
+   a planar picture is laid, points at -y, and its +y up. The same card is a POSTER's colour on a board beside it, a
+   CAN's label wrapped round a 66 mm can (cylindrical: across the card is the distance round, 207 mm, the can's
+   circumference; up it its height), and on a BALL laid triplanar. A dim studio, so the screen is the brightest thing. */
+async function pictures() {
+    const doc = scene('Pictures', { radius: 3000, env: STUDIO(60, 0.6) })
+    floor(doc, lib(doc, 'charcoal'))
+    const card = await entryFromBytes(testCard(), { name: 'test card.png', type: 'image/png', width: 320, height: 180 })
+    M.addImage(doc, card)
+    const screen = own(doc, 'screen', 'diffuse', { emissiveLuminance: 200 }, 'emitter')
+    M.addImageSlot(doc, screen, card.key, { size: { x: 400, y: 225 }, wrapU: 'clamp', wrapV: 'clamp' })
+    shape(doc, 'root', 'box', { label: 'television', params: { size: V(400, 225, 12), rounding: 2 }, at: [-150, 0, 200], rot: [90, 0, 0], material: screen })
+    const poster = own(doc, 'poster', 'diffuse', { roughness: 0.6 })
+    M.addImageSlot(doc, poster, card.key, { size: { x: 240, y: 135 }, wrapU: 'none', wrapV: 'none' })
+    shape(doc, 'root', 'box', { label: 'poster', params: { size: V(260, 155, 4), rounding: 0 }, at: [230, 30, 160], rot: [90, 0, -15], material: poster })
+    const label = own(doc, 'can label', 'plastic', { roughness: 0.25 })
+    M.addImageSlot(doc, label, card.key, { projection: 'cylindrical', size: { x: 2 * Math.PI * 33, y: 80 }, wrapV: 'none' })
+    shape(doc, 'root', 'cylinder', { label: 'can', params: { radius: 33, height: 115 }, at: [60, -160, 57.5], rot: [0, 0, -90], material: label })
+    const ball = own(doc, 'ball', 'plastic', { roughness: 0.35 })
+    M.addImageSlot(doc, ball, card.key, { projection: 'triplanar', size: { x: 80, y: 45 }, wrapU: 'mirror', wrapV: 'mirror' })
+    shape(doc, 'root', 'sphere', { label: 'ball', params: { radius: 45 }, at: [-20, -200, 45], material: ball })
+    return { doc, camera: orbit([20, -40, 120], -90, 12, 1100) }
+}
+
 /* GLASS AND LIQUID: a tumbler of water (glass 2 mm thick, water n 1.333 with its own dispersion), a green bottle whose
    colour deepens with thickness (the colour depth), and a flint prism splitting the sun into colours. */
 function glassLiquid() {
@@ -662,6 +715,7 @@ export const EXAMPLES = [
         ['material-board.json', materialBoard, 'The library\'s materials on 40 mm spheres'],
         ['relief-texture.json', reliefTexture, 'Plaster, stucco, render, stone, hammered metal, leather: reliefs in a raking light'],
         ['glass-liquid.json', glassLiquid, 'A tumbler of water, a green bottle, a flint prism in the sun'],
+        ['pictures.json', pictures, 'A test card glowing on a screen, on a poster, round a can and on a ball'],
     ] },
     { audience: 'Modelling and rendering', group: 'Light and camera', items: [
         ['lighting-room.json', lighting, 'A room in metres: daylight through a window and a 1500 lm lamp'],
@@ -687,9 +741,17 @@ export const EXAMPLES = [
 /* WRITTEN: each scene, and examples.js -- what scenes/index.js lists, read by the page without running this.
    AN EXAMPLE MADE IN THE PAGE (its function null: Dichroics, the user's own scene, 0.78.0) is the file as the user saved
    it: read for its title and checked, never written -- `made: false` in examples.js says so. */
+/* `node scenes/make.mjs pictures.json ...` writes those files alone, and the list: the others are read for their titles as
+   they are, as a file kept as saved is -- so one example added or remade does not write every other one again */
 if (import.meta.url === `file://${process.argv[1]}`) {
     const list = []
+    const only = process.argv.slice(2)
     for (const { audience, group: g, items } of EXAMPLES) for (const [file, make, description] of items) {
+        if (only.length && !only.includes(file) && make) {
+            const doc = M.parse(readFileSync(new URL(file, here), 'utf8'))
+            list.push({ file, title: doc.title, audience, group: g, description })
+            continue
+        }
         if (!make) {
             const doc = M.parse(readFileSync(new URL(file, here), 'utf8'))
             const bad = M.validate(doc)
@@ -698,7 +760,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
             console.log(`${file}: ${doc.title} (kept as saved)`)
             continue
         }
-        const { doc, camera, exposure } = make()
+        const { doc, camera, exposure } = await make()
         detectorRoles(doc)
         delete doc.$mats
         delete doc.$detectors

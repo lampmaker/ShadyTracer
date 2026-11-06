@@ -132,6 +132,7 @@ with the loop submitting, a revisit apply of the Noise library took 1.4-6.8 s ag
     constants: {...},       // name -> {type, def, gui} -- baked into the source, RECOMPILES
     uniforms:  {...},       // name -> {type, def, gui, page?} -- merged into the shared struct
     resources: {...},       // name -> WGSL type, merged into every kernel that compiles the scene
+                            //   (a scene's pictures: `sceneImages`, one texture -- below, A picture on a surface)
     async init(gpu),        // create buffers, run one-off compute; returns name -> buffer
     dispose(),              // optional: free them -- called when another scene has taken this one's place
     writeData(data),        // optional: the scene's data written in place (the builder's scene as data)
@@ -701,6 +702,27 @@ One `learn` buffer holds the photon-map counts, the discovery grid and the emitt
 Checked on the CPU with awkward boxes — one covering part of the emitter, one all of it, one
 empty, two overlapping — and emission varying over the surface: NEE + MIS 0.996 of a BSDF-only
 reference, probe-photon irradiance 0.99 (±1.5% run to run). On hardware: the `emitters` bench.
+
+### A picture on a surface
+
+A material can read a picture where a ray hits it (0.next; `core/images.js`, the builder's `builder/images.js`). What
+the engine gives a scene for it:
+- **`IMAGES_WGSL`**: the lookup, in the scene's text when it has a picture. A slot is one `mat4x4<f32>` uniform (its
+  rectangle in the atlas, its size and offset in mm, its turn, projection and flags). The point is projected in the
+  object's pattern frame, in mm, then bilinear (or nearest) from four `textureLoad`s, wrapping on the image's own
+  texels and decoding each tap from sRGB before the mix. `sample(slot)` is what a material's code calls.
+- **The atlas**: every picture of the scene in one `texture_2d<f32>`, `sceneImages`, a scene resource the scene's
+  `init` makes (the builder's `attachImages`, composed with the scene as data's init).
+- **`sceneCompute`**: every kernel that holds the scene's text is made through it. It gives the kernel its own
+  `imageTexel`: the atlas read where `main` reaches a material, a stub where it does not (the renderer's march and
+  shadow rays). A texture named in a function `main` never calls is declared, bound and missing from `layout:'auto'`:
+  an invalid bind group.
+- **A glowing picture is an emitter only where it glows.** Every test for an emitter reads `max3(emissive) > 0` at the
+  point (the emitter hit, the probe's start, discovery, the photon map's store). So a black pixel is the material's
+  surface there: the builder gives such a material a screen's dark glass for it. Light sampling and the probes evaluate
+  the emission where they land, so a picture's glow needs nothing of its own from them. Checked on Dawn over lavapipe
+  (`builder/test/images.gpu.mjs`): a floor under a glowing 8 x 8 checker reads its mean's light within its error bar,
+  light sampling on and off.
 
 ### Draft, Sketch and Optics: stopping at the first real scatter
 

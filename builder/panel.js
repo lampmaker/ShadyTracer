@@ -58,6 +58,7 @@ import { makeAfter } from './params.js'
 import { codeOnly } from './codegen.js'
 import { SEG, SEGBTN } from '../lib/pathtracer/strip.js'
 import { lit } from '../lib/pathtracer/icons.js'
+import { imageFromFile, slotKey, PROJECTIONS, WRAPS, FILTERS, FACES, IMAGE_MAX_EDGE } from './images.js'
 
 /** WHAT EACH ENVIRONMENT SETTING DOES (model.js ENVIRONMENT, the renderer's Lighting schema), said on its row. Every key
  *  has one (test/panel.check.mjs): a setting added to the schema with none fails there. Numbers are typical values, not
@@ -418,7 +419,7 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
                 setTimeout(() => { if (shownId === mat.id) show(mat.id) })
             })
             // what the scene's features leave in (model.js setFeatures: dispersion off, no Abbe number)
-            const all = (M.MATERIAL_FIELDS_OF[M.typeOf(mat)] || []).filter(k => M.fieldShown(doc, k))
+            const all = M.materialFieldsOf(mat).filter(k => M.fieldShown(doc, k))
             // the coating's fields in a folder of their own, below (coatingFolder)
             const fields = all.filter(k => k !== 'coating' && !M.MATERIAL_FIELDS[k].coat)
             if (fields.length) {
@@ -426,11 +427,13 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
                     bind(folder, mat.params, k, { label: M.MATERIAL_FIELD_LABELS[k] ?? k, ...(M.MATERIAL_FIELDS[k].gui || {}) }, () => live(mat.id, k), `scene/${mat.id}/${k}`)
             }
             if (all.includes('coating')) coatingFolder(folder, mat)
+            // its pictures (version 29): after what the surface is, before its own parameters and code, which read them
+            imagesFolder(folder, doc, mat)
             // and its own, for its code to read: added, edited and deleted like a code node's
             paramsFolder(folder, mat, M.customParams(mat), {}, true)
             // an empty block shows how to use one; comments alone compile to nothing
             if (!String(mat.code || '').trim()) mat.code = M.MATERIAL_CODE_TEMPLATE
-            codeEditor(folder, mat, { kind: 'material', title: 'material code', names: 'm, p, n, C, p_local, R_local, S_local, and its parameters' })
+            codeEditor(folder, mat, { kind: 'material', title: 'material code', names: `m, p, n, C, p_local, R_local, S_local, its parameters${(mat.images ?? []).length ? `, its pictures (${mat.images.map(x => x.name).join(', ')}) by sample(), mapped() and sampleAt()` : ''}` })
             // its relief LAST (the user, 2026-09-30): the shape it gives, after what the surface is
             reliefFolder(folder, doc, mat)
             return
@@ -1513,6 +1516,96 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
         if (!M.hasCoating(mat.params)) return
         for (const k of M.COAT_FIELDS)
             bind(cf, mat.params, k, { label: M.MATERIAL_FIELD_LABELS[k] ?? k, ...(M.MATERIAL_FIELDS[k].gui || {}) }, () => live(mat.id, k), `scene/${mat.id}/${k}`)
+    }
+
+    /* A MATERIAL'S PICTURES (model version 29; builder/images.js, lib/pathtracer/core/images.js; roadmap/TEXTURES.md T1).
+       + picture… reads a PNG, JPEG or WebP into the scene (scaled to IMAGE_MAX_EDGE on its longer side when larger, said)
+       and gives the material a slot showing it -- its colour if no other slot is. Each slot's placement, wrap, filter and
+       faces are its uniform, so each is LIVE (demo.js liveValue). Its picture, its name in code, whether it is the
+       material's colour, and taking it away change the shader's text: a compile and an undo step each. A slot naming a
+       picture the scene does not have reads transparent (images.js says when that can be), and says so here. */
+    const pictureError = new Map()
+    function imagesFolder(folder, doc, mat) {
+        const pf = folder.addFolder({ title: 'pictures' })
+        const redraw = () => setTimeout(() => { if (shownId === mat.id) show(mat.id) })
+        const glows = M.typeOf(mat) === 'emitter'
+        const structural = () => { edited(null); onStructure(); redraw() }
+        const choose = then => {
+            const input = Object.assign(document.createElement('input'), { type: 'file', accept: 'image/png,image/jpeg,image/webp' })
+            input.onchange = async () => {
+                const file = input.files?.[0]
+                if (!file) return
+                try {
+                    const got = await imageFromFile(file)
+                    M.addImage(BUILDER.doc, got)
+                    if (got.scaled) console.warn(`[builder] '${file.name}' was ${got.scaled.width} x ${got.scaled.height}: scaled to ${got.entry.width} x ${got.entry.height} (the longest edge a picture may have is ${IMAGE_MAX_EDGE})`)
+                    then(got)
+                } catch (e) { console.warn('[builder]', e.message); pictureError.set(mat.id, e.message); redraw() }
+            }
+            input.click()
+        }
+        // what went wrong reading the last file, said once where it was asked for
+        if (pictureError.has(mat.id)) { pf.addBinding({ why: pictureError.get(mat.id) }, 'why', { readonly: true, label: 'not read', multiline: true, rows: 2 }); pictureError.delete(mat.id) }
+        const add = pf.addButton({ title: '+ picture…' })
+        add.element.title = 'A PNG, JPEG or WebP, placed on every object wearing this material by a projection in the object\'s pattern frame.'
+            + (glows ? ' A glowing material glows with it: its white at the luminance above, its black not at all -- the surface below shows there.'
+                     : ' The first is the material\'s base colour; the others are for its code (sample(name)).')
+        add.on('click', () => choose(got => {
+            try { M.addImageSlot(BUILDER.doc, mat.id, got.key) } catch (e) { console.warn('[builder]', e.message); return }
+            structural()
+        }))
+        for (const slot of mat.images ?? []) {
+            const sf = pf.addFolder({ title: `${slot.name}${slot.use === 'colour' ? (glows ? ' (its glow)' : ' (its colour)') : ''}` })
+            const e = doc.images?.[slot.image]
+            const info = e ? `${e.name}: ${e.width} x ${e.height}` : 'its picture is not in this scene: choose it again'
+            sf.addBinding({ info }, 'info', { readonly: true, label: '' })
+            sf.addButton({ title: 'Choose another picture…' }).on('click', () => choose(got => {
+                try { M.setImageSlot(BUILDER.doc, mat.id, slot.name, { image: got.key }) } catch (err) { console.warn('[builder]', err.message); return }
+                structural()
+            }))
+            const set = (patch, compile) => {
+                try { M.setImageSlot(BUILDER.doc, mat.id, slot.name, patch) } catch (err) { console.warn('[builder]', err.message); redraw(); return false }
+                if (compile) structural()
+                return true
+            }
+            const N = { name: slot.name }
+            rowTip(sf.addBinding(N, 'name', { label: 'name in code' }), 'What the material\'s code calls it: sample(' + slot.name + ') is the picture at the hit, mapped(' + slot.name
+                + ') the position on it, sampleAt(' + slot.name + ', uv) the picture at a position of your own. A compile.')
+                .on('change', ev => { if (ev.value !== slot.name) set({ name: String(ev.value).trim() }, true) })
+            const Use = { use: slot.use ?? 'colour' }
+            rowTip(sf.addBinding(Use, 'use', { label: 'use', options: { [glows ? 'its glow' : 'its colour']: 'colour', 'code only': 'none' } }),
+                glows ? 'Its glow: the picture glows, its white at the luminance above. Code only: the material\'s code reads it. A compile.'
+                      : 'Its colour: the picture is the base colour, the material\'s own where it is transparent. Code only: the material\'s code reads it. A compile.')
+                .on('change', ev => set({ use: ev.value }, true))
+            const lv = () => live(mat.id, slotKey(slot.name))
+            const opts = list => Object.fromEntries(list.map(k => [k, k]))
+            rowTip(bind(sf, slot, 'projection', { label: 'projection', options: opts(PROJECTIONS) }, () => { lv(); redraw() }),
+                'How the point is put on the picture, in the object\'s pattern frame: planar along its z; box, one of six faces by the normal; triplanar, the three blended;'
+                + ' cylindrical round its z (across, the distance round in mm); spherical, the whole picture once over a sphere.')
+            rowTip(bind(sf, slot.size, 'x', { label: 'width (mm)', min: 0.001, step: 0.1 }, lv), 'One copy of the picture, across, in real millimetres whatever the scene\'s unit.')
+            rowTip(bind(sf, slot.size, 'y', { label: 'height (mm)', min: 0.001, step: 0.1 }, lv), 'One copy of the picture, up, in real millimetres.')
+            sf.addButton({ title: 'Height from the picture\'s shape' }).on('click', () => {
+                if (!e) return
+                slot.size.y = Number((slot.size.x * e.height / e.width).toPrecision(6))
+                lv(); redraw()
+            })
+            rowTip(bind(sf, slot.offset, 'x', { label: 'offset x (mm)', step: 0.1 }, lv), 'Where the picture\'s centre is, in its plane, in mm. The pattern frame moves it with everything else the material lays out.')
+            rowTip(bind(sf, slot.offset, 'y', { label: 'offset y (mm)', step: 0.1 }, lv), 'Where the picture\'s centre is, up, in mm.')
+            rowTip(bind(sf, slot, 'turn', { label: 'turn (deg)', min: -360, max: 360, step: 0.1 }, lv), 'The picture turned in its own plane, anticlockwise.')
+            const wrapTip = 'repeat: copies side by side; mirror: every other copy flipped, so the edges meet with no seam; clamp: the edge pixels go on; none: one copy, the material\'s own value outside it.'
+            rowTip(bind(sf, slot, 'wrapU', { label: 'wrap across', options: opts(WRAPS) }, lv), wrapTip)
+            rowTip(bind(sf, slot, 'wrapV', { label: 'wrap up', options: opts(WRAPS) }, lv), wrapTip)
+            rowTip(bind(sf, slot, 'filter', { label: 'filter', options: opts(FILTERS) }, lv), 'smooth: between pixels, mixed; pixels: each pixel a sharp square (an LED wall, pixel art).')
+            if (slot.projection === 'planar')
+                rowTip(bind(sf, slot, 'faces', { label: 'faces', options: opts(FACES) }, lv), 'front: only where the surface faces the frame\'s +z; both: front and back (the back mirrored, as a slide seen from behind); all: every face, its edges smeared across the sides.')
+            if (slot.projection === 'triplanar')
+                rowTip(bind(sf, slot, 'sharpness', { label: 'blend sharpness', min: 1, max: 64, step: 0.1 }, lv), 'How quickly the three projections hand over where the surface turns: higher is a sharper seam.')
+            rowTip(bind(sf, slot, 'colour', { label: 'colour (sRGB)' }, lv), 'On: the picture is colour, decoded from sRGB to light. Off: data -- a roughness map or a mask, read as its numbers.')
+            sf.addButton({ title: 'Take it away' }).on('click', () => {
+                try { M.removeImageSlot(BUILDER.doc, mat.id, slot.name) } catch (err) { console.warn('[builder]', err.message); return }
+                structural()
+            })
+        }
     }
 
     /* A MATERIAL'S RELIEF (materials.js RELIEFS): a height on every object wearing it -- in the shape, the
