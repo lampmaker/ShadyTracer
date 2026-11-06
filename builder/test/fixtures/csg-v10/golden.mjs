@@ -216,6 +216,10 @@
 //   Nothing else in its texts moved (cases.*.wgsl, diffed by hand).
 // (For a while the haze box was the scene's too, and dusty-beam.json's texts moved with it; the user wanted the box
 // back, so they are base's again, its `roles` key aside.)
+//
+// ONE SCENE ADDED (0.next, scene format 29): scenes/pictures.json, the Pictures example (builder/images.js). Frozen with
+// expected.json compared key by key before and after: its entry added, and none of the 51 documents before it moved --
+// a scene with no picture compiles to the text it did -- cases.*.wgsl among them.
 //======================================================================================================================
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
