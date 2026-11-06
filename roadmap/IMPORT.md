@@ -106,8 +106,11 @@ in the generated SDF (`builder/codegen.js:1395-1433`).
   `texWH`/`sz` at `:1058-1059`).
 - **check-shaders counts every resource as a storage binding** (`nStorage = Object.keys(k.resources).length`,
   `:632`). It would need to count textures apart.
+  (No longer: since then check-shaders and the renderer count textures and samplers apart,
+  `core/check-shaders.mjs:923`, `core/raytrace_main.js:499`. Noted 2026-11-06, `roadmap/TEXTURES.md`.)
 - **The builder's compile probe declares only its own buffer** (`builder/validate.js:60-61`). A scene naming
   a texture would fail the probe before it reached the renderer.
+  (No longer: it declares the scene's resources, `builder/validate.js:62-71`. Noted 2026-11-06.)
 
 ### What the march asks of a distance
 
