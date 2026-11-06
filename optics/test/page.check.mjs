@@ -246,7 +246,7 @@ ok('pointing at the map reads the cell', /lx/.test(st.readouts.map), JSON.string
 ok('...and the rings and encircled flux read the same radius', /ring at r/.test(st.readouts.rings) && /within r/.test(st.readouts.encircled), JSON.stringify(st.readouts))
 ok('...and the far field\'s charts let go of theirs', !st.readouts.polar, JSON.stringify(st.readouts))
 
-// THE SPECTRUM (0.next): a trace in colour has none -- the chart says where to switch it on, and reads nothing
+// THE SPECTRUM (0.83.0): a trace in colour has none -- the chart says where to switch it on, and reads nothing
 ok('a trace in colour: the spectrum reads nothing', st.readouts.spectrum === '', JSON.stringify(st.readouts.spectrum))
 ok('...its strip: rel or W/nm, and a CSV to save', st.bars.spectrum.fields.scale === 'rel' && st.bars.spectrum.tools.some(t => t.startsWith('Save the spectrum (CSV)')),
    JSON.stringify(st.bars.spectrum))

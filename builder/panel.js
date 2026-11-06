@@ -403,7 +403,7 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
                and it applies on request like a code node's. */
             /* ---- ITS TYPE (model version 11), and then only the settings that type uses
                (materials.js FIELDS_OF): a surface has no emission, a glowing surface (emitter) is its emission alone.
-               (A detector and a ray limiter were types too until 0.next: an object's role now, its Optics-Analysis box.)
+               (A detector and a ray limiter were types too until 0.83.0: an object's role now, its Optics-Analysis box.)
                Structural: the shader assigns only the type's fields. The panel is rebuilt so the list follows the type. */
             const Ty = { type: M.typeOf(mat) }
             const tyB = folder.addBinding(Ty, 'type', { label: 'type', options: { 'surface': 'surface', 'glowing': 'emitter' } })
@@ -554,7 +554,7 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
                     + 'scene; the optics trace uses it too.')
                 // ...and what it sees there: the sun and sky, or the studio (a row of the tree of its own until 0.52.0)
                 environmentFolder(folder, doc)
-                // ...and which optics it has: dispersion, absorption, coatings (model.js setFeatures, 0.next)
+                // ...and which optics it has: dispersion, absorption, coatings (model.js setFeatures, 0.83.0)
                 featuresFolder(folder, doc)
                 // ...and how it is looked at: its camera and its exposure (model.js VIEW, 0.66.0)
                 cameraFolder(folder, doc)
@@ -831,7 +831,7 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
        separator blade, since Tweakpane places each blade by its index). A feature off hides its material fields and
        leaves them out of the shader; the line under the switches says which materials have a value hidden. Every
        change is one undo step and a compile -- "everything through the compile" (the user, 2026-11-02). */
-    /* AN OBJECT'S OPTICS ROLE (0.next, model.js OPTICS_ROLES): a box of its own, offered while the scene's optics analysis is
+    /* AN OBJECT'S OPTICS ROLE (0.83.0, model.js OPTICS_ROLES): a box of its own, offered while the scene's optics analysis is
        on (its optical features). A detector is a live change -- the trace finds it by the object's tag, so the shader's text
        is the same and the scene's data carries it (codegen detectorTags) -- a ray limiter a compile, since the picture
        leaves its object out. Each object is its own detector: its own map on the Optics page. */
@@ -1009,7 +1009,7 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
                 }
                 input.click()
             })
-            /* ITS COLOUR (0.next): from the file, its header's wavelength, or any of a rectangle's four ways -- the same rows,
+            /* ITS COLOUR (0.83.0): from the file, its header's wavelength, or any of a rectangle's four ways -- the same rows,
                with the file's two first (lights.js RAYFILE_COLOUR_BY; optics/sources.js rayFileColour says what each
                comes to, and the line under them says it for this file) */
             colourBindings(f, node, L, set, H, parsed)
@@ -1046,7 +1046,7 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
        change here would be undone by the next resolve -- and so is the choice its binding holds (bind.js LIGHT_MODES:
        light.flux holds "brightness by", light.cct "colour by"), the binding on the label. opts(...settings) is the row's
        options, tip(row, ...settings) its label; a setting is a light's key, 'colour' for all three of light.colour.* */
-    /* A SPECTRAL RAY FILE'S COLOUR (0.next; zemax.js raysXYZ): what its rays' wavelengths add up to, said beside its
+    /* A SPECTRAL RAY FILE'S COLOUR (0.83.0; zemax.js raysXYZ): what its rays' wavelengths add up to, said beside its
        other numbers -- the colour the Optics page and the picture's photons give it. A flux-only file has none of its own. */
     function spectralLine(parsed) {
         const c = raysXYZ(parsed)
@@ -1068,10 +1068,10 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
 
     /* A LIGHT'S COLOUR, four ways (lights.js colourBy): an RGB hue, a CCT and Duv, CIE xy -- the
        last two as a datasheet gives an LED, and exact however far outside the display's gamut -- or its
-       spectrum (0.next; core/spd.js), below in spectrumBindings. Below them, what it comes to in the other
+       spectrum (0.83.0; core/spd.js), below in spectrumBindings. Below them, what it comes to in the other
        terms. Switching the way keeps the colour: the new fields start at the current colour's own values
        (a spectrum a blackbody at its CCT, or a table of the current spectrum). */
-    /* A RAY FILE (0.next; `parsed`, its file as RAYFILES holds it, or null): two more ways first, from the file and at its
+    /* A RAY FILE (0.83.0; `parsed`, its file as RAYFILES holds it, or null): two more ways first, from the file and at its
        header's wavelength, and for those the line says what this file comes to (optics/sources.js rayFileColour) */
     function colourBindings(f, node, L, set, H = lightHeld(node), parsed = undefined) {
         const ch = M.lightChromaticity(L)
@@ -1120,7 +1120,7 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
         infoB = f.addBinding(info, 'text', { readonly: true, label: '', ...(own ? { multiline: true, rows: 2 } : {}) })
     }
 
-    /* A LIGHT BY ITS SPECTRUM (0.next; core/spd.js, lights.js `spectrum`): a blackbody's temperature, peaks typed one a
+    /* A LIGHT BY ITS SPECTRUM (0.83.0; core/spd.js, lights.js `spectrum`): a blackbody's temperature, peaks typed one a
        line ("nm fwhm weight"), or a measured table pasted or loaded from a CSV -- and a starting point from the presets.
        Every change live, as a colour is (its exact RGB at Y = 1: no compile), one undo step a light's edit. Text is
        checked as it is typed, and only what reads clean is put in; a problem is said at its line and column, as the
@@ -1148,7 +1148,7 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
         rowTip(f.addBinding(K, 'preset', { label: 'start from', options: { '(choose)': '', ...Object.fromEntries(Object.keys(M.SPD_PRESETS).map(k => [k, k])) } }),
             'A spectrum to start from: a blackbody, CIE illuminant A, a single-colour LED as one Gaussian of its typical peak and width (a model, not a datasheet), a white LED as a blue die and a phosphor hump near 4000 K, or one of the CIE\'s measured LED lamps (CIE 015).')
             .on('change', ev => { if (ev.value) set({ spectrum: structuredClone(M.SPD_PRESETS[ev.value]) }, 'reshow') })
-        /* THE SPECTRUM, DRAWN (0.next; optics/spectrumchart.js), and what it renders colours like: its CRI (core/cri.js,
+        /* THE SPECTRUM, DRAWN (0.83.0; optics/spectrumchart.js), and what it renders colours like: its CRI (core/cri.js,
            CIE 13.3) beside its CCT and efficacy -- redrawn as it changes (put below), in a separator blade as Quality's
            buttons are (settingsui.js addQuality says why) */
         const blade = f.addBlade({ view: 'separator' })

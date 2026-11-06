@@ -181,7 +181,7 @@ export function sceneParams(doc, hooks = {}) {
             add('xy', { label: 'CIE x, y', dims: 2, min: 0.001, max: 0.9, step: 0.0001,
                         get: () => { const c = M.lightOf(node).xy; return [c.x, c.y] } }, ([x, y]) => (x + y < 1 ? { xy: { x, y } } : {}))
         } else if (L.colourBy === 'spectrum') {
-            /* A SPECTRUM (0.next; core/spd.js): a blackbody's temperature, or each peak's nm, FWHM and weight -- live, a
+            /* A SPECTRUM (0.83.0; core/spd.js): a blackbody's temperature, or each peak's nm, FWHM and weight -- live, a
                colour; a measured table's points are not numbers to move one at a time, so it has none here */
             const S = L.spectrum ?? M.LIGHT_DEFAULTS.spectrum
             if (S.kind === 'planck') add('spectrum', { label: 'blackbody temperature', unit: 'K', min: 1000, max: 15000, step: 10,

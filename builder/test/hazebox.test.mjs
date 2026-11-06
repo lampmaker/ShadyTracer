@@ -146,7 +146,7 @@ const T = (pos = [0, 0, 0], rot = [0, 0, 0], scale = 1) => ({ pos: { x: pos[0], 
 }
 
 //----------------------------------------------------------------------------------------------------------------------
-// a file of 27 from the while in 0.next when the haze was the scene's (doc.haze, in its environment): a haze box again
+// a file of 27 from the while in 0.83.0 when the haze was the scene's (doc.haze, in its environment): a haze box again
 //----------------------------------------------------------------------------------------------------------------------
 {
     const d = M.createDoc(); d.unit = 'mm'

@@ -725,7 +725,7 @@ and `docsdf.mjs` mirrors the new rule.
   took 144 s to convert in Node.
 - **Not read:** IGES, B-spline faces, open shells (a STEP surface model), meshes that are not closed.
 
-### 11.7 Fillets, freeform faces and the import dialog (0.next, 2026-11-04)
+### 11.7 Fillets, freeform faces and the import dialog (0.83.0, 2026-11-04)
 
 The user, 2026-11-04, with an Onshape part (a tray with filleted uprights, a U slot, two slanted slots; 121 faces, 62
 of them 1 mm fillets) and a render with black notches: *"step/stl could use improvements ... especially the fillets

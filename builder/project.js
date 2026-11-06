@@ -166,7 +166,7 @@ export function carryOutside(next, from, memory = null) {
 /* THE RENDERER'S SETTINGS AS A PROJECT KEEPS THEM (0.66.0): everything the renderer hands over (RT.settings) but what
    the scenes have of their own now -- the camera, the exposure (model.js VIEW_EXPOSURE) and the surface tolerance
    (`eps`). Saved, they were put back over the scene shown at every start (app.html applySettings), one scene's
-   camera over another's, and one exposure and one tolerance for all. And `dispersionOff` (0.74.0 to 0.next), whose
+   camera over another's, and one exposure and one tolerance for all. And `dispersionOff` (0.74.0 to 0.83.0), whose
    uniform is gone: dispersion is each scene's feature now (model.js setFeatures), read into them by adoptViews. */
 export function rendererSettings(s) {
     if (!s || typeof s !== 'object' || Array.isArray(s)) return {}
@@ -181,7 +181,7 @@ export function rendererSettings(s) {
  * { key: camera }, each scene's kept camera, and `renderer`, whose exposure was every scene's and whose tolerance
  * (eps, metres) was set while `current` was being worked on. A scene's own view comes first; a kept view that is not
  * sound is left out, never the reason a project does not open. And the renderer's dispersion switch (`dispersionOff`
- * 1, 0.74.0 to 0.next), which was every scene's: each scene's dispersion off (model.js setFeatures). Changes `p`;
+ * 1, 0.74.0 to 0.83.0), which was every scene's: each scene's dispersion off (model.js setFeatures). Changes `p`;
  * returns it.
  */
 export function adoptViews(p, { views = null, cameras = null, renderer = null, current = null } = {}) {

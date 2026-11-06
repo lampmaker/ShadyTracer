@@ -35,7 +35,7 @@ const fixture = n => new URL(`./fixtures/${n}`, import.meta.url)
 
 /* the most each part's formula may hold, and its shapes: what it holds now, the plate and the lens what a hand would
    write (the plate: box, four holes, pocket; the lens: two spheres and its edge) */
-/* (0.next: the bracket's and the boss's fillets round joins (fillet.js), 17 literals and 9 shapes, and 14 and 9, before;
+/* (0.83.0: the bracket's and the boss's fillets round joins (fillet.js), 17 literals and 9 shapes, and 14 and 9, before;
    the holder, made like the user's part of 2026-11-04, 209 and 178 without its fillets as round joins; 46 and 61 while
    the round join read its sides' normals, 49 and 64 since it reads their distances alone, as the renderer's march must) */
 const LIMITS = { plate: { literals: 16, shapes: 6 }, bracket: { literals: 9, shapes: 7 }, boss: { literals: 8, shapes: 7 },

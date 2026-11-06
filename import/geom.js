@@ -147,7 +147,7 @@ function deBoor(degree, H, knots, t) {
     return d[degree]
 }
 
-/** A FREEFORM SURFACE A FACE MAY LIE ON (0.next, import/freeform.js): not a half-space the renderer has a shape for,
+/** A FREEFORM SURFACE A FACE MAY LIE ON (0.83.0, import/freeform.js): not a half-space the renderer has a shape for,
  *  so it stays `unsupported` -- brep.js cannot classify against it -- but it can be EVALUATED, which is what fitting a
  *  regular shape to the face needs: at(u, v), its parameters' domain, and the normal du x dv (ISO 10303-42's: the face's
  *  own when same_sense). A B-spline surface, rational if weights are given (P[i][j], W[i][j]: i along u). */
@@ -328,7 +328,7 @@ export function roundedRect(F, hx, hy, r) {
     }
 }
 
-/** A FILLET'S SURFACE, ITS TWO SUPPORTS' TOGETHER (import/fillet.js, 0.next): the faces either side of a CAD fillet
+/** A FILLET'S SURFACE, ITS TWO SUPPORTS' TOGETHER (import/fillet.js, 0.83.0): the faces either side of a CAD fillet
  *  (two planes, a plane and a cylinder, a plane and a rounded rectangle's prism, a plane and another fillet) on the
  *  sides the solid is -- sA gA < 0, sB gB < 0 -- met by builder/joins.js's round join of radius r: their intersection
  *  for a convex fillet ('and'), their union for a concave one ('or'). One half-space where the fillet's face and its

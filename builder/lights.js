@@ -13,7 +13,7 @@
 //
 //   colourBy      how the colour is given: 'rgb' (colour), 'cct' (cct + duv), 'xy' (xy) or 'spectrum'
 //                 (spectrum) -- a datasheet gives a chromaticity, and additive mixing is exact in it. A RAY FILE
-//                 (0.next) has two more, and the first is its default: 'file', what the file says (a spectral
+//                 (0.83.0) has two more, and the first is its default: 'file', what the file says (a spectral
 //                 file's own wavelength on each ray; a flux-only file says nothing, and is white), and
 //                 'wavelength', every ray at its header's one wavelength. The four above colour every ray of it
 //                 alike. The file's data is the host's, so what the two come to is worked out where the file is
@@ -52,11 +52,11 @@ export const LIGHT_SHAPES = {
     rayfile: { params: {}, label: 'ray file' },
 }
 export const DISTRIBUTIONS = ['cosine', 'uniform', 'collimated']
-/* ...and by its spectrum (0.next; core/spd.js, roadmap/LIGHT_MODEL.md S1): a blackbody, peaks or a measured table,
+/* ...and by its spectrum (0.83.0; core/spd.js, roadmap/LIGHT_MODEL.md S1): a blackbody, peaks or a measured table,
    carried as the exact XYZ the CIE's table gives it, at luminance 1, as a chromaticity is. No version change, as colourBy
    itself had none: a builder from before refuses 'spectrum' by name rather than reading the light as white. */
 export const COLOUR_BY = ['rgb', 'cct', 'xy', 'spectrum']
-/* ...and a ray file's own two (0.next, the header): from the file, or at its header's wavelength -- no version change, as
+/* ...and a ray file's own two (0.83.0, the header): from the file, or at its header's wavelength -- no version change, as
    'spectrum' had none: a builder from before refuses them by name */
 export const RAYFILE_COLOUR_BY = ['file', 'wavelength', ...COLOUR_BY]
 export const LIGHT_DEFAULTS = Object.freeze({
@@ -66,7 +66,7 @@ export const LIGHT_DEFAULTS = Object.freeze({
     twoSided: false, transparent: false, emitN: 1,
 })
 const KEYS = ['shape', ...Object.keys(LIGHT_DEFAULTS), 'file', 'box']
-/* A RAY FILE'S DEFAULTS (0.next): its colour from the file. Per shape, and in both places a default is read -- what a
+/* A RAY FILE'S DEFAULTS (0.83.0): its colour from the file. Per shape, and in both places a default is read -- what a
    setting not stored means (lightOf) and what is dropped as at its default when stored (model.js lightPatched): with one
    table for both shapes a ray file set to RGB would be stored as nothing, and read back as from the file. */
 const RAYFILE_DEFAULTS = Object.freeze({ ...LIGHT_DEFAULTS, colourBy: 'file' })

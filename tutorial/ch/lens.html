@@ -140,7 +140,7 @@
       diffuse (matte, free), specular. A lens is an area, which light leaving the glass can hit. The lens's own file
       says so:</p>
     <pre data-src="lib/pathtracer/core/lens.js" data-sym="// WHY. The camera was a pinhole, a point." data-to="0.61.0 (below); the depth of field stays."
-         data-why="'A photon' is light traced from the lamp (chapters 18 and 19); the words in quotation marks are the user's suggestion, as written. That second reason has gone since version 0.61.0: the photon map (chapter 19) finds this light now, through any lens or none, and the lens is kept for its depth of field -- and, since version 0.next, for a light that has no surface to see (section 5)." data-hash="1cea6da8"></pre>
+         data-why="'A photon' is light traced from the lamp (chapters 18 and 19); the words in quotation marks are the user's suggestion, as written. That second reason has gone since version 0.61.0: the photon map (chapter 19) finds this light now, through any lens or none, and the lens is kept for its depth of field -- and, since version 0.83.0, for a light that has no surface to see (section 5)." data-hash="1cea6da8"></pre>
     <p>The camera ray, in the <a data-g="kernel">kernel</a> that makes them, piece by piece. right, up and fwd are the
       camera's three directions as seen in the scene; fwd points backwards, out of the scene, so −fwd looks into it.
       <code>dirCam</code> is the pixel's point on the picture one unit in front of the eye, in the camera's own
@@ -199,7 +199,7 @@
         aperture or none, and the lens kept only its depth of field.</li>
       <li><strong>A ray file nobody could see.</strong> A ray file is a lamp maker's list of the rays leaving a lamp, with
         no surface: no camera ray can hit it, and its light reached the picture only from the surfaces it lit. Looking at
-        the lamp itself through a lens, the user saw nothing (2026-11-04). Since version 0.next a ray of such a light that
+        the lamp itself through a lens, the user saw nothing (2026-11-04). Since version 0.83.0 a ray of such a light that
         passes through the lens adds itself where a real camera would put it, straight from the lamp or by a mirror or
         clear glass, and only then: light that has bounced off a matte surface is that surface's to show, and counting it
         at the lens too would count it twice. Through a pinhole it still shows nothing, since no ray passes through a

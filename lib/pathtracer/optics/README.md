@@ -85,7 +85,7 @@ The UI is `optics/page.js`, the Optics page beside Builder: the **Rays** (one ra
 
 ## Detectors, tracing N steps, Live, path length
 
-**Detectors and limiters: an object's role** (0.next, model version 27: builder/model.js `OPTICS_ROLES`, the object's Optics-Analysis box in Properties, shown while the scene's `analysis` feature is on; a material's type from version 10 to 26).
+**Detectors and limiters: an object's role** (0.83.0, model version 27: builder/model.js `OPTICS_ROLES`, the object's Optics-Analysis box in Properties, shown while the scene's `analysis` feature is on; a material's type from version 10 to 26).
 - **detector:** the object stops every ray that arrives at it from outside, whatever its material's fields say. Its flux counts as DETECTED, and each hit is recorded (position, flux, arriving direction, object) for analysis elsewhere; `readHits()` returns the records and the page saves them as CSV. The picture renders it as its fields say.
 - **ray limiter:** the same in the trace, and not in the picture at all: codegen leaves its objects out of the render and pick copies and gives the trace copies of its own (`opticsWgsl` for the march, `opticsPickWgsl` / `opticsTags` for the shade). For cutting the rays off where a cross-section is wanted. A CSG group whose base is one takes the role for every shape in it, as it takes the base's material: an aperture's hole wall stops rays too.
 - The kernels test the hit's TAG (codegen `detectorTags`, the optics copy's numbering, a 256-bit mask `optDetTagA/B`; the tag is found before the test, `kernels.js`), so a role given or taken changes no text: it is the scene's data (`SCENE_DATA_KEYS`), no compile, a limiter aside. A tag past 255 is clamped by the kernel and so refused by codegen (`opticsProblem`). The mask by MATERIAL id (codegen `detectors`, `optDetA/B`) stays for a scene written by hand, the benches'. A detector was an object flag in files from the optics branch, a material's type from 10 to 26; loading such a file gives the role to every object that wore it (model.js `branchToV10`, then `v26to27`).
@@ -128,7 +128,7 @@ caps), C bins on 0, ΔC, … A trace that does not ask for it has no grid and pa
 
 **What feeds it** (`O.setFar({ mode })`):
 - `'escaped'`: every ray that leaves the scene.
-- `'detector'`: every ray arriving at one detector OBJECT (`tag`, its tag; 0.next), or, with no tag, at one detector MATERIAL (`material`, its id: a scene written by hand). This is how the
+- `'detector'`: every ray arriving at one detector OBJECT (`tag`, its tag; 0.83.0), or, with no tag, at one detector MATERIAL (`material`, its id: a scene written by hand). This is how the
   user says which rays count: a surface placed to catch the light through the lens and not the
   light off the mount.
 
@@ -198,7 +198,7 @@ ordinary emitter. The page turns the scene's lights into descriptions (`builder/
   - **Dispersion (0.40.0).** A material's Abbe number makes its index n(λ); a ray refracted into it takes a wavelength
     and that wavelength's colour, so a prism fans white light out by colour. The detectors read the colour (XYZ) of
     what arrives, as before -- not the wavelength. Bench: `optics-dispersion`.
-  - **By wavelength (0.next; `spectral.js`, `roadmap/LIGHT_MODEL.md` S0 and S2).** A scene with its optical feature
+  - **By wavelength (0.83.0; `spectral.js`, `roadmap/LIGHT_MODEL.md` S0 and S2).** A scene with its optical feature
     *Spectral optics trace* on (codegen's `scene.spectral`) compiles `prog_opt_gen` and `prog_opt_shade` from spectral
     texts: each ray carries three wavelengths, u, u + 1/3 and u + 2/3 through the CDF of x̄ + ȳ + z̄ (u in the tag's
     wavelength bits), and its `beta`'s three channels are their weights, S(λ)/(3 p(λ)), the light's spectrum at

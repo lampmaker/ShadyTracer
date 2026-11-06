@@ -1,5 +1,5 @@
 //======================================================================================================================
-// Tests for the import's progress and the dialog's answers (0.next), no GPU and no DOM:
+// Tests for the import's progress and the dialog's answers (0.83.0), no GPU and no DOM:
 //   - convert's onProgress: a fraction from 0 to 1 that never goes back, each solid of an assembly its own share, its
 //     stage said in words, the last report 1; csg.js's stages each in order, done never above total, each ending whole;
 //   - the worker's throttle (import/progress.js): the first at once, at most one each PROGRESS_MS after, the latest kept,

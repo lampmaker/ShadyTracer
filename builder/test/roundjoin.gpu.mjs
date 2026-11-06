@@ -1,5 +1,5 @@
 //======================================================================================================================
-// A JOIN'S SHAPE ON A GPU (model version 28, 0.next): the round and chamfer joins' WGSL (scene_api.js csgRound*,
+// A JOIN'S SHAPE ON A GPU (model version 28, 0.83.0): the round and chamfer joins' WGSL (scene_api.js csgRound*,
 // csgChamfer*) through codegen and the scene as data, on a WebGPU in node (Dawn). Run:
 //   node builder/test/roundjoin.gpu.mjs     (optional: npm i -g webgpu, and lavapipe; says so and passes without)
 //

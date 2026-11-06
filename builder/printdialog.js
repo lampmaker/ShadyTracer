@@ -1,5 +1,5 @@
 //======================================================================================================================
-// PRINT DIALOG -- File > Export > 3D print...: what to print, the box it is cut by, and the export (0.next).
+// PRINT DIALOG -- File > Export > 3D print...: what to print, the box it is cut by, and the export (0.83.0).
 //
 // THE EXPORT USED TO NEED AN OBJECT IN THE SCENE, an "export box" added from the + menu, whose panel held the buttons
 // (the user, 2026-11-04: such things "feel like add-ons ... and are not always properly placed"). Now nothing is added:

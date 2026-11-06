@@ -334,7 +334,7 @@
            where to start; what the user changes from there is kept between visits. Design is also the
            default, what View > Reset the layout returns to. The charts are Analyse's: the Analysis pane
            on the left, the charts beside it in two rows -- the map, polar and I-gamma over the profiles,
-           rings and encircled flux (the spectrum a tab behind it, 0.next) -- and the picture a tab behind the map. */
+           rings and encircled flux (the spectrum a tab behind it, 0.83.0) -- and the picture a tab behind the map. */
         const O = (id, at, size, opts) => SHELL.open(id, at, size, opts);
         const DESIGN = () => {
             O('viewport');
@@ -1059,7 +1059,7 @@
                     open: notWhileEditing(k => ops.enter(k)), duplicate: notWhileEditing(k => ops.duplicate(k, { go: false })),
                     exportScene: k => BUILDER.saveScene(undefined, k), remove: notWhileEditing(k => ops.remove(k)), rename: (k, t) => ops.rename(k, t) } });
             };
-            /* WHAT IS SELECTED, for the print dialog's "Selected object" (0.next): the row the tree and the picture last chose */
+            /* WHAT IS SELECTED, for the print dialog's "Selected object" (0.83.0): the row the tree and the picture last chose */
             let selectedId = null;
             const selectRow = id => {
                 selectedId = id ?? null;
@@ -1422,7 +1422,7 @@
                 const i = SESSION.info();
                 status(i.id ? `saved in this browser: ${i.name} (it is saved as it changes)` : `nothing changed yet: this tab's copy of '${i.copy}' is kept once something is`);
             };
-            /* EXPORT ▸ 3D PRINT (0.next): a dialog asking what to print -- the selected object or the whole scene -- with
+            /* EXPORT ▸ 3D PRINT (0.83.0): a dialog asking what to print -- the selected object or the whole scene -- with
                the box fitted to it, drawn in the picture while it is open (builder/printdialog.js). Nothing is added to
                the scene: the export box this was, a node in the tree only so its panel could hold the buttons, is gone */
             const exportPrint = () => openPrintDialog({
@@ -1477,7 +1477,7 @@
         const mixing = { el: mixingEl, onVisible: fn => SHELL.onVisible('tools.mixing', fn) };
         window.OPTICS = installOpticsPage(opticsEl, { RT, WG, BUILDER, tableIn, charts, mixing,
             onEdit: () => builderPanel?.refresh(), boxes: window.BOXES, view: VIEW });
-        /* THE SCENE'S OPTICS ANALYSIS (0.next, builder/materials.js FEATURES.analysis): off, the view offers no rays drawn
+        /* THE SCENE'S OPTICS ANALYSIS (0.83.0, builder/materials.js FEATURES.analysis): off, the view offers no rays drawn
            over it and no lux or luminance view (the user, 2026-11-04). Read from the scene worked on twice a second, as the
            optics page reads it: a switch, an undo, a scene opened or a project loaded all change it, and one look at the
            document catches every one of them where a hook in each would miss the next way in. */

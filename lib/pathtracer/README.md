@@ -383,7 +383,7 @@ pdf, so light sampling and BSDF sampling can be weighted against each other hone
 - **Dispersion** (0.40.0; `Material2.abbe`, `core/spectral.js`): an Abbe number beside the index (n_d), n(λ)
   Cauchy's through both. A ray refracted INTO a dispersive medium draws a wavelength there and weighs its channels by
   it (mean 1 in each); every index it meets after is n(that wavelength). It rides in `Ray.tag`'s upper 16 bits
-  (`TAG_LAMBDA_MASK`: a new flag stays below bit 17, and bit 16 is `TAG_LENS_X` since 0.next). The pick and Fresnel at that first refraction are the d line's,
+  (`TAG_LAMBDA_MASK`: a new flag stays below bit 17, and bit 16 is `TAG_LENS_X` since 0.83.0). The pick and Fresnel at that first refraction are the d line's,
   so reflections stay white.
 - **Transmission** refracts with the same IOR (the ray's current IOR from the path, the other
   side's from the material, or an SDF probe for glass), reflecting by the exact Fresnel. Rough
@@ -616,7 +616,7 @@ went in 0.61.0, when the photon map (below) went on by default and owned the cla
 **The manifold connection (0.44.0 to 0.60.0)** went with it: a photon landing on a surface *inside* glass joined to the
 camera through one refraction, found by Newton's method on the face in the surface kernel (12.7k characters of WGSL
 there, and 16 bytes of every shade-queue item). The map gathers that light too, through any chain of glass and mirrors.
-**A light with no face, seen through the lens (0.next; `lens.js`).** The lens's photons came back for one kind of light:
+**A light with no face, seen through the lens (0.83.0; `lens.js`).** The lens's photons came back for one kind of light:
 a ray file, or a source that is only a description, which is no geometry -- no camera ray can meet it, nothing lands on
 it for the map to gather, and its photons connected only from the surfaces they landed on, so through any aperture the
 light itself was dark (the user, 2026-11-04). Such a photon carries `Ray.ltMis` `LT_FACELESS` (-2) while only delta

@@ -256,7 +256,7 @@ function geometry(E, U) {
         if ((a = part(e, 'SPHERICAL_SURFACE'))) return makeSurface('sphere', placement(a[1]), { r: a[2] * U.mm })
         if ((a = part(e, 'TOROIDAL_SURFACE')) || (a = part(e, 'DEGENERATE_TOROIDAL_SURFACE')))
             return makeSurface('torus', placement(a[1]), { R: a[2] * U.mm, r: a[3] * U.mm })
-        /* A FREEFORM SURFACE (0.next): still no half-space, but evaluable, so a regular shape can be fitted to the face
+        /* A FREEFORM SURFACE (0.83.0): still no half-space, but evaluable, so a regular shape can be fitted to the face
            on it (freeform.js) -- a B-spline, rational or not, in the simple form or the complex one; a curve extruded */
         if ((a = part(e, 'B_SPLINE_SURFACE_WITH_KNOTS'))) try {
             const simple = e.type === 'B_SPLINE_SURFACE_WITH_KNOTS'
@@ -308,7 +308,7 @@ function edgePoints(E, G, edgeRef, forward, warnings) {
             if (len(sub(v1, v2)) < 1e-9 * (1 + len(v1))) b = a + c.periodic          // a closed edge: the whole circle
             else { while (b <= a) b += c.periodic; while (b - a > c.periodic) b -= c.periodic }
         } else if (c.type === 'bspline' && len(sub(v1, v2)) < 1e-9 * (1 + len(v1))) {
-            /* A CLOSED B-SPLINE EDGE (0.next): one vertex at both ends, the whole curve between -- a NURBS circle's. Its
+            /* A CLOSED B-SPLINE EDGE (0.83.0): one vertex at both ends, the whole curve between -- a NURBS circle's. Its
                two ends' parameters are one point's, so it was the stretch from that point to itself: no edge at all
                (the plate made all NURBS: its holes' rims) */
             a = c.lo; b = c.hi
@@ -384,7 +384,7 @@ function readSolid(E, G, ref, warnings) {
 function moveSolid(s, T) {
     return { ...s, faces: s.faces.map(f => ({ ...f,
         surface: !f.surface.unsupported ? moveSurface(f.surface, T)
-            // an evaluable freeform surface moved with it: its points and its normal (0.next, freeform.js)
+            // an evaluable freeform surface moved with it: its points and its normal (0.83.0, freeform.js)
             : f.surface.at ? { ...f.surface, at: (u, v) => apply(T, f.surface.at(u, v)), normal: (u, v) => applyDir(T, f.surface.normal(u, v)) }
             : f.surface,
         loops: f.loops.map(l => ({ ...l, points: l.points.map(p => apply(T, p)),

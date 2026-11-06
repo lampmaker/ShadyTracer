@@ -283,7 +283,7 @@ export function toCSG(B, { seed = 1, volume = 6000, perFace = 64, perEdgePoint =
         const vote = q.reduce((v, p) => v + Math.sign(dot(outward(f, p), R.surface.grad(p))), 0)
         claimed.set(i, { S: R.surface, s: vote >= 0 ? 1 : -1 })
     }
-    /* FILLETS (fillet.js, 0.next): a rounded edge's face is its two supports' round join, the solid's side of it inside
+    /* FILLETS (fillet.js, 0.83.0): a rounded edge's face is its two supports' round join, the solid's side of it inside
        by construction -- one half-space with no separators, and in the scene a round join (shapes.js) */
     const F = fillets ? findFillets(B, claimed, { tol, scale }) : { found: [], kept: [] }
     for (const x of F.found) claimed.set(x.face, { S: x.S, s: 1 })
@@ -314,7 +314,7 @@ export function toCSG(B, { seed = 1, volume = 6000, perFace = 64, perEdgePoint =
             pts.push(add(L.points[i], mul(d, delta * (1 + 2 * rnd()))))
         }
     for (let i = 0; i < volume; i++) pts.push(lo.map((l, k) => l + (hi[k] - l) * rnd()))
-    /* WHERE A FILLET'S SUPPORTS MEET, all along (0.next): a fillet's half-space rounds the corner of its two supports
+    /* WHERE A FILLET'S SUPPORTS MEET, all along (0.83.0): a fillet's half-space rounds the corner of its two supports
        wherever they meet, not only where its face is -- the holder's U-edge fillet's supports, the upright's face and
        the U's straight wall, meet on below the U, in the solid, and the rounded corner there is a cell a millimetre
        across that the points above missed: a point of OpenCascade's 0.14 mm inside read outside (2026-11-04). So
@@ -383,7 +383,7 @@ export function toCSG(B, { seed = 1, volume = 6000, perFace = 64, perEdgePoint =
     // ...and of those, only the ones needed to keep out the cells outside the solid the others do not
     G = prime(G, OUT.filter(c => !G.every(l => sat(c.w, l))), l => dist(B.box, H[l.j]))
     const inG = new Set(G.map(l => l.j))
-    /* A FILLET'S ANTI-SUPPORTS (0.next): a fillet's half-space (fillet.js, geom.js rounded) is its two supports joined;
+    /* A FILLET'S ANTI-SUPPORTS (0.83.0): a fillet's half-space (fillet.js, geom.js rounded) is its two supports joined;
        a product holding it -- or under it, when it is global -- and the OTHER side of one of its supports is, in the
        air beyond the fillet, max(-S, S) = |S|: zero along S's whole surface, a sheet nothing modelled that a ray
        stops at. The holder fixture's pocket floor fillet (the walls' outside or the floor's underside, rounded) was
@@ -415,7 +415,7 @@ export function toCSG(B, { seed = 1, volume = 6000, perFace = 64, perEdgePoint =
         const w2 = c.w.slice(); w2[j >>> 5] |= 1 << (j & 31)
         if (byKey.has(w2.join(','))) items.push({ w: c.w, free: new Set([j]), weight: 0, p: c.p, _i: items.length })
     }
-    /* ...AND ACROSS A SURFACE A FILLET SHARES (0.next): a fillet's half-space is zero on its supports' surfaces, away
+    /* ...AND ACROSS A SURFACE A FILLET SHARES (0.83.0): a fillet's half-space is zero on its supports' surfaces, away
        from the fillet, so crossing a support there flips it as well as the support -- two literals, one wall. Cells
        either side differ in both and were no pair above, and the products either side met in a seam inside the solid:
        the holder fixture's floor, under its pocket's wall, read 0.05 where it was 0.69 from any surface (2026-11-04). So

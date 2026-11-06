@@ -2,7 +2,7 @@
 // PRINT EXPORT -- the part of a scene that becomes a printable file (3MF with colour, or STL), and the
 // export that makes it.
 //
-// NO OBJECT IN THE SCENE (0.next). This was an "export box", a node of its own type added from the +
+// NO OBJECT IN THE SCENE (0.83.0). This was an "export box", a node of its own type added from the +
 // menu, only so that its panel could hold the Export buttons; it sat in the tree, in the undo history and
 // in every file afterwards. Now File > Export > 3D print... (printdialog.js) asks what to print -- the
 // SELECTED OBJECT or the WHOLE SCENE -- and offers a box fitted to it, which the user may change. The box

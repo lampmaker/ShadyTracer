@@ -391,7 +391,7 @@ export const joinBlendName = id => uniformName(id, 'jblend')
 export const joinOf = c => c?.join ?? 'union'
 /** The children of a group that are its SHAPES: a light (drawn after a CSG group's combine, outside it:
  *  emitScene collectLights) and a haze box (draws nothing) are not, and are left out of the combine (children() below).
- *  (An export box was not either, until it stopped being a node: 0.next.) */
+ *  (An export box was not either, until it stopped being a node: 0.83.0.) */
 export const shapesOf = g => (g?.children || []).filter(c => c.type !== 'haze' && c.type !== 'light')
 
 /** Does this group combine its children into one shape (and so need the CSG path)? Not when every
@@ -951,7 +951,7 @@ export function generate(tree, opts = {}) {
     }
     const scene = emitScene(tree, { ...opts, pick: false })
     const picked = emitScene(tree, { ...opts, pick: true })
-    /* THE OPTICS ROLES ARE THE OBJECTS' (0.next, model version 27: model.js OPTICS_ROLES; a material's type from 10 to 26).
+    /* THE OPTICS ROLES ARE THE OBJECTS' (0.83.0, model version 27: model.js OPTICS_ROLES; a material's type from 10 to 26).
        A detector or a limiter stops the optics trace's rays and records them; the kernels test the hit's TAG -- which
        object it is, the optics copy's numbering (opticsTags), found before the test (optics/kernels.js) -- against
        `detectorTags`. Values, not text: a role given or taken is the scene's data, no compile (SCENE_DATA_KEYS), a
@@ -1592,7 +1592,7 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
     }
     /* A COMBINE IN PARTS, so an array's copies can share one (group(): open before its loop, the rest and the shapes
        once a copy, close after it). In this order for any other group, which is the order its text has always had.
-         A HAZE BOX IS NOT A CHILD OF THE SHAPE (nor was an export box, until 0.next). It emits nothing but its uniforms,
+         A HAZE BOX IS NOT A CHILD OF THE SHAPE (nor was an export box, until 0.83.0). It emits nothing but its uniforms,
        and as a CSG child it would still be combined -- as an empty Hit, 1e7 away, which an intersect takes as the
        result and so deletes the group's whole shape. Emitted for its uniforms, then left out of the combine. NOR IS A
        LIGHT, which was combined the same way until 2026-09-30 (as the
@@ -2187,7 +2187,7 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
            has one: whether it does decides the kernels' text (sceneTextOf), so a scene without one says nothing */
         ...(haze ? { haze } : {}),
         ...(scatter ? { scatter: true } : {}),
-        /* ...and whether the Optics page traces it by wavelength (0.next; model.js setFeatures `spectral`): the optics kernels'
+        /* ...and whether the Optics page traces it by wavelength (0.83.0; model.js setFeatures `spectral`): the optics kernels'
            text, never the picture's -- said only when it does, so every other scene's object is what it was */
         ...(tree.features?.spectral ? { spectral: true } : {}),
         wgsl: e.lines.slice(preludeLines).join('\n'),

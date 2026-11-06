@@ -16,7 +16,7 @@ photon map, scattering inside materials, an Optics-view beam view -- has its own
 (2026-10-16). **Translucent and scattering materials** -- opal sheets, diffuser films, light guides, milky glass:
 the options in `DIFFUSERS.md` (2026-10-29), the first two built (below).
 
-## The special objects stop being add-ons — built 2026-11-04 (0.next), NOT yet seen
+## The special objects stop being add-ons — built 2026-11-04 (0.83.0), NOT yet seen
 
 The user (2026-11-04): detectors, ray limiters, the haze box and the STL export "feel like add-ons, weird hacks and are not
 always properly placed". Decided with the user, from options each:
@@ -604,7 +604,7 @@ code, a look each.
          one shared draw a sample, a kernel in wavelength, or bands for photons only.
        What follows from here -- a ray that pays only for what the scene chooses, colour, polarisation, coatings,
        media and diffraction, and the order -- is `roadmap/LIGHT_MODEL.md` (2026-10-30).
-     - **Built since (0.next), not yet seen on hardware:** the scene's optical features (S0a); lights given by a spectrum
+     - **Built since (0.83.0), not yet seen on hardware:** the scene's optical features (S0a); lights given by a spectrum
        (S1); and the optics trace by wavelength with its Spectrum chart and CRI (S0 and S2 for the optics trace, the
        user's choice of 2026-11-04: three hero wavelengths in the `beta` a ray already has, the renderer untouched).
        On lavapipe the trace reads a white LED's colour within 2.2e-5 u'v' and a dichroic plate 0.9672 ± 0.0006

@@ -68,7 +68,7 @@ export function convertSolid(B, { seed = 1, onProgress = null, fillets = true } 
    parts keep their places in it, so an assembly stays put together. `place: 'file'` leaves it where the file has it.
    The file's axes are kept either way: STEP says nothing of which way is up, and one exporter's up is another's
    front, so a part modelled along y comes in lying along y. */
-/* FREEFORM FACES (freeform.js, 0.next): fitted with a regular surface before the B-rep is made; within `maxDeviation`
+/* FREEFORM FACES (freeform.js, 0.83.0): fitted with a regular surface before the B-rep is made; within `maxDeviation`
    (mm) a face takes it -- exactly, or APPROXIMATED and red (APPROX_ID) -- and beyond it the solid is refused with the
    deviation it would need, which the import dialog offers to allow */
 function fitted(s, maxDeviation) {

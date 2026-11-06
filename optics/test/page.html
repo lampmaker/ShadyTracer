@@ -50,7 +50,7 @@ const batchHits = () => Array.from({ length: 5000 }, () => {
     const flux = 0.16 / 5000
     const h = { pos: [rr * Math.cos(t) * 1.25 + 3, rr * Math.sin(t), 0], flux, dir: [0, 0, -1], tag: 1,
                 xyz: xyToXYZ(warm[0] + (cool[0] - warm[0]) * f, warm[1] + (cool[1] - warm[1]) * f, flux) }
-    /* BY WAVELENGTH (0.next), when a check asks (O.spectralHits): three wavelengths a hit, as the trace by wavelength
+    /* BY WAVELENGTH (0.83.0), when a check asks (O.spectralHits): three wavelengths a hit, as the trace by wavelength
        reads them back (index.js hitsOf), made up -- a blue peak and a phosphor's hump, as a white LED's */
     if (O.spectralHits) {
         const u = rnd()

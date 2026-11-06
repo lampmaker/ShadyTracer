@@ -910,7 +910,7 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
             const id = RT.scene.tags?.[tag - 1]
             return id != null && M.find(P.scene(project, current).doc, id) ? id : null
         },
-        /** EXPORT FOR PRINTING (exportbox.js, 0.next): what `subject` is -- an object's id, or null for the whole
+        /** EXPORT FOR PRINTING (exportbox.js, 0.83.0): what `subject` is -- an object's id, or null for the whole
          *  scene -- inside `box` ({ frames, lo, hi }: exportbox.js fittedBox, as the print dialog has it), as a 3MF with
          *  colour or an STL, downloaded. Nothing is added to the scene. The whole scene is the renderer's field; one
          *  object is a scene of that object alone (subjectTree), generated here and sampled by a kernel of its own

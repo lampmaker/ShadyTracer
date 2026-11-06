@@ -50,7 +50,7 @@ This is why a thin-limit "beam view" for the Optics view is phase 4, a visualisa
 ## Phase 1 — a haze box (0.62.0, built)
 
 What is in it, briefly (the README has the rest):
-- **Builder:** a `haze` node (`builder/hazebox.js`, scene format 22), one a scene. Asked in 0.next whether it could be a
+- **Builder:** a `haze` node (`builder/hazebox.js`, scene format 22), one a scene. Asked in 0.83.0 whether it could be a
   material instead: no -- `hazebox.js`'s header says why (a material's walls stop the shadow rays the dust is lit by).
 - **Scene:** codegen hands it over as `scene.haze`, in the world, in the scene's unit.
 - **Engine:** DERIVED uniforms, and the kernels' code only for a scene with a box.

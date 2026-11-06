@@ -1,5 +1,5 @@
 //======================================================================================================================
-// Tests for freeform faces (import/freeform.js, 0.next): a face on a B-spline or an extruded curve fitted with the
+// Tests for freeform faces (import/freeform.js, 0.83.0): a face on a B-spline or an extruded curve fitted with the
 // regular surface nearest it -- exactly when it is one, within the deviation allowed and red when it is not, and the
 // solid refused, saying the deviation it would need, beyond that. Run: node import/test/freeform.test.mjs
 //

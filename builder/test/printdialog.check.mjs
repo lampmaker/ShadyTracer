@@ -1,5 +1,5 @@
 //======================================================================================================================
-// The print dialog in headless Chromium (builder/printdialog.js, 0.next): File > Export > 3D print... over a stand-in
+// The print dialog in headless Chromium (builder/printdialog.js, 0.83.0): File > Export > 3D print... over a stand-in
 // page (printdialog.html) -- what to print, the box fitted to it, its outline in the picture, a size typed and Fit, the
 // settings checked before Export, the export asked with what was chosen and its result said, the settings remembered,
 // and Close taking the outline away. Run: node builder/test/printdialog.check.mjs (optional: playwright)

@@ -180,7 +180,7 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
             const frame = { origin: x.origin, u: x.u, v: x.v, w: x.normal, scale: x.scale / mpu }
             // a copy of one in an array is placed on its own, under its own key (builder/sources.js INSIDE AN ARRAY)
             const own = x.key ?? x.id
-            /* ITS COLOUR, AS ITS LIGHT CHOOSES IT (0.next; optics/sources.js rayFileColour): from the file -- a spectral
+            /* ITS COLOUR, AS ITS LIGHT CHOOSES IT (0.83.0; optics/sources.js rayFileColour): from the file -- a spectral
                file's own wavelength on each ray, what they add up to for the set -- its header's one wavelength on every
                ray, or the light's own colour, as a rectangle's. Which wavelengths the rays keep is part of the key. */
             const C = rayFileColour(f, x)
@@ -565,7 +565,7 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
     const symmetry = () => F.rot ? 'rotational' : 'none'
     const DG = { '0.25°': 0.25, '0.5°': 0.5, '1°': 1, '2°': 2, '2.5°': 2.5, '5°': 5 }
     const DC = { '1°': 1, '2.5°': 2.5, '5°': 5, '10°': 10, '15°': 15, '22.5°': 22.5, '30°': 30, '45°': 45, '90°': 90 }
-    /* THE DETECTORS: the scene's objects whose optics role is detector or limiter (0.next: an object's role, builder/model.js
+    /* THE DETECTORS: the scene's objects whose optics role is detector or limiter (0.83.0: an object's role, builder/model.js
        OPTICS_ROLES -- a material's type before), each with the tag the optics trace knows it by (codegen detectorTags:
        tag k is opticsTags[k - 1]). Only those the scene shown has compiled in: none while its analysis feature is off */
     const detectorObjects = () => {
@@ -842,7 +842,7 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
         : s.isolines === 'relative' ? [0.1, 0.25, 0.5, 0.75, 0.9].map(f => V.isE ? f * V.qm.hi : V.qm.lo + f * (V.qm.hi - V.qm.lo))
         : ticks(V.isE ? 0 : V.qm.lo, V.qm.hi, 5).filter(v => v > (V.isE ? 0 : V.qm.lo) && v < V.qm.hi)
     const pos = (V, v) => `${num(v)} ${V.lu}`
-    /* WHAT THE MAP'S PLACE RECEIVED BY WAVELENGTH (0.next): the hits the map is made of -- the detector chosen, zoomed or
+    /* WHAT THE MAP'S PLACE RECEIVED BY WAVELENGTH (0.83.0): the hits the map is made of -- the detector chosen, zoomed or
        whole -- binned (optics/spectrum.js), once a map. A trace in colour has no wavelengths to bin: the chart says where
        the trace by wavelength is switched on. */
     let SPM = { m: null, S: null }

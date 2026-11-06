@@ -206,7 +206,7 @@
 // wgsl and opticsWgsl by the window's functions, its pickWgsl and opticsPickWgsl by the copy number -- the one document
 // with an array.
 //
-// THE SPECIAL OBJECTS STOP BEING ADD-ONS (0.next, scene format 27; the user, 2026-11-04). Three agreed changes, the
+// THE SPECIAL OBJECTS STOP BEING ADD-ONS (0.83.0, scene format 27; the user, 2026-11-04). Three agreed changes, the
 // documents compared key by key before this freeze, each against the codegen of the commit before (be7b523):
 // - THE ROLES ARE THE OBJECTS' (a detector, a limiter: model.js OPTICS_ROLES): the fingerprint's `roles` now holds
 //   `detectorTags` beside `detectors` and `passes`, so it moved for EVERY document, and only that key for all but two.

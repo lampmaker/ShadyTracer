@@ -16,6 +16,375 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.83.0 — 2026-11-06
+
+**A ray file (or any light with no face) is seen through the camera's lens.** A ray file is no geometry: no camera ray
+can meet it, and its photons connected only from the surfaces they landed on, so looking at the light itself through a
+lens with an aperture showed nothing. Now each of its photons whose ray crosses the lens's disc -- straight from the
+file, or after mirrors and smooth glass only -- adds itself to the pixel a real camera would put it on, with the thin
+lens's own measurement, `Phi / (A_px A_L cos^4)` (`core/lens.js`, *A faceless light seen through the lens*). Only for
+lights with no face: a ray file, or a source that is only a description. A rectangle or disc light keeps its face,
+which the camera's rays see, and a collimated sheet keeps the glow it is given. A photon that has scattered off anything
+else (a matte or glossy surface, the dust, a milky material) is that surface's to show, through its connection or the
+photon map, and no longer counts at the lens, so nothing is counted twice.
+- The march marks the step that crosses the disc (a step is free space, so a crossing is unblocked); shade queues a
+  camera connection of length 0 there, and the occlusion kernel deposits it, never clamped as a firefly. A photon that
+  leaves the scene short of the lens (a camera outside the scene's radius) is tested ahead of it.
+- `Ray.ltMis` -2 (`LT_FACELESS`) marks such a photon while only delta events have turned it; bit 16 of the tag
+  (`TAG_LENS_X`, free since 0.61.0) marks the crossing.
+- Through a pinhole (aperture 0) such a light is still dark, and so in an orthographic view and the illuminance view.
+- Checked on Dawn over lavapipe (`lenslight.gpu.mjs`, every kernel through `R.trace` and the real optics module; no
+  picture seen, no card): a 25 cm Lambertian disc of 1000 lm, 1621 cd/m^2, 1 m from a lens of 10 cm radius focused on
+  it. As a ray file of 2^20 rays: 4965 of them cross the lens clear of a black plate covering half the disc, and the
+  picture of the clear half reads 1622 +- 13 and 1608 +- 10 cd/m^2 (the camera inside and outside the scene's radius)
+  against the 1607 those rays make by the same arithmetic in JS; behind the plate 0. As a description: 1625 +- 12.
+  In a mirror: 1625 +- 17. The white wall the light shines on reads 173 through the lens and 173 through a pinhole; with
+  the scattered photons still counted at the lens it read 344, twice, and the test fails. With ray sets marked as before
+  (-1) the clear half reads 0, the picture you saw, and the test fails.
+- Speed not measured: the march asks one more question per step of these photons only (a camera ray or any other photon
+  skips it on a flag read once a dispatch).
+
+**What to look at:** import a ray file, set the Camera's aperture above 0 and focus on the source, and look at it
+directly: the light should show where its rays leave, brighter where more of them point at you. A ray file is its rays:
+only those that point into the aperture can ever be seen, so a small aperture or a file of few rays shows specks
+(about rays x (aperture radius / distance)^2 of them for a Lambertian source), and a larger aperture fills it in. Seen
+in a mirror or through clear glass it should show too. The surfaces it lights should look the same as before, with
+the aperture at 0 and above it, and a rectangle or disc light should not change at all.
+
+**Importing a STEP or STL file shows its progress in a dialog, and when something does not convert cleanly the dialog
+asks before anything is pasted.** File › Import from file… (or a dropped file) opens a box over the view with the
+file's name, what the conversion is doing (classifying points, building the formula, checking it -- each part of an
+assembly in turn) and a bar, with Cancel, which stops the conversion. The same bar is in the status bar. A part that
+converts cleanly is pasted at once and the box closes, as before. Otherwise it stays and says, part by part, what
+happened: the shapes it became, how many of the conversion's check points disagree with the solid (small errors there:
+a notch or a bump near an edge, which used to be reported nowhere), and why a part was refused. Each part of an
+assembly has a box to leave it out, and **Import what converted** pastes the rest. The conversion reports its stages
+(import/csg.js `onProgress`, import/index.js `convert`); the worker sends them at most ten a second
+(import/progress.js); the dialog is builder/importdialog.js.
+
+**What to look at:** import a part that takes a few seconds (your Onshape part from 2026-11-04 takes about half a
+minute): the bar should move through its stages and the status bar's with it, and Cancel should stop it with nothing
+pasted. That part has 6 points that disagree, so the box should stay open and say so; Import pastes it as before.
+Import an assembly and untick one part: only the other should be pasted.
+
+**An imported part's fillets come in as round joins: one exact rounded edge each, where they were a cylinder or a
+torus cut into place.** A face of a STEP part that is a fillet -- a cylinder or a torus tangent to the two faces it
+rounds, along its whole length -- is now those two faces joined by a round join of its radius (the new join shape),
+a group of two shapes labelled *fillet R1*. Before, each was a curved surface with the planes and cones that say
+where it ends, and those were where the import went wrong: on your Onshape part of 2026-11-04 (121 faces, 62 of them
+1 mm fillets) 6 of OpenCascade's 3000 classified points came out on the wrong side, 4 deep inside read near zero (a
+seam) and 9 read more than their distance (measured, Node; the black notches in your render are likely these, not
+seen). Now: 0 on the wrong side, 0 over the distance, 0 seams; 3 points outside still read under a fifth of their
+distance (a slower march there, not a wrong surface: each is above the hit tolerance). The formula is 95 literals where
+it was 302, the part 139 shapes where it was 235 -- in 87 groups, as many as before, each fillet being a group of two --
+and it converts in 15 to 17 s instead of 24 to 29 (the container). A part made like it in
+OpenCascade, the holder (import/test/fixtures/holder.step: a filleted tray, an upright with a U slot and two slanted
+slots, 40 fillets), was 7 points wrong and 178 shapes; it is 0 and 64. A fillet that is not exactly two faces' round
+join -- one between a plane and a curved face met obliquely, the bottom of a U between parallel walls -- is left as
+before and counted in the import dialog. The conversion also keeps two new kinds of thin sheet out of the formula
+(import/csg.js: a fillet's anti-supports, and walls across a surface a fillet shares), and samples where each
+fillet's two faces meet. STL files keep the old route: a mesh has no edges to tell a fillet's rails by.
+
+**What to look at:** import your part again (or import/test/fixtures/holder.step). The U slot's rims and the slanted
+slots should be clean, with no black notches on the uprights' faces; the rims round, without creases where a straight
+fillet meets one round a corner. The import dialog should close by itself (nothing refused, nothing disagreeing).
+
+**A STEP face on a B-spline is fitted with the nearest plane, cylinder, cone, sphere or torus: exactly when it is one,
+and within a deviation you allow, shown red, when it is not.** Some exporters write every face as a B-spline. Those
+faces now come in as the surfaces they are: a plate made all NURBS in OpenCascade imports as the plate's own 6 shapes.
+A face that is truly freeform -- the sides of a block whose top is turned 3 degrees on its bottom, each 0.2 mm from any
+plane or cylinder -- is refused at the default allowance (0.05 mm), and the import dialog says the deviation it would
+import at. Type it into **Max surface deviation** and press **Re-convert**: the part comes in with those faces fitted,
+their shapes red (a material of its own, *approximated face*) and called *fitted ...* in the tree. Untick **Show the
+fitted faces in red** to give them the part's material instead. A surface of linear extrusion is fitted the same way;
+a surface of revolution or an offset surface is still refused by name. Found on the way: a closed edge on a B-spline
+(a NURBS circle, one vertex at both ends) was read as a single point, so a hole written that way had no rim; it is the
+whole curve now, and B-spline edges are sampled at 48 points at least.
+
+**What to look at:** import import/test/fixtures/twisted.step. The dialog should say it would import at 0.2 mm; type
+0.2 and Re-convert. The block's four sides should be red, its top and bottom not, and with the box unticked all of it
+should be the scene's material. Import import/test/fixtures/nurbsplate.step: it should look exactly like plate.step,
+with nothing red.
+
+**A light can be given by its spectrum.** *Colour by* has a fourth way, **spectrum**, beside RGB, CCT + Duv and xy.
+- **A blackbody** at a temperature.
+- **Peaks**: one a line, *nm FWHM weight*. One peak is a single-colour LED; a blue die and a broad phosphor hump make
+  a white one.
+- **A measured table** of nm against relative power, pasted or loaded with *Load CSV…*. The table may use commas,
+  tabs or semicolons; with semicolons it may use decimal commas, as a European spreadsheet writes them.
+
+**How it is coloured.** The colour is what the CIE 1931 2° observer's own table makes of the spectrum: the CIE's file
+at 1 nm, now in the repository under its CC BY-SA 4.0 licence. The colour is carried exactly, as a chromaticity is,
+and is live, with no compile. The readout under the colour also gives the light's luminous efficacy of radiation, in
+lm per radiated watt.
+
+**Typing a spectrum.** Peaks and tables are checked as you type. A problem is said at its line and column, and
+nothing is put in until the text reads clean.
+
+**Starting points.** *Start from* offers blackbodies, CIE illuminant A, single-colour LEDs (450, 470, 525, 590, 630
+and 660 nm) and a white LED at 3990 K. These are models, not datasheets.
+
+**Ray files with wavelengths.** A Zemax ray file with a wavelength per ray (its format 2) now takes the colour its
+rays add up to; the panel shows it under the file's numbers. A flux-only file stays white, whatever wavelength its
+header names, because many photometric files put a placeholder there.
+
+**What it does not change.** The picture still traces the light as that colour, not wavelength by wavelength. The
+Optics page can trace it by its spectrum when the scene asks: the spectral optics trace, below.
+`lib/pathtracer/core/spd.js`, `core/cie1931.js`, `builder/lights.js`.
+
+**What to look at:**
+- A light set to *start from › LED red 630 nm* should look red. The Optics page's detector should read about x 0.704,
+  y 0.296.
+- A blackbody at 2700 K should match *CCT + Duv* at 2700 K, 0.
+- Paste a CSV of a real LED's spectrum and check that its colour is the datasheet's.
+- Run Tests › optics-colour: its two new rows, a deep red LED and a white LED given by their spectra, should read
+  du'v' near 0.
+- Load a spectral Zemax file, if you have one: it should show its colour.
+
+**Each scene chooses its optics: dispersion, absorption inside and coatings.** The scene's row in the tree has a new
+box, *optical features*. It has a switch for each of the three, and **Basic** (all off) and **Full** (all three on) above
+them. A mix of the two reads Custom.
+- **A feature off is not traced at all,** in the picture or on the Optics page. The scene is compiled as if no
+  material had those fields: byte for byte the shader of the same scene without the values.
+- **Its fields are not shown** on any material, in the Parameters panel or on the timeline. With dispersion off there
+  is no Abbe number, with absorption off no colour depth, with coatings off no coating box.
+- **The values are kept,** and come back when the feature is on. The box says which materials have a value it hides,
+  for instance a library glass's Abbe number in a Basic scene.
+- **Each change is a compile and one undo step.**
+- **Full is the default** for a new scene, every example and every older file, so no picture changes until you
+  choose.
+
+**Dispersion is no longer a render setting.** Its row in Render settings › Paths and noise (0.74.0) is gone, Quality's
+Standard and High no longer touch it, and switching it is now a compile rather than live, as you chose. A project
+whose renderer had it off opens with dispersion off in each of its scenes. The Optics page now follows the scene
+instead of always tracing dispersion. The scene file's version does not change: an older build opening a newer file
+ignores the box and traces every feature. `builder/materials.js` FEATURES, `builder/model.js` setFeatures,
+`builder/panel.js` featuresFolder; `roadmap/LIGHT_MODEL.md` step S0a.
+
+**What to look at:**
+- **Open the example *Dispersion in a prism*.** On the scene's row, in *optical features*, press **Basic**. After the
+  compile the prism's fan of colours should be gone, every glass bending all colours alike. The flint's material
+  should show no Abbe number, colour depth or coating box, and the box should say the flint has an Abbe number it is
+  keeping.
+- **Tick dispersion alone:** the fan comes back and the box reads Custom.
+- **Press Full:** everything is as it was.
+- **Then the Optics page with dispersion off:** a prism's exit angles should be the same for every colour.
+- **How long a switch takes to compile on your card.**
+
+**A detector or a ray limiter is an object, not a material, and each object is a detector of its own.** Select an
+object: its Properties have an **optics analysis** box with a **role** (none, detector or ray limiter).
+- Two objects of the same material can be one detector and one plain screen, or two detectors read apart, each with
+  its own map on the Optics page.
+- Making an object a **detector** is live, with no compile. The optics trace finds it by the object's tag, so the
+  shader does not change.
+- Making one a **ray limiter** is a compile, since the picture leaves it out.
+- A group cut by CSG whose base is a limiter or a detector takes the role for every shape in it, as it takes the base's
+  material. So an aperture's hole wall stops rays too, as before.
+
+**What changed in materials and the Optics page.**
+- A material's type is now **surface** or **glowing** only.
+- The Optics page's far field "from" now lists the detector objects.
+- A script's `optics.setup({ from })` takes a detector's name.
+
+**A new optical feature, *optics analysis*** (the scene's row, *optical features*). It is not part of Basic, Full or
+Expert. With it off:
+- no object is a detector or a limiter (a role is kept, and does nothing);
+- the Optics-Analysis box is not shown;
+- the view offers neither the rays drawn over the picture nor the lux and luminance views.
+
+The measure tool and the Analysis pane stay. **New scenes start with it off.** Every example and older file that had
+a detector or a limiter opens with it on and the role on each object that wore one. Dropping the library's detector
+screen into a scene switches it on. Scene format 27 (`builder/model.js` `OPTICS_ROLES`, v26to27;
+`lib/pathtracer/optics/kernels.js` `optIsDetectorTag`; `builder/materials.js` FEATURES `analysis`).
+
+**What to look at:**
+- **Open *LED, lens and screen*.** Optics analysis should be on, the screen's optics analysis box should say detector,
+  and ▶ Run in the Analysis pane should give the same map and numbers as before.
+- **Give a second object the detector role.** The picture should not recompile, and after ▶ Run the map's *of* list
+  should have both, each with its own numbers.
+- **Make an object a ray limiter:** it should vanish from the picture (a compile) and still stop the rays.
+- **Switch optics analysis off.** The optics analysis box, the rays in the view's drawer and the lux and luminance
+  buttons should go, and a lux view that was on should go back to the photograph. Switch it on again and everything
+  should come back.
+- **A new scene:** no optics analysis box on its objects until you switch it on.
+
+**3D print export asks what to print, and adds nothing to the scene.** File › Export ▸ 3D print (3MF / STL)… opens a
+dialog. Choose **Selected object** or **Whole scene**:
+- **Selected object** prints that object alone: an object, or a group and everything in it, with nothing of its
+  neighbours. It is printed in its own frame, so its z is up on the bed.
+- **Whole scene** prints everything solid in the world's frame, as before.
+
+**How the box works.**
+- The box starts fitted to what you chose, from the measured boxes. For the whole scene, lights and an endless floor
+  are left out.
+- The box is drawn dashed in the picture while the dialog is open.
+- Type another size to cut it, or press **Fit** to fit it again.
+- The cell, the colour count and the format are remembered in this browser for the next export.
+
+**The export box is gone.** It was a node in the tree, added from **+** only so that its Properties could hold the
+buttons, and it stayed in the scene afterwards. It is no longer in the **+** menu. A file that has one opens without it.
+The scene format is now version 27, and an older build refuses a file of 27.
+
+**How "Selected object" works.** The export makes a scene of that object alone and compiles a field kernel for it
+(seconds, once per object), keeping every frame between the object and the world. What the groups above it *do* is
+left out: their joins, blends and modifiers, and an array's other copies. A part subtracted from another is printed as
+itself.
+
+`builder/printdialog.js`, `builder/exportbox.js` (`fittedBox`, `subjectTree`), `RT.sampleField(input, n, own)`;
+`builder/model.js` v26to27.
+
+**What to look at:**
+- **Select an object and choose File › Export ▸ 3D print…** The dashed box should fit the object, turned with it if
+  it is turned. Export the 3MF and open it in Bambu Studio: is the object alone, upright in its own frame, the right
+  size, and solid?
+- **Then Whole scene:** the box should hold the scene's objects but not the floor or the lights. Type a smaller size
+  and check that the print is cut there.
+- **A scene saved with an export box** should open without it, with nothing else changed.
+- **How long the first export of an object takes on your card** (its own compile).
+
+**A ray file's colour is chosen as a rectangle's is, and can be its header's wavelength.** A ray-file light had no
+colour rows: a spectral file took its rays' own colours and a flux-only file was white, whatever its header said. Its
+Properties now offer what a rectangle or disc light does -- RGB, CCT + Duv, CIE xy, a spectrum -- with two more first:
+*from the file* (the default: what it did before) and *its header's wavelength* (every ray at that one wavelength).
+- At a wavelength the eye cannot see -- the user's ams-OSRAM LZ4-00R608 file says 854 nm, an infrared emitter -- the
+  light shows nothing in the picture and lights nothing, as a camera would see it. Before, a flux-only file in watts
+  was always shown as white light of that many lumens. Its rays still trace on the Optics page, in the file's watts.
+- At a visible one, every ray is that wavelength's exact colour and carries it, so glass refracts it at its own index
+  and a coating reflects it at that wavelength. The spectral optics trace takes it as a line 0.01 nm wide.
+- The four other ways colour every ray of the file alike, its own wavelengths left aside.
+- The line under the choice says what it comes to for the file loaded (`optics/sources.js rayFileColour`, the one place
+  it is decided, for the Optics page and the panel alike).
+- A ray file's default colour is its own (`builder/lights.js lightDefaults`), so RGB chosen for one is stored and read
+  back as RGB, not dropped as the faces' default. No file version change: a builder from before refuses the two new
+  values by name.
+- Checked (no picture seen, no card): `optics.test.mjs` (each choice on a flux-only file at 854 nm and a spectral one,
+  a chosen infrared wavelength giving its record K 0), `model.test.mjs` (stored and read back, refused on a rectangle),
+  `lenslight.gpu.mjs` on Dawn over lavapipe (854 nm chosen: the mirror's image and the wall exactly 0; the same rays not
+  chosen: white, 1742 cd/m^2 in the mirror, as before).
+
+**What to look at:** select the ray-file light in the Builder. *Colour by* should offer *from the file*, *its header's
+wavelength (854 nm)* and the four of a rectangle. With your LZ4-00R608 file at its header's wavelength, the picture
+should be dark where it was dimly white, the line under the choice saying why, and the Optics page's numbers should not
+change. Pick *RGB* or a CCT and the light should take that colour.
+
+**A spectral ray file lights the picture in each ray's own colour.** A Zemax file with a wavelength on every ray (its
+format 2) was drawn in one colour, what all its rays add up to: the wavelength of each ray was read and then dropped.
+Now each of its rays lights the picture in that wavelength's exact colour, from the CIE's own table at 1 nm, so a light
+whose colour changes with direction shows that change where its rays land, on the walls and through the camera's lens.
+- Each ray keeps its wavelength in the packed ray data (`optics/sources.js placeRays`, the direction's fourth slot,
+  which was always 0), only for a file with one a ray: a flux-only file's header wavelength is often a placeholder.
+- The picture's photon carries its wavelength in its tag, as a dispersed ray does, so glass refracts it at its own
+  index instead of drawing a wavelength. A coating now meets any ray that has a wavelength of its own (this one, or a
+  dispersed ray) at that wavelength exactly, the same reflectance in every channel, not each channel's average
+  (`materials_pbr.js makeLobes`). The average assumed each channel's light spread over that channel's wavelengths,
+  which a single wavelength is not.
+- A file in lumens gives each ray its luminous flux; one in watts its radiant flux times y-bar. A ray the eye cannot see
+  carries nothing. The set is scaled so its mean luminance is what the light's flux says, as before, and the colours add
+  up to the file's own colour (`zemax.js raysXYZ`) exactly (`optics.test.mjs`).
+- The Analysis pane's own trace is unchanged: it traces such a file in its overall colour, its tallies in the file's
+  unit. Its spectral trace still treats the file as a smooth spectrum of that colour; using each ray's own wavelength
+  there is still to do (`roadmap/LIGHT_MODEL.md`).
+- Checked on Dawn over lavapipe (no picture seen, no card; `lenslight.gpu.mjs`, `coating.gpu.mjs`): a disc whose left
+  half emits 450 nm and right half 610 nm, seen through the lens in a mirror. Its 450 nm half reads 1765 +- 14 cd/m^2
+  against the 1753 its rays make by the same arithmetic in JS (lm), and 249 +- 2 against 246 (W). Its colour per unit
+  luminance is 450 nm's to 1e-3 in every channel, a negative green of -4.76 among them. A coating at a ray's own
+  wavelength gives R(lambda) in every channel at 0 and 45 degrees and inside the glass; with the wavelength not handed
+  to it, 12 checks fail.
+- Speed not measured: a ray file's photon does one table read more when it starts, and a coating meeting a ray with a
+  wavelength skips the per-channel average (41 exp and log) for one.
+
+**What to look at:** load a spectral Zemax file (format 2), if you have one, and look at what it lights and at the
+light itself through a lens with an aperture. The colour should vary where the file says it does, and over the whole
+picture it should average to the colour its Properties give. Few samples are speckled in strong colours (each photon is
+one wavelength) that settle into the real colour. A flux-only file should look exactly as before, and so should a
+dichroic lit by an ordinary light.
+
+**A join can round or chamfer its edge: a circular fillet, or a flat cut, of the blend's radius.** A shape in a group
+has a new **edge** setting beside its join (Properties: *smooth blend*, *round (fillet)*, *chamfer*), and the recipe
+writes it at a line's end (`subtract b  round 0.5`, or `round` alone at the group's blend). The smooth blend is what
+every join was; **round** is a circular fillet of the blend's radius where two faces meet at a right angle -- two flat
+faces, or a flat face across a cylinder, a cone or a prism's side: a hole's rim filleted is the torus it should be --
+and a rounded corner, not quite a circle, at other angles. Its normal is analytic. Its distance reads the two shapes'
+distances alone, never their normals: the first version read the angle between them, which the renderer's
+distance-only march does not have, so the march stopped on the sharp corner while the shading saw the fillet, and the
+fillets rendered black in every mode (your scene of 2026-11-04). It is also held to what it adds on the fillet itself,
+so far from it, where the two sides no longer meet squarely, it never reads more than the true distance. **Chamfer** is the flat cut between the same two lines on the faces. Scene files go to
+version 28 (`joinShape` on a node; absent is smooth, so older files read unchanged, and a builder of 27 refuses a file
+of 28). The WGSL is scene_api.js `csgRound*` / `csgChamfer*`; builder/joins.js is its JS twin and has the derivation.
+Codegen calls them for such a join, and the scene as data does only when the scene has one, so every other scene's
+shader text is unchanged.
+
+**What to look at:** a box with a cylinder subtracted, the cylinder's edge set to *round* and an own blend of a fifth
+of its radius. The hole's rim should be a smooth quarter-round, lit like a torus, with no crease where it meets the top
+face or the wall. Try *chamfer*: a flat ring at 45 degrees. Two boxes intersected, one turned 30 degrees, with the
+second's edge round: the long edge where they meet should be rounded along its whole length.
+
+**The Optics page can trace by wavelength, and a detector has a spectrum and a colour rendering index.**
+
+**The spectral optics trace.** The scene's *optical features* have a fourth switch, **Spectral optics trace**. It is
+off by default, and **Expert**, a new preset, is Full with it on. Full stays as it was.
+- **Each Analysis ray carries three wavelengths of its light's spectrum** instead of a colour. They are drawn afresh for
+  every ray, stratified through the eye's sensitivity (pbrt-v4's way; 1 200-2 700 rays for a colour within
+  0.001 u′v′, computed).
+- **A coating is worked out at each wavelength**, so a dichroic's edge falls where it is. The colour trace averages it
+  over each channel, which in phase 0 read 6-10 % off in Y through edge filters on an LED.
+- **A material's colour becomes a smooth spectrum of that colour.** Grey stays exactly flat.
+- **A dispersive glass** collapses a ray to one of its wavelengths.
+- **Which spectrum a light is traced with:** its own if it is given by a spectrum, a blackbody if it is a CCT with
+  Duv 0. Any other light, ray files included, is traced as a spectrum of exactly its colour, and the chart says so.
+- **The picture is not touched.** Its kernels are byte for byte what they were, and with the switch off the Optics page
+  is the colour trace it always was. The spectral kernels are built from the colour trace's text with a few lines
+  replaced, each found exactly once or the build stops. A detector hit is four numbers longer. Each switch is a
+  compile and one undo step.
+
+**The Spectrum chart**, a seventh kind in the Analysis pane (Analysis › New chart › Spectrum; in Layout: Analyse a tab
+behind Encircled flux). It shows what the map's detector received, whole or zoomed, from 380 to 780 nm.
+- The area under the line is filled in each wavelength's colour, with the eye's ȳ drawn faintly behind it.
+- **rel** shows power relative to its peak, **W/nm** in watts per nanometre. Point at it to read a wavelength.
+- Under it: xy, CCT and Duv, **Ra and R9 with their error bars**, the watts and how many hits it is made of.
+- It saves as a CSV of nm and W/nm. Without the spectral trace it says where to switch it on.
+
+**CRI**, by CIE 13.3, from the CIE's own tables (its 14 test samples and its daylight components, CC BY-SA 4.0, in
+`lib/pathtracer/core/data`). It is checked against colour-science's implementation on the CIE's fluorescent and LED
+illuminants: Ra within 0.04 and R9 within 0.2. Past a DC of 5.4e-3 it says the index means little. A light given by
+its spectrum now has its **spectrum drawn** in its Properties, with "Ra · R9 · CCT · lm/W" under it. *Start from*
+gains the CIE's nine LED illuminants (LED-B1 to B5, BH1, RGB1, V1 and V2).
+
+`lib/pathtracer/optics/spectral.js`, `optics/spectrum.js`, `optics/spectrumchart.js`, `core/cri.js`,
+`builder/materials.js` FEATURES; `roadmap/LIGHT_MODEL.md` S0 and S2. Not built yet: PPFD, melanopic EDI, TM-30, and a
+ray file's own wavelengths.
+
+**What to look at:**
+- **Tests › optics-spectral**, a new row (Optics trace group). It covers a spectral LED's and a blackbody's exact xy
+  through clear glass, a stand-in's, the dichroic of optics-coating by wavelength at 0° and 45°, and the CRI of CIE
+  LED-B3 through glass against its own (84.8). On lavapipe every row read within 1.1e-3 of its ratio. On your card:
+  the verdicts, and **how much longer the optics run takes** than optics-coating's at the same ray count.
+- **The example *Dichroic combiner* with Expert pressed.** Its two lights are given by xy, so first the Spectrum chart
+  should say they stand in as spectra of their colour. Then set them to *start from › LED red 630 nm* and *LED royal
+  blue 450 nm*, and ▶ Run. The detector's spectrum should be two peaks at 630 and 450 nm, and its xy should agree with
+  the map's colour.
+- **A light set to *start from › CIE LED-B3*:** its Properties should draw the blue peak and the phosphor hump, and
+  read about Ra 85 · R9 24 · 4103 K.
+- **With the switch off:** the Spectrum chart says where to switch it on, and the Optics page reads exactly what it
+  did before.
+
+**Which spectral ray, computed before one is built.** A new test, `lib/pathtracer/core/test/spectralnoise.test.mjs`,
+puts three ways a ray could carry a spectrum side by side on an LED's light: one wavelength a path, four hero
+wavelengths (drawn Wilkie's way and pbrt-v4's), and 8, 16 or 40 fixed bands. The light goes through a grey, a
+dichroic, an amber filter, two filters met at a gather, and a phosphor layer. For each way the test gives one path's
+noise, summed exactly over every wavelength draw and checked against Monte Carlo, or the bias against a 0.1 nm
+integral. Today's RGB is in the table too. Through an edge filter it is 6-10 % off in Y on these cases. The table
+and what it leaves open are in `roadmap/PLAN.md` C 4. Nothing in the application changes.
+
+**And a roadmap from it:** `roadmap/LIGHT_MODEL.md` -- what a ray carries (colour, polarisation, a medium), each
+a scene's choice in an Optical features block that also decides which material fields are shown (dispersion off,
+no Abbe numbers), with Basic / Optics / Expert presets; coatings from layer stacks as a table, phosphor, scattering
+inside solids, polarisation, gratings, and what diffraction stays outside; the order, spectral detectors first.
+
+**What to look at:** nothing on screen. The table in PLAN.md C 4 is the decision to take: the noise of hero
+wavelengths against the bias and memory of bands, and whether the RGB coatings' Y error on an LED matters to you.
+And `roadmap/LIGHT_MODEL.md`: whether the Optical features block and its order are what you want.
+
 ## 0.82.0 — 2026-11-03
 
 **Scatter inside a material: milky glass, whose thickness shows.** Two new material fields, *scatter distance* (the

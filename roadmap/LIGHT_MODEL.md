@@ -11,7 +11,7 @@ shows extra properties per material. Dispersion, for example, is a trace paramet
 setting: no dispersion, and the materials' Abbe numbers are not shown either. So more or fewer options shown,
 depending on what the user knows."*
 
-S0a, S1, and S0 and S2 for the optics trace are built (0.next: §6 says what each is); the rest is not. Each claim says how it is known: **computed** (by a program, named), **read in code**
+S0a, S1, and S0 and S2 for the optics trace are built (0.83.0: §6 says what each is); the rest is not. Each claim says how it is known: **computed** (by a program, named), **read in code**
 (file:line, what the code does, never what it costs), or **inferred** (a hypothesis, with what would test it).
 Nothing in this file was measured on a graphics card.
 
@@ -142,7 +142,7 @@ macro (`lib/wgsl_shorthand.js:19`).
     temperature and spectra digitised from datasheets. A light is then chosen by name, with its spectrum and its flux.
     Its format is read when that step comes, not before (inferred: not seen yet). Current and temperature are a step
     after, because they change the source, not the ray;
-  - a Zemax ray file's wavelength: kept since 0.next (`optics/sources.js placeRays`, the direction's fourth slot) and
+  - a Zemax ray file's wavelength: kept since 0.83.0 (`optics/sources.js placeRays`, the direction's fourth slot) and
     used by the picture's photons, each in its own wavelength's colour and carrying it in its tag
     (`optics/kernels.js RAY_COLOUR`); the spectral optics trace still draws a ray file's wavelengths from the stand-in
     of its colour.
@@ -236,10 +236,10 @@ One PR a step, each with its change note, its Node and Dawn tests, and its `test
 
 | step | what |
 |---|---|
-| **S0a** | **The Optical features block** and its presets. Dispersion, absorption and coating edges move into it and hide their fields when off; `dispersionOff` out of the render settings. Useful with no new physics. **Built (0.next), not yet seen on hardware.** |
-| **S0** | The `SPEC` type and the composed Ray, RGB byte for byte. Nothing visible; everything after rests on it. **Built for the optics trace only (0.next), not yet seen on hardware, and not as planned:** the user chose (2026-11-04) three wavelengths a ray carried in the `beta` the Ray already has, not a fourth channel, so the Ray stays 112 B and no `SPEC` type was needed. The spectral texts are derived from the renderer's by asserted anchors (`optics/spectral.js specialise`: each replaced exactly once or a throw), and only the optics kernels compile them; the renderer's text is byte for byte what it was (`build.test.mjs`, `codegen.test.mjs`). A scene feature, *Spectral optics trace*, off by default; *Expert* is Full with it. |
-| **S1** | Spectra as data (§3), the user's LED database among the sources, exact RGB. **Built (0.next), not yet seen on hardware:** colour by spectrum (a blackbody, peaks, a CSV table) through the CIE's own 1931 table at 1 nm, the efficacy said, a spectral Zemax file's colour; the user's LED database later (the user, 2026-11-03: "first generic CSV"). |
-| **S2** | Spectral (K = 4, and K = 1) in the optics trace, with spectral detectors. **The user's priority (2026-10-30):** response curves first (W, PPFD, melanopic, UV: weighted tallies), then a spectrum per cell for CRI and TM-30. **Built in part (0.next), not yet seen on hardware:** K = 3 hero wavelengths, drawn stratified through x + y + z (pbrt-v4's way; 1 200-2 700 paths to 0.001 u'v', computed: PLAN.md C 4). A material's colour is a smooth spectrum of it (a partition of unity over the clipped Rec.709 CMFs, so grey is flat and exact), a coating's edge is evaluated at each wavelength, and dispersion collapses a ray to its first. A detector hit keeps the weights (`DET_WORDS` 10 → 14; the readback's group raised to 48 MiB for it). The Analysis pane's **Spectrum** chart bins a detector's hits every 5 nm, with xy, CCT, Duv, CRI Ra and R9 (CIE 13.3, `core/cri.js`, against colour-science's) and their error bars. The light's spectrum is its own (given by a spectrum, or a CCT at Duv 0 as a blackbody), else a stand-in of exactly its colour, said by the chart. **Still to come:** PPFD, melanopic EDI and the other weighted tallies (the user, 2026-11-04: "later"); TM-30; a ray file's per-ray wavelength (a spectral Zemax file's rays are traced as their file's colour now); a spectrum per map cell. |
+| **S0a** | **The Optical features block** and its presets. Dispersion, absorption and coating edges move into it and hide their fields when off; `dispersionOff` out of the render settings. Useful with no new physics. **Built (0.83.0), not yet seen on hardware.** |
+| **S0** | The `SPEC` type and the composed Ray, RGB byte for byte. Nothing visible; everything after rests on it. **Built for the optics trace only (0.83.0), not yet seen on hardware, and not as planned:** the user chose (2026-11-04) three wavelengths a ray carried in the `beta` the Ray already has, not a fourth channel, so the Ray stays 112 B and no `SPEC` type was needed. The spectral texts are derived from the renderer's by asserted anchors (`optics/spectral.js specialise`: each replaced exactly once or a throw), and only the optics kernels compile them; the renderer's text is byte for byte what it was (`build.test.mjs`, `codegen.test.mjs`). A scene feature, *Spectral optics trace*, off by default; *Expert* is Full with it. |
+| **S1** | Spectra as data (§3), the user's LED database among the sources, exact RGB. **Built (0.83.0), not yet seen on hardware:** colour by spectrum (a blackbody, peaks, a CSV table) through the CIE's own 1931 table at 1 nm, the efficacy said, a spectral Zemax file's colour; the user's LED database later (the user, 2026-11-03: "first generic CSV"). |
+| **S2** | Spectral (K = 4, and K = 1) in the optics trace, with spectral detectors. **The user's priority (2026-10-30):** response curves first (W, PPFD, melanopic, UV: weighted tallies), then a spectrum per cell for CRI and TM-30. **Built in part (0.83.0), not yet seen on hardware:** K = 3 hero wavelengths, drawn stratified through x + y + z (pbrt-v4's way; 1 200-2 700 paths to 0.001 u'v', computed: PLAN.md C 4). A material's colour is a smooth spectrum of it (a partition of unity over the clipped Rec.709 CMFs, so grey is flat and exact), a coating's edge is evaluated at each wavelength, and dispersion collapses a ray to its first. A detector hit keeps the weights (`DET_WORDS` 10 → 14; the readback's group raised to 48 MiB for it). The Analysis pane's **Spectrum** chart bins a detector's hits every 5 nm, with xy, CCT, Duv, CRI Ra and R9 (CIE 13.3, `core/cri.js`, against colour-science's) and their error bars. The light's spectrum is its own (given by a spectrum, or a CCT at Duv 0 as a blackbody), else a stand-in of exactly its colour, said by the chart. **Still to come:** PPFD, melanopic EDI and the other weighted tallies (the user, 2026-11-04: "later"); TM-30; a ray file's per-ray wavelength (a spectral Zemax file's rays are traced as their file's colour now); a spectrum per map cell. |
 | **S3** | Spectral in the picture, the photon map included, and the same detectors in the measure tool. A photon's wavelengths are not the camera path's (PLAN.md C 4). A bench decides between one draw shared by a sample and bands for photons only: N bands, here and only here. |
 | S4 | Coating tables: stacks and measured curves. |
 | S5 | The phosphor layer. |
@@ -272,7 +272,7 @@ After S3 the user chooses the order of S4-S8.
 - [ ] PPFD, melanopic EDI and the other weighted tallies (the user, 2026-11-04: "later").
 - [ ] TM-30.
 - [ ] A spectral Zemax file's own wavelength per ray in the spectral trace (traced as a stand-in of its colour now).
-  **The picture's half is built (0.next), not yet seen on hardware:** a ray file's photon for the picture carries its
+  **The picture's half is built (0.83.0), not yet seen on hardware:** a ray file's photon for the picture carries its
   ray's wavelength in its tag and that wavelength's exact colour (the CIE table at 1 nm), lumens a ray's luminous flux and
   watts its radiant, a ray the eye cannot see carrying nothing, the set's mean luminance kept by a K a set
   (`optics/sources.js` RAY COLOURS; `optics.test.mjs` holds the colours' sum to `raysXYZ`, `lenslight.gpu.mjs` a 450 nm
@@ -292,4 +292,4 @@ After S3 the user chooses the order of S4-S8.
 - `opt_shade_spectral` over a scene as data binds 9 storage buffers, over the spec's floor of 8 (check-shaders says
   so 48 times). Data mode already needs 9, so no adapter that runs data mode is newly refused.
 - A detector hit is 14 words (`optics/kernels.js` DET_WORDS) and the readback's group 48 MiB
-  (`optics/index.js` SNAP_GROUP_BYTES), so a run keeps fewer hits per MiB than before: 10 words a hit until 0.next.
+  (`optics/index.js` SNAP_GROUP_BYTES), so a run keeps fewer hits per MiB than before: 10 words a hit until 0.83.0.

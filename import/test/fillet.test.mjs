@@ -1,5 +1,5 @@
 //======================================================================================================================
-// Tests for the fillets found among a part's faces (import/fillet.js, 0.next) and what the conversion makes of them:
+// Tests for the fillets found among a part's faces (import/fillet.js, 0.83.0) and what the conversion makes of them:
 // each a round join of the two faces it rounds. Run: node import/test/fillet.test.mjs
 //
 // What is held, no GPU, on OpenCascade's parts (fixtures/make.py):

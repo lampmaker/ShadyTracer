@@ -740,7 +740,7 @@ ok('...and the radius row says so by itself (the panel redrawn), the number kept
     ok('...and the editor shows the colour as the three lines it is', /light.colour.r = tint.r\nlight.colour.g = tint.g\nlight.colour.b = tint.b/.test(lheld.bindText ?? ''), JSON.stringify(lheld.bindText))
 }
 
-/* A LIGHT BY ITS SPECTRUM (0.next; core/spd.js): colour by spectrum starts as a blackbody at the colour's own CCT; peaks
+/* A LIGHT BY ITS SPECTRUM (0.83.0; core/spd.js): colour by spectrum starts as a blackbody at the colour's own CCT; peaks
    typed are checked as typed -- a problem said at its line, nothing put in -- and what reads clean is a live write of the
    light (no compile) with its undo step; a preset puts one in; the readout says the efficacy. */
 {
@@ -799,7 +799,7 @@ ok('...and the radius row says so by itself (the panel redrawn), the number kept
         && /^Ra 85 · R9 24 · 410\d K/.test(pl.line), JSON.stringify(pl))
 }
 
-/* A RAY FILE'S COLOUR (0.next; lights.js RAYFILE_COLOUR_BY, optics/sources.js rayFileColour): a rectangle's four ways and two
+/* A RAY FILE'S COLOUR (0.83.0; lights.js RAYFILE_COLOUR_BY, optics/sources.js rayFileColour): a rectangle's four ways and two
    of its own first -- from the file (its default) and its header's wavelength, the nm said in the choice -- the line under
    them saying what each comes to for the file loaded: a flux-only file at 854 nm, as the user's infrared LED's says */
 {
@@ -965,7 +965,7 @@ ok('...and a conic typed to four places kept on its slider (its step\'s rounding
     ok('...taken off: written, and the panel without its values', (await P()).coating === 0 && !VALUES.some(l => rows.includes(l)), JSON.stringify(rows))
 }
 
-/* THE SCENE'S OPTICAL FEATURES (0.next; model.js setFeatures): a box on the scene's row, Basic and Full over a switch a
+/* THE SCENE'S OPTICAL FEATURES (0.83.0; model.js setFeatures): a box on the scene's row, Basic and Full over a switch a
    feature. A feature off hides its fields on every material; each change is one undo step and a compile; what a feature
    off hides is said once, in the box. */
 {
@@ -1021,7 +1021,7 @@ ok('...and a conic typed to four places kept on its slider (its step\'s rounding
     await rowsOf(root)
     await press('full'); await p.waitForTimeout(50)
     ok('Full again: nothing written, no undo step', (await state()).commits.length === before.commits.length)
-    /* EXPERT (0.next): Full and the spectral optics trace, the one feature off by default -- saved as on, the glass the same */
+    /* EXPERT (0.83.0): Full and the spectral optics trace, the one feature off by default -- saved as on, the glass the same */
     ok('Expert pressed', await press('expert') === 'pressed')
     await p.waitForTimeout(50)
     b = await box()
@@ -1033,7 +1033,7 @@ ok('...and a conic typed to four places kept on its slider (its step\'s rounding
     await p.evaluate(() => { CHECK.M.material(CHECK.doc, 'gl').params.abbe = 0 })
 }
 
-// AN OBJECT'S OPTICS ROLE (0.next; builder/model.js OPTICS_ROLES): its own box, offered while the scene's optics analysis is
+// AN OBJECT'S OPTICS ROLE (0.83.0; builder/model.js OPTICS_ROLES): its own box, offered while the scene's optics analysis is
 // on -- a feature of its own, which the presets leave alone -- the role set, one undo step and an apply, taken away again
 {
     const off = await p.evaluate(() => { CHECK.M.setFeatures(CHECK.doc, { analysis: false }); return CHECK.M.featuresOf(CHECK.doc).analysis })

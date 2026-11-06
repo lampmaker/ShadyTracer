@@ -669,7 +669,7 @@ eq('uniformName', uniformName('n7', 'radius'), 'radius_n7')
 }
 
 //----------------------------------------------------------------------------------------------
-// OPTICS AND LIGHT: detectors and limiters by the OBJECT'S tag (0.next, version 27: its role; its material's type from
+// OPTICS AND LIGHT: detectors and limiters by the OBJECT'S tag (0.83.0, version 27: its role; its material's type from
 // 10 to 26); a limiter only in the optics copies; lights drawn as sheets with their own material, glowing for the camera's
 // first look
 //----------------------------------------------------------------------------------------------
@@ -2054,7 +2054,7 @@ eq('uniformName', uniformName('n7', 'radius'), 'radius_n7')
 }
 
 //----------------------------------------------------------------------------------------------
-// THE SCENE'S OPTICAL FEATURES (0.next; model.js setFeatures, materials.js FEATURES): a feature off is the scene compiled
+// THE SCENE'S OPTICAL FEATURES (0.83.0; model.js setFeatures, materials.js FEATURES): a feature off is the scene compiled
 // as if no material had its fields -- byte for byte the shader of the same scene with them at their defaults -- and every
 // feature on (the key absent) the shader it always was. The document keeps the values.
 //----------------------------------------------------------------------------------------------
@@ -2088,7 +2088,7 @@ eq('uniformName', uniformName('n7', 'radius'), 'radius_n7')
             && d.materials.find(m => m.id === 'dich').params.coating === 1)
         ok(`${name} off: the shader differs from Full's`, a.wgsl !== fullOut.wgsl)
     }
-    // the spectral trace (0.next) is the Optics page's alone, no material field: the scene's shader is Full's, byte for byte
+    // the spectral trace (0.83.0) is the Optics page's alone, no material field: the scene's shader is Full's, byte for byte
     const sp = make()
     Model.setFeatures(sp, { spectral: true })
     ok('the spectral trace on: the scene\'s shader Full\'s, byte for byte', gen(sp).wgsl === fullOut.wgsl)

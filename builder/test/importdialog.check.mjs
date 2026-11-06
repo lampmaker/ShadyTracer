@@ -1,6 +1,6 @@
 // node builder/test/importdialog.check.mjs
 //
-// THE IMPORT DIALOG IN A BROWSER (builder/importdialog.js, 0.next), on its own over a blank page, at a device pixel
+// THE IMPORT DIALOG IN A BROWSER (builder/importdialog.js, 0.83.0), on its own over a blank page, at a device pixel
 // ratio of 2 and a phone's width: the bar moving with what it is told; Cancel and Escape calling the host's cancel once
 // and closing; an error said with Close; a conversion that did not go cleanly asked about -- each part's lines, a part
 // left out by its box, Import handing the host what was left out, the deviation typed and Re-convert handing it over and

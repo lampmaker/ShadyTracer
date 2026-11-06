@@ -89,7 +89,7 @@ export const FIELDS = {
     emissiveLuminance:  { type: 'f32', def: 0.0, gui: { min: 0, step: 1 } },
 }
 
-/* THE SCENE'S OPTICAL FEATURES (0.next; roadmap/LIGHT_MODEL.md S0a): which of the fields above a scene has at all. The
+/* THE SCENE'S OPTICAL FEATURES (0.83.0; roadmap/LIGHT_MODEL.md S0a): which of the fields above a scene has at all. The
    user, 2026-10-30: "I'd rather not have automatic rules -- a choice somewhere that shows extra properties per material.
    Dispersion is a trace parameter now, but it could be a scene setting: no dispersion, and the materials' Abbe numbers
    are not shown either. More or fewer options, depending on what the user knows." A feature OFF is the scene compiled
@@ -113,7 +113,7 @@ export const FEATURES = {
     coatings: { label: 'Coatings', fields: ['coating', ...Object.keys(FIELDS).filter(k => FIELDS[k].coat)], hides: 'a coating',
         help: 'Thin-film coatings in place of a surface\'s own reflection: dichroics, beam splitters, anti-reflective layers. '
             + 'Off, every surface reflects as its index says, and the coating box is not shown.' },
-    /* THE OPTICS TRACE BY WAVELENGTH (0.next; roadmap/LIGHT_MODEL.md S2; the user, 2026-11-04: "a feature 'spectral', off by
+    /* THE OPTICS TRACE BY WAVELENGTH (0.83.0; roadmap/LIGHT_MODEL.md S2; the user, 2026-11-04: "a feature 'spectral', off by
        default", over an always-spectral trace). No material field of its own: it compiles the Optics page's trace
        spectral (optics/kernels.js), and the picture stays RGB. OFF BY DEFAULT, the one feature that is: every scene
        before it measured in RGB, and Full keeps it so; Expert is Full with it. */
@@ -123,7 +123,7 @@ export const FEATURES = {
             + 'colour rendering index. The picture is unchanged. Each ray\'s brightness is now a draw of its wavelengths, so a '
             + 'reading takes more rays to settle (1 200 to 2 700 rays for a colour within 0.001 u\'v\', on the cases worked out), where '
             + 'the colour trace was off by 6 to 10 % through a sharp filter; off, the trace is the colour trace it always was.' },
-    /* OPTICS ANALYSIS (0.next; the user, 2026-11-04: detectors and ray limiters "should be an object property ... Maybe make
+    /* OPTICS ANALYSIS (0.83.0; the user, 2026-11-04: detectors and ray limiters "should be an object property ... Maybe make
        a new scene setting 'optical features -> analysis' that hides or shows these. Maybe it also hides the rays overlay
        and illuminance, luminance views"). No material field: it is whether the scene's objects may be detectors and ray
        limiters (model.js OPTICS_ROLES) -- off, every role is kept and does nothing, and the Optics-Analysis box, the rays
@@ -138,7 +138,7 @@ export const FEATURES = {
 /** A feature's default: on, but for one that says otherwise (spectral). */
 export const featureDefault = k => FEATURES[k]?.def ?? true
 /** The presets, in the order shown: Basic is none of them; Full every feature at its default -- every material field, the
- *  colour trace -- the default and every scene before the features; Expert all of them (0.next: Full and the spectral
+ *  colour trace -- the default and every scene before the features; Expert all of them (0.83.0: Full and the spectral
  *  trace). "Optics" is Quality's word already (lib/pathtracer/quality.js). */
 /** ...of the features a preset sets: not one that says `preset: false` (analysis), which the presets leave alone */
 export const PRESET_FEATURES = Object.keys(FEATURES).filter(k => FEATURES[k].preset !== false)
@@ -241,7 +241,7 @@ export const PRESETS = {
  *  codegen assigns. Every field is still a uniform for every material, so switching the type
  *  back and forth loses nothing and never writes to a uniform that is not there. An emitter is
  *  emission alone -- a surface that emits ends every path that reaches it (materials_pbr.js), so
- *  its other fields never did anything; a surface has no emission. (A detector and a limiter were types too until 0.next:
+ *  its other fields never did anything; a surface has no emission. (A detector and a limiter were types too until 0.83.0:
  *  an object's optics role now, model.js OPTICS_ROLES.) */
 const SURFACE_FIELDS = ['baseColor', 'metallic', 'roughness', 'anisotropy', 'specular', 'specularTint', 'transmission', 'haze', 'ior',
     'abbe', 'attenuationDistance', 'scatterDistance', 'scatterAnisotropy', 'coating', 'coatLow', 'coatHigh', 'coatEdge', 'coatWidth', 'coatIndex']

@@ -114,7 +114,7 @@ export function sourceTable(doc) {
     return { sources, skipped }
 }
 
-/** A LIGHT'S SPECTRUM for the spectral optics trace (0.next; optics/spectral.js sourceSpectrum): its own when it is given
+/** A LIGHT'S SPECTRUM for the spectral optics trace (0.83.0; optics/spectral.js sourceSpectrum): its own when it is given
  *  by one, a blackbody's for a CCT on the locus, nothing otherwise (the trace makes a stand-in of its colour). */
 export const spectrumOf = L => L.colourBy === 'spectrum' && L.spectrum ? { spectrum: L.spectrum }
     : L.colourBy === 'cct' && !(L.duv) && L.cct > 0 ? { planck: L.cct } : {}

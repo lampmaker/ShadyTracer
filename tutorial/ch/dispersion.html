@@ -144,7 +144,7 @@
       approximation: a laser's pure 650 nm light is, to the renderer, mostly red channel, and reflects 0.584 of it, where
       the real coating would reflect nearly all of it. A ray that already carries a wavelength of its own is different:
       one a prism has split (section 3), or a ray from a lamp maker's ray file that lists each ray's wavelength. Since
-      version 0.next such a ray is reflected as the coating reflects that one wavelength, the same share in all three
+      version 0.83.0 such a ray is reflected as the coating reflects that one wavelength, the same share in all three
       channels, because the average would be about light spread over many wavelengths, and this ray has one
       (<code>materials_pbr.js</code>, "A ray with a wavelength of its own").</p>
     <p data-step="coat:tilted">Tilt the light, and the edge moves towards blue, as real coatings do: at 45° it is at
@@ -174,7 +174,7 @@
       three channels by the weights and gives it its wavelength
       (<cite data-src="lib/pathtracer/core/materials_pbr.js" data-sym="if (draw) { res.r.beta *= spec.w; res.r = withLambda(res.r, spec.lambda); }"></cite>):</p>
     <pre data-src="lib/pathtracer/core/materials_pbr.js" data-sym="/* DISPERSION (0.40.0; spectral.js). A ray that has a wavelength meets every medium at n(its wavelength)" data-to="nT = cauchyN(_n1, v1, spec.lambda);"
-         data-why="WGSL, the graphics card's language (chapter 21). _n1 is the glass's n_d, _v1 its Abbe number (0: no dispersion). v1 is the one used, _v1 itself: a scene with dispersion off is compiled with no Abbe number on any glass, so _v1 is 0 there (it was a render setting, UB.dispersionOff, from 0.74.0 until the scene's optical features took it). lam0 is the wavelength the ray already has, 0 for none. select(a, b, c) is WGSL's way of writing c ? b : a, so n1 is n(λ) for a ray with a wavelength and n_d otherwise. PRNG() gives four random numbers between 0 and 1, .x the first. lambdaCoded rounds the picked wavelength to what the ray can store, so every later index is worked out from exactly the same number. 'A photon started inside one': a ray started by a light (chapter 18) that sits inside the glass." data-hash="3e98db7c"></pre>
+         data-why="WGSL, the graphics card's language (chapter 21). _n1 is the glass's n_d, _v1 its Abbe number (0: no dispersion). v1 is the one used, _v1 itself: a scene with dispersion off is compiled with no Abbe number on any glass, so _v1 is 0 there (it was a render setting, UB.dispersionOff, from 0.74.0 until the scene's optical features took it). lam0 is the wavelength the ray already has, 0 for none. select(a, b, c) is WGSL's way of writing c ? b : a, so n1 is n(λ) for a ray with a wavelength and n_d otherwise. PRNG() gives four random numbers between 0 and 1, .x the first. lambdaCoded rounds the picked wavelength to what the ray can store, so every later index is worked out from exactly the same number. 'A photon started inside one': a ray started by a light (chapter 18) that sits inside the glass." data-hash="cf3a9ef2"></pre>
     <p>The wavelength rides in the ray's tag, a 32-bit word of flags, in its top 15 bits: 0 for none, otherwise 380 nm
       plus (the code − 1) × 400/32,766 nm (codes 1 to 32,767: 32,766 steps between them), steps of 0.012 nm
       (<cite data-src="lib/pathtracer/core/spectral.js" data-sym="export const lambdaCode = l =>"></cite>), so a ray

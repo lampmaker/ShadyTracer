@@ -1,5 +1,5 @@
 //======================================================================================================================
-// Tests for a join's shape (model version 28, 0.next): the round join a circular fillet, the chamfer its chord, in
+// Tests for a join's shape (model version 28, 0.83.0): the round join a circular fillet, the chamfer its chord, in
 // JavaScript (builder/joins.js, the WGSL's twin) and through the builder. Run: node builder/test/joins.test.mjs
 //
 // What is held, no GPU:

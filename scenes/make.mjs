@@ -454,7 +454,7 @@ function productShot() {
 // OPTICAL DESIGN -- lights in lumens, detectors to read, the Analysis pane to run. All in mm but the luminaire.
 //----------------------------------------------------------------------------------------------------------------------
 
-/* A DETECTOR IS AN OBJECT'S ROLE (0.next, builder/model.js OPTICS_ROLES): its material is a grey surface, and every object
+/* A DETECTOR IS AN OBJECT'S ROLE (0.83.0, builder/model.js OPTICS_ROLES): its material is a grey surface, and every object
    wearing it is made a detector once the scene is built (detectorRoles below), with the scene's optics analysis on */
 const detector = (doc, label = 'detector') => { const id = own(doc, label, 'diffuse', { baseColor: RGB(0.8, 0.8, 0.8) }); (doc.$detectors ??= new Set()).add(id); return id }
 /** Every object wearing a detector() material made a detector, and the analysis that shows it on. */

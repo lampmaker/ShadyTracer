@@ -292,7 +292,7 @@ ok('the bundled scenes have parameters at all', total > 50, `${total}`)
     PR.write(cpath('coating'), 0)
     ok('...taken off: written, no compile (coat 0 is none in the shader)', asked === 2 && state[cu('coating')] === 0, `${asked}`)
 
-    /* A FEATURE OFF (0.next; model.js setFeatures): its fields leave the registry, and a value written to one all the same
+    /* A FEATURE OFF (0.83.0; model.js setFeatures): its fields leave the registry, and a value written to one all the same
        (a timeline track made before) asks no compile -- toTree keeps it out of every build, so one would declare
        nothing, every frame. Its value kept; back on, the registry offers it again. */
     M.setFeatures(B.doc, { absorption: false })

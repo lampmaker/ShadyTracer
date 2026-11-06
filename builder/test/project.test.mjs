@@ -118,7 +118,7 @@ throws('and so is broken JSON', () => P.parse('{'), /JSON/)
     eq('...its typed tolerance into the scene being worked on, in its unit (2 um in mm)', [op.tolerance, oq.tolerance], [undefined, 0.002])
     eq('...and the renderer\'s settings are what is left', ow.renderer, { values: { maxbounce: 12 } })
     ok('...no cameras left beside them', !('cameras' in ow))
-    /* A PROJECT WHOSE RENDERER HAD DISPERSION OFF (dispersionOff 1, 0.74.0 to 0.next): it was every scene's, so every
+    /* A PROJECT WHOSE RENDERER HAD DISPERSION OFF (dispersionOff 1, 0.74.0 to 0.83.0): it was every scene's, so every
        scene's dispersion is off (model.js setFeatures), and the setting is not kept among the renderer's */
     const disp = JSON.parse(P.serializeWorkspace(P.createProject([M.createDoc({ title: 'D' }), M.createDoc({ title: 'E' })]), 's1', {}))
     disp.renderer = { values: { dispersionOff: 1, maxbounce: 12 } }

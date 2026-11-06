@@ -2,7 +2,7 @@
 // Tests for the print export (exportbox.js): its box, fitted to what is printed, and the export it drives.
 // Run: node builder/test/exportbox.test.mjs
 //
-// NO OBJECT IN THE SCENE (0.next): the box is the dialog's (printdialog.js), { frames, lo, hi } in a frame of its own.
+// NO OBJECT IN THE SCENE (0.83.0): the box is the dialog's (printdialog.js), { frames, lo, hi } in a frame of its own.
 // So: an older file's export box dropped on load (v26to27); the box fitted to the scene (lights and an open floor left
 // out) and to one object in its own frame (fittedBox, over a stand-in for the measured boxes); the scene of one object
 // alone (subjectTree), which the export of "the selected object" compiles -- the object where it is, nothing else in

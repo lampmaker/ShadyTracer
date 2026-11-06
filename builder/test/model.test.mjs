@@ -831,7 +831,7 @@ throws('another version is refused, not guessed at',
     throws('a CCT past the locus is refused', () => M.setLight(d, 'die', { colourBy: 'cct', cct: 20000 }), /cct/)
     throws('an xy outside the diagram is refused', () => M.setLight(d, 'die', { colourBy: 'xy', xy: { x: 0.7, y: 0.5 } }), /xy/)
     throws('an unknown colourBy is refused', () => M.setLight(d, 'die', { colourBy: 'hsv' }), /colourBy/)
-    /* ...AND BY ITS SPECTRUM (0.next; core/spd.js): its exact XYZ at Y = 1 (the CIE's table), the optics source the same,
+    /* ...AND BY ITS SPECTRUM (0.83.0; core/spd.js): its exact XYZ at Y = 1 (the CIE's table), the optics source the same,
        a spectrum with no visible light refused, its efficacy said, saved and read back, the default dropped */
     const red = { kind: 'peaks', peaks: [{ nm: 630, fwhm: 17, weight: 1 }] }
     M.setLight(d, 'die', { colourBy: 'spectrum', spectrum: red })
@@ -855,7 +855,7 @@ throws('another version is refused, not guessed at',
     eq('a ray file starts with no file', rf.light.file, '')
     M.setLight(d, rf.id, { file: 'ZEMAXRAYFILE.DAT', box: [[-2, -2, 0], [2, 2, 1.4]] })
     ok('...and round-trips with one', M.parse(M.serialize(d)).root.children.find(n => n.id === rf.id).light.file === 'ZEMAXRAYFILE.DAT')
-    /* A RAY FILE'S COLOUR (0.next; lights.js RAYFILE_COLOUR_BY): from the file by default, its header's wavelength, or a
+    /* A RAY FILE'S COLOUR (0.83.0; lights.js RAYFILE_COLOUR_BY): from the file by default, its header's wavelength, or a
        rectangle's four ways -- its default its own, so RGB, the faces' default, is kept when chosen, not dropped as one */
     ok('a ray file\'s colour is from its file by default, nothing stored', M.lightOf(rf).colourBy === 'file' && !('colourBy' in rf.light))
     M.setLight(d, rf.id, { colourBy: 'rgb' })
@@ -1709,7 +1709,7 @@ throws('another version is refused, not guessed at',
 }
 
 //----------------------------------------------------------------------------------------------
-// THE SCENE'S OPTICAL FEATURES (0.next; setFeatures): every feature on is no key (an old file, every example), only what
+// THE SCENE'S OPTICAL FEATURES (0.83.0; setFeatures): every feature on is no key (an old file, every example), only what
 // is off saved, a refusal changing nothing, the presets, what is hidden said, and toTree putting a feature's fields at
 // their defaults without touching the document. No version change: an older builder of the same version carries the key along.
 //----------------------------------------------------------------------------------------------
@@ -1741,7 +1741,7 @@ throws('another version is refused, not guessed at',
     eq('...and a refusal changes nothing', JSON.stringify(d.features), before)
     M.setFeatures(d, M.FEATURE_PRESETS.full.values)
     ok('Full again: no key at all, as every scene before', !('features' in d) && M.featurePresetOf(d) === 'full')
-    /* THE SPECTRAL TRACE (0.next): the one feature off by default -- on is what is saved; Expert is Full with it; it has no
+    /* THE SPECTRAL TRACE (0.83.0): the one feature off by default -- on is what is saved; Expert is Full with it; it has no
        field, so toTree's materials are as they were, and the root says it is on */
     M.setFeatures(d, { spectral: true })
     eq('the spectral trace on: that alone saved, Expert', [d.features, M.featurePresetOf(d)], [{ spectral: true }, 'expert'])
@@ -1759,7 +1759,7 @@ throws('another version is refused, not guessed at',
 }
 
 //----------------------------------------------------------------------------------------------
-// OPTICS ROLES (0.next, version 27): a detector or a limiter is an OBJECT's, not its material's -- set, refused, in the
+// OPTICS ROLES (0.83.0, version 27): a detector or a limiter is an OBJECT's, not its material's -- set, refused, in the
 // tree only while the scene's analysis is on, which no preset touches; carried by a copy and an asset; an old asset's
 // detector material made the role, and the analysis switched on for it
 //----------------------------------------------------------------------------------------------

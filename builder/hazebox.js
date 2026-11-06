@@ -22,7 +22,7 @@
 // inside (materials.js scatterDistance, core/haze.js THE MEDIUM'S WALK) walks its rays correctly, but its walls are
 // surfaces, every shadow ray stops at a surface, and inside a material a collision samples no light and connects no
 // photon (the walk assumes the solid's own wall would block them): a beam in such "air" would show only by chance. The
-// haze box has no surface, which is exactly why light sampling works in it (roadmap/DIFFUSERS.md, Option A). For 0.next
+// haze box has no surface, which is exactly why light sampling works in it (roadmap/DIFFUSERS.md, Option A). For 0.83.0
 // it was the scene's for a while (in its environment); the user wanted it back as a box to place round a region, "a
 // useful tool to visualize light in a specific region" -- so it is a node, as before.
 //
@@ -49,7 +49,7 @@ export const KOSCHMIEDER = -Math.log(0.02)
 export const visibilityOf = mfp => KOSCHMIEDER * mfp
 
 /** The box's eight corners in the world, for drawing and framing it (overlay.js, focus.js); null for anything else.
- *  (They were exportbox.js's, shared with the export box, until 0.next.) */
+ *  (They were exportbox.js's, shared with the export box, until 0.83.0.) */
 export function boxCorners(doc, id) {
     const node = lineage(doc, id)[0]
     if (!node || node.type !== 'haze') return null

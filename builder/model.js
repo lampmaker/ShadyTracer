@@ -151,11 +151,11 @@ export const FORMAT = 'raytracer-scene'
    asymmetry g -- milky glass, whose thickness shows. Every material has the two; version 25 files get them at 0, which
    is what they rendered: a clear volume (v25to26). A builder of 25 refuses a file of 26 rather than read the fields as
    parameters of the material's own and render milky glass clear. */
-/* 27: THE SPECIAL OBJECTS STOP BEING ADD-ONS (0.next): no export box (the print export's box is its dialog's,
+/* 27: THE SPECIAL OBJECTS STOP BEING ADD-ONS (0.83.0): no export box (the print export's box is its dialog's,
    exportbox.js); a detector and a limiter an object's `opticsRole`, not a material's type, shown and traced while the
    scene's `analysis` feature is on (materials.js FEATURES). v26to27. A builder of 26 refuses a file of 27 rather than
    read a detector as a plain surface. */
-/* 28: A JOIN'S SHAPE (0.next; the user, 2026-11-04: fillets and chamfers "are often used in designs ... a modifier or
+/* 28: A JOIN'S SHAPE (0.83.0; the user, 2026-11-04: fillets and chamfers "are often used in designs ... a modifier or
    operation specifically for those"): `joinShape` on a child, 'round' or 'chamfer' -- absent is 'smooth', the
    polynomial blend every join had -- says what its blend radius makes of the edge where it meets what is above it: a
    circular fillet of that radius where the two meet at a right angle -- two planes, a plane across a cylinder or a
@@ -169,9 +169,9 @@ export const VERSION = 28
 export const ARRAY_MAX = 16
 
 /** What a material can be (version 10). 'surface' is stored as no field at all. A detector and a limiter were
- *  material types too until 0.next: they are what an OBJECT does for the optics trace now (OPTICS_ROLES, v26to27). */
+ *  material types too until 0.83.0: they are what an OBJECT does for the optics trace now (OPTICS_ROLES, v26to27). */
 export const MATERIAL_TYPES = ['surface', 'emitter']
-/** WHAT AN OBJECT DOES FOR THE OPTICS TRACE (0.next, version 27): nothing (absent), or it is a DETECTOR -- the trace stops
+/** WHAT AN OBJECT DOES FOR THE OPTICS TRACE (0.83.0, version 27): nothing (absent), or it is a DETECTOR -- the trace stops
  *  there and records what arrives -- or a RAY LIMITER, a detector the picture does not show. The object's, not its
  *  material's (the user, 2026-11-04: "should be an object property, not a material property. You can have multiple
  *  objects acting as independent detectors"): two plates of one material can be one detector and one plate, and every
@@ -186,13 +186,13 @@ export const canHaveRole = n => n?.kind === 'object' && n.type !== 'light' && !i
 /** The type of a material, with the default filled in. */
 export const typeOf = m => m?.type ?? 'surface'
 export { LIGHT_SHAPES, LIGHT_DEFAULTS, lightOf, lightDefaults, hasFace, lightRGB, lightDisplayRGB, lightChromaticity } from './lights.js'
-/* a light's spectrum (0.next): its kinds, the presets, reading and writing its text -- for the panel (core/spd.js) */
+/* a light's spectrum (0.83.0): its kinds, the presets, reading and writing its text -- for the panel (core/spd.js) */
 export { SPD_PRESETS, spdAt, spdProblems, spdSummary, parsePeaks, parseSpdCsv, peaksText, tableText } from '../lib/pathtracer/core/spd.js'
 import { LIGHT_SHAPES, LIGHT_DEFAULTS, lightOf, lightDefaults, lightProblems, rotationTowards } from './lights.js'
 export { HAZE_PARAMS, HAZE_DEFAULTS, hazeSettings } from './hazebox.js'
 import { HAZE_PARAMS, HAZE_DEFAULTS, hazeProblems, hazeNode } from './hazebox.js'
 /** The object types that are boxes rather than shapes (a haze box): no material, no code, no join -- a size in their
- *  own frame and settings of their own. (An export box was one until 0.next: the print export's box is its dialog's
+ *  own frame and settings of their own. (An export box was one until 0.83.0: the print export's box is its dialog's
  *  now, exportbox.js, and a file of 26 or older that has one opens without it: v26to27.) */
 export const BOX_TYPES = Object.freeze(['haze'])
 const isBoxType = t => BOX_TYPES.includes(t)
@@ -2123,7 +2123,7 @@ export function setMaterialType(doc, id, type) {
     return doc
 }
 
-/** AN OBJECT'S OPTICS ROLE (0.next, OPTICS_ROLES): 'detector', 'limiter', or null for none. A light, a box or a group
+/** AN OBJECT'S OPTICS ROLE (0.83.0, OPTICS_ROLES): 'detector', 'limiter', or null for none. A light, a box or a group
  *  has none. Checked first; the role is kept whether or not the scene's analysis feature is on. */
 export function setOpticsRole(doc, id, role) {
     const { node } = must(doc, id)
@@ -2579,7 +2579,7 @@ export function setTolerance(doc, v) {
 }
 
 /*======================================================================================================================
-  THE SCENE'S OPTICAL FEATURES (0.next; materials.js FEATURES, roadmap/LIGHT_MODEL.md S0a): dispersion, absorption inside
+  THE SCENE'S OPTICAL FEATURES (0.83.0; materials.js FEATURES, roadmap/LIGHT_MODEL.md S0a): dispersion, absorption inside
   and coatings, each on or off for the scene, and the spectral optics trace (S2), off unless it is asked for. Saved as
   `features`, holding only what differs from a feature's default -- every feature at its default is the key absent, as
   every scene before it was -- so an old file is Full, and no example or fixture changes. NO VERSION
@@ -2989,7 +2989,7 @@ function patternProblems(n, root) {
     return p
 }
 
-/** THE SCENE'S HAZE AS IT WAS FOR A WHILE IN 0.next: `doc.haze`, in its environment, not a node -- a file of 27 saved by a
+/** THE SCENE'S HAZE AS IT WAS FOR A WHILE IN 0.83.0: `doc.haze`, in its environment, not a node -- a file of 27 saved by a
  *  build of that time (never released, but the user tried it). The user wanted the box back ("a useful tool to visualize
  *  light in a specific region"), so such a file has it as a haze box again, under the root, where the region was: its
  *  place and turn in the world, its size, its dust, its animated flags and locks, shown as it was switched. Unchanged when
@@ -3056,7 +3056,7 @@ export function upgrade(doc) {
     return d
 }
 
-/** 26 -> 27 (0.next): THE SPECIAL OBJECTS STOP BEING ADD-ONS.
+/** 26 -> 27 (0.83.0): THE SPECIAL OBJECTS STOP BEING ADD-ONS.
  *  - AN EXPORT BOX GOES: the print export asks what to print and fits its own box (exportbox.js, printdialog.js), so a
  *    box in the scene says nothing any more. Its settings (a cell, a colour count) were the export's, which the dialog
  *    now remembers per browser.
