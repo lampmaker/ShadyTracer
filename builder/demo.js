@@ -52,7 +52,9 @@
 // `error at line 431 of a file you never saw`.
 //======================================================================================================================
 
-import { generate, uniformName, xfName, patName, patterned, isCsg, readsLocal, blendName, joinBlendName, visName, paramUniform, livePointsUpdate, copyName } from './codegen.js'
+import { generate, uniformName, xfName, patName, patterned, isCsg, materialReadsLocal, blendName, joinBlendName, visName, paramUniform, livePointsUpdate, copyName } from './codegen.js'
+import { slotOfKey } from './images.js'
+import { slotMatrix } from '../lib/pathtracer/core/images.js'
 import { validate } from './validate.js'
 import { computeUniformTypes } from '../lib/pathtracer/core/uniforms.schema.js'
 import * as M from './model.js'
@@ -633,7 +635,7 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
             if (!f.node.pattern) return false
             const name = patName(id)
             if (!(name in (RT.scene?.uniforms || {}))) return !patterned(f.node.kind === 'group' ? { ...f.node, csg: isCsg(f.node) } : f.node,
-                { wantLocal: doc.materials.some(m => readsLocal(m.code)), relief: !!M.material(doc, f.node.kind === 'object' ? M.wornMaterial(doc, id).material : null)?.relief })
+                { wantLocal: doc.materials.some(materialReadsLocal), relief: !!M.material(doc, f.node.kind === 'object' ? M.wornMaterial(doc, id).material : null)?.relief })
             return RT.set({ [name]: M.matrixOf({ ...f.node.pattern, scale: 1 }) }).length === 0
         }
         /* AN ARRAY'S COPIES (model.js version 17): a uniform each -- refused when the count is not the one compiled, or when
@@ -923,6 +925,16 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
                 return RT.set({ [paramUniform(id, k)]: v && typeof v === 'object' ? { ...v } : v }).length === 0
             }
             const mat = M.material(doc, id)
+            /* A PICTURE'S SLOT (version 29, images.js): its uniform, its picture's place in the atlas the shown scene was
+               compiled with and its settings -- live while that atlas has its picture, a compile when not (a new picture,
+               or one the scene was compiled without) */
+            const slot = mat && slotOfKey(mat, k)
+            if (slot) {
+                const rect = RT.scene?.imageRects?.get(slot.image)
+                const name = uniformName(id, k)
+                if (RT.scene?.id !== 'built' || !rect || !(name in (RT.scene.uniforms || {}))) return false
+                return RT.set({ [name]: slotMatrix(M.imageSlotOf(slot), rect, doc.images?.[slot.image]) }).length === 0
+            }
             if (mat) {
                 if (RT.scene?.id !== 'built' || !(k in (mat.params || {}))) return false
                 const v = mat.params[k]

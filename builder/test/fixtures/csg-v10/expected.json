@@ -439,6 +439,26 @@
    "roles": "5ae1625b488b3935122d8dd627fe575b388a5aa360378fa4407aad08baaed1e2"
   }
  },
+ "scenes/pictures.json": {
+  "off": {
+   "wgsl": "286765aae55b71a6d5a3e3f9536a6cc4e008cf7777c9d82c5825f9fd55fa7849",
+   "pickWgsl": "3c28e89535dfa64f9a0b3fc7cc1b00d05554a6aba520655a5294eaf513c983fc",
+   "opticsWgsl": "286765aae55b71a6d5a3e3f9536a6cc4e008cf7777c9d82c5825f9fd55fa7849",
+   "opticsPickWgsl": "3c28e89535dfa64f9a0b3fc7cc1b00d05554a6aba520655a5294eaf513c983fc",
+   "uniforms": "cbdf24b7a1b325bb2421c40f970b2d9863c8523645bfc2c4428c58441f360985",
+   "tags": "82bb65bde60109504eb0e3e6f356656f0e9474ed79ff2440bc1c0be11117e3cf",
+   "roles": "5ae1625b488b3935122d8dd627fe575b388a5aa360378fa4407aad08baaed1e2"
+  },
+  "live": {
+   "wgsl": "2815a637e325b466ea6fec97fef52fa1af4c02ca968af316335ca7819f42f095",
+   "pickWgsl": "134a3b4a841256039c167e2f00e13677b78bedb65ca7807593f855b56adc4544",
+   "opticsWgsl": "2815a637e325b466ea6fec97fef52fa1af4c02ca968af316335ca7819f42f095",
+   "opticsPickWgsl": "134a3b4a841256039c167e2f00e13677b78bedb65ca7807593f855b56adc4544",
+   "uniforms": "0c65e5b3bf27d50d1f0e0b87a46cec1fe0984ad7a0bfc73fddee48a6f1ac51be",
+   "tags": "82bb65bde60109504eb0e3e6f356656f0e9474ed79ff2440bc1c0be11117e3cf",
+   "roles": "5ae1625b488b3935122d8dd627fe575b388a5aa360378fa4407aad08baaed1e2"
+  }
+ },
  "scenes/prism-dispersion.json": {
   "off": {
    "wgsl": "5eef2f43bad1227e3ed81a0d3f5591b5bc77b161a12b0e4216e1d907823ff9a3",

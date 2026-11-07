@@ -1185,6 +1185,112 @@ ok('...and the visibility beside it follows: 3.912 x 4 m, 15.6 m', /^visibility 
     await p.evaluate(() => { CHECK.panel.show(null); CHECK.flagPanel.show(null) })
 }
 
+// A MATERIAL'S PICTURES (0.next; builder/images.js): + picture… reads a PNG through the browser's own decoder into the scene
+// and the material, a compile with an undo step; each setting of its placement live; its use a compile; a file that is no
+// picture said in the box; taken away again
+{
+    const { deflateSync } = await import('node:zlib')
+    // a 3 x 2 PNG, written here from its specification (8-bit RGBA, no interlace)
+    const crcT = new Uint32Array(256).map((_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; return c >>> 0 })
+    const crc = b => { let c = 0xFFFFFFFF; for (const x of b) c = crcT[(c ^ x) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0 }
+    const chunk = (t, d) => { const o = Buffer.alloc(12 + d.length); o.writeUInt32BE(d.length, 0); o.write(t, 4, 'ascii'); d.copy(o, 8); o.writeUInt32BE(crc(o.subarray(4, 8 + d.length)), 8 + d.length); return o }
+    const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(3, 0); ihdr.writeUInt32BE(2, 4); ihdr[8] = 8; ihdr[9] = 6
+    const raw = Buffer.from([0, 255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 0, 255, 255, 255, 255, 0, 0, 0, 255, 128, 128, 128, 255])   // a filter byte a row, then its pixels
+    const png = Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', deflateSync(raw)), chunk('IEND', Buffer.alloc(0))])
+    const button = (title, id = 'scr') => p.evaluate(([title, id]) => {
+        const b = [...document.querySelectorAll('#t button')].find(x => x.textContent.trim().startsWith(title))
+        if (!b) return `no button '${title}'`
+        b.click(); return 'clicked'
+    }, [title, id])
+    const pick = async (title, file) => {
+        const [chooser] = await Promise.all([p.waitForEvent('filechooser', { timeout: 5000 }), button(title)])
+        await chooser.setFiles(file)
+        await p.waitForTimeout(300)
+    }
+    rows = await rowsOf('scr')
+    const has = await p.evaluate(() => [...document.querySelectorAll('#t button')].some(x => x.textContent.includes('+ image texture')))
+    ok('a material has + image texture… under its image textures', has)
+    before = await state()
+    await pick('+ image texture', { name: 'logo.png', mimeType: 'image/png', buffer: png })
+    const got = await p.evaluate(() => {
+        const m = CHECK.M.material(CHECK.doc, 'scr')
+        const k = m.images?.[0]?.image
+        // (the scene's problems that are not the screen's: a step above left one of its own, which is not this check's)
+        return { slot: m.images?.[0], entry: k && CHECK.doc.images?.[k] && { ...CHECK.doc.images[k], data: CHECK.doc.images[k].data.length }, base: m.params.baseColor, rough: m.params.roughness,
+                 valid: CHECK.M.validate(CHECK.doc) }
+    })
+    s = await state()
+    ok('...a PNG chosen: in the scene by its key, its size the decoder\'s, a slot that is the glow -- a compile and an undo step',
+        got.entry?.width === 3 && got.entry?.height === 2 && got.entry?.type === 'image/png' && got.slot?.use === 'colour' && got.slot?.name === 'texture'
+        && s.structure === before.structure + 1 && s.commits.at(-1) === null && got.valid.every(x => !/scr|image|picture/.test(x)), JSON.stringify([got, s.structure, before.structure]))
+    ok('...the screen\'s surface under the glow its dark glass', got.base?.r === 0.02 && got.rough === 0.05, JSON.stringify(got))
+    await p.waitForTimeout(50)
+    rows = await p.evaluate(() => [...document.querySelectorAll('#t .tp-lblv')].map(r => r.querySelector('.tp-lblv_l')?.textContent.trim()))
+    ok('...its rows: use, projection, size, offset, turn, wraps, filter, faces, colour; and the surface below the glow',
+        ['use', 'projection', 'width (mm)', 'height (mm)', 'offset x (mm)', 'offset y (mm)', 'turn (deg)', 'wrap across', 'wrap up', 'filter', 'faces', 'colour (sRGB)', 'baseColor', 'roughness']
+            .every(r => rows.includes(r)), JSON.stringify(rows))
+    before = await state()
+    ok('the width typed', await set('width (mm)', 55) === 'set')
+    s = await state()
+    ok('...is the slot\'s uniform, live, with its undo step: no compile', s.live.at(-1) === 'scr.img_texture' && s.commits.at(-1) === 'scr.img_texture'
+        && s.structure === before.structure && await p.evaluate(() => CHECK.M.material(CHECK.doc, 'scr').images[0].size.x) === 55, JSON.stringify(s))
+    // HEIGHT FROM THE IMAGE'S ASPECT RATIO: the height the width times the image's own height over its width (3 x 2: 2/3),
+    // the width kept; live, no compile
+    before = await state()
+    ok('Height from the image\'s aspect ratio', await button('Height from the image\'s aspect ratio') === 'clicked')
+    await p.waitForTimeout(50)
+    const sz = await p.evaluate(() => ({ ...CHECK.M.material(CHECK.doc, 'scr').images[0].size }))
+    s = await state()
+    ok('...the height 55 x 2 / 3, the width kept, live', Math.abs(sz.y - 55 * 2 / 3) < 1e-4 && sz.x === 55 && s.structure === before.structure
+        && s.live.at(-1) === 'scr.img_texture', JSON.stringify(sz))
+    ok('wrap across: mirror', await set('wrap across', 'mirror') === 'set')
+    s = await state()
+    ok('...live too', s.live.at(-1) === 'scr.img_texture' && s.structure === before.structure
+        && await p.evaluate(() => CHECK.M.material(CHECK.doc, 'scr').images[0].wrapU) === 'mirror')
+    ok('the projection: triplanar', await set('projection', 'triplanar') === 'set')
+    await p.waitForTimeout(50)
+    rows = await p.evaluate(() => [...document.querySelectorAll('#t .tp-lblv')].map(r => r.querySelector('.tp-lblv_l')?.textContent.trim()))
+    ok('...live, and the box shows its blend\'s sharpness and no faces', (await state()).structure === before.structure && rows.includes('blend sharpness') && !rows.includes('faces'), JSON.stringify(rows))
+    ok('its use: code only', await set('use', 'code only') === 'set')
+    s = await state()
+    ok('...a compile', s.structure === before.structure + 1 && await p.evaluate(() => CHECK.M.material(CHECK.doc, 'scr').images[0].use) === 'none')
+    // a file that is no picture: said in the box, nothing added
+    await p.waitForTimeout(50)
+    await pick('+ image texture', { name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('hello') })
+    await p.waitForTimeout(50)
+    const said = await p.evaluate(() => [...document.querySelectorAll('#t .tp-lblv')].find(r => r.querySelector('.tp-lblv_l')?.textContent.trim() === 'not read')?.querySelector('textarea')?.value ?? null)
+    ok('a text file chosen: said in the box, nothing added', /not a PNG, JPEG or WebP/.test(said ?? '') && await p.evaluate(() => CHECK.M.material(CHECK.doc, 'scr').images.length) === 1, said)
+    // A RELIEF FROM IT (0.next): offered in the relief box by the picture's name, its heights' bound worked out on import
+    // from the pixels Chromium decoded, a compile; the box says what such a relief is and is not
+    ok('the picture\'s heights\' bound was worked out as it was read', await p.evaluate(() => { const e = Object.values(CHECK.doc.images)[0]; return e.heights?.colour?.length === 6 && e.heights.data[0] > 0 }))
+    before = await state()
+    ok('the relief: from an image texture', await set('relief', 'from an image texture: texture') === 'set')
+    await p.waitForTimeout(150)
+    s = await state()
+    ok('...a relief reading it, amplitude and raise, a compile', await p.evaluate(() => CHECK.M.pictureReliefOf(CHECK.M.material(CHECK.doc, 'scr').relief)) === 'texture'
+        && s.structure === before.structure + 1)
+    const notes = await p.evaluate(() => [...document.querySelectorAll('#t textarea')].map(t => t.value).find(v => /on every face/.test(v)) ?? null)
+    ok('...and its box says it is read planar (the picture is triplanar), on every face, at 8 bits', /read planar.*triplanar/.test(notes ?? '') && /8 bits a pixel/.test(notes ?? ''), notes)
+    // dev's Insert pane is a second caller: it lists what a code box can read, and knew nothing of image textures
+    const inserts = await p.evaluate(() => {
+        const panes = [...document.querySelectorAll('#t details.rt-code-insert')]
+        panes.forEach(d => d.querySelector('summary').click())                 // its rows are made as it opens
+        return new Promise(r => setTimeout(() => r(panes.map(d => [...d.querySelectorAll('.rt-code-insert-row')].map(r => r.firstChild.textContent))), 50))
+    })
+    ok('...the material\'s Insert pane reads its image texture by name: sample, mapped, sampleAt', inserts.length === 2
+        && ['sample(texture)', 'mapped(texture)', 'sampleAt(texture, uv)'].every(r => inserts[0].includes(r)) && !inserts[0].includes('heightAt(texture, q)'),
+        JSON.stringify(inserts.map(x => x.filter(r => /texture/.test(r)))))
+    ok('...the relief\'s heightAt, and not the material\'s calls', inserts[1]?.includes('heightAt(texture, q)') && !inserts[1].includes('sample(texture)'),
+        JSON.stringify(inserts[1]?.filter(r => /texture/.test(r))))
+    before = await state()
+    ok('Take it away', await button('Take it away') === 'clicked')
+    s = await state()
+    ok('...the slot gone, the picture kept in the scene (no undo step holds it), a compile', s.structure === before.structure + 1
+        && await p.evaluate(() => !CHECK.M.material(CHECK.doc, 'scr').images && Object.keys(CHECK.doc.images).length === 1))
+    ok('...and the relief that read it with it', await p.evaluate(() => !CHECK.M.material(CHECK.doc, 'scr').relief))
+    await p.evaluate(() => CHECK.panel.show(null))
+}
+
 // THE INSERT PANE (builder/codehelper.js, 0.next): under a material's code box, every field as the line that sets it from
 // the material's own values; a click puts the line in the code -- at its end, under the comments, when the box was never
 // clicked into -- as an edit, and the document has it; its search finds the coating's line; a relief's lists h and slope,

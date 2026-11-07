@@ -352,7 +352,7 @@ export const CODE_BLOCKS = {
         ],
         fns: ['Noise', 'Units'],
         cannot: [
-            { name: 'the material\'s settings', why: 'A relief is shape: it runs in the march, where no material has been asked yet. It reads its own parameters (+ in its parameters header), not the material\'s or its code\'s.' },
+            { name: 'the material\'s settings', why: 'A relief is shape: it runs in the march, where no material has been asked yet. It reads its own parameters (+ in its parameters header) and the material\'s image textures by name (heightAt), not the material\'s settings or its code\'s.' },
             { name: 'n, the normal', why: 'There is none yet: the relief is part of what the normal is taken from (by differences).' },
             { name: 'the object\'s own parameters', why: 'One relief is shared by every object wearing the material.' },
         ],
@@ -410,6 +410,17 @@ export const CODE_BLOCKS = {
         fns: ['Putting shapes into the scene', 'Shapes with a normal', 'Joining shapes', 'Noise', 'Units', 'Materials'],
     },
 }
+/** A material's image textures as rows of its code box's Insert pane (codehelper.js's `params()` rows), after its own
+ *  parameters. Not in CODE_HELP or the recipes: these calls exist only in a scene with an image texture (IMAGES_WGSL,
+ *  lib/pathtracer/core/images.js), and coderef.test.mjs holds CODE_HELP to the prelude and every recipe to a block
+ *  that has none. A material's code samples its own image textures; a relief reads one as a height. */
+export const imageTextureReads = (kind, names = []) => names.flatMap(t => kind === 'relief' ? [
+    { name: `heightAt(${t}, q)`, type: 'vec2<f32>', text: `image texture ${t} as a height at q: x its luminance times alpha, 0 to 1; y the bound on its slope per mm. Laid flat in q.xy whatever its projection` },
+] : kind === 'material' ? [
+    { name: `sample(${t})`, type: 'vec4<f32>', text: `image texture ${t} here, placed as its box says: linear RGB and alpha, 0 where it does not show (a face it is not on, past a wrap of none)` },
+    { name: `mapped(${t})`, type: 'vec2<f32>', text: `where this point falls on image texture ${t}: (0, 0) its bottom left, (1, 1) its top right, other copies beyond, before its wraps` },
+    { name: `sampleAt(${t}, uv)`, type: 'vec4<f32>', text: `image texture ${t} at a uv of your own, as mapped() gives it, its wraps and filter applied` },
+] : [])
 /** A block's sets and cannot, the names resolved */
 export const setsOf = kind => { const s = CODE_BLOCKS[kind]?.sets; return s === 'MATERIAL_SETS' ? MATERIAL_SETS : s ?? [] }
 export const cannotOf = kind => { const s = CODE_BLOCKS[kind]?.cannot; return s === 'MATERIAL_CANNOT' ? MATERIAL_CANNOT : s ?? [] }

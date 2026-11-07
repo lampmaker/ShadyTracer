@@ -130,17 +130,24 @@ const uniqueTitle = (p, t) => {
 
 /* `app`, the version of the application writing a FILE (model.js withApp): given only by the File menu's saves
    (demo.js), never by undo's snapshots or the start-up copy, which are the project itself */
-export const serialize = (p, { app } = {}) => JSON.stringify(M.withApp(p, app), null, 2)
+export const serialize = (p, { app } = {}) => JSON.stringify(M.withApp(withUsedPictures(p), app), null, 2)
+/* each scene with only the pictures its materials use (model.js withUsedPictures): the project as a file and as the
+   browser keeps it */
+const withUsedPictures = p => p?.scenes?.some(s => s.doc?.images) ? { ...p, scenes: p.scenes.map(s => s.doc?.images ? { ...s, doc: M.withUsedPictures(s.doc) } : s) } : p
 
 /* WHAT A SCENE HAS THAT NO UNDO STEP HOLDS: its view (model.js VIEW), its timeline (model.js TIMELINE, 0.67.0) and its
    script (model.js SCRIPT, 0.82.0: a text editor's lines, which an undo of the scene's must not take back). One list, read by every place that leaves them out or puts them back -- the history's text, a restore (carryOutside),
    the builder's memory of a scene taken out and its comparison of a scene before and after a step (demo.js) -- so a
    third such part is one word here, not a fourth place found missing. */
-export const OUTSIDE_HISTORY = Object.freeze(['view', 'timeline', 'script'])
+/* ...AND ITS PICTURES (version 29, builder/images.js): megabytes each, which a snapshot a step would carry, and which no
+   undo needs to take away -- the step undoes the slot that names one. A picture's entry never changes once made, so it
+   is carried by reference, not copied (carryCopy). */
+export const OUTSIDE_HISTORY = Object.freeze(['view', 'timeline', 'script', 'images'])
+const carryCopy = (k, v) => k === 'images' ? { ...v } : structuredClone(v)
 /** A scene's document without what no undo step holds (OUTSIDE_HISTORY), a shallow copy. */
 export const withoutOutside = doc => Object.fromEntries(Object.entries(doc).filter(([k]) => !OUTSIDE_HISTORY.includes(k)))
 /** What a scene's document has of OUTSIDE_HISTORY, copied: { view, timeline }, each only when it has one. */
-export const outsideOf = doc => Object.fromEntries(OUTSIDE_HISTORY.filter(k => doc?.[k] !== undefined).map(k => [k, structuredClone(doc[k])]))
+export const outsideOf = doc => Object.fromEntries(OUTSIDE_HISTORY.filter(k => doc?.[k] !== undefined).map(k => [k, carryCopy(k, doc[k])]))
 /* THE HISTORY'S TEXT (demo.js): the project without any scene's view or timeline (OUTSIDE_HISTORY). Looking is not an
    edit: a snapshot that held the camera would make an undo move it back to where it was at that edit, and a commit
    after an orbit -- harmless by history.js's rule, nothing changed -- would record the orbit as a step. A timeline is
@@ -156,7 +163,7 @@ export function carryOutside(next, from, memory = null) {
         const was = scene(from, s.key)?.doc, kept = memory?.get?.(s.key)
         for (const k of OUTSIDE_HISTORY) {
             const v = was?.[k] ?? kept?.[k]
-            if (v) s.doc[k] = structuredClone(v)
+            if (v) s.doc[k] = carryCopy(k, v)
             else delete s.doc[k]
         }
     }
@@ -213,7 +220,7 @@ export const WORKSPACE_VERSION = 1
  *  their own (rendererSettings): each scene's camera and exposure are in its document (model.js VIEW). A workspace
  *  written before 0.66.0 had `cameras` beside the project; workspaceOf still reads them into the scenes. */
 export const serializeWorkspace = (p, current, renderer = {}, { app } = {}) => JSON.stringify(
-    M.withApp({ format: WORKSPACE_FORMAT, version: WORKSPACE_VERSION, current, renderer: rendererSettings(renderer), project: p }, app), null, 2)
+    M.withApp({ format: WORKSPACE_FORMAT, version: WORKSPACE_VERSION, current, renderer: rendererSettings(renderer), project: withUsedPictures(p) }, app), null, 2)
 /** THE PROJECT AS A FILE HOLDS IT: without the scenes of library items being edited (library/edit.js) --
  *  they are the library's, saved there -- and with a current scene it still has: the one the item was opened
  *  from, else the first. Returns { project, current }; the same project when it has no such scene. Two
