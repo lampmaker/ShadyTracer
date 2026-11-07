@@ -92,7 +92,14 @@ of 0, the copies turn about the group's axis as the circular array's do.
 
 Any object, group or material can be rewritten in **WGSL**, the graphics card's language. Open its *code* box in
 Properties. A probe compile runs half a second after you stop typing and shows any error **at your own line**.
-**Ctrl Enter** applies. **Functions you can call…** under the box opens [Functions for code](../reference/code.md).
+**Ctrl Enter** applies.
+
+**Insert**, under every code box, is the list of what that code can use: what it can **set** -- for a material every
+field, written as the line that sets it with the material's own value, so `m.roughness = 0.35;` is ready to edit --
+what it can **read**, its own parameters among them, **recipes** (a dichroic, a graded filter, brushed metal, grooves
+and knurling for a relief), the **functions** it reaches for, and what it **cannot be set** there and why. Click a row
+and it goes into the code at the caret; type in its search box to find one. **Functions you can call…** opens
+[Functions for code](../reference/code.md), where the same lists are written out.
 
 - **An object's code** adds a shape: `C = add_new(C, Nsphere(p, radius), MATERIAL);` where `p` is the point in the
   object's own frame and your parameters are names.

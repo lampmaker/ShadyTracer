@@ -2164,10 +2164,12 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
     const haze = hazeOf({ root: tree })
     /* ...and whether a material scatters inside (materials.js scatterDistance, 0.82.0): the march has the walk's code
        only then (core/haze.js THE MEDIUM'S WALK), so it is the scene's text, as the haze box's presence is (sceneTextOf).
-       A surface's or a detector's material with a scatter distance, as the shader is given it (`only`). A material's own
-       code that sets m.scatterDistance is not seen here: such a scene says scatter itself, or its rays walk nothing. */
+       A surface's material with a scatter distance, as the shader is given it (`only`) -- OR ITS OWN CODE NAMING
+       m.scatterDistance (0.next): that was not seen here, and its rays walked nothing, while the code compiled clean and
+       said nothing (the Insert pane, builder/coderef.js, offers the line). Read in its code without comments, as p_local
+       is (readsLocal); a scene whose code does not name it keeps the text it had. */
     const scatter = (tree.materials || []).some(m => (FIELDS_OF[m.type ?? 'surface'] ?? FIELDS_OF.surface).includes('scatterDistance')
-                                                    && m.params?.scatterDistance > 0)
+                                                    && (m.params?.scatterDistance > 0 || /\bm\.scatterDistance\b/.test(codeOnly(m.code ?? ''))))
     /* `wgsl` for the scene contract is the materials onwards -- the same place the three
        hand-written scenes put there, since the kernels prepend the engine prelude themselves
        and would otherwise see it twice. `body` is the whole file, which is what the probe

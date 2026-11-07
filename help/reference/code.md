@@ -14,7 +14,109 @@ What the code of an object, a group, a material or the scene's functions can cal
 | a material's relief | at every march step near an object wearing it | `q` the point in mm in that object's frame, `world` the same in the scene's; it sets `h`, the height in mm outward, and `slope`, a bound on how steep `h` is |
 | the scene's functions | -- | its functions are called from any of the others |
 
-The comments a new block starts with say the same, with examples; **Functions you can call…** under a block opens this page.
+Under every code box, **Insert** lists what that block can set, read and call, with recipes -- a click puts one in the code at the caret -- and what it cannot do; **Functions you can call…** opens this page.
+
+## What a material's code sets
+
+A material's code changes `m`, which holds every setting of its panel when the code starts. Each field, as the line that sets it (here from a new material's values; the Insert pane writes the material's own):
+
+| field | the line | what it is |
+|---|---|---|
+| `baseColor` | `m.baseColor = VEC3(0.8, 0.8, 0.8);` | the colour: linear red, green, blue, each 0..1 (not sRGB) |
+| `metallic` | `m.metallic = 0.0;` | 0 a dielectric (paint, plastic, glass), 1 a metal |
+| `roughness` | `m.roughness = 0.5;` | 0 a mirror-sharp reflection .. 1 matte |
+| `specular` | `m.specular = 0.5;` | a dielectric's reflection: 0 none, 0.5 the physical one, 1 twice |
+| `specularTint` | `m.specularTint = 0.0;` | the reflection tinted by the colour: 0 white .. 1 |
+| `anisotropy` | `m.anisotropy = 0.0;` | -1..1: rougher along the grain than across it, or the other way (with m.tangent) |
+| `tangent` | `m.tangent = grainAlong(R_local, VEC3(1.0, 0.0, 0.0));` | the grain's direction in the world, for an anisotropy: code only, no panel row. grainAlong, grainAround, grainRadial make one; zero is no grain |
+| `transmission` | `m.transmission = 0.0;` | of what is not reflected, the share that passes through: 0 opaque, 1 glass |
+| `ior` | `m.ior = 1.0;` | the index of refraction: 1.5 glass, 1.333 water, 1.49 PMMA |
+| `haze` | `m.haze = 0.0;` | of what passes, the share diffused at the face: 0 clear, 1 opal |
+| `abbe` | `m.abbe = 0.0;` | the Abbe number (dispersion): 0 none, 64 BK7, 36 a flint |
+| `attenuationDistance` | `m.attenuationDistance = mm(0.0);` | the colour depth: the depth inside at which light is filtered to the colour. A length in the scene's unit here, so mm() it -- the panel's number is mm |
+| `scatterDistance` | `m.scatterDistance = mm(0.0);` | the mean free path inside (milky glass), mm() it. A line naming it compiles the walk inside into the scene, as a scatter distance in the panel does; it acts only with transmission |
+| `scatterAnisotropy` | `m.scatterAnisotropy = 0.0;` | each scattering inside: 0 every way, towards 0.95 forward |
+| the whole coating | `m = coatMaterial(m, 1u, 0.0, 1.0, 600.0, 20.0, 1.8);` | a coating, whole: where (1u the faces light enters by, the back anti-reflective; 2u the back bare; 3u every face), R below the edge, R above it, the edge (nm), its width (nm), the stack's index. The way to set R below and above: they are one packed word |
+| `coatEdge` | `m.coatEdge = 600.0;` | the edge, nm head-on -- where the material has a coating (m.coat above 0) |
+| `coatWidth` | `m.coatWidth = 20.0;` | the edge's width, nm from 10 % to 90 % |
+| `coatIndex` | `m.coatIndex = 1.8;` | the stack's effective index: how far the edge moves at an angle |
+| `coat` | `m.coat = 0u;` | where the coating is: 0u none -- this line takes the panel's off here -- 1u, 2u, 3u as in coatMaterial |
+| `emissive` | `m.emissive = VEC3(1.0, 1.0, 1.0) * 1000.0;` | what the surface emits, cd/m² per channel (linear RGB): the panel's colour times its luminance. A surface given one here glows where it is set, and every path that reaches it ends there |
+
+What it cannot set:
+
+- `n` -- The surface normal is read-only here: the renderer takes it from the shape -- its own, or by differences of the distance -- before the material is asked, and nothing a material sets changes it. No bump or normal map exists yet. A relief (below the code) changes the shape itself, and so the normal and the silhouette, at a cost at every march step near the object.
+- `coatR` -- A coating's two reflectances, packed into one word: set them with coatMaterial, read them with coatLowHigh(m).
+- `lightTraced` -- Whether a surface is a light's face: the builder's own, set for the faces of its lights.
+- `p, n, C, p_local` -- The hit's point, normal and Hit are inputs: a material cannot move where it was hit. Copy one into a `var` to work on it.
+- `the type` -- Surface or glowing is the panel's: it says which settings are put into m before the code runs. A surface's code may still set m.emissive.
+
+## What a relief's code sets
+
+A relief's code runs in the march, at every step near an object wearing its material. It reads `q` and `world` and its own parameters, and sets two numbers:
+
+- `h` -- the height there, mm, outward from the surface (negative is in); clamped to ±amplitude. For example `h = amplitude * sin(q.x * TAU / 2.0);`
+- `slope` -- a bound on how steep h is anywhere (mm per mm): every distance is divided by 1 + slope. Too small and the march steps through bumps; too large only slows it. For example `slope = amplitude * TAU / 2.0;`
+
+Its recipes, each with its slope worked out:
+
+**Grooves along the object's y, 2 mm apart**
+
+```
+let k = TAU / 2.0;                     // 2 mm a period
+h = amplitude * sin(q.x * k);
+slope = amplitude * k;                 // exact: |d/dx sin| is at most 1
+```
+
+**Rings about the object's z, 1.5 mm apart**
+
+```
+let k = TAU / 1.5;
+h = amplitude * sin(length(q.xy) * k);
+slope = amplitude * k;                 // a distance from the axis grows at most 1 per mm
+```
+
+**Knurled: two sets of grooves crossed at 90°, 1.5 mm apart**
+
+```
+let k = TAU / 1.5;
+let u = (q.x + q.y) * 0.70710678;
+let v = (q.x - q.y) * 0.70710678;
+h = amplitude * sin(u * k) * sin(v * k);
+slope = amplitude * k;                 // |grad| = amplitude k sqrt(cos² sin² + sin² cos²), at most amplitude k
+```
+
+**Bumps from noise, about 8 mm across (the noise relief)**
+
+```
+let peak = nzFbmLip(4u, 1.0, 0.5, 1.0);
+let nz = fbm3(q / 8.0, 1u, 4u, 2.0, 0.5);
+h = amplitude * nz.w / peak;
+slope = amplitude / 8.0 * nzFbmLip(4u, 2.0, 0.5, NZ_GRAD_LIP_MEASURED) / peak;
+```
+
+**Dents in cells 6 mm across (hammered)**
+
+```
+let w = worley3(q / 6.0, 7u);
+let dent = 1.0 - clamp(w.x, 0.0, 1.0);
+h = -amplitude * dent * dent;
+slope = 2.0 * amplitude / 6.0;
+```
+
+**Layers level in the scene, 0.2 mm each**
+
+```
+let s = 2.0 * fract(world.z / 0.2) - 1.0;
+h = amplitude * (1.0 - s * s - 2.0 / 3.0);
+slope = 4.0 * amplitude / 0.2;
+```
+
+What it cannot read:
+
+- the material's settings -- A relief is shape: it runs in the march, where no material has been asked yet. It reads its own parameters (+ in its parameters header), not the material's or its code's.
+- n, the normal -- There is none yet: the relief is part of what the normal is taken from (by differences).
+- the object's own parameters -- One relief is shared by every object wearing the material.
 
 ## Words the page rewrites
 

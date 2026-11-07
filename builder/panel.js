@@ -55,7 +55,8 @@ import { changeUnit } from './unitchange.js'
 import { openUnitDialog } from './unitdialog.js'
 import { visibilityOf, HAZE_G_MAX } from './hazebox.js'
 import { makeAfter } from './params.js'
-import { codeOnly } from './codegen.js'
+import { codeOnly, wgslTypeOf, isProfile, isPath } from './codegen.js'
+import { codeHelper, placeInsert } from './codehelper.js'
 import { SEG, SEGBTN } from '../lib/pathtracer/strip.js'
 import { lit } from '../lib/pathtracer/icons.js'
 
@@ -432,7 +433,8 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
             paramsFolder(folder, mat, M.customParams(mat), {}, true)
             // an empty block shows how to use one; comments alone compile to nothing
             if (!String(mat.code || '').trim()) mat.code = M.MATERIAL_CODE_TEMPLATE
-            codeEditor(folder, mat, { kind: 'material', title: 'material code', names: 'm, p, n, C, p_local, R_local, S_local, and its parameters' })
+            codeEditor(folder, mat, { kind: 'material', title: 'material code', names: 'm, p, n, C, p_local, R_local, S_local, and its parameters',
+                values: () => mat.params, params: () => paramRows(mat, M.customParams(mat)) })
             // its relief LAST (the user, 2026-09-30): the shape it gives, after what the surface is
             reliefFolder(folder, doc, mat)
             return
@@ -471,7 +473,8 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
                     get code() { const c = M.codeOf(doc, node); return String(c || '').trim() ? c : M.GROUP_CODE_TEMPLATE },
                     set code(v) { M.setCode(doc, node.id, v) } }
                 const sharers = () => { const b = M.blockOf(doc, node); return b ? M.usersOf(doc, b.id).map(n => n.id) : [] }
-                codeEditor(folder, holder, { kind: 'group', title: 'group code', names: 'C = children(C, p) calls what is in it; p, C, r, and its parameters', same: sharers })
+                codeEditor(folder, holder, { kind: 'group', title: 'group code', names: 'C = children(C, p) calls what is in it; p, C, r, and its parameters', same: sharers,
+                    params: () => paramRows(M.viewOf(doc, node), Object.keys(node.params || {})) })
             } else {
                 // the values flagged as animated, first: what a timeline moves, in one place
                 animatedFolder(folder, doc)
@@ -617,7 +620,8 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
         bindFolder(folder, doc, node)
         const holder = { id: node.id, get code() { return M.codeOf(doc, node) }, set code(v) { M.setCode(doc, node.id, v) } }
         const sharers = () => { const b = M.blockOf(doc, node); return b ? M.usersOf(doc, b.id).map(n => n.id) : [] }
-        codeEditor(folder, holder, { kind: 'object', title: 'code', names: 'p, C, MATERIAL, and its parameters: C = add_new(C, <shape>, MATERIAL)', same: sharers })
+        codeEditor(folder, holder, { kind: 'object', title: 'code', names: 'p, C, MATERIAL, and its parameters: C = add_new(C, <shape>, MATERIAL)', same: sharers,
+            params: () => paramRows(M.viewOf(doc, node), Object.keys(node.params || {})) })
     }
 
     /* AN ARRAY (model.js copies, version 17): the group's children drawn at each of its copies -- one copy of their code
@@ -1549,7 +1553,8 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
             get constants() { return mat.relief.constants }, get ranges() { return mat.relief.ranges }, get lengths() { return mat.relief.lengths } }
         paramsFolder(rf, owner, Object.keys(mat.relief.params || {}), {}, true)
         const holder = { id: M.reliefOwner(mat.id), get code() { return mat.relief.code }, set code(v) { mat.relief.code = v } }
-        codeEditor(rf, holder, { kind: 'relief', title: 'relief code', names: 'q (mm, in the frame of the object wearing it) -> h (mm, outward), slope (a bound on its gradient)', owner: mat.id })
+        codeEditor(rf, holder, { kind: 'relief', title: 'relief code', names: 'q (mm, in the frame of the object wearing it) -> h (mm, outward), slope (a bound on its gradient)', owner: mat.id,
+            params: () => paramRows(owner, Object.keys(mat.relief?.params || {}).filter(k => k !== 'amplitude')) })
     }
 
     /* A CODE NODE'S (OR A MATERIAL'S) PARAMETERS are edited where they are shown: a + in the folder's header adds
@@ -1944,7 +1949,17 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
     /* `same`: the other nodes whose errors are this code's -- a block's other users (model.js version 16): the scene as
        data compiles a block once, its errors reported against the first node that uses it */
     const CODE_HELP_AT = { material: 'materials', relief: 'noise' }
-    function codeEditor(folder, node, { kind = 'object', title = 'code', names = '', owner = node.id, same = () => [] } = {}) {
+    /* A BLOCK'S OWN PARAMETERS as the Insert pane lists them: each by the name its code reads, its type, and its unit --
+       a material's and a relief's lengths are real mm, a node's in the scene's unit (unitOf) */
+    const paramRows = (owner, keys) => keys.map(k => {
+        const v = owner.params?.[k]
+        if (isProfile(v)) return { name: k, type: 'an outline', text: 'pass its name: extrude(' + k + ', p, height), revolve(' + k + ', p), profile(' + k + ', q)' }
+        if (isPath(v)) return { name: k, type: 'a path', text: 'pass its name: tube(' + k + ', p, radius, 0.0), sweep(' + k + ', outline, p)' }
+        const t = wgslTypeOf(v).replace('vec2<f32>', 'VEC2').replace('vec3<f32>', 'VEC3').replace('vec4<f32>', 'VEC4')
+        const colour = v && typeof v === 'object' && 'r' in v
+        return { name: k, type: colour ? 'VEC3' : t, text: colour ? 'a colour, linear RGB 0..1' : M.isLength(owner, k) ? `a length, ${unitOf(owner)}` : 'a parameter of this block' }
+    })
+    function codeEditor(folder, node, { kind = 'object', title = 'code', names = '', owner = node.id, same = () => [], values = () => null, params = () => [] } = {}) {
         const lines = s => String(s || '').split('\n').length
         if (typeof node.code !== 'string') node.code = ''
         const key = `${kind}:${codeOnly(node.code).trim() ? 'code' : 'comments'}`
@@ -1967,7 +1982,28 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
             margin: '2px 4px 6px', borderRadius: '3px', background: 'rgba(0,0,0,0.25)',
         })
         b.element.after(box)
-        cf.addButton({ title: 'Apply code  (Ctrl+Enter)' }).on('click', () => onApply())
+        const apply = cf.addButton({ title: 'Apply code  (Ctrl+Enter)' })
+        apply.on('click', () => onApply())
+        /* WHAT IT CAN SET, READ AND CALL (builder/codehelper.js, the user, 2026-11-07): a click puts a line in at the caret
+           -- or, in a box never clicked into, at its end, under the comments it starts with. The text goes in as typing
+           does: setRangeText and an input event, which PropertyTable's own handler writes to the document and the
+           editor's below takes as an edit (an undo step, a check after the pause). Open or folded is remembered per kind. */
+        let caretAt = null
+        const insert = (text, { line = true } = {}) => {
+            const ta = b.element.querySelector('textarea')
+            if (!ta) return
+            const at = placeInsert(ta.value, caretAt, text, { line })
+            ta.setRangeText(at.text, at.start, at.end, 'end')
+            const rows = lines(ta.value) + 2
+            if (rows > ta.rows && rows <= 24) ta.rows = rows
+            ta.dispatchEvent(new Event('input'))
+            ta.focus()
+            ta.setSelectionRange(at.caret, at.caret)
+            caretAt = at.caret
+        }
+        const insertKey = `insert:${kind}`
+        const helper = codeHelper({ kind, values, params, insert, open: foldState()[insertKey] ?? false, onFold: o => keepFold(insertKey, o) })
+        apply.element?.after(helper.el)
         /* WHAT THERE IS TO CALL (the user, 2026-10-24, of the reference of the functions code can call: "add that
            button"): Help at that page, at the part a block of this kind reaches for first -- a material's helpers, a
            relief's noise -- and at its top for the rest. `help(page, anchor)` is the host's (app.html opens its Help
@@ -2001,7 +2037,13 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
            rewires it on a zero timeout, so attach after that to see the final element. */
         setTimeout(() => {
             const ta = b.element.querySelector('textarea')
+            /* the Insert pane under the check's messages: Tweakpane puts each button before the next element after the
+               editor, so the messages end below the buttons -- and the pane went above them, between the Apply button
+               and what the check says */
+            box.after(helper.el)
             if (!ta) return say('(editor not found -- PropertyTable changed?)', '#ff8a80')
+            // where the caret was last, for the Insert pane: its click takes the focus away
+            for (const ev of ['keyup', 'mouseup', 'select', 'blur']) ta.addEventListener(ev, () => { caretAt = ta.selectionEnd })
             ta.addEventListener('input', () => {
                 edited(`${node.id}.code`)       // a burst of typing is one undo step
                 clearTimeout(timer); timer = setTimeout(run, 500)
