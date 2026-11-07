@@ -100,6 +100,18 @@
       780 nm a prism's reflectance changes by about 0.01 at most (section 6). A reflected ray never gets a wavelength: it keeps all three
       channels alike, white, and free of <em>colour noise</em>, the speckle of different colours from path to path that
       only many paths average away. Only the refracted light carries the rainbow, and its noise.</p>
+    <p>The weights assume the light in each channel is spread over that channel's wavelengths, which is true of white
+      light and false of a narrow one. A blue LED whose light is all within a few nanometres of 450 nm is, in red, green
+      and blue, (3.69, −4.60, 48.5) at brightness 1: mostly blue, a little red, and a negative green, because a colour
+      that saturated lies outside what three positive channels can make (chapter 6). Drawn by the weights, its red part
+      would land where the red channel's wavelengths are, 83% of them between 560 and 640 nm, and the prism would throw
+      a red band at the far end of a blue LED's rainbow. So a light that is given by its own spectrum (a few peaks, a
+      measured table, a blackbody) hands its <em>photons</em>, the rays it sends out into the scene (chapter 18), that
+      spectrum. At the glass such a photon draws its wavelength from the light's own spectrum, in 1 nm steps, and takes
+      that wavelength's exact colour, a negative channel and all (<code>lightspectra.js</code>). Its light leaves the
+      prism only where the LED really shines, each wavelength in its own colour, and the colours still add up to the
+      light's. A path from the camera cannot do the same: it meets the glass before it knows which light it will reach,
+      so it still draws by the weights.</p>
     <div data-claim="inferred">
       <p><strong>The fit's red end.</strong> The colour-matching curves are a fit (chapter 6), and its tails are its
         weakest part: past about 700 nm its ȳ outlasts its x̄, and its red response is 0 from 733 nm, so the last bins
@@ -170,11 +182,12 @@
     <pre data-src="lib/pathtracer/core/spectral.js" data-sym="/** THE WAVELENGTH DRAW:" data-to="acc += p"
          data-why="u is one random number in [0, 1). Lay the bins' chances end to end along a line from 0 to 1, each as long as its chance: u lands in one of them, and a long one is landed in more often. The loop walks the bins until their chances add up past u, then t places the wavelength evenly within that bin (the last bin catches anything rounding leaves over). w is the three weights, W_c / P." data-hash="6ad275dd"></pre>
     <p>And where a ray meets a dispersive glass, in the shading kernel: an index for a ray that already has a wavelength,
-      a pick for one that does not, used only if it refracts; then, if it does, the line that multiplies the ray's
-      three channels by the weights and gives it its wavelength
-      (<cite data-src="lib/pathtracer/core/materials_pbr.js" data-sym="if (draw) { res.r.beta *= spec.w; res.r = withLambda(res.r, spec.lambda); }"></cite>):</p>
+      a pick for one that does not, used only if it refracts (from its light's own spectrum, for a photon that carries
+      one); then, if it does, the lines that multiply the ray's three channels by the weights, or give such a photon its
+      wavelength's colour, and give it its wavelength
+      (<cite data-src="lib/pathtracer/core/materials_pbr.js" data-sym="if (ls > 0u) { res.r.beta = lsBeta(res.r.beta, ls - 1u, spec.w); } else { res.r.beta *= spec.w; }"></cite>):</p>
     <pre data-src="lib/pathtracer/core/materials_pbr.js" data-sym="/* DISPERSION (0.40.0; spectral.js). A ray that has a wavelength meets every medium at n(its wavelength)" data-to="nT = cauchyN(_n1, v1, spec.lambda);"
-         data-why="WGSL, the graphics card's language (chapter 21). _n1 is the glass's n_d, _v1 its Abbe number (0: no dispersion). v1 is the one used, _v1 itself: a scene with dispersion off is compiled with no Abbe number on any glass, so _v1 is 0 there (it was a render setting, UB.dispersionOff, from 0.74.0 until the scene's optical features took it). lam0 is the wavelength the ray already has, 0 for none. select(a, b, c) is WGSL's way of writing c ? b : a, so n1 is n(λ) for a ray with a wavelength and n_d otherwise. PRNG() gives four random numbers between 0 and 1, .x the first. lambdaCoded rounds the picked wavelength to what the ray can store, so every later index is worked out from exactly the same number. 'A photon started inside one': a ray started by a light (chapter 18) that sits inside the glass." data-hash="cf3a9ef2"></pre>
+         data-why="WGSL, the graphics card's language (chapter 21). _n1 is the glass's n_d, _v1 its Abbe number (0: no dispersion). v1 is the one used, _v1 itself: a scene with dispersion off is compiled with no Abbe number on any glass, so _v1 is 0 there (it was a render setting, UB.dispersionOff, from 0.74.0 until the scene's optical features took it). lam0 is the wavelength the ray already has, 0 for none. select(a, b, c) is WGSL's way of writing c ? b : a, so n1 is n(λ) for a ray with a wavelength and n_d otherwise. PRNG() gives four random numbers between 0 and 1, .x the first. lambdaCoded rounds the picked wavelength to what the ray can store, so every later index is worked out from exactly the same number. 'A photon started inside one': a ray started by a light (chapter 18) that sits inside the glass. lsOf(res.r) is 0 for every ray but a light's photon that carries its light's spectrum (section 3), which draws from that spectrum (lsDraw) and not by the channels' weights (specDraw); one random number either way, lsu, so every number drawn after is the same." data-hash="0d59a400"></pre>
     <p>The wavelength rides in the ray's tag, a 32-bit word of flags, in its top 15 bits: 0 for none, otherwise 380 nm
       plus (the code − 1) × 400/32,766 nm (codes 1 to 32,767: 32,766 steps between them), steps of 0.012 nm
       (<cite data-src="lib/pathtracer/core/spectral.js" data-sym="export const lambdaCode = l =>"></cite>), so a ray
@@ -222,7 +235,11 @@
         the index of its own wavelength to within 10⁻⁵; averaging the share not reflected in every channel
         (<code>core/test/dispersion.gpu.mjs</code>, Dawn on a software driver: correctness, never speed). On the user's
         card the test with a wedge (<code>optics-dispersion</code>) has not yet been run; it expects −23.892°, −24.177°
-        and −24.860° for red, green and blue.</p>
+        and −24.860° for red, green and blue. A light's own spectrum, through the whole renderer: a beam through a 30° prism
+        onto a wall. Where wavelengths of 550 nm and longer land, the 450 nm LED's photons put 2.0 ± 0.2 in red,
+        against 518,383 when the same light is given by its colour alone, and 8.07 million in blue on its own band. Where
+        480 nm and shorter land, the red LED's put 16.8 ± 0.6 in red, against 28,653 (<code>core/test/prism.gpu.mjs</code>,
+        Dawn on a software driver, 128 samples: correctness, never speed).</p>
     </div>
     <div data-claim="code">
       <p><strong>What it leaves out.</strong> The reflectance's own change with wavelength at the first surface
@@ -244,6 +261,11 @@
         ray's own red, green and blue, and the same bundle sums to white (<code>CHANGELOG.md</code>, 0.44.1).</li>
       <li><strong>A wavelength squeezed.</strong> The tag first gave the wavelength 16 bits; another flag took one in
         0.44.0, leaving 15, steps of 0.012 nm instead of 0.006 (<code>spectral.js</code>).</li>
+      <li><strong>A blue LED's red rainbow.</strong> A light given by a single peak at 450 nm, 10 nm wide, threw a fan of
+        blue from 380 to 510 nm through a prism, and a band of red at the red end; a red LED put a band of red in the
+        violet (the user's pictures, 2026-11-07). Every photon drew its wavelength by the channels' weights, the light's
+        spectrum unused: the red LED's red lost the 4.6% of the red channel's weights that lie below 480 nm, in its violet
+        lobe. A light's photons now draw from its own spectrum (section 3; <code>CHANGELOG.md</code>, 0.next).</li>
       <li><strong>A test that crashed the driver.</strong> A loop around the shading function made the software graphics
         driver crash; the test calls it once a thread instead (<code>dispersion.gpu.mjs</code>).</li>
     </ul>
