@@ -40,7 +40,6 @@ export const ITEMS = [
     row('optics-farfield', 'never', 'open — first press.', "Whether the far-field grid (the Intensity tab) gives a source's known curve", 'optics', 'does the far field give known curves?'),
     row('optics-absorption', 'never', 'open — first press.', 'Whether glass absorbs with its thickness', 'glass', 'does glass absorb with thickness?'),
     row('optics-coating', 'never', 'open — first press.', 'reflects and passes what it says', 'dispersion', 'does a coating do what it says?'),
-    row('optics-dispersion', 'never', 'open — first press.', 'fans white light as Snell and Cauchy say', 'dispersion', 'does glass fan white light right?'),
     row('volume', 'never', 'open — built, not pressed.', 'Whether scatter inside a material', 'glass', 'does milky glass keep its light?'),
     row('frame-cost', 'never', 'open — needs a real card.', 'What the f32 compare-and-swap frame buffer costs.', 'accumulate', 'what does the frame buffer cost?'),
     row('render-modes-cost', 'never', 'open — built 2026-10-01, never pressed.', 'What the Quality presets cost on the scene and view you have', 'feel', 'what does each Quality preset cost?'),

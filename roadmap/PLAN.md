@@ -566,7 +566,10 @@ code, a look each.
      30 degree prism leaves nothing where the old draw put red. Open: the camera's own paths still draw by the
      channels (a light seen through a prism, which only they reach through a pinhole); that needs a light's face to
      name its spectrum (codegen LIGHTS, scenedata.js) and a draw whose weights a spectrum can divide.
-     **The channels' draw at 1 nm (0.next), not yet seen.** The user asked (2026-11-07) whether the spectral resolution could
+     **The channels' draw at 1 nm (0.next).** Its weights measured: `optics-dispersion` PASS on the user's NVIDIA
+     Pascal (2026-11-07, af3cd7c), each channel's mean exit angle within 0.001 degrees of the 1 nm weights' (red
+     -23.8867 against -23.8858, green -24.1774 against -24.1773, blue -24.8590 against -24.8593). The picture's rainbow
+     without bands not yet seen. The user asked (2026-11-07) whether the spectral resolution could
      go to 1 nm, as a setting if it cost speed. What was 10 nm: the camera's draw, its colour constant over each bin --
      a rainbow seen through glass stepped by up to 0.136 u'v' between two bins at 480 nm, 0.014 between two 1 nm cells
      (computed) -- and a coating's per-channel average. The draw is now a 1 nm table from the CIE's own 1931 table, in

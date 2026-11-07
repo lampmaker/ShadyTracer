@@ -245,8 +245,11 @@
         ray at 45° onto glass of index 1.75: reflected at the yellow line's Fresnel and white; refracted along Snell at
         the index of its own wavelength to within 10⁻⁵; averaging the share not reflected in every channel
         (<code>core/test/dispersion.gpu.mjs</code>, Dawn on a software driver: correctness, never speed). On the user's
-        card the test with a wedge (<code>optics-dispersion</code>) has not yet been run; it expects −23.886°, −24.177°
-        and −24.859° for red, green and blue (−23.891°, −24.177° and −24.860° by the 10 nm bins before 0.next). A light's own spectrum, through the whole renderer: a beam through a 30° prism
+        card (an NVIDIA Pascal, 2026-11-07, at af3cd7c) the test with a wedge (<code>optics-dispersion</code>, 400,000
+        rays a row) read −23.8867°, −24.1774° and −24.8590° for red, green and blue, against the −23.8858°, −24.1773° and
+        −24.8593° the 1 nm weights and Snell's law give, and the control without dispersion −23.92327° against
+        −23.92327°: all four within 0.001° (by the 10 nm bins before 0.next the expectation was −23.891°, −24.177° and
+        −24.860°). A light's own spectrum, through the whole renderer: a beam through a 30° prism
         onto a wall. Where wavelengths of 550 nm and longer land, the 450 nm LED's photons put 2.0 ± 0.2 in red,
         against 518,383 when the same light is given by its colour alone, and 8.07 million in blue on its own band. Where
         480 nm and shorter land, the red LED's put 16.8 ± 0.6 in red, against 28,653 (<code>core/test/prism.gpu.mjs</code>,
