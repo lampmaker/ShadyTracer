@@ -1651,6 +1651,9 @@ throws('another version is refused, not guessed at',
     throws('the camera\'s mode is a word, not a value a curve passes through', () => M.setAnimated(a, 'view/camera/mode', true), /not a value/)
     throws('...nor its target, three numbers at once', () => M.setAnimated(a, 'view/camera/target', true), /not a value/)
     throws('...nor an exposure setting that is not one', () => M.setAnimated(a, 'view/exposure/iso', true), /not a value/)
+    M.setAnimated(a, 'view/camera/pose', true)
+    ok('the whole camera as one value is (0.next: lib/pathtracer/params.js CAMERA POSE)', M.isAnimated(a, 'view/camera/pose'))
+    M.setAnimated(a, 'view/camera/pose', false)
     M.setAnimated(a, 'view/camera/azimuth', false)
     eq('unflagged', M.animatedPaths(a), ['view/exposure/exposureEV', 'scene/environment/uSunElevation'])
     // a node may be called camera: its values are scene/camera/..., the view's view/camera/...

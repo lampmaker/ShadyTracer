@@ -378,5 +378,21 @@ for (const f of scenes) {
     ok('a library item\'s unit follows; null stays null', d.libraryItem.unit === 'mm' && e.libraryItem.unit === null)
 }
 
+// ---- THE CAMERA AS ONE VALUE (0.next, lib/pathtracer/params.js CAMERA POSE): a key on `view/camera/pose` is ten numbers,
+// eye xyz, target xyz, up xyz, field of view -- only the first six are lengths
+{
+    const d = M.createDoc({ title: 'pose' })
+    M.setTimeline(d, { fps: 30, duration: 1, tracks: [{ prop: 'view/camera/pose', interp: 'smooth', keys: [{ t: 0, v: [1, 2, 3, 0, 0, 0.5, 0, 0.6, 0.8, 40] }] }] })
+    for (const how of ['scale', 'dimensions']) {
+        const e = structuredClone(d)
+        changeUnit(e, 'mm', how)
+        ok(`a pose key to mm (${how}): its eye and target a thousand times, its up and its field as they were`,
+            JSON.stringify(e.timeline.tracks[0].keys[0].v) === JSON.stringify([1000, 2000, 3000, 0, 0, 500, 0, 0.6, 0.8, 40]), JSON.stringify(e.timeline.tracks[0].keys[0].v))
+    }
+    const e = structuredClone(d)
+    changeUnit(e, 'mm', 'keep')
+    ok('...kept: nothing', JSON.stringify(e.timeline) === JSON.stringify(d.timeline))
+}
+
 console.log(`unitchange: ${pass} passed, ${fail} failed`)
 if (fail) process.exit(1)

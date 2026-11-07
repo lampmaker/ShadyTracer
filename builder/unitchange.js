@@ -131,7 +131,9 @@ const boundValues = n => structuredClone({ transform: n.transform, params: n.par
 export function trackFactor(doc, prop, how, k) {
     if (how === 'keep' || k === 1) return 1
     let m = /^view\/camera\/([^/]+)$/.exec(prop)
-    if (m) return CAMERA_LENGTHS.includes(m[1]) ? k : 1
+    // the pose (0.next, lib/pathtracer/params.js CAMERA POSE): k for its eye and target, which convertOutside alone
+    // applies it to (POSE_LENGTHS) -- its up and its field of view are no lengths
+    if (m) return CAMERA_LENGTHS.includes(m[1]) || m[1] === 'pose' ? k : 1
     m = /^scene\/([^/]+)\/(.+)$/.exec(prop)
     if (!m) return 1
     const [, id, rest] = m
@@ -157,17 +159,21 @@ export function cameraTimes(camera, f) {
     return out
 }
 
-/* THE VIEW AND THE TIMELINE, converted by the factor of `from` to `to` for a change made `how`: the camera's lengths, and
-   each key on a track whose value was converted */
+/* THE CAMERA POSE'S LENGTHS: of its ten numbers [eye xyz, target xyz, up xyz, fov], the first six */
+const POSE_LENGTHS = 6
+/* THE VIEW AND THE TIMELINE, converted by the factor of `from` to `to` for a change made `how`: the camera's lengths, the
+   saved views' (model.js VIEW, 0.next), and each key on a track whose value was converted -- a pose's eye and target only */
 function convertOutside(doc, from, to, how) {
     if (how === 'keep' || from === to) return
     const k = unitFactor(from, to)
     if (doc.view?.camera) doc.view.camera = cameraTimes(doc.view.camera, k)
+    if (doc.view?.saved) doc.view.saved = doc.view.saved.map(s => ({ ...s, camera: cameraTimes(s.camera, k) }))
     for (const t of doc.timeline?.tracks || []) {
         const f = trackFactor(doc, t.prop, how, k)
         if (f === 1) continue
+        const upTo = t.prop === 'view/camera/pose' ? POSE_LENGTHS : Infinity
         for (const key of t.keys || []) key.v = typeof key.v === 'number' ? round(key.v * f)
-            : Array.isArray(key.v) ? key.v.map(x => typeof x === 'number' ? round(x * f) : x) : key.v
+            : Array.isArray(key.v) ? key.v.map((x, i) => typeof x === 'number' && i < upTo ? round(x * f) : x) : key.v
     }
 }
 

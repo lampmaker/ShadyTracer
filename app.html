@@ -114,6 +114,7 @@
         import { installOpticsPage, OPTICS_CHARTS, chartSet } from './optics/page.js'
         import { installMeasureTool } from './lib/pathtracer/measure/tool.js'
         import { installFocusPick } from './lib/pathtracer/focuspick.js'
+        import { installViewList } from './builder/viewlist.js'
         import { report, reloadFresh, staleFiles } from './diagnose.js'
         import { versionText, loadRevision, stamp } from './version.js'
         import { safeStartOf, started, safeNote, firstCompile } from './start.js'
@@ -1541,6 +1542,11 @@
                 frame: () => new Promise(r => requestAnimationFrame(r)), build: versionText }),
         });
         BUILDER.onScript = text => window.SCRIPT.showScene(text);
+
+        /* SAVED VIEWS (builder/viewlist.js; builder/model.js VIEW, 0.next): the scene's saved cameras at the foot of the
+           Camera popover, under Pick focus -- saved, gone to, renamed, kept again and taken away through the builder,
+           into the scene the renderer shows. VIEWLIST in the console. */
+        window.VIEWLIST = installViewList({ el: VIEW.popoverEl('Camera'), BUILDER, RT });
 
         /* THE MEASURE TOOL: pinned readings and a rectangle's average over the picture, points on surfaces and the
            distances between them (its ruler), and the false colour's legend (lib/pathtracer/measure). Reads nothing
