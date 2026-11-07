@@ -1280,6 +1280,62 @@ ok('...and the visibility beside it follows: 3.912 x 4 m, 15.6 m', /^visibility 
     await p.evaluate(() => CHECK.panel.show(null))
 }
 
+// THE INSERT PANE (builder/codehelper.js, 0.next): under a material's code box, every field as the line that sets it from
+// the material's own values; a click puts the line in the code -- at its end, under the comments, when the box was never
+// clicked into -- as an edit, and the document has it; its search finds the coating's line; a relief's lists h and slope,
+// a node's its parameters; under each code box once.
+{
+    const pane = (id, sel = '#t') => p.evaluate(([id, sel]) => {
+        CHECK.panel.show(id)
+        return [...document.querySelectorAll(`${sel} details.rt-code-insert`)].map(d => d.closest('.tp-fldv')?.querySelector('.tp-fldv_t')?.textContent ?? '')
+    }, [id, sel])
+    const open = (k = 0) => p.evaluate(k => {
+        const d = document.querySelectorAll('#t details.rt-code-insert')[k]
+        d.querySelector('summary').click()
+        return new Promise(r => setTimeout(() => r([...d.querySelectorAll('.rt-code-insert-row')].map(r => r.firstChild.textContent)), 50))
+    }, k)
+    const click = (text, k = 0) => p.evaluate(([text, k]) => {
+        const d = document.querySelectorAll('#t details.rt-code-insert')[k]
+        const row = [...d.querySelectorAll('.rt-code-insert-row')].find(r => r.firstChild.textContent === text)
+        if (!row) return 'no row'
+        row.click()
+        return 'clicked'
+    }, [text, k])
+    await p.evaluate(() => { CHECK.M.material(CHECK.doc, 'gl').params.roughness = 0.35; CHECK.M.material(CHECK.doc, 'gl').code = '' })
+    const titles = await pane('gl')
+    ok('a material\'s code box has one Insert pane', titles.length === 1, JSON.stringify(titles))
+    const rows = await open()
+    ok('...whose rows are every field\'s line, from the material\'s own values', rows.includes('m.roughness = 0.35;') && rows.includes('m.ior = 1.5;')
+        && rows.some(r => r.startsWith('m = coatMaterial(m, 1u,')) && rows.includes('m.tangent = grainAlong(R_local, VEC3(1.0, 0.0, 0.0));'), JSON.stringify(rows.slice(0, 30)))
+    ok('...what it reads, its recipes and functions among them', rows.includes('p_local') && rows.some(r => r.includes('600.0, 20.0, 1.8);   // where'))
+        && rows.includes('srfNoise(x, seed)'), JSON.stringify(rows.filter(r => /p_local|srf|600/.test(r))))
+    const before = await state()
+    ok('clicking a row', await click('m.roughness = 0.35;') === 'clicked')
+    const code = await p.evaluate(() => CHECK.M.material(CHECK.doc, 'gl').code)
+    ok('...puts the line in the document\'s code, at its end under the comments', code.startsWith('// Material code') && code.trimEnd().endsWith('\nm.roughness = 0.35;'), JSON.stringify(code.slice(-80)))
+    ok('...as an edit (an undo step under the code\'s key)', (await state()).commits.length > before.commits.length && (await state()).commits.at(-1) === 'gl.code', JSON.stringify((await state()).commits.slice(-2)))
+    await click('m.metallic = 0.0;')
+    const code2 = await p.evaluate(() => CHECK.M.material(CHECK.doc, 'gl').code)
+    ok('...a second after it, on a line of its own', code2.trimEnd().endsWith('m.roughness = 0.35;\nm.metallic = 0.0;'), JSON.stringify(code2.slice(-60)))
+    const found = await p.evaluate(() => {
+        const d = document.querySelector('#t details.rt-code-insert'), q = d.querySelector('input[type=search]')
+        q.value = 'dichroic'; q.dispatchEvent(new Event('input'))
+        return [...d.querySelectorAll('.rt-code-insert-row')].filter(r => !r.hidden && !r.closest('details[hidden]')).map(r => r.firstChild.textContent)
+    })
+    ok('its search finds the dichroics, and only rows that say the word', found.length >= 2 && found.every(r => /coatMaterial/.test(r)), JSON.stringify(found))
+    await p.evaluate(() => { CHECK.M.setRelief(CHECK.doc, 'gl', 'ripple') })
+    const two = await pane('gl')
+    ok('a material with a relief: a pane under each code box', two.length === 2, JSON.stringify(two))
+    const rel = await open(1)
+    ok('...the relief\'s lists h and slope, what it reads and its recipes', rel.some(r => r.startsWith('h = ')) && rel.some(r => r.startsWith('slope = '))
+        && rel.includes('q') && rel.includes('world') && rel.includes('wavelength') && rel.some(r => r.includes('0.70710678')), JSON.stringify(rel))
+    await p.evaluate(() => { CHECK.M.setRelief(CHECK.doc, 'gl', null) })
+    await pane('pr')
+    const node = await open()
+    ok('a node\'s pane lists its parameters by name, its outline as one', node.includes('outline') && node.includes('height') && node.includes('extrude(id, p, height)'), JSON.stringify(node.filter(r => /outline|height|extrude/.test(r))))
+    await p.evaluate(() => { CHECK.panel.show(null) })
+}
+
 ok('no page errors', !errs.length, errs.join('\n'))
 await b.close(); server.close()
 console.log(failed ? `${failed} FAILED` : 'builder panel: all passed')
