@@ -194,10 +194,11 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
    optics/fresnel.js refract), the flint against BK7 at least deviation; n(lambda) through n_d and V_d with BK7's
    catalogue against it; the wavelength draw and its weights averaging exactly 1, drawn live; a dichroic coat's edge
    moving with the tilt and each channel's reflectance (edgeAt, edgeRGB); a light's photon drawing its wavelength from
-   its light's own spectrum, and why (a 450 nm LED's red rainbow, 0.next: lightspectra.js); the shading kernel's dispersion block and
+   its light's own spectrum, and why (a 450 nm LED's red rainbow, 0.next: lightspectra.js); the draw in 1 nm cells of the CIE's table
+   (0.next, 10 nm bins of the fit before: the rainbow's colour in steps), coatings kept at 10 nm and why; the shading kernel's dispersion block and
    its off switch (the scene's optical features, 0.83.0: every material compiled without its Abbe number, the picture and the Optics page alike; a render setting, UB.dispersionOff, from 0.74.0 until then); the
    comments' stale bit count, softplus count, red's range and BK7 accuracy; the green reflections of 0.44.1 ->
-   spectral.js, lightspectra.js, materials_pbr.js. *Read:* wiki-dispersion, wiki-abbe, wiki-cauchy, pbr-spectra.
+   spectral.js, lightspectra.js, lightspectra_wgsl.js, materials_pbr.js. *Read:* wiki-dispersion, wiki-abbe, wiki-cauchy, pbr-spectra.
 
 **IV. Path tracing**
 12. **Dice and averages** (draft): π from darts with measure.js's error bar, 240 estimates a column against 1/√N,

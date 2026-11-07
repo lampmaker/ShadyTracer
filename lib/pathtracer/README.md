@@ -384,7 +384,10 @@ pdf, so light sampling and BSDF sampling can be weighted against each other hone
   Cauchy's through both. A ray refracted INTO a dispersive medium draws a wavelength there and weighs its channels by
   it (mean 1 in each); every index it meets after is n(that wavelength). It rides in `Ray.tag`'s upper 16 bits
   (`TAG_LAMBDA_MASK`: a new flag stays below bit 17, and bit 16 is `TAG_LENS_X` since 0.83.0). The pick and Fresnel at that first refraction are the d line's,
-  so reflections stay white.
+  so reflections stay white. The draw (`core/lightspectra.js`, 0.next) is from 1 nm cells of 380-780 nm: by the channels'
+  clipped Rec.709 functions from the CIE's table for every ray (10 nm bins of the analytic fit until then), and from its
+  light's own spectrum, with each wavelength's exact colour, for a light's photon that carries one (`Ray.pix` `PIX_LS`).
+  Both tables sit in the learn buffer past the microfacet tables.
 - **Transmission** refracts with the same IOR (the ray's current IOR from the path, the other
   side's from the material, or an SDF probe for glass), reflecting by the exact Fresnel. Rough
   transmission is sampled (a facet from the visible normals, then reflect or refract by that

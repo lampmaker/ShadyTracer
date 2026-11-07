@@ -5,8 +5,9 @@
 //          cauchyN from the glass's n_d and Abbe number, optics/fresnel.js refract -- drawn in its own colour
 //   index  n(lambda) of two catalogue glasses and of yours, Cauchy through n_d and V_d, with the three Fraunhofer lines a
 //          catalogue gives them at, and BK7's catalogue n_F and n_C against the formula
-//   draw   how the renderer gives a ray a wavelength: spectral.js specDraw, a 10 nm bin by the channels' summed weights,
-//          and the weight each channel then carries -- which averages to exactly 1, so the colours add back to white
+//   draw   how the renderer gives a ray a wavelength: lightspectra.js specDraw, a 1 nm cell by the channels' summed
+//          weights (CAMERA_TABLE; 10 nm bins until 0.next), and the weight each channel then carries -- which averages to
+//          exactly 1, so the colours add back to white
 //   coat   a dichroic coating's reflectance over the wavelengths, its edge moving bluer as the light tilts (edgeAt), and
 //          what each of the ray's three channels reflects (edgeRGB): no wavelength drawn at all
 //======================================================================================================================
@@ -14,11 +15,14 @@
 import { boot } from '../kit/page.js'
 import { plot } from '../kit/plot.js'
 import { rng } from '../kit/flatland.js'
-import { cmf, cauchyN, specDraw, edgeRGB, edgeAt, edgeScale, SPEC_PICK, SPEC_WEIGHTS, SPEC_LO, SPEC_STEP, SPEC_BINS, LAMBDA_D, LAMBDA_F, LAMBDA_C } from '../../lib/pathtracer/core/spectral.js'
+import { cmf, cauchyN, edgeRGB, edgeAt, edgeScale, SPEC_WEIGHTS, SPEC_LO, SPEC_STEP, SPEC_BINS, LAMBDA_D, LAMBDA_F, LAMBDA_C } from '../../lib/pathtracer/core/spectral.js'
+import { specDraw, CAMERA_TABLE, LS_LO, LS_CELLS } from '../../lib/pathtracer/core/lightspectra.js'
 import { XYZtoxy, rgbFromXy, gamutClip } from '../../lib/pathtracer/core/colorimetry.js'
 import { refract } from '../../lib/pathtracer/optics/fresnel.js'
 
 const DEG = Math.PI / 180, clamp = (v, a, b) => Math.min(b, Math.max(a, v))
+/** each 1 nm cell's chance in the draw (lightspectra.js CAMERA_TABLE's CDF, step by step) */
+export const PICK = Array.from({ length: LS_CELLS }, (_, k) => CAMERA_TABLE.cdf[k] - (k ? CAMERA_TABLE.cdf[k - 1] : 0))
 const srgb = v => v <= 0.0031308 ? 12.92 * v : 1.055 * Math.pow(v, 1 / 2.4) - 0.055
 /** a wavelength's colour on this screen, at full strength: its chromaticity (spectral.js cmf), clipped, brightest 1.
  *  Past 700 nm the colour of 700: the fit's tails part from the CIE's table there (its y-bar outlasts its x-bar, and its
@@ -156,16 +160,16 @@ export const figures = {
         steps: { bins: { n: 0, seed: 1 }, many: { n: 20000, seed: 1 } },
         draw(pen, s) {
             const { W, H } = pen.view, rect = { x: W * 0.08, y: H * 0.08, w: W * 0.6, h: H * 0.7 }, { ctx } = pen
-            const mid = k => SPEC_LO + (k + 0.5) * SPEC_STEP, top = Math.max(...SPEC_PICK) * 1.1
+            const mid = k => LS_LO + k + 0.5, top = Math.max(...PICK) * 1.1
             plot(pen, rect, {
-                x: [SPEC_LO, SPEC_LO + SPEC_BINS * SPEC_STEP], y: [0, top], xticks: [400, 500, 600, 700], yticks: [0.02, 0.04, 0.06], fmt: v => v >= 1 ? `${v}` : `${(100 * v).toFixed(0)}%`,
-                hoverX: v => { const k = clamp(Math.floor((v - SPEC_LO) / SPEC_STEP), 0, SPEC_BINS - 1), p = SPEC_PICK[k], w = SPEC_WEIGHTS[k].map(x => p > 0 ? x / p : 0); return `${SPEC_LO + k * SPEC_STEP}-${SPEC_LO + (k + 1) * SPEC_STEP} nm: picked ${(100 * p).toFixed(2)}% of the time; weights R ${w[0].toFixed(2)}, G ${w[1].toFixed(2)}, B ${w[2].toFixed(2)}` },
-                hoverY: () => '', series: [{ name: 'chance', pts: SPEC_PICK.map((p, k) => [mid(k), p]), role: 'soft', kind: 'bars', tip: false }],
+                x: [LS_LO, LS_LO + LS_CELLS], y: [0, top], xticks: [400, 500, 600, 700], yticks: [0.002, 0.004, 0.006], fmt: v => v >= 1 ? `${v}` : `${(100 * v).toFixed(1)}%`,
+                hoverX: v => { const k = clamp(Math.floor(v - LS_LO), 0, LS_CELLS - 1), p = PICK[k], w = [0, 1, 2].map(c => CAMERA_TABLE.col[3 * k + c]); return `${LS_LO + k}-${LS_LO + k + 1} nm: picked ${(100 * p).toFixed(3)}% of the time; weights R ${w[0].toFixed(2)}, G ${w[1].toFixed(2)}, B ${w[2].toFixed(2)}` },
+                hoverY: () => '', series: [{ name: 'chance', pts: PICK.map((p, k) => [mid(k), p]), role: 'soft', kind: 'bars', tip: false }],
             })
-            // each bin's bar in its own colour, under the plot's grey
-            const X = v => rect.x + (v - SPEC_LO) / (SPEC_BINS * SPEC_STEP) * rect.w, Yp = v => rect.y + rect.h - v / top * rect.h, bw = rect.w / SPEC_BINS * 0.8
-            SPEC_PICK.forEach((p, k) => { ctx.save(); ctx.fillStyle = waveColour(mid(k)); ctx.globalAlpha = 0.8; ctx.fillRect(X(mid(k)) - bw / 2, Yp(p), bw, rect.y + rect.h - Yp(p)); ctx.restore() })
-            pen.labelPx(rect.x - 20, rect.y - 18, 'the chance of each 10 nm bin being picked (point at a bin for its weights)', { role: 'soft', size: 12 })
+            // each cell's bar in its own colour, under the plot's grey: one bar a cell, as wide as it is
+            const X = v => rect.x + (v - LS_LO) / LS_CELLS * rect.w, Yp = v => rect.y + rect.h - v / top * rect.h, bw = rect.w / LS_CELLS
+            PICK.forEach((p, k) => { ctx.save(); ctx.fillStyle = waveColour(mid(k)); ctx.globalAlpha = 0.8; ctx.fillRect(X(LS_LO + k), Yp(p), bw + 0.5, rect.y + rect.h - Yp(p)); ctx.restore() })
+            pen.labelPx(rect.x - 20, rect.y - 18, 'the chance of each 1 nm cell being picked (point at a cell for its weights)', { role: 'soft', size: 12 })
             // the running average of the three weights over the draws so far: towards 1 each
             const R = rng(s.seed * 7919 + 1), acc = [0, 0, 0]
             for (let i = 0; i < s.n; i++) { const d = specDraw(R()); for (let c = 0; c < 3; c++) acc[c] += d.w[c] }
@@ -184,9 +188,9 @@ export const figures = {
         readout(s) {
             const R = rng(s.seed * 7919 + 1), acc = [0, 0, 0]
             for (let i = 0; i < s.n; i++) { const d = specDraw(R()); for (let c = 0; c < 3; c++) acc[c] += d.w[c] }
-            const exact = [0, 1, 2].map(c => SPEC_PICK.reduce((a, p, k) => a + (p > 0 ? p * SPEC_WEIGHTS[k][c] / p : 0), 0))
-            return s.n ? `${s.n.toLocaleString('en')} wavelengths picked: the weights average R ${(acc[0] / s.n).toFixed(3)}, G ${(acc[1] / s.n).toFixed(3)}, B ${(acc[2] / s.n).toFixed(3)} · worked out exactly instead, every bin's chance times its weight added up: ${exact.map(v => v.toFixed(6)).join(', ')}`
-                : `no wavelengths picked yet · worked out exactly, every bin's chance times its weight added up, each channel's weight averages ${exact.map(v => v.toFixed(6)).join(', ')}`
+            const exact = [0, 1, 2].map(c => PICK.reduce((a, p, k) => a + p * CAMERA_TABLE.col[3 * k + c], 0))
+            return s.n ? `${s.n.toLocaleString('en')} wavelengths picked: the weights average R ${(acc[0] / s.n).toFixed(3)}, G ${(acc[1] / s.n).toFixed(3)}, B ${(acc[2] / s.n).toFixed(3)} · worked out exactly instead, every cell's chance times its weight added up: ${exact.map(v => v.toFixed(6)).join(', ')}`
+                : `no wavelengths picked yet · worked out exactly, every cell's chance times its weight added up, each channel's weight averages ${exact.map(v => v.toFixed(6)).join(', ')}`
         },
     },
 }

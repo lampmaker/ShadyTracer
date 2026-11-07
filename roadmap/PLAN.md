@@ -566,6 +566,14 @@ code, a look each.
      30 degree prism leaves nothing where the old draw put red. Open: the camera's own paths still draw by the
      channels (a light seen through a prism, which only they reach through a pinhole); that needs a light's face to
      name its spectrum (codegen LIGHTS, scenedata.js) and a draw whose weights a spectrum can divide.
+     **The channels' draw at 1 nm (0.next), not yet seen.** The user asked (2026-11-07) whether the spectral resolution could
+     go to 1 nm, as a setting if it cost speed. What was 10 nm: the camera's draw, its colour constant over each bin --
+     a rainbow seen through glass stepped by up to 0.136 u'v' between two bins at 480 nm, 0.014 between two 1 nm cells
+     (computed) -- and a coating's per-channel average. The draw is now a 1 nm table from the CIE's own 1931 table, in
+     the learn buffer beside the lights' (`lightspectra.js` CAMERA_TABLE), drawn by binary search: 9 reads where the
+     bins took up to 40 (read in code; untimed). No setting: nothing to gain by turning it off, and a second draw would
+     be code that does not run. Coatings keep 10 nm: at 1 nm the same arithmetic moves R by at most 0.009 (computed)
+     for 400 softplus terms a coated hit instead of 40.
   3. **The exact method for the optics trace** -- a source's spectrum (an LED's SPD, Planck, a Zemax file's own
      wavelength: optRays' unused 4th word), watts as watts, X Y Z from the CMFs at the detector, R(λ) and n(λ) per
      ray; and a true-colour detector map.

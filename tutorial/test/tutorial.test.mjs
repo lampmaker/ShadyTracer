@@ -798,11 +798,19 @@ for (const [name, { mod }] of modules) {
     ok('ch.11: the flint fans blue 3.24 degrees more than red, BK7 0.71, none 0.00', fl('flint').includes('blue bent 3.24°') && fl('bk7').includes('blue bent 0.71°') && fl('none').includes('blue bent 0.00°'), fl('flint'))
     const d = X.throughPrism(SP.LAMBDA_D, 1.75, 28, 31)
     ok('ch.11: at a tilt of 31 degrees the flint\'s yellow ray leaves 31 degrees down: least deviation, symmetric', Math.abs(d.angle - 31) < 0.2, d.angle)
-    // the draw: each channel's weight averages exactly 1; at most 3
-    const exact = [0, 1, 2].map(c => SP.SPEC_PICK.reduce((a, p, k) => a + (p > 0 ? SP.SPEC_WEIGHTS[k][c] : 0), 0))
-    const maxw = Math.max(...SP.SPEC_PICK.flatMap((p, k) => p > 0 ? SP.SPEC_WEIGHTS[k].map(w => w / p) : []))
+    // the draw (lightspectra.js CAMERA_TABLE, 1 nm cells since 0.next): each channel's weight averages exactly 1; at most 3
+    const LSm = await import('../../lib/pathtracer/core/lightspectra.js'), CT = LSm.CAMERA_TABLE
+    const exact = [0, 1, 2].map(c => X.PICK.reduce((a, p, k) => a + p * CT.col[3 * k + c], 0))
+    const maxw = Math.max(...CT.col)
     ok('ch.11: the draw\'s weights average exactly 1 in each channel, and never pass 3', exact.every(v => Math.abs(v - 1) < 1e-12) && maxw <= 3 + 1e-12)
-    ok('ch.11: 20,000 draws average 0.993, 1.014, 0.993', X.figures.draw.readout({ n: 20000, seed: 1 }).includes('R 0.993, G 1.014, B 0.993'))
+    ok('ch.11: 20,000 draws average 0.992, 1.015, 0.993', X.figures.draw.readout({ n: 20000, seed: 1 }).includes('R 0.992, G 1.015, B 0.993'))
+    // the worked pick, the cell from 445 nm; the three humps
+    const c445 = 445 - LSm.LS_LO, w445 = [0, 1, 2].map(c => CT.w[3 * c445 + c])
+    ok('ch.11: the cell from 445 nm is picked 0.614% of the time, responses 0.00107, 0, 0.01736, weights 0.17, 0, 2.83',
+        (100 * X.PICK[c445]).toFixed(3) === '0.614' && w445[0].toFixed(5) === '0.00107' && w445[1] === 0 && w445[2].toFixed(5) === '0.01736'
+        && [0, 1, 2].map(c => CT.col[3 * c445 + c].toFixed(2)).join() === '0.17,0.00,2.83', `${X.PICK[c445]} ${w445}`)
+    const humps = []; for (let k = 1; k < X.PICK.length - 1; k++) if (X.PICK[k] > X.PICK[k - 1] && X.PICK[k] >= X.PICK[k + 1] && X.PICK[k] > 1e-3) humps.push(LSm.LS_LO + k)
+    ok('ch.11: the draw\'s humps at 443, 539 and 588 nm', humps.join() === '443,539,588', humps.join())
     // the coating: a constant reflectance is that reflectance in every channel; the edge at 45 degrees is the bench's 551.8 nm
     ok('ch.11: a coating that reflects 0.3 everywhere reflects 0.3 in every channel; the edge at 45 degrees moves to 551.8 nm, the bench\'s', SP.edgeRGB(0.3, 0.3, 600, 20).every(v => Math.abs(v - 0.3) < 1e-12)
         && X.coatEdge(600, 45).toFixed(1) === '551.8' && readFileSync(join(REPO, 'docs/TESTING.md'), 'utf8').includes('the edge at 551.8 nm'))
@@ -810,8 +818,19 @@ for (const [name, { mod }] of modules) {
     const zero = []; for (let l = 440; l <= 560; l += 0.5) if (SP.rgbBar(l)[0] === 0) zero.push(l)
     ok('ch.11: the tag holds 15 bits from bit 17; 40 bins; red\'s weight 0 from 460 to 552 nm', SP.LAMBDA_SHIFT === 17 && 32 - SP.LAMBDA_SHIFT === 15 && SP.SPEC_BINS === 40 && zero[0] === 460 && zero[zero.length - 1] === 552
         && SPs.includes('is 41 softplus') && SPs.includes('upper 16 bits'), `${zero[0]}-${zero[zero.length - 1]}`)
-    const tail = SP.SPEC_PICK.reduce((a, p, k) => a + (SP.SPEC_LO + k * SP.SPEC_STEP >= 730 ? p : 0), 0)
-    ok('ch.11: the fit\'s red end: red 0 from 733 nm, and those bins drawn 1.25e-5 of the time', SP.rgbBar(733)[0] === 0 && SP.rgbBar(732)[0] > 0 && tail.toExponential(2) === '1.25e-5', tail)
+    const tail = X.PICK.reduce((a, p, k) => a + (LSm.LS_LO + k >= 730 ? p : 0), 0)
+    ok('ch.11: the fit\'s red end, red 0 from 733 nm; the CIE table\'s red to 780 nm, its cells from 730 drawn 9.8e-5 of the time',
+        SP.rgbBar(733)[0] === 0 && SP.rgbBar(732)[0] > 0 && tail.toExponential(1) === '9.8e-5' && Array.from({ length: 50 }, (_, k) => CT.w[3 * (350 + k)]).every(v => v > 0), tail)
+    // the 10 nm bins' colour step at 480 nm and the 1 nm cells'; a coating's 0.009 at most
+    const { rgbToXYZ } = await import('../../lib/pathtracer/core/colorimetry.js')
+    const uv = c => { const x = rgbToXYZ(c), dd = x[0] + 15 * x[1] + 3 * x[2]; return [4 * x[0] / dd, 9 * x[1] / dd] }
+    const du = (a, b) => { const p = uv(a), q = uv(b); return Math.hypot(p[0] - q[0], p[1] - q[1]) }
+    const at10 = Math.max(...Array.from({ length: 30 }, (_, k) => du(SP.SPEC_WEIGHTS[k + 2], SP.SPEC_WEIGHTS[k + 3])))
+    const cell = k => [0, 1, 2].map(c => CT.w[3 * k + c])
+    let at1 = 0, at1nm = 0
+    for (let k = 20; k < 320; k++) { const d = du(cell(k), cell(k + 1)); if (d > at1) { at1 = d; at1nm = LSm.LS_LO + k + 1 } }
+    ok('ch.11: two neighbouring 10 nm bins\' colours up to 0.136 u\'v\' apart (near 480 nm), two 1 nm cells\' 0.014 (at 478 nm)',
+        at10.toFixed(3) === '0.136' && du(SP.SPEC_WEIGHTS[9], SP.SPEC_WEIGHTS[10]) === at10 && at1.toFixed(3) === '0.014' && at1nm === 478, `${at10} ${at1} ${at1nm}`)
 }
 
 {

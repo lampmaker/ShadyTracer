@@ -79,20 +79,22 @@
       prism, would be colour noise (section 6). So ShadyTracer does neither until a material sorts colours.</p>
     <p data-step="draw:bins">A ray carries red, green and blue; white light is all three alike, (1, 1, 1). When one is
       refracted into a dispersive glass, the renderer picks it a single wavelength at random, which it then keeps, out
-      of the prism and into any glass after. The wavelengths are split into 40 bins of 10 nm. Each channel stands for a
-      range of wavelengths (chapter 6's curves), and its responses over the bins add up to 1. A bin is picked as often as
-      the three channels together respond to it (the bars, in each bin's colour). That gives two humps: blue near
-      445 nm, where blue's whole response is crowded into a few bins, and orange near 590 nm, where red and green
-      overlap; deep violet and deep red rarely.</p>
+      of the prism and into any glass after. The wavelengths are split into 400 cells of 1 nm, from 380 to 780 nm. Each
+      channel stands for a range of wavelengths (chapter 6's curves, from the CIE's own table), and its responses over
+      the cells add up to 1. A cell is picked as often as the three channels together respond to it (the bars, in each
+      cell's colour). That gives a tall hump of blue near 443 nm, where blue's whole response is crowded together, a
+      lower one of green near 539 nm, and one of orange near 588 nm, where red and green overlap; deep violet and deep
+      red rarely.</p>
     <p data-step="draw:bins">Then each channel is weighted by how much it responds to that wavelength, divided by the
-      bin's chance: chapter 8's rule, pick with chance <var>P</var> and divide by <var>P</var>, so that rarely picked
-      wavelengths count for more each time and the average comes out right. Point at a bin to read its three
-      weights. One pick, worked: the bin from 440 to 450 nm is picked 6.19% of the time; there red responds 0.0132,
-      green 0 and blue 0.1725 (each channel's share of its whole response), so the weights are 0.0132 / 0.0619 = 0.21,
-      0 and 0.1725 / 0.0619 = 2.79. A white ray (1, 1, 1) that draws it goes on as (0.21, 0, 2.79): violet-blue, and
-      bright, because it stands in for the blue that other paths will not carry.</p>
+      cell's chance: chapter 8's rule, pick with chance <var>P</var> and divide by <var>P</var>, so that rarely picked
+      wavelengths count for more each time and the average comes out right. Point at a cell to read its three
+      weights. One pick, worked: the cell from 445 to 446 nm is picked 0.614% of the time; there red responds 0.00107,
+      green 0 and blue 0.01736 (each channel's share of its whole response), so the weights are 0.00107 / 0.00614 =
+      0.17, 0 and 0.01736 / 0.00614 = 2.83. A white ray (1, 1, 1) that draws it goes on as (0.17, 0, 2.83): violet-blue,
+      and bright, because it stands in for the blue that other paths will not carry. The wavelength itself is anywhere
+      in its cell, at random, so the angle it bends by is never rounded; only its colour is the cell's.</p>
     <p data-step="draw:many">So each channel's weight averages exactly 1 over the picks (the fold-out): a white ray
-      becomes one colour on each path, and averaged over many paths is white again. 20,000 picks average 0.993, 1.014 and
+      becomes one colour on each path, and averaged over many paths is white again. 20,000 picks average 0.992, 1.015 and
       0.993, heading for 1.</p>
     <p data-step="draw:many">The reflections stay white. At the prism's face a path first decides, at random, whether
       it reflects or refracts (chapter 10: it reflects with a chance equal to the share the glass reflects), and that
@@ -112,23 +114,27 @@
       prism only where the LED really shines, each wavelength in its own colour, and the colours still add up to the
       light's. A path from the camera cannot do the same: it meets the glass before it knows which light it will reach,
       so it still draws by the weights.</p>
-    <div data-claim="inferred">
-      <p><strong>The fit's red end.</strong> The colour-matching curves are a fit (chapter 6), and its tails are its
-        weakest part: past about 700 nm its ȳ outlasts its x̄, and its red response is 0 from 733 nm, so the last bins
-        weigh green only (worked out from <code>spectral.js</code> in node). The CIE's own deep reds all look red (the
-        red corner of chapter 6's diagram), so this is the fit's, not the light's. The draw lands there about once in
-        80,000 (1.25 × 10⁻⁵), so no picture should show it; a test of a deep-red laser through a prism would.</p>
+    <div data-claim="code">
+      <p><strong>Cells of 1 nm, from the CIE's table.</strong> Until version 0.next the draw used 40 bins of 10 nm, and
+        the colour-matching curves' analytic fit (chapter 6) instead of the CIE's table. Every wavelength in a bin took
+        the bin's colour, so in a rainbow seen through a prism the colour changed in steps every 10 nm: by up to 0.136 in
+        u′v′ between two neighbouring bins near 480 nm, where the hue turns fastest. Between two of the 1 nm cells the
+        largest step is 0.014, at 478 nm (both worked out in node, from <code>spectral.js</code>'s bins and
+        <code>lightspectra.js</code>'s cells). The fit's tails were
+        its weakest part too: past about 700 nm its ȳ outlasts its x̄ and its red response is 0 from 733 nm, so the last
+        bins weighed green only. In the CIE's table red responds all the way to 780 nm, as the deep reds of chapter 6's
+        diagram all look red; the cells from 730 nm are drawn about once in 10,000 (9.8 × 10⁻⁵).</p>
     </div>
     <details class="maths">
       <summary><span class="tag">The maths</span>Why the weights average to 1</summary>
       <div class="body">
-        <p>Let <var>W</var><sub>c</sub>(<var>k</var>) be channel <var>c</var>'s response in bin <var>k</var>, each
-          channel's responses adding up to 1 over the bins (so that a white light, 1 in every channel, is made of them
-          exactly). The bin is picked with chance <var>P</var>(<var>k</var>) = (<var>W</var><sub>R</sub> +
+        <p>Let <var>W</var><sub>c</sub>(<var>k</var>) be channel <var>c</var>'s response in cell <var>k</var>, each
+          channel's responses adding up to 1 over the cells (so that a white light, 1 in every channel, is made of them
+          exactly). The cell is picked with chance <var>P</var>(<var>k</var>) = (<var>W</var><sub>R</sub> +
           <var>W</var><sub>G</sub> + <var>W</var><sub>B</sub>)/3 (the three responses' average, so that the chances
           add up to 1) and gives channel <var>c</var> the weight
           <var>W</var><sub>c</sub>(<var>k</var>)/<var>P</var>(<var>k</var>). The average of anything over the picks is
-          each value times its chance, added up (Σ<sub><var>k</var></sub>, "add up over every bin <var>k</var>"):</p>
+          each value times its chance, added up (Σ<sub><var>k</var></sub>, "add up over every cell <var>k</var>"):</p>
         <p class="eq">Σ<sub><var>k</var></sub> <var>P</var>(<var>k</var>) × <span class="frac"><span><var>W</var><sub>c</sub>(<var>k</var>)</span><span><var>P</var>(<var>k</var>)</span></span> = Σ<sub><var>k</var></sub> <var>W</var><sub>c</sub>(<var>k</var>) = 1</p>
         <p>A weight is at most 3, where one channel alone responds. Small weights mean little noise: a pick that counts
           enormously, as a rare one divided by a tiny chance would, makes a speck. Picking in proportion to the summed
@@ -137,7 +143,7 @@
     </details>
   </div>
   <figure class="fig" data-fig="draw">
-    <figcaption>Left: the chance of each 10 nm bin being picked, each bar in its wavelength's colour; point at a bin for
+    <figcaption>Left: the chance of each 1 nm cell being picked, each bar in its wavelength's colour; point at a cell for
       the weights a ray then carries. Right: the three weights' average over the picks so far, against 1 (dashed), each
       bar in its channel's colour. Pick 100 or 10,000 more, or start again.</figcaption>
   </figure>
@@ -178,9 +184,14 @@
     <p>The index at any wavelength, from a catalogue's two numbers:</p>
     <pre data-src="lib/pathtracer/core/spectral.js" data-sym="/** n(lambda) of a glass of index nd at the d line and Abbe number vd" data-to="return nd - B / LAMBDA_D ** 2 + B / lambda ** 2"
          data-why="B is fixed by the Abbe number: n_F − n_C = B (1/λF² − 1/λC²) must equal (n_d − 1)/V_d. A is then whatever puts n_d at the d line, written out as nd − B/λd². The WGSL copy below it is the same formula." data-hash="05595498"></pre>
-    <p>The draw of section 3:</p>
-    <pre data-src="lib/pathtracer/core/spectral.js" data-sym="/** THE WAVELENGTH DRAW:" data-to="acc += p"
-         data-why="u is one random number in [0, 1). Lay the bins' chances end to end along a line from 0 to 1, each as long as its chance: u lands in one of them, and a long one is landed in more often. The loop walks the bins until their chances add up past u, then t places the wavelength evenly within that bin (the last bin catches anything rounding leaves over). w is the three weights, W_c / P." data-hash="6ad275dd"></pre>
+    <p>The table of section 3, made once in JavaScript and handed to the graphics card in a buffer:</p>
+    <pre data-src="lib/pathtracer/core/lightspectra.js" data-sym="export const CAMERA_TABLE = (() => {" data-to="return { lambda: d.lambda, k: d.cell, w: d.col }"
+         data-why="w is each cell's share of each channel: cieAt reads the CIE's table, rgbOf turns it into red, green and blue, Math.max(0, ...) clips the negative parts, 10 points a cell average it, and each channel is divided by its total so its shares add up to 1. q is the cell's chance, the three shares' average; cdf adds the chances up from 380 nm, so cdf[i] is the chance of any cell up to i, and col is the weights, W_c / P. The last loop makes the cells past the last one with any light exactly 1, so rounding can never pick past it. specDraw is lsDraw on this table: the same search the light's own spectra use (section 3)." data-hash="d90d7ee8"></pre>
+    <p>The draw itself, lsDraw, looks for the first cell whose running total passes the random number u, by halving the
+      range (nine steps for 400 cells), then puts the wavelength evenly within that cell
+      (<cite data-src="lib/pathtracer/core/lightspectra.js" data-sym="export function lsDraw(T, u) {"></cite>). Lay the
+      cells' chances end to end along a line from 0 to 1, each as long as its chance: u lands in one of them, and a long
+      one is landed in more often.</p>
     <p>And where a ray meets a dispersive glass, in the shading kernel: an index for a ray that already has a wavelength,
       a pick for one that does not, used only if it refracts (from its light's own spectrum, for a photon that carries
       one); then, if it does, the lines that multiply the ray's three channels by the weights, or give such a photon its
@@ -234,12 +245,20 @@
         ray at 45° onto glass of index 1.75: reflected at the yellow line's Fresnel and white; refracted along Snell at
         the index of its own wavelength to within 10⁻⁵; averaging the share not reflected in every channel
         (<code>core/test/dispersion.gpu.mjs</code>, Dawn on a software driver: correctness, never speed). On the user's
-        card the test with a wedge (<code>optics-dispersion</code>) has not yet been run; it expects −23.892°, −24.177°
-        and −24.860° for red, green and blue. A light's own spectrum, through the whole renderer: a beam through a 30° prism
+        card the test with a wedge (<code>optics-dispersion</code>) has not yet been run; it expects −23.886°, −24.177°
+        and −24.859° for red, green and blue (−23.891°, −24.177° and −24.860° by the 10 nm bins before 0.next). A light's own spectrum, through the whole renderer: a beam through a 30° prism
         onto a wall. Where wavelengths of 550 nm and longer land, the 450 nm LED's photons put 2.0 ± 0.2 in red,
         against 518,383 when the same light is given by its colour alone, and 8.07 million in blue on its own band. Where
         480 nm and shorter land, the red LED's put 16.8 ± 0.6 in red, against 28,653 (<code>core/test/prism.gpu.mjs</code>,
         Dawn on a software driver, 128 samples: correctness, never speed).</p>
+    </div>
+    <div data-claim="code">
+      <p><strong>Coatings keep 10 nm.</strong> A coating's reflectance per channel (section 4) is still averaged over
+        40 bins of 10 nm, by the analytic fit. Worked out at 1 nm instead, the same arithmetic differs by at most 0.009 of
+        reflectance, for an edge 0.01 to 30 nm wide anywhere from 390 to 770 nm (in node), and it would add up 400 bins
+        instead of 40 at every coated surface a ray meets. The draw (section 3) is a different case. It runs once per ray,
+        where it enters dispersive glass, and finding a cell by halving takes nine steps where walking the bins took up to
+        40, so the finer table should cost no more (read in code; nobody has timed it).</p>
     </div>
     <div data-claim="code">
       <p><strong>What it leaves out.</strong> The reflectance's own change with wavelength at the first surface
