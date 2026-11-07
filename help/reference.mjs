@@ -18,34 +18,11 @@ import { FIELDS, FIELD_LABELS, COAT_PRESETS, RELIEFS, PRESETS, FEATURES } from '
 import { LIGHT_SHAPES, LIGHT_DEFAULTS } from '../builder/lights.js'
 import { HAZE_DEFAULTS, HAZE_G_MAX, KOSCHMIEDER } from '../builder/hazebox.js'
 import { codeOnly } from '../builder/codegen.js'
-import { SCENE_PRELUDE } from '../lib/pathtracer/core/scene_api.js'
 import { referenceMarkdown as scriptReference } from '../tools/scriptref.js'
 import { TOKENS, SHORT_TOKENS } from '../lib/wgsl_shorthand.js'
 
-/** WHAT EACH MATERIAL FIELD DOES -- read in builder/materials.js FIELDS and lib/pathtracer/core/materials_pbr.js. */
-export const FIELD_HELP = {
-    baseColor: 'The surface\'s colour, linear (not sRGB): how much of each of red, green and blue it reflects -- for a metal, its reflectance head-on; for glass, the tint each crossing gives (or, with a colour depth, the colour at that depth).',
-    metallic: '0 a dielectric (plastic, paint, stone, glass): white reflections over a coloured body. 1 a metal: no body, the reflection itself coloured. In between is rarely physical.',
-    roughness: 'How rough the surface is at a scale too small to model: 0 a mirror-sharp reflection, 1 fully matte.',
-    anisotropy: 'Roughness different along and across a direction -- brushed or turned metal. 0 the same every way; the direction is the material code\'s `m.tangent`.',
-    specular: 'How strong a dielectric\'s reflection is: 0.5 the physical value for its index of refraction, 0 none at all (a pure diffuse surface), 1 twice.',
-    specularTint: 'Tints a dielectric\'s reflection with its base colour: 0 white, as real plastics and paints reflect.',
-    transmission: 'How much of the light the surface does not reflect passes THROUGH it instead of back off a diffuse body: 1 glass and clear plastics, 0 everything opaque, 0.5 an opal sheet that passes half at each face. Haze says how much of what passes is diffused instead of going straight. With roughness it is frosted glass -- and a diffuser film is a thin sheet of it: roughness 0.36 spreads a ray head-on through a polycarbonate sheet by about 10 degrees, anisotropy makes the spread elliptical along the grain, up to 10:1.',
-    ior: 'The index of refraction, at the d line (587.6 nm): 1.5 a typical glass, 1.333 water, 1.49 PMMA, 1.586 polycarbonate. Sets how much a transparent material bends light and how strongly it reflects.',
-    abbe: 'The Abbe number V_d -- how much the index changes with colour: 0 none (no dispersion), 64 a crown glass (BK7), 36 a flint, 30 polycarbonate. Lower spreads colours more. Turning it on is a compile.',
-    attenuationDistance: 'The colour depth, in real mm whatever the scene\'s unit: light that has travelled this far inside has been filtered to the base colour, so a thick part is darker than a thin one. 0 off: each crossing tints by the colour, whatever the thickness. Turning it on is a compile.',
-    coating: 'A thin-film coating whose reflectance replaces the surface\'s own: none, on the faces light enters by (the back anti-reflective, or bare), or on every face. Putting one on is a compile.',
-    coatLow: 'The coating\'s reflectance below its edge wavelength (0..1).',
-    coatHigh: 'The coating\'s reflectance above its edge wavelength (0..1).',
-    coatEdge: 'Where the coating switches, in nm, head-on. At an angle it moves to shorter wavelengths, as real interference filters do.',
-    coatWidth: 'How sharp the switch is: nm from 10 % to 90 % of the way.',
-    coatIndex: 'The coating stack\'s effective index: how fast the edge moves with the angle -- higher moves it less.',
-    haze: 'Of the light that passes through (transmission), how much is diffused -- spread evenly on the far side -- instead of going straight on: what a datasheet calls haze (ASTM D1003). 0 clear, 1 all of it (an opal diffuser, paper, a lampshade). Clear acrylic with haze 0.06 keeps a sharp image behind it under a veil; roughness is the other, narrow blur (frosting). Each face a ray crosses scatters it, so a sheet scatters twice. A clear sheet of n 1.49 whose faces have haze 0.01, 0.03, 0.06, 0.1, 0.2, 0.5 has about 1.7, 5, 10, 17, 33, 72 % haze itself, passing 92 to 84 % (a walk of the sheet in core/transmission.js). An opal sheet whose datasheet gives a total transmittance T (white, specular 0) is transmission 2T / (1 + T) a face with haze 1 -- 0.667 for 50 %. Thickness does not change it: it scatters at the faces. Light sampling and the lights\' rays reach through it in Standard and High; Draft follows it as it follows frosted glass. Turning it on is a compile.',
-    scatterDistance: 'How far light travels inside the material, on average, before something in it scatters it: in millimetres, whatever the scene\'s unit, as the colour depth. 0 a clear volume. Haze scatters at the faces, whatever the thickness; this scatters inside, so a thick part is milkier than a thin one -- milky or opal glass by the block, a light guide\'s diffusing body, frosted ice. A few millimetres in a part a few centimetres thick is milky; a free path well under the part\'s size makes it glow through, like opal. It only acts where light travels inside, so with transmission. Each scattering is a step of the march, so a dense, thick part walks long: raise Max Iterations if it reads dark. Light sampling cannot reach inside smooth glass, so what the glass scatters -- a beam\'s track, a lamp\'s glow -- shows through the photon map (Light sources), sharpening as samples come in, and without it only by chance; the Optics page\'s rays walk it too. Turning it on is a compile.',
-    scatterAnisotropy: 'Which way each scattering inside sends the light (Henyey-Greenstein\'s g): 0 evenly in every direction, towards 0.95 mostly onwards, as large particles do (milk about 0.8, fine particles nearer 0). Forward scattering lets light through deeper, so a forward-scattering part is clearer for the same scatter distance. Only with a scatter distance.',
-    emissive: 'An emitter\'s colour. Only its hue counts: the brightness is the luminance.',
-    emissiveLuminance: 'An emitter\'s brightness in cd/m²: 300 a monitor, 5000 a frosted bulb, 20 000 a fluorescent tube, 1.6 billion the sun.',
-}
+export { FIELD_HELP, CODE_HELP, CODE_SHAPED, CODE_UNLISTED, CODE_MADE, preludeSignatures } from '../builder/coderef.js'
+import { FIELD_HELP, CODE_HELP, CODE_MADE, preludeSignatures, typeWords, CODE_BLOCKS, MATERIAL_SETS, MATERIAL_CANNOT, recipeText } from '../builder/coderef.js'
 
 /** WHAT EACH LIGHT SETTING DOES -- read in builder/lights.js (its header lists them). */
 export const LIGHT_HELP = {
@@ -75,156 +52,6 @@ export const HAZE_HELP = {
     g: `How the particles scatter (Henyey-Greenstein's g): 0 evenly in every direction, towards 1 forward -- real dust and haze are about 0.6 to 0.8, so a beam looks brightest looking into it -- towards -1 back. Held within ±${HAZE_G_MAX}.`,
 }
 
-/* THE FUNCTIONS CODE CAN CALL (the user, 2026-10-23: "code block comments and/or help could use an overview of sdf
-   functions defined that can be used inside of code blocks"). Every block -- an object's, a group's, a material's, the
-   scene's functions -- is compiled after the same prelude (lib/pathtracer/core/scene_api.js SCENE_PRELUDE: sdf.js,
-   shapes.js, noise.js, materials.js and the scene API), so all of it is in scope everywhere; these are the parts of it
-   written to be called. A function's SIGNATURE IS READ FROM THE PRELUDE, not typed here, so the page cannot disagree
-   with the code; the words are below, one a name, and help/test/coverage.test.mjs fails on a name the prelude has not,
-   and on a prelude function named like a shape or a join (CODE_SHAPED) with no words and no place in CODE_UNLISTED --
-   so a shape added to shapes.js without words fails, as a material field does. Read in each function's own comment
-   and code; where it says exact or a bound, so does this. */
-export const CODE_HELP = [
-    { title: 'Putting shapes into the scene', intro: 'What an object\'s code calls once a shape, and what a group\'s code works with.', fns: {
-        add_new: 'Folds a shape into `C`: `sdf` is (normal, distance) in this node\'s own frame, taken to the world here; `matIndex` its material -- `MATERIAL` for the node\'s own. Every shape\'s code is this call.',
-        fold: '`add_new` without the transform: for a result already in world units, such as the `s` of a Hit its children were folded into (`fold(C, H.s, H.m)`).',
-        emptyHit: 'A Hit with nothing in it yet: what a group folds its children into when it works on their result before it reaches `C` (`var H = children(emptyHit(r), p);`).',
-        warp: 'Call after changing `p` in a way that is not a plain move or turn: every distance folded in from here on is multiplied by `k` (below 1 for a warp that stretches space, so the march does not step through), and normals are taken by differences.',
-        foldRelief: 'A distance steepened by up to `slope` -- a noise added to it -- folded in: divided by `slope` here, so the march stays safe, or, passed `DIVIDED_ABOVE` in a CSG group, once after the blend.',
-    } },
-    { title: 'Joining shapes', intro: 'Each takes two (normal, distance) results and gives one; `k` is the blend\'s width, in the frame\'s units. The `csg` three are what a CSG group compiles to, and the ones to use: `k = 0` is a hard join, and the result has a normal only when both shapes have one -- otherwise the renderer takes it by differences, which is right for any shapes. The older ones, below, are kept for the code that calls them.', fns: {
-        csgUnion: 'Both shapes; `k` above 0 melts them together where they come within `k` of each other.',
-        csgIntersect: 'Only where both are.',
-        csgSubtract: '`a` with `b` cut out of it.',
-        csgRoundUnion: 'A join set to *round* (version 28): both shapes, the concave edge where they meet filled by a fillet of radius `r` -- a circle where they meet at a right angle (two flat faces, a flat face across a cylinder or a prism), a rounded corner at other angles. Its distance reads the two distances alone; its normal is analytic, and with a shape that gives no normal the result has none.',
-        csgRoundIntersect: 'Only where both are, the edge rounded by a circle of radius `r`: a convex fillet, as `csgRoundUnion`.',
-        csgRoundSubtract: '`a` with `b` cut out, the rim of the cut rounded by radius `r`: a hole\'s filleted edge.',
-        csgChamferUnion: 'A join set to *chamfer*: the concave edge filled with the flat cut between the lines a round of radius `r` would touch.',
-        csgChamferIntersect: 'Only where both are, the edge cut flat between the lines a round of radius `r` would touch.',
-        csgChamferSubtract: '`a` with `b` cut out, the rim of the cut chamfered.',
-    } },
-    { title: 'Older joins', intro: 'Kept for the code that calls them; new code is better off with the `csg` three above.', fns: {
-        Nsmin: 'A smooth union with the normals blended. `k` must be above 0 (it is divided by), and both shapes need a normal: an `sd` shape\'s zero normal can make it NaN, and a NaN normal deletes the surface. `csgUnion` has neither problem.',
-        Nsmax: 'A smooth intersection, as `Nsmin` with its caveats.',
-        NopSmoothUnion: '`Nsmin` by another name.',
-        NopSmoothIntersect: '`Nsmax` by another name.',
-        NopSmoothSubtract: '`a` with `b` cut out, smoothly: `Nsmax` of `a` and `b` turned inside out.',
-        opSmoothUnion: 'A smooth union of the distances alone: no normal. `k` above 0.',
-        opSmoothIntersect: 'A smooth intersection of the distances alone. `k` above 0.',
-        opSmoothSubtract: '`d1` with `d2` cut out, smoothly, distances alone. `k` above 0.',
-        opUninion: 'The smaller distance (a union), no normal. Spelled as it is in the code.',
-        opIntersection: 'The larger distance, no normal.',
-        opSubtraction: '`d1` with `d2` cut out, no normal.',
-        opScale: 'The distance times `s`, no normal: what a shape drawn at `p / s` needs, `s` times its distance.',
-    } },
-    { title: 'Shapes with a normal', intro: 'Each returns `VEC4(normal, distance)` with the normal worked out exactly, which saves the renderer three more evaluations of the whole scene at every hit (`tracebasics.js` `hitNormal`). All are centred on the origin with z up, unless it says otherwise; sizes are in the frame\'s units.', fns: {
-        Nsphere: 'A sphere of radius `r`.',
-        NboxRounded: 'A box of half-sizes `b`, its edges rounded by `r` within that size (`r = 0` sharp).',
-        Nroundedbox: 'A box of half-sizes `b` rounded by `r` outside it: `b + r` in all.',
-        Nbox: 'A box of half-sizes `b`, rounded by 0.01 outside them -- kept for the code that calls it; `NboxRounded` is the box shape\'s.',
-        Ncylinder: 'A cylinder along z: `h` its half-height, `r` its radius.',
-        Ncapsule: 'A segment from z = -`h` to +`h`, swept by radius `r`: a pill.',
-        Ntorus: 'A ring in the xy plane: `R` from the axis to the tube\'s centre, `r` the tube\'s radius.',
-        NcappedTorus: 'An arc of a ring: radius `R` in the xy plane, `angle` degrees of it, symmetric about +y, swept by a tube of radius `r`. 360 is a whole ring.',
-        Nlink: 'A chain link: a ring of radius `R` pulled apart along y by `span`, swept by a tube of radius `r`.',
-        Nplane: 'Everything below z = 0, its surface facing +z. Infinite.',
-        Nrectangle: 'A flat rectangle of half-sizes `h` in the xy plane, no thickness: seen from both sides.',
-        Ndisc: 'A flat disc of radius `r` in the xy plane, no thickness.',
-        NroundCone: 'A sphere of radius `r1` at z = -`h`/2 and one of `r2` at +`h`/2, and the cone that touches both. Exact.',
-        Noctahedron: 'A regular octahedron, `s0` from its centre to each corner. Exact.',
-        Npyramid: 'A square pyramid: base side `base` on z = -`height`/2, apex on +`height`/2. Exact.',
-        Nfrustum: 'A rectangular base `base.x` by `base.y` on z = -`height`/2 and a rectangular top `top` on +`height`/2; a top of 0 by 0 is a pyramid. Exact.',
-        Nprism: 'A regular polygon of `sides` sides (3 to 64), `radius` to its corners, a flat side facing -y, extruded `height` along z. Exact.',
-        Ntriprism: 'A triangle in the xz plane, base `width` on z = -`height`/2, its top at `apex` along the base (0 over its -x end, 0.5 the middle, 1 its +x end), extruded `depth` along y. Exact.',
-        Ndome: 'The part of a sphere of radius `R0` above z = 0, `height` tall: its base sits on z = 0. Exact.',
-        Ntube: 'A hollow cylinder: radii `outer` and `inner`, `height` tall. `inner` of 0 or less is solid. Exact.',
-        Ndish: 'A parabolic mirror of focal length `f`, its focus at the origin, opening to +z, out to radius `aperture`, with a wall `wall` thick behind the mirror. Exact inside, a bound outside near the rim.',
-        Nlens: 'A spherical lens along z: diameter `D`, centre thickness `t`, face radii `r1` (+z) and `r2` (-z) -- positive bulges out, negative is hollowed, 0 flat. A bound, exact near the face that wins.',
-        Nasphere: 'An aspheric lens along z: diameter `D`, centre thickness `t`, and each face\'s radius, conic constant and coefficients a4..a10 (`R1, k1, a1` the +z face, `R2, k2, a2` the -z). A bound both sides.',
-        Nmenger: 'A Menger sponge `ITER` levels deep in a cube of half-size 1. Make `ITER` a compile-time parameter so its loop can be unrolled.',
-    } },
-    { title: 'Shapes with a distance only', intro: 'These return a zero normal, so wherever one of them is the surface the renderer takes the normal by differences: three more evaluations of the whole scene at each hit. Use the `N` one where there is one.', fns: {
-        sd: 'Wraps a bare distance as a result: `sd(length(p) - 0.5)` is a sphere. For a shape of your own.',
-        sdSphere: 'A sphere of radius `r`.',
-        sdBox: 'A sharp box of half-sizes `b`.',
-        sdRoundedBox: 'A box of half-sizes `b` rounded by `r` outside it.',
-        sdCylinder: 'A cylinder along z: `h` its half-height, `r` its radius.',
-        sdCappedCylinder: 'A cylinder of radius `r` from point `a` to point `b`.',
-        sdCappedCone: 'A cone along z: radius `r1` at z = -`h`, `r2` at +`h` (0 for a point). Exact; its normal is left to the renderer on purpose.',
-        sdMenger: 'A Menger sponge `ITER` levels deep in a cube of half-size 1.',
-    } },
-    { title: 'Building shapes in 2D', intro: 'A shape of revolution is a 2D shape in the half-plane `q = VEC2(length(p.xy), p.z)`, and an extrusion one in `p.xy`. These return `VEC3(gradient.xy, distance)` there, and `g2Revolve` and `g2Extrude` lift that into 3D with its normal -- how the dish, the dome and the round cone are made.', fns: {
-        g2Circle: 'A circle of radius `r` around `c`.',
-        g2Box: 'A rectangle of half-sizes `b` around `c`. Exact.',
-        g2RegularPolygon: 'A regular polygon of `sides` sides, `R0` to its corners, a flat side facing -y. Exact.',
-        g2Triangle: 'The triangle `a`, `b`, `c`, counter-clockwise. Exact.',
-        g2Parabola: 'The parabola y = `k` x^2 (`k` above 0), positive below it. Exact.',
-        g2Max: 'The larger of two: an intersection.',
-        g2Neg: 'Inside and outside swapped.',
-        g2Offset: 'Grown by `t` (shrunk, for `t` below 0).',
-        g2Revolve: 'A 2D result at `q = VEC2(length(p.xy), p.z)` turned around the z axis.',
-        g2Extrude: 'A 2D result at `p.xy`, extruded `h` either side of z = 0.',
-        g2Dir: '`v` made unit length, or `fallback` where `v` is zero.',
-        safeDir: 'The same in 3D: `v` unit length, or `fallback` where it has no direction -- a normal that must never be NaN.',
-    } },
-    { title: 'Noise', intro: 'Solid noise: one cell per unit of the point it is given, a pure function of the point and the `seed` (a `u32`, such as `3u`). Each returns its gradient with it, `VEC4(gradient, value)`, so a bump has a normal. A noise added to a distance makes the field steeper than 1, and the march then steps through the surface: divide by the steepness, or fold it with `foldRelief` as the *noise relief* modifier does. In a material, where it runs once a hit, nothing needs dividing.', fns: {
-        vnoise3: 'Value noise: (gradient, value), the value in -1 to 1. Blockier than gradient noise.',
-        gnoise3: 'Gradient (Perlin) noise: (gradient, value), the value about -1 to 1. Smoother and less tied to the grid.',
-        fbm3: '`octaves` of gradient noise added up, each at `lac` times the last one\'s frequency and `gain` times its amplitude: (gradient, value).',
-        nzFbmLip: 'How steep `fbm3` with those settings can be, given `L` for one octave: `NZ_GRAD_LIP` (proved) or `NZ_GRAD_LIP_MEASURED` (a quarter of it, measured). What a distance with `fbm3` added is divided by.',
-        worley3: 'Cells: `VEC4(F1, F2, id1, id2)` -- the distances to the nearest and second-nearest point, and a number from 0 to 1 for each of their cells. `F2 - F1` is 0 on a border: cracks, leather, grains.',
-        worley3x: '`worley3` of two point sets at once, the second turned and of another size, so no grid shows. Twice the cost.',
-        perMm: 'Cycles per millimetre in cycles per scene unit: `gnoise3(p * perMm(2.0), 1u)` has two cells a millimetre.',
-    } },
-    { title: 'Units', intro: 'Code\'s numbers are in the scene\'s unit. These give a real size whatever that is.', fns: {
-        metres: '`x` metres in the scene\'s unit.',
-        mm: '`x` millimetres in the scene\'s unit.',
-    } },
-    { title: 'Materials', intro: 'For a material\'s code, which changes `m` -- or returns a material of its own -- where a ray hits.', fns: {
-        makeDefaultMaterial: 'A light grey dielectric: the starting point of every material.',
-        makeDiffuse: 'A pure diffuse surface of colour `color`, no reflection. `roughness` changes nothing.',
-        makePlastic: 'A coloured dielectric with a reflection: `specular` 0.5 the physical one.',
-        makeMetal: 'A metal, `color` its reflectance.',
-        makeMirror: 'A perfect mirror, tinted `color`.',
-        makeGlassSmooth: 'Clear glass of index `ior`, tinted `color`.',
-        makeGlassRough: 'Frosted glass: `makeGlassSmooth` with a `roughness`.',
-        makeEmissive: 'A surface emitting `color`.',
-        mixMaterials: 'Part way from `m1` to `m2`, `t` 0 to 1. A coating is one or the other, never half of each: `m2`\'s past 0.5.',
-        grainAlong: 'A brushed grain, for `m.tangent` (with an anisotropy above 0): straight along `axis` in the object\'s frame. Pass `R_local` as `R`.',
-        grainAround: 'A turned grain: circles about `axis` through the origin of `q` (usually `p_local`).',
-        grainRadial: 'Spokes out from `axis`, as on a sunburst dial.',
-        srfNoise: 'Smooth value noise from 0 to 1, one cell per unit of `x`.',
-        streaksAlong: 'Brush lines along `axis`: a value from 0 to 1 per line, about `len` long and `width` across, for varying `m.roughness`. `q`, `width` and `len` in one unit.',
-        streaksAround: 'The same as circles about `axis`, for a turned part.',
-    } },
-]
-
-/** Prelude functions named like a shape or a join (N..., sd..., op..., csg..., g2...): each has words above or a reason here. */
-export const CODE_SHAPED = /^(N[a-z]|sd[A-Z]?|op[A-Z]|csg[A-Z]|g2[A-Z])/
-export const CODE_UNLISTED = {
-    csgNormal: 'the csg joins\' own blended normal',
-    csgShapedCap: 'the round and chamfer joins\' own cap on how far they go over the hard op',
-    sheetNormal: 'Nrectangle\'s and Ndisc\'s own',
-    lensFace: 'Nlens\'s own, one face',
-}
-
-/** WHAT A SCENE MAKES FOR ITS OWN PROFILES AND PATHS (codegen.js emits them when a scene has one): not in the prelude, so
- *  their signatures are written here as codegen writes them, and the coverage test finds each in codegen.js. */
-export const CODE_MADE = {
-    'extrude(id: u32, p: VEC3, height: FLOAT) -> VEC4': 'The node\'s profile parameter `id` (its name) in xy, extruded `height` along z, centred.',
-    'revolve(id: u32, p: VEC3) -> VEC4': 'The profile, as (radius, z), turned around the z axis.',
-    'profile(id: u32, q: VEC2) -> VEC3': 'The profile in 2D: (gradient, distance) at `q`, for use with the 2D functions.',
-    'tube(id: u32, p: VEC3, radius: FLOAT, rounded: FLOAT) -> VEC4': 'A tube of `radius` along the path parameter `id`; `rounded` above 0.5 gives it round ends.',
-    'sweep(id: u32, outline: u32, p: VEC3) -> VEC4': 'The profile `outline` swept along the path `id`, its ends flat.',
-}
-
-/** A prelude function's signature, as the page shows it: the long vector types as the short words code writes. */
-const TYPE_WORDS = [[/vec2<f32>/g, 'VEC2'], [/vec3<f32>/g, 'VEC3'], [/vec4<f32>/g, 'VEC4'], [/\bFLOAT\b/g, 'f32']]
-const typeWords = s => TYPE_WORDS.reduce((t, [re, w]) => t.replace(re, w), s)
-const sigOf = (name, args, ret) => `${name}(${args.split(',').map(a => a.trim()).filter(Boolean)
-    .map(a => a.replace(/\s*:\s*/, ': ')).join(', ')})${ret ? ` -> ${ret.trim()}` : ''}`
-export const preludeSignatures = () => new Map([...SCENE_PRELUDE.matchAll(/\bfn\s+(\w+)\s*\(([^)]*)\)\s*(?:->\s*([^{]+?))?\s*\{/g)]
-    .map(m => [m[1], typeWords(sigOf(m[1], m[2], m[3]))]))
 
 const firstComment = code => String(code ?? '').split('\n').filter(l => /^\s*\/\//.test(l)).map(l => l.replace(/^\s*\/\/\s?/, '')).join(' ')
     .replace(/\s+/g, ' ').trim()
@@ -329,7 +156,22 @@ function code() {
         + '| a material\'s relief | at every march step near an object wearing it | `q` the point in mm in that object\'s frame, '
         + '`world` the same in the scene\'s; it sets `h`, the height in mm outward, and `slope`, a bound on how steep `h` is |\n'
         + '| the scene\'s functions | -- | its functions are called from any of the others |\n'
-        + '\nThe comments a new block starts with say the same, with examples; **Functions you can call…** under a block opens this page.\n'
+        + '\nUnder every code box, **Insert** lists what that block can set, read and call, with recipes -- a click puts one in the '
+        + 'code at the caret -- and what it cannot do; **Functions you can call…** opens this page.\n'
+    /* WHAT A MATERIAL'S CODE SETS, and a relief's (builder/coderef.js, which the Insert pane shows): every field of
+       Material2, its line, and what cannot be set at all */
+    s += '\n## What a material\'s code sets\n\nA material\'s code changes `m`, which holds every setting of its panel when the code '
+        + 'starts. Each field, as the line that sets it (here from a new material\'s values; the Insert pane writes the material\'s own):\n\n'
+        + '| field | the line | what it is |\n|---|---|---|\n'
+    const D = Object.fromEntries(Object.entries(FIELDS).map(([k, f]) => [k, structuredClone(f.def)]))
+    for (const x of MATERIAL_SETS) s += `| ${x.label ?? `\`${x.field}\``} | \`${cell(x.code(D))}\` | ${cell(x.brief)} |\n`
+    s += '\nWhat it cannot set:\n\n' + MATERIAL_CANNOT.map(c => `- \`${c.name}\` -- ${c.why}\n`).join('')
+    s += '\n## What a relief\'s code sets\n\nA relief\'s code runs in the march, at every step near an object wearing its material. '
+        + 'It reads `q` and `world` and its own parameters, and sets two numbers:\n\n'
+        + CODE_BLOCKS.relief.sets.map(x => `- \`${x.name}\` -- ${x.brief}. For example \`${x.code()}\`\n`).join('')
+        + '\nIts recipes, each with its slope worked out:\n\n'
+        + CODE_BLOCKS.relief.recipes.map(r => `**${r.title}**\n\n\`\`\`\n${recipeText(r)}\n\`\`\`\n\n`).join('')
+        + 'What it cannot read:\n\n' + CODE_BLOCKS.relief.cannot.map(c => `- ${c.name} -- ${c.why}\n`).join('')
     s += '\n## Words the page rewrites\n\nBefore it compiles, every whole word below is replaced -- in your code too, so do not name '
         + 'a variable or a parameter one of them: a variable `X` becomes `vec4<f32>`.\n\n| word | becomes |\n|---|---|\n'
         + Object.entries({ ...TOKENS, ...SHORT_TOKENS }).map(([k, v]) => `| \`${k}\` | \`${cell(v)}\` |`).join('\n') + '\n'
