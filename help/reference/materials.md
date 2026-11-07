@@ -18,7 +18,7 @@ What each field of a material does. Every field is live -- a slider moves the pi
 | ior | ior | The index of refraction, at the d line (587.6 nm): 1.5 a typical glass, 1.333 water, 1.49 PMMA, 1.586 polycarbonate. Sets how much a transparent material bends light and how strongly it reflects. |
 | abbe | Abbe number (dispersion) | The Abbe number V_d -- how much the index changes with colour: 0 none (no dispersion), 64 a crown glass (BK7), 36 a flint, 30 polycarbonate. Lower spreads colours more. Turning it on is a compile. |
 | attenuationDistance | colour depth (mm) | The colour depth, in real mm whatever the scene's unit: light that has travelled this far inside has been filtered to the base colour, so a thick part is darker than a thin one. 0 off: each crossing tints by the colour, whatever the thickness. Turning it on is a compile. |
-| coating | coating | A thin-film coating whose reflectance replaces the surface's own: none, on the faces light enters by (the back anti-reflective, or bare), or on every face. Putting one on is a compile. |
+| coating | coating | A thin-film coating whose reflectance replaces the surface's own: none, on the faces light enters by (the back anti-reflective, or bare), or on every face. On a metal it lies over the metal, which reflects back what the coating passes. Putting one on is a compile. |
 | coatLow | R below edge | The coating's reflectance below its edge wavelength (0..1). |
 | coatHigh | R above edge | The coating's reflectance above its edge wavelength (0..1). |
 | coatEdge | edge (nm) | Where the coating switches, in nm, head-on. At an angle it moves to shorter wavelengths, as real interference filters do. |
