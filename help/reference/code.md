@@ -115,7 +115,7 @@ slope = 4.0 * amplitude / 0.2;
 
 What it cannot read:
 
-- the material's settings -- A relief is shape: it runs in the march, where no material has been asked yet. It reads its own parameters (+ in its parameters header), not the material's or its code's.
+- the material's settings -- A relief is shape: it runs in the march, where no material has been asked yet. It reads its own parameters (+ in its parameters header) and the material's image textures by name (heightAt), not the material's settings or its code's.
 - n, the normal -- There is none yet: the relief is part of what the normal is taken from (by differences).
 - the object's own parameters -- One relief is shared by every object wearing the material.
 

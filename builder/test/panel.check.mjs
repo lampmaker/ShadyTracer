@@ -1271,6 +1271,17 @@ ok('...and the visibility beside it follows: 3.912 x 4 m, 15.6 m', /^visibility 
         && s.structure === before.structure + 1)
     const notes = await p.evaluate(() => [...document.querySelectorAll('#t textarea')].map(t => t.value).find(v => /on every face/.test(v)) ?? null)
     ok('...and its box says it is read planar (the picture is triplanar), on every face, at 8 bits', /read planar.*triplanar/.test(notes ?? '') && /8 bits a pixel/.test(notes ?? ''), notes)
+    // dev's Insert pane is a second caller: it lists what a code box can read, and knew nothing of image textures
+    const inserts = await p.evaluate(() => {
+        const panes = [...document.querySelectorAll('#t details.rt-code-insert')]
+        panes.forEach(d => d.querySelector('summary').click())                 // its rows are made as it opens
+        return new Promise(r => setTimeout(() => r(panes.map(d => [...d.querySelectorAll('.rt-code-insert-row')].map(r => r.firstChild.textContent))), 50))
+    })
+    ok('...the material\'s Insert pane reads its image texture by name: sample, mapped, sampleAt', inserts.length === 2
+        && ['sample(texture)', 'mapped(texture)', 'sampleAt(texture, uv)'].every(r => inserts[0].includes(r)) && !inserts[0].includes('heightAt(texture, q)'),
+        JSON.stringify(inserts.map(x => x.filter(r => /texture/.test(r)))))
+    ok('...the relief\'s heightAt, and not the material\'s calls', inserts[1]?.includes('heightAt(texture, q)') && !inserts[1].includes('sample(texture)'),
+        JSON.stringify(inserts[1]?.filter(r => /texture/.test(r))))
     before = await state()
     ok('Take it away', await button('Take it away') === 'clicked')
     s = await state()

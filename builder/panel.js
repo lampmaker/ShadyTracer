@@ -57,6 +57,7 @@ import { visibilityOf, HAZE_G_MAX } from './hazebox.js'
 import { makeAfter } from './params.js'
 import { codeOnly, wgslTypeOf, isProfile, isPath } from './codegen.js'
 import { codeHelper, placeInsert } from './codehelper.js'
+import { imageTextureReads } from './coderef.js'
 import { SEG, SEGBTN } from '../lib/pathtracer/strip.js'
 import { lit } from '../lib/pathtracer/icons.js'
 import { imageFromFile, slotKey, withHeights, PROJECTIONS, WRAPS, FILTERS, FACES, IMAGE_MAX_EDGE } from './images.js'
@@ -437,7 +438,7 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
             // an empty block shows how to use one; comments alone compile to nothing
             if (!String(mat.code || '').trim()) mat.code = M.MATERIAL_CODE_TEMPLATE
             codeEditor(folder, mat, { kind: 'material', title: 'material code', names: `m, p, n, C, p_local, R_local, S_local, its parameters${(mat.images ?? []).length ? `, its image textures (${mat.images.map(x => x.name).join(', ')}) by sample(), mapped() and sampleAt()` : ''}`,
-                values: () => mat.params, params: () => paramRows(mat, M.customParams(mat)) })
+                values: () => mat.params, params: () => [...paramRows(mat, M.customParams(mat)), ...imageTextureReads('material', (mat.images ?? []).map(x => x.name))] })
             // its relief LAST (the user, 2026-09-30): the shape it gives, after what the surface is
             reliefFolder(folder, doc, mat)
             return
@@ -1673,7 +1674,8 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
         paramsFolder(rf, owner, Object.keys(mat.relief.params || {}), {}, true)
         const holder = { id: M.reliefOwner(mat.id), get code() { return mat.relief.code }, set code(v) { mat.relief.code = v } }
         codeEditor(rf, holder, { kind: 'relief', title: 'relief code', names: 'q (mm, in the frame of the object wearing it) -> h (mm, outward), slope (a bound on its gradient)', owner: mat.id,
-            params: () => paramRows(owner, Object.keys(mat.relief?.params || {}).filter(k => k !== 'amplitude')) })
+            params: () => [...paramRows(owner, Object.keys(mat.relief?.params || {}).filter(k => k !== 'amplitude')),
+                ...imageTextureReads('relief', (mat.images ?? []).map(x => x.name))] })
     }
 
     /* A CODE NODE'S (OR A MATERIAL'S) PARAMETERS are edited where they are shown: a + in the folder's header adds

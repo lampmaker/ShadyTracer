@@ -10,7 +10,8 @@ colour:
   has.
 
 Another image texture, or one set to *code only*, is read by the material's code: `sample(name)`, `mapped(name)`,
-`sampleAt(name, uv)`.
+`sampleAt(name, uv)`. The code box's **Insert** pane lists these three under *Read* for each of the material's image textures, and a
+relief's lists `heightAt(name, q)`.
 
 A shape has no texture coordinates, so the image texture is **projected** in the object's pattern frame: planar, box,
 triplanar, cylindrical or spherical. It moves and turns with the object and its pattern frame. On top of that it has a
