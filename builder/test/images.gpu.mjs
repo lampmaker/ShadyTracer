@@ -211,7 +211,7 @@ for (const data of [false, true]) for (const pattern of [null, PAT]) {
             var hit = emptyHit(r); hit.m = matid_screen; hit.a = 0u; hit.s = vec4<f32>(N, 0.0);
             let m = getMaterial2(hit, false);
             evalOut[16u * i] = m.emissive.x; evalOut[16u * i + 1u] = m.emissive.y; evalOut[16u * i + 2u] = m.emissive.z;`,
-            input, cases.length, { [uniformName('screen', slotKey('picture'))]: Sm })
+            input, cases.length, { [uniformName('screen', slotKey('texture'))]: Sm })
         let worst = 0
         cases.forEach((q, i) => {
             if (q.mat !== 'screen' || q.n[2] !== 1) return
@@ -291,7 +291,7 @@ for (const bits of [8, 16]) for (const raise of [1, -1]) for (const data of [fal
         var hh = emptyHit(r);
         hh.m = matid_pl; hh.a = 0u; hh.s = vec4<f32>(0.0, 0.0, 1.0, 0.0);
         let m = getMaterial2(hh, false);
-        evalOut[16u * i + 2u] = heightAt(UB.${uniformName('pl', slotKey('picture'))}, IMG_Q).x;
+        evalOut[16u * i + 2u] = heightAt(UB.${uniformName('pl', slotKey('texture'))}, IMG_Q).x;
         evalOut[16u * i + 3u] = m.roughness;`, pts, N)
     let worst = 0, below = 0, frames = 0, at1 = '', maxSteps = 0
     for (let k = 0; k < N; k++) {

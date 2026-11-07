@@ -620,7 +620,7 @@ export const MATERIAL_SCOPE = ['m', 'p', 'n', 'C', 'p_local', 'R_local', 'S_loca
 export const IMAGE_SCOPE = ['sample', 'mapped', 'sampleAt', 'heightAt']
 /** The names a slot of material `m` may not take: its parameters', those its code already has, and -- its pictures being
  *  in its relief's code too (codegen, 0.next) -- its relief's parameters and the names that code has. */
-const slotTaken = m => [...customParams(m), ...MATERIAL_SCOPE, ...IMAGE_SCOPE, ...(m?.relief ? [...Object.keys(m.relief.params || {}), ...RELIEF_SCOPE, 'picture_height'] : [])]
+const slotTaken = m => [...customParams(m), ...MATERIAL_SCOPE, ...IMAGE_SCOPE, ...(m?.relief ? [...Object.keys(m.relief.params || {}), ...RELIEF_SCOPE, 'texture_height', 'picture_height'] : [])]
 
 /* A MATERIAL'S RELIEF (materials.js RELIEFS): { code, params, constants?, ranges?, lengths? } -- a height
    field in mm that codegen puts around every object wearing the material. `amplitude` it must have, a
@@ -645,7 +645,7 @@ function reliefProblems(m) {
         if (!PARAM.test(k) || RESERVED_PARAMS.includes(k) || RELIEF_SCOPE.includes(k))
             p.push(`${at}: parameter name '${k}' not usable (a WGSL name, and not one of ${RELIEF_SCOPE.join(', ')})`)
         // its code has the material's pictures by name (codegen, 0.next): a parameter by one of them would be declared twice
-        else if (slots.includes(k)) p.push(`${at}: parameter '${k}' is the name of one of the material's pictures`)
+        else if (slots.includes(k)) p.push(`${at}: parameter '${k}' is the name of one of the material's image textures`)
         else if (!['number', 'vector', 'colour'].includes(paramKind(v)) || !finiteValue(v))
             p.push(`${at}: parameter '${k}' must be a number, {x, y, z} or {r, g, b}`)
     }
@@ -665,7 +665,7 @@ export function setRelief(doc, id, preset, { picture } = {}) {
     if (preset === 'picture') {
         const name = picture ?? mat.images?.[0]?.name
         if (!name || !(mat.images ?? []).some(x => x.name === name))
-            throw new ModelError(picture ? `material '${id}' has no picture '${picture}'` : `material '${id}' has no picture to make a relief from: + picture… first`)
+            throw new ModelError(picture ? `material '${id}' has no image texture '${picture}'` : `material '${id}' has no image texture to make a relief from: + image texture… first`)
     }
     const R = preset === 'picture' ? pictureRelief(picture ?? mat.images[0].name) : RELIEFS[preset]
     if (!R) throw new ModelError(`unknown relief '${preset}' (one of ${Object.keys(RELIEFS).join(', ')}, or picture)`)
@@ -2168,7 +2168,7 @@ export { fieldsOf as materialFieldsOf, SLOT_DEFAULTS, colourSlot, usedImages }
 /** Put a picture into the scene, under its key ({ key, entry } as images.js imageFromFile gives it). The same picture
  *  twice is kept once. Returns the key. */
 export function addImage(doc, { key, entry }) {
-    if (!IMAGE_KEY.test(key ?? '')) throw new ModelError(`'${key}' is not a picture's key`)
+    if (!IMAGE_KEY.test(key ?? '')) throw new ModelError(`'${key}' is not an image's key`)
     const bad = imagesProblems({ [key]: entry })
     if (bad.length) throw new ModelError(bad)
     doc.images ??= {}
@@ -2182,13 +2182,13 @@ const mustMaterial = (doc, id) => {
     return m
 }
 /** A slot on material `id` showing picture `image`, the defaults where `slot` says nothing (images.js SLOT_DEFAULTS), named
- *  `picture` or the next free one. It is the material's colour if no other slot is; on an emitter's first, the surface
+ *  `texture` or the next free one. It is the material's colour if no other slot is; on an emitter's first, the surface
  *  under its glow becomes a screen's dark glass (images.js SCREEN_DEFAULTS) -- whatever those fields held: an emitter
  *  never read them before it had a picture (materials.js fieldsOf), so they were a surface's left from before the type
  *  changed, or a preset's. Checked first; returns the slot. */
 export function addImageSlot(doc, id, image, slot = {}) {
     const m = mustMaterial(doc, id)
-    const name = slot.name ?? freeSlotName(m, 'picture', slotTaken(m))
+    const name = slot.name ?? freeSlotName(m, 'texture', slotTaken(m))
     const use = slot.use ?? (colourSlot(m) ? 'none' : 'colour')
     const s = { name, image, ...structuredClone({ ...SLOT_DEFAULTS, ...slot, name, image, use }) }
     const next = { ...m, images: [...(m.images ?? []), s] }
@@ -2206,7 +2206,7 @@ export function addImageSlot(doc, id, image, slot = {}) {
 export function setImageSlot(doc, id, name, patch) {
     const m = mustMaterial(doc, id)
     const i = (m.images ?? []).findIndex(s => s.name === name)
-    if (i < 0) throw new ModelError(`material '${id}' has no picture '${name}'`)
+    if (i < 0) throw new ModelError(`material '${id}' has no image texture '${name}'`)
     const was = m.images[i]
     const s = { ...was, ...structuredClone(patch) }
     const images = m.images.map((x, k) => k === i ? s : x)
@@ -2223,7 +2223,7 @@ export function setImageSlot(doc, id, name, patch) {
 export function removeImageSlot(doc, id, name) {
     const m = mustMaterial(doc, id)
     const i = (m.images ?? []).findIndex(s => s.name === name)
-    if (i < 0) throw new ModelError(`material '${id}' has no picture '${name}'`)
+    if (i < 0) throw new ModelError(`material '${id}' has no image texture '${name}'`)
     if (pictureReliefOf(m.relief) === name) setRelief(doc, id, null)
     const [s] = m.images.splice(i, 1)
     if (!m.images.length) delete m.images

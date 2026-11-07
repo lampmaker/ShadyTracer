@@ -110,51 +110,54 @@ intersection, a blend, a round, a shell), the material is laid out in the **grou
 pattern frame. The
 box on one of its shapes says so, and there it moves only that shape's relief.
 
-## Pictures
+## Image textures
 
-A material can show a **picture**: a PNG, JPEG or WebP, up to 4096 pixels on its longer side (a larger one is scaled
-down, and the console says so). In a material's Properties, **pictures** › **+ picture…** chooses one. The picture is kept
-in the scene, so a saved file, an exported scene, a copy and a library item all carry it.
+A material can show an **image texture**: a PNG, JPEG or WebP image, up to 4096 pixels on its longer side (a larger one
+is scaled down, and the console says so). In a material's Properties, **image textures** › **+ image texture…** chooses
+one. The image is kept in the scene, so a saved file, an exported scene, a copy and a library item all carry it.
 
-**What it does.** The first picture is the material's colour:
+**What it does.** The first image texture is the material's colour:
 - on a surface, its **base colour**;
 - on a **glowing** material, its **glow**. A white pixel glows at the material's luminance, a pixel half as bright half as
-  much, and a black one not at all. It works like a screen showing the picture at that brightness: 200 cd/m² is a
+  much, and a black one not at all. It works like a screen showing the image at that brightness: 200 cd/m² is a
   television, 300 an office monitor.
 
-Where the picture is transparent, the material's own colour or glow shows. A second picture, or one set to *code only*,
-is for the material's code: `sample(picture)` is the picture at the hit, `mapped(picture)` the position on it, and
-`sampleAt(picture, uv)` the picture at a position of your own ([Functions for code](../reference/code.md#a-materials-pictures)).
+Where the image is transparent, the material's own colour or glow shows. A second image texture, or one set to *code
+only*, is for the material's code: `sample(texture)` is the image texture at the hit, `mapped(texture)` the position on
+it, and `sampleAt(texture, uv)` the image texture at a position of your own
+([Functions for code](../reference/code.md#a-materials-image-textures)).
 
-**Where it goes.** A shape has no built-in picture coordinates, so the picture is projected onto it, in the object's
-[pattern frame](#turning-a-pattern-the-pattern-frame). It moves and turns with the object, and *pattern at* and *pattern
-turn* move and turn it like any pattern. The **projection** says how:
-- **planar**: along the frame's z, the picture's top towards +y. For a screen, a sign, a poster or a floor.
+**Where it goes.** A shape has no built-in texture coordinates, so the image texture is projected onto it, in the
+object's [pattern frame](#turning-a-pattern-the-pattern-frame). It moves and turns with the object, and *pattern at* and
+*pattern turn* move and turn it like any pattern. The **projection** says how:
+- **planar**: along the frame's z, the image's top towards +y. For a screen, a sign, a poster or a floor.
 - **box**: one of six faces, picked by the direction the surface faces. Each reads the right way round from outside.
 - **triplanar**: the three directions blended, for stone or concrete on any shape with no visible seam.
-- **cylindrical**: round the frame's z. Across the picture is the distance round in mm, so a label of 207 mm goes once
+- **cylindrical**: round the frame's z. Across the image is the distance round in mm, so a label of 207 mm goes once
   round a 66 mm can.
-- **spherical**: the whole picture once over a sphere.
+- **spherical**: the whole image once over a sphere.
 
-Then the picture is placed:
-- **width** and **height** are one copy, in real millimetres whatever the scene's unit; *Height from the picture's
-  shape* keeps its proportions.
+Then the image texture is placed:
+- **width** and **height** are one copy, in real millimetres whatever the scene's unit.
+  - *Height from the image's aspect ratio* sets the height to the width times the image's own height over its width.
+  - That gives the image its own proportions back, undistorted; the width stays as it is.
 - **offset** is where its centre is, in mm, and **turn** turns it in its own plane.
 - **wrap**, across and up separately: *repeat*, *mirror* (every other copy flipped, so the edges meet with no seam),
   *clamp* (the edge pixels go on) or *none* (one copy, the material's own value outside it).
 - **filter**: *smooth* mixes between pixels; *pixels* keeps each one a sharp square, for an LED wall or pixel art.
 - **faces**, for planar: the *front* faces only (where the surface faces +z), *both* (the back mirrored, as a slide seen
   from behind) or *all*.
-- **colour (sRGB)**: on for a colour picture. Off reads it as data, for a roughness map or a mask.
+- **colour (sRGB)**: on for a colour image. Off reads it as data, for a roughness map or a mask.
 
-Every one of these is live. Choosing another picture, renaming it, changing its use or taking it away is a compile.
+Every one of these is live. Choosing another image, renaming the image texture, changing its use or taking it away is a
+compile.
 
-**A glowing picture's dark parts.** A black pixel emits nothing, so there the material is not a light, and its surface
-shows. A glowing material with a picture keeps a surface's base colour, metallic, roughness and specular for that. They
-start as a screen's dark glass, so a black pixel looks like a switched-off screen reflecting the room. A pixel that
-glows reflects nothing, as every glowing surface: on a real screen the reflection is small next to the glow.
+**A glowing image texture's dark parts.** A black pixel emits nothing, so there the material is not a light, and its
+surface shows. A glowing material with an image texture keeps a surface's base colour, metallic, roughness and specular
+for that. They start as a screen's dark glass, so a black pixel looks like a switched-off screen reflecting the room. A
+pixel that glows reflects nothing, as every glowing surface: on a real screen the reflection is small next to the glow.
 
-Try [Pictures](example:pictures.json): one test card on a glowing screen, on a poster, round a can and on a ball.
+Try [Image textures](example:pictures.json): one test card on a glowing screen, on a poster, round a can and on a ball.
 
 ## Relief
 
@@ -165,24 +168,24 @@ that comes within two of its heights of the surface, so a scene full of relief r
 
 Compare them in a low, raking light: [Relief and texture](example:relief-texture.json).
 
-### A relief from a picture
+### A relief from an image texture
 
-A material's picture can be its relief: in the **relief** box choose **from a picture:** and the picture's name. Its
-luminance (times its alpha) is the height, so white is `amplitude` mm up and black is the surface itself. *raise* -1
-engraves it instead. It is placed by the picture's own width, height, offset, turn and wrap, read **planar** along the
-object's z whatever the picture's projection, and on every face: the sides of a box show its edge unless the wrap is
-*none* and the picture has a black border.
-
+A material's image texture can be its relief: in the **relief** box choose **from an image texture:** and its name.
+- **The height:** the image's luminance (times its alpha). White is `amplitude` mm up, black is the surface itself, and
+  *raise* -1 engraves it instead.
+- **Placement:** the image texture's own width, height, offset, turn and wrap, read **planar** along the object's z
+  whatever its projection, and on every face. The sides of a box show its edge unless the wrap is *none* and the image
+  has a black border.
 - **Smooth:** the height between pixels is a smooth curve through them (a cubic B-spline). Shading does not show the
   pixel grid, and sharp edges come out slightly rounded.
-- **Safe to march:** how steep the relief can be is worked out from the picture's own pixels when it is read, so a ray
-  never steps through it. A steep picture, small and high, makes the march take more steps near it.
-- **16 bits:** a 16-bit greyscale PNG keeps all of its 65 536 heights; any other picture has 256, a step of
+- **Safe to march:** how steep the relief can be is worked out from the image's own pixels when it is read, so a ray
+  never steps through it. A steep image texture, small and high, makes the march take more steps near it.
+- **16 bits:** a 16-bit greyscale PNG keeps all of its 65 536 heights; any other image has 256, a step of
   amplitude / 255. For a tall relief under a raking light, use a 16-bit height map.
-- **Its cost:** sixteen reads of the picture at every march step near the surface, on top of what a relief costs.
+- **Its cost:** sixteen reads of the image at every march step near the surface, on top of what a relief costs.
 
-To show the picture's colour without the relief, or the relief without the colour, set the picture's **use** to
-*code only*: the relief still reads it. [Pictures](example:pictures.json) has an embossed plaque made this way.
+To show the image texture's colour without the relief, or the relief without the colour, set its **use** to *code only*:
+the relief still reads it. [Image textures](example:pictures.json) has an embossed plaque made this way.
 
 ## Realistic values
 

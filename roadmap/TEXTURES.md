@@ -1,13 +1,13 @@
 # Images on surfaces: a proposal
 
-**STATUS (2026-11-07).** **T4's relief from a picture is built (0.next), not yet seen on hardware.** The user: *"build
+**STATUS (2026-11-07).** **T4's relief from an image texture is built (0.next), not yet seen on hardware.** The user: *"build
 the relief from picture"*. What it is, and what decided each part:
-- **A relief made for one picture** (`materials.js pictureRelief`), not one of the presets. Its code is
+- **A relief made for one image texture** (`materials.js pictureRelief`), not one of the presets. Its code is
   `h = amplitude * raise * heightAt(name, q).x` with its slope from the same call. The presets are each compiled on
-  materials with no picture (check-shaders, the relief tests), where it would not compile. A relief's code now has the
-  material's pictures by name (codegen), as its material code does.
-- **Planar from the point's x and y, on every face, whatever the picture's projection.** The height is then a function
-  of the point alone, and a bound on its gradient is a property of the picture and its placement. Box and triplanar
+  materials with no image texture (check-shaders, the relief tests), where it would not compile. A relief's code now has the
+  material's image textures by name (codegen), as its material code does.
+- **Planar from the point's x and y, on every face, whatever the image texture's projection.** The height is then a function
+  of the point alone, and a bound on its gradient is a property of the image texture and its placement. Box and triplanar
   hand over by the normal, which a relief, evaluated in the SDF, does not have. The cylinder's arc length has a seam,
   and the sphere has poles: neither has a bound.
 - **Smooth: a cubic B-spline of the pixels, 16 reads.** Bilinear's gradient jumps at every texel's edge, and a relief's
@@ -28,40 +28,40 @@ the relief from picture"*. What it is, and what decided each part:
 
 **STATUS (2026-11-06, later).** **T1 is built (0.next), not yet seen on hardware.** The user: *"go with your proposals,
 build T1"*, after the four decisions below were put to them, so each is taken as proposed: a surface under the glow
-(way 1), pictures in the file, 4096 px and 8-bit, one picture per material placed by the pattern frame. What was built
+(way 1), image textures in the file, 4096 px and 8-bit, one image texture per material placed by the pattern frame. What was built
 differs from the proposal in these places, each for a reason found while building:
 
-- **A slot, not a parameter kind.** A material's pictures are `m.images`, a list of slots beside its parameters
+- **A slot, not a parameter kind.** A material's image textures are `m.images`, a list of slots beside its parameters
   (`builder/images.js`), not a fifth kind of parameter. The parameter kinds are read in some 40 places
-  (`model.js paramKind`), each of which would have had to learn what a picture is. A slot's uniform is
+  (`model.js paramKind`), each of which would have had to learn what an image texture is. A slot's uniform is
   `img_<name>_<material>`, and a material's own parameter may not be called `img_...`.
-- **The picture is in the scene document, outside every undo step** (`project.js OUTSIDE_HISTORY`), rather than in a
+- **The image texture is in the scene document, outside every undo step** (`project.js OUTSIDE_HISTORY`), rather than in a
   store of its own. That makes a file, an export, a copy, a library item and a drag between scenes whole with no code
-  of their own. A snapshot does not carry megabytes: no undo step holds a picture, and a restore carries them across. A
-  file keeps only the pictures its materials use (`model.js withUsedPictures`). The document in memory keeps all of
+  of their own. A snapshot does not carry megabytes: no undo step holds an image texture, and a restore carries them across. A
+  file keeps only the image textures its materials use (`model.js withUsedPictures`). The document in memory keeps all of
   them, since an undo may bring back a slot that names one.
 - **Each kernel gets its own texel read** (`core/images.js withImages`, `sceneCompute`): the atlas where `main`
   reaches a material, a stub where it does not. The renderer's march and shadow rays ask the distance alone, and a
   texture named in a function `main` never calls is an invalid bind group (check-shaders pass 2). Found while planning
   the binding, before anything was run.
 - **The screen's surface replaces whatever an emitter held** in base colour, metallic, roughness, specular and specular
-  tint, on its first glowing picture. An emitter never read those fields before (`materials.js fieldsOf`), and a preset's
+  tint, on its first glowing image texture. An emitter never read those fields before (`materials.js fieldsOf`), and a preset's
   roughness is not the field's default, so "only where still the default" left the diffuse preset's roughness 1 under
   the glass (`builder/test/images.gpu.mjs` found it).
 - **Not in T1:** a slot's settings as parameters of the registry and the timeline (a scrolling sign is T2), *Fit to
-  object* (T2 as planned), HDR pictures (T2), a picture's bytes freed on the GPU (an atlas no scene holds is the
+  object* (T2 as planned), HDR image textures (T2), an image texture's bytes freed on the GPU (an atlas no scene holds is the
   browser's to free: `builder/images.js` ATLASES).
 
 **What is verified, and where (Dawn over lavapipe, this container):** the WGSL lookup against its JS twin in every
 projection, wrap, filter and face setting (`core/test/images.gpu.mjs`); the scene's own `getMaterial2`, codegen and as
-data, against the twin: a glowing picture's emission times the luminance, the pattern frame moving it, a slot's live
+data, against the twin: a glowing image texture's emission times the luminance, the pattern frame moving it, a slot's live
 uniform moving it (`builder/test/images.gpu.mjs`); and the whole renderer: a floor under a glowing 8 x 8 checker reads
 0.9905 +- 0.0078 of the floor under a uniform grey of its mean with light sampling on, and 0.9956 +- 0.0063 with it
-off, against the means' ratio of 0.9943. **Not seen:** any picture, on any screen; its speed. Both are the user's.
+off, against the means' ratio of 0.9943. **Not seen:** any rendered picture, on any screen; its speed. Both are the user's.
 
-**What to look at first:** File › Examples › *Pictures*. The test card's bars should read white, yellow, cyan, green,
+**What to look at first:** File › Examples › *Image textures*. The test card's bars should read white, yellow, cyan, green,
 magenta, red, blue from the left on the screen, the poster and the can, with the ring round its centre. The
-television's black ramp end should look like dark glass. Then a material's **pictures** box: + picture…, and its
+television's black ramp end should look like dark glass. Then a material's **image textures** box: + image texture…, and its
 settings dragged.
 
 **STATUS (2026-11-06).** A proposal, nothing built. The user: *"think about textures. how could these be applied.
@@ -100,7 +100,7 @@ The facts below are marked **read in code** (file:line, which says what the code
   code: `builder/materials.js:174-177`.
 
 **So placement mostly exists.** A texture is one more pattern: the pattern frame places and turns it per object,
-and the image's own mapping only adds what a picture needs and a noise does not: a size, an aspect, a wrap mode.
+and the image's own mapping only adds what an image texture needs and a noise does not: a size, an aspect, a wrap mode.
 
 ### Emission that varies over a surface is already right
 
@@ -156,7 +156,7 @@ deals with it.
 
 - **Kept by its content**: the SHA-256 of its bytes is its key. The scene stores `images: { <hash>: { name, width,
   height, colour } }` and the bytes go into the project's own store in IndexedDB, beside its scenes. Two scenes and
-  two materials using one picture keep it once.
+  two materials using one image texture keep it once.
 - **Carried in every file that leaves the browser.** An exported project or scene holds the bytes as base64 (or a
   ZIP, if the files get large). A library item holds its own. A file is whole on its own.
 - **Its colour space is the image's, chosen once:** *colour* (sRGB-encoded: decoded to linear on read, for a base
@@ -164,7 +164,7 @@ deals with it.
   choice. The default is guessed from use: colour if first used for a colour.
 - **8-bit PNG, JPEG and WebP first**, through `createImageBitmap`. Their alpha is kept. **HDR images later** (.hdr,
   .exr: the Darkroom already writes both and its test has readers, `lib/pathtracer/test/export.test.mjs`), in a
-  second, `rgba16float` atlas, for a picture given in absolute luminance.
+  second, `rgba16float` atlas, for an image texture given in absolute luminance.
 - **A size limit, said when applied**: the long edge scaled down to 4096 px on import (a proposal; the user's call).
 - **A version bump of the scene file**: `bump: minor`.
 
@@ -174,7 +174,7 @@ deals with it.
 
 - **The atlas is one `texture_2d<f32>`** (`rgba8unorm`), every image of the scene packed into it by shelves, each
   with a gutter. Each image's rectangle in it, its size in texels and its colour flag are uniforms.
-- **Why one texture:** the number of bindings does not depend on the number of images. A second picture is an
+- **Why one texture:** the number of bindings does not depend on the number of images. A second image texture is an
   upload and a uniform write, not a new declaration in every kernel that reaches `getMaterial2`. One binding also
   keeps clear of the 16-texture limit.
 - **Its size follows the images**, repacked when one is added. It is not allocated at the 8192² the WebGPU default
@@ -220,10 +220,10 @@ sample measured on the user's hardware.
 `m.emissive = image.rgb × luminance`
 
 - **The luminance on the panel is a white pixel's.** A white pixel (linear 1, 1, 1) glows at the luminance typed;
-  a pixel half as bright, half as much; a black one, not at all. It is a monitor showing the picture at that
+  a pixel half as bright, half as much; a black one, not at all. It is a monitor showing the image texture at that
   brightness: 300 cd/m² for an office screen, 1000 for a phone in the sun.
 - **This differs from a plain glowing colour.** For a plain colour, codegen divides the colour by its own luminance,
-  so the number alone sets the brightness (`builder/codegen.js:707`). A picture's pixels are kept relative to its
+  so the number alone sets the brightness (`builder/codegen.js:707`). An image texture's pixels are kept relative to its
   white instead, or every pixel would come out equally bright.
 - **Its alpha** gives the material's own colour where it is transparent, so a logo on a glowing panel is one image.
 
@@ -278,14 +278,14 @@ first image in a scene is a compile.
   on any shape with no visible seam: three lookups.
 - **Cylindrical** around the frame's z: the image wrapped round, its width the circumference given by *size*. A
   label on a bottle, a lampshade.
-- **Spherical**: longitude and latitude. A globe, or an equirectangular picture seen from inside.
+- **Spherical**: longitude and latitude. A globe, or an equirectangular image texture seen from inside.
 - **Code**: none. The material's code passes its own position (below).
 
-**Fit to object** sets size and offset from the object's box in its pattern frame, one undo step, so a picture
+**Fit to object** sets size and offset from the object's box in its pattern frame, one undo step, so an image texture
 covers a panel in one click. The boxes are measured already (`builder/bounds.js`, `builder/boxes.js`).
 
 **Why in the pattern frame and not on a field of its own:** the frame already moves and turns a pattern per object,
-live, with its rules for CSG groups (§1), and every pattern on the object then lines up with the picture. A picture
+live, with its rules for CSG groups (§1), and every pattern on the object then lines up with the image texture. An image texture
 is laid out the same way as every other pattern.
 
 ## 6. In code
@@ -293,16 +293,16 @@ is laid out the same way as every other pattern.
 A material's image parameters are in scope by name, as its other parameters are, with three functions:
 
 ```wgsl
-let c = sample(picture);            // vec4: linear rgb (if colour) and alpha, at the hit, by its mapping
-let uv = mapped(picture);           // the projection's position, in copies of the image (0..1 is one)
-let d = sampleAt(picture, uv * 2.0);// a lookup at a position of one's own, with the wrap and filter
+let c = sample(texture);                  // vec4: linear rgb (if colour) and alpha, at the hit, by its mapping
+let uv = mapped(texture);                 // the projection's position, in copies of the image (0..1 is one)
+let d = sampleAt(texture, uv * 2.0);// a lookup at a position of one's own, with the wrap and filter
 
 m.baseColor  = mix(m.baseColor, c.rgb, c.a);
 m.roughness  = sample(roughmap).r;                  // a data image
 m.emissive   = c.rgb * 500.0;                       // 500 cd/m^2 for a white pixel
 ```
 
-- `picture` is a constant naming the slot (a `u32`); the functions read its rectangle and mapping from the
+- `texture` names the slot (a `u32`); the functions read its rectangle and mapping from the
   uniforms.
 - **What code cannot do with it yet:** bend the normal (a normal map). Material2 has no normal: the shading normal
   is the SDF's (`core/materials.js` `struct Material2`). A height image as a **relief** is possible, since a relief is
@@ -341,19 +341,19 @@ pass 2 already refuses a binding `main` cannot reach:
   error bar of the others. An image half black, for the probes (§4).
 - **codegen**: a scene without an image, byte for byte the text it was. A scene with one: the binding declared on
   exactly the kernels that reach `getMaterial2`.
-- **The file**: an image saved, exported, imported elsewhere and still there; two materials with one picture keep
+- **The file**: an image saved, exported, imported elsewhere and still there; two materials with one image texture keep
   it once.
 - **The panel** in headless Chromium: an image chosen, its mapping's fields, Fit to object.
-- **For the user to look at** (what the container cannot judge): a picture on a screen in a dark room, the right way
+- **For the user to look at** (what the container cannot judge): an image texture on a screen in a dark room, the right way
   round, sharp with *pixels*; a tiled floor with *mirror* and no seam; a label on a cylinder.
 
 ## 8. Steps
 
 | step | what | why first or later |
 |---|---|---|
-| **T1** | Images as project assets (§2). The atlas and the four-load lookup (§3). The image parameter with every projection, wrap and filter (§5). A glowing material's colour from an image with a surface underneath (§4, way 1). A surface's base colour from an image. `sample`, `mapped`, `sampleAt` in code (§6). | The short-term request: a picture that glows, and everything else through code |
+| **T1** | Images as project assets (§2). The atlas and the four-load lookup (§3). The image parameter with every projection, wrap and filter (§5). A glowing material's colour from an image with a surface underneath (§4, way 1). A surface's base colour from an image. `sample`, `mapped`, `sampleAt` in code (§6). | The short-term request: an image texture that glows, and everything else through code |
 | **T2** | Any field from an image's channel without code (roughness from R, metallic from G, ...). Fit to object. Library items carrying their images. HDR images in absolute luminance. | Each is small once T1 is there; HDR needs a second atlas format |
-| **T3** | **A light object showing an image**: a rectangle light whose face glows by the picture, with exact lumens, a source on the Optics page, its photons drawn by the image's brightness (a table of its pixels' cumulative sums). Also a **gobo**: a light's beam masked by an image. | A rectangle light's face already has exact coordinates, its own xy (`builder/lights.js`), so it needs no projection. The best long-term home for a backlit sign whose flux matters. A larger change: the sources, the optics trace and the photons each change |
+| **T3** | **A light object showing an image**: a rectangle light whose face glows by the image texture, with exact lumens, a source on the Optics page, its photons drawn by the image's brightness (a table of its pixels' cumulative sums). Also a **gobo**: a light's beam masked by an image. | A rectangle light's face already has exact coordinates, its own xy (`builder/lights.js`), so it needs no projection. The best long-term home for a backlit sign whose flux matters. A larger change: the sources, the optics trace and the photons each change |
 | **T4** | A height image as a relief. A surface that glows and reflects (§4, way 2). An equirectangular HDR as the environment. | Each a change to the engine with its own cost to measure |
 
 ## 9. Decisions for the user
@@ -364,4 +364,4 @@ pass 2 already refuses a binding `main` cannot reach:
    name, as ray files are?
 3. **The size limit** on import: 4096 px on the long edge? 8-bit images only in T1?
 4. **One image per material, placed per object by its pattern frame** (proposed), or an image setting on the
-   object as well? With the proposal, two screens showing different pictures are two materials.
+   object as well? With the proposal, two screens showing different image textures are two materials.

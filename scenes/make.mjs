@@ -412,7 +412,7 @@ function testCard() {
    CAN's label wrapped round a 66 mm can (cylindrical: across the card is the distance round, 207 mm, the can's
    circumference; up it its height), and on a BALL laid triplanar. A dim studio, so the screen is the brightest thing. */
 async function pictures() {
-    const doc = scene('Pictures', { radius: 3000, env: STUDIO(60, 0.6) })
+    const doc = scene('Image textures', { radius: 3000, env: STUDIO(60, 0.6) })
     floor(doc, lib(doc, 'charcoal'))
     const card = await entryFromBytes(testCard(), { name: 'test card.png', type: 'image/png', width: 320, height: 180 })
     M.addImage(doc, card)
@@ -752,7 +752,7 @@ export const EXAMPLES = [
         ['material-board.json', materialBoard, 'The library\'s materials on 40 mm spheres'],
         ['relief-texture.json', reliefTexture, 'Plaster, stucco, render, stone, hammered metal, leather: reliefs in a raking light'],
         ['glass-liquid.json', glassLiquid, 'A tumbler of water, a green bottle, a flint prism in the sun'],
-        ['pictures.json', pictures, 'A test card glowing on a screen, on a poster, round a can and on a ball; a plaque embossed from a 16-bit height map'],
+        ['pictures.json', pictures, 'One image texture glowing on a screen, on a poster, round a can and on a ball; a plaque embossed from a 16-bit height map'],
     ] },
     { audience: 'Modelling and rendering', group: 'Light and camera', items: [
         ['lighting-room.json', lighting, 'A room in metres: daylight through a window and a 1500 lm lamp'],

@@ -81,10 +81,10 @@ export const EXAMPLES = [
  },
  {
   "file": "pictures.json",
-  "title": "Pictures",
+  "title": "Image textures",
   "audience": "Modelling and rendering",
   "group": "Materials",
-  "description": "A test card glowing on a screen, on a poster, round a can and on a ball; a plaque embossed from a 16-bit height map"
+  "description": "One image texture glowing on a screen, on a poster, round a can and on a ball; a plaque embossed from a 16-bit height map"
  },
  {
   "file": "lighting-room.json",

@@ -1208,10 +1208,10 @@ ok('...and the visibility beside it follows: 3.912 x 4 m, 15.6 m', /^visibility 
         await p.waitForTimeout(300)
     }
     rows = await rowsOf('scr')
-    const has = await p.evaluate(() => [...document.querySelectorAll('#t button')].some(x => x.textContent.includes('+ picture')))
-    ok('a material has + picture… under its pictures', has)
+    const has = await p.evaluate(() => [...document.querySelectorAll('#t button')].some(x => x.textContent.includes('+ image texture')))
+    ok('a material has + image texture… under its image textures', has)
     before = await state()
-    await pick('+ picture', { name: 'logo.png', mimeType: 'image/png', buffer: png })
+    await pick('+ image texture', { name: 'logo.png', mimeType: 'image/png', buffer: png })
     const got = await p.evaluate(() => {
         const m = CHECK.M.material(CHECK.doc, 'scr')
         const k = m.images?.[0]?.image
@@ -1221,7 +1221,7 @@ ok('...and the visibility beside it follows: 3.912 x 4 m, 15.6 m', /^visibility 
     })
     s = await state()
     ok('...a PNG chosen: in the scene by its key, its size the decoder\'s, a slot that is the glow -- a compile and an undo step',
-        got.entry?.width === 3 && got.entry?.height === 2 && got.entry?.type === 'image/png' && got.slot?.use === 'colour' && got.slot?.name === 'picture'
+        got.entry?.width === 3 && got.entry?.height === 2 && got.entry?.type === 'image/png' && got.slot?.use === 'colour' && got.slot?.name === 'texture'
         && s.structure === before.structure + 1 && s.commits.at(-1) === null && got.valid.every(x => !/scr|image|picture/.test(x)), JSON.stringify([got, s.structure, before.structure]))
     ok('...the screen\'s surface under the glow its dark glass', got.base?.r === 0.02 && got.rough === 0.05, JSON.stringify(got))
     await p.waitForTimeout(50)
@@ -1232,11 +1232,20 @@ ok('...and the visibility beside it follows: 3.912 x 4 m, 15.6 m', /^visibility 
     before = await state()
     ok('the width typed', await set('width (mm)', 55) === 'set')
     s = await state()
-    ok('...is the slot\'s uniform, live, with its undo step: no compile', s.live.at(-1) === 'scr.img_picture' && s.commits.at(-1) === 'scr.img_picture'
+    ok('...is the slot\'s uniform, live, with its undo step: no compile', s.live.at(-1) === 'scr.img_texture' && s.commits.at(-1) === 'scr.img_texture'
         && s.structure === before.structure && await p.evaluate(() => CHECK.M.material(CHECK.doc, 'scr').images[0].size.x) === 55, JSON.stringify(s))
+    // HEIGHT FROM THE IMAGE'S ASPECT RATIO: the height the width times the image's own height over its width (3 x 2: 2/3),
+    // the width kept; live, no compile
+    before = await state()
+    ok('Height from the image\'s aspect ratio', await button('Height from the image\'s aspect ratio') === 'clicked')
+    await p.waitForTimeout(50)
+    const sz = await p.evaluate(() => ({ ...CHECK.M.material(CHECK.doc, 'scr').images[0].size }))
+    s = await state()
+    ok('...the height 55 x 2 / 3, the width kept, live', Math.abs(sz.y - 55 * 2 / 3) < 1e-4 && sz.x === 55 && s.structure === before.structure
+        && s.live.at(-1) === 'scr.img_texture', JSON.stringify(sz))
     ok('wrap across: mirror', await set('wrap across', 'mirror') === 'set')
     s = await state()
-    ok('...live too', s.live.at(-1) === 'scr.img_picture' && s.structure === before.structure
+    ok('...live too', s.live.at(-1) === 'scr.img_texture' && s.structure === before.structure
         && await p.evaluate(() => CHECK.M.material(CHECK.doc, 'scr').images[0].wrapU) === 'mirror')
     ok('the projection: triplanar', await set('projection', 'triplanar') === 'set')
     await p.waitForTimeout(50)
@@ -1247,7 +1256,7 @@ ok('...and the visibility beside it follows: 3.912 x 4 m, 15.6 m', /^visibility 
     ok('...a compile', s.structure === before.structure + 1 && await p.evaluate(() => CHECK.M.material(CHECK.doc, 'scr').images[0].use) === 'none')
     // a file that is no picture: said in the box, nothing added
     await p.waitForTimeout(50)
-    await pick('+ picture', { name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('hello') })
+    await pick('+ image texture', { name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('hello') })
     await p.waitForTimeout(50)
     const said = await p.evaluate(() => [...document.querySelectorAll('#t .tp-lblv')].find(r => r.querySelector('.tp-lblv_l')?.textContent.trim() === 'not read')?.querySelector('textarea')?.value ?? null)
     ok('a text file chosen: said in the box, nothing added', /not a PNG, JPEG or WebP/.test(said ?? '') && await p.evaluate(() => CHECK.M.material(CHECK.doc, 'scr').images.length) === 1, said)
@@ -1255,10 +1264,10 @@ ok('...and the visibility beside it follows: 3.912 x 4 m, 15.6 m', /^visibility 
     // from the pixels Chromium decoded, a compile; the box says what such a relief is and is not
     ok('the picture\'s heights\' bound was worked out as it was read', await p.evaluate(() => { const e = Object.values(CHECK.doc.images)[0]; return e.heights?.colour?.length === 6 && e.heights.data[0] > 0 }))
     before = await state()
-    ok('the relief: from a picture', await set('relief', 'from a picture: picture') === 'set')
+    ok('the relief: from an image texture', await set('relief', 'from an image texture: texture') === 'set')
     await p.waitForTimeout(150)
     s = await state()
-    ok('...a relief reading it, amplitude and raise, a compile', await p.evaluate(() => CHECK.M.pictureReliefOf(CHECK.M.material(CHECK.doc, 'scr').relief)) === 'picture'
+    ok('...a relief reading it, amplitude and raise, a compile', await p.evaluate(() => CHECK.M.pictureReliefOf(CHECK.M.material(CHECK.doc, 'scr').relief)) === 'texture'
         && s.structure === before.structure + 1)
     const notes = await p.evaluate(() => [...document.querySelectorAll('#t textarea')].map(t => t.value).find(v => /on every face/.test(v)) ?? null)
     ok('...and its box says it is read planar (the picture is triplanar), on every face, at 8 bits', /read planar.*triplanar/.test(notes ?? '') && /8 bits a pixel/.test(notes ?? ''), notes)

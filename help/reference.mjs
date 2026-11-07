@@ -277,18 +277,18 @@ function materials() {
     s += `\n## Starting points\n\nThe Properties panel's **+** makes a material from one of these: ${Object.values(PRESETS).map(p => `*${p.label}*`).join(', ')}. `
         + 'The Library has many more, with real values.\n'
     s += '\n## Coating presets\n\n' + Object.entries(COAT_PRESETS).map(([k, v]) => `- **${k}**: ${Object.entries(v).map(([f, x]) => `${FIELD_LABELS[f] ?? f} ${x}`).join(', ')}`).join('\n') + '\n'
-    s += '\n## Pictures\n\nA material can show pictures (' + IMAGE_TYPES.map(t => t.slice(6).toUpperCase()).join(', ') + ', up to '
+    s += '\n## Image textures\n\nA material can show image textures (' + IMAGE_TYPES.map(t => t.slice(6).toUpperCase()).join(', ') + ', up to '
         + `${IMAGE_MAX_EDGE} pixels on the longer side; a larger one is scaled down), each placed on every object wearing it by a projection in `
         + 'the object\'s [pattern frame](../modelling/materials.md#turning-a-pattern-the-pattern-frame). One can be the material\'s colour; '
-        + 'the others are for its code (`sample(name)`: [Functions for code](code.md#a-materials-pictures)). Every setting is live but the '
-        + 'picture itself, its name and its use: a compile. See [Pictures](../modelling/materials.md#pictures).\n\n'
+        + 'the others are for its code (`sample(name)`: [Functions for code](code.md#a-materials-image-textures)). Every setting is live but the '
+        + 'image itself, its name and its use: a compile. See [Image textures](../modelling/materials.md#image-textures).\n\n'
         + '| setting | starts at | does |\n|---|---|---|\n'
     for (const [k, v] of Object.entries(SLOT_DEFAULTS)) s += `| ${k} | ${cell(value(v))} | ${cell(SLOT_HELP[k] ?? '')} |\n`
     s += '\n## Reliefs\n\nA relief is a height on every object wearing the material, in real mm -- part of the shape, so it shows in the '
         + 'silhouette, and paid for at every march step near the object.\n\n'
     for (const R of Object.values(RELIEFS)) s += `### ${R.label}\n\n${firstComment(R.code)}\n\n`
     // ...and the one made for a picture (materials.js pictureRelief, 0.next): not a preset, it names the picture it reads
-    s += `### ${PICTURE_RELIEF_LABEL}\n\n${firstComment(pictureRelief('picture').code)}\n\n`
+    s += `### ${PICTURE_RELIEF_LABEL}\n\n${firstComment(pictureRelief('texture').code)}\n\n`
     return s
 }
 
@@ -337,9 +337,9 @@ function code() {
         + '`XF_S` this frame\'s units in world units, `SURFACE_ONLY`, `READ_REACH`, `DIVIDED_ABOVE` |\n'
         + '| a material\'s | once where a ray hits | `m` the material to change, `p` and `n` the hit and its normal in the world, `C`, '
         + 'and `p_local`, `R_local`, `S_local` the hit in the object\'s frame, its turn and its scale |\n'
-        + '| a material\'s pictures | -- | `sample(name)`, `mapped(name)` and `sampleAt(name, uv)` in its code: [below](#a-materials-pictures) |\n'
+        + '| a material\'s image textures | -- | `sample(name)`, `mapped(name)` and `sampleAt(name, uv)` in its code: [below](#a-materials-image-textures) |\n'
         + '| a material\'s relief | at every march step near an object wearing it | `q` the point in mm in that object\'s frame, '
-        + '`world` the same in the scene\'s, the material\'s pictures by name for `heightAt`; it sets `h`, the height in mm outward, and `slope`, a bound on how steep `h` is |\n'
+        + '`world` the same in the scene\'s, the material\'s image textures by name for `heightAt`; it sets `h`, the height in mm outward, and `slope`, a bound on how steep `h` is |\n'
         + '| the scene\'s functions | -- | its functions are called from any of the others |\n'
         + '\nThe comments a new block starts with say the same, with examples; **Functions you can call…** under a block opens this page.\n'
     s += '\n## Words the page rewrites\n\nBefore it compiles, every whole word below is replaced -- in your code too, so do not name '
@@ -352,18 +352,18 @@ function code() {
         + 'reaches 1, so the field\'s reaches √2, and divided by 1.5 it is never more than the distance.\n'
     /* A MATERIAL'S PICTURES (0.next; lib/pathtracer/core/images.js): not in the scene prelude -- a scene without a picture has
        none of them -- so written here, not in CODE_HELP, whose every name the prelude must have */
-    s += '\n## A material\'s pictures\n\nIn a material whose **pictures** box has any, each is in its code by its name, and three '
+    s += '\n## A material\'s image textures\n\nIn a material whose **image textures** box has any, each is in its code by its name, and three '
         + 'functions read them. The point is the hit\'s in the object\'s pattern frame, in mm.\n\n'
-        + '- `sample(picture) -> vec4<f32>` -- the picture at the hit by its own projection, size, offset, turn, wrap and filter: linear '
-        + 'rgb (a colour picture decoded from sRGB) and alpha; 0 where it does not show (outside a copy that does not wrap, a face it is not on).\n'
-        + '- `mapped(picture) -> vec2<f32>` -- where on the picture the hit is, in copies of it: (0, 0) its bottom left, (1, 1) its top right.\n'
-        + '- `sampleAt(picture, uv: vec2<f32>) -> vec4<f32>` -- the picture at a position of your own, in copies, with its wrap and filter.\n'
-        + '\nFor instance a data picture as the roughness, `m.roughness = sample(rough).r;`, or a picture twice as small, '
-        + '`m.baseColor = sampleAt(picture, mapped(picture) * 2.0).rgb;`.\n'
-        + '\nIn the material\'s **relief** code its pictures are in scope by name too, with one more:\n\n'
-        + '- `heightAt(picture, q) -> vec2<f32>` -- the picture as a height at `q`: its luminance times its alpha, 0 to 1, read planar '
+        + '- `sample(texture) -> vec4<f32>` -- the image texture at the hit by its own projection, size, offset, turn, wrap and filter: linear '
+        + 'rgb (a colour image decoded from sRGB) and alpha; 0 where it does not show (outside a copy that does not wrap, a face it is not on).\n'
+        + '- `mapped(texture) -> vec2<f32>` -- where on the image texture the hit is, in copies of it: (0, 0) its bottom left, (1, 1) its top right.\n'
+        + '- `sampleAt(texture, uv: vec2<f32>) -> vec4<f32>` -- the image texture at a position of your own, in copies, with its wrap and filter.\n'
+        + '\nFor instance a data image texture as the roughness, `m.roughness = sample(rough).r;`, or one twice as small, '
+        + '`m.baseColor = sampleAt(texture, mapped(texture) * 2.0).rgb;`.\n'
+        + '\nIn the material\'s **relief** code its image textures are in scope by name too, with one more:\n\n'
+        + '- `heightAt(texture, q) -> vec2<f32>` -- the image texture as a height at `q`: its luminance times its alpha, 0 to 1, read planar '
         + 'from `q.xy` at its own size, offset, turn and wrap, smooth (a cubic B-spline of its pixels, 16 reads); and, second, the '
-        + 'bound on how steep it is per mm, from its own pixels. A relief from a picture is `h = amplitude * raise * t.x; '
+        + 'bound on how steep it is per mm, from its own pixels. A relief from an image texture is `h = amplitude * raise * t.x; '
         + 'slope = amplitude * abs(raise) * t.y;` with `t` this.\n'
     for (const sec of CODE_HELP) {
         s += `\n## ${sec.title}\n\n${sec.intro}\n\n`

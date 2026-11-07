@@ -46,26 +46,26 @@ const doc = () => {
     ok('a picture put into the scene once, under its key', M.addImage(d, a) === a.key && M.addImage(d, a2) === a.key && Object.keys(d.images).length === 1
         && d.images[a.key].name === 'a.png')
     const s = M.addImageSlot(d, 'wall', a.key)
-    ok('the first slot: named picture, the material\'s colour, every setting at its default', s.name === 'picture' && s.use === 'colour'
+    ok('the first slot: named texture, the material\'s colour, every setting at its default', s.name === 'texture' && s.use === 'colour'
         && s.projection === 'planar' && s.size.x === 100 && s.wrapU === 'repeat' && s.colour === true)
     const s2 = M.addImageSlot(d, 'wall', a.key)
-    ok('a second: picture2, and code only (one colour a material)', s2.name === 'picture2' && s2.use === 'none')
-    ok('two that are both the colour refused', /one at most/.test(threw(() => M.setImageSlot(d, 'wall', 'picture2', { use: 'colour' })) ?? ''))
+    ok('a second: texture2, and code only (one colour a material)', s2.name === 'texture2' && s2.use === 'none')
+    ok('two that are both the colour refused', /one at most/.test(threw(() => M.setImageSlot(d, 'wall', 'texture2', { use: 'colour' })) ?? ''))
     ok('...and nothing changed', M.material(d, 'wall').images[1].use === 'none')
-    ok('a slot named as a parameter of the material refused', (() => { M.material(d, 'wall').params.stripe = 1; const e = threw(() => M.setImageSlot(d, 'wall', 'picture2', { name: 'stripe' })); delete M.material(d, 'wall').params.stripe; return /taken/.test(e ?? '') })())
-    ok('...or as a name its code has (p, sample)', /taken/.test(threw(() => M.setImageSlot(d, 'wall', 'picture2', { name: 'p' })) ?? '')
-        && /taken/.test(threw(() => M.setImageSlot(d, 'wall', 'picture2', { name: 'sample' })) ?? ''))
+    ok('a slot named as a parameter of the material refused', (() => { M.material(d, 'wall').params.stripe = 1; const e = threw(() => M.setImageSlot(d, 'wall', 'texture2', { name: 'stripe' })); delete M.material(d, 'wall').params.stripe; return /taken/.test(e ?? '') })())
+    ok('...or as a name its code has (p, sample)', /taken/.test(threw(() => M.setImageSlot(d, 'wall', 'texture2', { name: 'p' })) ?? '')
+        && /taken/.test(threw(() => M.setImageSlot(d, 'wall', 'texture2', { name: 'sample' })) ?? ''))
     ok('a material\'s own parameter may not be called img_...', M.validate({ ...d, materials: d.materials.map(m => m.id === 'wall' ? { ...m, params: { ...m.params, img_x: 1 } } : m) })
         .some(x => /img_/.test(x)))
-    ok('bad settings refused, each said', /projection/.test(threw(() => M.setImageSlot(d, 'wall', 'picture', { projection: 'cubic' })) ?? '')
-        && /size/.test(threw(() => M.setImageSlot(d, 'wall', 'picture', { size: { x: 0, y: 1 } })) ?? '')
-        && /wrapU/.test(threw(() => M.setImageSlot(d, 'wall', 'picture', { wrapU: 'tile' })) ?? ''))
+    ok('bad settings refused, each said', /projection/.test(threw(() => M.setImageSlot(d, 'wall', 'texture', { projection: 'cubic' })) ?? '')
+        && /size/.test(threw(() => M.setImageSlot(d, 'wall', 'texture', { size: { x: 0, y: 1 } })) ?? '')
+        && /wrapU/.test(threw(() => M.setImageSlot(d, 'wall', 'texture', { wrapU: 'tile' })) ?? ''))
     // what is a compile and what is live
-    ok('a placement, a wrap, a filter: the slot\'s uniform (no compile)', M.setImageSlot(d, 'wall', 'picture', { offset: { x: 5, y: 1 }, wrapU: 'mirror', filter: 'pixels', projection: 'box' }).compile === false)
-    ok('another picture, a name, its use: a compile', M.setImageSlot(d, 'wall', 'picture', { image: a.key }).compile === false
-        && (M.addImage(d, b), M.setImageSlot(d, 'wall', 'picture', { image: b.key }).compile === true)
-        && M.setImageSlot(d, 'wall', 'picture2', { name: 'grain' }).compile === true && M.setImageSlot(d, 'wall', 'grain', { use: 'none' }).compile === false
-        && M.setImageSlot(d, 'wall', 'picture', { use: 'none' }).compile === true)
+    ok('a placement, a wrap, a filter: the slot\'s uniform (no compile)', M.setImageSlot(d, 'wall', 'texture', { offset: { x: 5, y: 1 }, wrapU: 'mirror', filter: 'pixels', projection: 'box' }).compile === false)
+    ok('another picture, a name, its use: a compile', M.setImageSlot(d, 'wall', 'texture', { image: a.key }).compile === false
+        && (M.addImage(d, b), M.setImageSlot(d, 'wall', 'texture', { image: b.key }).compile === true)
+        && M.setImageSlot(d, 'wall', 'texture2', { name: 'grain' }).compile === true && M.setImageSlot(d, 'wall', 'grain', { use: 'none' }).compile === false
+        && M.setImageSlot(d, 'wall', 'texture', { use: 'none' }).compile === true)
     ok('the scene is sound', M.validate(d).length === 0, JSON.stringify(M.validate(d)))
     // a glowing material's first picture: the surface under its glow a screen's dark glass
     M.material(d, 'tv').params.roughness = 0.9
@@ -76,7 +76,7 @@ const doc = () => {
     ok('...whose fields it then uses (panel, codegen, the registry: materials.js fieldsOf)', M.materialFieldsOf(tv).includes('roughness')
         && !M.materialFieldsOf({ type: 'emitter' }).includes('roughness'))
     // taken away
-    M.removeImageSlot(d, 'wall', 'grain'); M.removeImageSlot(d, 'wall', 'picture')
+    M.removeImageSlot(d, 'wall', 'grain'); M.removeImageSlot(d, 'wall', 'texture')
     ok('the last slot taken away: no images list on the material, the pictures kept in the scene', !('images' in M.material(d, 'wall'))
         && Object.keys(d.images).length === 2)
     ok('a slot naming a picture the scene does not have is sound (it reads transparent: images.js)', (() => {
@@ -137,7 +137,7 @@ const doc = () => {
         const g = generate(...M.generateArgs(plain, { id: 'p', data }))
         const how = data ? 'as data' : 'codegen'
         ok(`${how}: the atlas a resource, and init`, g.resources?.[IMAGE_RESOURCE] === 'texture_2d<f32>' && typeof g.init === 'function')
-        const u = g.uniforms[uniformName('wall', slotKey('picture'))]
+        const u = g.uniforms[uniformName('wall', slotKey('texture'))]
         ok(`${how}: a slot a mat4x4 uniform, its picture's place and its settings`, u?.type === 'mat4x4<f32>'
             && JSON.stringify(u.def) === JSON.stringify(slotMatrix(M.imageSlotOf(M.material(plain, 'wall').images[0]), g.imageRects.get(a.key))))
         ok(`${how}: the surface's colour from it, the glow from the other`, g.wgsl.includes(`m.baseColor = mix(m.baseColor, ic.rgb, ic.a)`)
@@ -172,17 +172,17 @@ const doc = () => {
         const B = installBuilder({}, { RT, gpu, project: P.createProject([d]) })
         await B.apply()
         const n0 = RT.compiles
-        const name = uniformName('wall', slotKey('picture'))
+        const name = uniformName('wall', slotKey('texture'))
         const m = M.material(B.doc, 'wall')
         const bound = RT.scene?.buffers?.[IMAGE_RESOURCE]
         m.images[0].size.x = 37; m.images[0].turn = 45
-        const took = B.live('wall', slotKey('picture'))
+        const took = B.live('wall', slotKey('texture'))
         const want = slotMatrix(M.imageSlotOf(m.images[0]), RT.scene.imageRects.get(a.key))
         const live = { took, value: JSON.stringify(RT.get()[name]) === JSON.stringify(want), compiles: RT.compiles - n0 }
         // another picture: not in the atlas compiled -- not live
         M.addImage(B.doc, b)
-        M.setImageSlot(B.doc, 'wall', 'picture', { image: b.key })
-        const notLive = B.live('wall', slotKey('picture'))
+        M.setImageSlot(B.doc, 'wall', 'texture', { image: b.key })
+        const notLive = B.live('wall', slotKey('texture'))
         await B.apply()
         got = { bound: !!bound, live, notLive, after: RT.scene.imageRects.has(b.key), compiled: RT.compiles - n0 }
     } finally { console.log = log; console.warn = warn }
@@ -259,13 +259,13 @@ const doc = () => {
     const d = doc()
     M.addImage(d, a)
     M.addImageSlot(d, 'wall', a.key)
-    ok('a relief from a picture refused on a material with none, saying so', /no picture/.test(threw(() => M.setRelief(d, 'tv', 'picture')) ?? ''))
+    ok('a relief from a picture refused on a material with none, saying so', /no image texture/.test(threw(() => M.setRelief(d, 'tv', 'picture')) ?? ''))
     M.setRelief(d, 'wall', 'picture')
     const R = M.material(d, 'wall').relief
-    ok('...made for the first picture: its code that picture\'s, amplitude and raise', pictureReliefOf(R) === 'picture' && R.params.amplitude === 1 && R.params.raise === 1
+    ok('...made for the first picture: its code that picture\'s, amplitude and raise', pictureReliefOf(R) === 'texture' && R.params.amplitude === 1 && R.params.raise === 1
         && R.lengths.includes('amplitude') && M.validate(d).length === 0, JSON.stringify(M.validate(d)))
     ok('...not one of the presets (they compile on materials with no picture)', M.reliefPresetOf(R) === null && !('picture' in M.RELIEFS))
-    M.setImageSlot(d, 'wall', 'picture', { name: 'logo' })
+    M.setImageSlot(d, 'wall', 'texture', { name: 'logo' })
     ok('the picture renamed: the relief reads it by its new name', pictureReliefOf(M.material(d, 'wall').relief) === 'logo')
     ok('a picture named as the relief\'s parameter refused', /taken/.test(threw(() => M.setImageSlot(d, 'wall', 'logo', { name: 'raise' })) ?? ''))
     ok('...or as a name the relief\'s code has', /taken/.test(threw(() => M.setImageSlot(d, 'wall', 'logo', { name: 'slope' })) ?? ''))

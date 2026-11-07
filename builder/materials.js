@@ -449,26 +449,30 @@ export const RELIEFS = {
    pictures as a height -- white `amplitude` mm up, or with `raise` -1 engraved as far down, black at the surface. Not one
    of RELIEFS: it names a picture, and every preset there is compiled on materials that have none (check-shaders, the
    tests), where it would not compile. Made for the picture it reads, so its code is that picture's (pictureReliefOf). */
-export const PICTURE_RELIEF_LABEL = 'from a picture'
+export const PICTURE_RELIEF_LABEL = 'from an image texture'
 export const pictureRelief = name => ({
     params: { amplitude: 1.0, raise: 1.0 },
     ranges: { amplitude: MM(0, 20, 0.01), raise: { min: -1, max: 1, step: 0.01 } },
     lengths: ['amplitude'],
     code: [
-        `// Relief from a picture: the picture "${name}" as a height -- its luminance times its alpha -- white "amplitude" mm`,
+        `// Relief from an image texture: "${name}" as a height -- its luminance times its alpha -- white "amplitude" mm`,
         '// up (raise 1) or engraved as far down (raise -1), black at the surface. Read planar from the object\'s x and y in mm,',
-        '// at the picture\'s own size, offset, turn and wrap, on every face; smooth (a cubic B-spline of its pixels: sixteen',
-        '// reads at every march step near the surface). heightAt\'s second number is the bound on its slope per mm, worked',
-        '// out from the picture\'s own pixels when it was read, and from its size and wrap: the march never steps through it.',
-        `let picture_height = heightAt(${name}, q);`,
-        'h = amplitude * raise * picture_height.x;',
-        'slope = amplitude * abs(raise) * picture_height.y;',
+        '// at the image texture\'s own size, offset, turn and wrap, on every face; smooth (a cubic B-spline of its pixels:',
+        '// sixteen reads at every march step near the surface). heightAt\'s second number is the bound on its slope per mm,',
+        '// worked out from the image\'s own pixels when it was read, and from its size and wrap: the march never steps through it.',
+        `let texture_height = heightAt(${name}, q);`,
+        'h = amplitude * raise * texture_height.x;',
+        'slope = amplitude * abs(raise) * texture_height.y;',
     ].join('\n'),
 })
+/* WHICH PICTURE A RELIEF READS, by its code WITHOUT ITS COMMENTS: the comment is words for the user, worded again since
+   (picture became image texture in what users see), and a relief must not stop being one for that. Its local was
+   picture_height in the first files of 0.next's branch: read as the same relief. */
+const reliefCodeOnly = c => String(c ?? '').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '').replace(/picture_height/g, 'texture_height').replace(/\s+/g, ' ').trim()
 /** The picture a relief from a picture reads, by its code; null for any other relief. */
 export const pictureReliefOf = relief => {
-    const m = relief && /let picture_height = heightAt\(([A-Za-z][A-Za-z0-9_]*), q\);/.exec(relief.code ?? '')
-    return m && relief.code === pictureRelief(m[1]).code ? m[1] : null
+    const m = relief && /let (?:texture|picture)_height = heightAt\(([A-Za-z][A-Za-z0-9_]*), q\);/.exec(relief.code ?? '')
+    return m && reliefCodeOnly(relief.code) === reliefCodeOnly(pictureRelief(m[1]).code) ? m[1] : null
 }
 
 /** The relief preset a relief is, by its code; null for code of one's own. */

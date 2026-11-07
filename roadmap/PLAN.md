@@ -16,15 +16,15 @@ photon map, scattering inside materials, an Optics-view beam view -- has its own
 (2026-10-16). **Translucent and scattering materials** -- opal sheets, diffuser films, light guides, milky glass:
 the options in `DIFFUSERS.md` (2026-10-29), the first two built (below).
 
-## Pictures on surfaces — built 2026-11-06 (0.next), NOT yet seen
+## Image textures on surfaces — built 2026-11-06 (0.next), NOT yet seen
 
 The user (2026-11-06): "a texture that can act as an emitting surface as well ... alignment, positioning, repeating,
-mirror, scaling etc is the big question". Proposed in `TEXTURES.md` and its T1 built: a material's pictures, projected
+mirror, scaling etc is the big question". Proposed in `TEXTURES.md` and its T1 built: a material's image textures, projected
 in the object's pattern frame (planar, box, triplanar, cylindrical, spherical), sized in mm, wrapped per axis, a
 surface's colour or a glowing material's glow with a screen's glass under its black, or read by code. Kept in the scene
 by its bytes, outside the undo history; one atlas a scene. Verified on Dawn over lavapipe, not on hardware: what to look
-at and the numbers are `TEXTURES.md` STATUS. Next, when asked: T2 (a picture's settings on the timeline, Fit to object,
-any field from a channel, HDR pictures).
+at and the numbers are `TEXTURES.md` STATUS. Next, when asked: T2 (an image texture's settings on the timeline, Fit to object,
+any field from a channel, HDR image textures).
 
 ## The special objects stop being add-ons — built 2026-11-04 (0.83.0), NOT yet seen
 

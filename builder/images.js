@@ -28,15 +28,15 @@ const SLOT_NAME = /^[A-Za-z][A-Za-z0-9_]*$/
 /** What each setting of a slot does, in the user's words: the reference page's (help/reference.mjs). */
 export const SLOT_HELP = {
     use: 'colour: the material\'s colour with no code -- a surface\'s base colour, a glowing material\'s glow (its white at the luminance, its black dark, the surface below it showing there); none: only its code reads it. A compile.',
-    projection: 'How the point is put on the picture, in the object\'s pattern frame: planar along its z; box, one of six faces by the normal, each read the right way round from outside; triplanar, the three blended by the normal; cylindrical round its z, across being the distance round in mm; spherical, the whole picture once over a sphere.',
-    size: 'One copy of the picture, across and up, in real millimetres whatever the scene\'s unit (spherical: unused).',
-    offset: 'Where the picture\'s centre is in its plane, in mm.',
-    turn: 'The picture turned in its own plane, anticlockwise, in degrees.',
+    projection: 'How the point is put on the image texture, in the object\'s pattern frame: planar along its z; box, one of six faces by the normal, each read the right way round from outside; triplanar, the three blended by the normal; cylindrical round its z, across being the distance round in mm; spherical, the whole image once over a sphere.',
+    size: 'One copy of the image texture, across and up, in real millimetres whatever the scene\'s unit (spherical: unused).',
+    offset: 'Where the image texture\'s centre is in its plane, in mm.',
+    turn: 'The image texture turned in its own plane, anticlockwise, in degrees.',
     wrapU: 'Across: repeat (copies side by side), mirror (every other copy flipped, no seam), clamp (the edge pixels go on) or none (one copy; the material\'s own value outside it).',
     wrapV: 'Up: the same four.',
     filter: 'smooth: mixed between pixels; pixels: each pixel a sharp square.',
     faces: 'Planar only: front (where the surface faces +z), both (front and back, the back mirrored as a slide seen from behind) or all (every face; the edges smear across the sides).',
-    colour: 'true: a colour picture, decoded from sRGB to light; false: data (a roughness map, a mask), read as its numbers.',
+    colour: 'true: a colour image, decoded from sRGB to light; false: data (a roughness map, a mask), read as its numbers.',
     sharpness: 'Triplanar only: how quickly the three projections hand over where the surface turns, 1 to 64.',
 }
 
@@ -70,23 +70,23 @@ const xy = v => isObj(v) && Number.isFinite(v.x) && Number.isFinite(v.y)
 /** Every problem with a scene's pictures, as strings. */
 export function imagesProblems(images) {
     if (images === undefined) return []
-    if (!isObj(images)) return ['images must be an object of pictures by key']
+    if (!isObj(images)) return ['images must be an object of images by key']
     const p = []
     for (const [k, e] of Object.entries(images)) {
-        if (!IMAGE_KEY.test(k)) p.push(`images: '${k}' is not a picture's key (i and 24 hex digits)`)
-        if (!isObj(e)) { p.push(`images.${k}: not a picture`); continue }
+        if (!IMAGE_KEY.test(k)) p.push(`images: '${k}' is not an image's key (i and 24 hex digits)`)
+        if (!isObj(e)) { p.push(`images.${k}: not an image`); continue }
         if (typeof e.name !== 'string') p.push(`images.${k}: name must be a string`)
         if (!IMAGE_TYPES.includes(e.type)) p.push(`images.${k}: type must be one of ${IMAGE_TYPES.join(', ')}`)
         for (const d of ['width', 'height'])
             if (!(Number.isInteger(e[d]) && e[d] >= 1 && e[d] <= IMAGE_MAX_EDGE)) p.push(`images.${k}: ${d} must be a whole number from 1 to ${IMAGE_MAX_EDGE}`)
-        if (typeof e.data !== 'string' || !/^[A-Za-z0-9+/]*={0,2}$/.test(e.data)) p.push(`images.${k}: data must be the picture's bytes in base64`)
+        if (typeof e.data !== 'string' || !/^[A-Za-z0-9+/]*={0,2}$/.test(e.data)) p.push(`images.${k}: data must be the image's bytes in base64`)
         // a 16-bit grey PNG (0.next): read by this file's own decoder, not the browser's, which gives 8 bits
         if (e.bits !== undefined && !(e.bits === 16 && e.type === 'image/png')) p.push(`images.${k}: bits is 16 (a 16-bit grey PNG) or absent`)
         // its heights' bound (core/images.js heightStats): six numbers from 0 to 1 read as colour and as data
         if (e.heights !== undefined && !(isObj(e.heights) && ['colour', 'data'].every(c => Array.isArray(e.heights[c]) && e.heights[c].length === 6
             && e.heights[c].every(v => Number.isFinite(v) && v >= 0 && v <= 1.01)) && Object.keys(e.heights).length === 2))
             p.push(`images.${k}: heights must be { colour, data }, six numbers from 0 to 1 each`)
-        for (const x of Object.keys(e)) if (!['name', 'type', 'width', 'height', 'data', 'bits', 'heights'].includes(x)) p.push(`images.${k}: '${x}' is not a picture's`)
+        for (const x of Object.keys(e)) if (!['name', 'type', 'width', 'height', 'data', 'bits', 'heights'].includes(x)) p.push(`images.${k}: '${x}' is not an image's`)
     }
     return p
 }
@@ -95,17 +95,17 @@ export function imagesProblems(images) {
 export function slotsProblems(m, taken = []) {
     if (m?.images === undefined) return []
     const id = m?.id
-    if (!Array.isArray(m.images)) return [`material '${id}': images must be a list of slots`]
+    if (!Array.isArray(m.images)) return [`material '${id}': images must be a list of image textures`]
     const p = [], seen = new Set()
     let colours = 0
     for (const s of m.images) {
-        if (!isObj(s)) { p.push(`material '${id}': a slot that is not an object`); continue }
-        const at = `material '${id}', image '${s.name}'`
-        if (typeof s.name !== 'string' || !SLOT_NAME.test(s.name)) p.push(`material '${id}': '${s.name}' is not a slot name (a WGSL name)`)
-        else if (seen.has(s.name)) p.push(`${at}: a second slot of that name`)
+        if (!isObj(s)) { p.push(`material '${id}': an image texture that is not an object`); continue }
+        const at = `material '${id}', image texture '${s.name}'`
+        if (typeof s.name !== 'string' || !SLOT_NAME.test(s.name)) p.push(`material '${id}': '${s.name}' is not a name for an image texture (a WGSL name)`)
+        else if (seen.has(s.name)) p.push(`${at}: a second image texture of that name`)
         else if (taken.includes(s.name)) p.push(`${at}: the name is taken (a parameter of the material, or a name its code has)`)
         seen.add(s.name)
-        if (typeof s.image !== 'string' || !IMAGE_KEY.test(s.image)) p.push(`${at}: image must be a picture's key`)
+        if (typeof s.image !== 'string' || !IMAGE_KEY.test(s.image)) p.push(`${at}: image must be an image's key`)
         const one = (k, list) => { if (s[k] !== undefined && !list.includes(s[k])) p.push(`${at}: ${k} must be one of ${list.join(', ')}`) }
         one('use', USES); one('projection', PROJECTIONS); one('wrapU', WRAPS); one('wrapV', WRAPS); one('filter', FILTERS); one('faces', FACES)
         if (s.use === 'colour') colours++
@@ -114,9 +114,9 @@ export function slotsProblems(m, taken = []) {
         if (s.turn !== undefined && !Number.isFinite(s.turn)) p.push(`${at}: turn must be a number of degrees`)
         if (s.sharpness !== undefined && !(Number.isFinite(s.sharpness) && s.sharpness >= 1 && s.sharpness <= 64)) p.push(`${at}: sharpness must be from 1 to 64`)
         if (s.colour !== undefined && typeof s.colour !== 'boolean') p.push(`${at}: colour must be true (sRGB) or false (data)`)
-        for (const x of Object.keys(s)) if (!['name', 'image', ...Object.keys(SLOT_DEFAULTS)].includes(x)) p.push(`${at}: '${x}' is not a slot's setting`)
+        for (const x of Object.keys(s)) if (!['name', 'image', ...Object.keys(SLOT_DEFAULTS)].includes(x)) p.push(`${at}: '${x}' is not an image texture's setting`)
     }
-    if (colours > 1) p.push(`material '${id}': ${colours} slots are its colour -- one at most`)
+    if (colours > 1) p.push(`material '${id}': ${colours} image textures are its colour -- one at most`)
     return p
 }
 
@@ -128,7 +128,7 @@ export function usedImages(doc) {
 }
 
 /** A free slot name on material `m`: `base`, base2, base3, ... */
-export function freeSlotName(m, base = 'picture', taken = []) {
+export function freeSlotName(m, base = 'texture', taken = []) {
     const has = n => (m.images ?? []).some(s => s.name === n) || taken.includes(n)
     if (!has(base)) return base
     for (let i = 2; ; i++) if (!has(`${base}${i}`)) return `${base}${i}`
@@ -158,7 +158,7 @@ export async function imageKey(bytes) {
     return 'i' + [...h.slice(0, 12)].map(b => b.toString(16).padStart(2, '0')).join('')
 }
 /** A picture's entry from bytes whose size and type are known: { key, entry }. */
-export async function entryFromBytes(bytes, { name = 'picture', type, width, height }) {
+export async function entryFromBytes(bytes, { name = 'image', type, width, height }) {
     return { key: await imageKey(bytes), entry: { name: String(name), type, width, height, data: toBase64(bytes) } }
 }
 /* A 16-BIT GREY PNG (0.next; a height map, core/images.js A PICTURE AS A HEIGHT): the browser decodes every picture to 8
@@ -262,13 +262,13 @@ export async function withHeights(entry) {
  */
 export async function imageFromFile(file) {
     const type = IMAGE_TYPES.includes(file.type) ? file.type : null
-    const name = String(file.name ?? 'picture')
-    if (!type) throw new Error(`'${file.name ?? 'the file'}' is not a PNG, JPEG or WebP picture${file.type ? ` (it is ${file.type})` : ''}`)
+    const name = String(file.name ?? 'image')
+    if (!type) throw new Error(`'${file.name ?? 'the file'}' is not a PNG, JPEG or WebP image${file.type ? ` (it is ${file.type})` : ''}`)
     const bytes = new Uint8Array(await file.arrayBuffer())
     const info = type === 'image/png' ? pngInfo(bytes) : null
     if (isDeepGrey(info)) {
         if (Math.max(info.width, info.height) > IMAGE_MAX_EDGE)
-            throw new Error(`'${name}' is a 16-bit picture of ${info.width} x ${info.height}: scale it to ${IMAGE_MAX_EDGE} on its longer side first (scaled here it would lose its 16 bits)`)
+            throw new Error(`'${name}' is a 16-bit image of ${info.width} x ${info.height}: scale it to ${IMAGE_MAX_EDGE} on its longer side first (scaled here it would lose its 16 bits)`)
         let d
         try { d = await decodePNG16(bytes) } catch (e) { throw new Error(`'${name}' could not be decoded: ${e?.message ?? e}`) }
         const got = await entryFromBytes(bytes, { name, type, width: d.width, height: d.height })
