@@ -31,7 +31,8 @@
 // and why the palette of scenes/common.js it replaced is gone.
 //======================================================================================================================
 
-import { FIELDS, FEATURES, FEATURE_PRESETS, fieldOn, featureDefault, defaults as materialDefaults, PALETTE_V3, PRESETS, MATERIAL_CODE_TEMPLATE, RELIEFS, RELIEF_SCOPE, reliefMaterialId, reliefOwner } from './materials.js'
+import { FIELDS, FEATURES, FEATURE_PRESETS, fieldOn, featureDefault, defaults as materialDefaults, PALETTE_V3, PRESETS, MATERIAL_CODE_TEMPLATE, RELIEFS, RELIEF_SCOPE, reliefMaterialId, reliefOwner, fieldsOf, pictureRelief, pictureReliefOf } from './materials.js'
+import { imagesProblems, slotsProblems, usedImages, freeSlotName, slotOf, colourSlot, SLOT_PREFIX, SLOT_DEFAULTS, SCREEN_DEFAULTS, SCREEN_FIELDS, IMAGE_KEY } from './images.js'
 import { NODE_TYPES, GROUP_SCOPE, isCsg, hasCode, isAfter } from './codegen.js'
 import { PRIMITIVES, primitiveObject } from './primitives.js'
 import { MODIFIERS, modifierGroup } from './modifiers.js'
@@ -163,7 +164,11 @@ export const FORMAT = 'raytracer-scene'
    with it (import/fillet.js). Nothing in a version 27 file changes; a builder of 27 refuses a file of 28 rather than
    load a fillet as a smooth blend. (Written as 27 while its branch was apart; dev took 27 for the special objects
    first, 2026-11-04.) */
-export const VERSION = 28
+/* 29: IMAGES ON SURFACES (0.next; images.js, roadmap/TEXTURES.md T1): `images` on the scene, its pictures by key, and
+   `images` on a material, its slots -- each a picture placed on the surface by a projection in its object's pattern
+   frame, read as the material's colour (a surface's base colour, an emitter's glow) or by its code. Nothing in a
+   version 28 file changes; a builder of 28 refuses a file of 29 rather than drop every picture on its first save. */
+export const VERSION = 29
 /** The most copies an array has: each is a walk of its children at every step near them, until a BVH can tell which
  *  copies are near (call 4: chosen, not measured). */
 export const ARRAY_MAX = 16
@@ -255,7 +260,7 @@ export { NODE_TYPES as OBJECT_TYPES, GROUP_CODE_TEMPLATE } from './codegen.js'
 export { PRIMITIVES } from './primitives.js'
 export { FIELDS as MATERIAL_FIELDS, PRESETS as MATERIAL_PRESETS, MATERIAL_CODE_TEMPLATE, FIELDS_OF as MATERIAL_FIELDS_OF, FIELD_LABELS as MATERIAL_FIELD_LABELS,
          COAT_FIELDS, COAT_PRESETS, hasCoating, FEATURES, FEATURE_PRESETS, PRESET_FEATURES, featureOfField, fieldOn,
-         RELIEFS, reliefOwner, reliefMaterialId, reliefPresetOf } from './materials.js'
+         RELIEFS, reliefOwner, reliefMaterialId, reliefPresetOf, pictureReliefOf, PICTURE_RELIEF_LABEL } from './materials.js'
 
 const ID = /^[A-Za-z][A-Za-z0-9]*$/            // no underscore -- see the header
 const PARAM = /^[A-Za-z][A-Za-z0-9_]*$/
@@ -590,9 +595,11 @@ function materialProblems(m) {
        second colour -- declared and aliased exactly like a code node's (codegen). */
     /* ...and not relief_<anything>: a relief's parameters are uniforms `relief_<name>_<id>` (codegen
        paramUniform), so an own parameter by that name would be the same uniform */
-    const bad = customParams(m).filter(k => !PARAM.test(k) || RESERVED_PARAMS.includes(k) || MATERIAL_SCOPE.includes(k) || k.startsWith('relief_'))
+    const bad = customParams(m).filter(k => !PARAM.test(k) || RESERVED_PARAMS.includes(k) || MATERIAL_SCOPE.includes(k) || k.startsWith('relief_') || k.startsWith(SLOT_PREFIX))
     if (bad.length) p.push(`material '${m.id}': parameter name(s) not usable: ${bad.join(', ')}`
-        + ` (a WGSL name, not relief_..., and not one of ${MATERIAL_SCOPE.join(', ')})`)
+        + ` (a WGSL name, not relief_... or ${SLOT_PREFIX}..., and not one of ${MATERIAL_SCOPE.join(', ')})`)
+    // its pictures' slots (version 29, images.js): each named apart from its parameters and the names its code has
+    p.push(...slotsProblems(m, slotTaken(m)))
     for (const k of customParams(m)) if (!['number', 'vector', 'colour'].includes(paramKind(P[k])) || !finiteValue(P[k]))
         p.push(`material '${m.id}': parameter '${k}' must be a number, {x, y, z} or {r, g, b}`)
     p.push(...constantProblems(m), ...rangesProblems(m), ...lengthsProblems(m))
@@ -608,6 +615,12 @@ function materialProblems(m) {
 /** The names a material's code already has in scope (codegen emitMaterials): a parameter by one
  *  of these would shadow it, and `m` or `p` silently meaning something else is worse than an error. */
 export const MATERIAL_SCOPE = ['m', 'p', 'n', 'C', 'p_local', 'R_local', 'S_local', 'idx', 'checkInside', 'MATERIAL']
+/** ...and the functions a material's code calls its pictures with (core/images.js): a slot by one of these names
+ *  would hide the function its code needs. */
+export const IMAGE_SCOPE = ['sample', 'mapped', 'sampleAt', 'heightAt']
+/** The names a slot of material `m` may not take: its parameters', those its code already has, and -- its pictures being
+ *  in its relief's code too (codegen, 0.next) -- its relief's parameters and the names that code has. */
+const slotTaken = m => [...customParams(m), ...MATERIAL_SCOPE, ...IMAGE_SCOPE, ...(m?.relief ? [...Object.keys(m.relief.params || {}), ...RELIEF_SCOPE, 'texture_height', 'picture_height'] : [])]
 
 /* A MATERIAL'S RELIEF (materials.js RELIEFS): { code, params, constants?, ranges?, lengths? } -- a height
    field in mm that codegen puts around every object wearing the material. `amplitude` it must have, a
@@ -627,9 +640,12 @@ function reliefProblems(m) {
     const A = R.params.amplitude
     if (!(typeof A === 'number' && Number.isFinite(A) && A >= 0))
         p.push(`${at} needs an amplitude, a number >= 0 (mm): the most its height reaches -- it is what bounds it`)
+    const slots = (m.images ?? []).map(x => x?.name)
     for (const [k, v] of Object.entries(R.params)) {
         if (!PARAM.test(k) || RESERVED_PARAMS.includes(k) || RELIEF_SCOPE.includes(k))
             p.push(`${at}: parameter name '${k}' not usable (a WGSL name, and not one of ${RELIEF_SCOPE.join(', ')})`)
+        // its code has the material's pictures by name (codegen, 0.next): a parameter by one of them would be declared twice
+        else if (slots.includes(k)) p.push(`${at}: parameter '${k}' is the name of one of the material's image textures`)
         else if (!['number', 'vector', 'colour'].includes(paramKind(v)) || !finiteValue(v))
             p.push(`${at}: parameter '${k}' must be a number, {x, y, z} or {r, g, b}`)
     }
@@ -638,15 +654,21 @@ function reliefProblems(m) {
     return p
 }
 
-/** Give a material a relief from a preset (materials.js RELIEFS), or take it away (null). */
-export function setRelief(doc, id, preset) {
+/** Give a material a relief from a preset (materials.js RELIEFS), or take it away (null). 'picture' is a relief from one
+ *  of the material's pictures (materials.js pictureRelief, 0.next): `picture`, its name, or its first. */
+export function setRelief(doc, id, preset, { picture } = {}) {
     const mat = material(doc, id)
     if (!mat) throw new ModelError(`no material '${id}'`)
     // its relief's animated flags (setAnimated: kept on the material) go with the relief they named
     const dropReliefFlags = () => { if (Array.isArray(mat.animate)) { mat.animate = mat.animate.filter(k => !String(k).startsWith(RELIEF_FLAG)); if (!mat.animate.length) delete mat.animate } }
     if (preset == null) { delete mat.relief; dropReliefFlags(); return mat }
-    const R = RELIEFS[preset]
-    if (!R) throw new ModelError(`unknown relief '${preset}' (one of ${Object.keys(RELIEFS).join(', ')})`)
+    if (preset === 'picture') {
+        const name = picture ?? mat.images?.[0]?.name
+        if (!name || !(mat.images ?? []).some(x => x.name === name))
+            throw new ModelError(picture ? `material '${id}' has no image texture '${picture}'` : `material '${id}' has no image texture to make a relief from: + image texture… first`)
+    }
+    const R = preset === 'picture' ? pictureRelief(picture ?? mat.images[0].name) : RELIEFS[preset]
+    if (!R) throw new ModelError(`unknown relief '${preset}' (one of ${Object.keys(RELIEFS).join(', ')}, or picture)`)
     const relief = { code: R.code, params: structuredClone(R.params), ranges: structuredClone(R.ranges), lengths: [...R.lengths] }
     const bad = reliefProblems({ ...mat, relief })
     if (bad.length) throw new ModelError(bad)
@@ -1508,7 +1530,7 @@ const materialCodes = m => [m.code ?? '', m.relief?.code ?? '']
 export function extractAsset(doc, id) {
     const unit = doc.unit ?? 'm'
     const mat = material(doc, id)
-    if (mat) return withHelpers(doc, { kind: 'material', material: structuredClone(mat), unit }, materialCodes(mat))
+    if (mat) return withPictures(doc, withHelpers(doc, { kind: 'material', material: structuredClone(mat), unit }, materialCodes(mat)))
     const { node, parent } = must(doc, id)
     if (!parent) throw new ModelError('the scene itself is not an asset; duplicate the scene instead')
     const used = new Set(), blocks = []
@@ -1530,7 +1552,15 @@ export function extractAsset(doc, id) {
     const asset = { kind: 'node', node: copy, unit,
                     materials: structuredClone(doc.materials.filter(m => used.has(m.id))),
                     blocks: structuredClone(blocks.map(id => block(doc, id)).filter(Boolean)) }
-    return withHelpers(doc, asset, [...asset.blocks.map(b => b.code ?? ''), ...asset.materials.flatMap(materialCodes)])
+    return withPictures(doc, withHelpers(doc, asset, [...asset.blocks.map(b => b.code ?? ''), ...asset.materials.flatMap(materialCodes)]))
+}
+/* ITS PICTURES GO WITH IT (version 29, images.js): an asset is complete, as a file is -- a material pasted into another
+   scene, dragged to another or kept in the library shows its picture there. Not copied: a picture's entry never changes. */
+function withPictures(doc, asset) {
+    const mats = asset.kind === 'material' ? [asset.material] : asset.materials ?? []
+    const keys = [...new Set(mats.flatMap(m => (m?.images ?? []).map(s => s.image)))].filter(k => doc.images?.[k])
+    if (keys.length) asset.images = Object.fromEntries(keys.map(k => [k, doc.images[k]]))
+    return asset
 }
 
 /* The same material: identical parameters and code, whatever it is called or numbered. The
@@ -1597,6 +1627,14 @@ export function insertAsset(doc, asset, parentId = 'root', index) {
     })
     const before = { materials: doc.materials.slice(), blocks: (doc.blocks || []).slice(), nextId: doc.nextId, functions: doc.functions,
                      features: doc.features && { ...doc.features } }
+    /* ITS PICTURES (version 29): into the scene's, each kept once by its key. Not taken back if the paste is refused below:
+       a picture no slot names is harmless, and no undo step holds pictures (images.js) */
+    if (asset?.images && typeof asset.images === 'object') {
+        const bad = imagesProblems(asset.images)
+        if (bad.length) throw new ModelError(bad)
+        doc.images ??= {}
+        for (const [k, e] of Object.entries(asset.images)) doc.images[k] ??= e
+    }
     if (bring.length) doc.functions = [String(doc.functions ?? '').replace(/\s+$/, ''), ...bring.map(x => x.text)].filter(Boolean).join('\n\n') + '\n'
     const labels = new Set(doc.materials.map(m => m.label))
     const addMat = (m, index) => {
@@ -2123,6 +2161,77 @@ export function setMaterialType(doc, id, type) {
     if (type === 'emitter' && !(m.params.emissiveLuminance > 0)) m.params.emissiveLuminance = 1000
     return doc
 }
+
+/*----------------------------------------------------------------------------------------------------------------------
+  PICTURES AND A MATERIAL'S SLOTS (version 29; images.js says what each is and why a picture is in no undo step)
+----------------------------------------------------------------------------------------------------------------------*/
+export { fieldsOf as materialFieldsOf, SLOT_DEFAULTS, colourSlot, usedImages }
+/** Put a picture into the scene, under its key ({ key, entry } as images.js imageFromFile gives it). The same picture
+ *  twice is kept once. Returns the key. */
+export function addImage(doc, { key, entry }) {
+    if (!IMAGE_KEY.test(key ?? '')) throw new ModelError(`'${key}' is not an image's key`)
+    const bad = imagesProblems({ [key]: entry })
+    if (bad.length) throw new ModelError(bad)
+    doc.images ??= {}
+    if (!doc.images[key]) doc.images[key] = entry
+    return key
+}
+/** The names a slot of material `m` may not take: its parameters', and those its code already has. */
+const mustMaterial = (doc, id) => {
+    const m = material(doc, id)
+    if (!m) throw new ModelError(`no material '${id}'`)
+    return m
+}
+/** A slot on material `id` showing picture `image`, the defaults where `slot` says nothing (images.js SLOT_DEFAULTS), named
+ *  `texture` or the next free one. It is the material's colour if no other slot is; on an emitter's first, the surface
+ *  under its glow becomes a screen's dark glass (images.js SCREEN_DEFAULTS) -- whatever those fields held: an emitter
+ *  never read them before it had a picture (materials.js fieldsOf), so they were a surface's left from before the type
+ *  changed, or a preset's. Checked first; returns the slot. */
+export function addImageSlot(doc, id, image, slot = {}) {
+    const m = mustMaterial(doc, id)
+    const name = slot.name ?? freeSlotName(m, 'texture', slotTaken(m))
+    const use = slot.use ?? (colourSlot(m) ? 'none' : 'colour')
+    const s = { name, image, ...structuredClone({ ...SLOT_DEFAULTS, ...slot, name, image, use }) }
+    const next = { ...m, images: [...(m.images ?? []), s] }
+    const bad = slotsProblems(next, slotTaken(m))
+    if (bad.length) throw new ModelError(bad)
+    const screen = typeOf(m) === 'emitter' && use === 'colour' && !colourSlot(m)
+    m.images = next.images
+    if (screen) for (const k of SCREEN_FIELDS) m.params[k] = structuredClone(SCREEN_DEFAULTS[k])
+    return s
+}
+/** Change slot `name` of material `id` by `patch` (any of its settings, a new name or picture among them). Checked
+ *  first, nothing changed on a refusal. Returns { slot, compile }: compile when the shader's text changes with it --
+ *  its name (its code's), its picture (the atlas), or whether it is the material's colour -- else every change is the
+ *  slot's uniform, live. */
+export function setImageSlot(doc, id, name, patch) {
+    const m = mustMaterial(doc, id)
+    const i = (m.images ?? []).findIndex(s => s.name === name)
+    if (i < 0) throw new ModelError(`material '${id}' has no image texture '${name}'`)
+    const was = m.images[i]
+    const s = { ...was, ...structuredClone(patch) }
+    const images = m.images.map((x, k) => k === i ? s : x)
+    const bad = slotsProblems({ ...m, images }, slotTaken(m))
+    if (bad.length) throw new ModelError(bad)
+    m.images = images
+    // a relief from this picture (materials.js pictureRelief) reads it by name: renamed with it, its values kept
+    if (s.name !== was.name && pictureReliefOf(m.relief) === was.name) m.relief.code = pictureRelief(s.name).code
+    const compile = s.name !== was.name || s.image !== was.image || (s.use ?? SLOT_DEFAULTS.use) !== (was.use ?? SLOT_DEFAULTS.use)
+    return { slot: s, compile }
+}
+/** Take slot `name` off material `id`, and a relief from it with it (it reads nothing else). The picture stays in the
+ *  scene (images.js: no undo step holds it). */
+export function removeImageSlot(doc, id, name) {
+    const m = mustMaterial(doc, id)
+    const i = (m.images ?? []).findIndex(s => s.name === name)
+    if (i < 0) throw new ModelError(`material '${id}' has no image texture '${name}'`)
+    if (pictureReliefOf(m.relief) === name) setRelief(doc, id, null)
+    const [s] = m.images.splice(i, 1)
+    if (!m.images.length) delete m.images
+    return s
+}
+/** A slot's settings whole, the defaults filled in (images.js slotOf). */
+export const imageSlotOf = slotOf
 
 /** AN OBJECT'S OPTICS ROLE (0.83.0, OPTICS_ROLES): 'detector', 'limiter', or null for none. A light, a box or a group
  *  has none. Checked first; the role is kept whether or not the scene's analysis feature is on. */
@@ -2870,6 +2979,10 @@ export function toTree(doc, { keepDisabled = false } = {}) {
         for (const m of root.materials) if (m.params)
             for (const k of Object.keys(m.params)) if (!fieldOn(features, k)) m.params[k] = structuredClone(FIELDS[k].def)
     }
+    /* ITS PICTURES (version 29): those its materials use, as the document has them -- not copied, as nothing downstream
+       changes one, and a copy of a picture's bytes at every compile would be megabytes each time */
+    const used = usedImages(doc).filter(k => doc.images?.[k])
+    if (used.length) root.images = Object.fromEntries(used.map(k => [k, doc.images[k]]))
     root.functions = doc.functions ?? ''
     root.unit = doc.unit ?? 'm'
     // where the scene stops, in that unit (codegen hands it to the renderer); absent is the renderer's default
@@ -2896,7 +3009,17 @@ export function toNodes(doc) {
 // Saving and loading
 //----------------------------------------------------------------------------------------------
 
-export const serialize = doc => JSON.stringify(doc, null, 2)
+export const serialize = doc => JSON.stringify(withUsedPictures(doc), null, 2)
+/** A document as a file keeps it (version 29): only the pictures its materials use. The document in memory keeps every
+ *  one it was given, as no undo step holds them (images.js) and an undo may bring back a slot that names one. */
+export function withUsedPictures(doc) {
+    if (!doc?.images) return doc
+    const used = new Set(usedImages(doc))
+    const keys = Object.keys(doc.images).filter(k => used.has(k))
+    if (keys.length === Object.keys(doc.images).length) return doc
+    const { images: _, ...rest } = doc
+    return keys.length ? { ...rest, images: Object.fromEntries(keys.map(k => [k, doc.images[k]])) } : rest
+}
 
 /* WHICH APPLICATION WROTE A FILE (version.js stamp, '0.1.0+1819ac6'): `app`, at the top of a saved FILE only,
    next to its format version. It says who wrote the file, which the file's own version cannot (that only changes
@@ -2940,6 +3063,7 @@ export function validate(doc) {
     if (doc.tolerance !== undefined) p.push(...toleranceProblems(doc.tolerance))
     if (doc.liveVisibility !== undefined && typeof doc.liveVisibility !== 'boolean') p.push('liveVisibility must be true or false')
     if (doc.features !== undefined) p.push(...featureProblems(doc.features))
+    p.push(...imagesProblems(doc.images))
     if (p.length) return p
 
     const seen = new Set()
@@ -3139,6 +3263,7 @@ export function upgrade(doc) {
     if (d.version === 25) d = v25to26(d)
     if (d.version === 26) d = v26to27(d)
     if (d.version === 27) d.version = 28          // nothing to change: a join's shape is new
+    if (d.version === 28) d.version = 29          // nothing to change: pictures are new
     return d
 }
 

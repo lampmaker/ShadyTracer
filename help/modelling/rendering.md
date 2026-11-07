@@ -19,6 +19,11 @@ The [Render settings](show:renderer) panel's **Quality** box has the same preset
 The line under the buttons says what the preset in force traces. If you change a setting by hand, it reads
 **Custom** and says what differs.
 
+**Everything diffuse**, in the Quality box while Sketch is chosen, shows every surface as plain matte paint of its
+own colour: mirrors, metal and glass too, so you see their shapes rather than what they reflect or what is behind
+them. Lamps and glowing surfaces keep glowing. It applies only to a Sketch you chose, not to a Standard picture
+traced as Sketch while you move.
+
 **What each one traces, side by side.** A camera path is a ray followed from the camera into the scene. *Stops at the
 first matte surface* means it ends at the first diffuse or glossy surface it meets, after any mirrors, clear or frosted
 glass and near-mirror metal on the way.

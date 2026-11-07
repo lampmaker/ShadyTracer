@@ -224,8 +224,10 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
 16. **Every glowing thing is a light** (draft): discovery by the paths that hit a glow (a 16 × 16 grid in the flat
     world, the bar behind a wall found by bounces), unbiased from the first sample; Crofton's random lines, crossings
     against perimeters and their cosine spread; the brightness code, linear against log (the comment's "2e-5 of a stop"
-    was 4.8e-6 by its own constants; corrected in 0.67.3); emitConePdf, emitLineDensity; 2.3× a sample and 1.4× sooner (PLAN.md) →
-    materials_pbr.js emitDeposit, tracebasics.js LUM_CODE. *Read:* wiki-crofton, pbr-lights, pbr-spheres.
+    was 4.8e-6 by its own constants; corrected in 0.67.3); emitConePdf, emitLineDensity; 2.3× a sample and 1.4× sooner (PLAN.md);
+    a glow that varies over its surface -- an image texture on a glowing material (0.next) -- evaluated where each ray lands, a
+    black pixel no light at all (every test reads max3(emissive) > 0 at the point), and a floor under a glowing checker
+    lit as by its mean (builder/test/images.gpu.mjs) → materials_pbr.js emitDeposit, tracebasics.js LUM_CODE, core/images.js. *Read:* wiki-crofton, pbr-lights, pbr-spheres.
 17. **The camera's lens** (draft): the thin lens from the side, its blur by lens.js lensImage against 2R |1/F − 1/D|;
     a 3D picture through the lens (space.js cameraRayLens on lensDisc and lensRay), three balls, the focus and
     aperture the reader's; why the lens was added (light → glass → floor → glass → eye) and what it no longer does
@@ -309,7 +311,9 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
     of noise 4): every object at every step, culling boxes on every object, on the dear ones only, and the reliefs in
     their shell; why only at the root (a lens and a blend, one disc culled inside the join: a surface where there is
     none, a bridge gone); one relief divided everywhere or in its shell, with the modifier's 17.2 or the measured 11.2;
-    the step cache's balls, its own cell and the cells ahead, filled from the copy with boxes (the orange shell).
+    a relief from an image texture (0.next): its slope bound from its own pixels (exact on a ramp, 2.4 times the steepest on
+    random noise), what a loose bound costs in steps, and why a test of it must shoot rays sideways (straight down, the
+    field is exact whatever the bound: builder/test/images.gpu.mjs); the step cache's balls, its own cell and the cells ahead, filled from the copy with boxes (the orange shell).
     -> scene_api.js (cullDist, cullMargin), codegen.js (the root's comment, `culled`, the CULL line), modifiers.js
     (reliefCode), wavefront.js (scStep, the march's cache step). Measured: PERFORMANCE.md's runs 3 to 5 (culling, the
     shell), ARCHITECTURE.md's boxcost and stepcache runs. Inferred and said so: with the shell, a relief's box may no

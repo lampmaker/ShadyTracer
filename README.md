@@ -203,6 +203,10 @@ for the help.
   per colour channel.
 - **Anisotropic surfaces along a grain** (brushed, turned, radial) **✓**; visible brush streaks.
 - **Any material field can be code**: checkers, stripes and brushed grain ship as examples.
+- **Image textures**: a PNG, JPEG or WebP placed on a shape by a projection in its pattern frame (planar, box,
+  triplanar, cylindrical, spherical), sized in mm, repeated, mirrored or clamped; a surface's colour, what a glowing
+  screen shows, or read by a material's code. The image is kept in the scene file. An image texture can also be a
+  material's **relief**, a height in the shape itself, from 16-bit height maps too.
 - **A noise library for surfaces**: value, gradient, fBm and Worley noise, each with its analytic
   gradient and a proved or measured bound on its slope, so a displaced surface never lets the march
   step through it.
@@ -468,6 +472,7 @@ number carries its standard error**.
 | **Material board** | Materials | mm | The library's materials on 40 mm spheres |
 | **Relief and texture** | Materials | mm | Plaster, stucco, render, stone, hammered metal, leather: reliefs in a raking light |
 | **Glass and liquid** | Materials | mm | A tumbler of water, a green bottle, a flint prism in the sun |
+| **Image textures** | Materials | mm | A test card glowing on a screen, on a poster, round a can and on a ball; a plaque embossed from a 16-bit height map |
 | **Lighting a room** | Light and camera | m | A room in metres: daylight through a window and a 1500 lm lamp |
 | **Depth of field** | Light and camera | mm | A row of pawns through an open lens, focused on the third |
 | **Animation** | Light and camera | mm | Values marked animated, for the Timeline |

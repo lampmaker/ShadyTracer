@@ -1,6 +1,6 @@
 {
   "format": "raytracer-scene",
-  "version": 28,
+  "version": 29,
   "title": "Office lighting",
   "nextId": 16,
   "unit": "m",

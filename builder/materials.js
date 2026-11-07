@@ -19,6 +19,8 @@
 // renders as it did.
 //======================================================================================================================
 
+import { colourSlot, SCREEN_FIELDS } from './images.js'
+
 /** Every field of Material2 a material sets -- only those the shader reads, since each is a
  *  control in the panel (`model` and `clearcoat` were here and did nothing; model.js 7, 8) -- in
  *  declaration order, with its uniform type and
@@ -241,6 +243,14 @@ export const FIELDS_OF = {
     surface: SURFACE_FIELDS,
     emitter: ['emissive', 'emissiveLuminance'],
 }
+/** THE FIELDS ONE MATERIAL USES: its type's (FIELDS_OF), and for an emitter whose glow is a picture (images.js
+ *  colourSlot) a surface's first few too, which show where the picture is dark (images.js SCREEN_FIELDS says why). What
+ *  codegen assigns, the panel shows and the parameter registry offers -- one list, read by all three. */
+export const fieldsOf = m => {
+    const t = m?.type ?? 'surface'
+    const own = FIELDS_OF[t] ?? FIELDS_OF.surface
+    return t === 'emitter' && colourSlot(m) ? [...SCREEN_FIELDS, ...own] : own
+}
 /** What the panel calls a field, where its name says too little */
 export const FIELD_LABELS = { emissive: 'colour', emissiveLuminance: 'luminance (cd/m\u00b2)',
     attenuationDistance: 'colour depth (mm)', abbe: 'Abbe number (dispersion)', coating: 'coating', coatLow: 'R below edge', coatHigh: 'R above edge',
@@ -427,5 +437,35 @@ export const RELIEFS = {
         ].join('\n'),
     },
 }
+/* A RELIEF FROM A PICTURE (0.next; lib/pathtracer/core/images.js heightAt, A PICTURE AS A HEIGHT): one of the material's
+   pictures as a height -- white `amplitude` mm up, or with `raise` -1 engraved as far down, black at the surface. Not one
+   of RELIEFS: it names a picture, and every preset there is compiled on materials that have none (check-shaders, the
+   tests), where it would not compile. Made for the picture it reads, so its code is that picture's (pictureReliefOf). */
+export const PICTURE_RELIEF_LABEL = 'from an image texture'
+export const pictureRelief = name => ({
+    params: { amplitude: 1.0, raise: 1.0 },
+    ranges: { amplitude: MM(0, 20, 0.01), raise: { min: -1, max: 1, step: 0.01 } },
+    lengths: ['amplitude'],
+    code: [
+        `// Relief from an image texture: "${name}" as a height -- its luminance times its alpha -- white "amplitude" mm`,
+        '// up (raise 1) or engraved as far down (raise -1), black at the surface. Read planar from the object\'s x and y in mm,',
+        '// at the image texture\'s own size, offset, turn and wrap, on every face; smooth (a cubic B-spline of its pixels:',
+        '// sixteen reads at every march step near the surface). heightAt\'s second number is the bound on its slope per mm,',
+        '// worked out from the image\'s own pixels when it was read, and from its size and wrap: the march never steps through it.',
+        `let texture_height = heightAt(${name}, q);`,
+        'h = amplitude * raise * texture_height.x;',
+        'slope = amplitude * abs(raise) * texture_height.y;',
+    ].join('\n'),
+})
+/* WHICH PICTURE A RELIEF READS, by its code WITHOUT ITS COMMENTS: the comment is words for the user, worded again since
+   (picture became image texture in what users see), and a relief must not stop being one for that. Its local was
+   picture_height in the first files of 0.next's branch: read as the same relief. */
+const reliefCodeOnly = c => String(c ?? '').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '').replace(/picture_height/g, 'texture_height').replace(/\s+/g, ' ').trim()
+/** The picture a relief from a picture reads, by its code; null for any other relief. */
+export const pictureReliefOf = relief => {
+    const m = relief && /let (?:texture|picture)_height = heightAt\(([A-Za-z][A-Za-z0-9_]*), q\);/.exec(relief.code ?? '')
+    return m && reliefCodeOnly(relief.code) === reliefCodeOnly(pictureRelief(m[1]).code) ? m[1] : null
+}
+
 /** The relief preset a relief is, by its code; null for code of one's own. */
 export const reliefPresetOf = relief => relief ? Object.keys(RELIEFS).find(k => RELIEFS[k].code === relief.code) ?? null : null

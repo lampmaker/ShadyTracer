@@ -53,6 +53,24 @@ The Properties panel's **+** makes a material from one of these: *diffuse*, *pla
 - **beam splitter 50/50**: R below edge 0.5, R above edge 0.5
 - **anti-reflective**: R below edge 0, R above edge 0
 
+## Image textures
+
+A material can show image textures (PNG, JPEG, WEBP, up to 4096 pixels on the longer side; a larger one is scaled down), each placed on every object wearing it by a projection in the object's [pattern frame](../modelling/materials.md#turning-a-pattern-the-pattern-frame). One can be the material's colour; the others are for its code (`sample(name)`: [Functions for code](code.md#a-materials-image-textures)). Every setting is live but the image itself, its name and its use: a compile. See [Image textures](../modelling/materials.md#image-textures).
+
+| setting | starts at | does |
+|---|---|---|
+| use | colour | colour: the material's colour with no code -- a surface's base colour, a glowing material's glow (its white at the luminance, its black dark, the surface below it showing there); none: only its code reads it. A compile. |
+| projection | planar | How the point is put on the image texture, in the object's pattern frame: planar along its z; box, one of six faces by the normal, each read the right way round from outside; triplanar, the three blended by the normal; cylindrical round its z, across being the distance round in mm; spherical, the whole image once over a sphere. |
+| size | 100, 100 | One copy of the image texture, across and up, in real millimetres whatever the scene's unit (spherical: unused). |
+| offset | 0, 0 | Where the image texture's centre is in its plane, in mm. |
+| turn | 0 | The image texture turned in its own plane, anticlockwise, in degrees. |
+| wrapU | repeat | Across: repeat (copies side by side), mirror (every other copy flipped, no seam), clamp (the edge pixels go on) or none (one copy; the material's own value outside it). |
+| wrapV | repeat | Up: the same four. |
+| filter | smooth | smooth: mixed between pixels; pixels: each pixel a sharp square. |
+| faces | front | Planar only: front (where the surface faces +z), both (front and back, the back mirrored as a slide seen from behind) or all (every face; the edges smear across the sides). |
+| colour | true | true: a colour image, decoded from sRGB to light; false: data (a roughness map, a mask), read as its numbers. |
+| sharpness | 4 | Triplanar only: how quickly the three projections hand over where the surface turns, 1 to 64. |
+
 ## Reliefs
 
 A relief is a height on every object wearing the material, in real mm -- part of the shape, so it shows in the silhouette, and paid for at every march step near the object.
@@ -72,4 +90,8 @@ Hammered: a dent "amplitude" mm deep in every cell of a Worley pattern "size" mm
 ### 3D-print layers
 
 3D-print layers: a bead of plastic every "layer" mm up the SCENE's z -- the build plate is its z = 0, so the layers stay level and line up across parts however they are turned or joined; for a part printed lying another way than it is shown, read the object's own z, q.z, in place of world.z. Each bead rounded -- a parabola across it -- with a groove "amplitude" mm deep where it meets the next, and a little fuller or flatter than the next, by up to "variation" of it, as a printer's extrusion is never quite even; pinned at the grooves, so the height is continuous and its slope is at most 4 (1 + variation) amplitude / layer, at a groove. this layer's own number: value noise at a lattice point is that point's value, in [-1, 1]
+
+### from an image texture
+
+Relief from an image texture: "texture" as a height -- its luminance times its alpha -- white "amplitude" mm up (raise 1) or engraved as far down (raise -1), black at the surface. Read planar from the object's x and y in mm, at the image texture's own size, offset, turn and wrap, on every face; smooth (a cubic B-spline of its pixels: sixteen reads at every march step near the surface). heightAt's second number is the bound on its slope per mm, worked out from the image's own pixels when it was read, and from its size and wrap: the march never steps through it.
 

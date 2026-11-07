@@ -11,7 +11,8 @@ What the code of an object, a group, a material or the scene's functions can cal
 | an object's | at every march step | `p` the point in the node's own frame, `C` the Hit to fold into, `MATERIAL` its material |
 | a group's | at every march step, around its children | `p` (which it may change), `C`, `r` the ray, `children(C, p)`, `XF_S` this frame's units in world units, `SURFACE_ONLY`, `READ_REACH`, `DIVIDED_ABOVE` |
 | a material's | once where a ray hits | `m` the material to change, `p` and `n` the hit and its normal in the world, `C`, and `p_local`, `R_local`, `S_local` the hit in the object's frame, its turn and its scale |
-| a material's relief | at every march step near an object wearing it | `q` the point in mm in that object's frame, `world` the same in the scene's; it sets `h`, the height in mm outward, and `slope`, a bound on how steep `h` is |
+| a material's image textures | -- | `sample(name)`, `mapped(name)` and `sampleAt(name, uv)` in its code: [below](#a-materials-image-textures) |
+| a material's relief | at every march step near an object wearing it | `q` the point in mm in that object's frame, `world` the same in the scene's, the material's image textures by name for `heightAt`; it sets `h`, the height in mm outward, and `slope`, a bound on how steep `h` is |
 | the scene's functions | -- | its functions are called from any of the others |
 
 Under every code box, **Insert** lists what that block can set, read and call, with recipes -- a click puts one in the code at the caret -- and what it cannot do; **Functions you can call…** opens this page.
@@ -114,7 +115,7 @@ slope = 4.0 * amplitude / 0.2;
 
 What it cannot read:
 
-- the material's settings -- A relief is shape: it runs in the march, where no material has been asked yet. It reads its own parameters (+ in its parameters header), not the material's or its code's.
+- the material's settings -- A relief is shape: it runs in the march, where no material has been asked yet. It reads its own parameters (+ in its parameters header) and the material's image textures by name (heightAt), not the material's settings or its code's.
 - n, the normal -- There is none yet: the relief is part of what the normal is taken from (by differences).
 - the object's own parameters -- One relief is shared by every object wearing the material.
 
@@ -144,6 +145,20 @@ Before it compiles, every whole word below is replaced -- in your code too, so d
 ## What a shape is
 
 A shape is a `VEC4`: `xyz` its outward normal, unit length, and `w` its signed distance -- negative inside. A zero normal means *none*, and the renderer then takes the normal by differences. A distance must never be more than the true distance to the surface, or the march steps through it. `C = add_new(C, Nsphere(p, 0.5), MATERIAL);` is a sphere. `C = add_new(C, sd((p.z - 0.1 * sin(p.x * 10.0)) / 1.5), MATERIAL);` is a wavy floor: the height's slope reaches 1, so the field's reaches √2, and divided by 1.5 it is never more than the distance.
+
+## A material's image textures
+
+In a material whose **image textures** box has any, each is in its code by its name, and three functions read them. The point is the hit's in the object's pattern frame, in mm.
+
+- `sample(texture) -> vec4<f32>` -- the image texture at the hit by its own projection, size, offset, turn, wrap and filter: linear rgb (a colour image decoded from sRGB) and alpha; 0 where it does not show (outside a copy that does not wrap, a face it is not on).
+- `mapped(texture) -> vec2<f32>` -- where on the image texture the hit is, in copies of it: (0, 0) its bottom left, (1, 1) its top right.
+- `sampleAt(texture, uv: vec2<f32>) -> vec4<f32>` -- the image texture at a position of your own, in copies, with its wrap and filter.
+
+For instance a data image texture as the roughness, `m.roughness = sample(rough).r;`, or one twice as small, `m.baseColor = sampleAt(texture, mapped(texture) * 2.0).rgb;`.
+
+In the material's **relief** code its image textures are in scope by name too, with one more:
+
+- `heightAt(texture, q) -> vec2<f32>` -- the image texture as a height at `q`: its luminance times its alpha, 0 to 1, read planar from `q.xy` at its own size, offset, turn and wrap, smooth (a cubic B-spline of its pixels, 16 reads); and, second, the bound on how steep it is per mm, from its own pixels. A relief from an image texture is `h = amplitude * raise * t.x; slope = amplitude * abs(raise) * t.y;` with `t` this.
 
 ## Putting shapes into the scene
 
