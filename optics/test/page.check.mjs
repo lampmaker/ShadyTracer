@@ -11,7 +11,8 @@
 //   Save the chart (PNG): a file named with the chart's kind and the time, a second save in that second its own file
 //   the ray count: a number times a multiplier, 500k typed setting both, more than the most refused, either way
 //   Live: round after round, the count each; ▶ Run disabled; Σ off at first, each round on its own; with Σ the rounds
-//     adding up, and a reset of the picture starting them over; Σ off again; the rays traced between rounds and their own loop not started; switched off mid-round, the round let
+//     adding up, and a reset of the picture starting them over; past the map's allowance its hits binned, the map still
+//     filling in and each batch weighed alike (0.next); Σ off again; the rays traced between rounds and their own loop not started; switched off mid-round, the round let
 //     go and the totals as the whole rounds left them; the rays switched on
 //     during a ▶ Run start when it ends; no round while a scene is built (the run bar says it waits); a round the
 //     scene was swapped under let go, Live going on; one that fails with the scene as it was stops it, and says why
@@ -631,6 +632,41 @@ await p.waitForFunction(() => CHECK.O.runs === CHECK.O.done, null, { timeout: 50
 ok('...and started when it ends', (await liveState()).living === true)
 await p.evaluate(() => { CHECK.O.batchMs = 0 })
 await raysButton()
+
+/* THE MAP PAST ITS ALLOWANCE (0.next; the user, 2026-11-07: "when doing analysis - map and live, cumulative, the 2d Map
+   stops converging after a little while"). With room for 12 000 hits -- three of the stand-in's 5 000-hit batches --
+   Live's rounds added up go on adding to the map: its hits per lit cell keep growing round after round, where they
+   stopped at the allowance before, and every batch weighs alike, so its flux stays each batch's 0.16 lm */
+{
+    const mapNote = () => p.evaluate(() => [...document.querySelectorAll('.shell-note')].map(e => e.textContent).join(' | '))
+    const hpcOf = t => +(/about (\d+) hits per lit cell/.exec(t)?.[1] ?? NaN)
+    // the map of the screen's hits again (THE DATA above left it on the far field on a plane), and put back after
+    const mapOf = label => p.evaluate(l => {
+        const s = [...document.querySelectorAll('select')].find(s => [...s.options].some(o => o.textContent === 'the far field on a plane'))
+        s.value = [...s.options].find(o => l ? o.textContent === l : o.textContent !== 'the far field on a plane').value
+        s.dispatchEvent(new Event('change', { bubbles: true }))
+    }, label)
+    await mapOf(null); await p.waitForTimeout(300)
+    await p.evaluate(() => { CHECK.mapHits = 12000; CHECK.O.batchMs = 20 })
+    if (!(await sumOn())) await p.click('.shell-runbar .sum')
+    const d0 = (await liveState()).done
+    await p.click('.shell-runbar .live')
+    await p.waitForFunction(d => CHECK.O.done >= d + 2, d0, { timeout: 8000 }); await p.waitForTimeout(60)
+    const n1 = await mapNote(), h1 = hpcOf(n1)
+    await p.waitForFunction(d => CHECK.O.done >= d + 7, d0, { timeout: 15000 }); await p.waitForTimeout(60)
+    const n2 = await mapNote(), h2 = hpcOf(n2)
+    await p.click('.shell-runbar .live'); await p.waitForTimeout(400)
+    ok('Live with Σ past the map\'s allowance: the map goes on filling in, round after round', h1 > 0 && h2 > 2 * h1, `${h1} -> ${h2}: ${n2}`)
+    const shown = await p.evaluate(() => CHECK.O.mapShown()), tot = shown?.total
+    // every stand-in hit carries 0.16 / 5000 lm; a hit or two of the halo fall outside the screen's box, so the batches
+    // are the hits over 5 000 rounded, and the flux exactly theirs over that many batches -- w = 1 for the list, or the
+    // sum left out, would be far from it
+    const K = Math.round((shown?.hits ?? 0) / 5000), want = shown ? shown.hits * 0.16 / 5000 / K : NaN
+    ok('...every batch weighed alike: the map\'s flux each batch\'s 0.16 lm', shown?.more && K > 12000 / 5000 && Math.abs(tot - want) < 1e-12 * want
+       && Math.abs(tot - 0.16) < 1e-3, JSON.stringify({ ...shown, K, want }))
+    await p.evaluate(() => { CHECK.mapHits = undefined; CHECK.O.batchMs = 0 })
+    await mapOf('the far field on a plane'); await p.waitForTimeout(300)
+}
 
 /* LIVE THROUGH A STRUCTURAL EDIT: the renderer puts the new scene in before it builds, and its uniforms in after, so
    a round in between can be refused by name. While a scene is built no round starts; one the scene changed under is

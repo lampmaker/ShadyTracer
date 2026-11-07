@@ -35,7 +35,7 @@
 // Everything that traces is lib/pathtracer/optics; this file is controls, charts and a table.
 //======================================================================================================================
 import { createOptics } from '../lib/pathtracer/optics/index.js'
-import { detectorMap } from '../lib/pathtracer/optics/detmap.js'
+import { detectorMap, mapFrame, mapSum, addToMapSum, copyMapSum } from '../lib/pathtracer/optics/detmap.js'
 import { UNITS } from '../lib/pathtracer/core/photometry.js'
 import { rgbToXYZ, XYZtoxy, xyToXYZ, xyToCctDuv, cctDuvToXy, mixToTarget } from '../lib/pathtracer/core/colorimetry.js'
 import { sourceTable, faceSource } from '../builder/sources.js'
@@ -100,7 +100,7 @@ const RAYS_MAX = 5e7
  *                  (Tools menu), not a folder in the Analysis pane; without it there is no colour mixing
  */
 export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () => { }, charts = null, boxes = null, view = null,
-                                          optics = null, mixing = null }) {
+                                          optics = null, mixing = null, mapHits = null }) {
     /* `optics`: a stand-in for the optics module -- optics/test/page.check.mjs drives this page in a browser
        with no GPU, and a made-up far field and hits, so the charts and the pane are run by something */
     const O = optics ?? createOptics(RT, WG)
@@ -769,21 +769,16 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
         }
         const hits = lastMap?.hits
         if (!hits?.length) return { why: 'No detector hits yet: make an object a detector (Builder: its Optics-Analysis box; the scene\'s optics analysis on), then ▶ Run in the Analysis pane.' }
-        /* WHAT IT COVERS: a zoom when there is one; else the whole detector, from its measured box --
-           the node the hits' tag names, its box's corners in the world (boxes.js; null until measured,
-           and then the map is where the light landed) -- else where the light landed */
-        const tag = tagOf()
-        const id = (RT.scene?.opticsTags ?? RT.scene?.tags)?.[tag - 1]
-        const corners = IL.area === 'detector' && id && boxes && BUILDER?.doc ? boxes.corners(BUILDER.doc, id) : null
-        const range = IL.zoom ? rangeOfView(IL.zoom) : corners ? rangeOfPoints(corners) : null
-        const covers = IL.zoom ? 'zoomed' : corners ? 'the whole detector'
-            : IL.area === 'detector' ? 'where the light landed (the detector\'s box is not measured yet)' : 'where the light landed'
-        const key = [tag, MP.cells, MP.smooth, MP.bandwidth, MP.k, RT.scene?.unit, IL.area, JSON.stringify(IL.zoom), JSON.stringify(corners)].join('|')
+        const { tag, range, covers, key: setKey, mpu } = mapSetup()
+        // the hits past the list (OVER below), when binned for the map as it is set up now
+        const over = lastMap.over?.key === setKey ? lastMap.over : null
+        const key = `${setKey}|${over?.batches ?? 0}`
         if (ilMemo?.key === key && ilMemo.hits === hits) return ilMemo.v
         const list = hits.filter(h => h.tag === tag)
-        const mpu = UNITS[RT.scene?.unit] ?? 1
+        const K = lastMap.kept + (over?.batches ?? 0)
         const m0 = list.length >= 3 ? detectorMap(list, { cells: MP.cells | 0, metresPerUnit: mpu, unit: lastMap.unit,
-                                                           smooth: MP.smooth, bandwidth: MP.bandwidth, k: MP.k | 0, range }) : null
+                                                           smooth: MP.smooth, bandwidth: MP.bandwidth, k: MP.k | 0, range,
+                                                           more: over ? { sum: over.sum, w: lastMap.kept / K, s: 1 / K } : null }) : null
         let v
         if (!m0) v = { why: 'Too few hits on that detector for a map.' }
         else {
@@ -795,6 +790,50 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
         }
         ilMemo = { key, hits, v }
         return v
+    }
+    /* WHAT A DETECTOR MAP IS OF, as the map is set up now: the detector (`tags`: the ones there are hits on, when the
+       map's choice is none of them -- the first, as keepChoices will choose), what it covers, and a key that changes
+       with any of it. WHAT IT COVERS: a zoom when there is one; else the whole detector, from its measured box -- the
+       node the hits' tag names, its box's corners in the world (boxes.js; null until measured, and then the map is
+       where the light landed) -- else where the light landed */
+    const mapSetup = (tags = null) => {
+        let tag = tagOf()
+        if (tags?.size && !tags.has(tag)) tag = Math.min(...tags)
+        const id = (RT.scene?.opticsTags ?? RT.scene?.tags)?.[tag - 1]
+        const corners = IL.area === 'detector' && id && boxes && BUILDER?.doc ? boxes.corners(BUILDER.doc, id) : null
+        const range = IL.zoom ? rangeOfView(IL.zoom) : corners ? rangeOfPoints(corners) : null
+        const covers = IL.zoom ? 'zoomed' : corners ? 'the whole detector'
+            : IL.area === 'detector' ? 'where the light landed (the detector\'s box is not measured yet)' : 'where the light landed'
+        const key = [tag, MP.cells, MP.smooth, MP.bandwidth, MP.k, RT.scene?.unit, IL.area, JSON.stringify(IL.zoom), JSON.stringify(corners)].join('|')
+        return { tag, range, covers, key, mpu: UNITS[RT.scene?.unit] ?? 1 }
+    }
+    /* THE HITS PAST THE LIST (the user, 2026-11-07: "when doing analysis - map and live, cumulative, the 2d Map stops
+       converging after a little while"). The map is made from a list of at most MAP_HITS_MAX hits, and Live's rounds added
+       up stopped adding to it once it was full. Past it, each batch's hits are binned as they come into the cells of
+       the map as it is set up now (detmap.js mapSum: the list's own frame, so both land in the same cells), and the map
+       adds the sum in, every batch weighed alike. OF ONE LIST AND ONE SETUP: another list (a new Run, Σ starting over)
+       starts a new sum, and a change to the map's setup (its cells, smoothing, detector, zoom) starts this one over --
+       its batches binned in the old cells are let go, and the map is the list's alone until the next batch. The k
+       nearest are not linear in the hits, so they bin nothing: that map stays the list's, as before. */
+    let OVER = null
+    const overFor = list => OVER?.list === list ? OVER : (OVER = { list, tags: null, key: null, sum: null, batches: 0 })
+    /** One batch past the list: `read` its hits only when there is a sum to bin them into. */
+    const overAdd = async (over, read) => {
+        over.tags ??= new Set(over.list.map(h => h.tag))     // the list is full: it no longer changes
+        const S = mapSetup(over.tags)
+        if (S.key !== over.key) {
+            const list = over.list.filter(h => h.tag === S.tag)
+            const F = MP.smooth === 'knn' ? null : mapFrame(list, { cells: MP.cells | 0, range: S.range })
+            Object.assign(over, { key: S.key, batches: 0, tag: S.tag,
+                                  sum: F ? mapSum(F, { smooth: MP.smooth, bandwidth: MP.bandwidth, metresPerUnit: S.mpu,
+                                                       colour: list.every(h => Array.isArray(h.xyz)) }) : null })
+        }
+        if (!over.sum) return
+        const h = await read()
+        if (!h) return
+        // every batch read counts, hits on the detector or none: each is a whole estimate, an empty one too
+        addToMapSum(over.sum, h.hits.filter(x => x.tag === over.tag))
+        over.batches++
     }
     /* THE POINT the profiles, rings and encircled flux are taken about: one for every chart, found on the
        illuminance whatever a chart shows -- the brightest cell is a bright one */
@@ -1340,14 +1379,19 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
     }
 
     /* THE DETECTOR HITS the map is made of: an analysis's, every batch's together, each batch carrying
-       its share of the flux -- up to MAP_HITS of them, beyond which the later batches are left out (each
+       its share of the flux -- up to MAP_HITS_MAX of them, past which the later batches are binned, not kept (each
        batch is a whole estimate on its own, so leaving some out adds noise, not bias). The hit buffer
        holds 262 144, more than an analysis batch's rays, and a ray stops at the first detector it
        reaches, so no batch overflows it. ONLY THE ANALYSIS WRITES THEM: the live rays trace into the
        same buffer, and their 2 000 rays are a look, not a measurement. LIVE'S ROUNDS ADDED UP share the one
-       allowance: the map stops filling in at it, while the totals and the far field go on converging. */
+       allowance -- and past it the map no longer stopped (0.next): the later batches' hits are binned into the map's
+       cells as they come (OVER above), so the map goes on converging as the totals and the far field do. What reads
+       the hits themselves -- the k nearest, the spectrum of a place, the hits' CSV, a script's map -- reads the list. */
     // a hit kept for the map is a JS object of a few hundred bytes: half a million is ~100 MB
-    const MAP_HITS = 500000
+    const MAP_HITS_MAX = 500000
+    // `mapHits`: a smaller allowance, asked of a function each round -- optics/test/page.check.mjs's, so that the hits
+    // past it are binned by something with no half a million hits to make
+    const mapHitsMax = () => mapHits?.() ?? MAP_HITS_MAX
 
     const buttons = () => {
         runBtn.disabled = analysing || LIVE.on
@@ -1385,11 +1429,14 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
 
     /* ONE ANALYSIS'S BATCHES: the ray count in batches, into an estimate (optics/estimate.js: each number the mean
        over the batches with the standard error from their spread), and the detector hits kept for the map -- whole
-       batches of them while there is room (`room`, of MAP_HITS). ▶ Run shows each readback's batches as they come; a
+       batches of them while there is room (`room`, of MAP_HITS_MAX). ▶ Run shows each readback's batches as they come; a
        live round shows nothing itself: liveRounds decides what it is shown with. Throws what the trace throws, and
        STOPPED when Live is switched off during it. */
     const STOPPED = new Error('stopped'), SCENE_CHANGED = new Error('the scene changed during the round')
-    const traceRound = async ({ live = false, room = MAP_HITS } = {}) => {
+    /* `extend`: the list the batches past the room extend (OVER): the round's own hits by default, Live's added-up
+       list when the round adds to it with no room left, null for none (a round adding to a list it has room in: those
+       few batches are left out, as before, and the next round extends the list it fills) */
+    const traceRound = async ({ live = false, room = mapHitsMax(), extend } = {}) => {
         const scene = RT.scene
         push()
         const { rays, batches } = batchesFor(raysTotal())
@@ -1401,11 +1448,12 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
             if (live && !LIVE.on) throw STOPPED
             // the batches of one readback arrive together: drawn once, at the last of them
             if (!live && (batch?.last ?? true)) { ANA.results = r; ANA.far = O.far; render(r); farRead(); say(`batch ${b} of ${batches}`) }
+            // read back with the batch (index.js); a stand-in module without it (a check's, a mockup's): as it stands
+            const read = async () => batch?.hits ? batch.hits() : await O.readHits()
             if (hits.length < room) {
-                // read back with the batch (index.js); a stand-in module without it (a check's, a mockup's): as it stands
-                const h = batch?.hits ? batch.hits() : await O.readHits()
+                const h = await read()
                 if (h) { for (const x of h.hits) hits.push(x); kept++ }
-            }
+            } else if (extend !== null) await overAdd(overFor(extend ?? hits), read)
         } })
         // a live round the scene was swapped under is of two scenes: let go, as one that failed for it is (liveRounds)
         if (live && RT.scene !== scene) throw SCENE_CHANGED
@@ -1422,7 +1470,11 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
                              secs, live, rounds })
         if (map) {
             const n = Math.max(1, kept)
-            lastMap = { hits: hits.map(h => ({ ...h, flux: h.flux / n, xyz: h.xyz?.map(v => v / n), ...(h.w ? { w: h.w.map(v => v / n) } : {}) })), unit: 'lm', note: ` from ${kept} of ${r.batches} batches` }
+            // the hits past the list, as they stand now: a copy, for the next round goes on adding to them
+            const ov = OVER?.list === hits && OVER.sum && OVER.batches ? { key: OVER.key, batches: OVER.batches, sum: copyMapSum(OVER.sum) } : null
+            const past = ov ? ` and ${ov.batches} more binned (${ov.sum.hits.toLocaleString()} hits past the ${hits.length.toLocaleString()} kept)` : ''
+            lastMap = { hits: hits.map(h => ({ ...h, flux: h.flux / n, xyz: h.xyz?.map(v => v / n), ...(h.w ? { w: h.w.map(v => v / n) } : {}) })),
+                        kept: n, over: ov, unit: 'lm', note: ` from ${kept} of ${r.batches} batches${past}` }
         }
         buildData()
         render(r); farRead(); if (map) drawMapCharts(); results(); sayWhen()
@@ -1468,7 +1520,8 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
                 const scene = RT.scene, builds = LIVE.builds, resets = RT.resets?.(), key = liveKey()
                 const adds = LIVE.sum && !!ACC.est && ACC.scene === scene && ACC.resets === resets && ACC.key === key
                 let round
-                try { round = await traceRound({ live: true, room: adds ? MAP_HITS - ACC.hits.length : MAP_HITS }) } catch (e) {
+                const room = adds ? mapHitsMax() - ACC.hits.length : mapHitsMax()
+                try { round = await traceRound({ live: true, room, extend: !adds ? undefined : room <= 0 ? ACC.hits : null }) } catch (e) {
                     if (e === STOPPED || (RT.scene === scene && LIVE.builds === builds && !sceneBusy())) throw e
                     ACC.est = null
                     await nextFrame(); continue
@@ -1479,9 +1532,13 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
                     ACC.est.merge(round.est)
                     for (const h of round.hits) ACC.hits.push(h)
                     ACC.kept += round.kept; ACC.rounds++
-                } else Object.assign(ACC, { est: round.est, hits: round.hits, kept: round.kept, rounds: 1, mapHits: -1, scene, resets, key })
-                const map = ACC.hits.length > 1.25 * ACC.mapHits
-                if (map) ACC.mapHits = ACC.hits.length
+                } else Object.assign(ACC, { est: round.est, hits: round.hits, kept: round.kept, rounds: 1, mapHits: -1, mapOver: null, scene, resets, key })
+                // made again when the hits have grown by a quarter -- the list's and those binned past it together -- or
+                // when what is binned past it started over for another setup of the map
+                const ov = OVER?.list === ACC.hits && OVER.sum ? OVER : null
+                const n = ACC.hits.length + (ov?.sum.hits ?? 0)
+                const map = n > 1.25 * ACC.mapHits || (ov?.key ?? null) !== ACC.mapOver
+                if (map) { ACC.mapHits = n; ACC.mapOver = ov?.key ?? null }
                 show({ est: ACC.est, hits: ACC.hits, kept: ACC.kept, secs: round.secs, live: true, rounds: ACC.rounds, map })
                 if (moved) ACC.est = null             // of two states: the next round starts over
                 if (LIVE.on && V.show) await raysBetween()
@@ -1521,6 +1578,9 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
        second, its photons leaving from behind the reflector's new place (the user, 2026-10-16, Reflector.json).
        A table is about 0.03 ms of the CPU (measured on the user's laptop, three scenes). */
     O.followScene = () => { followScene() }
+    /* THE DETECTOR MAP AS IT IS SHOWN: its flux and its hits -- the list's and those binned past it (OVER) -- or null
+       with none. For optics/test/page.check.mjs, which has no other way to read the map's own numbers. */
+    O.mapShown = () => { const m = isPlane() ? null : currentIllum()?.m; return m ? { total: m.total, hits: m.hits, more: !!m.moreUsed } : null }
 
     /*==================================================================================================================
       FOR A SCRIPT (tools/scriptapi.js, 0.82.0): the analysis as ▶ Run runs it, its setup as the Analysis pane's data
