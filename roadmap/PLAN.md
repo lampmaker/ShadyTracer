@@ -568,6 +568,25 @@ code, a look each.
      channel weights (mean 1 per channel, at most 3), refracting with n(λ) from then on; the pick and Fresnel there the
      d line's, so reflections stay white. The wavelength rides in Ray.tag's upper 16 bits (the user's choice: the Ray
      stays 112). Bench `optics-dispersion` (a wedge's per-channel exit angles) and three furnace rows.
+     **A light's own spectrum at the prism (0.next; `core/lightspectra.js`), not yet seen on hardware.** The user, 2026-11-07:
+     a 450 nm LED (10 nm) threw red at the red end of its rainbow, and a red LED red in the violet -- the draw above
+     spreads each channel over its own wavelengths, whatever the light emits. A photon of a light given by its spectrum
+     (or a CCT on the locus) now carries it (Ray.pix PIX_LS, the tables in learn past the microfacet tables) and draws
+     from it in 1 nm cells, taking each wavelength's exact colour. On Dawn (`core/test/prism.gpu.mjs`) a beam through a
+     30 degree prism leaves nothing where the old draw put red. Open: the camera's own paths still draw by the
+     channels (a light seen through a prism, which only they reach through a pinhole); that needs a light's face to
+     name its spectrum (codegen LIGHTS, scenedata.js) and a draw whose weights a spectrum can divide.
+     **The channels' draw at 1 nm (0.next).** Its weights measured: `optics-dispersion` PASS on the user's NVIDIA
+     Pascal (2026-11-07, af3cd7c), each channel's mean exit angle within 0.001 degrees of the 1 nm weights' (red
+     -23.8867 against -23.8858, green -24.1774 against -24.1773, blue -24.8590 against -24.8593). The picture's rainbow
+     without bands not yet seen. The user asked (2026-11-07) whether the spectral resolution could
+     go to 1 nm, as a setting if it cost speed. What was 10 nm: the camera's draw, its colour constant over each bin --
+     a rainbow seen through glass stepped by up to 0.136 u'v' between two bins at 480 nm, 0.014 between two 1 nm cells
+     (computed) -- and a coating's per-channel average. The draw is now a 1 nm table from the CIE's own 1931 table, in
+     the learn buffer beside the lights' (`lightspectra.js` CAMERA_TABLE), drawn by binary search: 9 reads where the
+     bins took up to 40 (read in code; untimed). No setting: nothing to gain by turning it off, and a second draw would
+     be code that does not run. Coatings keep 10 nm: at 1 nm the same arithmetic moves R by at most 0.009 (computed)
+     for 400 softplus terms a coated hit instead of 40.
   3. **The exact method for the optics trace** -- a source's spectrum (an LED's SPD, Planck, a Zemax file's own
      wavelength: optRays' unused 4th word), watts as watts, X Y Z from the CMFs at the detector, R(λ) and n(λ) per
      ray; and a true-colour detector map.
