@@ -138,7 +138,12 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
    join of its two supports, one half-space with no separators; the two sheets such half-spaces make possible (a
    fillet with the other side of its support: zero along the support; walls across a surface a fillet shares) and
    how the cover keeps them out; a freeform face fitted with the nearest regular surface, and the deviation shown
-   -> builder/joins.js, scene_api.js csgRound*, import/fillet.js, import/freeform.js. *Read:* iq-distfunctions, iq-interior, iq-fbmsdf,
+   -> builder/joins.js, scene_api.js csgRound*, import/fillet.js, import/freeform.js. Planned for it too (0.next): a
+   convex solid as the intersection of half-spaces, exact inside by the largest plane distance -- the faceted
+   reflector, flat facets with their corners on a paraboloid (the lifting map's lower hull, so convex while the count
+   round it halves no finer than a ring's width: past that a coarse facet rose through a finer one), each facet a
+   line in its fold's (u, z), the point's own sector the largest -> shapes.js NfacetedReflector.
+   *Read:* iq-distfunctions, iq-interior, iq-fbmsdf,
    iq-smin; Shapiro and Vossler 1991 (named in words, not yet in kit/reading.js).
 4. **Which way is up** (draft): the normal as the field's gradient; a shape's own against forward differences (the
    shade kernel's 3 looks) and central ones (the pick's 6), their errors as h and h², a crease; the same differences

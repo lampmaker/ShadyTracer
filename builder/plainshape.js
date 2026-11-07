@@ -12,9 +12,10 @@
 import { withoutComments } from './helpers.js'
 
 /** The closed-form shapes' N-functions: a call of one of these alone is one plain shape */
+/* Ndish is the reflector's code before 0.next, which a scene saved then keeps; Nparabolic its code since */
 export const PLAIN_SHAPES = new Set([
     'Nsphere', 'NboxRounded', 'Ncylinder', 'Ncapsule', 'Nlens', 'Ndisc', 'Nrectangle', 'Nplane',
-    'Ntube', 'sdCappedCone', 'Ndome', 'Ndish', 'Noctahedron', 'Nfrustum', 'Nprism', 'NroundCone',
+    'Ntube', 'sdCappedCone', 'Ndome', 'Ndish', 'Nparabolic', 'Noctahedron', 'Nfrustum', 'Nprism', 'NroundCone',
 ])
 
 /* the arguments of a call, split at its top-level commas; null when the parentheses do not balance */
