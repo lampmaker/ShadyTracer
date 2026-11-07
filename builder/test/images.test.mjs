@@ -11,8 +11,10 @@
 import * as M from '../model.js'
 import * as P from '../project.js'
 import { generate, uniformName } from '../codegen.js'
-import { entryFromBytes, slotKey, imagesProblems, usedImages, SCREEN_DEFAULTS } from '../images.js'
-import { slotMatrix, IMAGE_RESOURCE } from '../../lib/pathtracer/core/images.js'
+import { entryFromBytes, slotKey, imagesProblems, usedImages, SCREEN_DEFAULTS, decodePNG16, pngInfo, isDeepGrey, imageFromFile, withHeights, pixelsOf } from '../images.js'
+import { slotMatrix, IMAGE_RESOURCE, heightStats, pack16 } from '../../lib/pathtracer/core/images.js'
+import { pictureRelief, pictureReliefOf } from '../materials.js'
+import { deflateSync } from 'node:zlib'
 
 let pass = 0, fail = 0
 const ok = (name, cond, extra = '') => { if (cond) { pass++; return } fail++; console.log(`FAIL  ${name}${extra ? '\n      ' + extra : ''}`) }
@@ -196,6 +198,90 @@ const doc = () => {
     M.addImageSlot(d, 'tv', b.key); M.addImageSlot(d, 'wall', a.key); M.addImageSlot(d, 'wall', b.key)
     ok('the pictures used, each once, in the order first used', JSON.stringify(usedImages(d)) === JSON.stringify([a.key, b.key]))
     ok('toTree hands codegen those, the document\'s own entries (not copies)', M.toTree(d).images[a.key] === d.images[a.key])
+}
+
+// ---- A 16-BIT GREY PNG (0.next): read by builder/images.js's own decoder, every row filter, grey and grey with alpha
+{
+    // a PNG written here from its specification, each row with the filter given (0 none, 1 sub, 2 up, 3 average, 4 Paeth)
+    const crcT = new Uint32Array(256).map((_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; return c >>> 0 })
+    const crc = b => { let c = 0xFFFFFFFF; for (const x of b) c = crcT[(c ^ x) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0 }
+    const chunk = (t, d) => { const o = Buffer.alloc(12 + d.length); o.writeUInt32BE(d.length, 0); o.write(t, 4, 'ascii'); d.copy(o, 8); o.writeUInt32BE(crc(o.subarray(4, 8 + d.length)), 8 + d.length); return o }
+    const png16 = (W, H, samples, ch, filters) => {
+        const bpp = 2 * ch, stride = W * bpp
+        const rows = Buffer.alloc(H * stride)
+        for (let i = 0; i < W * H * ch; i++) rows.writeUInt16BE(samples[i], 2 * i)
+        const raw = Buffer.alloc(H * (stride + 1))
+        for (let y = 0; y < H; y++) {
+            const f = filters[y % filters.length]
+            raw[y * (stride + 1)] = f
+            for (let i = 0; i < stride; i++) {
+                const x = rows[y * stride + i], a = i >= bpp ? rows[y * stride + i - bpp] : 0, b = y ? rows[(y - 1) * stride + i] : 0, c = y && i >= bpp ? rows[(y - 1) * stride + i - bpp] : 0
+                const p = a + b - c, pa = Math.abs(p - a), pb = Math.abs(p - b), pc = Math.abs(p - c), pr = pa <= pb && pa <= pc ? a : pb <= pc ? b : c
+                raw[y * (stride + 1) + 1 + i] = (x - [0, a, b, (a + b) >> 1, pr][f]) & 255
+            }
+        }
+        const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(W, 0); ihdr.writeUInt32BE(H, 4); ihdr[8] = 16; ihdr[9] = ch === 2 ? 4 : 0
+        return new Uint8Array(Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', deflateSync(raw)), chunk('IEND', Buffer.alloc(0))]))
+    }
+    let r = 77
+    const rnd = () => { r = (r * 1103515245 + 12345) >>> 0; return r >>> 16 }
+    const W = 13, H = 10
+    const g = Array.from({ length: W * H }, rnd)
+    const bytes = png16(W, H, g, 1, [0, 1, 2, 3, 4])
+    const info = pngInfo(bytes)
+    ok('its header read: 13 x 10, 16 bits, grey, not interlaced', info.width === 13 && info.height === 10 && info.depth === 16 && info.colourType === 0 && isDeepGrey(info))
+    const d = await decodePNG16(bytes)
+    ok('every row filter undone: each sample its own 16-bit value', d.gray.every((v, i) => v === g[i]) && d.alpha === null)
+    const ga = Array.from({ length: W * H * 2 }, rnd)
+    const da = await decodePNG16(png16(W, H, ga, 2, [4, 3, 2, 1, 0]))
+    ok('grey with alpha: both, 16 bits each', da.gray.every((v, i) => v === ga[2 * i]) && da.alpha.every((v, i) => v === ga[2 * i + 1]))
+    ok('an 8-bit PNG is not this decoder\'s (the browser\'s)', !isDeepGrey(pngInfo(Uint8Array.from([137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 2, 0, 0, 0, 2, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0]))))
+    // through File > + picture… as the panel reads a file: 16 bits kept, its heights from its own bytes
+    const file = { name: 'height.png', type: 'image/png', arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) }
+    const got = await imageFromFile(file)
+    ok('read as a picture: bits 16, its size, its heights\' bound worked out, sound', got.entry.bits === 16 && got.entry.width === 13 && got.entry.heights?.data?.length === 6
+        && imagesProblems({ [got.key]: got.entry }).length === 0, JSON.stringify(imagesProblems({ [got.key]: got.entry })))
+    const px = await pixelsOf(got.entry)
+    ok('...its pixels as the atlas holds them: two bytes a texel', JSON.stringify(heightStats(px, { bits: 16 })) === JSON.stringify(got.entry.heights)
+        && px.pixels[0] === g[0] >> 8 && px.pixels[1] === (g[0] & 255))
+    const plain = { ...got.entry }; delete plain.heights
+    await withHeights(plain)
+    ok('an entry from before heights: given them from its pixels, the same', JSON.stringify(plain.heights) === JSON.stringify(got.entry.heights))
+    let refused = null
+    try { await imageFromFile({ name: 'huge.png', type: 'image/png', arrayBuffer: async () => { const b = png16(1, 1, [0], 1, [0]); const dv = new DataView(b.buffer); dv.setUint32(16, 5000); return b.buffer } }) } catch (e) { refused = e.message }
+    ok('a 16-bit picture over 4096 refused, saying why (scaled it would lose its 16 bits)', /16-bit .*5000/.test(refused ?? ''), refused)
+    ok('bits other than 16, or on a JPEG, refused', imagesProblems({ [a.key]: { ...a.entry, bits: 8 } }).length === 1 && imagesProblems({ [b.key]: { ...b.entry, bits: 16 } }).length === 1)
+    ok('heights not six numbers refused', imagesProblems({ [a.key]: { ...a.entry, heights: { colour: [1], data: [1, 2, 3, 4, 5, 6] } } }).length === 1)
+}
+
+// ---- A RELIEF FROM A PICTURE (0.next; materials.js pictureRelief)
+{
+    const d = doc()
+    M.addImage(d, a)
+    M.addImageSlot(d, 'wall', a.key)
+    ok('a relief from a picture refused on a material with none, saying so', /no picture/.test(threw(() => M.setRelief(d, 'tv', 'picture')) ?? ''))
+    M.setRelief(d, 'wall', 'picture')
+    const R = M.material(d, 'wall').relief
+    ok('...made for the first picture: its code that picture\'s, amplitude and raise', pictureReliefOf(R) === 'picture' && R.params.amplitude === 1 && R.params.raise === 1
+        && R.lengths.includes('amplitude') && M.validate(d).length === 0, JSON.stringify(M.validate(d)))
+    ok('...not one of the presets (they compile on materials with no picture)', M.reliefPresetOf(R) === null && !('picture' in M.RELIEFS))
+    M.setImageSlot(d, 'wall', 'picture', { name: 'logo' })
+    ok('the picture renamed: the relief reads it by its new name', pictureReliefOf(M.material(d, 'wall').relief) === 'logo')
+    ok('a picture named as the relief\'s parameter refused', /taken/.test(threw(() => M.setImageSlot(d, 'wall', 'logo', { name: 'raise' })) ?? ''))
+    ok('...or as a name the relief\'s code has', /taken/.test(threw(() => M.setImageSlot(d, 'wall', 'logo', { name: 'slope' })) ?? ''))
+    const g = generate(M.toTree(d), { id: 'p' })
+    const fn = g.wgsl.slice(g.wgsl.indexOf('fn relief_wall('), g.wgsl.indexOf('}', g.wgsl.indexOf('return vec2<f32>(clamp(h', g.wgsl.indexOf('fn relief_wall('))))
+    ok('codegen: the relief\'s code has the material\'s pictures by name, and reads its height', fn.includes(`let logo = UB.${uniformName('wall', slotKey('logo'))};`) && fn.includes('heightAt(logo, q)'))
+    ok('...and a relief of a material with no picture is the text it was (no picture line)', (() => {
+        const e = doc(); M.setRelief(e, 'wall', 'noise'); const t = generate(M.toTree(e), { id: 'p' }).wgsl; return !/UB\.img_/.test(t) && !t.includes('fn heightAt(') })())
+    // the bound in the slot's uniform: from the entry's heights, its size, its wrap
+    const entry = { ...a.entry, heights: { colour: [0.2, 0.1, 0.5, 0, 0.3, 0.4], data: [0.2, 0.1, 0.5, 0, 0.3, 0.4] } }
+    d.images[a.key] = entry
+    const g2 = generate(M.toTree(d), { id: 'p' })
+    const u = g2.uniforms[uniformName('wall', slotKey('logo'))].def
+    ok('the slot\'s uniform carries the bound: repeat across (the seam 0.5), 64 texels in 100 mm; 32 in 100 up', Math.abs(u[13] - Math.hypot(0.5 * 64 / 100, 0.1 * 32 / 100)) < 1e-12, u[13])
+    M.removeImageSlot(d, 'wall', 'logo')
+    ok('the picture taken away: its relief with it', !M.material(d, 'wall').relief && !M.material(d, 'wall').images)
 }
 
 console.log(`${pass} passed, ${fail} failed`)

@@ -1,5 +1,31 @@
 # Images on surfaces: a proposal
 
+**STATUS (2026-11-07).** **T4's relief from a picture is built (0.next), not yet seen on hardware.** The user: *"build
+the relief from picture"*. What it is, and what decided each part:
+- **A relief made for one picture** (`materials.js pictureRelief`), not one of the presets. Its code is
+  `h = amplitude * raise * heightAt(name, q).x` with its slope from the same call. The presets are each compiled on
+  materials with no picture (check-shaders, the relief tests), where it would not compile. A relief's code now has the
+  material's pictures by name (codegen), as its material code does.
+- **Planar from the point's x and y, on every face, whatever the picture's projection.** The height is then a function
+  of the point alone, and a bound on its gradient is a property of the picture and its placement. Box and triplanar
+  hand over by the normal, which a relief, evaluated in the SDF, does not have. The cylinder's arc length has a seam,
+  and the sphere has poles: neither has a bound.
+- **Smooth: a cubic B-spline of the pixels, 16 reads.** Bilinear's gradient jumps at every texel's edge, and a relief's
+  normal is taken by differences. Its derivative is a quadratic B-spline of neighbouring differences, so the largest of
+  those bounds it (`heightStats`): exact on a ramp, about 2.4 times loose on random noise (read in the test's numbers:
+  bound 16, steepest 6.9). Wrap *none* fades to 0 over the texels past the copy, since a step to 0 has no bound.
+- **The bound is worked out on import from the pixels** (`builder/images.js statsOf`), with two levels in 255 of room
+  for what a canvas's premultiplied read-back rounds (inferred). It is carried in the slot's uniform, so a size dragged
+  is still live. An entry made before had none: choosing the relief works it out then (`withHeights`).
+- **16-bit grey PNGs** are read by a decoder of their own (`decodePNG16`; the browser gives 8 bits) and kept in the
+  atlas as two bytes a texel (`pack16`). Any other PNG, JPEG or WebP has 8 bits.
+- **Verified on Dawn over lavapipe:** `heightAt` is its twin's to 1.1e-6, and rays at 12 degrees over a steep relief
+  stop on it, never past its first crossing (`builder/test/images.gpu.mjs`). With the bound taken out they do step
+  through, so the test can fail. Straight-down rays could not: the field along a vertical is exact whatever the bound,
+  and with slopes of 0.6 or 1.7 a march with no bound still landed right.
+- **Not known:** its speed (16 reads at every step near the surface, and the march's steps there grow with the bound),
+  and how it looks. Both are the user's.
+
 **STATUS (2026-11-06, later).** **T1 is built (0.next), not yet seen on hardware.** The user: *"go with your proposals,
 build T1"*, after the four decisions below were put to them, so each is taken as proposed: a surface under the glow
 (way 1), pictures in the file, 4096 px and 8-bit, one picture per material placed by the pattern frame. What was built

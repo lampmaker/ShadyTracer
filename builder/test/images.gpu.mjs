@@ -45,7 +45,7 @@ const M = await import('../model.js')
 const { PRESETS } = await import('../materials.js')
 const { generate, uniformName } = await import('../codegen.js')
 const { entryFromBytes, slotKey } = await import('../images.js')
-const { slotMatrix, imageSampleJS } = await import('../../lib/pathtracer/core/images.js')
+const { slotMatrix, imageSampleJS, heightAtJS, heightStats, pack16 } = await import('../../lib/pathtracer/core/images.js')
 const { WEBGPU } = await import('../../lib/tinywebgpu/src/tinywebgpu.js')
 const { SCENE_PRELUDE } = await import('../../lib/pathtracer/core/scene_api.js')
 const { sceneCompute } = await import('../../lib/pathtracer/core/images.js')
@@ -221,6 +221,100 @@ for (const data of [false, true]) for (const pattern of [null, PAT]) {
         })
         ok(`a slot's uniform written live moves the picture, no compile (worst ${(worst * 100).toFixed(3)} % of L)`, worst < 3e-3)
     }
+}
+
+/*----------------------------------------------------------------------------------------------------------------------
+  A RELIEF FROM A PICTURE (0.next; materials.js pictureRelief, core/images.js heightAt): a 60 x 40 x 4 mm plaque in a
+  scene in mm, its top at z = 2, wearing a material whose picture -- random greys, sharp from texel to texel, so its slope
+  is steep -- is its relief, 1.5 mm, the picture 3 x 2 mm, repeated across and mirrored up. Rays at 12 degrees above the plaque's plane,
+  each in its own direction, marched through the scene's own SDF (codegen and as data): every one must stop where it
+  first meets the relief, found here by stepping along it 2 microns at a time against the JS twin's height -- not later,
+  through a bump. STRAIGHT DOWN WOULD PROVE NOTHING: along a vertical the field is z - 2 - h(x, y) exactly whatever the
+  bound, and with the bound taken out (slope 0) every vertical ray still landed right. Run so, these rays do not: a bound
+  under the true slope lets the march step through a bump, and that is what this catches. At 8 and at 16 bits, raised
+  and engraved (raise -1). And the frames agree: the hit's material reads the picture where the relief put the surface
+  (heightAt at its IMG_Q times the amplitude is the hit's height).
+----------------------------------------------------------------------------------------------------------------------*/
+for (const bits of [8, 16]) for (const raise of [1, -1]) for (const data of [false, true]) {
+    const how = `a relief from a ${bits}-bit picture${raise < 0 ? ', engraved' : ''}, ${data ? 'as data' : 'codegen'}`
+    const RW = 24, RH = 16
+    let rs = 31 + bits + raise
+    const rnd = () => { rs = (rs * 1103515245 + 12345) >>> 0; return rs >>> 16 }
+    const px = bits === 16 ? pack16(new Uint16Array(RW * RH).map(() => rnd()), null, RW, RH)
+        : (() => { const p = new Uint8Array(RW * RH * 4); for (let i = 0; i < RW * RH; i++) { const v = rnd() & 255; p.set([v, v, v, 255], 4 * i) } return p })()
+    const img = { width: RW, height: RH, pixels: px }
+    const ent = await entryFromBytes(px, { name: 'height.png', type: 'image/png', width: RW, height: RH })
+    if (bits === 16) ent.entry.bits = 16
+    ent.entry.heights = heightStats(img, { bits })
+    const d = M.createDoc({})
+    d.unit = 'mm'
+    M.addImage(d, ent)
+    M.addMaterial(d, { id: 'pl', label: 'plaque', preset: 'diffuse' })
+    /* 3 x 2 mm a copy, so its slopes are steep -- eight texels a mm at 1.5 mm high: the steepest brute force finds is
+       about 6.9, the bound 16 -- repeated across and mirrored up (both seams' bounds in play). Gentler, a march with no
+       bound at all still landed right: at 60 x 40 mm (slopes of 0.6) and at 12 x 8 (1.7), too gentle to show anything. */
+    M.addImageSlot(d, 'pl', ent.key, { size: { x: 3, y: 2 }, wrapU: 'repeat', wrapV: 'mirror', colour: false })
+    M.setRelief(d, 'pl', 'picture')
+    const R = M.material(d, 'pl').relief
+    R.params.amplitude = 1.5; R.params.raise = raise
+    M.addObject(d, 'root', { id: 'plaque', primitive: 'box', material: 'pl', params: { size: { x: 30, y: 20, z: 2 }, rounding: 0 }, transform: at(0, 0, 0) })   // half sizes
+    ok(`${how}: the scene sound`, M.validate(d).length === 0, JSON.stringify(M.validate(d)))
+    const [tree, opts] = M.generateArgs(d, { id: 'relief-pic', data })
+    const scene = generate(withPixels(tree, { [ent.key]: px }), opts)
+    const S = slotMatrix(M.imageSlotOf(M.material(d, 'pl').images[0]), scene.imageRects.get(ent.key), ent.entry)
+    const N = 400
+    const pts = []
+    let ps = 9
+    const prnd = () => { ps = (ps * 1664525 + 1013904223) >>> 0; return ps / 2 ** 32 }
+    // each ray: a start over the plaque, 12 degrees above its plane, its own heading
+    const EL = 12 * Math.PI / 180
+    for (let k = 0; k < N; k++) {
+        const az = 2 * Math.PI * prnd(), dx = Math.cos(EL) * Math.cos(az), dy = Math.cos(EL) * Math.sin(az), dz = -Math.sin(EL)
+        const tz = (5.5 - 2) / Math.sin(EL), x0 = 40 * prnd() - 20, y0 = 26 * prnd() - 13     // where it would reach z = 2
+        pts.push(x0 - dx * tz, y0 - dy * tz, 5.5, 0, dx, dy, dz, 0)
+    }
+    const g = await run(scene, /*wgsl*/`
+        let o = evalIn[2u * i].xyz; let dir = evalIn[2u * i + 1u].xyz;
+        var r = newRay(o, dir, VEC4(1.0), 1.0);
+        var t = 0.0;
+        var steps = 0u;
+        for (var k = 0u; k < 4000u; k++) {
+            r.pos = o + dir * t;
+            let hit = SDF(r);
+            if (abs(hit.s.w) < 1.0e-4) { break; }
+            t += hit.s.w;
+            steps++;
+        }
+        evalOut[16u * i] = t;
+        evalOut[16u * i + 1u] = f32(steps);
+        // the hit's material: where it reads the picture, through the capture the renderer makes
+        var hh = emptyHit(r);
+        hh.m = matid_pl; hh.a = 0u; hh.s = vec4<f32>(0.0, 0.0, 1.0, 0.0);
+        let m = getMaterial2(hh, false);
+        evalOut[16u * i + 2u] = heightAt(UB.${uniformName('pl', slotKey('picture'))}, IMG_Q).x;
+        evalOut[16u * i + 3u] = m.roughness;`, pts, N)
+    let worst = 0, below = 0, frames = 0, at1 = '', maxSteps = 0
+    for (let k = 0; k < N; k++) {
+        const o = pts.slice(8 * k, 8 * k + 3), dir = pts.slice(8 * k + 4, 8 * k + 7)
+        const surf = tt => o[2] + dir[2] * tt - 2 - 1.5 * raise * heightAtJS(S, img, [o[0] + dir[0] * tt, o[1] + dir[1] * tt, 0])[0]
+        // the first crossing: 2 microns at a time along the ray, then halved down to a nanometre
+        let a0 = 0, want = null
+        for (let tt = 0; tt < 80; tt += 0.002) { if (surf(tt) <= 0) { let lo = a0, hi = tt; for (let b = 0; b < 30; b++) { const mdl = (lo + hi) / 2; if (surf(mdl) <= 0) hi = mdl; else lo = mdl } want = hi; break } a0 = tt }
+        const t = g[16 * k]
+        if (want == null) { below++; continue }
+        /* ON THE SURFACE, AND NOT PAST ITS FIRST CROSSING. Not "at the first crossing": a ray grazing a bump's top within the
+           march's tolerance (|d| < 1e-4) is a hit there, as the renderer's is -- one stopped 0.7 mm before the crossing, 0.4
+           microns above a bump, the GPU's height and the twin's there agreeing to 2e-7 -- and it is the right answer */
+        const err = Math.abs(surf(t))                                // how far the hit is from the surface, in height
+        if (err > worst) { worst = err; at1 = `ray ${k}: t ${t}, the first crossing ${want}, ${err} mm off the surface` }
+        if (t > want + 0.01) below++
+        const z = o[2] + dir[2] * t
+        frames = Math.max(frames, Math.abs(2 + 1.5 * raise * g[16 * k + 2] - z))
+        maxSteps = Math.max(maxSteps, g[16 * k + 1])
+    }
+    ok(`${how}: every ray at 12 degrees stops on the relief (worst ${worst.toExponential(2)} mm off it, ${maxSteps} steps at most)`, worst < 0.002 && maxSteps < 4000, at1)
+    ok(`${how}: none went past it -- the march never stepped through a bump`, below === 0, `${below} of ${N}`)
+    ok(`${how}: the material reads the picture where the relief is (the frames agree, worst ${frames.toExponential(2)} mm)`, frames < 0.01)
 }
 
 /*----------------------------------------------------------------------------------------------------------------------

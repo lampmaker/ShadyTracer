@@ -309,7 +309,9 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
     of noise 4): every object at every step, culling boxes on every object, on the dear ones only, and the reliefs in
     their shell; why only at the root (a lens and a blend, one disc culled inside the join: a surface where there is
     none, a bridge gone); one relief divided everywhere or in its shell, with the modifier's 17.2 or the measured 11.2;
-    the step cache's balls, its own cell and the cells ahead, filled from the copy with boxes (the orange shell).
+    a relief from a picture (0.next): its slope bound from its own pixels (exact on a ramp, 2.4 times the steepest on
+    random noise), what a loose bound costs in steps, and why a test of it must shoot rays sideways (straight down, the
+    field is exact whatever the bound: builder/test/images.gpu.mjs); the step cache's balls, its own cell and the cells ahead, filled from the copy with boxes (the orange shell).
     -> scene_api.js (cullDist, cullMargin), codegen.js (the root's comment, `culled`, the CULL line), modifiers.js
     (reliefCode), wavefront.js (scStep, the march's cache step). Measured: PERFORMANCE.md's runs 3 to 5 (culling, the
     shell), ARCHITECTURE.md's boxcost and stepcache runs. Inferred and said so: with the shell, a relief's box may no

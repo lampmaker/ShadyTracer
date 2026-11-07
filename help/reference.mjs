@@ -14,7 +14,7 @@
 import { writeFileSync, mkdirSync } from 'node:fs'
 import { PRIMITIVES, SHAPE_GROUPS } from '../builder/primitives.js'
 import { MODIFIERS } from '../builder/modifiers.js'
-import { FIELDS, FIELD_LABELS, COAT_PRESETS, RELIEFS, PRESETS, FEATURES } from '../builder/materials.js'
+import { FIELDS, FIELD_LABELS, COAT_PRESETS, RELIEFS, PRESETS, FEATURES, pictureRelief, PICTURE_RELIEF_LABEL } from '../builder/materials.js'
 import { LIGHT_SHAPES, LIGHT_DEFAULTS } from '../builder/lights.js'
 import { HAZE_DEFAULTS, HAZE_G_MAX, KOSCHMIEDER } from '../builder/hazebox.js'
 import { codeOnly } from '../builder/codegen.js'
@@ -287,6 +287,8 @@ function materials() {
     s += '\n## Reliefs\n\nA relief is a height on every object wearing the material, in real mm -- part of the shape, so it shows in the '
         + 'silhouette, and paid for at every march step near the object.\n\n'
     for (const R of Object.values(RELIEFS)) s += `### ${R.label}\n\n${firstComment(R.code)}\n\n`
+    // ...and the one made for a picture (materials.js pictureRelief, 0.next): not a preset, it names the picture it reads
+    s += `### ${PICTURE_RELIEF_LABEL}\n\n${firstComment(pictureRelief('picture').code)}\n\n`
     return s
 }
 
@@ -337,7 +339,7 @@ function code() {
         + 'and `p_local`, `R_local`, `S_local` the hit in the object\'s frame, its turn and its scale |\n'
         + '| a material\'s pictures | -- | `sample(name)`, `mapped(name)` and `sampleAt(name, uv)` in its code: [below](#a-materials-pictures) |\n'
         + '| a material\'s relief | at every march step near an object wearing it | `q` the point in mm in that object\'s frame, '
-        + '`world` the same in the scene\'s; it sets `h`, the height in mm outward, and `slope`, a bound on how steep `h` is |\n'
+        + '`world` the same in the scene\'s, the material\'s pictures by name for `heightAt`; it sets `h`, the height in mm outward, and `slope`, a bound on how steep `h` is |\n'
         + '| the scene\'s functions | -- | its functions are called from any of the others |\n'
         + '\nThe comments a new block starts with say the same, with examples; **Functions you can call…** under a block opens this page.\n'
     s += '\n## Words the page rewrites\n\nBefore it compiles, every whole word below is replaced -- in your code too, so do not name '
@@ -358,6 +360,11 @@ function code() {
         + '- `sampleAt(picture, uv: vec2<f32>) -> vec4<f32>` -- the picture at a position of your own, in copies, with its wrap and filter.\n'
         + '\nFor instance a data picture as the roughness, `m.roughness = sample(rough).r;`, or a picture twice as small, '
         + '`m.baseColor = sampleAt(picture, mapped(picture) * 2.0).rgb;`.\n'
+        + '\nIn the material\'s **relief** code its pictures are in scope by name too, with one more:\n\n'
+        + '- `heightAt(picture, q) -> vec2<f32>` -- the picture as a height at `q`: its luminance times its alpha, 0 to 1, read planar '
+        + 'from `q.xy` at its own size, offset, turn and wrap, smooth (a cubic B-spline of its pixels, 16 reads); and, second, the '
+        + 'bound on how steep it is per mm, from its own pixels. A relief from a picture is `h = amplitude * raise * t.x; '
+        + 'slope = amplitude * abs(raise) * t.y;` with `t` this.\n'
     for (const sec of CODE_HELP) {
         s += `\n## ${sec.title}\n\n${sec.intro}\n\n`
         for (const [name, words] of Object.entries(sec.fns)) {

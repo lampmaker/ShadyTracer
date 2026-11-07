@@ -641,7 +641,7 @@ export const GROUP_CODE_TEMPLATE = [
  * of its own. Its text goes in untouched and
  * flush left, in a block of its own, and is mapped back to the material's id like a node's.
  */
-function emitMaterials(e, materials, matIdOf, uniforms, wantLocal, lights = [], atlas = null) {
+function emitMaterials(e, materials, matIdOf, uniforms, wantLocal, lights = [], atlas = null, images = {}) {
     e.raw('const MATID_DEFAULT: u32 = 1u;')
     for (const m of materials) e.raw(`const matid_${m.id}: u32 = ${matIdOf.get(m.id)}u;`)
     /* the back of a one-sided light: black, emitting nothing (see LIGHTS in emitScene) -- and CLEAR,
@@ -729,7 +729,7 @@ function emitMaterials(e, materials, matIdOf, uniforms, wantLocal, lights = [], 
            on the panel, a pixel half as bright half as much (not normalised as the plain colour is, or every pixel
            would glow alike). Where it is transparent, the material's own value. */
         const slots = (mat.images ?? []).map(slotOf)
-        for (const sl of slots) uniforms[uniformName(mat.id, slotKey(sl.name))] = { type: 'mat4x4<f32>', def: slotMatrix(sl, atlas?.rects.get(sl.image) ?? null) }
+        for (const sl of slots) uniforms[uniformName(mat.id, slotKey(sl.name))] = { type: 'mat4x4<f32>', def: slotMatrix(sl, atlas?.rects.get(sl.image) ?? null, images?.[sl.image]) }
         if (slots.length) {
             e.raw('            IMG_Q = p_local * S_local / mm(1.0); IMG_N = transpose(R_local) * n;')
             const cs = colourSlot(mat)
@@ -1227,7 +1227,7 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
        every other compiles to the text it always did */
     const pictures = materials.some(hasSlots)
     if (pictures) e.raw(IMAGES_WGSL)
-    emitMaterials(e, materials, matIdOf, uniforms, wantLocal, lights, pictures ? atlasOf(tree) : null)
+    emitMaterials(e, materials, matIdOf, uniforms, wantLocal, lights, pictures ? atlasOf(tree) : null, tree.images ?? {})
     // the faces light sampling aims at: only with a light -- without, the stub (uniforms.schema.js sceneConstantsWGSL)
     if (lights.length && data) for (const l of lightFacesWGSL(lights, (L, k) => uniformName(L.id, k))) e.raw(l)
     else if (lights.length) emitLightFaces(e, lights, liveVisibility)
@@ -1251,6 +1251,10 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
         e.raw('    var slope = 0.0;')
         e.raw('    {')
         for (const a of aliasPrelude(m.id, params, null, consts, k => reliefName(m.id, k))) e.raw('    ' + a)
+        /* ...and the material's pictures by name (0.next), for heightAt (core/images.js A PICTURE AS A HEIGHT): a relief from
+           a picture reads one (materials.js pictureRelief). Only for a material with pictures: every other relief is the
+           text it was. */
+        for (const sl of m.images ?? []) e.raw(`    let ${sl.name} = UB.${uniformName(m.id, slotKey(sl.name))};`)
         e.from(reliefOwner(m.id), String(R.code || ''))
         e.raw('    }')
         e.raw(`    return vec2<f32>(clamp(h, -${A}, ${A}), max(slope, 0.0));`)

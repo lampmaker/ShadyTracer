@@ -31,7 +31,7 @@
 // and why the palette of scenes/common.js it replaced is gone.
 //======================================================================================================================
 
-import { FIELDS, FEATURES, FEATURE_PRESETS, fieldOn, featureDefault, defaults as materialDefaults, PALETTE_V3, PRESETS, MATERIAL_CODE_TEMPLATE, RELIEFS, RELIEF_SCOPE, reliefMaterialId, reliefOwner, fieldsOf } from './materials.js'
+import { FIELDS, FEATURES, FEATURE_PRESETS, fieldOn, featureDefault, defaults as materialDefaults, PALETTE_V3, PRESETS, MATERIAL_CODE_TEMPLATE, RELIEFS, RELIEF_SCOPE, reliefMaterialId, reliefOwner, fieldsOf, pictureRelief, pictureReliefOf } from './materials.js'
 import { imagesProblems, slotsProblems, usedImages, freeSlotName, slotOf, colourSlot, SLOT_PREFIX, SLOT_DEFAULTS, SCREEN_DEFAULTS, SCREEN_FIELDS, IMAGE_KEY } from './images.js'
 import { NODE_TYPES, GROUP_SCOPE, isCsg, hasCode, isAfter } from './codegen.js'
 import { PRIMITIVES, primitiveObject } from './primitives.js'
@@ -260,7 +260,7 @@ export { NODE_TYPES as OBJECT_TYPES, GROUP_CODE_TEMPLATE } from './codegen.js'
 export { PRIMITIVES } from './primitives.js'
 export { FIELDS as MATERIAL_FIELDS, PRESETS as MATERIAL_PRESETS, MATERIAL_CODE_TEMPLATE, FIELDS_OF as MATERIAL_FIELDS_OF, FIELD_LABELS as MATERIAL_FIELD_LABELS,
          COAT_FIELDS, COAT_PRESETS, hasCoating, FEATURES, FEATURE_PRESETS, PRESET_FEATURES, featureOfField, fieldOn,
-         RELIEFS, reliefOwner, reliefMaterialId, reliefPresetOf } from './materials.js'
+         RELIEFS, reliefOwner, reliefMaterialId, reliefPresetOf, pictureReliefOf, PICTURE_RELIEF_LABEL } from './materials.js'
 
 const ID = /^[A-Za-z][A-Za-z0-9]*$/            // no underscore -- see the header
 const PARAM = /^[A-Za-z][A-Za-z0-9_]*$/
@@ -599,7 +599,7 @@ function materialProblems(m) {
     if (bad.length) p.push(`material '${m.id}': parameter name(s) not usable: ${bad.join(', ')}`
         + ` (a WGSL name, not relief_... or ${SLOT_PREFIX}..., and not one of ${MATERIAL_SCOPE.join(', ')})`)
     // its pictures' slots (version 29, images.js): each named apart from its parameters and the names its code has
-    p.push(...slotsProblems(m, [...customParams(m), ...MATERIAL_SCOPE, ...IMAGE_SCOPE]))
+    p.push(...slotsProblems(m, slotTaken(m)))
     for (const k of customParams(m)) if (!['number', 'vector', 'colour'].includes(paramKind(P[k])) || !finiteValue(P[k]))
         p.push(`material '${m.id}': parameter '${k}' must be a number, {x, y, z} or {r, g, b}`)
     p.push(...constantProblems(m), ...rangesProblems(m), ...lengthsProblems(m))
@@ -617,7 +617,10 @@ function materialProblems(m) {
 export const MATERIAL_SCOPE = ['m', 'p', 'n', 'C', 'p_local', 'R_local', 'S_local', 'idx', 'checkInside', 'MATERIAL']
 /** ...and the functions a material's code calls its pictures with (core/images.js): a slot by one of these names
  *  would hide the function its code needs. */
-export const IMAGE_SCOPE = ['sample', 'mapped', 'sampleAt']
+export const IMAGE_SCOPE = ['sample', 'mapped', 'sampleAt', 'heightAt']
+/** The names a slot of material `m` may not take: its parameters', those its code already has, and -- its pictures being
+ *  in its relief's code too (codegen, 0.next) -- its relief's parameters and the names that code has. */
+const slotTaken = m => [...customParams(m), ...MATERIAL_SCOPE, ...IMAGE_SCOPE, ...(m?.relief ? [...Object.keys(m.relief.params || {}), ...RELIEF_SCOPE, 'picture_height'] : [])]
 
 /* A MATERIAL'S RELIEF (materials.js RELIEFS): { code, params, constants?, ranges?, lengths? } -- a height
    field in mm that codegen puts around every object wearing the material. `amplitude` it must have, a
@@ -637,9 +640,12 @@ function reliefProblems(m) {
     const A = R.params.amplitude
     if (!(typeof A === 'number' && Number.isFinite(A) && A >= 0))
         p.push(`${at} needs an amplitude, a number >= 0 (mm): the most its height reaches -- it is what bounds it`)
+    const slots = (m.images ?? []).map(x => x?.name)
     for (const [k, v] of Object.entries(R.params)) {
         if (!PARAM.test(k) || RESERVED_PARAMS.includes(k) || RELIEF_SCOPE.includes(k))
             p.push(`${at}: parameter name '${k}' not usable (a WGSL name, and not one of ${RELIEF_SCOPE.join(', ')})`)
+        // its code has the material's pictures by name (codegen, 0.next): a parameter by one of them would be declared twice
+        else if (slots.includes(k)) p.push(`${at}: parameter '${k}' is the name of one of the material's pictures`)
         else if (!['number', 'vector', 'colour'].includes(paramKind(v)) || !finiteValue(v))
             p.push(`${at}: parameter '${k}' must be a number, {x, y, z} or {r, g, b}`)
     }
@@ -648,15 +654,21 @@ function reliefProblems(m) {
     return p
 }
 
-/** Give a material a relief from a preset (materials.js RELIEFS), or take it away (null). */
-export function setRelief(doc, id, preset) {
+/** Give a material a relief from a preset (materials.js RELIEFS), or take it away (null). 'picture' is a relief from one
+ *  of the material's pictures (materials.js pictureRelief, 0.next): `picture`, its name, or its first. */
+export function setRelief(doc, id, preset, { picture } = {}) {
     const mat = material(doc, id)
     if (!mat) throw new ModelError(`no material '${id}'`)
     // its relief's animated flags (setAnimated: kept on the material) go with the relief they named
     const dropReliefFlags = () => { if (Array.isArray(mat.animate)) { mat.animate = mat.animate.filter(k => !String(k).startsWith(RELIEF_FLAG)); if (!mat.animate.length) delete mat.animate } }
     if (preset == null) { delete mat.relief; dropReliefFlags(); return mat }
-    const R = RELIEFS[preset]
-    if (!R) throw new ModelError(`unknown relief '${preset}' (one of ${Object.keys(RELIEFS).join(', ')})`)
+    if (preset === 'picture') {
+        const name = picture ?? mat.images?.[0]?.name
+        if (!name || !(mat.images ?? []).some(x => x.name === name))
+            throw new ModelError(picture ? `material '${id}' has no picture '${picture}'` : `material '${id}' has no picture to make a relief from: + picture… first`)
+    }
+    const R = preset === 'picture' ? pictureRelief(picture ?? mat.images[0].name) : RELIEFS[preset]
+    if (!R) throw new ModelError(`unknown relief '${preset}' (one of ${Object.keys(RELIEFS).join(', ')}, or picture)`)
     const relief = { code: R.code, params: structuredClone(R.params), ranges: structuredClone(R.ranges), lengths: [...R.lengths] }
     const bad = reliefProblems({ ...mat, relief })
     if (bad.length) throw new ModelError(bad)
@@ -2164,7 +2176,6 @@ export function addImage(doc, { key, entry }) {
     return key
 }
 /** The names a slot of material `m` may not take: its parameters', and those its code already has. */
-const slotTaken = m => [...customParams(m), ...MATERIAL_SCOPE, ...IMAGE_SCOPE]
 const mustMaterial = (doc, id) => {
     const m = material(doc, id)
     if (!m) throw new ModelError(`no material '${id}'`)
@@ -2202,14 +2213,18 @@ export function setImageSlot(doc, id, name, patch) {
     const bad = slotsProblems({ ...m, images }, slotTaken(m))
     if (bad.length) throw new ModelError(bad)
     m.images = images
+    // a relief from this picture (materials.js pictureRelief) reads it by name: renamed with it, its values kept
+    if (s.name !== was.name && pictureReliefOf(m.relief) === was.name) m.relief.code = pictureRelief(s.name).code
     const compile = s.name !== was.name || s.image !== was.image || (s.use ?? SLOT_DEFAULTS.use) !== (was.use ?? SLOT_DEFAULTS.use)
     return { slot: s, compile }
 }
-/** Take slot `name` off material `id`. The picture stays in the scene (images.js: no undo step holds it). */
+/** Take slot `name` off material `id`, and a relief from it with it (it reads nothing else). The picture stays in the
+ *  scene (images.js: no undo step holds it). */
 export function removeImageSlot(doc, id, name) {
     const m = mustMaterial(doc, id)
     const i = (m.images ?? []).findIndex(s => s.name === name)
     if (i < 0) throw new ModelError(`material '${id}' has no picture '${name}'`)
+    if (pictureReliefOf(m.relief) === name) setRelief(doc, id, null)
     const [s] = m.images.splice(i, 1)
     if (!m.images.length) delete m.images
     return s

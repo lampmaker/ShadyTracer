@@ -91,3 +91,7 @@ Hammered: a dent "amplitude" mm deep in every cell of a Worley pattern "size" mm
 
 3D-print layers: a bead of plastic every "layer" mm up the SCENE's z -- the build plate is its z = 0, so the layers stay level and line up across parts however they are turned or joined; for a part printed lying another way than it is shown, read the object's own z, q.z, in place of world.z. Each bead rounded -- a parabola across it -- with a groove "amplitude" mm deep where it meets the next, and a little fuller or flatter than the next, by up to "variation" of it, as a printer's extrusion is never quite even; pinned at the grooves, so the height is continuous and its slope is at most 4 (1 + variation) amplitude / layer, at a groove. this layer's own number: value noise at a lattice point is that point's value, in [-1, 1]
 
+### from a picture
+
+Relief from a picture: the picture "picture" as a height -- its luminance times its alpha -- white "amplitude" mm up (raise 1) or engraved as far down (raise -1), black at the surface. Read planar from the object's x and y in mm, at the picture's own size, offset, turn and wrap, on every face; smooth (a cubic B-spline of its pixels: sixteen reads at every march step near the surface). heightAt's second number is the bound on its slope per mm, worked out from the picture's own pixels when it was read, and from its size and wrap: the march never steps through it.
+

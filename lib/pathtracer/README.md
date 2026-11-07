@@ -717,6 +717,11 @@ the engine gives a scene for it:
   `imageTexel`: the atlas read where `main` reaches a material, a stub where it does not (the renderer's march and
   shadow rays). A texture named in a function `main` never calls is declared, bound and missing from `layout:'auto'`:
   an invalid bind group.
+- **`heightAt(slot, q)`**: a picture as a height, for a material's relief (in the SDF, so the march's kernels reach the
+  atlas through the shape). Luminance times alpha, read planar from `q.xy`, a cubic B-spline of 16 taps, wrap *none*
+  fading to 0 past its copy; and the bound on its gradient per mm, which the host works out from the picture's pixels
+  (`heightStats`, `heightSteep`) and puts in the slot's word 13. A 16-bit grey picture is two bytes a texel in the atlas
+  (`pack16`), put together on every read.
 - **A glowing picture is an emitter only where it glows.** Every test for an emitter reads `max3(emissive) > 0` at the
   point (the emitter hit, the probe's start, discovery, the photon map's store). So a black pixel is the material's
   surface there: the builder gives such a material a screen's dark glass for it. Light sampling and the probes evaluate

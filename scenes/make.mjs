@@ -31,7 +31,7 @@ import { modifierGroup } from '../builder/modifiers.js'
 import { rotationTowards } from '../builder/lights.js'
 import { COAT_PRESETS } from '../builder/materials.js'
 import { convert } from '../import/index.js'
-import { entryFromBytes } from '../builder/images.js'
+import { entryFromBytes, withHeights } from '../builder/images.js'
 import { deflateSync } from 'node:zlib'
 
 const here = new URL('./', import.meta.url)
@@ -366,6 +366,31 @@ function png(w, h, pixel) {
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) raw.set(pixel(x, y), y * (1 + 4 * w) + 1 + 4 * x)
     return new Uint8Array(Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', deflateSync(raw, { level: 9 })), chunk('IEND', Buffer.alloc(0))]))
 }
+/* A 16-BIT GREY PNG (0.next: a height map, builder/images.js decodePNG16): one sample a pixel, big-endian, filter none */
+function png16(w, h, height) {
+    const crcT = new Uint32Array(256).map((_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; return c >>> 0 })
+    const crc = b => { let c = 0xFFFFFFFF; for (const x of b) c = crcT[(c ^ x) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0 }
+    const chunk = (t, d) => { const o = Buffer.alloc(12 + d.length); o.writeUInt32BE(d.length, 0); o.write(t, 4, 'ascii'); d.copy(o, 8); o.writeUInt32BE(crc(o.subarray(4, 8 + d.length)), 8 + d.length); return o }
+    const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4); ihdr[8] = 16; ihdr[9] = 0
+    const raw = Buffer.alloc(h * (1 + 2 * w))
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) raw.writeUInt16BE(Math.round(65535 * Math.min(1, Math.max(0, height(x, y)))), y * (1 + 2 * w) + 1 + 2 * x)
+    return new Uint8Array(Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', deflateSync(raw, { level: 9 })), chunk('IEND', Buffer.alloc(0))]))
+}
+/* A HEIGHT MAP FOR AN EMBOSSED PLAQUE, 192 x 128 (3:2): a raised ring with a rounded shoulder, ripples inside it that
+   fade towards its centre, and a dome there -- every edge smooth, so the relief's bound is near its true slope (it is
+   exact on a straight ramp, core/test/images.test.mjs) -- black at the border, so wrap none keeps the plaque's sides flat */
+function plaqueHeights() {
+    const W = 192, H = 128, s = t => t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t)
+    return png16(W, H, (x, y) => {
+        const u = (x + 0.5 - W / 2) / (H / 2), v = (y + 0.5 - H / 2) / (H / 2), r = Math.hypot(u, v)
+        const ring = s((r - 0.62) / 0.06) * (1 - s((r - 0.80) / 0.06))
+        const ripple = r < 0.62 ? 0.25 * (0.5 + 0.5 * Math.cos(r * 40)) * s(r / 0.62) : 0
+        const dome = 0.6 * (1 - s(r / 0.22))
+        const border = s((1.45 - Math.abs(u)) / 0.05) * s((0.95 - Math.abs(v)) / 0.05)
+        return border * Math.max(ring, ripple, dome)
+    })
+}
+
 /* A TEST CARD, 320 x 180 (16:9): colour bars at 75 % across its top two thirds -- white, yellow, cyan, green, magenta,
    red, blue, in that order from the left, so which way round it lies is plain -- a grey ramp below them from black on
    the left to white on the right, and a white ring on its centre. sRGB, as a picture is. */
@@ -403,6 +428,18 @@ async function pictures() {
     const ball = own(doc, 'ball', 'plastic', { roughness: 0.35 })
     M.addImageSlot(doc, ball, card.key, { projection: 'triplanar', size: { x: 80, y: 45 }, wrapU: 'mirror', wrapV: 'mirror' })
     shape(doc, 'root', 'sphere', { label: 'ball', params: { radius: 45 }, at: [-20, -200, 45], material: ball })
+    /* AN EMBOSSED PLAQUE (0.next: a relief from a picture, materials.js pictureRelief): 150 x 100 x 8 mm of white plaster
+       lying on the floor, its relief a 16-bit height map (plaqueHeights) 3 mm high -- shape, not colour: its picture is
+       its code's alone (use none), so it is white, and its relief reads it. Seen at a low angle in front of the rest. */
+    const heights = await entryFromBytes(plaqueHeights(), { name: 'plaque heights.png', type: 'image/png', width: 192, height: 128 })
+    heights.entry.bits = 16
+    await withHeights(heights.entry)
+    M.addImage(doc, heights)
+    const plaster = own(doc, 'embossed plaster', 'diffuse', { baseColor: RGB(0.82, 0.8, 0.76), roughness: 0.7 })
+    M.addImageSlot(doc, plaster, heights.key, { name: 'heights', use: 'none', colour: false, size: { x: 150, y: 100 }, wrapU: 'none', wrapV: 'none' })
+    M.setRelief(doc, plaster, 'picture', { picture: 'heights' })
+    M.material(doc, plaster).relief.params.amplitude = 3
+    shape(doc, 'root', 'box', { label: 'embossed plaque', params: { size: V(75, 50, 4), rounding: 1 }, at: [210, -230, 4], rot: [0, 0, 10], material: plaster })
     return { doc, camera: orbit([20, -40, 120], -90, 12, 1100) }
 }
 
@@ -715,7 +752,7 @@ export const EXAMPLES = [
         ['material-board.json', materialBoard, 'The library\'s materials on 40 mm spheres'],
         ['relief-texture.json', reliefTexture, 'Plaster, stucco, render, stone, hammered metal, leather: reliefs in a raking light'],
         ['glass-liquid.json', glassLiquid, 'A tumbler of water, a green bottle, a flint prism in the sun'],
-        ['pictures.json', pictures, 'A test card glowing on a screen, on a poster, round a can and on a ball'],
+        ['pictures.json', pictures, 'A test card glowing on a screen, on a poster, round a can and on a ball; a plaque embossed from a 16-bit height map'],
     ] },
     { audience: 'Modelling and rendering', group: 'Light and camera', items: [
         ['lighting-room.json', lighting, 'A room in metres: daylight through a window and a 1500 lm lamp'],

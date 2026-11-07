@@ -445,5 +445,31 @@ export const RELIEFS = {
         ].join('\n'),
     },
 }
+/* A RELIEF FROM A PICTURE (0.next; lib/pathtracer/core/images.js heightAt, A PICTURE AS A HEIGHT): one of the material's
+   pictures as a height -- white `amplitude` mm up, or with `raise` -1 engraved as far down, black at the surface. Not one
+   of RELIEFS: it names a picture, and every preset there is compiled on materials that have none (check-shaders, the
+   tests), where it would not compile. Made for the picture it reads, so its code is that picture's (pictureReliefOf). */
+export const PICTURE_RELIEF_LABEL = 'from a picture'
+export const pictureRelief = name => ({
+    params: { amplitude: 1.0, raise: 1.0 },
+    ranges: { amplitude: MM(0, 20, 0.01), raise: { min: -1, max: 1, step: 0.01 } },
+    lengths: ['amplitude'],
+    code: [
+        `// Relief from a picture: the picture "${name}" as a height -- its luminance times its alpha -- white "amplitude" mm`,
+        '// up (raise 1) or engraved as far down (raise -1), black at the surface. Read planar from the object\'s x and y in mm,',
+        '// at the picture\'s own size, offset, turn and wrap, on every face; smooth (a cubic B-spline of its pixels: sixteen',
+        '// reads at every march step near the surface). heightAt\'s second number is the bound on its slope per mm, worked',
+        '// out from the picture\'s own pixels when it was read, and from its size and wrap: the march never steps through it.',
+        `let picture_height = heightAt(${name}, q);`,
+        'h = amplitude * raise * picture_height.x;',
+        'slope = amplitude * abs(raise) * picture_height.y;',
+    ].join('\n'),
+})
+/** The picture a relief from a picture reads, by its code; null for any other relief. */
+export const pictureReliefOf = relief => {
+    const m = relief && /let picture_height = heightAt\(([A-Za-z][A-Za-z0-9_]*), q\);/.exec(relief.code ?? '')
+    return m && relief.code === pictureRelief(m[1]).code ? m[1] : null
+}
+
 /** The relief preset a relief is, by its code; null for code of one's own. */
 export const reliefPresetOf = relief => relief ? Object.keys(RELIEFS).find(k => RELIEFS[k].code === relief.code) ?? null : null

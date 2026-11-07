@@ -863,7 +863,7 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
                 const rect = RT.scene?.imageRects?.get(slot.image)
                 const name = uniformName(id, k)
                 if (RT.scene?.id !== 'built' || !rect || !(name in (RT.scene.uniforms || {}))) return false
-                return RT.set({ [name]: slotMatrix(M.imageSlotOf(slot), rect) }).length === 0
+                return RT.set({ [name]: slotMatrix(M.imageSlotOf(slot), rect, doc.images?.[slot.image]) }).length === 0
             }
             if (mat) {
                 if (RT.scene?.id !== 'built' || !(k in (mat.params || {}))) return false

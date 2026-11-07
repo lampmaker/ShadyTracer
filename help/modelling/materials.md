@@ -165,6 +165,25 @@ that comes within two of its heights of the surface, so a scene full of relief r
 
 Compare them in a low, raking light: [Relief and texture](example:relief-texture.json).
 
+### A relief from a picture
+
+A material's picture can be its relief: in the **relief** box choose **from a picture:** and the picture's name. Its
+luminance (times its alpha) is the height, so white is `amplitude` mm up and black is the surface itself. *raise* -1
+engraves it instead. It is placed by the picture's own width, height, offset, turn and wrap, read **planar** along the
+object's z whatever the picture's projection, and on every face: the sides of a box show its edge unless the wrap is
+*none* and the picture has a black border.
+
+- **Smooth:** the height between pixels is a smooth curve through them (a cubic B-spline). Shading does not show the
+  pixel grid, and sharp edges come out slightly rounded.
+- **Safe to march:** how steep the relief can be is worked out from the picture's own pixels when it is read, so a ray
+  never steps through it. A steep picture, small and high, makes the march take more steps near it.
+- **16 bits:** a 16-bit greyscale PNG keeps all of its 65 536 heights; any other picture has 256, a step of
+  amplitude / 255. For a tall relief under a raking light, use a 16-bit height map.
+- **Its cost:** sixteen reads of the picture at every march step near the surface, on top of what a relief costs.
+
+To show the picture's colour without the relief, or the relief without the colour, set the picture's **use** to
+*code only*: the relief still reads it. [Pictures](example:pictures.json) has an embossed plaque made this way.
+
 ## Realistic values
 
 - **Nothing is perfectly white or black.** White paint typically reflects about 0.8-0.9, charcoal 0.03-0.05. A base

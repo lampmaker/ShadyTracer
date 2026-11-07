@@ -19,7 +19,7 @@
 // called img_... (model.js), so the two cannot meet. `use` 'colour' wires it with no code -- a surface's base colour, an
 // emitter's glow -- at most one slot a material; 'none' leaves it to the code.
 //======================================================================================================================
-import { PROJECTIONS, WRAPS, FILTERS, FACES, USES, SLOT_DEFAULTS, IMAGE_MAX_EDGE, IMAGE_RESOURCE } from '../lib/pathtracer/core/images.js'
+import { PROJECTIONS, WRAPS, FILTERS, FACES, USES, SLOT_DEFAULTS, IMAGE_MAX_EDGE, IMAGE_RESOURCE, heightStats, pack16 } from '../lib/pathtracer/core/images.js'
 
 export { SLOT_DEFAULTS, PROJECTIONS, WRAPS, FILTERS, FACES, USES, IMAGE_MAX_EDGE }
 
@@ -80,7 +80,13 @@ export function imagesProblems(images) {
         for (const d of ['width', 'height'])
             if (!(Number.isInteger(e[d]) && e[d] >= 1 && e[d] <= IMAGE_MAX_EDGE)) p.push(`images.${k}: ${d} must be a whole number from 1 to ${IMAGE_MAX_EDGE}`)
         if (typeof e.data !== 'string' || !/^[A-Za-z0-9+/]*={0,2}$/.test(e.data)) p.push(`images.${k}: data must be the picture's bytes in base64`)
-        for (const x of Object.keys(e)) if (!['name', 'type', 'width', 'height', 'data'].includes(x)) p.push(`images.${k}: '${x}' is not a picture's`)
+        // a 16-bit grey PNG (0.next): read by this file's own decoder, not the browser's, which gives 8 bits
+        if (e.bits !== undefined && !(e.bits === 16 && e.type === 'image/png')) p.push(`images.${k}: bits is 16 (a 16-bit grey PNG) or absent`)
+        // its heights' bound (core/images.js heightStats): six numbers from 0 to 1 read as colour and as data
+        if (e.heights !== undefined && !(isObj(e.heights) && ['colour', 'data'].every(c => Array.isArray(e.heights[c]) && e.heights[c].length === 6
+            && e.heights[c].every(v => Number.isFinite(v) && v >= 0 && v <= 1.01)) && Object.keys(e.heights).length === 2))
+            p.push(`images.${k}: heights must be { colour, data }, six numbers from 0 to 1 each`)
+        for (const x of Object.keys(e)) if (!['name', 'type', 'width', 'height', 'data', 'bits', 'heights'].includes(x)) p.push(`images.${k}: '${x}' is not a picture's`)
     }
     return p
 }
@@ -155,22 +161,131 @@ export async function imageKey(bytes) {
 export async function entryFromBytes(bytes, { name = 'picture', type, width, height }) {
     return { key: await imageKey(bytes), entry: { name: String(name), type, width, height, data: toBase64(bytes) } }
 }
+/* A 16-BIT GREY PNG (0.next; a height map, core/images.js A PICTURE AS A HEIGHT): the browser decodes every picture to 8
+   bits, which give a height 256 levels -- a terrace every amplitude / 255 under a raking light -- so a grey PNG of 16 bits
+   is read here, from its specification: its chunks, its IDAT inflated (DecompressionStream's zlib, the browser's and
+   node's own), its rows unfiltered. Grey (colour type 0) and grey with alpha (4), not interlaced; every other PNG is the
+   browser's to decode, at 8 bits. */
+const PNG_SIG = [137, 80, 78, 71, 13, 10, 26, 10]
+/** A PNG's header: { width, height, depth, colourType, interlace }, or null for what is not a PNG. */
+export function pngInfo(bytes) {
+    if (!(bytes?.length > 33) || PNG_SIG.some((b, i) => bytes[i] !== b)) return null
+    const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+    if (String.fromCharCode(...bytes.subarray(12, 16)) !== 'IHDR') return null
+    return { width: dv.getUint32(16), height: dv.getUint32(20), depth: bytes[24], colourType: bytes[25], interlace: bytes[28] }
+}
+/** Whether this file's own decoder reads it: a 16-bit grey PNG, not interlaced. */
+export const isDeepGrey = info => !!info && info.depth === 16 && (info.colourType === 0 || info.colourType === 4) && info.interlace === 0
+async function inflate(bytes) {
+    const out = new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate')))
+    return new Uint8Array(await out.arrayBuffer())
+}
+/** A 16-bit grey PNG decoded: { width, height, gray: Uint16Array, alpha: Uint16Array | null }. Throws, saying why. */
+export async function decodePNG16(bytes) {
+    const info = pngInfo(bytes)
+    if (!isDeepGrey(info)) throw new Error('not a 16-bit grey PNG that is not interlaced')
+    const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+    const parts = []
+    for (let o = 8; o + 8 <= bytes.length;) {
+        const len = dv.getUint32(o), type = String.fromCharCode(...bytes.subarray(o + 4, o + 8))
+        if (type === 'IDAT') parts.push(bytes.subarray(o + 8, o + 8 + len))
+        if (type === 'IEND') break
+        o += 12 + len
+    }
+    const z = new Uint8Array(parts.reduce((n, p) => n + p.length, 0))
+    let at = 0
+    for (const p of parts) { z.set(p, at); at += p.length }
+    const raw = await inflate(z)
+    const ch = info.colourType === 4 ? 2 : 1, bpp = 2 * ch, stride = info.width * bpp
+    if (raw.length < info.height * (stride + 1)) throw new Error('its image data is shorter than its size says')
+    const rows = new Uint8Array(info.height * stride)
+    for (let y = 0; y < info.height; y++) {
+        const f = raw[y * (stride + 1)], src = raw.subarray(y * (stride + 1) + 1, (y + 1) * (stride + 1)), row = rows.subarray(y * stride, (y + 1) * stride)
+        const up = y ? rows.subarray((y - 1) * stride, y * stride) : null
+        for (let i = 0; i < stride; i++) {
+            const a = i >= bpp ? row[i - bpp] : 0, b = up ? up[i] : 0, c = up && i >= bpp ? up[i - bpp] : 0
+            const pr = () => { const p = a + b - c, pa = Math.abs(p - a), pb = Math.abs(p - b), pc = Math.abs(p - c); return pa <= pb && pa <= pc ? a : pb <= pc ? b : c }
+            row[i] = (src[i] + (f === 0 ? 0 : f === 1 ? a : f === 2 ? b : f === 3 ? (a + b) >> 1 : f === 4 ? pr() : NaN)) & 255
+            if (f > 4) throw new Error(`a row with filter ${f}, which PNG does not have`)
+        }
+    }
+    const n = info.width * info.height, gray = new Uint16Array(n), alpha = ch === 2 ? new Uint16Array(n) : null
+    for (let i = 0; i < n; i++) {
+        gray[i] = (rows[i * bpp] << 8) | rows[i * bpp + 1]
+        if (alpha) alpha[i] = (rows[i * bpp + 2] << 8) | rows[i * bpp + 3]
+    }
+    return { width: info.width, height: info.height, gray, alpha }
+}
+
+/** A PICTURE'S PIXELS AS THE ATLAS HOLDS THEM: { width, height, pixels } in rgba bytes, a 16-bit grey one's packed
+ *  (core/images.js pack16). Decoded from its entry -- by the browser, or for 16 bits by decodePNG16. */
+export async function pixelsOf(entry) {
+    const bytes = fromBase64(entry.data)
+    if (entry.bits === 16) {
+        const d = await decodePNG16(bytes)
+        return { width: d.width, height: d.height, pixels: pack16(d.gray, d.alpha, d.width, d.height) }
+    }
+    const bmp = await createImageBitmap(new Blob([bytes], { type: entry.type }), { premultiplyAlpha: 'none', colorSpaceConversion: 'none' })
+    try { return { width: bmp.width, height: bmp.height, pixels: bitmapPixels(bmp) } } finally { bmp.close?.() }
+}
+const bitmapPixels = bmp => {
+    const c = new OffscreenCanvas(bmp.width, bmp.height)
+    const g = c.getContext('2d', { willReadFrequently: true })
+    g.drawImage(bmp, 0, 0)
+    return new Uint8Array(g.getImageData(0, 0, bmp.width, bmp.height).data.buffer)
+}
+/* THE HEIGHTS' BOUND FROM PIXELS THE BROWSER DECODED, with room: a canvas keeps its colours premultiplied by alpha, so
+   reading them back un-premultiplied rounds a part-transparent pixel's colour a little apart from what the atlas, which
+   is given them un-premultiplied, holds (inferred, from how a 2D canvas stores them). Two levels in 255 on every
+   difference covers that rounding at every alpha above 1/255 times the luminance's weights, which sum to 1. A 16-bit
+   picture is read by decodePNG16, the atlas's own bytes: no room needed. */
+const BROWSER_ROOM = 2 / 255
+const statsOf = (px, bits) => {
+    const st = heightStats(px, { bits })
+    if (bits === 16) return st
+    return Object.fromEntries(Object.entries(st).map(([k, v]) => [k, v.map(x => Math.min(1.01, x + BROWSER_ROOM))]))
+}
+/** Work out an entry's heights' bound (core/images.js heightStats) from its pixels, and give it to the entry: for one
+ *  made before entries had it. Returns the entry. */
+export async function withHeights(entry) {
+    if (entry.heights) return entry
+    entry.heights = statsOf(await pixelsOf(entry), entry.bits ?? 8)
+    return entry
+}
+
 /**
  * A file (or a Blob) as a picture: { key, entry, scaled } -- scaled the size it was, when it was larger than
- * IMAGE_MAX_EDGE and was scaled down; null otherwise. Throws, saying why, for what is not a PNG, JPEG or WebP the
- * browser can decode.
+ * IMAGE_MAX_EDGE and was scaled down; null otherwise. Its heights' bound is worked out as it is read, for a relief
+ * (core/images.js A PICTURE AS A HEIGHT). A 16-bit grey PNG keeps its 16 bits (decodePNG16), and is refused, saying so,
+ * when larger than IMAGE_MAX_EDGE: scaling one here would round it to 8. Throws, saying why, for what is not a PNG, JPEG
+ * or WebP the browser can decode.
  */
 export async function imageFromFile(file) {
     const type = IMAGE_TYPES.includes(file.type) ? file.type : null
+    const name = String(file.name ?? 'picture')
     if (!type) throw new Error(`'${file.name ?? 'the file'}' is not a PNG, JPEG or WebP picture${file.type ? ` (it is ${file.type})` : ''}`)
+    const bytes = new Uint8Array(await file.arrayBuffer())
+    const info = type === 'image/png' ? pngInfo(bytes) : null
+    if (isDeepGrey(info)) {
+        if (Math.max(info.width, info.height) > IMAGE_MAX_EDGE)
+            throw new Error(`'${name}' is a 16-bit picture of ${info.width} x ${info.height}: scale it to ${IMAGE_MAX_EDGE} on its longer side first (scaled here it would lose its 16 bits)`)
+        let d
+        try { d = await decodePNG16(bytes) } catch (e) { throw new Error(`'${name}' could not be decoded: ${e?.message ?? e}`) }
+        const got = await entryFromBytes(bytes, { name, type, width: d.width, height: d.height })
+        got.entry.bits = 16
+        got.entry.heights = statsOf({ width: d.width, height: d.height, pixels: pack16(d.gray, d.alpha, d.width, d.height) }, 16)
+        return { ...got, scaled: null }
+    }
     let bmp
     try { bmp = await createImageBitmap(file, { premultiplyAlpha: 'none', colorSpaceConversion: 'none' }) }
     catch (e) { throw new Error(`'${file.name ?? 'the file'}' could not be decoded: ${e?.message ?? e}`) }
     const { width, height } = bmp
-    const name = String(file.name ?? 'picture')
     if (Math.max(width, height) <= IMAGE_MAX_EDGE) {
+        const heights = statsOf({ width, height, pixels: bitmapPixels(bmp) }, 8)
         bmp.close?.()
-        return { ...(await entryFromBytes(new Uint8Array(await file.arrayBuffer()), { name, type, width, height })), scaled: null }
+        const got = await entryFromBytes(bytes, { name, type, width, height })
+        got.entry.heights = heights
+        return { ...got, scaled: null }
     }
     // TOO LARGE: drawn at IMAGE_MAX_EDGE on its longer side, and kept as PNG (a JPEG stays a JPEG, at 0.92)
     const k = IMAGE_MAX_EDGE / Math.max(width, height)
@@ -182,7 +297,10 @@ export async function imageFromFile(file) {
     bmp.close?.()
     const outType = type === 'image/jpeg' ? 'image/jpeg' : 'image/png'
     const blob = await c.convertToBlob({ type: outType, quality: 0.92 })
-    return { ...(await entryFromBytes(new Uint8Array(await blob.arrayBuffer()), { name, type: outType, width: w, height: h })), scaled: { width, height } }
+    const got = await entryFromBytes(new Uint8Array(await blob.arrayBuffer()), { name, type: outType, width: w, height: h })
+    // the bound from the bytes kept, as the atlas will be given them (a JPEG re-encoded is not the canvas drawn)
+    await withHeights(got.entry)
+    return { ...got, scaled: { width, height } }
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -210,6 +328,12 @@ async function makeAtlas(WG, atlas, images) {
             if (e.pixels) {                 // a test's stand-in: rgba bytes, first row the top (never in a file: imagesProblems)
                 const D = WG.device
                 D.queue.writeTexture({ texture: tex, origin: { x: r.x, y: r.y } }, e.pixels, { bytesPerRow: 4 * r.w, rowsPerImage: r.h }, { width: r.w, height: r.h })
+                continue
+            }
+            if (e.bits === 16) {            // this file's own decoder, and its two bytes a texel (core/images.js pack16)
+                const d = await pixelsOf(e)
+                WG.device.queue.writeTexture({ texture: tex, origin: { x: r.x, y: r.y } }, d.pixels, { bytesPerRow: 4 * d.width, rowsPerImage: d.height },
+                    { width: Math.min(r.w, d.width), height: Math.min(r.h, d.height) })
                 continue
             }
             if (typeof createImageBitmap !== 'function') { console.warn(`[images] '${e.name}' not decoded: no createImageBitmap here`); continue }

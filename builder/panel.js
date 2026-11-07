@@ -58,7 +58,7 @@ import { makeAfter } from './params.js'
 import { codeOnly } from './codegen.js'
 import { SEG, SEGBTN } from '../lib/pathtracer/strip.js'
 import { lit } from '../lib/pathtracer/icons.js'
-import { imageFromFile, slotKey, PROJECTIONS, WRAPS, FILTERS, FACES, IMAGE_MAX_EDGE } from './images.js'
+import { imageFromFile, slotKey, withHeights, PROJECTIONS, WRAPS, FILTERS, FACES, IMAGE_MAX_EDGE } from './images.js'
 
 /** WHAT EACH ENVIRONMENT SETTING DOES (model.js ENVIRONMENT, the renderer's Lighting schema), said on its row. Every key
  *  has one (test/panel.check.mjs): a setting added to the schema with none fails there. Numbers are typical values, not
@@ -1616,22 +1616,45 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
     function reliefFolder(folder, doc, mat) {
         const rf = folder.addFolder({ title: 'relief' })
         const preset = M.reliefPresetOf(mat.relief)
-        const OWN = '#own'
-        const options = { none: '', ...Object.fromEntries(Object.entries(M.RELIEFS).map(([k, r]) => [r.label, k])) }
-        if (mat.relief && !preset) options['code of its own'] = OWN
-        const R = { relief: mat.relief ? (preset ?? OWN) : '' }
+        const OWN = '#own', PIC = '#picture:'
+        /* A RELIEF FROM A PICTURE (0.next; materials.js pictureRelief): one choice for each of the material's pictures */
+        const reads = M.pictureReliefOf(mat.relief)
+        const options = { none: '', ...Object.fromEntries(Object.entries(M.RELIEFS).map(([k, r]) => [r.label, k])),
+            ...Object.fromEntries((mat.images ?? []).map(x => [`${M.PICTURE_RELIEF_LABEL}: ${x.name}`, PIC + x.name])) }
+        if (mat.relief && !preset && !reads) options['code of its own'] = OWN
+        const R = { relief: mat.relief ? (preset ?? (reads ? PIC + reads : OWN)) : '' }
         const b = rf.addBinding(R, 'relief', { label: 'relief', options })
         const l = b.element.querySelector('.tp-lblv_l')
         if (l) l.title = 'A height on the surface of every object wearing this material, in real millimetres -- in the shape itself,'
             + ' the silhouette too. Its noise is paid at every march step near those objects.'
-        b.on('change', ev => {
+        b.on('change', async ev => {
             if (ev.value === OWN) return
-            try { M.setRelief(doc, mat.id, ev.value || null) } catch (e) { console.error('[panel] relief:', e); return }
+            const pic = String(ev.value).startsWith(PIC) ? ev.value.slice(PIC.length) : null
+            if (pic) {
+                /* ITS HEIGHTS' BOUND, worked out from its pixels before the relief is made (images.js withHeights): a
+                   picture read before pictures had one is decoded once now */
+                const slot = mat.images.find(x => x.name === pic), entry = doc.images?.[slot?.image]
+                if (entry && !entry.heights) { try { await withHeights(entry) } catch (e) { console.warn('[panel] the picture\'s heights could not be read:', e?.message ?? e) } }
+            }
+            try { M.setRelief(doc, mat.id, pic ? 'picture' : ev.value || null, pic ? { picture: pic } : {}) } catch (e) { console.error('[panel] relief:', e); return }
             edited(null)
             onStructure()
             setTimeout(() => { if (shownId === mat.id) show(mat.id) })
         })
         if (!mat.relief) return
+        if (reads) {
+            /* WHAT A PICTURE'S RELIEF IS NOT, said where it is chosen: planar whatever the picture's projection, on every
+               face, and flat while its picture has no heights' bound (an entry from before, or one not in the scene) */
+            const slot = (mat.images ?? []).find(x => x.name === reads), entry = doc.images?.[slot?.image]
+            const notes = []
+            if (!entry) notes.push(`its picture is not in this scene: the relief is flat`)
+            else if (!entry.heights) notes.push('its picture\'s heights are not worked out yet: choose the relief again')
+            if (slot && slot.projection !== 'planar') notes.push(`read planar, along the object's z (the picture's colour is ${slot.projection})`)
+            notes.push(`on every face: the sides of a box show its edge${slot?.wrapU === 'none' && slot?.wrapV === 'none' ? '' : ' (wrap none and a black border keep them flat)'}`)
+            if (entry?.bits === 16) notes.push('16 bits a pixel: 65 536 heights')
+            else if (entry) notes.push('8 bits a pixel: a step of amplitude / 255 (a 16-bit grey PNG has 256 times finer)')
+            rf.addBinding({ notes: notes.join('\n') }, 'notes', { readonly: true, label: '', multiline: true, rows: notes.length })
+        }
         const owner = { id: M.reliefOwner(mat.id), unit: 'mm', get params() { return mat.relief.params },
             get constants() { return mat.relief.constants }, get ranges() { return mat.relief.ranges }, get lengths() { return mat.relief.lengths } }
         paramsFolder(rf, owner, Object.keys(mat.relief.params || {}), {}, true)

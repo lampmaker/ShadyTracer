@@ -84,7 +84,7 @@ export const EXAMPLES = [
   "title": "Pictures",
   "audience": "Modelling and rendering",
   "group": "Materials",
-  "description": "A test card glowing on a screen, on a poster, round a can and on a ball"
+  "description": "A test card glowing on a screen, on a poster, round a can and on a ball; a plaque embossed from a 16-bit height map"
  },
  {
   "file": "lighting-room.json",

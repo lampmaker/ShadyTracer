@@ -1251,11 +1251,23 @@ ok('...and the visibility beside it follows: 3.912 x 4 m, 15.6 m', /^visibility 
     await p.waitForTimeout(50)
     const said = await p.evaluate(() => [...document.querySelectorAll('#t .tp-lblv')].find(r => r.querySelector('.tp-lblv_l')?.textContent.trim() === 'not read')?.querySelector('textarea')?.value ?? null)
     ok('a text file chosen: said in the box, nothing added', /not a PNG, JPEG or WebP/.test(said ?? '') && await p.evaluate(() => CHECK.M.material(CHECK.doc, 'scr').images.length) === 1, said)
+    // A RELIEF FROM IT (0.next): offered in the relief box by the picture's name, its heights' bound worked out on import
+    // from the pixels Chromium decoded, a compile; the box says what such a relief is and is not
+    ok('the picture\'s heights\' bound was worked out as it was read', await p.evaluate(() => { const e = Object.values(CHECK.doc.images)[0]; return e.heights?.colour?.length === 6 && e.heights.data[0] > 0 }))
+    before = await state()
+    ok('the relief: from a picture', await set('relief', 'from a picture: picture') === 'set')
+    await p.waitForTimeout(150)
+    s = await state()
+    ok('...a relief reading it, amplitude and raise, a compile', await p.evaluate(() => CHECK.M.pictureReliefOf(CHECK.M.material(CHECK.doc, 'scr').relief)) === 'picture'
+        && s.structure === before.structure + 1)
+    const notes = await p.evaluate(() => [...document.querySelectorAll('#t textarea')].map(t => t.value).find(v => /on every face/.test(v)) ?? null)
+    ok('...and its box says it is read planar (the picture is triplanar), on every face, at 8 bits', /read planar.*triplanar/.test(notes ?? '') && /8 bits a pixel/.test(notes ?? ''), notes)
     before = await state()
     ok('Take it away', await button('Take it away') === 'clicked')
     s = await state()
     ok('...the slot gone, the picture kept in the scene (no undo step holds it), a compile', s.structure === before.structure + 1
         && await p.evaluate(() => !CHECK.M.material(CHECK.doc, 'scr').images && Object.keys(CHECK.doc.images).length === 1))
+    ok('...and the relief that read it with it', await p.evaluate(() => !CHECK.M.material(CHECK.doc, 'scr').relief))
     await p.evaluate(() => CHECK.panel.show(null))
 }
 

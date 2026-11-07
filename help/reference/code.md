@@ -12,7 +12,7 @@ What the code of an object, a group, a material or the scene's functions can cal
 | a group's | at every march step, around its children | `p` (which it may change), `C`, `r` the ray, `children(C, p)`, `XF_S` this frame's units in world units, `SURFACE_ONLY`, `READ_REACH`, `DIVIDED_ABOVE` |
 | a material's | once where a ray hits | `m` the material to change, `p` and `n` the hit and its normal in the world, `C`, and `p_local`, `R_local`, `S_local` the hit in the object's frame, its turn and its scale |
 | a material's pictures | -- | `sample(name)`, `mapped(name)` and `sampleAt(name, uv)` in its code: [below](#a-materials-pictures) |
-| a material's relief | at every march step near an object wearing it | `q` the point in mm in that object's frame, `world` the same in the scene's; it sets `h`, the height in mm outward, and `slope`, a bound on how steep `h` is |
+| a material's relief | at every march step near an object wearing it | `q` the point in mm in that object's frame, `world` the same in the scene's, the material's pictures by name for `heightAt`; it sets `h`, the height in mm outward, and `slope`, a bound on how steep `h` is |
 | the scene's functions | -- | its functions are called from any of the others |
 
 The comments a new block starts with say the same, with examples; **Functions you can call…** under a block opens this page.
@@ -53,6 +53,10 @@ In a material whose **pictures** box has any, each is in its code by its name, a
 - `sampleAt(picture, uv: vec2<f32>) -> vec4<f32>` -- the picture at a position of your own, in copies, with its wrap and filter.
 
 For instance a data picture as the roughness, `m.roughness = sample(rough).r;`, or a picture twice as small, `m.baseColor = sampleAt(picture, mapped(picture) * 2.0).rgb;`.
+
+In the material's **relief** code its pictures are in scope by name too, with one more:
+
+- `heightAt(picture, q) -> vec2<f32>` -- the picture as a height at `q`: its luminance times its alpha, 0 to 1, read planar from `q.xy` at its own size, offset, turn and wrap, smooth (a cubic B-spline of its pixels, 16 reads); and, second, the bound on how steep it is per mm, from its own pixels. A relief from a picture is `h = amplitude * raise * t.x; slope = amplitude * abs(raise) * t.y;` with `t` this.
 
 ## Putting shapes into the scene
 
