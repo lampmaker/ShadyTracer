@@ -201,7 +201,7 @@ drop('a top-level node, up to the first place', 'a', 'g', 'before')
     ok('every shape listed once', listed.length === Object.keys(PRIMITIVES).length && new Set(listed).size === listed.length
         && Object.keys(PRIMITIVES).every(k => listed.includes(k)), JSON.stringify(menu))
     ok('none of them empty', menu.every(g => g.keys.length > 0))
-    ok('the lenses and the reflector in Optics; the extrusion in From points', ['lens', 'fresnel lens', 'reflector'].every(k => menu[1].keys.includes(k)) && menu[2].keys.includes('extrusion'))
+    ok('the lenses and the reflector in Optics; the extrusion in From points', ['lens', 'fresnel lens', 'reflector', 'faceted reflector'].every(k => menu[1].keys.includes(k)) && menu[2].keys.includes('extrusion'))
 }
 
 // A LOCK PER NODE ROW (TOGGLES.lock, model.js setLock): open, both, or one alone; none on what is not a node

@@ -30,7 +30,7 @@ for (const [key, s] of Object.entries(PRIMITIVES)) {
     const n = add(key)
     eq(`${key}: every axis it maps is offered, as the entry says`, axesOf(n), s.stretch)
 }
-eq('a sphere, the octahedron, the reflector: no stretch -- scaled whole', [axesOf(add('sphere')), axesOf(add('octahedron')), axesOf(add('reflector'))], [null, null, null])
+eq('a sphere, the octahedron, the reflectors: no stretch -- scaled whole', [axesOf(add('sphere')), axesOf(add('octahedron')), axesOf(add('reflector')), axesOf(add('faceted reflector'))], [null, null, null, null])
 // LOOKED AT AGAIN (2026-10-02, "don't force it"): a ring in the xy plane, the link's straight sides -- and no z by a round tube
 eq('a torus and a capped torus: x and y by the ring, no z', [axesOf(add('torus')), axesOf(add('capped torus'))], [{ x: ['ring'], y: ['ring'] }, { x: ['ring'], y: ['ring'] }])
 eq('a link: y by its span only', axesOf(add('link')), { y: ['span'] })

@@ -40,3 +40,9 @@ lights' rays also light the picture: a lens's spot on a screen shows in the pict
 The examples for **Optical design** (the Project panel: the project's name over the tree) each show one thing: an aspheric condenser, a Fresnel lens
 beside a plano-convex one, a parabolic reflector, a light guide, RGBW colour mixing, a prism's dispersion, a
 dichroic combiner, and an office's work-plane illuminance.
+
+The **+** menu's Optics shapes include two parabolic reflectors, their focus at the node's origin. The **reflector** is
+smooth, and the **faceted reflector** is made of flat facets: `facets` round the rim, `rings` along the radius, and
+fewer facets round the centre wherever they would be narrower than `minWidth`. Each has a `solid` switch. At 0 it is a
+mirror with a wall behind it. At 1 it is the filled paraboloid, capped flat at the rim: give it a glass for a TIR
+reflector, or subtract it from another shape for a parabolic cavity.
