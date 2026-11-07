@@ -35,6 +35,9 @@
 //   BUILDER.saveWorkspace()  every scene, which is current, and the renderer's own settings
 //                            (quality, sampling, size; each scene's camera and exposure are its own)
 //   BUILDER.views()   every scene's view { key: view } (model.js VIEW): what the browser's session keeps
+//   BUILDER.savedViews()  the scene shown's saved views [{ name, camera }] (model.js VIEW, 0.next); saveView(name?),
+//                     goToView(name), updateView(name), renameView(from, to), removeView(name) each on it, and
+//                     BUILDER.onSavedViews(list), the host's, told the list whenever it or the scene shown changes
 //   BUILDER.timeline()   the scene shown's timeline, whole (model.js TIMELINE); keepTimeline(t) writes it,
 //                     and BUILDER.onTimeline(t), the host's, is told the next scene's as it is shown
 //   BUILDER.exportPrint({ subject, box, format, cell, colours })  an object, or the scene, for a printer (exportbox.js;
@@ -106,6 +109,9 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
     let timelineKept = 0
     /* ...AND A SCRIPT KEPT (keepScript, model.js SCRIPT): the same, for the same reasons */
     let scriptKept = 0
+    /* ...AND A SAVED VIEW KEPT, renamed or taken away (model.js VIEW, 0.next): the same again -- a view saved is work,
+       written within the second, but no undo step (it is the view's, outside the history) */
+    let viewsKept = 0
 
     /* A RESTORED PROJECT, and what the renderer needs to follow it. AN EDIT INSIDE A SCENE: the scene the step
        changed becomes current -- undoing an edit made in another scene shows that scene, rather than changing
@@ -237,6 +243,29 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
         /* ...AND ITS SCRIPT (model.js SCRIPT): the Script panel shows the one of the scene the renderer shows, whose
            parameters it names. Shown, never run (tools/script.js). */
         try { BUILDER.onScript?.(M.sceneScriptOf(d)) } catch (e) { console.warn('[builder] onScript', e) }
+        /* ...AND ITS SAVED VIEWS: the Camera popover's list is the scene's the camera moves over */
+        tellSavedViews()
+    }
+    /* THE SAVED VIEWS (model.js VIEW, 0.next), of the scene the renderer SHOWS, as its view is (keepView): the camera
+       saved is the one over its picture. While a unit change waits to be shown (unitPending) the renderer's numbers are
+       k times the document's away, so a camera saved is converted on its way in and one gone to on its way out. */
+    const shownDoc = () => shown != null ? P.scene(project, shown)?.doc ?? null : null
+    const tellSavedViews = () => {
+        try { BUILDER.onSavedViews?.(M.savedViewsOf(shownDoc())) } catch (e) { console.warn('[builder] onSavedViews', e) }
+    }
+    const liveCamera = () => {
+        const c = RT.view?.()?.camera
+        return c && unitPending?.key === shown ? cameraTimes(c, unitPending.k) : c
+    }
+    /* one change to the list: kept, counted for the autosave, told; a refusal (a name taken, too many) thrown as it is */
+    const changeViews = fn => {
+        const d = shownDoc()
+        if (!d) throw new Error('no scene of the project is shown yet: its compile has not ended')
+        const out = fn(d)
+        memorize(shown, d)
+        viewsKept++
+        tellSavedViews()
+        return out
     }
     /* THE SCRIPT KEPT, into the scene the renderer shows, as the timeline is (keepTimeline below). */
     let scriptRefused = null
@@ -650,10 +679,51 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
         /** WHAT THE AUTOSAVE LOOKS AT (workspace/autosave.js): `revision`, and one more for every timeline kept -- saved
          *  as an edit is, so a key set is in the project within the second and makes a second tab's copy, without
          *  being an undo step or an edit the bake waits out (`timelineKept` above). */
-        get saveRevision() { return `${revision}.${timelineKept}.${scriptKept}` },
+        get saveRevision() { return `${revision}.${timelineKept}.${scriptKept}.${viewsKept}` },
         /** Every scene's view: { key: view }, what the browser's session keeps between the project's writes. The one
          *  shown is written as it changes (keepView), so this is it as it is now. */
         views: () => P.viewsOf(project),
+        /** THE SAVED VIEWS OF THE SCENE SHOWN (model.js VIEW): [{ name, camera }], [] while none of the project's is shown. */
+        savedViews: () => M.savedViewsOf(shownDoc()),
+        /** Save the camera as it is now as a view called `name` (the next "View N" if none is given); returns its name.
+         *  A name taken is refused, as the model refuses it. */
+        saveView(name) {
+            return changeViews(d => {
+                const n = name ?? M.nextViewName(d), c = liveCamera()
+                if (!c) throw new Error('there is no camera to save')
+                M.saveView(d, n, c)
+                return n
+            })
+        },
+        /** The view `name` kept as the camera is now. */
+        updateView(name) {
+            return changeViews(d => {
+                const c = liveCamera()
+                if (!c) throw new Error('there is no camera to save')
+                M.updateView(d, name, c)
+                return name
+            })
+        },
+        renameView: (from, to) => changeViews(d => { M.renameView(d, from, to); return to }),
+        removeView: name => changeViews(d => { M.removeView(d, name); return name }),
+        /** THE CAMERA PUT BACK where the view `name` has it, at once (the user's choice: a jump, not a glide) -- whole,
+         *  every setting it leaves out the default, as a scene's own camera comes back (model.js sceneViewOf). The
+         *  scene keeps it as its camera from there (keepView, through RT.watchView). Returns whether it did. */
+        goToView(name) {
+            const d = shownDoc()
+            const v = d && M.savedViewsOf(d).find(s => s.name === name)
+            if (!v) return false
+            const whole = { ...structuredClone(M.CAMERA_DEFAULTS), ...v.camera }
+            RT.applyView?.({ camera: unitPending?.key === shown ? cameraTimes(whole, 1 / unitPending.k) : whole })
+            return true
+        },
+        /** The host's: told the saved views of the scene shown, whenever they or the scene change. */
+        onSavedViews: null,
+        /** WHETHER A SCENE OF THE PROJECT IS THE ONE OVER THE PICTURE: what the saved views' list offers anything for. Not
+         *  `showing`, which is also false while another scene is the one worked on and this one's camera still the
+         *  picture's -- the views are the shown scene's. False for the safe start's empty scene and a test's or bench's
+         *  (RT.scene not the builder's); a renderer that names no scene (a stand-in) is taken to show it. */
+        get viewsShown() { return !!shownDoc() && (RT.scene?.id ?? 'built') === 'built' },
         /** THE TIMELINE OF THE SCENE SHOWN, whole (model.js sceneTimelineOf): the one the panel holds, as the camera is.
          *  The defaults while the renderer shows none of the project's (a workspace just opened, the safe start), when
          *  nothing is kept (keepTimeline). */

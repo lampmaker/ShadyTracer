@@ -94,6 +94,8 @@ export const CAMERA_HELP = {
     focus: 'The distance in focus, in the scene\'s unit: 0 is the target\'s.',
     target: 'What the camera looks at, in the scene\'s unit.',
     position: 'Where the camera stands, in the scene\'s unit.',
+    pose: 'The whole camera as one value for the Timeline: where it stands, what it looks at, which way is up and its '
+        + 'field of view. A track on it keys all of them at once. Flag it with \u25C7 to keep it offered while only animated values are.',
 }
 export const EXPOSURE_HELP = {
     exposureEV: 'The exposure when auto exposure is off, as a camera\'s EV at ISO 100: 15 is a sunlit scene, 12 overcast, 7 an office, 2 a candle-lit room.',
@@ -811,6 +813,10 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
             if (k === 'mode' || k === 'camtype') b.on('change', redraw)
             flagRow(b, `view/camera/${k}`)
         }
+        /* THE POSE (lib/pathtracer/params.js CAMERA POSE, 0.next): no field of its own -- it is the rows above, together
+           -- but a value the Timeline can key, so a row for its flag */
+        const pose = rowTip(f.addBinding({ pose: 'position, target, up, fov' }, 'pose', { readonly: true }), CAMERA_HELP.pose)
+        flagRow(pose, 'view/camera/pose')
     }
     function exposureFolder(parent, doc) {
         if (!view?.exposure) return

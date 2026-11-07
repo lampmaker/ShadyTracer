@@ -1731,9 +1731,10 @@ export function setLock(doc, id, which, on) {
    nothing of the shape. What a flag is worth in the shader is the bake's to say (animate.js liveUniformsOf). */
 const ANIMATE_PATH = /^scene\/([^/]+)\/(.+)$/
 /* THE VIEW'S VALUES a flag can name: the camera's numbers the registry has (lib/pathtracer/params.js settingsParams --
-   not its mode, a word, nor its target and position, three numbers at once) and every exposure setting */
+   not its mode, a word, nor its target and position on their own) and every exposure setting. `pose` (0.next) is the
+   whole camera as one value, its position, target, up and field of view (params.js CAMERA POSE). */
 const VIEW_FLAG = /^view\/(camera|exposure)\/([^/]+)$/
-const CAMERA_FLAGS = ['camtype', 'azimuth', 'elevation', 'distance', 'fov', 'dimensions', 'aperture', 'focus']
+const CAMERA_FLAGS = ['camtype', 'azimuth', 'elevation', 'distance', 'fov', 'dimensions', 'aperture', 'focus', 'pose']
 /* path -> { owner, key }: where a flag is kept, or null for a path that names nothing of this scene */
 function animateSlot(doc, path) {
     const v = VIEW_FLAG.exec(String(path ?? ''))
@@ -2310,6 +2311,15 @@ export const environmentOf = doc => doc.environment
   history's snapshots leave the view out (project.js historyText). Lengths are the scene's unit, as every length here.
 
   No version change, as the environment's (above): a builder of 22 that predates it carries it along unread.
+
+  SAVED VIEWS (0.next; the user, 2026-11-07: "a way to store camera settings ... so i can move around a scene, change
+  things and move back to the camera view I want"): `doc.view.saved = [{ name, camera }]`, each camera as `view.camera`
+  is, checked by VIEW_CAMERA. In the view, so outside the history as the view is (project.js OUTSIDE_HISTORY): saving,
+  renaming or deleting one is no undo step -- an undo puts back the shape, never takes away a view kept since -- and a
+  unit change converts them with the camera (unitchange.js convertOutside). The camera only, not the exposure (the
+  user's choice): going back to a view leaves the picture's brightness as it is. An empty list is no key, so a scene
+  that has none is byte for byte what it was. Still no version change: a builder of 0.83.0 refuses a file that has
+  some ("view.saved: not part of a view", viewProblems below), which is said in the change note.
 ======================================================================================================================*/
 /** Each exposure setting's schema entry, by its uniform name: the Exposure group's, the ones with a control. */
 export const VIEW_EXPOSURE = Object.freeze(Object.fromEntries(Object.entries(UniformGroups.Exposure).filter(([, sp]) => sp.gui)))
@@ -2336,20 +2346,46 @@ export const CAMERA_DEFAULTS = Object.freeze({ mode: 'orbit', camtype: 0, fov: 4
 /* the camera's lengths: what a unit's change, or a camera from a scene in another unit, scales */
 export const CAMERA_LENGTHS = Object.freeze(['dimensions', 'target', 'distance', 'pos', 'aperture', 'focus'])
 
+/* THE MOST VIEWS A SCENE KEEPS, and the longest name: chosen, not measured -- a list that fits a popover, and a
+   name that fits its row */
+export const SAVED_VIEWS_MAX = 64
+export const VIEW_NAME_MAX = 80
+function cameraProblems(c, at) {
+    if (!c || typeof c !== 'object' || Array.isArray(c)) return [`${at} must be an object`]
+    const p = []
+    for (const [k, v] of Object.entries(c)) {
+        const check = VIEW_CAMERA[k]
+        if (!check) { p.push(`${at}.${k}: not a camera setting`); continue }
+        const ok = check(v)
+        if (ok !== true) p.push(`${at}.${k} ${ok}`)
+    }
+    return p
+}
+const viewNameProblem = n => typeof n !== 'string' || !n.trim() ? 'must be a name (text, not empty)'
+    : n.length > VIEW_NAME_MAX ? `must be at most ${VIEW_NAME_MAX} characters` : n !== n.trim() ? 'must not start or end with a space' : null
+function savedProblems(saved) {
+    if (!Array.isArray(saved)) return ['view.saved must be a list of { name, camera }']
+    const p = []
+    if (saved.length > SAVED_VIEWS_MAX) p.push(`view.saved holds at most ${SAVED_VIEWS_MAX} views (it has ${saved.length})`)
+    const names = new Set()
+    saved.forEach((s, i) => {
+        const at = `view.saved[${i}]`
+        if (!s || typeof s !== 'object' || Array.isArray(s)) { p.push(`${at} must be { name, camera }`); return }
+        for (const k of Object.keys(s)) if (k !== 'name' && k !== 'camera') p.push(`${at}.${k}: not part of a saved view (name, camera)`)
+        const bad = viewNameProblem(s.name)
+        if (bad) p.push(`${at}.name ${bad}`)
+        else if (names.has(s.name)) p.push(`${at}.name '${s.name}' is taken by another view`)
+        else names.add(s.name)
+        p.push(...cameraProblems(s.camera, `${at}.camera`))
+    })
+    return p
+}
 function viewProblems(view) {
     if (!view || typeof view !== 'object' || Array.isArray(view)) return ['view must be an object']
     const p = []
-    for (const k of Object.keys(view)) if (k !== 'camera' && k !== 'exposure') p.push(`view.${k}: not part of a view (camera, exposure)`)
-    const c = view.camera
-    if (c !== undefined) {
-        if (!c || typeof c !== 'object' || Array.isArray(c)) p.push('view.camera must be an object')
-        else for (const [k, v] of Object.entries(c)) {
-            const check = VIEW_CAMERA[k]
-            if (!check) { p.push(`view.camera.${k}: not a camera setting`); continue }
-            const ok = check(v)
-            if (ok !== true) p.push(`view.camera.${k} ${ok}`)
-        }
-    }
+    for (const k of Object.keys(view)) if (k !== 'camera' && k !== 'exposure' && k !== 'saved') p.push(`view.${k}: not part of a view (camera, exposure, saved)`)
+    if (view.camera !== undefined) p.push(...cameraProblems(view.camera, 'view.camera'))
+    if (view.saved !== undefined) p.push(...savedProblems(view.saved))
     const e = view.exposure
     if (e !== undefined) {
         if (!e || typeof e !== 'object' || Array.isArray(e)) p.push('view.exposure must be an object')
@@ -2395,6 +2431,56 @@ export function setView(doc, { camera, exposure } = {}) {
     if (Object.keys(next).length) doc.view = next
     else delete doc.view
     return doc
+}
+/** THE SCENE'S SAVED VIEWS (VIEW above), copied: [{ name, camera }] in the order kept, [] for none. */
+export const savedViewsOf = doc => structuredClone(doc?.view?.saved ?? [])
+/* the list written whole, checked first (a refusal changes nothing); an empty one is no key */
+function setSaved(doc, list) {
+    const next = structuredClone(doc.view || {})
+    if (list.length) next.saved = list
+    else delete next.saved
+    const bad = viewProblems(next)
+    if (bad.length) throw new ModelError(bad)
+    if (Object.keys(next).length) doc.view = next
+    else delete doc.view
+    return doc
+}
+const viewIndex = (doc, name) => {
+    const i = (doc?.view?.saved ?? []).findIndex(s => s.name === name)
+    if (i < 0) throw new ModelError(`no saved view '${name}'`)
+    return i
+}
+/** The first of "View 1", "View 2" ... the scene has not taken. */
+export function nextViewName(doc) {
+    const taken = new Set((doc?.view?.saved ?? []).map(s => s.name))
+    for (let i = 1; ; i++) if (!taken.has(`View ${i}`)) return `View ${i}`
+}
+/** Keep `camera` (only what VIEW_CAMERA knows) as a new view called `name`, last. A name taken, or more than
+ *  SAVED_VIEWS_MAX, is refused. */
+export function saveView(doc, name, camera) {
+    const list = savedViewsOf(doc)
+    if (list.some(s => s.name === name)) throw new ModelError(`a view called '${name}' is saved already`)
+    return setSaved(doc, [...list, { name, camera: cameraSettings(camera) ?? camera }])
+}
+/** The view `name` kept as `camera` now, where it is in the list. */
+export function updateView(doc, name, camera) {
+    const list = savedViewsOf(doc), i = viewIndex(doc, name)
+    list[i] = { name, camera: cameraSettings(camera) ?? camera }
+    return setSaved(doc, list)
+}
+/** The view `from` called `to`; a name another view has is refused. The same name is nothing. */
+export function renameView(doc, from, to) {
+    const list = savedViewsOf(doc), i = viewIndex(doc, from)
+    if (from === to) return doc
+    if (list.some(s => s.name === to)) throw new ModelError(`a view called '${to}' is saved already`)
+    list[i] = { ...list[i], name: to }
+    return setSaved(doc, list)
+}
+/** The view `name` taken away. */
+export function removeView(doc, name) {
+    const list = savedViewsOf(doc), i = viewIndex(doc, name)
+    list.splice(i, 1)
+    return setSaved(doc, list)
 }
 /** A camera's lengths said in another unit: one kept by a scene in `from` seen from a scene in `to`, the same place in
  *  metres. 330 mm stays 0.33 m, rather than becoming 330 m. */
