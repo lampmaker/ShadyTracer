@@ -131,7 +131,7 @@ for (const s of params.list(lens.path)) log(s.path, s.value)
 
 The camera. Lengths are in the scene's unit, angles in degrees.
 
-Gives: { mode, camtype, azimuth, elevation, distance, target, fov, aperture, focus, ... }
+Gives: { mode, camtype, azimuth, elevation, distance, target, fov, aperture, focus, roll, ... }
 
 ### `camera.set({ ... })`
 

@@ -1772,7 +1772,7 @@ const ANIMATE_PATH = /^scene\/([^/]+)\/(.+)$/
    not its mode, a word, nor its target and position on their own) and every exposure setting. `pose` (0.84.0) is the
    whole camera as one value, its position, target, up and field of view (params.js CAMERA POSE). */
 const VIEW_FLAG = /^view\/(camera|exposure)\/([^/]+)$/
-const CAMERA_FLAGS = ['camtype', 'azimuth', 'elevation', 'distance', 'fov', 'dimensions', 'aperture', 'focus', 'pose']
+const CAMERA_FLAGS = ['camtype', 'azimuth', 'elevation', 'distance', 'fov', 'dimensions', 'aperture', 'focus', 'roll', 'pose']
 /* path -> { owner, key }: where a flag is kept, or null for a path that names nothing of this scene */
 function animateSlot(doc, path) {
     const v = VIEW_FLAG.exec(String(path ?? ''))
@@ -2448,10 +2448,11 @@ export const VIEW_CAMERA = Object.freeze({
     up: v => pt3(v) || 'must be [x, y, z]',
     aperture: v => (Number.isFinite(v) && v >= 0) || 'must be a number >= 0 (0 a pinhole)',
     focus: v => (Number.isFinite(v) && v >= 0) || 'must be a number >= 0 (0 the target\'s distance)',
+    roll: v => Number.isFinite(v) || 'must be a number (degrees about the line of sight)',
 })
 /* THE CAMERA A SCENE LEAVING ONE OUT HAS: the page's start (app.html Q, and the renderer's up), a pinhole */
 export const CAMERA_DEFAULTS = Object.freeze({ mode: 'orbit', camtype: 0, fov: 40, dimensions: 10, target: [0, 0, 0],
-    azimuth: 40, elevation: 70, distance: 20, up: [0, 0, 1], aperture: 0, focus: 0 })
+    azimuth: 40, elevation: 70, distance: 20, up: [0, 0, 1], aperture: 0, focus: 0, roll: 0 })
 /* the camera's lengths: what a unit's change, or a camera from a scene in another unit, scales */
 export const CAMERA_LENGTHS = Object.freeze(['dimensions', 'target', 'distance', 'pos', 'aperture', 'focus'])
 
@@ -2513,6 +2514,11 @@ function viewProblems(view) {
  *  aspect, its near and far planes), which are the canvas's and the renderer's, not the scene's. */
 export const cameraSettings = c => c && typeof c === 'object'
     ? Object.fromEntries(Object.keys(VIEW_CAMERA).filter(k => c[k] !== undefined).map(k => [k, structuredClone(c[k])])) : null
+/* A ROLL OF 0 IS NO KEY (0.next): the camera hands one out always (lib/camera.js get), and the view is written as it
+   changes, so without this every scene's file would gain `roll: 0` and a builder of 0.84.0 would refuse it ("not a
+   camera setting"). sceneViewOf puts the 0 back from CAMERA_DEFAULTS. Dropped AFTER a merge (setView), never before:
+   dropped first, a roll set back to 0 would leave the old one standing under it. */
+const unrolled = c => { if (c && c.roll === 0) delete c.roll; return c }
 /** An exposure with only the Exposure group's settings, copied (RT.get() hands out every setting at once). */
 export const exposureSettings = e => e && typeof e === 'object'
     ? Object.fromEntries(Object.keys(VIEW_EXPOSURE).filter(k => e[k] !== undefined).map(k => [k, e[k]])) : null
@@ -2532,7 +2538,7 @@ export function sceneViewOf(doc) {
 export function setView(doc, { camera, exposure } = {}) {
     const next = structuredClone(doc.view || {})
     if (camera === null) delete next.camera
-    else if (camera !== undefined) next.camera = { ...(next.camera || {}), ...cameraSettings(camera) }
+    else if (camera !== undefined) next.camera = unrolled({ ...(next.camera || {}), ...cameraSettings(camera) })
     if (exposure === null) delete next.exposure
     else if (exposure !== undefined) next.exposure = { ...(next.exposure || {}), ...exposureSettings(exposure) }
     const bad = viewProblems(next)
@@ -2569,12 +2575,12 @@ export function nextViewName(doc) {
 export function saveView(doc, name, camera) {
     const list = savedViewsOf(doc)
     if (list.some(s => s.name === name)) throw new ModelError(`a view called '${name}' is saved already`)
-    return setSaved(doc, [...list, { name, camera: cameraSettings(camera) ?? camera }])
+    return setSaved(doc, [...list, { name, camera: unrolled(cameraSettings(camera)) ?? camera }])
 }
 /** The view `name` kept as `camera` now, where it is in the list. */
 export function updateView(doc, name, camera) {
     const list = savedViewsOf(doc), i = viewIndex(doc, name)
-    list[i] = { name, camera: cameraSettings(camera) ?? camera }
+    list[i] = { name, camera: unrolled(cameraSettings(camera)) ?? camera }
     return setSaved(doc, list)
 }
 /** The view `from` called `to`; a name another view has is refused. The same name is nothing. */

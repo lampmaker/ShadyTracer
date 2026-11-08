@@ -62,7 +62,7 @@ export const SCRIPT_REF = [
             { names: ['scene.nodes'], sig: 'scene.nodes()', returns: 'a list of { id, label, kind, type, parent, path }', text: 'Every object and group; `path` is where its settings are (`params.list(n.path)`).' },
             { names: ['scene.node'], sig: 'scene.node(name)', text: 'An object or group by its label or id, or null.',
               example: "const lens = scene.node('lens')\nfor (const s of params.list(lens.path)) log(s.path, s.value)" },
-            { names: ['camera.get'], sig: 'camera.get()', returns: '{ mode, camtype, azimuth, elevation, distance, target, fov, aperture, focus, ... }', text: 'The camera. Lengths are in the scene\'s unit, angles in degrees.' },
+            { names: ['camera.get'], sig: 'camera.get()', returns: '{ mode, camtype, azimuth, elevation, distance, target, fov, aperture, focus, roll, ... }', text: 'The camera. Lengths are in the scene\'s unit, angles in degrees.' },
             { names: ['camera.set'], sig: 'camera.set({ ... })', text: 'Change only what you name; returns the camera after.', example: 'camera.set({ azimuth: 30, elevation: 70 })' },
             { names: ['exposure.get', 'exposure.set'], sig: 'exposure.get()  exposure.set({ ... })', text: 'The exposure settings by name (exposureEV, autoExposure, toneMap, ...), as the Exposure box has them.' },
         ],

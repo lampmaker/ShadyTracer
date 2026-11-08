@@ -380,7 +380,7 @@ export function makeScriptApi({ PARAMS, RT, BUILDER = null, OPTICS = null, signa
 
     // ---- THE CAMERA AND THE EXPOSURE (RT.view: what a scene keeps as its view) --------------------------------------------
     const camera = {
-        /** { mode, camtype, azimuth, elevation, distance, target, fov, aperture, focus, ... }, lengths in the scene's unit */
+        /** { mode, camtype, azimuth, elevation, distance, target, fov, aperture, focus, roll, ... }, lengths in the scene's unit */
         get: () => RT.view().camera,
         /** any of those; the rest stay. Returns the camera as it is now */
         set(patch) { RT.applyView({ camera: patch }); return RT.view().camera },
