@@ -50,6 +50,14 @@ Presets: dichroic reflecting red, dichroic reflecting blue, a 50/50 beam splitte
 [Dichroic combiner](example:dichroic-combiner.json) joins a red and a blue beam with one;
 [Dichroics](example:dichroics.json) splits two white sheets of light with seven.
 
+A coating works on any surface, not only glass. On an **opaque** material (a plastic, a paint) the coating is the gloss and
+the base gets what it passes. On a **metal** the stack lies over the metal: the coating reflects R, and what it passes
+reaches the metal, which reflects its own share back out through the coating. The result is never less than either
+alone, so a coating on a bright metal changes little (silver is already a mirror), and on a dark one (titanium, dark
+chrome, metallic 1 with a grey colour) its band shows as colour: a red-reflecting dichroic on grey metal reflects red
+fully and the rest as the metal does. An anti-reflective layer on a metal changes nothing. This adds the two as
+intensities, with no interference between the stack and the metal, and takes the metal's reflectance as it is in air.
+
 A beam splitter's and an AR layer's reflectance is the same at every wavelength, so the trace is exact for them. A
 dichroic's edge is averaged over each colour channel's wavelengths, which approximates the spectrum
 ([limits](limits.md)); traced [by wavelength](../modelling/materials.md#the-spectral-optics-trace), it is exact at each.

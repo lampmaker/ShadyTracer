@@ -563,6 +563,9 @@ code, a look each.
      covered: a cube beam splitter (an interface between two touching solids -- not checked whether a ray inside
      one stops at a face it shares with the other), polarising splitters (polarisation, below), a rough coating's
      single-scatter loss. Material2 is 96 bytes, the shade item 272: ~2.16 M rays in flight (2.24 M).
+     **On a metal (0.next), built, not yet seen:** until then the metal lobe never read the coating; now the stack lies
+     over the metal, the bounces between them summed as intensities (`materials_pbr.js` `metalFresnel`), the metal's F
+     its reflectance in air. Rows in `coating.gpu.mjs`.
   2. **Dispersion -- built (0.40.0), not yet seen.** An Abbe number on a material (ior as n_d; Cauchy through both);
      at the first refraction into a dispersive medium a wavelength is drawn and the ray weighted by that wavelength's
      channel weights (mean 1 per channel, at most 3), refracting with n(λ) from then on; the pick and Fresnel there the

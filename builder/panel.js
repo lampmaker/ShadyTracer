@@ -1511,6 +1511,7 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
             + ' and on those it leaves by nothing (AR back), the bare surface, or the same coating (every face).'
             + '\nA plate with "entry faces (AR back)" is a real dichroic or plate beam splitter.'
             + '\nEach colour channel reflects R averaged over its wavelengths; transmitted is 1 - R.'
+            + '\nOn a metal, what the coating passes reaches the metal and is reflected back through it.'
         const P = { preset: '' }
         cf.addBinding(P, 'preset', { label: 'preset', options: { '(choose)': '', ...Object.fromEntries(Object.keys(M.COAT_PRESETS).map(k => [k, k])) } })
             .on('change', ev => {

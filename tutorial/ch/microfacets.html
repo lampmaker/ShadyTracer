@@ -184,9 +184,12 @@
          data-why="u holds the pick's two random numbers between 0 and 1. Stretching by alpha turns any roughness into roughness 1, where the facet normals the eye sees are a simple cap of a sphere; the result is stretched back. u.x turns into an angle round the view, u.y into a height z on that cap: u.y = 0 its top, u.y = 1 its rim, the facets seen most edge-on (section 2's rim). The old density the comment names is section 3's: Gv is G₁ of the view, NoH the cosine between normal and facet, VoH between view and facet." data-hash="faffd98d"></pre>
     <p>The weight of a rough metal's reflection, with the compensation of section 2 (<code>lb.cm</code>, 1 +
       F<sub>0</sub>(1/<var>E</var> − 1), from the table:
-      <cite data-src="lib/pathtracer/core/materials_pbr.js" data-sym="lb.cm = VEC3(1.0) + m.baseColor * (1.0 / max(e1, 1e-3) - 1.0);"></cite>):</p>
-    <pre data-src="lib/pathtracer/core/materials_pbr.js" data-sym="let h = mfSampleVNDF(lb.o, lb.a, rnd.yz);" data-nth="1" data-to="s.w = lb.cm * fresnelSchlick3(dot(lb.o, h), lb.base) * mfG2(lb.o, i, lb.a) / mfG1(lb.o, lb.a);"
-         data-why="reflect(−o, h) mirrors the view about the facet. A reflection below the surface (i.z ≤ 0) keeps a weight of 0 and ends the path: the light section 1 shows lost." data-hash="1080984d"></pre>
+      <cite data-src="lib/pathtracer/core/materials_pbr.js" data-sym="lb.cm = VEC3(1.0) + f0 * (1.0 / max(e1, 1e-3) - 1.0);"></cite>).
+      <code>metalFresnel</code> is Schlick's Fresnel with F<sub>0</sub> the metal's colour; under a thin-film coating
+      (a dichroic, say) it is the coating's reflectance and the metal's together, and F<sub>0</sub> is what the two
+      reflect head-on:</p>
+    <pre data-src="lib/pathtracer/core/materials_pbr.js" data-sym="let h = mfSampleVNDF(lb.o, lb.a, rnd.yz);" data-nth="1" data-to="s.w = lb.cm * metalFresnel(lb, dot(lb.o, h)) * mfG2(lb.o, i, lb.a) / mfG1(lb.o, lb.a);"
+         data-why="reflect(−o, h) mirrors the view about the facet. A reflection below the surface (i.z ≤ 0) keeps a weight of 0 and ends the path: the light section 1 shows lost." data-hash="ae683415"></pre>
     <p>And the table's grid, with why it is warped:</p>
     <pre data-src="lib/pathtracer/core/microfacet.js" data-sym="/* THE GRID IS WARPED, u.y = 1 - (1 - v)^2 with weight 2 (1 - v)." data-to="acc += 2.0 * (1.0 - v.y) * fr * mfG2(o, i3, a) / mfG1(o, a);"
          data-why="v runs over the 32 × 32 grid; u is the pick it becomes, crowded towards u.y = 1, the rim of the visible cap; the weight 2(1 − v) makes up for the crowding, so the average is unchanged and only the error falls. fr is the Fresnel: a dielectric's for the coat's table, 1 for the metal's (isE1). The table is built by a kernel, a program run on the graphics card once for every entry (chapter 21); MF_SQRT_SAMPLES, 32, is filled in when it is built." data-hash="e78d4c83"></pre>
