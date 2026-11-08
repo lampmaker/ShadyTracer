@@ -1652,7 +1652,7 @@ throws('another version is refused, not guessed at',
     throws('...nor its target, three numbers at once', () => M.setAnimated(a, 'view/camera/target', true), /not a value/)
     throws('...nor an exposure setting that is not one', () => M.setAnimated(a, 'view/exposure/iso', true), /not a value/)
     M.setAnimated(a, 'view/camera/pose', true)
-    ok('the whole camera as one value is (0.next: lib/pathtracer/params.js CAMERA POSE)', M.isAnimated(a, 'view/camera/pose'))
+    ok('the whole camera as one value is (0.84.0: lib/pathtracer/params.js CAMERA POSE)', M.isAnimated(a, 'view/camera/pose'))
     M.setAnimated(a, 'view/camera/pose', false)
     M.setAnimated(a, 'view/camera/azimuth', false)
     eq('unflagged', M.animatedPaths(a), ['view/exposure/exposureEV', 'scene/environment/uSunElevation'])

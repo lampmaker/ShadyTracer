@@ -114,7 +114,7 @@ function materials() {
     s += '\n## Reliefs\n\nA relief is a height on every object wearing the material, in real mm -- part of the shape, so it shows in the '
         + 'silhouette, and paid for at every march step near the object.\n\n'
     for (const R of Object.values(RELIEFS)) s += `### ${R.label}\n\n${firstComment(R.code)}\n\n`
-    // ...and the one made for a picture (materials.js pictureRelief, 0.next): not a preset, it names the picture it reads
+    // ...and the one made for a picture (materials.js pictureRelief, 0.84.0): not a preset, it names the picture it reads
     s += `### ${PICTURE_RELIEF_LABEL}\n\n${firstComment(pictureRelief('texture').code)}\n\n`
     return s
 }
@@ -192,7 +192,7 @@ function code() {
         + 'more than the true distance to the surface, or the march steps through it. `C = add_new(C, Nsphere(p, 0.5), MATERIAL);` '
         + 'is a sphere. `C = add_new(C, sd((p.z - 0.1 * sin(p.x * 10.0)) / 1.5), MATERIAL);` is a wavy floor: the height\'s slope '
         + 'reaches 1, so the field\'s reaches √2, and divided by 1.5 it is never more than the distance.\n'
-    /* A MATERIAL'S PICTURES (0.next; lib/pathtracer/core/images.js): not in the scene prelude -- a scene without a picture has
+    /* A MATERIAL'S PICTURES (0.84.0; lib/pathtracer/core/images.js): not in the scene prelude -- a scene without a picture has
        none of them -- so written here, not in CODE_HELP, whose every name the prelude must have */
     s += '\n## A material\'s image textures\n\nIn a material whose **image textures** box has any, each is in its code by its name, and three '
         + 'functions read them. The point is the hit\'s in the object\'s pattern frame, in mm.\n\n'

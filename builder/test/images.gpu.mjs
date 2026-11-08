@@ -1,5 +1,5 @@
 //======================================================================================================================
-// PICTURES ON SURFACES ON A REAL WEBGPU (0.next; builder/images.js, lib/pathtracer/core/images.js). Run:
+// PICTURES ON SURFACES ON A REAL WEBGPU (0.84.0; builder/images.js, lib/pathtracer/core/images.js). Run:
 //   node builder/test/images.gpu.mjs
 //
 // OPTIONAL, AND LOUD ABOUT IT, as the other GPU checks: the `webgpu` package (npm i -g webgpu) and a Vulkan driver
@@ -224,7 +224,7 @@ for (const data of [false, true]) for (const pattern of [null, PAT]) {
 }
 
 /*----------------------------------------------------------------------------------------------------------------------
-  A RELIEF FROM A PICTURE (0.next; materials.js pictureRelief, core/images.js heightAt): a 60 x 40 x 4 mm plaque in a
+  A RELIEF FROM A PICTURE (0.84.0; materials.js pictureRelief, core/images.js heightAt): a 60 x 40 x 4 mm plaque in a
   scene in mm, its top at z = 2, wearing a material whose picture -- random greys, sharp from texel to texel, so its slope
   is steep -- is its relief, 1.5 mm, the picture 3 x 2 mm, repeated across and mirrored up. Rays at 12 degrees above the plaque's plane,
   each in its own direction, marched through the scene's own SDF (codegen and as data): every one must stop where it

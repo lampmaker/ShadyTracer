@@ -19,7 +19,7 @@ for (const [k, fn] of Object.entries(want)) {
     const a = plainShapeOf(PRIMITIVES[k].code)
     ok(`the ${k}'s own code is one plain shape, ${fn}`, a?.fn === fn, JSON.stringify(a))
 }
-// Ndish: the reflector's own code before 0.next, kept by every scene saved with it (the examples among them)
+// Ndish: the reflector's own code before 0.84.0, kept by every scene saved with it (the examples among them)
 const older = ['Ndish']
 ok('every plain shape is a built-in\'s, or one a built-in was', [...PLAIN_SHAPES].every(f => Object.values(want).includes(f) || older.includes(f)) && PLAIN_SHAPES.size === Object.keys(want).length + older.length)
 ok('...the old reflector\'s code still one plain shape, Ndish', plainShapeOf('C = add_new(C, Ndish(p, focal, aperture, wall), MATERIAL);')?.fn === 'Ndish')

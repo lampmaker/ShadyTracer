@@ -1384,7 +1384,7 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
        holds 262 144, more than an analysis batch's rays, and a ray stops at the first detector it
        reaches, so no batch overflows it. ONLY THE ANALYSIS WRITES THEM: the live rays trace into the
        same buffer, and their 2 000 rays are a look, not a measurement. LIVE'S ROUNDS ADDED UP share the one
-       allowance -- and past it the map no longer stopped (0.next): the later batches' hits are binned into the map's
+       allowance -- and past it the map no longer stopped (0.84.0): the later batches' hits are binned into the map's
        cells as they come (OVER above), so the map goes on converging as the totals and the far field do. What reads
        the hits themselves -- the k nearest, the spectrum of a place, the hits' CSV, a script's map -- reads the list. */
     // a hit kept for the map is a JS object of a few hundred bytes: half a million is ~100 MB

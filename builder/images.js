@@ -1,5 +1,5 @@
 //======================================================================================================================
-// IMAGES -- a scene's pictures and a material's image slots (model version 29, 0.next; roadmap/TEXTURES.md T1). The
+// IMAGES -- a scene's pictures and a material's image slots (model version 29, 0.84.0; roadmap/TEXTURES.md T1). The
 // engine's half -- the lookup, the atlas, the slot's uniform -- is lib/pathtracer/core/images.js.
 //
 // THE PICTURE IS THE SCENE'S, KEPT BY ITS CONTENT: doc.images = { <key>: { name, type, width, height, data } }, the key
@@ -80,7 +80,7 @@ export function imagesProblems(images) {
         for (const d of ['width', 'height'])
             if (!(Number.isInteger(e[d]) && e[d] >= 1 && e[d] <= IMAGE_MAX_EDGE)) p.push(`images.${k}: ${d} must be a whole number from 1 to ${IMAGE_MAX_EDGE}`)
         if (typeof e.data !== 'string' || !/^[A-Za-z0-9+/]*={0,2}$/.test(e.data)) p.push(`images.${k}: data must be the image's bytes in base64`)
-        // a 16-bit grey PNG (0.next): read by this file's own decoder, not the browser's, which gives 8 bits
+        // a 16-bit grey PNG (0.84.0): read by this file's own decoder, not the browser's, which gives 8 bits
         if (e.bits !== undefined && !(e.bits === 16 && e.type === 'image/png')) p.push(`images.${k}: bits is 16 (a 16-bit grey PNG) or absent`)
         // its heights' bound (core/images.js heightStats): six numbers from 0 to 1 read as colour and as data
         if (e.heights !== undefined && !(isObj(e.heights) && ['colour', 'data'].every(c => Array.isArray(e.heights[c]) && e.heights[c].length === 6
@@ -161,7 +161,7 @@ export async function imageKey(bytes) {
 export async function entryFromBytes(bytes, { name = 'image', type, width, height }) {
     return { key: await imageKey(bytes), entry: { name: String(name), type, width, height, data: toBase64(bytes) } }
 }
-/* A 16-BIT GREY PNG (0.next; a height map, core/images.js A PICTURE AS A HEIGHT): the browser decodes every picture to 8
+/* A 16-BIT GREY PNG (0.84.0; a height map, core/images.js A PICTURE AS A HEIGHT): the browser decodes every picture to 8
    bits, which give a height 256 levels -- a terrace every amplitude / 255 under a raking light -- so a grey PNG of 16 bits
    is read here, from its specification: its chunks, its IDAT inflated (DecompressionStream's zlib, the browser's and
    node's own), its rows unfiltered. Grey (colour type 0) and grey with alpha (4), not interlaced; every other PNG is the

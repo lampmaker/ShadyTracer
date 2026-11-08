@@ -378,7 +378,7 @@ for (const f of scenes) {
     ok('a library item\'s unit follows; null stays null', d.libraryItem.unit === 'mm' && e.libraryItem.unit === null)
 }
 
-// ---- THE CAMERA AS ONE VALUE (0.next, lib/pathtracer/params.js CAMERA POSE): a key on `view/camera/pose` is ten numbers,
+// ---- THE CAMERA AS ONE VALUE (0.84.0, lib/pathtracer/params.js CAMERA POSE): a key on `view/camera/pose` is ten numbers,
 // eye xyz, target xyz, up xyz, field of view -- only the first six are lengths
 {
     const d = M.createDoc({ title: 'pose' })

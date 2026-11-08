@@ -58,7 +58,7 @@ export const FIELDS = {
        method: exact for an R that is the same at every wavelength, an approximation of the spectrum for an edge).
        ALL SIX ONLY IN THE SHADER WHILE coating IS ABOVE 0 (`only`, as the colour depth): a material without one
        compiles to the text it did, and putting one on is a compile (demo.js live); after that each is a uniform. The
-       defaults, once on: a dichroic that reflects red, above 600 nm, and passes the rest. On a metal (0.next) the
+       defaults, once on: a dichroic that reflects red, above 600 nm, and passes the rest. On a metal (0.84.0) the
        stack lies over the metal, which reflects what the coating passes (core/materials_pbr.js metalFresnel). */
     coating:            { type: 'u32', def: 0, gui: { options: { 'none': 0, 'entry faces (AR back)': 1, 'entry faces (bare back)': 2, 'every face': 3 } },
                           only: v => v > 0, onlyHelp: 'a compile to put on or take off a coating (from none); between the others it is live' },
@@ -438,7 +438,7 @@ export const RELIEFS = {
         ].join('\n'),
     },
 }
-/* A RELIEF FROM A PICTURE (0.next; lib/pathtracer/core/images.js heightAt, A PICTURE AS A HEIGHT): one of the material's
+/* A RELIEF FROM A PICTURE (0.84.0; lib/pathtracer/core/images.js heightAt, A PICTURE AS A HEIGHT): one of the material's
    pictures as a height -- white `amplitude` mm up, or with `raise` -1 engraved as far down, black at the surface. Not one
    of RELIEFS: it names a picture, and every preset there is compiled on materials that have none (check-shaders, the
    tests), where it would not compile. Made for the picture it reads, so its code is that picture's (pictureReliefOf). */
@@ -460,7 +460,7 @@ export const pictureRelief = name => ({
 })
 /* WHICH PICTURE A RELIEF READS, by its code WITHOUT ITS COMMENTS: the comment is words for the user, worded again since
    (picture became image texture in what users see), and a relief must not stop being one for that. Its local was
-   picture_height in the first files of 0.next's branch: read as the same relief. */
+   picture_height in the first files of 0.84.0's branch: read as the same relief. */
 const reliefCodeOnly = c => String(c ?? '').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '').replace(/picture_height/g, 'texture_height').replace(/\s+/g, ' ').trim()
 /** The picture a relief from a picture reads, by its code; null for any other relief. */
 export const pictureReliefOf = relief => {

@@ -1,5 +1,5 @@
 //======================================================================================================================
-// THE INSERT PANE UNDER A CODE BOX (0.next): builder/coderef.js shown where the code is written -- for a block of each
+// THE INSERT PANE UNDER A CODE BOX (0.84.0): builder/coderef.js shown where the code is written -- for a block of each
 // kind, what it can set (a material's every field, as the line that sets it, from the material's own values), what it
 // reads, recipes, the functions it reaches for, and what it cannot do. A click puts the line in the code at the caret;
 // a search finds a row by any word it shows. The user, 2026-11-07: "there is no explanation / tool to easily pick the

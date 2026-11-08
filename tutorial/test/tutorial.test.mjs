@@ -798,7 +798,7 @@ for (const [name, { mod }] of modules) {
     ok('ch.11: the flint fans blue 3.24 degrees more than red, BK7 0.71, none 0.00', fl('flint').includes('blue bent 3.24°') && fl('bk7').includes('blue bent 0.71°') && fl('none').includes('blue bent 0.00°'), fl('flint'))
     const d = X.throughPrism(SP.LAMBDA_D, 1.75, 28, 31)
     ok('ch.11: at a tilt of 31 degrees the flint\'s yellow ray leaves 31 degrees down: least deviation, symmetric', Math.abs(d.angle - 31) < 0.2, d.angle)
-    // the draw (lightspectra.js CAMERA_TABLE, 1 nm cells since 0.next): each channel's weight averages exactly 1; at most 3
+    // the draw (lightspectra.js CAMERA_TABLE, 1 nm cells since 0.84.0): each channel's weight averages exactly 1; at most 3
     const LSm = await import('../../lib/pathtracer/core/lightspectra.js'), CT = LSm.CAMERA_TABLE
     const exact = [0, 1, 2].map(c => X.PICK.reduce((a, p, k) => a + p * CT.col[3 * k + c], 0))
     const maxw = Math.max(...CT.col)

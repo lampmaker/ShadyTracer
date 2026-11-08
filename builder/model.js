@@ -164,7 +164,7 @@ export const FORMAT = 'raytracer-scene'
    with it (import/fillet.js). Nothing in a version 27 file changes; a builder of 27 refuses a file of 28 rather than
    load a fillet as a smooth blend. (Written as 27 while its branch was apart; dev took 27 for the special objects
    first, 2026-11-04.) */
-/* 29: IMAGES ON SURFACES (0.next; images.js, roadmap/TEXTURES.md T1): `images` on the scene, its pictures by key, and
+/* 29: IMAGES ON SURFACES (0.84.0; images.js, roadmap/TEXTURES.md T1): `images` on the scene, its pictures by key, and
    `images` on a material, its slots -- each a picture placed on the surface by a projection in its object's pattern
    frame, read as the material's colour (a surface's base colour, an emitter's glow) or by its code. Nothing in a
    version 28 file changes; a builder of 28 refuses a file of 29 rather than drop every picture on its first save. */
@@ -619,7 +619,7 @@ export const MATERIAL_SCOPE = ['m', 'p', 'n', 'C', 'p_local', 'R_local', 'S_loca
  *  would hide the function its code needs. */
 export const IMAGE_SCOPE = ['sample', 'mapped', 'sampleAt', 'heightAt']
 /** The names a slot of material `m` may not take: its parameters', those its code already has, and -- its pictures being
- *  in its relief's code too (codegen, 0.next) -- its relief's parameters and the names that code has. */
+ *  in its relief's code too (codegen, 0.84.0) -- its relief's parameters and the names that code has. */
 const slotTaken = m => [...customParams(m), ...MATERIAL_SCOPE, ...IMAGE_SCOPE, ...(m?.relief ? [...Object.keys(m.relief.params || {}), ...RELIEF_SCOPE, 'texture_height', 'picture_height'] : [])]
 
 /* A MATERIAL'S RELIEF (materials.js RELIEFS): { code, params, constants?, ranges?, lengths? } -- a height
@@ -644,7 +644,7 @@ function reliefProblems(m) {
     for (const [k, v] of Object.entries(R.params)) {
         if (!PARAM.test(k) || RESERVED_PARAMS.includes(k) || RELIEF_SCOPE.includes(k))
             p.push(`${at}: parameter name '${k}' not usable (a WGSL name, and not one of ${RELIEF_SCOPE.join(', ')})`)
-        // its code has the material's pictures by name (codegen, 0.next): a parameter by one of them would be declared twice
+        // its code has the material's pictures by name (codegen, 0.84.0): a parameter by one of them would be declared twice
         else if (slots.includes(k)) p.push(`${at}: parameter '${k}' is the name of one of the material's image textures`)
         else if (!['number', 'vector', 'colour'].includes(paramKind(v)) || !finiteValue(v))
             p.push(`${at}: parameter '${k}' must be a number, {x, y, z} or {r, g, b}`)
@@ -655,7 +655,7 @@ function reliefProblems(m) {
 }
 
 /** Give a material a relief from a preset (materials.js RELIEFS), or take it away (null). 'picture' is a relief from one
- *  of the material's pictures (materials.js pictureRelief, 0.next): `picture`, its name, or its first. */
+ *  of the material's pictures (materials.js pictureRelief, 0.84.0): `picture`, its name, or its first. */
 export function setRelief(doc, id, preset, { picture } = {}) {
     const mat = material(doc, id)
     if (!mat) throw new ModelError(`no material '${id}'`)
@@ -1769,7 +1769,7 @@ export function setLock(doc, id, which, on) {
    nothing of the shape. What a flag is worth in the shader is the bake's to say (animate.js liveUniformsOf). */
 const ANIMATE_PATH = /^scene\/([^/]+)\/(.+)$/
 /* THE VIEW'S VALUES a flag can name: the camera's numbers the registry has (lib/pathtracer/params.js settingsParams --
-   not its mode, a word, nor its target and position on their own) and every exposure setting. `pose` (0.next) is the
+   not its mode, a word, nor its target and position on their own) and every exposure setting. `pose` (0.84.0) is the
    whole camera as one value, its position, target, up and field of view (params.js CAMERA POSE). */
 const VIEW_FLAG = /^view\/(camera|exposure)\/([^/]+)$/
 const CAMERA_FLAGS = ['camtype', 'azimuth', 'elevation', 'distance', 'fov', 'dimensions', 'aperture', 'focus', 'pose']
@@ -2421,7 +2421,7 @@ export const environmentOf = doc => doc.environment
 
   No version change, as the environment's (above): a builder of 22 that predates it carries it along unread.
 
-  SAVED VIEWS (0.next; the user, 2026-11-07: "a way to store camera settings ... so i can move around a scene, change
+  SAVED VIEWS (0.84.0; the user, 2026-11-07: "a way to store camera settings ... so i can move around a scene, change
   things and move back to the camera view I want"): `doc.view.saved = [{ name, camera }]`, each camera as `view.camera`
   is, checked by VIEW_CAMERA. In the view, so outside the history as the view is (project.js OUTSIDE_HISTORY): saving,
   renaming or deleting one is no undo step -- an undo puts back the shape, never takes away a view kept since -- and a

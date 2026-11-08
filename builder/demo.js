@@ -35,7 +35,7 @@
 //   BUILDER.saveWorkspace()  every scene, which is current, and the renderer's own settings
 //                            (quality, sampling, size; each scene's camera and exposure are its own)
 //   BUILDER.views()   every scene's view { key: view } (model.js VIEW): what the browser's session keeps
-//   BUILDER.savedViews()  the scene shown's saved views [{ name, camera }] (model.js VIEW, 0.next); saveView(name?),
+//   BUILDER.savedViews()  the scene shown's saved views [{ name, camera }] (model.js VIEW, 0.84.0); saveView(name?),
 //                     goToView(name), updateView(name), renameView(from, to), removeView(name) each on it, and
 //                     BUILDER.onSavedViews(list), the host's, told the list whenever it or the scene shown changes
 //   BUILDER.timeline()   the scene shown's timeline, whole (model.js TIMELINE); keepTimeline(t) writes it,
@@ -111,7 +111,7 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
     let timelineKept = 0
     /* ...AND A SCRIPT KEPT (keepScript, model.js SCRIPT): the same, for the same reasons */
     let scriptKept = 0
-    /* ...AND A SAVED VIEW KEPT, renamed or taken away (model.js VIEW, 0.next): the same again -- a view saved is work,
+    /* ...AND A SAVED VIEW KEPT, renamed or taken away (model.js VIEW, 0.84.0): the same again -- a view saved is work,
        written within the second, but no undo step (it is the view's, outside the history) */
     let viewsKept = 0
 
@@ -248,7 +248,7 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
         /* ...AND ITS SAVED VIEWS: the Camera popover's list is the scene's the camera moves over */
         tellSavedViews()
     }
-    /* THE SAVED VIEWS (model.js VIEW, 0.next), of the scene the renderer SHOWS, as its view is (keepView): the camera
+    /* THE SAVED VIEWS (model.js VIEW, 0.84.0), of the scene the renderer SHOWS, as its view is (keepView): the camera
        saved is the one over its picture. While a unit change waits to be shown (unitPending) the renderer's numbers are
        k times the document's away, so a camera saved is converted on its way in and one gone to on its way out. */
     const shownDoc = () => shown != null ? P.scene(project, shown)?.doc ?? null : null

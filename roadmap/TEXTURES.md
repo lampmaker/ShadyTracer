@@ -1,6 +1,6 @@
 # Images on surfaces: a proposal
 
-**STATUS (2026-11-07).** **T4's relief from an image texture is built (0.next), not yet seen on hardware.** The user: *"build
+**STATUS (2026-11-07).** **T4's relief from an image texture is built (0.84.0), not yet seen on hardware.** The user: *"build
 the relief from picture"*. What it is, and what decided each part:
 - **A relief made for one image texture** (`materials.js pictureRelief`), not one of the presets. Its code is
   `h = amplitude * raise * heightAt(name, q).x` with its slope from the same call. The presets are each compiled on
@@ -26,7 +26,7 @@ the relief from picture"*. What it is, and what decided each part:
 - **Not known:** its speed (16 reads at every step near the surface, and the march's steps there grow with the bound),
   and how it looks. Both are the user's.
 
-**STATUS (2026-11-06, later).** **T1 is built (0.next), not yet seen on hardware.** The user: *"go with your proposals,
+**STATUS (2026-11-06, later).** **T1 is built (0.84.0), not yet seen on hardware.** The user: *"go with your proposals,
 build T1"*, after the four decisions below were put to them, so each is taken as proposed: a surface under the glow
 (way 1), image textures in the file, 4096 px and 8-bit, one image texture per material placed by the pattern frame. What was built
 differs from the proposal in these places, each for a reason found while building:

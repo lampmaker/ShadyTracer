@@ -1185,7 +1185,7 @@ ok('...and the visibility beside it follows: 3.912 x 4 m, 15.6 m', /^visibility 
     await p.evaluate(() => { CHECK.panel.show(null); CHECK.flagPanel.show(null) })
 }
 
-// A MATERIAL'S PICTURES (0.next; builder/images.js): + picture… reads a PNG through the browser's own decoder into the scene
+// A MATERIAL'S PICTURES (0.84.0; builder/images.js): + picture… reads a PNG through the browser's own decoder into the scene
 // and the material, a compile with an undo step; each setting of its placement live; its use a compile; a file that is no
 // picture said in the box; taken away again
 {
@@ -1260,7 +1260,7 @@ ok('...and the visibility beside it follows: 3.912 x 4 m, 15.6 m', /^visibility 
     await p.waitForTimeout(50)
     const said = await p.evaluate(() => [...document.querySelectorAll('#t .tp-lblv')].find(r => r.querySelector('.tp-lblv_l')?.textContent.trim() === 'not read')?.querySelector('textarea')?.value ?? null)
     ok('a text file chosen: said in the box, nothing added', /not a PNG, JPEG or WebP/.test(said ?? '') && await p.evaluate(() => CHECK.M.material(CHECK.doc, 'scr').images.length) === 1, said)
-    // A RELIEF FROM IT (0.next): offered in the relief box by the picture's name, its heights' bound worked out on import
+    // A RELIEF FROM IT (0.84.0): offered in the relief box by the picture's name, its heights' bound worked out on import
     // from the pixels Chromium decoded, a compile; the box says what such a relief is and is not
     ok('the picture\'s heights\' bound was worked out as it was read', await p.evaluate(() => { const e = Object.values(CHECK.doc.images)[0]; return e.heights?.colour?.length === 6 && e.heights.data[0] > 0 }))
     before = await state()
@@ -1291,7 +1291,7 @@ ok('...and the visibility beside it follows: 3.912 x 4 m, 15.6 m', /^visibility 
     await p.evaluate(() => CHECK.panel.show(null))
 }
 
-// THE INSERT PANE (builder/codehelper.js, 0.next): under a material's code box, every field as the line that sets it from
+// THE INSERT PANE (builder/codehelper.js, 0.84.0): under a material's code box, every field as the line that sets it from
 // the material's own values; a click puts the line in the code -- at its end, under the comments, when the box was never
 // clicked into -- as an edit, and the document has it; its search finds the coating's line; a relief's lists h and slope,
 // a node's its parameters; under each code box once.

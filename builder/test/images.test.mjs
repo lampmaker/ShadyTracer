@@ -1,6 +1,6 @@
 // node builder/test/images.test.mjs
 //
-// PICTURES ON SURFACES, THE BUILDER'S SIDE (model version 29, 0.next; builder/images.js): a scene's pictures and a
+// PICTURES ON SURFACES, THE BUILDER'S SIDE (model version 29, 0.84.0; builder/images.js): a scene's pictures and a
 // material's slots checked, made, changed and taken away; what changes the shader's text and what is live; a picture
 // kept once whoever uses it, in the file only while something does, outside every undo step and carried across a
 // restore; carried by an asset into another scene; a file of 28 read; codegen's text byte for byte without one, and with
@@ -200,7 +200,7 @@ const doc = () => {
     ok('toTree hands codegen those, the document\'s own entries (not copies)', M.toTree(d).images[a.key] === d.images[a.key])
 }
 
-// ---- A 16-BIT GREY PNG (0.next): read by builder/images.js's own decoder, every row filter, grey and grey with alpha
+// ---- A 16-BIT GREY PNG (0.84.0): read by builder/images.js's own decoder, every row filter, grey and grey with alpha
 {
     // a PNG written here from its specification, each row with the filter given (0 none, 1 sub, 2 up, 3 average, 4 Paeth)
     const crcT = new Uint32Array(256).map((_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; return c >>> 0 })
@@ -254,7 +254,7 @@ const doc = () => {
     ok('heights not six numbers refused', imagesProblems({ [a.key]: { ...a.entry, heights: { colour: [1], data: [1, 2, 3, 4, 5, 6] } } }).length === 1)
 }
 
-// ---- A RELIEF FROM A PICTURE (0.next; materials.js pictureRelief)
+// ---- A RELIEF FROM A PICTURE (0.84.0; materials.js pictureRelief)
 {
     const d = doc()
     M.addImage(d, a)

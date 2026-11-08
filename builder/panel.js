@@ -821,7 +821,7 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
             if (k === 'mode' || k === 'camtype') b.on('change', redraw)
             flagRow(b, `view/camera/${k}`)
         }
-        /* THE POSE (lib/pathtracer/params.js CAMERA POSE, 0.next): no field of its own -- it is the rows above, together
+        /* THE POSE (lib/pathtracer/params.js CAMERA POSE, 0.84.0): no field of its own -- it is the rows above, together
            -- but a value the Timeline can key, so a row for its flag */
         const pose = rowTip(f.addBinding({ pose: 'position, target, up, fov' }, 'pose', { readonly: true }), CAMERA_HELP.pose)
         flagRow(pose, 'view/camera/pose')
@@ -1632,7 +1632,7 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
         const rf = folder.addFolder({ title: 'relief' })
         const preset = M.reliefPresetOf(mat.relief)
         const OWN = '#own', PIC = '#picture:'
-        /* A RELIEF FROM A PICTURE (0.next; materials.js pictureRelief): one choice for each of the material's pictures */
+        /* A RELIEF FROM A PICTURE (0.84.0; materials.js pictureRelief): one choice for each of the material's pictures */
         const reads = M.pictureReliefOf(mat.relief)
         const options = { none: '', ...Object.fromEntries(Object.entries(M.RELIEFS).map(([k, r]) => [r.label, k])),
             ...Object.fromEntries((mat.images ?? []).map(x => [`${M.PICTURE_RELIEF_LABEL}: ${x.name}`, PIC + x.name])) }

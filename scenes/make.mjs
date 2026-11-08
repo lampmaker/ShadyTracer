@@ -366,7 +366,7 @@ function png(w, h, pixel) {
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) raw.set(pixel(x, y), y * (1 + 4 * w) + 1 + 4 * x)
     return new Uint8Array(Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', deflateSync(raw, { level: 9 })), chunk('IEND', Buffer.alloc(0))]))
 }
-/* A 16-BIT GREY PNG (0.next: a height map, builder/images.js decodePNG16): one sample a pixel, big-endian, filter none */
+/* A 16-BIT GREY PNG (0.84.0: a height map, builder/images.js decodePNG16): one sample a pixel, big-endian, filter none */
 function png16(w, h, height) {
     const crcT = new Uint32Array(256).map((_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; return c >>> 0 })
     const crc = b => { let c = 0xFFFFFFFF; for (const x of b) c = crcT[(c ^ x) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0 }
@@ -405,7 +405,7 @@ function testCard() {
     })
 }
 
-/* PICTURES (0.next; builder/images.js, roadmap/TEXTURES.md T1): one test card, shown four ways. A television's screen
+/* PICTURES (0.84.0; builder/images.js, roadmap/TEXTURES.md T1): one test card, shown four ways. A television's screen
    (400 x 225 mm, 16:9) GLOWS with it at 200 cd/m^2 -- its white at that, its black dark, the screen's dark glass showing
    there -- standing on the floor and facing the camera: the panel turned 90 degrees about x, so its own +z, along which
    a planar picture is laid, points at -y, and its +y up. The same card is a POSTER's colour on a board beside it, a
@@ -428,7 +428,7 @@ async function pictures() {
     const ball = own(doc, 'ball', 'plastic', { roughness: 0.35 })
     M.addImageSlot(doc, ball, card.key, { projection: 'triplanar', size: { x: 80, y: 45 }, wrapU: 'mirror', wrapV: 'mirror' })
     shape(doc, 'root', 'sphere', { label: 'ball', params: { radius: 45 }, at: [-20, -200, 45], material: ball })
-    /* AN EMBOSSED PLAQUE (0.next: a relief from a picture, materials.js pictureRelief): 150 x 100 x 8 mm of white plaster
+    /* AN EMBOSSED PLAQUE (0.84.0: a relief from a picture, materials.js pictureRelief): 150 x 100 x 8 mm of white plaster
        lying on the floor, its relief a 16-bit height map (plaqueHeights) 3 mm high -- shape, not colour: its picture is
        its code's alone (use none), so it is white, and its relief reads it. Seen at a low angle in front of the rest. */
     const heights = await entryFromBytes(plaqueHeights(), { name: 'plaque heights.png', type: 'image/png', width: 192, height: 128 })

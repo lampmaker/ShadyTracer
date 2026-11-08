@@ -1,6 +1,6 @@
 // node builder/test/viewlist.check.mjs
 //
-// THE CAMERA POPOVER'S SAVED VIEWS (builder/viewlist.js, 0.next) in headless Chromium, over a stand-in builder that keeps
+// THE CAMERA POPOVER'S SAVED VIEWS (builder/viewlist.js, 0.84.0) in headless Chromium, over a stand-in builder that keeps
 // the views with the real model (builder/model.js saveView ...) and a stand-in renderer whose camera is plain data --
 // the page's own popover needs WebGPU, which the container does not have. Save view, its name opened for typing and
 // kept; a click going to a view; the row lit while the camera is at it; a double-click renaming, Escape not; ↻ keeping

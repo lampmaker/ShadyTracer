@@ -138,7 +138,7 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
    join of its two supports, one half-space with no separators; the two sheets such half-spaces make possible (a
    fillet with the other side of its support: zero along the support; walls across a surface a fillet shares) and
    how the cover keeps them out; a freeform face fitted with the nearest regular surface, and the deviation shown
-   -> builder/joins.js, scene_api.js csgRound*, import/fillet.js, import/freeform.js. Planned for it too (0.next): a
+   -> builder/joins.js, scene_api.js csgRound*, import/fillet.js, import/freeform.js. Planned for it too (0.84.0): a
    convex solid as the intersection of half-spaces, exact inside by the largest plane distance -- the faceted
    reflector, flat facets with their corners on a paraboloid (the lifting map's lower hull, so convex while the count
    round it halves no finer than a ring's width: past that a coarse facet rose through a finer one), each facet a
@@ -199,8 +199,8 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
    optics/fresnel.js refract), the flint against BK7 at least deviation; n(lambda) through n_d and V_d with BK7's
    catalogue against it; the wavelength draw and its weights averaging exactly 1, drawn live; a dichroic coat's edge
    moving with the tilt and each channel's reflectance (edgeAt, edgeRGB); a light's photon drawing its wavelength from
-   its light's own spectrum, and why (a 450 nm LED's red rainbow, 0.next: lightspectra.js); the draw in 1 nm cells of the CIE's table
-   (0.next, 10 nm bins of the fit before: the rainbow's colour in steps), coatings kept at 10 nm and why; the shading kernel's dispersion block and
+   its light's own spectrum, and why (a 450 nm LED's red rainbow, 0.84.0: lightspectra.js); the draw in 1 nm cells of the CIE's table
+   (0.84.0, 10 nm bins of the fit before: the rainbow's colour in steps), coatings kept at 10 nm and why; the shading kernel's dispersion block and
    its off switch (the scene's optical features, 0.83.0: every material compiled without its Abbe number, the picture and the Optics page alike; a render setting, UB.dispersionOff, from 0.74.0 until then); the
    comments' stale bit count, softplus count, red's range and BK7 accuracy; the green reflections of 0.44.1 ->
    spectral.js, lightspectra.js, lightspectra_wgsl.js, materials_pbr.js. *Read:* wiki-dispersion, wiki-abbe, wiki-cauchy, pbr-spectra.
@@ -230,7 +230,7 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
     world, the bar behind a wall found by bounces), unbiased from the first sample; Crofton's random lines, crossings
     against perimeters and their cosine spread; the brightness code, linear against log (the comment's "2e-5 of a stop"
     was 4.8e-6 by its own constants; corrected in 0.67.3); emitConePdf, emitLineDensity; 2.3× a sample and 1.4× sooner (PLAN.md);
-    a glow that varies over its surface -- an image texture on a glowing material (0.next) -- evaluated where each ray lands, a
+    a glow that varies over its surface -- an image texture on a glowing material (0.84.0) -- evaluated where each ray lands, a
     black pixel no light at all (every test reads max3(emissive) > 0 at the point), and a floor under a glowing checker
     lit as by its mean (builder/test/images.gpu.mjs) → materials_pbr.js emitDeposit, tracebasics.js LUM_CODE, core/images.js. *Read:* wiki-crofton, pbr-lights, pbr-spheres.
 17. **The camera's lens** (draft): the thin lens from the side, its blur by lens.js lensImage against 2R |1/F − 1/D|;
@@ -316,7 +316,7 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
     of noise 4): every object at every step, culling boxes on every object, on the dear ones only, and the reliefs in
     their shell; why only at the root (a lens and a blend, one disc culled inside the join: a surface where there is
     none, a bridge gone); one relief divided everywhere or in its shell, with the modifier's 17.2 or the measured 11.2;
-    a relief from an image texture (0.next): its slope bound from its own pixels (exact on a ramp, 2.4 times the steepest on
+    a relief from an image texture (0.84.0): its slope bound from its own pixels (exact on a ramp, 2.4 times the steepest on
     random noise), what a loose bound costs in steps, and why a test of it must shoot rays sideways (straight down, the
     field is exact whatever the bound: builder/test/images.gpu.mjs); the step cache's balls, its own cell and the cells ahead, filled from the copy with boxes (the orange shell).
     -> scene_api.js (cullDist, cullMargin), codegen.js (the root's comment, `culled`, the CULL line), modifiers.js

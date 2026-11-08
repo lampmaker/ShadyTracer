@@ -1,6 +1,6 @@
 // node builder/test/coderef.test.mjs
 //
-// WHAT A CODE BLOCK CAN USE (builder/coderef.js, 0.next), held to the code it describes, no GPU: every field of the WGSL
+// WHAT A CODE BLOCK CAN USE (builder/coderef.js, 0.84.0), held to the code it describes, no GPU: every field of the WGSL
 // struct Material2 either a line the Insert pane offers or a reason it cannot be set, and nothing named that the struct
 // has not; every panel field (materials.js FIELDS) with its line; each line written from the material's own values, so
 // inserting it changes nothing; every function named the prelude's; and every recipe and line in a scene's shader as it
@@ -55,7 +55,7 @@ ok('...and with none in the panel, entry faces (1u)', MATERIAL_SETS.find(s => s.
         /m\.attenuationDistance = mm\(UB\.\w+\);/.test(w) && /m = coatMaterial\(m, UB\./.test(w))
 }
 
-// A SCATTER DISTANCE SET IN CODE compiles the walk inside, as the panel's does (codegen scene.scatter, 0.next): it did not,
+// A SCATTER DISTANCE SET IN CODE compiles the walk inside, as the panel's does (codegen scene.scatter, 0.84.0): it did not,
 // and the line the pane offers did nothing. A comment naming it does not; neither does a glowing material, which has none.
 {
     const scat = (code, type) => {

@@ -16,7 +16,7 @@ photon map, scattering inside materials, an Optics-view beam view -- has its own
 (2026-10-16). **Translucent and scattering materials** -- opal sheets, diffuser films, light guides, milky glass:
 the options in `DIFFUSERS.md` (2026-10-29), the first two built (below).
 
-## Image textures on surfaces — built 2026-11-06 (0.next), NOT yet seen
+## Image textures on surfaces — built 2026-11-06 (0.84.0), NOT yet seen
 
 The user (2026-11-06): "a texture that can act as an emitting surface as well ... alignment, positioning, repeating,
 mirror, scaling etc is the big question". Proposed in `TEXTURES.md` and its T1 built: a material's image textures, projected
@@ -563,7 +563,7 @@ code, a look each.
      covered: a cube beam splitter (an interface between two touching solids -- not checked whether a ray inside
      one stops at a face it shares with the other), polarising splitters (polarisation, below), a rough coating's
      single-scatter loss. Material2 is 96 bytes, the shade item 272: ~2.16 M rays in flight (2.24 M).
-     **On a metal (0.next), built, not yet seen:** until then the metal lobe never read the coating; now the stack lies
+     **On a metal (0.84.0), built, not yet seen:** until then the metal lobe never read the coating; now the stack lies
      over the metal, the bounces between them summed as intensities (`materials_pbr.js` `metalFresnel`), the metal's F
      its reflectance in air. Rows in `coating.gpu.mjs`.
   2. **Dispersion -- built (0.40.0), not yet seen.** An Abbe number on a material (ior as n_d; Cauchy through both);
@@ -571,7 +571,7 @@ code, a look each.
      channel weights (mean 1 per channel, at most 3), refracting with n(λ) from then on; the pick and Fresnel there the
      d line's, so reflections stay white. The wavelength rides in Ray.tag's upper 16 bits (the user's choice: the Ray
      stays 112). Bench `optics-dispersion` (a wedge's per-channel exit angles) and three furnace rows.
-     **A light's own spectrum at the prism (0.next; `core/lightspectra.js`), not yet seen on hardware.** The user, 2026-11-07:
+     **A light's own spectrum at the prism (0.84.0; `core/lightspectra.js`), not yet seen on hardware.** The user, 2026-11-07:
      a 450 nm LED (10 nm) threw red at the red end of its rainbow, and a red LED red in the violet -- the draw above
      spreads each channel over its own wavelengths, whatever the light emits. A photon of a light given by its spectrum
      (or a CCT on the locus) now carries it (Ray.pix PIX_LS, the tables in learn past the microfacet tables) and draws
@@ -579,7 +579,7 @@ code, a look each.
      30 degree prism leaves nothing where the old draw put red. Open: the camera's own paths still draw by the
      channels (a light seen through a prism, which only they reach through a pinhole); that needs a light's face to
      name its spectrum (codegen LIGHTS, scenedata.js) and a draw whose weights a spectrum can divide.
-     **The channels' draw at 1 nm (0.next).** Its weights measured: `optics-dispersion` PASS on the user's NVIDIA
+     **The channels' draw at 1 nm (0.84.0).** Its weights measured: `optics-dispersion` PASS on the user's NVIDIA
      Pascal (2026-11-07, af3cd7c), each channel's mean exit angle within 0.001 degrees of the 1 nm weights' (red
      -23.8867 against -23.8858, green -24.1774 against -24.1773, blue -24.8590 against -24.8593). The picture's rainbow
      without bands not yet seen. The user asked (2026-11-07) whether the spectral resolution could

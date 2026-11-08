@@ -6,7 +6,7 @@
 //   index  n(lambda) of two catalogue glasses and of yours, Cauchy through n_d and V_d, with the three Fraunhofer lines a
 //          catalogue gives them at, and BK7's catalogue n_F and n_C against the formula
 //   draw   how the renderer gives a ray a wavelength: lightspectra.js specDraw, a 1 nm cell by the channels' summed
-//          weights (CAMERA_TABLE; 10 nm bins until 0.next), and the weight each channel then carries -- which averages to
+//          weights (CAMERA_TABLE; 10 nm bins until 0.84.0), and the weight each channel then carries -- which averages to
 //          exactly 1, so the colours add back to white
 //   coat   a dichroic coating's reflectance over the wavelengths, its edge moving bluer as the light tilts (edgeAt), and
 //          what each of the ray's three channels reflects (edgeRGB): no wavelength drawn at all

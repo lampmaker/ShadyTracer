@@ -1251,7 +1251,7 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
         e.raw('    var slope = 0.0;')
         e.raw('    {')
         for (const a of aliasPrelude(m.id, params, null, consts, k => reliefName(m.id, k))) e.raw('    ' + a)
-        /* ...and the material's pictures by name (0.next), for heightAt (core/images.js A PICTURE AS A HEIGHT): a relief from
+        /* ...and the material's pictures by name (0.84.0), for heightAt (core/images.js A PICTURE AS A HEIGHT): a relief from
            a picture reads one (materials.js pictureRelief). Only for a material with pictures: every other relief is the
            text it was. */
         for (const sl of m.images ?? []) e.raw(`    let ${sl.name} = UB.${uniformName(m.id, slotKey(sl.name))};`)
@@ -2214,7 +2214,7 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
     /* ...and whether a material scatters inside (materials.js scatterDistance, 0.82.0): the march has the walk's code
        only then (core/haze.js THE MEDIUM'S WALK), so it is the scene's text, as the haze box's presence is (sceneTextOf).
        A surface's material with a scatter distance, as the shader is given it (`only`) -- OR ITS OWN CODE NAMING
-       m.scatterDistance (0.next): that was not seen here, and its rays walked nothing, while the code compiled clean and
+       m.scatterDistance (0.84.0): that was not seen here, and its rays walked nothing, while the code compiled clean and
        said nothing (the Insert pane, builder/coderef.js, offers the line). Read in its code without comments, as p_local
        is (readsLocal); a scene whose code does not name it keeps the text it had. */
     const scatter = (tree.materials || []).some(m => (FIELDS_OF[m.type ?? 'surface'] ?? FIELDS_OF.surface).includes('scatterDistance')

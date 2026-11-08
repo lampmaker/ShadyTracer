@@ -217,15 +217,15 @@
 // (For a while the haze box was the scene's too, and dusty-beam.json's texts moved with it; the user wanted the box
 // back, so they are base's again, its `roles` key aside.)
 //
-// ONE SCENE ADDED (0.next, scene format 29): scenes/pictures.json, the Pictures example (builder/images.js). Frozen with
+// ONE SCENE ADDED (0.84.0, scene format 29): scenes/pictures.json, the Pictures example (builder/images.js). Frozen with
 // expected.json compared key by key before and after: its entry added, and none of the 51 documents before it moved --
 // a scene with no picture compiles to the text it did -- cases.*.wgsl among them.
 //
-// AND AGAIN FOR IT (0.next, the same day): a relief from a picture -- heightAt in the lookup's text, a 16-bit picture's
+// AND AGAIN FOR IT (0.84.0, the same day): a relief from a picture -- heightAt in the lookup's text, a 16-bit picture's
 // read, a slot's height bound -- and an embossed plaque in the example. scenes/pictures.json alone moved, checked key by
 // key; no other document has a picture.
 //
-// AND ONCE MORE (0.next): "picture" became "image texture" in what users see -- the example's title, its textures' default
+// AND ONCE MORE (0.84.0): "picture" became "image texture" in what users see -- the example's title, its textures' default
 // name (texture), its relief's comment and local. scenes/pictures.json alone moved, checked key by key.
 //======================================================================================================================
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs'

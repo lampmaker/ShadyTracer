@@ -385,7 +385,7 @@ pdf, so light sampling and BSDF sampling can be weighted against each other hone
   Cauchy's through both. A ray refracted INTO a dispersive medium draws a wavelength there and weighs its channels by
   it (mean 1 in each); every index it meets after is n(that wavelength). It rides in `Ray.tag`'s upper 16 bits
   (`TAG_LAMBDA_MASK`: a new flag stays below bit 17, and bit 16 is `TAG_LENS_X` since 0.83.0). The pick and Fresnel at that first refraction are the d line's,
-  so reflections stay white. The draw (`core/lightspectra.js`, 0.next) is from 1 nm cells of 380-780 nm: by the channels'
+  so reflections stay white. The draw (`core/lightspectra.js`, 0.84.0) is from 1 nm cells of 380-780 nm: by the channels'
   clipped Rec.709 functions from the CIE's table for every ray (10 nm bins of the analytic fit until then), and from its
   light's own spectrum, with each wavelength's exact colour, for a light's photon that carries one (`Ray.pix` `PIX_LS`).
   Both tables sit in the learn buffer past the microfacet tables.
@@ -708,7 +708,7 @@ reference, probe-photon irradiance 0.99 (±1.5% run to run). On hardware: the `e
 
 ### An image texture on a surface
 
-A material can read an image texture where a ray hits it (0.next; `core/images.js`, the builder's `builder/images.js`). What
+A material can read an image texture where a ray hits it (0.84.0; `core/images.js`, the builder's `builder/images.js`). What
 the engine gives a scene for it:
 - **`IMAGES_WGSL`**: the lookup, in the scene's text when it has an image texture. A slot is one `mat4x4<f32>` uniform (its
   rectangle in the atlas, its size and offset in mm, its turn, projection and flags). The point is projected in the

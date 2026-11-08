@@ -1,5 +1,5 @@
 //======================================================================================================================
-// SAVED VIEWS -- the Camera popover's list of the scene's saved cameras (0.next; the user, 2026-11-07: "I would like a
+// SAVED VIEWS -- the Camera popover's list of the scene's saved cameras (0.84.0; the user, 2026-11-07: "I would like a
 // way to store camera settings ... so i can move around a scene, change things and move back to the camera view I
 // want").
 //

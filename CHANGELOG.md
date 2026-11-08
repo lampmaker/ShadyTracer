@@ -16,6 +16,316 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.84.0 — 2026-11-08
+
+**A coating on a metal now does something.** Before this, a metal's reflection never read the material's coating, so a
+dichroic, a beam splitter or an anti-reflective layer on a material with metallic 1 changed nothing. A material that
+was part metal had the coating only on its non-metal share. Now the stack lies over the metal. The coating reflects
+its R, and what it passes reaches the metal, which reflects its own share back out through the coating. Every bounce
+between the two is added as an intensity, which comes to 1 - (1 - R)(1 - F) / (1 - R F), with F the metal's Schlick
+Fresnel (`core/materials_pbr.js` `metalFresnel`). The result is never less than the coating or the metal alone. A white
+metal stays white, an AR layer leaves a metal as it was, and a full mirror coating makes a mirror. Turquin's energy
+compensation takes its F0 from the same sum at normal incidence. An uncoated metal is the same code as before, bit for
+bit. The light sampling, the photons, the photon map and the Optics trace (colour and by wavelength) all build the same
+lobes, so they all see the change. Two approximations, both stated in the code: as on glass, R is the coating's at the
+view's angle for every facet; and the metal's F is its reflectance in air, while a real metal under a dielectric layer
+reflects somewhat less. `coating.gpu.mjs` gains eleven rows on Dawn. Smooth metals under a dichroic, a beam splitter,
+an AR layer and every face are held to the bounces summed term by term. Rough metals, coated and not, are checked to be
+sampled as they are evaluated. With the old metal lobe put back, the six rows that should change fail. The help's
+Coatings section, the coating field's help and the panel's tooltip say what a coating does on a metal. The tutorial's
+microfacets chapter cites the changed lines.
+
+**What to look at:** a sphere with metallic 1, roughness about 0.05 and a dark grey colour (0.2 to 0.3), with the
+coating "dichroic: reflects red". It should reflect its surroundings red-tinted: red near full, green and blue at the
+grey metal's level, and toward orange or yellow near the rim, where the edge moves. Next, the same with a white or
+silver colour: it should look almost unchanged (that is the physics: a bright metal already reflects what the coating
+passes). Then a gold colour with "dichroic: reflects blue": gold with a blue sheen. An uncoated metal should look
+exactly as before. The speed of an uncoated metal should not change, since it runs the same code. A coated metal adds a
+few multiplies a reflection. This is unmeasured.
+
+**Every code box has an Insert pane: what that code can set, read and call, one click a line in the code.** A material's
+code block named six of its material's twenty-one fields in its opening comments, and nowhere said how to write the rest:
+a coating's two reflectances are one packed number that `m.coatLow = ...` does not compile against, and a colour depth
+written in code is in the scene's unit where the panel's is in mm. Under every code box (an object's, a group's, a
+material's, its relief's, the scene's functions), **Insert** now lists, for that kind of block: what it can **set** --
+for a material every field, grouped (surface, glass, coating, light), each as the line that sets it written from the
+material's own values (`m.roughness = 0.35;`, `m = coatMaterial(m, 1u, 0.0, 1.0, 600.0, 20.0, 1.8);`,
+`m.attenuationDistance = mm(5.0);`), with the panel's explanation on hover; for a relief `h` and `slope`; what it can
+**read**, its own parameters by name among them; **recipes** that compile as they are (dichroics, a beam splitter, a
+graded filter whose edge moves across the part, noise roughness, brushed and turned metal, colour by height; a relief's
+grooves, rings, knurling, noise bumps, dents and print layers, each with its slope worked out); the **functions** that
+kind of block reaches for, inserted with their arguments' names; and what **cannot be set** there, and why -- the surface
+normal above all, which a material cannot change (a relief changes the shape instead). A search box finds a row by any
+word it shows. A click puts the line at the caret, or at the end of a box never clicked into, as typing does: one undo
+step, checked after the pause. A new material's opening comments are rewritten to say the syntax plainly and point to
+it. Help › Reference › Functions for code gains the same tables, *What a material's code sets* and *What a relief's
+code sets* (builder/coderef.js, one text for both). check-shaders compiles every line and recipe the pane offers in every
+kernel, so a recipe that does not compile fails it.
+
+**A scatter distance set in a material's code now scatters.** The walk inside a material is compiled into the march only
+for a scene that needs it, and that was decided from the panel alone: a material whose code set `m.scatterDistance`
+compiled clean and its rays walked nothing. Code naming it now compiles the walk in, as a panel value does; a scene whose
+code does not name it is the text it was.
+
+**What to look at:** open a material's *material code* box and its **Insert** pane: the lines carry the material's
+values; click *Set · Coating*'s first row, Apply, and the material is a dichroic reflecting red; try a recipe under
+*Recipes*. Choose a relief and open the relief code's Insert: *Knurled* should look knurled on an object wearing it. A
+glass material with `m.transmission = 1.0; m.scatterDistance = mm(5.0);` in its code (and none in the panel) should now
+render milky where before it rendered clear.
+
+**A solid paraboloid, and a faceted parabolic reflector.** The **reflector** preset gains a live `solid` switch
+(`Nparabolic`). At 0 it is the mirror with its wall, as before. At 1 it is the filled paraboloid, capped flat at the
+rim (`Nparaboloid`): glass for a TIR reflector, or a tool to subtract from another shape for a parabolic cavity. A
+new **faceted reflector** preset (+ › Optics, `NfacetedReflector`) is made of flat facets whose corners lie on the
+paraboloid: `rings` rings of equal width, `facets` facets round the rim, and going inward the count halves wherever a
+facet would be narrower than `minWidth`, so the centre has fewer facets than the rim. Where the count halves, each
+coarse sector is closed with three triangles, so no gaps open. `facets` 0 makes it round, faceted along the radius
+only. `rings` 0 makes it smooth along the radius, faceted round the axis only. Both 0 make it the smooth reflector.
+It has the same `solid` and `wall` as the reflector, and every number is live, with no compile.
+
+Each facet is a line in its sector's (u, z) half-plane: an extrusion turned round the axis and intersected. With the
+corners on a paraboloid, the facets are the corners' lower convex hull, so the distance is the largest of the facets'
+plane distances. It is exact inside (for glass, and for a cut) and a bound outside. It stays convex only while
+`minWidth` is at most one ring's width: past that a coarse facet's plane rose through a finer ring (15 of 108 layouts
+at 1.5 ring widths, 2026-11-07), so `minWidth` is held there. `shapes.test.mjs` holds every mode to the facets' mesh
+by brute force, and checks convexity over 352 layouts. `reflector.gpu.mjs` runs the WGSL against its JS twin on Dawn.
+Old scenes keep their reflectors' `Ndish` code unchanged.
+
+**What to look at:**
+- + › Optics › **faceted reflector** with a mirror material. As it starts there are 6 facets round the centre ring,
+  then 12, then 24 out to the rim, with triangles where the count doubles. `facets`, `rings` and `minWidth` should move
+  it live.
+- `solid` 1 with a glass: a filled paraboloid, flat across the rim. Put it in a group with a box and switch its join
+  to − : the box gets a parabolic cavity, faceted or smooth.
+- In the Optics page, the faceted reflector's far field beside the smooth one's (the Parabolic reflector example
+  with its reflector swapped).
+
+**A light given by its spectrum now throws its own rainbow through a prism.** You reported two wrong pictures. The
+450 nm LED (10 nm wide) threw a fan of blue from 380 to 510 nm through a prism, plus a band of red at the red end,
+where it emits nothing. A red LED put a band of red in the violet. The picture's renderer carries three colour
+channels, and a ray gets a wavelength only when it refracts into dispersive glass. That wavelength was drawn from
+the channels' own weights, whatever the light emits, so each channel's light was spread over every wavelength that
+channel covers. The 450 nm LED's colour at luminance 1 is (3.69, −4.60, 48.5). Its red part went where the red
+channel's weights are, 83 % of them at 560–640 nm. The red LED's red lost the 4.6 % of the red channel's weights
+that sit below 480 nm, in the violet. These figures come from the code's own weights, not from a measurement.
+
+Now a photon from a light given by its spectrum carries that light's spectrum with it. That means a peak, a table
+or a blackbody (a CCT on the locus). At the first dispersive glass the photon draws its wavelength from that
+spectrum, in 1 nm cells from 380 to 780 nm, and takes that wavelength's exact colour, a negative channel and all.
+So a narrow LED's light leaves the prism only at its own wavelengths, each in its own colour, and the rainbow still
+adds up to the light's colour. Anything that coloured the photon before the glass carries over channel by channel.
+The tables are in `core/lightspectra.js`. They sit in the renderer's learn buffer, past its microfacet tables (shade
+has no binding to spare), and the picture's photon source writes them there. A photon names its table in `Ray.pix`.
+
+**Not changed:**
+- A light seen *through* a prism by the camera is still each channel spread. A camera path draws its wavelength at
+  the glass before it knows which light it will reach. Only the camera's paths can reach a light behind a prism
+  through a pinhole, so the LED itself, seen through the glass, still looks smeared. The rainbow it throws on a wall
+  or floor comes from the photons, and is now right.
+- A light given by RGB, xy or a CCT off the locus has no spectrum, and draws as before.
+- Past 16 distinct spectra in a scene, the rest draw as before, and the console says how many.
+
+**What to look at:** your two scenes again: the 450 nm LED (peaks `450 10 1`) and the red LED through the prism.
+- The blue LED's rainbow on the wall should be a narrow blue band, with nothing at the red end.
+- The red LED's should be a red band, with nothing in the purple.
+- A white light given by a spectrum (a blackbody or a measured white LED) should still throw a full rainbow.
+  Its colours should now be each wavelength's own, rather than each channel's share of one.
+- The LED seen directly through the prism is unchanged (above).
+- `core/test/prism.gpu.mjs` renders this on a simulated card: a beam through a 30° prism onto a wall. Both of your
+  cases read nothing where they used to show red. The same lights given only by their colour, the old way, do show
+  it there, so the check can fail.
+
+**The detector map no longer stops converging under Live with Σ.** The map is made from a list of detector hits, and
+the Analysis page keeps at most 500 000 of them; Live's rounds added up stopped adding to the map once the list was
+full, while the totals and the far field went on (the user: "the 2d Map stops converging after a little while"). Past
+the list each batch's hits are now binned as they come into the map's own cells (`lib/pathtracer/optics/detmap.js`
+`mapSum`, the list's frame) and the map adds the sum in, every batch weighed alike -- exactly the map of all the hits,
+for no smoothing, Gaussian and Epanechnikov (`illum.test.mjs`). A single ▶ Run with more hits than the list holds gets
+the same. What reads the hits themselves stays at the list: the k-nearest smoothing (not linear in the hits), the
+spectrum of a place, the hits' CSV and a script's map. Changing the map's cells, smoothing, detector or zoom during
+Live starts the binned part over (the map is the list's alone until the next batch).
+
+**What to look at:** Analysis, a detector map, Live with Σ on and a ray count that fills the list in a few rounds
+(e.g. 1M a round on a scene that sends most rays to the detector): the map's note "about N hits per lit cell" should keep
+rising round after round instead of stopping, and the map's grain keep fading. The map's flux and E max should not jump
+when the list fills. With k nearest the map stays as it was at the list. Rounds past the list now read each batch's hits
+back to bin them, so a round there may take a little longer than before (not measured).
+
+**Image textures on surfaces: a material can show a PNG, JPEG or WebP, as its colour, as what a glowing screen shows, or to its
+code** (scene version 29; `roadmap/TEXTURES.md` T1). A material's Properties have an **image textures** box: **+ image texture…**
+reads one into the scene (scaled to 4096 pixels on its longer side if larger). The first image texture is the material's
+colour:
+- on a surface, its base colour;
+- on a glowing material, its glow. A white pixel glows at the luminance, a black one not at all, and there a screen's dark
+  glass shows: base colour, metallic, roughness, specular and specular tint, which a glowing material with an image texture now
+  has.
+
+Another image texture, or one set to *code only*, is read by the material's code: `sample(name)`, `mapped(name)`,
+`sampleAt(name, uv)`. The code box's **Insert** pane lists these three under *Read* for each of the material's image textures, and a
+relief's lists `heightAt(name, q)`.
+
+A shape has no texture coordinates, so the image texture is **projected** in the object's pattern frame: planar, box,
+triplanar, cylindrical or spherical. It moves and turns with the object and its pattern frame. On top of that it has a
+size in real mm, an offset, a turn, a wrap across and up (repeat, mirror, clamp, none), smooth or pixels, its faces, and
+colour or data. Every one of these is live; another image texture, its name in code, its use or taking it away is a compile.
+
+The image is kept in the scene by its bytes, so an exported scene or project, a library item, a copy pasted or dragged
+to another scene all carry it. A file keeps only the image textures its materials use. No undo step holds an image.
+
+On the GPU every image of a scene is in one atlas texture, read by four `textureLoad`s with wrap and mirror exact and
+each tap decoded from sRGB. Each kernel holding the scene is given its own texel read: the atlas where it reaches a
+material, a stub where it does not (`core/images.js` `sceneCompute`). A scene without an image texture compiles to the text it
+did. A new example, **Image textures**.
+
+Verified on Dawn over lavapipe, not on hardware:
+- the WGSL lookup is its JS twin's in every setting;
+- the scene's own material reads the twin's, codegen and as data;
+- a floor under a glowing checker reads its mean's light, 0.9905 ± 0.0078 with light sampling on and 0.9956 ± 0.0063
+  off, against 0.9943.
+
+**What to look at:** File › Examples › **Image textures**.
+- The test card's bars should read white, yellow, cyan, green, magenta, red, blue from the left, the right way up, on the
+  television, the poster and round the can, with the white ring at its centre. On the ball they are triplanar and
+  mirrored.
+- The television should glow, its black end of the ramp dark glass reflecting the room. The scene is dimly lit, so the
+  screen's light should show on the floor in front of it.
+- Then any material's **image textures** box: + image texture… with a photo of your own, and drag its width, offset, turn and wrap.
+  Each should move the image texture at once, with no compile. *pixels* should give sharp pixels close up.
+- Whether a large image texture costs speed is yours to say: an image texture costs four texel reads and one scene evaluation per hit
+  on the material (inferred, not measured).
+
+**A material's image texture can be its relief: a height in the shape itself, from a 16-bit height map too.** In the relief box,
+**from an image texture:** and the image texture's name.
+- **The height:** luminance times alpha, so white is `amplitude` mm up, black the surface, and *raise* -1 engraves.
+- **Placement:** the image texture's own size, offset, turn and wrap, read planar along the object's z on every face, whatever
+  the image texture's projection.
+- **Smooth:** a cubic B-spline of the pixels, sixteen reads at every march step near the surface.
+- **The slope bound:** worked out from the image's pixels when it is read, so the march never steps through.
+- **16 bits:** a 16-bit greyscale PNG keeps its 65 536 heights (read by a decoder of its own: the browser gives 8 bits);
+  any other image has 256.
+- **In code:** a relief's code has the material's image textures by name, with `heightAt(texture, q)` returning the height and
+  its bound.
+- **Its image texture:** renaming the image texture renames it in the relief, and taking the image texture away takes its relief too.
+
+Verified on Dawn over lavapipe, not on hardware: `heightAt` is its JS twin's to 1.1e-6 at 8 and 16 bits. Rays at 12° over
+a steep relief stop on it and never past where they first meet it, codegen and as data, raised and engraved. With the
+bound taken out, the same rays step through, so the test can fail.
+
+**What to look at:** File › Examples › **Image textures** has an embossed plaque in front, lying on the floor.
+- It should show a raised ring with a rounded shoulder, ripples inside it and a dome at the centre, 3 mm high in the
+  low studio light, with no texel grid in its shading and no holes.
+- Then put a height map of your own on a material (its **use** *code only* if it should not colour it) and choose the
+  relief from it.
+- Whether it costs speed near the surface is yours to say. Each step there is sixteen reads, and a steep image texture (small
+  and high) makes the march take more steps: inferred, not measured.
+
+**Saved camera views, and the whole camera as one Timeline value.** You can now keep the cameras you want to come
+back to. Move about the scene, change things, then return to a view with one click. For animation, one Timeline track
+can hold the whole camera.
+
+**Saved views.** They sit at the foot of the camera popover (⌖), under Pick focus.
+- **Save view** keeps the camera as it is now: its mode, perspective or orthographic, position and target, up, field
+  of view or width, aperture and focus. It does not keep the exposure, so going back to a view leaves the brightness
+  as it is.
+- A new view is named *View 1*, *View 2* and so on, with the name selected so you can type over it.
+- **Click a name** to put the camera back there at once. The row the camera is at now is lit (●).
+- **Double-click a name** to rename it. Each name can be used once in a scene.
+- **↻** saves the current camera under that name.
+- **✕** deletes the view. It asks for a second click, because no undo brings a view back.
+
+**Where they are kept.** The views belong to the scene: `doc.view.saved`, next to its camera (`builder/model.js` VIEW).
+- They are saved in the scene's file and go with a duplicate.
+- Like moving the camera, saving, renaming or deleting a view is not an undo step. An undo of an edit neither removes
+  a view nor brings one back.
+- A change of the scene's unit converts them, as it converts the camera (`builder/unitchange.js convertOutside`).
+- A scene with no views is byte for byte what it was, and there is no file version change. A file that does have
+  views is refused by a 0.83.0 builder ("view.saved: not part of a view").
+
+**The camera as one value.** The Timeline's + track offers *Camera › pose (position, target, up, fov)*
+(`view/camera/pose`, `lib/pathtracer/params.js` CAMERA POSE). It is ten numbers, so one key holds the whole camera.
+- lib/timeline moves each number on its own between keys. A linear or smooth track moves the camera and its target
+  in straight lines; a spline track follows a curve through the keys.
+- An orbit camera stays an orbit, turning about the target the key gives it. A free (fps) camera takes the position as
+  it is. Before this change a free camera could not be animated at all, because the azimuth, elevation and distance
+  tracks move only an orbit.
+- A unit change scales the eye and target of a pose key, never its up or field of view.
+- **◇** before *pose* in the scene's camera folder flags it as animated.
+
+**What to look at:**
+- **Saved views:** in the camera popover, Save view, orbit away, then click the view: the picture should be exactly as
+  it was. Save two views and check the lit row follows the camera. Reload the page and the views should still be
+  there. Switch to another scene and it should have its own list.
+- **The pose track:** in the Timeline, + track *Camera › pose*. Go to one view and key it, move the playhead, go to
+  another view and key again, then play. The camera should move from the first view to the second.
+
+**Checked here** (no picture seen):
+- `builder/test/views.test.mjs` (new): the model's verbs and their refusals; a file there and back; a unit change and
+  its undo; the real builder over a stand-in renderer.
+- `lib/pathtracer/test/campose.test.mjs` (new): the pose on the real `lib/camera.js`, and a track halfway between two
+  keys.
+- `builder/test/viewlist.check.mjs` (new): the popover's list in headless Chromium.
+- `unitchange.test.mjs`, `model.test.mjs` and `lib/shell/test/params.test.mjs` (extended).
+- `builder/test/panel.check.mjs`.
+
+**Sketch can show every surface as plain diffuse paint (Everything diffuse).** A new switch in the Render settings'
+Quality box, shown while Sketch is chosen (`sketchDiffuse`): each surface a camera path meets is shaded as a
+Lambertian of its material's own colour -- mirrors, metal, gloss and glass included, coatings and colour depth gone --
+so a reflector or a lens reads as its shape in Sketch's flat light, and not as what it reflects or what is behind it.
+Lamps, glowing surfaces and a light's faces keep their material. It is one swap of the material in the shade kernel
+(materials_pbr.js sketchFlat, called from tracebasics.js pathMiddle); the scene is not recompiled. It applies only to a
+Sketch the user chose (quality.js effective): a Standard picture traced as Sketch while moving keeps its glass, since
+the row is hidden there. Off by default, so nothing changes until it is ticked.
+
+**What to look at:** a scene with a mirror and a glass part (Office lighting, a lens example) in Sketch: tick
+**Everything diffuse** and the mirror and the glass turn matte in their own colour, a lamp still glows; untick it and
+they reflect and refract again. With Standard chosen and ⚡ set to Sketch, a move keeps the glass. Tests ›
+render-modes' three new rows at the end: the mirror and the clear glass floor with the switch must read the
+Lambertian sketch row (PASS), the mirror without it is reported beside them.
+
+**`optics/test/spectral.gpu.mjs` runs again.** It made its detector floor the way a scene did before model version 27,
+a material of type `detector`, which 0.83.0 moved to the object (an optics role), so the test threw `ModelError:
+material type must be one of surface, emitter` before any check ran. Its floor is now a detector by
+`setOpticsRole`, with the scene's `analysis` feature on (a role counts only then, as `toTree` reads it). Nothing in its
+checks changed: on Dawn with lavapipe all 13 pass, the dichroic plate reading 0.9673 +- 0.0006 against its integral
+0.9677.
+
+**What to look at:** nothing in the page; `node lib/pathtracer/optics/test/spectral.gpu.mjs` (webgpu + lavapipe)
+says 13 passed.
+
+**A ray's wavelength at dispersive glass is now drawn in 1 nm steps instead of 10 nm, so a rainbow seen through glass
+no longer changes colour in bands.** You asked whether the spectral resolution could go down to 1 nm, perhaps as a
+setting. Two things used 10 nm:
+
+- **The camera's wavelength draw.** A camera path, or the photon of a light given by RGB, xy or a CCT off the locus,
+  draws its wavelength at the first dispersive glass. It drew it from 40 bins of 10 nm, and took its bin's colour.
+  The wavelength itself was always anywhere in its bin, so the angle it bends by was never rounded. Only its colour
+  was. So the colour in a rainbow seen through glass changed in 10 nm steps. Near 480 nm, where the hue turns fastest,
+  two neighbouring bins were 0.136 apart in u′v′ (computed). The draw is now a table of 400 cells of 1 nm, built from
+  the CIE's own 1931 table rather than the analytic fit. The largest step between two cells is 0.014, at 478 nm
+  (computed). As before, each channel averages exactly 1 over the draw, and no weight is above 3. The fit's red end,
+  where its red response stops at 733 nm, is gone from the draw: in the CIE table red responds to 780 nm.
+- **A coating's reflectance per channel** stays at 10 nm. At 1 nm the same arithmetic moves the reflectance by at
+  most 0.009 (computed, for an edge 0.01 to 30 nm wide anywhere from 390 to 770 nm). It would also add up 400 terms
+  at every coated surface instead of 40.
+
+**There is no setting**, because this change should not make anything slower:
+- The new table sits in the learn buffer beside the lights' spectra (`core/lightspectra.js` `CAMERA_TABLE`), and
+  the draw finds a cell by binary search: 9 reads where the old bins took a loop of up to 40.
+- The draw runs once per ray, where it enters dispersive glass.
+- Both points are read in the code. Nobody has timed it.
+
+A second draw kept behind a switch would be code that nothing runs.
+
+The optics bench row `optics-dispersion` now expects red −23.886°, green −24.177°, blue −24.859°. The old
+10 nm bins gave −23.891°, −24.177°, −24.860°.
+
+**What to look at:**
+- A white light seen *through* a prism or a dispersive glass ball, the view where the camera's own draw shows: its
+  rainbow fringes should change colour smoothly, without bands.
+- The speed of a scene with dispersive glass should not change. If it does, the Render stats against the previous
+  build's would show it, and the 10 nm bins can come back as an option.
+- Tests > `optics-dispersion` expects the new angles above.
+
 ## 0.83.0 — 2026-11-06
 
 **A ray file (or any light with no face) is seen through the camera's lens.** A ray file is no geometry: no camera ray

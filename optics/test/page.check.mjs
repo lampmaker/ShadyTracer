@@ -12,7 +12,7 @@
 //   the ray count: a number times a multiplier, 500k typed setting both, more than the most refused, either way
 //   Live: round after round, the count each; ▶ Run disabled; Σ off at first, each round on its own; with Σ the rounds
 //     adding up, and a reset of the picture starting them over; past the map's allowance its hits binned, the map still
-//     filling in and each batch weighed alike (0.next); Σ off again; the rays traced between rounds and their own loop not started; switched off mid-round, the round let
+//     filling in and each batch weighed alike (0.84.0); Σ off again; the rays traced between rounds and their own loop not started; switched off mid-round, the round let
 //     go and the totals as the whole rounds left them; the rays switched on
 //     during a ▶ Run start when it ends; no round while a scene is built (the run bar says it waits); a round the
 //     scene was swapped under let go, Live going on; one that fails with the scene as it was stops it, and says why
@@ -633,7 +633,7 @@ ok('...and started when it ends', (await liveState()).living === true)
 await p.evaluate(() => { CHECK.O.batchMs = 0 })
 await raysButton()
 
-/* THE MAP PAST ITS ALLOWANCE (0.next; the user, 2026-11-07: "when doing analysis - map and live, cumulative, the 2d Map
+/* THE MAP PAST ITS ALLOWANCE (0.84.0; the user, 2026-11-07: "when doing analysis - map and live, cumulative, the 2d Map
    stops converging after a little while"). With room for 12 000 hits -- three of the stand-in's 5 000-hit batches --
    Live's rounds added up go on adding to the map: its hits per lit cell keep growing round after round, where they
    stopped at the allowance before, and every batch weighs alike, so its flux stays each batch's 0.16 lm */

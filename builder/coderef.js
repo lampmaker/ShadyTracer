@@ -1,5 +1,5 @@
 //======================================================================================================================
-// WHAT A CODE BLOCK CAN USE (0.next): every name a block of each kind can set, read and call, with recipes -- shown under
+// WHAT A CODE BLOCK CAN USE (0.84.0): every name a block of each kind can set, read and call, with recipes -- shown under
 // every code box by its Insert pane (builder/codehelper.js), one click a line in the code, and written as Help ›
 // Reference › Functions for code by help/reference.mjs. One text, two places, as the script's reference is
 // (tools/scriptref.js).
