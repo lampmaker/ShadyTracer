@@ -137,7 +137,7 @@ const viewEl = document.createElement('div')
 Object.assign(viewEl.style, { position: 'fixed', right: '0', bottom: '0', width: '520px', height: '360px', zIndex: '50', background: '#111' })
 document.body.appendChild(viewEl)
 const VIEW = installViewToolbar(viewEl, { PropertyTable, RT })
-installOpticsPage(pane, { RT, WG: null, BUILDER, tableIn, boxes, optics: O, view: VIEW, mixing: { el: mixEl, onVisible: fn => S.onVisible('tools.mixing', fn) }, charts: {
+installOpticsPage(pane, { RT, WG: null, BUILDER, tableIn, boxes, optics: O, view: VIEW, mapHits: () => window.CHECK?.mapHits, mixing: { el: mixEl, onVisible: fn => S.onVisible('tools.mixing', fn) }, charts: {
     set: CHARTS, el, onVisible: (id, fn) => S.onVisible(id, fn),
     // as app.html: registered (no View entry: Analysis › Open chart lists it), to the right of the chart it was made from
     add: (c, near) => {
