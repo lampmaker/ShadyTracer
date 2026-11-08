@@ -179,7 +179,9 @@
         (four 32-bit numbers, each good to about seven digits, not 256 steps, so it needs no sRGB: there are no steps to
         spend), and <em>developed</em> into 8-bit sRGB afterwards with its own exposure and tone curve, through the same function the display
         uses (<code>displayPixel</code>): the exposure can be chosen after a render that took minutes, and a picture
-        saved untouched cannot differ from the view (<code>lib/pathtracer/develop.js</code>).</p>
+        saved untouched cannot differ from the view (<code>lib/pathtracer/develop.js</code>). Each pixel holds the mean of
+        its samples so far and their count, so a copy taken while the render runs is a whole picture too: the Darkroom
+        shows one every few seconds, to be developed while the samples come in.</p>
     </div>
     <div data-claim="measured">
       <p><strong>The same picture, to the bit.</strong> A 480 × 270 render developed untouched equals the display's own

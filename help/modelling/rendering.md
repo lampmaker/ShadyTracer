@@ -126,10 +126,16 @@ goes straight back to the editable build.
 ## Saving a picture
 
 **File › Save picture…** opens the **Darkroom**, a tab beside the picture. Its boxes on the right: **Render** renders
-offscreen at its own size, up to 16 384 pixels on a side, with its own number of samples (you can stop it early);
+offscreen at its own size, up to 16 384 pixels on a side, with its own number of samples;
 **Develop** shows a histogram of what will be saved, and the boxes under it develop the picture; **Save** writes the
 file. The render is kept as light, so you can develop it and save it as often as you like. Each save is a file of its
 own: the name you give, with the date and time it was saved after it (`render-2026-10-19_14-03-22.png`).
+
+While it renders, the Darkroom shows the picture as far as it has got: after a second, then every **show every**
+seconds (0 shows it only at the end); **Show now** shows it at once. Every developing box works on it meanwhile, so
+the exposure and the look can be chosen while the samples come in. When it looks good enough, **Stop and keep** ends
+the render and keeps what it has, saying how many samples that is. To render further, raise **samples** while it
+runs. Saving waits for the end of the render.
 
 **Save** offers the developed picture -- **PNG** at 8 or 16 bits a channel, **JPEG**, **WebP** -- or the light itself:
 **OpenEXR**, **Radiance HDR** and **PFM**. These hold the render as the renderer made it, in cd/m² (or multiplied by your
