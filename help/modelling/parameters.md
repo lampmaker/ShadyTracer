@@ -18,6 +18,7 @@ the parameters header adds one. Each parameter can be:
 Every setting in the program, the renderer's included, also has a path, such as `scene/<id>/radius`. The
 [Parameters panel](show:parameters) lists them all, and **Ctrl K** finds one by name. Typing `exposure = 2` there
 sets it.
+A [script](scripts.md) reads and sets them by the same paths.
 
 ## Component parameters
 
@@ -60,7 +61,7 @@ cannot take, such as a CCT out of range, is reported and the light keeps its las
 Some things cannot be bound:
 - **A material's fields.** A material is shared by every object that wears it, so one object cannot change its
   colour alone. To give each copy of a component its own colour, give each its own material.
-- **A haze box or an export box.** Neither has a *from parameters* box.
+- **A haze box.** It has no *from parameters* box.
 - **A light's choices:** its distribution, *both faces* and *transparent*.
 
 [Parametric part](example:parametric-part.json) is a heatsink built this way: change `fins` in its Properties.
@@ -91,7 +92,14 @@ of 0, the copies turn about the group's axis as the circular array's do.
 
 Any object, group or material can be rewritten in **WGSL**, the graphics card's language. Open its *code* box in
 Properties. A probe compile runs half a second after you stop typing and shows any error **at your own line**.
-**Ctrl Enter** applies. **Functions you can call…** under the box opens [Functions for code](../reference/code.md).
+**Ctrl Enter** applies.
+
+**Insert**, under every code box, is the list of what that code can use: what it can **set** -- for a material every
+field, written as the line that sets it with the material's own value, so `m.roughness = 0.35;` is ready to edit --
+what it can **read**, its own parameters among them, **recipes** (a dichroic, a graded filter, brushed metal, grooves
+and knurling for a relief), the **functions** it reaches for, and what it **cannot be set** there and why. Click a row
+and it goes into the code at the caret; type in its search box to find one. **Functions you can call…** opens
+[Functions for code](../reference/code.md), where the same lists are written out.
 
 - **An object's code** adds a shape: `C = add_new(C, Nsphere(p, radius), MATERIAL);` where `p` is the point in the
   object's own frame and your parameters are names.

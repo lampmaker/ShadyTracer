@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Pick focus · check</title>
+<!-- PICK FOCUS, for lib/pathtracer/test/focuspick.check.mjs: the real view toolbar (viewtools.js) and its Camera
+     popover's real PropertyTable, the real camera (lib/camera.js) with its mouse controls on the canvas, and
+     focuspick.js installed as app.html installs it. The renderer is a stand-in: its pick answers the floor z = 0 along
+     genrays.js rayThrough, the pick's own ray, a little later (as the GPU's does), and nothing in the picture's right
+     tenth (the sky). The canvas's buffer is wider than its box, so the picture is letterboxed. -->
+<style>html, body { margin: 0; } #stage { position: relative; width: 600px; height: 400px; background: #111; }
+       #pic { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+       #elsewhere { width: 100px; height: 40px; }</style>
+</head>
+<body>
+<div id="stage"><canvas id="pic" width="300" height="100"></canvas></div>
+<div id="elsewhere"></div>
+<script type="module">
+import { PropertyTable } from '../../guistuff/propertytable/propertytable.js'
+import { CAMERA } from '../../camera.js'
+import { camBindings } from '../params.js'
+import { installViewToolbar } from '../viewtools.js'
+import { untitledTable } from '../sections.js'
+import { rayThrough } from '../core/genrays.js'
+import { installFocusPick } from '../focuspick.js'
+
+const stage = document.getElementById('stage'), canvas = document.getElementById('pic')
+const watchers = new Set(), picks = []
+const cam = CAMERA({ canvas, aspect: 3, fov: 40, up: [0, 0, 1], onChange: () => { for (const f of watchers) f() } })
+cam.set({ target: [0, 0, 0] }); cam.set({ azimuth: 30, elevation: 60, distance: 5, aperture: 0.1 })
+const state = { measureMode: 0, exposureEV: 9, autoExposure: 0, measureMin: 1, measureMax: 100, measureBands: 0 }
+const RT = {
+    cam, get: () => ({ ...state }), set: o => Object.assign(state, o),
+    watchView: fn => (watchers.add(fn), () => watchers.delete(fn)),
+    async pick(x, y) {
+        picks.push([x, y])
+        await new Promise(r => setTimeout(r, 15))
+        if (x > 0.8) return { hit: false }
+        const { o, d } = rayThrough(x, y, cam.getUniforms(), cam.get().camtype ?? 0)
+        if (!(d[2] < 0)) return { hit: false }
+        const t = -o[2] / d[2]
+        return { hit: true, tag: 1, distance: t, pos: [o[0] + d[0] * t, o[1] + d[1] * t, 0] }
+    },
+}
+const V = installViewToolbar(stage, { PropertyTable, RT })
+// filled as installUI fills it (index.js): a flat folder, the camera's bindings
+const folder = untitledTable(V.sections.Camera).addFolder({ title: 'Camera' })
+for (const [k, target, options] of camBindings(cam)) folder.addBinding(target, k, options)
+const F = installFocusPick({ canvas, RT, toolbar: V })
+// a listener on the window registered after it, as the measure tool's is in app.html: it must not hear the press
+let later = 0
+window.addEventListener('mousedown', () => later++, true)
+window.CHECK = { cam, V, F, picks, canvas, later: () => later,
+    // where the floor is under a picture point, and the depth of that point along the camera's axis by the camera's
+    // own pose (target - pos), not the uniforms focuspick reads
+    expect(x, y) {
+        const { o, d } = rayThrough(x, y, cam.getUniforms(), 0), t = -o[2] / d[2]
+        const P = [o[0] + d[0] * t, o[1] + d[1] * t, o[2] + d[2] * t], s = cam.get()
+        const a = [s.target[0] - s.pos[0], s.target[1] - s.pos[1], s.target[2] - s.pos[2]], L = Math.hypot(...a)
+        return ((P[0] - s.pos[0]) * a[0] + (P[1] - s.pos[1]) * a[1] + (P[2] - s.pos[2]) * a[2]) / L
+    } }
+</script>
+</body>
+</html>

@@ -28,7 +28,9 @@ The library's optical materials, with catalogue values:
 **abbe**, the Abbe number V_d, makes the index depend on the wavelength (a Cauchy fit through n_d and V_d). A ray
 refracted into such a material takes a wavelength and that wavelength's colour, so white light fans out by colour. 0
 is no dispersion. Lower is more. Turning it on compiles once.
-See [Dispersion in a prism](example:prism-dispersion.json).
+See [Dispersion in a prism](example:prism-dispersion.json). The scene can switch dispersion off as a whole, in its
+[optical features](../modelling/materials.md#optical-features): every glass then refracts at n_d, here and in the
+picture, and the Abbe number is not shown. The same goes for the colour depth and coatings.
 
 ## Absorption: colour depth
 
@@ -48,20 +50,41 @@ Presets: dichroic reflecting red, dichroic reflecting blue, a 50/50 beam splitte
 [Dichroic combiner](example:dichroic-combiner.json) joins a red and a blue beam with one;
 [Dichroics](example:dichroics.json) splits two white sheets of light with seven.
 
+A coating works on any surface, not only glass. On an **opaque** material (a plastic, a paint) the coating is the gloss and
+the base gets what it passes. On a **metal** the stack lies over the metal: the coating reflects R, and what it passes
+reaches the metal, which reflects its own share back out through the coating. The result is never less than either
+alone, so a coating on a bright metal changes little (silver is already a mirror), and on a dark one (titanium, dark
+chrome, metallic 1 with a grey colour) its band shows as colour: a red-reflecting dichroic on grey metal reflects red
+fully and the rest as the metal does. An anti-reflective layer on a metal changes nothing. This adds the two as
+intensities, with no interference between the stack and the metal, and takes the metal's reflectance as it is in air.
+
 A beam splitter's and an AR layer's reflectance is the same at every wavelength, so the trace is exact for them. A
 dichroic's edge is averaged over each colour channel's wavelengths, which approximates the spectrum
-([limits](limits.md)).
+([limits](limits.md)); traced [by wavelength](../modelling/materials.md#the-spectral-optics-trace), it is exact at each.
 
 ## Detectors
 
-A material of type **detector** (the material's *type* in Properties) **stops every ray that arrives at it** and
-records it: where, how much flux, from which direction, and its colour. The Analysis pane's map is made from these
-hits. In the picture, a detector looks as its fields say, so it can be a visible screen, a wall or a work plane.
+A detector is an **object**, not a material: select it, and in its **optics analysis** box in Properties set its
+**role** to **detector**. The box is there while the scene's **optics analysis** is on (the scene's row, *optical
+features*): off for a new scene, on for one that has detectors. A detector **stops every ray that arrives at it** and
+records it: where, how much flux, from which direction, and its colour. In the picture, it looks as its material says,
+so it can be a visible screen, a wall or a work plane.
 
-A detector stops rays whatever its fields say: it does not reflect or transmit them. A **rectangle** or **disc**
-shape with a detector material makes a flat screen of no thickness.
+Each object is a detector of its own, with its own map in the Analysis pane: two screens of one material can be one
+detector and one plain screen, or two detectors read apart. Making an object a detector is live: no compile.
+
+A detector stops rays whatever its material says: it does not reflect or transmit them. A **rectangle** or **disc**
+shape made a detector is a flat screen of no thickness.
 
 ## Ray limiters
 
-A material of type **ray limiter** does what a detector does in the trace, and is **not in the picture at all**.
-Use it to cut a beam where you want a cross-section, without anything showing in the render.
+An object whose **role** is **ray limiter** does what a detector does in the trace, and is **not in the picture at
+all**. Use it to cut a beam where you want a cross-section, without anything showing in the render. A plate with a
+hole cut from it (a group subtracting the hole) is an aperture: give the plate the role, and the hole's wall stops
+rays too. Making an object a limiter is a compile, since the picture leaves it out.
+
+## Optics analysis off
+
+With the scene's optics analysis off, no object is a detector or a limiter -- a role an object has is kept and does
+nothing -- and the view offers neither the rays drawn over the picture nor the lux and luminance views. The Optics page
+still runs, and still reads the far field of the rays that escape.

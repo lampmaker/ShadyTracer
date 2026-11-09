@@ -41,7 +41,9 @@
 // after a builtin. Worth a warning once there is a UI to warn in.
 //======================================================================================================================
 
-import { FIELDS as MATERIAL_FIELDS, FIELDS_OF, COAT_FIELDS, hasCoating, reliefMaterialId, reliefOwner } from './materials.js'
+import { FIELDS as MATERIAL_FIELDS, FIELDS_OF, COAT_FIELDS, hasCoating, reliefMaterialId, reliefOwner, fieldsOf } from './materials.js'
+import { hasSlots, slotOf, colourSlot, slotKey, attachImages } from './images.js'
+import { IMAGES_WGSL, IMAGE_RESOURCE, IMAGE_TYPE, packImages, slotMatrix } from '../lib/pathtracer/core/images.js'
 import { hasFace, lightOf, lightRGBObject, beamOf, arraysOf, copyCount, arrayedLightProblem } from './lights.js'
 import { copyPattern, codeOf, contentKey, ARRAY_WINDOW_WGSL } from './arrays.js'
 import { sceneExtent } from './bounds.js'
@@ -57,6 +59,8 @@ import { ANSWER_OF, ALONG_WGSL, ALONG_SUPPORT_WGSL } from '../lib/pathtracer/cor
 import { BODY_MARKER } from './validate.js'
 import { matrixOf } from './transform.js'
 import { hazeOf } from './hazebox.js'
+/* the most objects the optics trace tells apart (optics/kernels.js OPT_TAGS: a tag past it is clamped to its last) */
+import { OPT_TAGS as OPT_TAG_LIMIT } from '../lib/pathtracer/optics/kernels.js'
 
 /* COMPONENT ORDER IS DECLARED, NOT INHERITED FROM THE OBJECT LITERAL. The old builder took
    the TYPE from the sorted key list and the VALUE from Object.values() in insertion order, so
@@ -316,14 +320,8 @@ export const NODE_TYPES = {
         params: {},
         body: () => '',
     },
-    /** AN EXPORT BOX (exportbox.js): the part of the scene a print export takes. Not geometry --
-     *  emitted as a comment, its uniforms declared like anything left out (see `object` below). */
-    export: {
-        params: {},
-        body: () => '',
-    },
     /** A HAZE BOX (hazebox.js, version 22): dust in the air inside it -- the renderer's (lib/pathtracer/core/haze.js),
-     *  handed over as the scene's `haze`. Not geometry: emitted as a comment, as an export box is. */
+     *  handed over as the scene's `haze`. Not geometry: emitted as a comment, its uniforms declared like anything left out. */
     haze: {
         params: {},
         body: () => '',
@@ -343,6 +341,16 @@ export const NODE_TYPES = {
  *  "p_local" must not buy an SDF evaluation per hit. */
 export const codeOnly = s => String(s || '').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '')
 export const readsLocal = s => /\b(p_local|R_local|S_local)\b/.test(codeOnly(s))
+/** Does a MATERIAL read its point in its frame: its code says so, or it has a picture (images.js), which is laid out
+ *  there (core/images.js: the point in the pattern frame, in mm). Every question "does a material read p_local" asks
+ *  this, so a picture with no code pays the same one SDF evaluation per hit a pattern does, and is turned by the pattern
+ *  frame as a pattern is. */
+export const materialReadsLocal = m => readsLocal(m?.code) || hasSlots(m)
+/** THE SCENE'S ATLAS (core/images.js packImages): where each of its pictures sits in the one texture. The same for the
+ *  same pictures, so codegen's rectangles and scene.init's pixels agree. */
+export const atlasOf = tree => packImages(Object.entries(tree?.images ?? {}).map(([key, e]) => ({ key, width: e.width, height: e.height })))
+/** Whether a tree has a picture in any material: then every copy of its text holds the lookup, and the atlas is bound. */
+export const hasPictures = tree => (tree?.materials ?? []).some(hasSlots)
 /** Does a relief's code read the scene's point (materials.js, the relief header)? */
 export const readsWorld = s => /\bworld\b/.test(codeOnly(s))
 
@@ -368,7 +376,7 @@ export const patName = id => uniformName(id, 'pat')
  *  one does: a CSG group, or group code on its children's result (isAfter: a round, a shell). Anywhere else it is
  *  nothing, and the scene's text is what it was without it. The scene as data compiles a node it is in (scenedata.js). */
 export const patterned = (n, { wantLocal = false, relief = false } = {}) => !!n?.pattern
-    && (n.kind === 'object' ? (wantLocal || relief) && !!NODE_TYPES[n.type] && n.type !== 'light' && n.type !== 'export' && n.type !== 'haze'
+    && (n.kind === 'object' ? (wantLocal || relief) && !!NODE_TYPES[n.type] && n.type !== 'light' && n.type !== 'haze'
         : n.kind === 'group' && wantLocal && (isCsg(n) || isAfter(n, { straight: false })))
 /** An array's copy i (model.js copies, version 17): its transform, one mat4 uniform a copy (uniforms are not arrays) */
 export const copyName = (id, i) => uniformName(id, `cp${i}`)
@@ -395,9 +403,9 @@ export const joinBlendName = id => uniformName(id, 'jblend')
 /** How a node joins what is above it in its group (model.js OPS; absent = union). */
 export const joinOf = c => c?.join ?? 'union'
 /** The children of a group that are its SHAPES: a light (drawn after a CSG group's combine, outside it:
- *  emitScene collectLights) and an export box (draws nothing) are not, and are left out of the combine
- *  (children() below). */
-export const shapesOf = g => (g?.children || []).filter(c => c.type !== 'export' && c.type !== 'haze' && c.type !== 'light')
+ *  emitScene collectLights) and a haze box (draws nothing) are not, and are left out of the combine (children() below).
+ *  (An export box was not either, until it stopped being a node: 0.83.0.) */
+export const shapesOf = g => (g?.children || []).filter(c => c.type !== 'haze' && c.type !== 'light')
 
 /** Does this group combine its children into one shape (and so need the CSG path)? Not when every
  *  shape after the first joins by union with no blend of its own and the group has none: each child
@@ -437,6 +445,19 @@ export function combinedGroups(tree) {
 }
 
 const CSG_FN = { union: 'csgUnion', subtract: 'csgSubtract', intersect: 'csgIntersect' }
+/* A JOIN'S SHAPE (model version 28, joinShape): a round's or a chamfer's functions in place of the smooth blend's,
+   scene_api.js csgRound* / csgChamfer* (builder/joins.js is their JS twin) */
+const SHAPED_FN = {
+    round: { union: 'csgRoundUnion', subtract: 'csgRoundSubtract', intersect: 'csgRoundIntersect' },
+    chamfer: { union: 'csgChamferUnion', subtract: 'csgChamferSubtract', intersect: 'csgChamferIntersect' },
+}
+/** The WGSL function a child joins by: its op's, in its shape (smooth, absent, the csg* every join had). */
+export const joinFn = c => (SHAPED_FN[c?.joinShape] ?? CSG_FN)[joinOf(c)]
+/** How far off a child's own surface its join reads it, per unit of the blend: a smooth blend 5/4 (csgUnion: min -
+ *  h^2/4k, h nonzero within k); a round or a chamfer as far as the fillet's surface is from the edge's two faces,
+ *  r (1 / sin(theta / 2) - 1) for an edge of interior angle theta -- 0.41 r at a right angle, 3 r at 29 degrees. 3:
+ *  edges sharper than 29 degrees are not what fillets are made on (chosen, not measured). */
+export const READS_PER_BLEND = { smooth: 1.25, round: 3, chamfer: 3 }
 // when the child just combined makes the surface, and so gives the group its material (combine below)
 const MAT_WINS = { union: k => `C.s.w < ${k}.w`, subtract: k => `-C.s.w > ${k}.w`, intersect: k => `C.s.w > ${k}.w` }
 
@@ -621,7 +642,7 @@ export const GROUP_CODE_TEMPLATE = [
  * of its own. Its text goes in untouched and
  * flush left, in a block of its own, and is mapped back to the material's id like a node's.
  */
-function emitMaterials(e, materials, matIdOf, uniforms, wantLocal, lights = []) {
+function emitMaterials(e, materials, matIdOf, uniforms, wantLocal, lights = [], atlas = null, images = {}) {
     e.raw('const MATID_DEFAULT: u32 = 1u;')
     for (const m of materials) e.raw(`const matid_${m.id}: u32 = ${matIdOf.get(m.id)}u;`)
     /* the back of a one-sided light: black, emitting nothing (see LIGHTS in emitScene) -- and CLEAR,
@@ -662,7 +683,7 @@ function emitMaterials(e, materials, matIdOf, uniforms, wantLocal, lights = []) 
        the IOR is read. R_local and S_local are the same capture's (scene_api.js HIT_FRAME,
        HIT_SCALE): the object's rotation to the world, for a direction in its frame -- a grain --
        and its scale, for a pattern in real units: p_local * S_local is in scene units. */
-    const localIds = wantLocal ? materials.filter(m => readsLocal(m.code)).map(m => `idx == ${matIdOf.get(m.id)}u`) : []
+    const localIds = wantLocal ? materials.filter(materialReadsLocal).map(m => `idx == ${matIdOf.get(m.id)}u`) : []
     if (localIds.length) {
         e.raw('    var p_local = C.r.pos;')
         e.raw('    var R_local = mat3x3<f32>(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0);')
@@ -680,7 +701,7 @@ function emitMaterials(e, materials, matIdOf, uniforms, wantLocal, lights = []) 
         e.raw('            var m = makeDefaultMaterial();')
         /* ONLY WHAT ITS TYPE USES is assigned (materials.js FIELDS_OF): a surface emits nothing, an
            emitter is its emission alone. Every field is declared, whatever the type. */
-        const uses = new Set(FIELDS_OF[mat.type ?? 'surface'] ?? FIELDS_OF.surface)
+        const uses = new Set(fieldsOf(mat))
         for (const [k, f] of Object.entries(MATERIAL_FIELDS)) {
             const name = uniformName(mat.id, k)
             /* A FIELD ONLY THERE WHILE IN USE (materials.js `only`: the colour depth): neither declared nor assigned
@@ -693,7 +714,7 @@ function emitMaterials(e, materials, matIdOf, uniforms, wantLocal, lights = []) 
                values are declared above only then */
             if (k === 'coating' || f.coat) continue
             // the colour depth is in real mm, whatever the scene's unit: the material's side is in the scene's
-            if (k === 'attenuationDistance') { e.raw(`            m.${k} = mm(UB.${name});`); continue }
+            if (k === 'attenuationDistance' || k === 'scatterDistance') { e.raw(`            m.${k} = mm(UB.${name});`); continue }
             /* the colour is a hue, normalised to Y = 1 here, and the luminance carries the
                magnitude -- so the number on the panel IS the surface's cd/m^2 (materials.js) */
             if (k === 'emissive') e.raw(`            m.emissive = UB.${name} / max(dot(UB.${name}, LUMA_709), 1e-6) * UB.${uniformName(mat.id, 'emissiveLuminance')};`)
@@ -701,6 +722,25 @@ function emitMaterials(e, materials, matIdOf, uniforms, wantLocal, lights = []) 
         }
         if (uses.has('coating') && hasCoating(P))
             e.raw(`            m = coatMaterial(m, ${['coating', ...COAT_FIELDS].map(k => `UB.${uniformName(mat.id, k)}`).join(', ')});`)
+        /* ITS PICTURES (version 29; images.js, core/images.js): a slot a uniform, its picture's place in the atlas and its
+           settings, so every setting is live and only a new picture or slot is a compile. Where the picture is read
+           from: the point in the object's pattern frame, in mm, and the normal in it -- for sample() and mapped(), which
+           read them from IMG_Q and IMG_N. The slot that is the material's COLOUR is read here, before its code, so the
+           code can still change it: a surface's base colour, an emitter's glow -- the picture's white at the luminance
+           on the panel, a pixel half as bright half as much (not normalised as the plain colour is, or every pixel
+           would glow alike). Where it is transparent, the material's own value. */
+        const slots = (mat.images ?? []).map(slotOf)
+        for (const sl of slots) uniforms[uniformName(mat.id, slotKey(sl.name))] = { type: 'mat4x4<f32>', def: slotMatrix(sl, atlas?.rects.get(sl.image) ?? null, images?.[sl.image]) }
+        if (slots.length) {
+            e.raw('            IMG_Q = p_local * S_local / mm(1.0); IMG_N = transpose(R_local) * n;')
+            const cs = colourSlot(mat)
+            if (cs) {
+                const u = `UB.${uniformName(mat.id, slotKey(cs.name))}`
+                if ((mat.type ?? 'surface') === 'emitter')
+                    e.raw(`            { let ic = sample(${u}); m.emissive = mix(m.emissive, ic.rgb * UB.${uniformName(mat.id, 'emissiveLuminance')}, ic.a); }`)
+                else e.raw(`            { let ic = sample(${u}); m.baseColor = mix(m.baseColor, ic.rgb, ic.a); }`)
+            }
+        }
         /* ITS OWN PARAMETERS, the keys that are not fields: uniforms (or consts) under the same
            `<name>_<id>` scheme as a node's, put in scope for the code by the same aliases. Their
            uniforms are declared even with no code to read them, so dragging one is never a
@@ -713,6 +753,7 @@ function emitMaterials(e, materials, matIdOf, uniforms, wantLocal, lights = []) 
         if (codeOnly(code).trim()) {
             e.raw('            {')
             for (const a of aliasPrelude(mat.id, own, null, consts)) e.raw('            ' + a)
+            for (const sl of slots) e.raw(`            let ${sl.name} = UB.${uniformName(mat.id, slotKey(sl.name))};`)
             e.from(mat.id, code)
             e.raw('            }')
         }
@@ -933,7 +974,7 @@ export function generate(tree, opts = {}) {
     let dataRefused = null
     if (opts.data && !Array.isArray(tree)) {
         const pl = planOf(tree, { reliefMaterials: new Set((tree.materials || []).filter(m => m.relief).map(m => m.id)),
-                                  wantLocal: (tree.materials || []).some(m => readsLocal(m.code)) })
+                                  wantLocal: (tree.materials || []).some(materialReadsLocal) })
         const depth = pl.depth, deepArrays = pl.arrayDepth
         if (depth > STACK_MAX || deepArrays > STACK_MAX) {
             dataRefused = `${depth > STACK_MAX ? `CSG groups ${depth}` : `arrays and modifiers ${deepArrays}`} deep inside one another, and the scene as data has room for ${STACK_MAX}: compiled as before`
@@ -943,11 +984,25 @@ export function generate(tree, opts = {}) {
     }
     const scene = emitScene(tree, { ...opts, pick: false })
     const picked = emitScene(tree, { ...opts, pick: true })
-    /* THE OPTICS ROLES are the materials' (model version 10). A detector or a limiter stops the
-       optics trace's rays and records them; the kernels test the hit's MATERIAL id against
-       `detectors` (ids as getMaterial2 numbers them: the document's materials from 2). */
+    /* THE OPTICS ROLES ARE THE OBJECTS' (0.83.0, model version 27: model.js OPTICS_ROLES; a material's type from 10 to 26).
+       A detector or a limiter stops the optics trace's rays and records them; the kernels test the hit's TAG -- which
+       object it is, the optics copy's numbering (opticsTags), found before the test (optics/kernels.js) -- against
+       `detectorTags`. Values, not text: a role given or taken is the scene's data, no compile (SCENE_DATA_KEYS), a
+       limiter aside (below). `detectors`, material ids, stays for a scene written by hand (lib/pathtracer/tests.js'
+       benches); the builder's have none. toTree puts a role in the tree only while the scene's analysis is on. */
     const materials = Array.isArray(tree) ? [] : (tree.materials || [])
-    const detectors = materials.map((m, i) => m.type === 'detector' || m.type === 'limiter' ? i + 2 : 0).filter(Boolean)
+    const detectors = []
+    /* ...AND A CSG GROUP WHOSE BASE HAS ONE, every shape in it: the group's shape takes its base's material (combineShapes),
+       so a limiter plate with a hole cut from it -- an aperture -- stops a ray on the hole's wall too, whose tag is the
+       hole's, as it did when the role was the plate's material */
+    const roleIds = new Set()
+    const under = (n, out = []) => { if (n?.kind === 'object') out.push(n.id); for (const c of n?.children || []) under(c, out); return out }
+    const walkRoles = n => {
+        if (n?.kind === 'object' && n.opticsRole) roleIds.add(n.id)
+        if (n?.kind === 'group' && n.csg && shapesOf(n).filter(c => c.enabled !== false)[0]?.opticsRole) for (const id of under(n)) roleIds.add(id)
+        for (const c of n?.children || []) walkRoles(c)
+    }
+    if (!Array.isArray(tree)) walkRoles(tree)
     /* WHAT THE OPTICS TRACE PASSES THROUGH: transparent lights, front and back (MATID_CLEAR) -- an
        LED die in its silicone does not stop the light of another */
     const passes = scene.lights.filter(L => L.transparent).map(L => L.matId)
@@ -956,7 +1011,9 @@ export function generate(tree, opts = {}) {
        optics trace gets copies of its own that have them -- `opticsWgsl` for its march,
        `opticsPickWgsl` (with `opticsTags`) for its shade. Without a limiter those are the render
        and pick copies themselves, so a scene without one compiles nothing extra. */
-    const hasLimiter = materials.some(m => m.type === 'limiter')
+    let hasLimiter = false
+    { const go = n => { if (n?.kind === 'object' && n.opticsRole === 'limiter' && n.enabled !== false) hasLimiter = true; for (const c of n?.children || []) go(c) }
+      if (!Array.isArray(tree)) go(tree) }
     const optics = hasLimiter ? emitScene(tree, { ...opts, pick: false, optics: true }) : scene
     const opticsPicked = hasLimiter ? emitScene(tree, { ...opts, pick: true, optics: true }) : picked
     /* HOW BIG IT IS, in scene units: the renderer sizes its surface tolerance from this
@@ -967,8 +1024,16 @@ export function generate(tree, opts = {}) {
        The renderer carries a value across setScene by NAME, and ids repeat between documents (o3 is in
        every scene), so the scene shown before put its o3's transform on this one's: the material test's
        ground at the optics bench's z = -10 while its parameters said -2 (the user, 2026-09-28). */
-    const result = { ...out, carryUniforms: false, pickWgsl: picked.wgsl, tags: picked.tags, detectors, passes, extent,
-                     opticsWgsl: optics.wgsl, opticsPickWgsl: opticsPicked.wgsl, opticsTags: opticsPicked.tags }
+    /* ...the detectors by the tag the optics copy gives them (tag k is opticsTags[k - 1]). The kernel clamps a tag to
+       OPT_TAGS - 1 (255), so a role past the 255th tagged node would share its bit with every node after it: refused here,
+       said in the console and on the scene (opticsProblem), and left out */
+    const detectorTags = [], tooFar = []
+    opticsPicked.tags.forEach((id, k) => { if (roleIds.has(id)) (k + 1 < OPT_TAG_LIMIT ? detectorTags : tooFar).push(k + 1) })
+    const opticsProblem = tooFar.length ? `${tooFar.length} detector(s) or limiter(s) past the ${OPT_TAG_LIMIT - 1}th object the optics trace can tell apart: move them up the tree` : null
+    if (opticsProblem) console.warn(`[codegen] ${opticsProblem}`)
+    const result = { ...out, carryUniforms: false, pickWgsl: picked.wgsl, tags: picked.tags, detectors, detectorTags, passes, extent,
+                     opticsWgsl: optics.wgsl, opticsPickWgsl: opticsPicked.wgsl, opticsTags: opticsPicked.tags,
+                     ...(opticsProblem ? { opticsProblem } : {}) }
     /* THE SCENE AS DATA (opts.data): every copy reads the one buffer (the records are the same; the copies differ in
        SCN_PICK and SCN_OPTICS), declared as a scene resource and made by the renderer's setScene (scene.init).
        `dataOf(tree, boxes)` makes the records again for a tree of the same plan -- a value changed, a box measured --
@@ -987,12 +1052,21 @@ export function generate(tree, opts = {}) {
         Object.defineProperty(result, 'compiledIds', { enumerable: false, value: _data.compiledIds })
     }
     if (dataRefused) Object.defineProperty(result, 'dataRefused', { enumerable: false, value: dataRefused })
+    /* ITS PICTURES (version 29; core/images.js): the atlas, a scene resource every kernel holding the scene declares (each
+       given its own texel read: core/images.js withImages), made by setScene through scene.init -- composed with the scene
+       as data's when it has both. `imageRects`, where each picture sits, is what a slot's live value is written with
+       (demo.js liveValue): a slot naming a picture not in it is a compile. */
+    if (hasPictures(tree)) {
+        const atlas = atlasOf(tree)
+        result.resources = { ...(result.resources || {}), [IMAGE_RESOURCE]: IMAGE_TYPE }
+        attachImages(result, atlas, tree.images ?? {})
+    }
     /* WHICH ARRAYS' COPIES HAVE A WINDOW, AND HOW (arrays.js): id -> the pattern's code, as the render copy's text compiles
        it in -- a copies edit that makes another pattern of one needs that text again (demo.js nodeLive) */
     Object.defineProperty(result, 'arrayWindows', { enumerable: false, value: new Map([..._windows].map(([id, p]) => [id, codeOf(p)])) })
     /* MADE WITHOUT ITS BOUNDING BOXES (opts.cull false: a generation option the bench alone sets since 0.34.0, the
        renderer's setting `cull` before): no box test anywhere in its text, codegen's or the records' walk -- a mode of
-       its own to the page's mode watcher (index.html), never the one it wants */
+       its own to the page's mode watcher (app.html), never the one it wants */
     if (opts.cull === false) Object.defineProperty(result, 'unculled', { enumerable: false, value: true })
     return result
 }
@@ -1038,7 +1112,7 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
     /* LOCAL POINTS ONLY IF SOMETHING READS ONE. Tracking the current frame's point costs a
        store per frame entered, at every SDF evaluation; a scene whose materials never say
        p_local does not pay it (see localPoint in scene_api.js). */
-    const wantLocal = materials.some(m => readsLocal(m.code))
+    const wantLocal = materials.some(materialReadsLocal)
     const tags = []
     // the groups whose children combine into one shape: the CSG groups and their shapes that are plain groups
     const combined = combinedGroups(tree)
@@ -1060,9 +1134,9 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
        snippet's MATERIAL alias reads as what it is. */
     const matIdOf = new Map(materials.map((m, i) => [m.id, i + 2]))
     const matConst = id => id != null && matIdOf.has(id) ? `matid_${id}` : 'MATID_DEFAULT'
-    // a limiter's objects are only in the optics copies (see generate)
-    const limiters = new Set(materials.filter(m => m.type === 'limiter').map(m => m.id))
-    const hidden = n => !optics && n.kind === 'object' && limiters.has(n.material)
+    // a limiter's objects are only in the optics copies (see generate): the object's role (model.js OPTICS_ROLES)
+    const limiter = n => n.kind === 'object' && n.opticsRole === 'limiter'
+    const hidden = n => !optics && limiter(n)
     /* LIGHTS (lights.js): each rectangle or disc light has a material id of its own, after the
        document's materials and MATID_BLACK / CLEAR, since what it looks like depends on the light,
        not on a shared material. ONE UNDER GROUP CODE IS NOT DRAWN: code can move its children anywhere
@@ -1150,7 +1224,11 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
        Mapped to 'functions' (a reserved id) so an error in it is reported at its own lines. */
     const functions = String(tree.functions || '')
     if (codeOnly(functions).trim()) e.from('functions', functions)
-    emitMaterials(e, materials, matIdOf, uniforms, wantLocal, lights)
+    /* THE PICTURES' LOOKUP (core/images.js), once, before the materials that call it -- only in a scene with a picture:
+       every other compiles to the text it always did */
+    const pictures = materials.some(hasSlots)
+    if (pictures) e.raw(IMAGES_WGSL)
+    emitMaterials(e, materials, matIdOf, uniforms, wantLocal, lights, pictures ? atlasOf(tree) : null, tree.images ?? {})
     // the faces light sampling aims at: only with a light -- without, the stub (uniforms.schema.js sceneConstantsWGSL)
     if (lights.length && data) for (const l of lightFacesWGSL(lights, (L, k) => uniformName(L.id, k))) e.raw(l)
     else if (lights.length) emitLightFaces(e, lights, liveVisibility)
@@ -1174,6 +1252,10 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
         e.raw('    var slope = 0.0;')
         e.raw('    {')
         for (const a of aliasPrelude(m.id, params, null, consts, k => reliefName(m.id, k))) e.raw('    ' + a)
+        /* ...and the material's pictures by name (0.84.0), for heightAt (core/images.js A PICTURE AS A HEIGHT): a relief from
+           a picture reads one (materials.js pictureRelief). Only for a material with pictures: every other relief is the
+           text it was. */
+        for (const sl of m.images ?? []) e.raw(`    let ${sl.name} = UB.${uniformName(m.id, slotKey(sl.name))};`)
         e.from(reliefOwner(m.id), String(R.code || ''))
         e.raw('    }')
         e.raw(`    return vec2<f32>(clamp(h, -${A}, ${A}), max(slope, 0.0));`)
@@ -1463,11 +1545,10 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
            tinywebgpu refuses a name the pipeline does not declare. A limiter outside the optics
            copies, a ray file (no geometry), a light that cannot be drawn where it says. */
         const L = node.type === 'light' ? lightOfId.get(node.id) : null
-        if (hidden(node) || (node.type === 'light' && !L) || node.type === 'export' || node.type === 'haze') {
+        if (hidden(node) || (node.type === 'light' && !L) || node.type === 'haze') {
             if (node.transform) uniforms[xfName(node.id)] = { type: 'mat4x4<f32>', def: matrixOf(node.transform) }
             if (patterned(node, { wantLocal, relief: reliefOf.has(node.material) })) patDecl(node)
-            const why = node.type === 'export' ? 'an export box: draws nothing'
-                : node.type === 'haze' ? 'a haze box: draws nothing (the renderer\'s dust, scene.haze)'
+            const why = node.type === 'haze' ? 'a haze box: draws nothing (the renderer\'s dust, scene.haze)'
                 : node.type !== 'light' ? 'an optics limiter, not in the picture'
                 : warpedLights.get(node.id) ?? 'a ray file: no geometry'
             line(d, `// node ${node.id} (${node.type}): ${why}`)
@@ -1483,7 +1564,7 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
            two-sided, chosen by the side of the sheet the point is on (p is the node's own frame
            here), and a transparent one's back clear. A material per face, rather than a test in the
            shader's emitter code, because every place that meets a surface already asks the material.
-           ONLY ON THE FACE ITSELF, and the same back material beyond its edge (0.next). The march calls a point within
+           ONLY ON THE FACE ITSELF, and the same back material beyond its edge (0.79.0). The march calls a point within
            the surface tolerance a hit, so what a ray can meet of a sheet is the face grown by the tolerance all round:
            a rim, its normal turned, that glowed. Light sampling aims at the face alone (lightFaceArea) and the photons
            start on it alone, so a camera path finding the light by its glow saw a larger light than they did. With light
@@ -1600,10 +1681,10 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
     }
     /* A COMBINE IN PARTS, so an array's copies can share one (group(): open before its loop, the rest and the shapes
        once a copy, close after it). In this order for any other group, which is the order its text has always had.
-         AN EXPORT BOX IS NOT A CHILD OF THE SHAPE. It emits nothing but its uniforms, and as a CSG
-       child it would still be combined -- as an empty Hit, 1e7 away, which an intersect takes
-       as the result and so deletes the group's whole shape. Emitted for its uniforms, then left
-       out of the combine. NOR IS A LIGHT, which was combined the same way until 2026-09-30 (as the
+         A HAZE BOX IS NOT A CHILD OF THE SHAPE (nor was an export box, until 0.83.0). It emits nothing but its uniforms,
+       and as a CSG child it would still be combined -- as an empty Hit, 1e7 away, which an intersect takes as the
+       result and so deletes the group's whole shape. Emitted for its uniforms, then left out of the combine. NOR IS A
+       LIGHT, which was combined the same way until 2026-09-30 (as the
        base it emptied the group): it is drawn after the combine, outside it (collectLights,
        emitHoisted) -- the ones this group is the outermost CSG group of, from anywhere below it.
        One hoisted to an outer CSG group, or under group code (not drawn), is left where it is.
@@ -1641,7 +1722,7 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
                is the farther. Before 0.57.2 only a union switched, so a subtraction's carved walls kept the base's
                material (the die's pips in combining-shapes came out white). Hard at the middle of a blend. */
             line(dd, `${km} = select(${km}, C.m, ${MAT_WINS[joinOf(c)](k)});`)
-            line(dd, `${k} = ${CSG_FN[joinOf(c)]}(${k}, C.s, ${blendOf(c)});`)
+            line(dd, `${k} = ${joinFn(c)}(${k}, C.s, ${blendOf(c)});`)
         }
         shape.forEach((c, i) => {
             // live: the whole child skipped when hidden -- absent, not an empty shape (see emitScene)
@@ -1657,7 +1738,7 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
                    exactly the text it had (test/fixtures/csg-v10). IN AN ARRAY IT IS, at every copy after the first:
                    a union of the copies, at the group's blend -- a plain group's, 0 -- whatever join and blend the
                    base keeps dormant (isCsg reads neither). */
-                combine(d + 2, copies && i === 0 ? { ...c, join: 'union', joinBlend: undefined } : i === 0 && shape[1] ? { ...c, join: shape[1].join } : c)
+                combine(d + 2, copies && i === 0 ? { ...c, join: 'union', joinBlend: undefined, joinShape: undefined } : i === 0 && shape[1] ? { ...c, join: shape[1].join } : c)
                 line(d + 1, '}')
             } else if (i === 0) {
                 line(d + 1, `${k} = C.s; ${km} = C.m;`)
@@ -1759,17 +1840,20 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
        reads the running result up to its blend away and the next reads that. The base is read by every join. */
     const linkOf = (g, c) => {
         const shape = shapesOf(g), i = shape.indexOf(c)
-        return { g, reads: shape.slice(Math.max(i, 1)).map(x => `UB.${x.joinBlend != null ? joinBlendName(x.id) : blendName(g.id)}`) }
+        return { g, reads: shape.slice(Math.max(i, 1)).map(x => ({ u: `UB.${x.joinBlend != null ? joinBlendName(x.id) : blendName(g.id)}`,
+                                                                    per: READS_PER_BLEND[x.joinShape ?? 'smooth'] })) }
     }
     const reachOf = chain => {
-        // a blend read by several joins (the group's, the default) counts for each: n x, written once
+        /* a blend read by several joins (the group's, the default) counts for each: n x, written once. Each times what
+           its join's shape reads per unit (READS_PER_BLEND): smooth joins alone are written as they always were */
         const count = new Map()
-        for (const b of chain.flatMap(l => l.reads)) count.set(b, (count.get(b) || 0) + 1)
-        const terms = [...count].map(([b, n]) => n > 1 ? `${n}.0 * ${b}` : b)
+        for (const { u, per } of chain.flatMap(l => l.reads)) count.set(u, (count.get(u) || 0) + per / 1.25)
+        const num = x => Number.isInteger(x) ? `${x}.0` : `${+x.toPrecision(6)}`
+        const terms = [...count].map(([b, n]) => n !== 1 ? `${num(n)} * ${b}` : b)
         return !terms.length ? '0.0' : `1.25 * ${terms.length > 1 ? `(${terms.join(' + ')})` : terms[0]}`
     }
     const wrapped = n => n.kind === 'object' && reliefOf.has(n.material) && NODE_TYPES[n.type]
-        && !hidden(n) && n.type !== 'light' && n.type !== 'export' && n.type !== 'haze'
+        && !hidden(n) && n.type !== 'light' && n.type !== 'haze'
     const chains = (n, chain, coded) => {
         if (n.kind !== 'group') {
             if (chain.length && wrapped(n)) { reliefChain.set(n.id, chain); reliefTops.add(chain[0].g.id) }
@@ -1968,7 +2052,7 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
        THE BOUND AGAINST |d|: fold keeps the nearest surface by |d| (inside a glass, d is negative), and the
        march steps by |d|, so a skipped node limits the step whenever its bound is nearer than that. A bound
        is always above the margin, so it never passes the march's hit test and is never shaded. */
-    const drawsNothing = n => n.kind === 'object' && (!NODE_TYPES[n.type] || hidden(n) || n.type === 'export' || n.type === 'haze'
+    const drawsNothing = n => n.kind === 'object' && (!NODE_TYPES[n.type] || hidden(n) || n.type === 'haze'
         || (n.type === 'light' && !lightOfId.get(n.id)))
     /* ONLY THE DEAR ONES (cull 'dear': Tests > boxcost's fourth row in 0.33.8; THE BUILDER'S WAY since 0.34.0, the user,
        2026-10-07: "yes, make dear-only the default and remove the setting"). Measured on the user's Pascal (Tests >
@@ -2124,7 +2208,7 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
         if (plan.lights.map(L => L.id).join() !== lights.map(L => L.id).join())
             throw new Error(`[codegen] the data plan's lights (${plan.lights.map(L => L.id)}) are not codegen's (${lights.map(L => L.id)})`)
         const how = { materialIndex: mid => mid != null && matIdOf.has(mid) ? matIdOf.get(mid) : 1,
-                      lightMaterial: i => lights[i].matId, limiters, arrayWindow: arrayWindow !== false }
+                      lightMaterial: i => lights[i].matId, limiter, arrayWindow: arrayWindow !== false }
         const rec = recordsOf(tree, plan, how)
         if (!rec) throw new Error('[codegen] the data plan does not cover its own tree')
         /* ...READ FROM A UNIFORM COPY, where every ray walks them in step (scenedata.js RECORDS_IN_UNIFORM) -- in every
@@ -2134,7 +2218,7 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
         /* the arrays' window (arrays.js), wherever the walk culls and the scene has an array: which arrays are rows or rings
            is in their records, so a copy dragged off its row is a write, not a compile */
         if (plan.arrays > 0 && cull !== false && !pick && !optics && arrayWindow !== false) e.raw(ARRAY_WINDOW_WGSL)
-        for (const l of evaluatorWGSL({ blocks: plan.blocks.length, befores: plan.befores.length, afters: plan.afters.length, subs: plan.subs.length, stack: plan.stack, arrays: plan.arrays, wantLocal, keepK, straight, pick, optics, cull,
+        for (const l of evaluatorWGSL({ blocks: plan.blocks.length, befores: plan.befores.length, afters: plan.afters.length, subs: plan.subs.length, stack: plan.stack, arrays: plan.arrays, shaped: plan.shaped, wantLocal, keepK, straight, pick, optics, cull,
             count, recs: 'scnRecs', arrayWindow: arrayWindow !== false })) e.raw(l)
         // the nodes inside compiled subtrees: their values are those subtrees' uniforms, never records (demo.js liveValue)
         const compiledIds = new Set()
@@ -2176,6 +2260,14 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
 
     // the haze box in the world, if the scene has one (the tree is the root group here)
     const haze = hazeOf({ root: tree })
+    /* ...and whether a material scatters inside (materials.js scatterDistance, 0.82.0): the march has the walk's code
+       only then (core/haze.js THE MEDIUM'S WALK), so it is the scene's text, as the haze box's presence is (sceneTextOf).
+       A surface's material with a scatter distance, as the shader is given it (`only`) -- OR ITS OWN CODE NAMING
+       m.scatterDistance (0.84.0): that was not seen here, and its rays walked nothing, while the code compiled clean and
+       said nothing (the Insert pane, builder/coderef.js, offers the line). Read in its code without comments, as p_local
+       is (readsLocal); a scene whose code does not name it keeps the text it had. */
+    const scatter = (tree.materials || []).some(m => (FIELDS_OF[m.type ?? 'surface'] ?? FIELDS_OF.surface).includes('scatterDistance')
+                                                    && (m.params?.scatterDistance > 0 || /\bm\.scatterDistance\b/.test(codeOnly(m.code ?? ''))))
     /* `wgsl` for the scene contract is the materials onwards -- the same place the three
        hand-written scenes put there, since the kernels prepend the engine prelude themselves
        and would otherwise see it twice. `body` is the whole file, which is what the probe
@@ -2194,6 +2286,10 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
         /* ...and its haze box (hazebox.js hazeOf: in the world, in that unit; the renderer's core/haze.js), only when it
            has one: whether it does decides the kernels' text (sceneTextOf), so a scene without one says nothing */
         ...(haze ? { haze } : {}),
+        ...(scatter ? { scatter: true } : {}),
+        /* ...and whether the Optics page traces it by wavelength (0.83.0; model.js setFeatures `spectral`): the optics kernels'
+           text, never the picture's -- said only when it does, so every other scene's object is what it was */
+        ...(tree.features?.spectral ? { spectral: true } : {}),
         /* ...and whether a shape answers along the ray (ANSWERS ALONG THE RAY): the renderer's march and occlusion read
            its answers only then (wavefront.js along), so a scene without says nothing */
         ...(alongAny ? { along: true } : {}),

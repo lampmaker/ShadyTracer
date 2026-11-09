@@ -11,10 +11,113 @@ What the code of an object, a group, a material or the scene's functions can cal
 | an object's | at every march step | `p` the point in the node's own frame, `C` the Hit to fold into, `MATERIAL` its material |
 | a group's | at every march step, around its children | `p` (which it may change), `C`, `r` the ray, `children(C, p)`, `XF_S` this frame's units in world units, `SURFACE_ONLY`, `READ_REACH`, `DIVIDED_ABOVE` |
 | a material's | once where a ray hits | `m` the material to change, `p` and `n` the hit and its normal in the world, `C`, and `p_local`, `R_local`, `S_local` the hit in the object's frame, its turn and its scale |
-| a material's relief | at every march step near an object wearing it | `q` the point in mm in that object's frame, `world` the same in the scene's; it sets `h`, the height in mm outward, and `slope`, a bound on how steep `h` is |
+| a material's image textures | -- | `sample(name)`, `mapped(name)` and `sampleAt(name, uv)` in its code: [below](#a-materials-image-textures) |
+| a material's relief | at every march step near an object wearing it | `q` the point in mm in that object's frame, `world` the same in the scene's, the material's image textures by name for `heightAt`; it sets `h`, the height in mm outward, and `slope`, a bound on how steep `h` is |
 | the scene's functions | -- | its functions are called from any of the others |
 
-The comments a new block starts with say the same, with examples; **Functions you can call…** under a block opens this page.
+Under every code box, **Insert** lists what that block can set, read and call, with recipes -- a click puts one in the code at the caret -- and what it cannot do; **Functions you can call…** opens this page.
+
+## What a material's code sets
+
+A material's code changes `m`, which holds every setting of its panel when the code starts. Each field, as the line that sets it (here from a new material's values; the Insert pane writes the material's own):
+
+| field | the line | what it is |
+|---|---|---|
+| `baseColor` | `m.baseColor = VEC3(0.8, 0.8, 0.8);` | the colour: linear red, green, blue, each 0..1 (not sRGB) |
+| `metallic` | `m.metallic = 0.0;` | 0 a dielectric (paint, plastic, glass), 1 a metal |
+| `roughness` | `m.roughness = 0.5;` | 0 a mirror-sharp reflection .. 1 matte |
+| `specular` | `m.specular = 0.5;` | a dielectric's reflection: 0 none, 0.5 the physical one, 1 twice |
+| `specularTint` | `m.specularTint = 0.0;` | the reflection tinted by the colour: 0 white .. 1 |
+| `anisotropy` | `m.anisotropy = 0.0;` | -1..1: rougher along the grain than across it, or the other way (with m.tangent) |
+| `tangent` | `m.tangent = grainAlong(R_local, VEC3(1.0, 0.0, 0.0));` | the grain's direction in the world, for an anisotropy: code only, no panel row. grainAlong, grainAround, grainRadial make one; zero is no grain |
+| `transmission` | `m.transmission = 0.0;` | of what is not reflected, the share that passes through: 0 opaque, 1 glass |
+| `ior` | `m.ior = 1.0;` | the index of refraction: 1.5 glass, 1.333 water, 1.49 PMMA |
+| `haze` | `m.haze = 0.0;` | of what passes, the share diffused at the face: 0 clear, 1 opal |
+| `abbe` | `m.abbe = 0.0;` | the Abbe number (dispersion): 0 none, 64 BK7, 36 a flint |
+| `attenuationDistance` | `m.attenuationDistance = mm(0.0);` | the colour depth: the depth inside at which light is filtered to the colour. A length in the scene's unit here, so mm() it -- the panel's number is mm |
+| `scatterDistance` | `m.scatterDistance = mm(0.0);` | the mean free path inside (milky glass), mm() it. A line naming it compiles the walk inside into the scene, as a scatter distance in the panel does; it acts only with transmission |
+| `scatterAnisotropy` | `m.scatterAnisotropy = 0.0;` | each scattering inside: 0 every way, towards 0.95 forward |
+| the whole coating | `m = coatMaterial(m, 1u, 0.0, 1.0, 600.0, 20.0, 1.8);` | a coating, whole: where (1u the faces light enters by, the back anti-reflective; 2u the back bare; 3u every face), R below the edge, R above it, the edge (nm), its width (nm), the stack's index. The way to set R below and above: they are one packed word |
+| `coatEdge` | `m.coatEdge = 600.0;` | the edge, nm head-on -- where the material has a coating (m.coat above 0) |
+| `coatWidth` | `m.coatWidth = 20.0;` | the edge's width, nm from 10 % to 90 % |
+| `coatIndex` | `m.coatIndex = 1.8;` | the stack's effective index: how far the edge moves at an angle |
+| `coat` | `m.coat = 0u;` | where the coating is: 0u none -- this line takes the panel's off here -- 1u, 2u, 3u as in coatMaterial |
+| `emissive` | `m.emissive = VEC3(1.0, 1.0, 1.0) * 1000.0;` | what the surface emits, cd/m² per channel (linear RGB): the panel's colour times its luminance. A surface given one here glows where it is set, and every path that reaches it ends there |
+
+What it cannot set:
+
+- `n` -- The surface normal is read-only here: the renderer takes it from the shape -- its own, or by differences of the distance -- before the material is asked, and nothing a material sets changes it. No bump or normal map exists yet. A relief (below the code) changes the shape itself, and so the normal and the silhouette, at a cost at every march step near the object.
+- `coatR` -- A coating's two reflectances, packed into one word: set them with coatMaterial, read them with coatLowHigh(m).
+- `lightTraced` -- Whether a surface is a light's face: the builder's own, set for the faces of its lights.
+- `p, n, C, p_local` -- The hit's point, normal and Hit are inputs: a material cannot move where it was hit. Copy one into a `var` to work on it.
+- `the type` -- Surface or glowing is the panel's: it says which settings are put into m before the code runs. A surface's code may still set m.emissive.
+
+## What a relief's code sets
+
+A relief's code runs in the march, at every step near an object wearing its material. It reads `q` and `world` and its own parameters, and sets two numbers:
+
+- `h` -- the height there, mm, outward from the surface (negative is in); clamped to ±amplitude. For example `h = amplitude * sin(q.x * TAU / 2.0);`
+- `slope` -- a bound on how steep h is anywhere (mm per mm): every distance is divided by 1 + slope. Too small and the march steps through bumps; too large only slows it. For example `slope = amplitude * TAU / 2.0;`
+
+Its recipes, each with its slope worked out:
+
+**Grooves along the object's y, 2 mm apart**
+
+```
+let k = TAU / 2.0;                     // 2 mm a period
+h = amplitude * sin(q.x * k);
+slope = amplitude * k;                 // exact: |d/dx sin| is at most 1
+```
+
+**Rings about the object's z, 1.5 mm apart**
+
+```
+let k = TAU / 1.5;
+h = amplitude * sin(length(q.xy) * k);
+slope = amplitude * k;                 // a distance from the axis grows at most 1 per mm
+```
+
+**Knurled: two sets of grooves crossed at 90°, 1.5 mm apart**
+
+```
+let k = TAU / 1.5;
+let u = (q.x + q.y) * 0.70710678;
+let v = (q.x - q.y) * 0.70710678;
+h = amplitude * sin(u * k) * sin(v * k);
+slope = amplitude * k;                 // |grad| = amplitude k sqrt(cos² sin² + sin² cos²), at most amplitude k
+```
+
+**Bumps from noise, about 8 mm across (the noise relief)**
+
+```
+let peak = nzFbmLip(4u, 1.0, 0.5, 1.0);
+let nz = fbm3(q / 8.0, 1u, 4u, 2.0, 0.5);
+h = amplitude * nz.w / peak;
+slope = amplitude / 8.0 * nzFbmLip(4u, 2.0, 0.5, NZ_GRAD_LIP_MEASURED) / peak;
+```
+
+**Dents in cells 6 mm across (hammered)**
+
+```
+let w = worley3(q / 6.0, 7u);
+let dent = 1.0 - clamp(w.x, 0.0, 1.0);
+h = -amplitude * dent * dent;
+slope = 2.0 * amplitude / 6.0;
+```
+
+**Layers level in the scene, 0.2 mm each**
+
+```
+let s = 2.0 * fract(world.z / 0.2) - 1.0;
+h = amplitude * (1.0 - s * s - 2.0 / 3.0);
+slope = 4.0 * amplitude / 0.2;
+```
+
+What it cannot read:
+
+- the material's settings -- A relief is shape: it runs in the march, where no material has been asked yet. It reads its own parameters (+ in its parameters header) and the material's image textures by name (heightAt), not the material's settings or its code's.
+- n, the normal -- There is none yet: the relief is part of what the normal is taken from (by differences).
+- the object's own parameters -- One relief is shared by every object wearing the material.
 
 ## Words the page rewrites
 
@@ -43,11 +146,25 @@ Before it compiles, every whole word below is replaced -- in your code too, so d
 
 A shape is a `VEC4`: `xyz` its outward normal, unit length, and `w` its signed distance -- negative inside. A zero normal means *none*, and the renderer then takes the normal by differences. A distance must never be more than the true distance to the surface, or the march steps through it. `C = add_new(C, Nsphere(p, 0.5), MATERIAL);` is a sphere. `C = add_new(C, sd((p.z - 0.1 * sin(p.x * 10.0)) / 1.5), MATERIAL);` is a wavy floor: the height's slope reaches 1, so the field's reaches √2, and divided by 1.5 it is never more than the distance.
 
+## A material's image textures
+
+In a material whose **image textures** box has any, each is in its code by its name, and three functions read them. The point is the hit's in the object's pattern frame, in mm.
+
+- `sample(texture) -> vec4<f32>` -- the image texture at the hit by its own projection, size, offset, turn, wrap and filter: linear rgb (a colour image decoded from sRGB) and alpha; 0 where it does not show (outside a copy that does not wrap, a face it is not on).
+- `mapped(texture) -> vec2<f32>` -- where on the image texture the hit is, in copies of it: (0, 0) its bottom left, (1, 1) its top right.
+- `sampleAt(texture, uv: vec2<f32>) -> vec4<f32>` -- the image texture at a position of your own, in copies, with its wrap and filter.
+
+For instance a data image texture as the roughness, `m.roughness = sample(rough).r;`, or one twice as small, `m.baseColor = sampleAt(texture, mapped(texture) * 2.0).rgb;`.
+
+In the material's **relief** code its image textures are in scope by name too, with one more:
+
+- `heightAt(texture, q) -> vec2<f32>` -- the image texture as a height at `q`: its luminance times its alpha, 0 to 1, read planar from `q.xy` at its own size, offset, turn and wrap, smooth (a cubic B-spline of its pixels, 16 reads); and, second, the bound on how steep it is per mm, from its own pixels. A relief from an image texture is `h = amplitude * raise * t.x; slope = amplitude * abs(raise) * t.y;` with `t` this.
+
 ## Putting shapes into the scene
 
 What an object's code calls once a shape, and what a group's code works with.
 
-- `add_new(C: Hit, sdf: VEC4, matIndex: u32) -> Hit` -- Folds a shape into `C`: `sdf` is (normal, distance) in this node's own frame, taken to the world here; `matIndex` its material -- `MATERIAL` for the node's own. Every shape's code is this call. Used by *sphere*, *box*, *cylinder*, *capsule*, *torus* and 21 more.
+- `add_new(C: Hit, sdf: VEC4, matIndex: u32) -> Hit` -- Folds a shape into `C`: `sdf` is (normal, distance) in this node's own frame, taken to the world here; `matIndex` its material -- `MATERIAL` for the node's own. Every shape's code is this call. Used by *sphere*, *box*, *cylinder*, *capsule*, *torus* and 22 more.
 - `fold(C: Hit, sdf: VEC4, matIndex: u32) -> Hit` -- `add_new` without the transform: for a result already in world units, such as the `s` of a Hit its children were folded into (`fold(C, H.s, H.m)`). Used by *circular array*, *round*, *shell*, *noise relief*.
 - `emptyHit(r: Ray) -> Hit` -- A Hit with nothing in it yet: what a group folds its children into when it works on their result before it reaches `C` (`var H = children(emptyHit(r), p);`). Used by *circular array*, *round*, *shell*, *displace*, *noise relief*.
 - `warp(k: f32)` -- Call after changing `p` in a way that is not a plain move or turn: every distance folded in from here on is multiplied by `k` (below 1 for a warp that stretches space, so the march does not step through), and normals are taken by differences. Used by *twist*, *bend*, *mirror*.
@@ -60,6 +177,12 @@ Each takes two (normal, distance) results and gives one; `k` is the blend's widt
 - `csgUnion(a: VEC4, b: VEC4, k: f32) -> VEC4` -- Both shapes; `k` above 0 melts them together where they come within `k` of each other.
 - `csgIntersect(a: VEC4, b: VEC4, k: f32) -> VEC4` -- Only where both are.
 - `csgSubtract(a: VEC4, b: VEC4, k: f32) -> VEC4` -- `a` with `b` cut out of it.
+- `csgRoundUnion(a: VEC4, b: VEC4, r: f32) -> VEC4` -- A join set to *round* (version 28): both shapes, the concave edge where they meet filled by a fillet of radius `r` -- a circle where they meet at a right angle (two flat faces, a flat face across a cylinder or a prism), a rounded corner at other angles. Its distance reads the two distances alone; its normal is analytic, and with a shape that gives no normal the result has none.
+- `csgRoundIntersect(a: VEC4, b: VEC4, r: f32) -> VEC4` -- Only where both are, the edge rounded by a circle of radius `r`: a convex fillet, as `csgRoundUnion`.
+- `csgRoundSubtract(a: VEC4, b: VEC4, r: f32) -> VEC4` -- `a` with `b` cut out, the rim of the cut rounded by radius `r`: a hole's filleted edge.
+- `csgChamferUnion(a: VEC4, b: VEC4, r: f32) -> VEC4` -- A join set to *chamfer*: the concave edge filled with the flat cut between the lines a round of radius `r` would touch.
+- `csgChamferIntersect(a: VEC4, b: VEC4, r: f32) -> VEC4` -- Only where both are, the edge cut flat between the lines a round of radius `r` would touch.
+- `csgChamferSubtract(a: VEC4, b: VEC4, r: f32) -> VEC4` -- `a` with `b` cut out, the rim of the cut chamfered.
 
 ## Older joins
 
@@ -102,7 +225,10 @@ Each returns `VEC4(normal, distance)` with the normal worked out exactly, which 
 - `Ntriprism(p: VEC3, width: f32, height: f32, apex: f32, depth: f32) -> VEC4` -- A triangle in the xz plane, base `width` on z = -`height`/2, its top at `apex` along the base (0 over its -x end, 0.5 the middle, 1 its +x end), extruded `depth` along y. Exact.
 - `Ndome(p: VEC3, R0: f32, height: f32) -> VEC4` -- The part of a sphere of radius `R0` above z = 0, `height` tall: its base sits on z = 0. Exact. Used by *dome*.
 - `Ntube(p: VEC3, outer: f32, inner: f32, height: f32) -> VEC4` -- A hollow cylinder: radii `outer` and `inner`, `height` tall. `inner` of 0 or less is solid. Exact. Used by *tube*.
-- `Ndish(p: VEC3, f: f32, aperture: f32, wall: f32) -> VEC4` -- A parabolic mirror of focal length `f`, its focus at the origin, opening to +z, out to radius `aperture`, with a wall `wall` thick behind the mirror. Exact inside, a bound outside near the rim. Used by *reflector*.
+- `Ndish(p: VEC3, f: f32, aperture: f32, wall: f32) -> VEC4` -- A parabolic mirror of focal length `f`, its focus at the origin, opening to +z, out to radius `aperture`, with a wall `wall` thick behind the mirror. Exact inside, a bound outside near the rim.
+- `Nparaboloid(p: VEC3, f: f32, aperture: f32) -> VEC4` -- The solid inside a paraboloid of focal length `f`, its focus at the origin, opening to +z, capped flat at radius `aperture`: glass for a TIR reflector, or a tool to subtract. Exact inside, a bound outside near the rim.
+- `Nparabolic(p: VEC3, f: f32, aperture: f32, wall: f32, solid: f32) -> VEC4` -- `Ndish` when `solid` is 0, `Nparaboloid` when it is 1: the reflector with a live switch between its mirror and its solid. Used by *reflector*.
+- `NfacetedReflector(p: VEC3, f: f32, aperture: f32, wall: f32, solid: f32, facets: f32, rings: f32, minWidth: f32) -> VEC4` -- The parabolic reflector in flat facets, their corners on the paraboloid: `rings` rings of equal width, `facets` round the rim, halving inward where a facet would be narrower than `minWidth` (held at one ring's width). `facets` 0 is round, `rings` 0 smooth along the radius. `solid` and `wall` as `Nparabolic`'s. Exact inside, a bound outside. Used by *faceted reflector*.
 - `Nlens(p: VEC3, D: f32, t: f32, r1: f32, r2: f32) -> VEC4` -- A spherical lens along z: diameter `D`, centre thickness `t`, face radii `r1` (+z) and `r2` (-z) -- positive bulges out, negative is hollowed, 0 flat. A bound, exact near the face that wins. Used by *lens*.
 - `Nasphere(p: VEC3, D: f32, t: f32, R1: f32, k1: f32, a1: VEC4, R2: f32, k2: f32, a2: VEC4) -> VEC4` -- An aspheric lens along z: diameter `D`, centre thickness `t`, and each face's radius, conic constant and coefficients a4..a10 (`R1, k1, a1` the +z face, `R2, k2, a2` the -z). A bound both sides. Used by *aspheric lens*.
 - `Nmenger(p: VEC3, ITER: u32) -> VEC4` -- A Menger sponge `ITER` levels deep in a cube of half-size 1. Make `ITER` a compile-time parameter so its loop can be unrolled.

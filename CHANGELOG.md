@@ -16,6 +16,1408 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.84.0 — 2026-11-08
+
+**A coating on a metal now does something.** Before this, a metal's reflection never read the material's coating, so a
+dichroic, a beam splitter or an anti-reflective layer on a material with metallic 1 changed nothing. A material that
+was part metal had the coating only on its non-metal share. Now the stack lies over the metal. The coating reflects
+its R, and what it passes reaches the metal, which reflects its own share back out through the coating. Every bounce
+between the two is added as an intensity, which comes to 1 - (1 - R)(1 - F) / (1 - R F), with F the metal's Schlick
+Fresnel (`core/materials_pbr.js` `metalFresnel`). The result is never less than the coating or the metal alone. A white
+metal stays white, an AR layer leaves a metal as it was, and a full mirror coating makes a mirror. Turquin's energy
+compensation takes its F0 from the same sum at normal incidence. An uncoated metal is the same code as before, bit for
+bit. The light sampling, the photons, the photon map and the Optics trace (colour and by wavelength) all build the same
+lobes, so they all see the change. Two approximations, both stated in the code: as on glass, R is the coating's at the
+view's angle for every facet; and the metal's F is its reflectance in air, while a real metal under a dielectric layer
+reflects somewhat less. `coating.gpu.mjs` gains eleven rows on Dawn. Smooth metals under a dichroic, a beam splitter,
+an AR layer and every face are held to the bounces summed term by term. Rough metals, coated and not, are checked to be
+sampled as they are evaluated. With the old metal lobe put back, the six rows that should change fail. The help's
+Coatings section, the coating field's help and the panel's tooltip say what a coating does on a metal. The tutorial's
+microfacets chapter cites the changed lines.
+
+**What to look at:** a sphere with metallic 1, roughness about 0.05 and a dark grey colour (0.2 to 0.3), with the
+coating "dichroic: reflects red". It should reflect its surroundings red-tinted: red near full, green and blue at the
+grey metal's level, and toward orange or yellow near the rim, where the edge moves. Next, the same with a white or
+silver colour: it should look almost unchanged (that is the physics: a bright metal already reflects what the coating
+passes). Then a gold colour with "dichroic: reflects blue": gold with a blue sheen. An uncoated metal should look
+exactly as before. The speed of an uncoated metal should not change, since it runs the same code. A coated metal adds a
+few multiplies a reflection. This is unmeasured.
+
+**Every code box has an Insert pane: what that code can set, read and call, one click a line in the code.** A material's
+code block named six of its material's twenty-one fields in its opening comments, and nowhere said how to write the rest:
+a coating's two reflectances are one packed number that `m.coatLow = ...` does not compile against, and a colour depth
+written in code is in the scene's unit where the panel's is in mm. Under every code box (an object's, a group's, a
+material's, its relief's, the scene's functions), **Insert** now lists, for that kind of block: what it can **set** --
+for a material every field, grouped (surface, glass, coating, light), each as the line that sets it written from the
+material's own values (`m.roughness = 0.35;`, `m = coatMaterial(m, 1u, 0.0, 1.0, 600.0, 20.0, 1.8);`,
+`m.attenuationDistance = mm(5.0);`), with the panel's explanation on hover; for a relief `h` and `slope`; what it can
+**read**, its own parameters by name among them; **recipes** that compile as they are (dichroics, a beam splitter, a
+graded filter whose edge moves across the part, noise roughness, brushed and turned metal, colour by height; a relief's
+grooves, rings, knurling, noise bumps, dents and print layers, each with its slope worked out); the **functions** that
+kind of block reaches for, inserted with their arguments' names; and what **cannot be set** there, and why -- the surface
+normal above all, which a material cannot change (a relief changes the shape instead). A search box finds a row by any
+word it shows. A click puts the line at the caret, or at the end of a box never clicked into, as typing does: one undo
+step, checked after the pause. A new material's opening comments are rewritten to say the syntax plainly and point to
+it. Help › Reference › Functions for code gains the same tables, *What a material's code sets* and *What a relief's
+code sets* (builder/coderef.js, one text for both). check-shaders compiles every line and recipe the pane offers in every
+kernel, so a recipe that does not compile fails it.
+
+**A scatter distance set in a material's code now scatters.** The walk inside a material is compiled into the march only
+for a scene that needs it, and that was decided from the panel alone: a material whose code set `m.scatterDistance`
+compiled clean and its rays walked nothing. Code naming it now compiles the walk in, as a panel value does; a scene whose
+code does not name it is the text it was.
+
+**What to look at:** open a material's *material code* box and its **Insert** pane: the lines carry the material's
+values; click *Set · Coating*'s first row, Apply, and the material is a dichroic reflecting red; try a recipe under
+*Recipes*. Choose a relief and open the relief code's Insert: *Knurled* should look knurled on an object wearing it. A
+glass material with `m.transmission = 1.0; m.scatterDistance = mm(5.0);` in its code (and none in the panel) should now
+render milky where before it rendered clear.
+
+**A solid paraboloid, and a faceted parabolic reflector.** The **reflector** preset gains a live `solid` switch
+(`Nparabolic`). At 0 it is the mirror with its wall, as before. At 1 it is the filled paraboloid, capped flat at the
+rim (`Nparaboloid`): glass for a TIR reflector, or a tool to subtract from another shape for a parabolic cavity. A
+new **faceted reflector** preset (+ › Optics, `NfacetedReflector`) is made of flat facets whose corners lie on the
+paraboloid: `rings` rings of equal width, `facets` facets round the rim, and going inward the count halves wherever a
+facet would be narrower than `minWidth`, so the centre has fewer facets than the rim. Where the count halves, each
+coarse sector is closed with three triangles, so no gaps open. `facets` 0 makes it round, faceted along the radius
+only. `rings` 0 makes it smooth along the radius, faceted round the axis only. Both 0 make it the smooth reflector.
+It has the same `solid` and `wall` as the reflector, and every number is live, with no compile.
+
+Each facet is a line in its sector's (u, z) half-plane: an extrusion turned round the axis and intersected. With the
+corners on a paraboloid, the facets are the corners' lower convex hull, so the distance is the largest of the facets'
+plane distances. It is exact inside (for glass, and for a cut) and a bound outside. It stays convex only while
+`minWidth` is at most one ring's width: past that a coarse facet's plane rose through a finer ring (15 of 108 layouts
+at 1.5 ring widths, 2026-11-07), so `minWidth` is held there. `shapes.test.mjs` holds every mode to the facets' mesh
+by brute force, and checks convexity over 352 layouts. `reflector.gpu.mjs` runs the WGSL against its JS twin on Dawn.
+Old scenes keep their reflectors' `Ndish` code unchanged.
+
+**What to look at:**
+- + › Optics › **faceted reflector** with a mirror material. As it starts there are 6 facets round the centre ring,
+  then 12, then 24 out to the rim, with triangles where the count doubles. `facets`, `rings` and `minWidth` should move
+  it live.
+- `solid` 1 with a glass: a filled paraboloid, flat across the rim. Put it in a group with a box and switch its join
+  to − : the box gets a parabolic cavity, faceted or smooth.
+- In the Optics page, the faceted reflector's far field beside the smooth one's (the Parabolic reflector example
+  with its reflector swapped).
+
+**A light given by its spectrum now throws its own rainbow through a prism.** You reported two wrong pictures. The
+450 nm LED (10 nm wide) threw a fan of blue from 380 to 510 nm through a prism, plus a band of red at the red end,
+where it emits nothing. A red LED put a band of red in the violet. The picture's renderer carries three colour
+channels, and a ray gets a wavelength only when it refracts into dispersive glass. That wavelength was drawn from
+the channels' own weights, whatever the light emits, so each channel's light was spread over every wavelength that
+channel covers. The 450 nm LED's colour at luminance 1 is (3.69, −4.60, 48.5). Its red part went where the red
+channel's weights are, 83 % of them at 560–640 nm. The red LED's red lost the 4.6 % of the red channel's weights
+that sit below 480 nm, in the violet. These figures come from the code's own weights, not from a measurement.
+
+Now a photon from a light given by its spectrum carries that light's spectrum with it. That means a peak, a table
+or a blackbody (a CCT on the locus). At the first dispersive glass the photon draws its wavelength from that
+spectrum, in 1 nm cells from 380 to 780 nm, and takes that wavelength's exact colour, a negative channel and all.
+So a narrow LED's light leaves the prism only at its own wavelengths, each in its own colour, and the rainbow still
+adds up to the light's colour. Anything that coloured the photon before the glass carries over channel by channel.
+The tables are in `core/lightspectra.js`. They sit in the renderer's learn buffer, past its microfacet tables (shade
+has no binding to spare), and the picture's photon source writes them there. A photon names its table in `Ray.pix`.
+
+**Not changed:**
+- A light seen *through* a prism by the camera is still each channel spread. A camera path draws its wavelength at
+  the glass before it knows which light it will reach. Only the camera's paths can reach a light behind a prism
+  through a pinhole, so the LED itself, seen through the glass, still looks smeared. The rainbow it throws on a wall
+  or floor comes from the photons, and is now right.
+- A light given by RGB, xy or a CCT off the locus has no spectrum, and draws as before.
+- Past 16 distinct spectra in a scene, the rest draw as before, and the console says how many.
+
+**What to look at:** your two scenes again: the 450 nm LED (peaks `450 10 1`) and the red LED through the prism.
+- The blue LED's rainbow on the wall should be a narrow blue band, with nothing at the red end.
+- The red LED's should be a red band, with nothing in the purple.
+- A white light given by a spectrum (a blackbody or a measured white LED) should still throw a full rainbow.
+  Its colours should now be each wavelength's own, rather than each channel's share of one.
+- The LED seen directly through the prism is unchanged (above).
+- `core/test/prism.gpu.mjs` renders this on a simulated card: a beam through a 30° prism onto a wall. Both of your
+  cases read nothing where they used to show red. The same lights given only by their colour, the old way, do show
+  it there, so the check can fail.
+
+**The detector map no longer stops converging under Live with Σ.** The map is made from a list of detector hits, and
+the Analysis page keeps at most 500 000 of them; Live's rounds added up stopped adding to the map once the list was
+full, while the totals and the far field went on (the user: "the 2d Map stops converging after a little while"). Past
+the list each batch's hits are now binned as they come into the map's own cells (`lib/pathtracer/optics/detmap.js`
+`mapSum`, the list's frame) and the map adds the sum in, every batch weighed alike -- exactly the map of all the hits,
+for no smoothing, Gaussian and Epanechnikov (`illum.test.mjs`). A single ▶ Run with more hits than the list holds gets
+the same. What reads the hits themselves stays at the list: the k-nearest smoothing (not linear in the hits), the
+spectrum of a place, the hits' CSV and a script's map. Changing the map's cells, smoothing, detector or zoom during
+Live starts the binned part over (the map is the list's alone until the next batch).
+
+**What to look at:** Analysis, a detector map, Live with Σ on and a ray count that fills the list in a few rounds
+(e.g. 1M a round on a scene that sends most rays to the detector): the map's note "about N hits per lit cell" should keep
+rising round after round instead of stopping, and the map's grain keep fading. The map's flux and E max should not jump
+when the list fills. With k nearest the map stays as it was at the list. Rounds past the list now read each batch's hits
+back to bin them, so a round there may take a little longer than before (not measured).
+
+**Image textures on surfaces: a material can show a PNG, JPEG or WebP, as its colour, as what a glowing screen shows, or to its
+code** (scene version 29; `roadmap/TEXTURES.md` T1). A material's Properties have an **image textures** box: **+ image texture…**
+reads one into the scene (scaled to 4096 pixels on its longer side if larger). The first image texture is the material's
+colour:
+- on a surface, its base colour;
+- on a glowing material, its glow. A white pixel glows at the luminance, a black one not at all, and there a screen's dark
+  glass shows: base colour, metallic, roughness, specular and specular tint, which a glowing material with an image texture now
+  has.
+
+Another image texture, or one set to *code only*, is read by the material's code: `sample(name)`, `mapped(name)`,
+`sampleAt(name, uv)`. The code box's **Insert** pane lists these three under *Read* for each of the material's image textures, and a
+relief's lists `heightAt(name, q)`.
+
+A shape has no texture coordinates, so the image texture is **projected** in the object's pattern frame: planar, box,
+triplanar, cylindrical or spherical. It moves and turns with the object and its pattern frame. On top of that it has a
+size in real mm, an offset, a turn, a wrap across and up (repeat, mirror, clamp, none), smooth or pixels, its faces, and
+colour or data. Every one of these is live; another image texture, its name in code, its use or taking it away is a compile.
+
+The image is kept in the scene by its bytes, so an exported scene or project, a library item, a copy pasted or dragged
+to another scene all carry it. A file keeps only the image textures its materials use. No undo step holds an image.
+
+On the GPU every image of a scene is in one atlas texture, read by four `textureLoad`s with wrap and mirror exact and
+each tap decoded from sRGB. Each kernel holding the scene is given its own texel read: the atlas where it reaches a
+material, a stub where it does not (`core/images.js` `sceneCompute`). A scene without an image texture compiles to the text it
+did. A new example, **Image textures**.
+
+Verified on Dawn over lavapipe, not on hardware:
+- the WGSL lookup is its JS twin's in every setting;
+- the scene's own material reads the twin's, codegen and as data;
+- a floor under a glowing checker reads its mean's light, 0.9905 ± 0.0078 with light sampling on and 0.9956 ± 0.0063
+  off, against 0.9943.
+
+**What to look at:** File › Examples › **Image textures**.
+- The test card's bars should read white, yellow, cyan, green, magenta, red, blue from the left, the right way up, on the
+  television, the poster and round the can, with the white ring at its centre. On the ball they are triplanar and
+  mirrored.
+- The television should glow, its black end of the ramp dark glass reflecting the room. The scene is dimly lit, so the
+  screen's light should show on the floor in front of it.
+- Then any material's **image textures** box: + image texture… with a photo of your own, and drag its width, offset, turn and wrap.
+  Each should move the image texture at once, with no compile. *pixels* should give sharp pixels close up.
+- Whether a large image texture costs speed is yours to say: an image texture costs four texel reads and one scene evaluation per hit
+  on the material (inferred, not measured).
+
+**A material's image texture can be its relief: a height in the shape itself, from a 16-bit height map too.** In the relief box,
+**from an image texture:** and the image texture's name.
+- **The height:** luminance times alpha, so white is `amplitude` mm up, black the surface, and *raise* -1 engraves.
+- **Placement:** the image texture's own size, offset, turn and wrap, read planar along the object's z on every face, whatever
+  the image texture's projection.
+- **Smooth:** a cubic B-spline of the pixels, sixteen reads at every march step near the surface.
+- **The slope bound:** worked out from the image's pixels when it is read, so the march never steps through.
+- **16 bits:** a 16-bit greyscale PNG keeps its 65 536 heights (read by a decoder of its own: the browser gives 8 bits);
+  any other image has 256.
+- **In code:** a relief's code has the material's image textures by name, with `heightAt(texture, q)` returning the height and
+  its bound.
+- **Its image texture:** renaming the image texture renames it in the relief, and taking the image texture away takes its relief too.
+
+Verified on Dawn over lavapipe, not on hardware: `heightAt` is its JS twin's to 1.1e-6 at 8 and 16 bits. Rays at 12° over
+a steep relief stop on it and never past where they first meet it, codegen and as data, raised and engraved. With the
+bound taken out, the same rays step through, so the test can fail.
+
+**What to look at:** File › Examples › **Image textures** has an embossed plaque in front, lying on the floor.
+- It should show a raised ring with a rounded shoulder, ripples inside it and a dome at the centre, 3 mm high in the
+  low studio light, with no texel grid in its shading and no holes.
+- Then put a height map of your own on a material (its **use** *code only* if it should not colour it) and choose the
+  relief from it.
+- Whether it costs speed near the surface is yours to say. Each step there is sixteen reads, and a steep image texture (small
+  and high) makes the march take more steps: inferred, not measured.
+
+**Saved camera views, and the whole camera as one Timeline value.** You can now keep the cameras you want to come
+back to. Move about the scene, change things, then return to a view with one click. For animation, one Timeline track
+can hold the whole camera.
+
+**Saved views.** They sit at the foot of the camera popover (⌖), under Pick focus.
+- **Save view** keeps the camera as it is now: its mode, perspective or orthographic, position and target, up, field
+  of view or width, aperture and focus. It does not keep the exposure, so going back to a view leaves the brightness
+  as it is.
+- A new view is named *View 1*, *View 2* and so on, with the name selected so you can type over it.
+- **Click a name** to put the camera back there at once. The row the camera is at now is lit (●).
+- **Double-click a name** to rename it. Each name can be used once in a scene.
+- **↻** saves the current camera under that name.
+- **✕** deletes the view. It asks for a second click, because no undo brings a view back.
+
+**Where they are kept.** The views belong to the scene: `doc.view.saved`, next to its camera (`builder/model.js` VIEW).
+- They are saved in the scene's file and go with a duplicate.
+- Like moving the camera, saving, renaming or deleting a view is not an undo step. An undo of an edit neither removes
+  a view nor brings one back.
+- A change of the scene's unit converts them, as it converts the camera (`builder/unitchange.js convertOutside`).
+- A scene with no views is byte for byte what it was, and there is no file version change. A file that does have
+  views is refused by a 0.83.0 builder ("view.saved: not part of a view").
+
+**The camera as one value.** The Timeline's + track offers *Camera › pose (position, target, up, fov)*
+(`view/camera/pose`, `lib/pathtracer/params.js` CAMERA POSE). It is ten numbers, so one key holds the whole camera.
+- lib/timeline moves each number on its own between keys. A linear or smooth track moves the camera and its target
+  in straight lines; a spline track follows a curve through the keys.
+- An orbit camera stays an orbit, turning about the target the key gives it. A free (fps) camera takes the position as
+  it is. Before this change a free camera could not be animated at all, because the azimuth, elevation and distance
+  tracks move only an orbit.
+- A unit change scales the eye and target of a pose key, never its up or field of view.
+- **◇** before *pose* in the scene's camera folder flags it as animated.
+
+**What to look at:**
+- **Saved views:** in the camera popover, Save view, orbit away, then click the view: the picture should be exactly as
+  it was. Save two views and check the lit row follows the camera. Reload the page and the views should still be
+  there. Switch to another scene and it should have its own list.
+- **The pose track:** in the Timeline, + track *Camera › pose*. Go to one view and key it, move the playhead, go to
+  another view and key again, then play. The camera should move from the first view to the second.
+
+**Checked here** (no picture seen):
+- `builder/test/views.test.mjs` (new): the model's verbs and their refusals; a file there and back; a unit change and
+  its undo; the real builder over a stand-in renderer.
+- `lib/pathtracer/test/campose.test.mjs` (new): the pose on the real `lib/camera.js`, and a track halfway between two
+  keys.
+- `builder/test/viewlist.check.mjs` (new): the popover's list in headless Chromium.
+- `unitchange.test.mjs`, `model.test.mjs` and `lib/shell/test/params.test.mjs` (extended).
+- `builder/test/panel.check.mjs`.
+
+**Sketch can show every surface as plain diffuse paint (Everything diffuse).** A new switch in the Render settings'
+Quality box, shown while Sketch is chosen (`sketchDiffuse`): each surface a camera path meets is shaded as a
+Lambertian of its material's own colour -- mirrors, metal, gloss and glass included, coatings and colour depth gone --
+so a reflector or a lens reads as its shape in Sketch's flat light, and not as what it reflects or what is behind it.
+Lamps, glowing surfaces and a light's faces keep their material. It is one swap of the material in the shade kernel
+(materials_pbr.js sketchFlat, called from tracebasics.js pathMiddle); the scene is not recompiled. It applies only to a
+Sketch the user chose (quality.js effective): a Standard picture traced as Sketch while moving keeps its glass, since
+the row is hidden there. Off by default, so nothing changes until it is ticked.
+
+**What to look at:** a scene with a mirror and a glass part (Office lighting, a lens example) in Sketch: tick
+**Everything diffuse** and the mirror and the glass turn matte in their own colour, a lamp still glows; untick it and
+they reflect and refract again. With Standard chosen and ⚡ set to Sketch, a move keeps the glass. Tests ›
+render-modes' three new rows at the end: the mirror and the clear glass floor with the switch must read the
+Lambertian sketch row (PASS), the mirror without it is reported beside them.
+
+**`optics/test/spectral.gpu.mjs` runs again.** It made its detector floor the way a scene did before model version 27,
+a material of type `detector`, which 0.83.0 moved to the object (an optics role), so the test threw `ModelError:
+material type must be one of surface, emitter` before any check ran. Its floor is now a detector by
+`setOpticsRole`, with the scene's `analysis` feature on (a role counts only then, as `toTree` reads it). Nothing in its
+checks changed: on Dawn with lavapipe all 13 pass, the dichroic plate reading 0.9673 +- 0.0006 against its integral
+0.9677.
+
+**What to look at:** nothing in the page; `node lib/pathtracer/optics/test/spectral.gpu.mjs` (webgpu + lavapipe)
+says 13 passed.
+
+**A ray's wavelength at dispersive glass is now drawn in 1 nm steps instead of 10 nm, so a rainbow seen through glass
+no longer changes colour in bands.** You asked whether the spectral resolution could go down to 1 nm, perhaps as a
+setting. Two things used 10 nm:
+
+- **The camera's wavelength draw.** A camera path, or the photon of a light given by RGB, xy or a CCT off the locus,
+  draws its wavelength at the first dispersive glass. It drew it from 40 bins of 10 nm, and took its bin's colour.
+  The wavelength itself was always anywhere in its bin, so the angle it bends by was never rounded. Only its colour
+  was. So the colour in a rainbow seen through glass changed in 10 nm steps. Near 480 nm, where the hue turns fastest,
+  two neighbouring bins were 0.136 apart in u′v′ (computed). The draw is now a table of 400 cells of 1 nm, built from
+  the CIE's own 1931 table rather than the analytic fit. The largest step between two cells is 0.014, at 478 nm
+  (computed). As before, each channel averages exactly 1 over the draw, and no weight is above 3. The fit's red end,
+  where its red response stops at 733 nm, is gone from the draw: in the CIE table red responds to 780 nm.
+- **A coating's reflectance per channel** stays at 10 nm. At 1 nm the same arithmetic moves the reflectance by at
+  most 0.009 (computed, for an edge 0.01 to 30 nm wide anywhere from 390 to 770 nm). It would also add up 400 terms
+  at every coated surface instead of 40.
+
+**There is no setting**, because this change should not make anything slower:
+- The new table sits in the learn buffer beside the lights' spectra (`core/lightspectra.js` `CAMERA_TABLE`), and
+  the draw finds a cell by binary search: 9 reads where the old bins took a loop of up to 40.
+- The draw runs once per ray, where it enters dispersive glass.
+- Both points are read in the code. Nobody has timed it.
+
+A second draw kept behind a switch would be code that nothing runs.
+
+The optics bench row `optics-dispersion` now expects red −23.886°, green −24.177°, blue −24.859°. The old
+10 nm bins gave −23.891°, −24.177°, −24.860°.
+
+**What to look at:**
+- A white light seen *through* a prism or a dispersive glass ball, the view where the camera's own draw shows: its
+  rainbow fringes should change colour smoothly, without bands.
+- The speed of a scene with dispersive glass should not change. If it does, the Render stats against the previous
+  build's would show it, and the 10 nm bins can come back as an option.
+- Tests > `optics-dispersion` expects the new angles above.
+
+## 0.83.0 — 2026-11-06
+
+**A ray file (or any light with no face) is seen through the camera's lens.** A ray file is no geometry: no camera ray
+can meet it, and its photons connected only from the surfaces they landed on, so looking at the light itself through a
+lens with an aperture showed nothing. Now each of its photons whose ray crosses the lens's disc -- straight from the
+file, or after mirrors and smooth glass only -- adds itself to the pixel a real camera would put it on, with the thin
+lens's own measurement, `Phi / (A_px A_L cos^4)` (`core/lens.js`, *A faceless light seen through the lens*). Only for
+lights with no face: a ray file, or a source that is only a description. A rectangle or disc light keeps its face,
+which the camera's rays see, and a collimated sheet keeps the glow it is given. A photon that has scattered off anything
+else (a matte or glossy surface, the dust, a milky material) is that surface's to show, through its connection or the
+photon map, and no longer counts at the lens, so nothing is counted twice.
+- The march marks the step that crosses the disc (a step is free space, so a crossing is unblocked); shade queues a
+  camera connection of length 0 there, and the occlusion kernel deposits it, never clamped as a firefly. A photon that
+  leaves the scene short of the lens (a camera outside the scene's radius) is tested ahead of it.
+- `Ray.ltMis` -2 (`LT_FACELESS`) marks such a photon while only delta events have turned it; bit 16 of the tag
+  (`TAG_LENS_X`, free since 0.61.0) marks the crossing.
+- Through a pinhole (aperture 0) such a light is still dark, and so in an orthographic view and the illuminance view.
+- Checked on Dawn over lavapipe (`lenslight.gpu.mjs`, every kernel through `R.trace` and the real optics module; no
+  picture seen, no card): a 25 cm Lambertian disc of 1000 lm, 1621 cd/m^2, 1 m from a lens of 10 cm radius focused on
+  it. As a ray file of 2^20 rays: 4965 of them cross the lens clear of a black plate covering half the disc, and the
+  picture of the clear half reads 1622 +- 13 and 1608 +- 10 cd/m^2 (the camera inside and outside the scene's radius)
+  against the 1607 those rays make by the same arithmetic in JS; behind the plate 0. As a description: 1625 +- 12.
+  In a mirror: 1625 +- 17. The white wall the light shines on reads 173 through the lens and 173 through a pinhole; with
+  the scattered photons still counted at the lens it read 344, twice, and the test fails. With ray sets marked as before
+  (-1) the clear half reads 0, the picture you saw, and the test fails.
+- Speed not measured: the march asks one more question per step of these photons only (a camera ray or any other photon
+  skips it on a flag read once a dispatch).
+
+**What to look at:** import a ray file, set the Camera's aperture above 0 and focus on the source, and look at it
+directly: the light should show where its rays leave, brighter where more of them point at you. A ray file is its rays:
+only those that point into the aperture can ever be seen, so a small aperture or a file of few rays shows specks
+(about rays x (aperture radius / distance)^2 of them for a Lambertian source), and a larger aperture fills it in. Seen
+in a mirror or through clear glass it should show too. The surfaces it lights should look the same as before, with
+the aperture at 0 and above it, and a rectangle or disc light should not change at all.
+
+**Importing a STEP or STL file shows its progress in a dialog, and when something does not convert cleanly the dialog
+asks before anything is pasted.** File › Import from file… (or a dropped file) opens a box over the view with the
+file's name, what the conversion is doing (classifying points, building the formula, checking it -- each part of an
+assembly in turn) and a bar, with Cancel, which stops the conversion. The same bar is in the status bar. A part that
+converts cleanly is pasted at once and the box closes, as before. Otherwise it stays and says, part by part, what
+happened: the shapes it became, how many of the conversion's check points disagree with the solid (small errors there:
+a notch or a bump near an edge, which used to be reported nowhere), and why a part was refused. Each part of an
+assembly has a box to leave it out, and **Import what converted** pastes the rest. The conversion reports its stages
+(import/csg.js `onProgress`, import/index.js `convert`); the worker sends them at most ten a second
+(import/progress.js); the dialog is builder/importdialog.js.
+
+**What to look at:** import a part that takes a few seconds (your Onshape part from 2026-11-04 takes about half a
+minute): the bar should move through its stages and the status bar's with it, and Cancel should stop it with nothing
+pasted. That part has 6 points that disagree, so the box should stay open and say so; Import pastes it as before.
+Import an assembly and untick one part: only the other should be pasted.
+
+**An imported part's fillets come in as round joins: one exact rounded edge each, where they were a cylinder or a
+torus cut into place.** A face of a STEP part that is a fillet -- a cylinder or a torus tangent to the two faces it
+rounds, along its whole length -- is now those two faces joined by a round join of its radius (the new join shape),
+a group of two shapes labelled *fillet R1*. Before, each was a curved surface with the planes and cones that say
+where it ends, and those were where the import went wrong: on your Onshape part of 2026-11-04 (121 faces, 62 of them
+1 mm fillets) 6 of OpenCascade's 3000 classified points came out on the wrong side, 4 deep inside read near zero (a
+seam) and 9 read more than their distance (measured, Node; the black notches in your render are likely these, not
+seen). Now: 0 on the wrong side, 0 over the distance, 0 seams; 3 points outside still read under a fifth of their
+distance (a slower march there, not a wrong surface: each is above the hit tolerance). The formula is 95 literals where
+it was 302, the part 139 shapes where it was 235 -- in 87 groups, as many as before, each fillet being a group of two --
+and it converts in 15 to 17 s instead of 24 to 29 (the container). A part made like it in
+OpenCascade, the holder (import/test/fixtures/holder.step: a filleted tray, an upright with a U slot and two slanted
+slots, 40 fillets), was 7 points wrong and 178 shapes; it is 0 and 64. A fillet that is not exactly two faces' round
+join -- one between a plane and a curved face met obliquely, the bottom of a U between parallel walls -- is left as
+before and counted in the import dialog. The conversion also keeps two new kinds of thin sheet out of the formula
+(import/csg.js: a fillet's anti-supports, and walls across a surface a fillet shares), and samples where each
+fillet's two faces meet. STL files keep the old route: a mesh has no edges to tell a fillet's rails by.
+
+**What to look at:** import your part again (or import/test/fixtures/holder.step). The U slot's rims and the slanted
+slots should be clean, with no black notches on the uprights' faces; the rims round, without creases where a straight
+fillet meets one round a corner. The import dialog should close by itself (nothing refused, nothing disagreeing).
+
+**A STEP face on a B-spline is fitted with the nearest plane, cylinder, cone, sphere or torus: exactly when it is one,
+and within a deviation you allow, shown red, when it is not.** Some exporters write every face as a B-spline. Those
+faces now come in as the surfaces they are: a plate made all NURBS in OpenCascade imports as the plate's own 6 shapes.
+A face that is truly freeform -- the sides of a block whose top is turned 3 degrees on its bottom, each 0.2 mm from any
+plane or cylinder -- is refused at the default allowance (0.05 mm), and the import dialog says the deviation it would
+import at. Type it into **Max surface deviation** and press **Re-convert**: the part comes in with those faces fitted,
+their shapes red (a material of its own, *approximated face*) and called *fitted ...* in the tree. Untick **Show the
+fitted faces in red** to give them the part's material instead. A surface of linear extrusion is fitted the same way;
+a surface of revolution or an offset surface is still refused by name. Found on the way: a closed edge on a B-spline
+(a NURBS circle, one vertex at both ends) was read as a single point, so a hole written that way had no rim; it is the
+whole curve now, and B-spline edges are sampled at 48 points at least.
+
+**What to look at:** import import/test/fixtures/twisted.step. The dialog should say it would import at 0.2 mm; type
+0.2 and Re-convert. The block's four sides should be red, its top and bottom not, and with the box unticked all of it
+should be the scene's material. Import import/test/fixtures/nurbsplate.step: it should look exactly like plate.step,
+with nothing red.
+
+**A light can be given by its spectrum.** *Colour by* has a fourth way, **spectrum**, beside RGB, CCT + Duv and xy.
+- **A blackbody** at a temperature.
+- **Peaks**: one a line, *nm FWHM weight*. One peak is a single-colour LED; a blue die and a broad phosphor hump make
+  a white one.
+- **A measured table** of nm against relative power, pasted or loaded with *Load CSV…*. The table may use commas,
+  tabs or semicolons; with semicolons it may use decimal commas, as a European spreadsheet writes them.
+
+**How it is coloured.** The colour is what the CIE 1931 2° observer's own table makes of the spectrum: the CIE's file
+at 1 nm, now in the repository under its CC BY-SA 4.0 licence. The colour is carried exactly, as a chromaticity is,
+and is live, with no compile. The readout under the colour also gives the light's luminous efficacy of radiation, in
+lm per radiated watt.
+
+**Typing a spectrum.** Peaks and tables are checked as you type. A problem is said at its line and column, and
+nothing is put in until the text reads clean.
+
+**Starting points.** *Start from* offers blackbodies, CIE illuminant A, single-colour LEDs (450, 470, 525, 590, 630
+and 660 nm) and a white LED at 3990 K. These are models, not datasheets.
+
+**Ray files with wavelengths.** A Zemax ray file with a wavelength per ray (its format 2) now takes the colour its
+rays add up to; the panel shows it under the file's numbers. A flux-only file stays white, whatever wavelength its
+header names, because many photometric files put a placeholder there.
+
+**What it does not change.** The picture still traces the light as that colour, not wavelength by wavelength. The
+Optics page can trace it by its spectrum when the scene asks: the spectral optics trace, below.
+`lib/pathtracer/core/spd.js`, `core/cie1931.js`, `builder/lights.js`.
+
+**What to look at:**
+- A light set to *start from › LED red 630 nm* should look red. The Optics page's detector should read about x 0.704,
+  y 0.296.
+- A blackbody at 2700 K should match *CCT + Duv* at 2700 K, 0.
+- Paste a CSV of a real LED's spectrum and check that its colour is the datasheet's.
+- Run Tests › optics-colour: its two new rows, a deep red LED and a white LED given by their spectra, should read
+  du'v' near 0.
+- Load a spectral Zemax file, if you have one: it should show its colour.
+
+**Each scene chooses its optics: dispersion, absorption inside and coatings.** The scene's row in the tree has a new
+box, *optical features*. It has a switch for each of the three, and **Basic** (all off) and **Full** (all three on) above
+them. A mix of the two reads Custom.
+- **A feature off is not traced at all,** in the picture or on the Optics page. The scene is compiled as if no
+  material had those fields: byte for byte the shader of the same scene without the values.
+- **Its fields are not shown** on any material, in the Parameters panel or on the timeline. With dispersion off there
+  is no Abbe number, with absorption off no colour depth, with coatings off no coating box.
+- **The values are kept,** and come back when the feature is on. The box says which materials have a value it hides,
+  for instance a library glass's Abbe number in a Basic scene.
+- **Each change is a compile and one undo step.**
+- **Full is the default** for a new scene, every example and every older file, so no picture changes until you
+  choose.
+
+**Dispersion is no longer a render setting.** Its row in Render settings › Paths and noise (0.74.0) is gone, Quality's
+Standard and High no longer touch it, and switching it is now a compile rather than live, as you chose. A project
+whose renderer had it off opens with dispersion off in each of its scenes. The Optics page now follows the scene
+instead of always tracing dispersion. The scene file's version does not change: an older build opening a newer file
+ignores the box and traces every feature. `builder/materials.js` FEATURES, `builder/model.js` setFeatures,
+`builder/panel.js` featuresFolder; `roadmap/LIGHT_MODEL.md` step S0a.
+
+**What to look at:**
+- **Open the example *Dispersion in a prism*.** On the scene's row, in *optical features*, press **Basic**. After the
+  compile the prism's fan of colours should be gone, every glass bending all colours alike. The flint's material
+  should show no Abbe number, colour depth or coating box, and the box should say the flint has an Abbe number it is
+  keeping.
+- **Tick dispersion alone:** the fan comes back and the box reads Custom.
+- **Press Full:** everything is as it was.
+- **Then the Optics page with dispersion off:** a prism's exit angles should be the same for every colour.
+- **How long a switch takes to compile on your card.**
+
+**A detector or a ray limiter is an object, not a material, and each object is a detector of its own.** Select an
+object: its Properties have an **optics analysis** box with a **role** (none, detector or ray limiter).
+- Two objects of the same material can be one detector and one plain screen, or two detectors read apart, each with
+  its own map on the Optics page.
+- Making an object a **detector** is live, with no compile. The optics trace finds it by the object's tag, so the
+  shader does not change.
+- Making one a **ray limiter** is a compile, since the picture leaves it out.
+- A group cut by CSG whose base is a limiter or a detector takes the role for every shape in it, as it takes the base's
+  material. So an aperture's hole wall stops rays too, as before.
+
+**What changed in materials and the Optics page.**
+- A material's type is now **surface** or **glowing** only.
+- The Optics page's far field "from" now lists the detector objects.
+- A script's `optics.setup({ from })` takes a detector's name.
+
+**A new optical feature, *optics analysis*** (the scene's row, *optical features*). It is not part of Basic, Full or
+Expert. With it off:
+- no object is a detector or a limiter (a role is kept, and does nothing);
+- the Optics-Analysis box is not shown;
+- the view offers neither the rays drawn over the picture nor the lux and luminance views.
+
+The measure tool and the Analysis pane stay. **New scenes start with it off.** Every example and older file that had
+a detector or a limiter opens with it on and the role on each object that wore one. Dropping the library's detector
+screen into a scene switches it on. Scene format 27 (`builder/model.js` `OPTICS_ROLES`, v26to27;
+`lib/pathtracer/optics/kernels.js` `optIsDetectorTag`; `builder/materials.js` FEATURES `analysis`).
+
+**What to look at:**
+- **Open *LED, lens and screen*.** Optics analysis should be on, the screen's optics analysis box should say detector,
+  and ▶ Run in the Analysis pane should give the same map and numbers as before.
+- **Give a second object the detector role.** The picture should not recompile, and after ▶ Run the map's *of* list
+  should have both, each with its own numbers.
+- **Make an object a ray limiter:** it should vanish from the picture (a compile) and still stop the rays.
+- **Switch optics analysis off.** The optics analysis box, the rays in the view's drawer and the lux and luminance
+  buttons should go, and a lux view that was on should go back to the photograph. Switch it on again and everything
+  should come back.
+- **A new scene:** no optics analysis box on its objects until you switch it on.
+
+**3D print export asks what to print, and adds nothing to the scene.** File › Export ▸ 3D print (3MF / STL)… opens a
+dialog. Choose **Selected object** or **Whole scene**:
+- **Selected object** prints that object alone: an object, or a group and everything in it, with nothing of its
+  neighbours. It is printed in its own frame, so its z is up on the bed.
+- **Whole scene** prints everything solid in the world's frame, as before.
+
+**How the box works.**
+- The box starts fitted to what you chose, from the measured boxes. For the whole scene, lights and an endless floor
+  are left out.
+- The box is drawn dashed in the picture while the dialog is open.
+- Type another size to cut it, or press **Fit** to fit it again.
+- The cell, the colour count and the format are remembered in this browser for the next export.
+
+**The export box is gone.** It was a node in the tree, added from **+** only so that its Properties could hold the
+buttons, and it stayed in the scene afterwards. It is no longer in the **+** menu. A file that has one opens without it.
+The scene format is now version 27, and an older build refuses a file of 27.
+
+**How "Selected object" works.** The export makes a scene of that object alone and compiles a field kernel for it
+(seconds, once per object), keeping every frame between the object and the world. What the groups above it *do* is
+left out: their joins, blends and modifiers, and an array's other copies. A part subtracted from another is printed as
+itself.
+
+`builder/printdialog.js`, `builder/exportbox.js` (`fittedBox`, `subjectTree`), `RT.sampleField(input, n, own)`;
+`builder/model.js` v26to27.
+
+**What to look at:**
+- **Select an object and choose File › Export ▸ 3D print…** The dashed box should fit the object, turned with it if
+  it is turned. Export the 3MF and open it in Bambu Studio: is the object alone, upright in its own frame, the right
+  size, and solid?
+- **Then Whole scene:** the box should hold the scene's objects but not the floor or the lights. Type a smaller size
+  and check that the print is cut there.
+- **A scene saved with an export box** should open without it, with nothing else changed.
+- **How long the first export of an object takes on your card** (its own compile).
+
+**A ray file's colour is chosen as a rectangle's is, and can be its header's wavelength.** A ray-file light had no
+colour rows: a spectral file took its rays' own colours and a flux-only file was white, whatever its header said. Its
+Properties now offer what a rectangle or disc light does -- RGB, CCT + Duv, CIE xy, a spectrum -- with two more first:
+*from the file* (the default: what it did before) and *its header's wavelength* (every ray at that one wavelength).
+- At a wavelength the eye cannot see -- the user's ams-OSRAM LZ4-00R608 file says 854 nm, an infrared emitter -- the
+  light shows nothing in the picture and lights nothing, as a camera would see it. Before, a flux-only file in watts
+  was always shown as white light of that many lumens. Its rays still trace on the Optics page, in the file's watts.
+- At a visible one, every ray is that wavelength's exact colour and carries it, so glass refracts it at its own index
+  and a coating reflects it at that wavelength. The spectral optics trace takes it as a line 0.01 nm wide.
+- The four other ways colour every ray of the file alike, its own wavelengths left aside.
+- The line under the choice says what it comes to for the file loaded (`optics/sources.js rayFileColour`, the one place
+  it is decided, for the Optics page and the panel alike).
+- A ray file's default colour is its own (`builder/lights.js lightDefaults`), so RGB chosen for one is stored and read
+  back as RGB, not dropped as the faces' default. No file version change: a builder from before refuses the two new
+  values by name.
+- Checked (no picture seen, no card): `optics.test.mjs` (each choice on a flux-only file at 854 nm and a spectral one,
+  a chosen infrared wavelength giving its record K 0), `model.test.mjs` (stored and read back, refused on a rectangle),
+  `lenslight.gpu.mjs` on Dawn over lavapipe (854 nm chosen: the mirror's image and the wall exactly 0; the same rays not
+  chosen: white, 1742 cd/m^2 in the mirror, as before).
+
+**What to look at:** select the ray-file light in the Builder. *Colour by* should offer *from the file*, *its header's
+wavelength (854 nm)* and the four of a rectangle. With your LZ4-00R608 file at its header's wavelength, the picture
+should be dark where it was dimly white, the line under the choice saying why, and the Optics page's numbers should not
+change. Pick *RGB* or a CCT and the light should take that colour.
+
+**A spectral ray file lights the picture in each ray's own colour.** A Zemax file with a wavelength on every ray (its
+format 2) was drawn in one colour, what all its rays add up to: the wavelength of each ray was read and then dropped.
+Now each of its rays lights the picture in that wavelength's exact colour, from the CIE's own table at 1 nm, so a light
+whose colour changes with direction shows that change where its rays land, on the walls and through the camera's lens.
+- Each ray keeps its wavelength in the packed ray data (`optics/sources.js placeRays`, the direction's fourth slot,
+  which was always 0), only for a file with one a ray: a flux-only file's header wavelength is often a placeholder.
+- The picture's photon carries its wavelength in its tag, as a dispersed ray does, so glass refracts it at its own
+  index instead of drawing a wavelength. A coating now meets any ray that has a wavelength of its own (this one, or a
+  dispersed ray) at that wavelength exactly, the same reflectance in every channel, not each channel's average
+  (`materials_pbr.js makeLobes`). The average assumed each channel's light spread over that channel's wavelengths,
+  which a single wavelength is not.
+- A file in lumens gives each ray its luminous flux; one in watts its radiant flux times y-bar. A ray the eye cannot see
+  carries nothing. The set is scaled so its mean luminance is what the light's flux says, as before, and the colours add
+  up to the file's own colour (`zemax.js raysXYZ`) exactly (`optics.test.mjs`).
+- The Analysis pane's own trace is unchanged: it traces such a file in its overall colour, its tallies in the file's
+  unit. Its spectral trace still treats the file as a smooth spectrum of that colour; using each ray's own wavelength
+  there is still to do (`roadmap/LIGHT_MODEL.md`).
+- Checked on Dawn over lavapipe (no picture seen, no card; `lenslight.gpu.mjs`, `coating.gpu.mjs`): a disc whose left
+  half emits 450 nm and right half 610 nm, seen through the lens in a mirror. Its 450 nm half reads 1765 +- 14 cd/m^2
+  against the 1753 its rays make by the same arithmetic in JS (lm), and 249 +- 2 against 246 (W). Its colour per unit
+  luminance is 450 nm's to 1e-3 in every channel, a negative green of -4.76 among them. A coating at a ray's own
+  wavelength gives R(lambda) in every channel at 0 and 45 degrees and inside the glass; with the wavelength not handed
+  to it, 12 checks fail.
+- Speed not measured: a ray file's photon does one table read more when it starts, and a coating meeting a ray with a
+  wavelength skips the per-channel average (41 exp and log) for one.
+
+**What to look at:** load a spectral Zemax file (format 2), if you have one, and look at what it lights and at the
+light itself through a lens with an aperture. The colour should vary where the file says it does, and over the whole
+picture it should average to the colour its Properties give. Few samples are speckled in strong colours (each photon is
+one wavelength) that settle into the real colour. A flux-only file should look exactly as before, and so should a
+dichroic lit by an ordinary light.
+
+**A join can round or chamfer its edge: a circular fillet, or a flat cut, of the blend's radius.** A shape in a group
+has a new **edge** setting beside its join (Properties: *smooth blend*, *round (fillet)*, *chamfer*), and the recipe
+writes it at a line's end (`subtract b  round 0.5`, or `round` alone at the group's blend). The smooth blend is what
+every join was; **round** is a circular fillet of the blend's radius where two faces meet at a right angle -- two flat
+faces, or a flat face across a cylinder, a cone or a prism's side: a hole's rim filleted is the torus it should be --
+and a rounded corner, not quite a circle, at other angles. Its normal is analytic. Its distance reads the two shapes'
+distances alone, never their normals: the first version read the angle between them, which the renderer's
+distance-only march does not have, so the march stopped on the sharp corner while the shading saw the fillet, and the
+fillets rendered black in every mode (your scene of 2026-11-04). It is also held to what it adds on the fillet itself,
+so far from it, where the two sides no longer meet squarely, it never reads more than the true distance. **Chamfer** is the flat cut between the same two lines on the faces. Scene files go to
+version 28 (`joinShape` on a node; absent is smooth, so older files read unchanged, and a builder of 27 refuses a file
+of 28). The WGSL is scene_api.js `csgRound*` / `csgChamfer*`; builder/joins.js is its JS twin and has the derivation.
+Codegen calls them for such a join, and the scene as data does only when the scene has one, so every other scene's
+shader text is unchanged.
+
+**What to look at:** a box with a cylinder subtracted, the cylinder's edge set to *round* and an own blend of a fifth
+of its radius. The hole's rim should be a smooth quarter-round, lit like a torus, with no crease where it meets the top
+face or the wall. Try *chamfer*: a flat ring at 45 degrees. Two boxes intersected, one turned 30 degrees, with the
+second's edge round: the long edge where they meet should be rounded along its whole length.
+
+**The Optics page can trace by wavelength, and a detector has a spectrum and a colour rendering index.**
+
+**The spectral optics trace.** The scene's *optical features* have a fourth switch, **Spectral optics trace**. It is
+off by default, and **Expert**, a new preset, is Full with it on. Full stays as it was.
+- **Each Analysis ray carries three wavelengths of its light's spectrum** instead of a colour. They are drawn afresh for
+  every ray, stratified through the eye's sensitivity (pbrt-v4's way; 1 200-2 700 rays for a colour within
+  0.001 u′v′, computed).
+- **A coating is worked out at each wavelength**, so a dichroic's edge falls where it is. The colour trace averages it
+  over each channel, which in phase 0 read 6-10 % off in Y through edge filters on an LED.
+- **A material's colour becomes a smooth spectrum of that colour.** Grey stays exactly flat.
+- **A dispersive glass** collapses a ray to one of its wavelengths.
+- **Which spectrum a light is traced with:** its own if it is given by a spectrum, a blackbody if it is a CCT with
+  Duv 0. Any other light, ray files included, is traced as a spectrum of exactly its colour, and the chart says so.
+- **The picture is not touched.** Its kernels are byte for byte what they were, and with the switch off the Optics page
+  is the colour trace it always was. The spectral kernels are built from the colour trace's text with a few lines
+  replaced, each found exactly once or the build stops. A detector hit is four numbers longer. Each switch is a
+  compile and one undo step.
+
+**The Spectrum chart**, a seventh kind in the Analysis pane (Analysis › New chart › Spectrum; in Layout: Analyse a tab
+behind Encircled flux). It shows what the map's detector received, whole or zoomed, from 380 to 780 nm.
+- The area under the line is filled in each wavelength's colour, with the eye's ȳ drawn faintly behind it.
+- **rel** shows power relative to its peak, **W/nm** in watts per nanometre. Point at it to read a wavelength.
+- Under it: xy, CCT and Duv, **Ra and R9 with their error bars**, the watts and how many hits it is made of.
+- It saves as a CSV of nm and W/nm. Without the spectral trace it says where to switch it on.
+
+**CRI**, by CIE 13.3, from the CIE's own tables (its 14 test samples and its daylight components, CC BY-SA 4.0, in
+`lib/pathtracer/core/data`). It is checked against colour-science's implementation on the CIE's fluorescent and LED
+illuminants: Ra within 0.04 and R9 within 0.2. Past a DC of 5.4e-3 it says the index means little. A light given by
+its spectrum now has its **spectrum drawn** in its Properties, with "Ra · R9 · CCT · lm/W" under it. *Start from*
+gains the CIE's nine LED illuminants (LED-B1 to B5, BH1, RGB1, V1 and V2).
+
+`lib/pathtracer/optics/spectral.js`, `optics/spectrum.js`, `optics/spectrumchart.js`, `core/cri.js`,
+`builder/materials.js` FEATURES; `roadmap/LIGHT_MODEL.md` S0 and S2. Not built yet: PPFD, melanopic EDI, TM-30, and a
+ray file's own wavelengths.
+
+**What to look at:**
+- **Tests › optics-spectral**, a new row (Optics trace group). It covers a spectral LED's and a blackbody's exact xy
+  through clear glass, a stand-in's, the dichroic of optics-coating by wavelength at 0° and 45°, and the CRI of CIE
+  LED-B3 through glass against its own (84.8). On lavapipe every row read within 1.1e-3 of its ratio. On your card:
+  the verdicts, and **how much longer the optics run takes** than optics-coating's at the same ray count.
+- **The example *Dichroic combiner* with Expert pressed.** Its two lights are given by xy, so first the Spectrum chart
+  should say they stand in as spectra of their colour. Then set them to *start from › LED red 630 nm* and *LED royal
+  blue 450 nm*, and ▶ Run. The detector's spectrum should be two peaks at 630 and 450 nm, and its xy should agree with
+  the map's colour.
+- **A light set to *start from › CIE LED-B3*:** its Properties should draw the blue peak and the phosphor hump, and
+  read about Ra 85 · R9 24 · 4103 K.
+- **With the switch off:** the Spectrum chart says where to switch it on, and the Optics page reads exactly what it
+  did before.
+
+**Which spectral ray, computed before one is built.** A new test, `lib/pathtracer/core/test/spectralnoise.test.mjs`,
+puts three ways a ray could carry a spectrum side by side on an LED's light: one wavelength a path, four hero
+wavelengths (drawn Wilkie's way and pbrt-v4's), and 8, 16 or 40 fixed bands. The light goes through a grey, a
+dichroic, an amber filter, two filters met at a gather, and a phosphor layer. For each way the test gives one path's
+noise, summed exactly over every wavelength draw and checked against Monte Carlo, or the bias against a 0.1 nm
+integral. Today's RGB is in the table too. Through an edge filter it is 6-10 % off in Y on these cases. The table
+and what it leaves open are in `roadmap/PLAN.md` C 4. Nothing in the application changes.
+
+**And a roadmap from it:** `roadmap/LIGHT_MODEL.md` -- what a ray carries (colour, polarisation, a medium), each
+a scene's choice in an Optical features block that also decides which material fields are shown (dispersion off,
+no Abbe numbers), with Basic / Optics / Expert presets; coatings from layer stacks as a table, phosphor, scattering
+inside solids, polarisation, gratings, and what diffraction stays outside; the order, spectral detectors first.
+
+**What to look at:** nothing on screen. The table in PLAN.md C 4 is the decision to take: the noise of hero
+wavelengths against the bias and memory of bands, and whether the RGB coatings' Y error on an LED matters to you.
+And `roadmap/LIGHT_MODEL.md`: whether the Optical features block and its order are what you want.
+
+## 0.82.0 — 2026-11-03
+
+**Scatter inside a material: milky glass, whose thickness shows.** Two new material fields, *scatter distance* (the
+mean free path between scatterings, in mm whatever the scene's unit, as the colour depth) and *scatter forward*
+(Henyey-Greenstein's g), make the volume itself scatter. A thick part is then milkier than a thin one: milky or opal
+glass by the block, a light guide's diffusing body. Haze (0.81.0) scatters at the faces whatever the thickness; this
+scatters inside.
+- **Each scattering is a step of the march**, not a bounce, so a dense, thick part may need more Max Iterations to
+  read its full brightness.
+- **A beam is seen inside it: the photon map in the volume.** A collimated beam through slightly milky acrylic shows
+  its track, as a laser's does. Photons are stored where they scatter in the glass, and a camera ray gathers them
+  where it first scatters. Light sampling cannot reach inside smooth glass, so this is how that light reaches the
+  picture; with the photon map off it is found only by chance (and a collimated beam not at all). Like the surface
+  map, it starts a little soft and sharpens as samples come in. It needs two storage buffers more in the march; desktop
+  adapters usually offer 16 a stage (tinywebgpu's note, not checked here), and on one with only the spec's 8 the beam
+  stays unseen.
+- **The Optics page's rays walk it too**, through the same march. No test runs that page with it yet.
+- **Only a scene with a scattering material compiles the walk**; every other scene's march is the text it was.
+
+The library gains *milky glass (scatters inside)*: a free path of 3 mm, g 0.7. Scene format 26; files of 25 open as
+they rendered, with a clear volume.
+
+**What changes for existing scenes:** a medium's absorption is now kept in f16, beside its scattering, because the
+ray had no room for more. A colour depth's exp(-mu L) moves by at most 3e-4 over 10 m. Every kernel's text changed with
+it.
+
+**Checked without a GPU and on Dawn over lavapipe, not on hardware:**
+- A walk in JS through an index-matched slab is held to Beer-Lambert, to energy and to the diffusion regime. The
+  march's own walk passes what it passes at three depths.
+- Milky spheres vanish in the furnace, with light sampling on and off.
+- A floor lit through a milky slab reads one mean by the camera's own paths, the sun's photons and the photon map.
+
+**What to look at:**
+- A collimated beam (a builder light set to collimated) through a thin sheet of slightly milky glass, seen from the
+  side, the photon map on: the beam's track should show inside the glass and sharpen with samples.
+- The library's *milky glass* as a thin sheet and a thick block side by side: the thin one should show what lies behind
+  it, the thick one glow.
+- On the Optics page, the light guide example with a scatter distance.
+
+**The photon map's keep is planned on the GPU, from the sample before.** When a sample's photons ask for more stores
+than the map holds, it keeps a share of them, planned from what the sample before stored. The host planned it from a
+readback. RT.step, which the Tests panel's image rows sample with, records every sample before the first readback
+lands, so every sample of such a row ran on the first guess, a surface's two stores a photon.
+- **Inside milky glass**, where a photon stores at every collision, every sample overflowed: `volume-map` read 0.546 on
+  the user's card.
+- **With a medium's higher guess** (256 a photon) it read 1.01, but on a map 30x too sparse: kept 0.00082 at the 64th
+  sample.
+
+A one-thread kernel now plans the keep at each sample's start, from the count still in the map's heads. The host hands
+over only the first guess, for a fresh map. This holds for the surface map too, in any row the Tests panel samples. The
+`volume-map` row pins the map's radius and capacity, and shows the map's columns: records, dropped, samples over, cut,
+kept and radius.
+
+**Measured on the user's Ampere:** `volume-light` agreed on three presses (within 0.25 %). `volume-map` read 1.0006 at
+94a1903 (880 × 896), with the map at 0.85 of its room, kept 0.032, and nothing dropped or cut.
+
+**The photon map has a radius of its own inside glass.** It is under Render settings › Light sources › Photon map,
+*radius inside glass (pixels)*, with the developer settings shown. It defaults to 10 pixels, where the surface's is 3.
+- **Why:** a gather inside glass finds what lies in a sphere, so what it finds goes as the radius cubed. At the
+  surface's radius it found about 0.01 records on the bench's milky sheet, and a beam's track was grainy.
+- **Its own grid:** the photons stored inside glass go on a grid of their own, and the radius shrinks over samples as a
+  volume shrinks.
+- **On Dawn:** twice the surface's radius read the same mean, and the spread across a lit slab's face fell from 0.172 to
+  0.068.
+- **The limit:** near the glass's own faces a large radius reads dark. The sphere sticks out of the glass and is divided
+  as if whole, so keep the radius well under the glass's thickness.
+
+**An image row in Tests waits for the kernels its settings ask for**, as a timing row did. Switching the photon map in a
+scene that scatters builds every kernel again. The row's samples were refused while that ran ("trace while the scene's
+pipelines are being built"), and a second press worked. The map's columns are read once the row's samples are done, not
+from the first sample.
+
+**What to look at:** the beam's track through slightly milky glass, the photon map on: smoother than before, and
+sharpening as samples come in. If it is still grainy, raise the radius inside glass; if the glass reads dark near its
+faces, lower it. Press `volume` and `volume-map` in Tests and paste them back: `volume-map` now gathers inside glass
+at 10 pixels (its `r glass mm` column). `sppm` and `dichroics` take the same plan for the keep.
+
+**A scene can hold a script: JavaScript that drives the scene and reads what it measures.** View › Script opens its
+panel: an editor with JavaScript's colours and line numbers (an error's line marked), ▶ Run (Ctrl Enter), ■ Stop, Examples… and what the script prints. The script is the scene's, saved
+with it and in its file (`script` in the document, outside the undo history as the view and the timeline are; no
+format version change). It never runs on its own -- not when a scene is opened, shown or loaded -- because a scene is a
+file people pass around and a script has the page's whole reach. What it is handed (tools/scriptapi.js): a setting as a
+variable (`const pos = param(path)`: `pos.value = [1, 2, 4]`, `pos[0]`, `pos.z = 4`, a number in arithmetic as itself --
+dragged in from the Parameters panel by its name, as that line on an empty line or the call inside code), every setting
+by its path (`params.list`, `get`, `set`, `apply`, the animated ones alone; a mistyped path an error naming what is near;
+`settled()` waits out a compile), the camera and the exposure, the live picture's samples and readings
+(`picture.wait`, `measure`, `region`), `render()` into the Darkroom and `.save()` in any of its formats with the view's
+look, the Darkroom's or settings of its own, the Analysis pane's run (`optics.run`, shown in the pane and the charts as
+▶ Run's) and the numbers its charts show (I max, intensity in a direction, beam and field angles, flux in a cone, a
+detector's illuminance map with its uniformity and encircled flux, the far field on a plane), files saved as CSV, JSON
+or text. Five examples: settings read and written, a generative series of renders, the analysis's numbers, a lens's
+setting searched by golden section for the highest peak, a turntable. **? Reference** in the panel opens every function a script can call beside the editor -- what each does and gives back, how
+the analysis's numbers are made and how far to trust them, an example each that **insert** puts in at the caret -- and
+the same text is Help › Reference › Script functions (help/reference.mjs writes it from tools/scriptref.js; a function
+without words fails the test). Help › Scripts is the overview.
+
+The Parameters panel's rows have a ⧉ that copies the path (right-clicking did, unseen).
+
+**What to look at:** View › Script. Drag a setting's name from the Parameters panel onto an empty line and into
+`const r = `. Open ? Reference, search "beam", insert an example. The colours should sit exactly under the caret, scrolling included. Run each example on a scene of yours -- the generative one needs a few settings
+flagged animated (★) with a range; the lens one a setting flagged or its path typed, and a light. A render should show
+in the Darkroom and download; an analysis should fill the pane and the charts as ▶ Run does, and the numbers the
+script prints should be the ones the cards show. ■ Stop during a render or an analysis should end it.
+
+## 0.81.0 — 2026-11-02
+
+**Haze on any transmissive material, and light through frosted glass found by light sampling and the lights' rays
+instead of by chance** (`roadmap/DIFFUSERS.md`). Three changes:
+- **Rough glass's transmission is evaluated, not only sampled.** Two estimators can now follow light through a frosted
+  face, in Standard and High. Light sampling aims through the face a path leaves glass by. A photon in glass connects
+  out to the camera through the face it leaves by. Anisotropic rough glass too, so an elliptical diffuser is a
+  material's own roughness and anisotropy.
+- **Transmission and haze.** Transmission is how much passes through. The new field **haze** is how much of that is
+  diffused, spread evenly on the far side, instead of going straight: a datasheet's haze (ASTM D1003). Roughness
+  stays the narrow blur.
+  - Clear acrylic with a veil is transmission 1, haze 0.06.
+  - An opal diffuser, paper or a lampshade is haze 1.
+  - Each face a ray crosses scatters it.
+- **A face that both refracts and diffuses is now right when seen from inside.** This covers hazy glass, and any
+  transmission between 0 and 1. From inside the glass, light used to get through where total internal reflection
+  forbids it: a hazy glass sphere read 1.23 in the furnace with light sampling and 0.92 without. Light diffused into
+  the glass past the critical angle was also never let out. Now it reads 1.
+
+In Draft, Sketch and the Optics view all of it is followed as frosted glass always was. The Optics page's ray trace
+samples it as it samples any material.
+
+The library gains:
+- *opal diffuser (50 %)*;
+- *hazy acrylic (10 % haze)*: haze 0.059 a face, from a walk of the sheet;
+- *diffuser film 10° (frosted polycarbonate)*, a thin sheet of rough glass whose roughness, 0.36, spreads a ray
+  head-on by about 10° FWHM.
+
+Scene format 25; files of 24 open as they rendered.
+
+**What changes for existing scenes:**
+- **Frosted glass** (roughness from 0.224 up) now counts as a diffuse bounce for Max Diffuse Bounces, as gloss always
+  has: with a low cap, what lies behind frosted glass gets darker.
+- **A material with transmission between 0 and 1** (half glass, half a diffuse body) renders differently where it is
+  seen from inside: before, it gained light there.
+- **Material2 is 112 bytes**, so a sample holds about 3 % fewer rays a batch (2.10 M where it held 2.16 M), which only
+  shows as an extra batch on very large pictures with photons.
+
+**Checked without a GPU and on Dawn over lavapipe, and pressed on an Ampere card** (`furnace-beyond` 14 of 14,
+`transmission-parity` 16 of 16):
+- The lobes' value, density and draw agree with each other, anisotropic too.
+- A slab with one frosted, opal, anisotropically frosted or hazy face, seen from below under the sun, reads the same
+  with light sampling and the photons on or off, each way round.
+- Opal and hazy-glass spheres vanish in the furnace. Hazy glass needs 2000 march steps for that: light trapped past
+  the critical angle walks long, and at the default 400 a smooth hazy sphere reads 0.992.
+
+**What to look at:**
+- In Standard, an LED (a builder light) behind a frosted cover, an opal sheet and the library's 10° film:
+  - they should show the same brightness as before, with far less noise at equal samples;
+  - in Draft they should look as they always did.
+- The library's *hazy acrylic* over a checkerboard: the checks should stay sharp under a faint veil.
+  - Haze 0.2 and 0.5 should be milkier but still show an image.
+  - Haze 1 is an opal.
+
+Press `light-vs-emitter` (its frosted and opal diffuser pairs) in Tests and paste it back. The investigation behind this is in
+`roadmap/DIFFUSERS.md`, with what was decided and measured while it was built. It also says why a diffuser film of its
+own was built and taken out again, and why translucency became haze.
+
+**The live rays no longer switch themselves off when the scene is rebuilt.** The rays' loop stopped at the first trace
+that failed, and a trace can fail for a moment whenever the scene is rebuilt under it: the renderer puts the new scene
+in before its values are ready, and every structural edit opens that window -- so does the background bake, once the
+edits stand still. The rays now do what the Live analysis already did: nothing is traced while a scene is being built,
+a trace that fails with the scene swapped or a build begun under it is let go, and only a failure with the scene as it
+was switches the rays off, saying why in the status line (`rays stopped: ...`).
+
+**What to look at:** switch the rays on (the view's analysis drawer, RAYS) and edit the scene -- add or delete a
+shape, change a group's join, then stop and let the bake swap in. The rays should stay on throughout. If they still
+switch off, the status line under the run bar says `rays stopped:` and the reason: that message is the next clue.
+
+**A large render no longer loses the GPU by cutting its work by the frame's average.** A 3840 x 2160 render in the
+Darkroom lost its device after a few batches (`DXGI_ERROR_DEVICE_HUNG`, Windows' two-second watchdog). The engine cuts
+a heavy frame into submissions of about 150 ms, sized by the last frame's time spread evenly over its batches and its
+wavefront iterations. Neither is even: a batch of camera rays is a band of the picture, and the band holding the object
+costs several times the band of sky; and inside a batch the first iterations carry nearly all the rays. Offscreen,
+nothing slices a sample, so at 4K the batches are as large as the ray buffer allows. The first two samples of a render
+are cut every iteration (untimed, and the second recorded before the first is done), so the third is the first one cut
+by the average, which matches "after a few". That is the inferred cause: nobody has measured a submission's time
+on the card. Now every submission is timed by its own done, and the longest one in the last frame of the same shape
+caps the next frame's cut at its iterations x 150 ms / its time, never below one iteration. The cap can only make cuts
+finer than the old rule, so a scene the old rule already cut safely is unchanged, and a fast frame measured whole
+stays whole. `RT.hud.submitMs` is the longest submission of the last timed frame, and `RT.hud.submissions` how many
+that frame made. One iteration of one batch that runs past two seconds would still be lost: the cut cannot go finer
+than that.
+
+**What to look at:** the same render again, 3840 x 2160 in the Darkroom, with the same scene and samples. It should
+finish. While it runs, type `RT.hud.submitMs` and `RT.hud.splitEvery` in the console and paste back what they say.
+A `submitMs` near or over 1000 with `splitEvery` 1 means one iteration of a band is close to the limit by itself. The
+next fix would then be smaller batches, not finer cuts. The live view should feel the same as before.
+
+**Pick focus: the lens focused on what is under the mouse.** The Camera popover (⌖▾) has a *Pick focus* button
+under the lens's numbers. Clicked, the popover closes and the cursor becomes a cross over the picture; a press on the
+picture focuses the lens on the surface under it -- the focus plane is put through the picked point, so it is sharp
+wherever it is in the picture -- and while the button is held the focus follows the mouse over the surfaces. Let go,
+it stays focused there and the mode is over. The press is the focus's alone: the camera does not turn, nothing is
+selected, no measuring pin is placed. A press on the sky leaves the focus as it was; Esc or a press anywhere else
+cancels. The button is there only for a perspective camera (an orthographic one has no lens).
+`lib/pathtracer/focuspick.js`; headless-checked by `lib/pathtracer/test/focuspick.check.mjs`.
+
+**What to look at:** a scene with depth, *Depth of field* for one, with the aperture above 0 (focus has no visible
+effect at 0). ⌖▾ › *Pick focus*, then press on a near pawn, drag to a far one and back while holding, and let go:
+the sharp band should follow the mouse and stay where it was released. Then check a plain drag orbits as before, and
+that with the Measure tool's pin or ruler on, the focus press placed no pin.
+
+**The *preview* marks taken off what the user has confirmed works.** The user went through the README's list of
+features marked *preview* (built and tested without a GPU, not yet confirmed on real hardware) and said every one
+works on their hardware but the Zemax ray files, not yet tried. Those features are unmarked now in the README and on
+the front page, and their rows in `FEATURES.md` say **in use** with the date, their earlier status kept after it. The
+Zemax ray files keep their mark everywhere.
+
+**What to look at:** the README and the front page: *preview* only beside the Zemax ray files and in the legend.
+
+**Opening another project in the Project panel stays in the panel.** Until now a click on a project switched straight
+to the viewport and compiled the scene it was last left on -- seconds spent on a scene that may not be the one wanted.
+Now the panel shows the project's scenes and compiles nothing; a click on a scene card compiles that one and brings the
+picture back. Bringing the picture back without choosing (the Viewport tab, or *Back to …*) compiles the scene the
+project was left on, and so does opening a project while the viewport is in view beside the panel. A scene that will
+not compile leaves the empty scene, as before, rather than the last project's picture.
+
+**What to look at:** in the Project panel, click another project: the panel should stay, its scene cards shown, the one
+it was left on marked *not compiled yet*. Click a different scene: it compiles and the viewport comes forward. Open a
+project again and click the Viewport tab instead: its last scene compiles.
+
+## 0.80.0 — 2026-10-27
+
+**shadytracer.com has a front page, and the app moved to `app.html`.** `/` was the app itself, which told a search
+engine little and a new visitor less. It is now a page that says what ShadyTracer is: a button to the app, what it does
+with the README's pictures, a section for lighting and optics design, the checks against known answers, the tutorial,
+open source, and the questions people ask (what it needs, where work is kept, whether anything is uploaded), with the
+README's ✓ and *preview* marks kept. It is static, dark like the app, and works without JavaScript; under its button a
+line says whether this browser can run it, asked as the app asks. The app is `app.html` in the same folder, kept out
+of search results, with Help › ShadyTracer homepage back to the front page. Projects are kept per site, not per page,
+so nothing saved is lost. A link of the old kind, `/?safe` or `/?s=2048`, still opens the app; a shared link's
+`?utm_source=` stays on the front page.
+
+**Who makes it, and why**, just under the first picture, short and in the author's words: the lighting industry
+(Philips Lighting, Lumileds, Invisua Lighting), Keuper Innovations and code+wood; the ray tracer they always wanted,
+started on TinyWebGPU; how it is made -- the foundations by hand, finished with Claude Code under their direction -- and why it can be trusted: what checks it; and what a tip pays for. The bar's About goes there.
+
+**The README's screenshots are JPEGs**, quality 85, under the same names: 16.0 MB for the nine as PNGs, 3.6 MB now,
+the largest about 600 KB. The front page shows these same files, so a screenshot retaken is retaken for both.
+`docs/screenshots/README.md` gives the command for a new one, and `test/seo.test.mjs` fails a PNG left there, a file
+over 1 MB, and a picture whose size the front page no longer gives right.
+
+**What to look at:** shadytracer.com/ shows the front page, and *Open ShadyTracer* opens the app with your projects
+as you left them; the app starts as before at `app.html`; Help › ShadyTracer homepage opens the front page in a new
+tab; the README's pictures on GitHub look as before. Once released, Search Console's URL inspection of `/` shows the
+front page's text.
+
+**The tutorial opens in its Minimal style, dark.** A reader who has chosen nothing sees *Minimal* on a dark page,
+whatever their system's light or dark setting; until now it was the *Lab notebook*, light or dark as the system asked.
+A style or theme chosen in the tutorial's bar is kept, as before, and wins. The defaults are named once, in
+`tutorial/kit/styles.js`.
+
+**What to look at:** open the tutorial in a private window (nothing chosen yet): Minimal, dark, on every page. Choose
+another style or Light in the bar, reload: your choice stays.
+
+## 0.79.1 — 2026-10-27
+
+**The site says what it is to a search engine and a shared link.** The page's head has a real title, a description,
+its canonical address, an icon, an Open Graph card (`docs/screenshots/social.jpg`, the hero shot cut to 1200 × 630)
+and JSON-LD naming it a free web application. `#container` starts with a short introduction -- what ShadyTracer
+does, the tutorial and the code linked -- which a crawler reads, since it has no WebGPU, and which is taken away
+just before the window is built. A browser without WebGPU, or with WebGPU and no adapter (a headless one, a card
+switched off), now stays on that introduction and says why, where the window used to be built and then left without a
+picture. `robots.txt` and `sitemap.xml` are new: the sitemap lists
+the app and every tutorial page, and each tutorial page has a description, a chapter's its line in the contents.
+`test/seo.test.mjs` holds the page, the sitemap, the descriptions and robots.txt together.
+
+**What to look at:** open the page: the introduction shows on the dark background while the modules load, then the
+window as before; the tab title is the version as before, the tab icon new. In a browser without WebGPU, or with
+hardware acceleration switched off, the introduction stays, with the reason in amber. Once deployed: a link to
+shadytracer.com pasted into a chat shows the card, and Google Search Console can be given the sitemap.
+
+## 0.79.0 — 2026-10-26
+
+**A node inside an array is measured as one copy, not as all of them.** The boxes the culling uses are measured by
+sampling, at a grid of points, which object's surface is nearest. Every copy of an object has the same tag, and each
+point was put into the object's frame through its first copy. So a node inside an array was measured as all its copies
+at once, and its group then put that box at every copy again:
+- In Tests › Benchmarks › lightarray's ring of 16 rows of 16 lights, a 4 cm light measured 2.22 × 2.22 m. The ring's
+  culling box measured 5.25 m across, where the ring is 2.2 m.
+- Too big, never too small: nothing was cut off, but arrays were culled late.
+
+Now the pick copy of the scene keeps which copy it is walking (`XF_COPY`, in codegen's copies loop and in the data
+walk's ARRAY records), and the tag field returns it with each tag. `builder/boxes.js` puts each point into its own
+copy's frame.
+- The same light now measures 0.133 m, and the ring's box 2.44 m (2.20 m estimated).
+- Where the copy number cannot be believed, a point goes through the first copy, as before. That happens when it says
+  another count of arrays than the node is inside, or when the copies multiply past a u32.
+
+The tag field is four words a point instead of two, read by one function (`core/field.js` `tagSample`) where the page
+and five GPU tests each had their own. `builder/test/boxes.test.mjs` measures a ring of rows of beads with a sampler that
+draws every copy. `builder/test/arraywindow.gpu.mjs` checks on Dawn that the pick copy names each face of the bench's
+ring by its own copy, codegen and as data. The golden shaders: `scenes/parametric-part.json`'s pick texts, the one
+document with an array.
+
+**What to look at:**
+- **Any scene with copies:** nothing should look different. Turn on the bounds overlay and select something inside an
+  array: its box should be one copy's, not the whole array's.
+- **Tests › Benchmarks › lightarray:** rows 5 and 6 (the window off) may be a little faster, their culling boxes being
+  the array's true size now.
+
+**A row or a ring of copies costs about what its nearest copies cost.** Measured on the user's Pascal card (Tests ›
+Benchmarks › lightarray, f4a2a57): 256 copies of a small light in a ring of rows took 119.8 ms a sample, against 389.4
+with every copy walked, and a row of 16 marched as 16 lights placed by hand do. Every copy of an array used to be
+evaluated at every step of every ray. Measured on the user's Ampere card (Tests › Benchmarks › lightarray, 213642c): a floor under
+256 copies of one small light took 465 ms of march and 160 ms of occlusion a sample, against 12 and 8 ms for one light.
+Light sampling's pick of a face stayed flat at 20 ms, so the copies were the whole cost.
+
+Now a group's copies that form a **row** (evenly spaced, each turned and scaled alike) or a **ring** (evenly turned about
+the group's x, y or z axis) are evaluated only near the copy closest to the point (`builder/arrays.js`):
+- Every other copy is bounded by its content's measured box:
+  - a row's copy by the box's own distance, which grows each way from the nearest copy;
+  - a ring's by the sphere round the box, and never below the ring-shaped band about the axis that every copy lies in.
+- The nearest such bound stands in for all of them, as a skipped culling box does.
+- Near a surface the picture's distances are exact. Elsewhere they are a lower bound, safe to march by.
+- Any other list of copies is drawn as before. So is an array inside a joining group or under group code, and one
+  whose box is not measured yet.
+- A copies edit that turns a row or a ring into another shape compiles again. One that keeps it is live, as before.
+
+**The first version of the window was slower, for two reasons, both fixed before the measurement above:**
+- **Measured on the user's Pascal card (a81cac9):** the ring of 256 marched in 1007.5 ms a sample with the window,
+  against 281.0 with it off.
+- **Each step cost more.** The loop fetched each copy through a switch on a number that differs from pixel to pixel, and
+  a GPU runs such a switch's cases one after another.
+  - Measured at c9577ae: bench row 7, every copy fetched that way, marched in 399.6 ms against row 6's 279.3.
+  - Now a window's copy is worked out from the first copy by the pattern (`arrays.js` `arrCopy`): moved along the row,
+    or turned round the ring. It is the stored copy to f32's precision.
+  - Measured: row 4 went from 1007.5 ms of march to 740.0.
+- **The rays took more steps.**
+  - At c9577ae only 34% of row 4's rays finished in the first 32-step march pass, against 77% of row 6's.
+  - The cause: the bench's measured boxes held every copy of a node in an array (the change note
+    `array-boxes-per-copy.md`), and the window bounded each copy by a sphere round such a box.
+  - Counted on lavapipe with boxes measured as the bench measures them (`builder/test/arraywindow.gpu.mjs`, which now
+    holds the count): 47.1 steps a camera ray with the window against 21.9.
+  - With each copy measured as one, 32.1 against 21.4. With the box-shaped bounds above as well, 29.6 against 21.4
+    (codegen) and 32.8 against 30.4 (as data); the row about 1.0 either way.
+  - Inferred, not measured: what is left is the sphere round a ring's copy inside the lights' own plane, where the
+    band says nothing. A bound by the angle about the axis would be the next step.
+
+The bench gains three rows: rows 2 and 4 with the window off, and row 7, the ring's every copy fetched through the
+switch from the window's first copy, which says what the switch costs. The test of the window is
+`builder/test/arraywindow.gpu.mjs`. The Parametric part example's golden shader was refrozen: its heatsink fins are a
+row of 9.
+
+**What to look at:**
+- **Tests › Benchmarks › lightarray:**
+  - Row 4 (16 × 16 in a ring of rows) against row 6 (the same, window off) says what the window saves on your card:
+    119.8 against 389.4 ms a sample on Pascal at f4a2a57.
+  - Row 7 against row 6 is what the switch cost the first version (321.7 against 269.7 ms of march at f4a2a57).
+- **The pictures:** any arrayed scene should look as it did, its copies never clipped or missing. Look at the
+  Parametric part example's fins, the LED ring, and a row of lights seen close.
+- **A copy moved off a row:** in the group's copies box, change one copy's place by hand. The scene recompiles and every
+  copy is drawn.
+
+**Help › Reference › Functions for code lists every function a code block can call.** An object's, a group's or a
+material's code, and the scene's functions, are all compiled after the same library, and nothing listed what is in
+it. The new page has each function's signature and what it does: putting a shape into the scene (`add_new`, `fold`,
+`warp`, `foldRelief`), the joins (`csgUnion` and the older ones, with why `csgUnion` is the one to use), the shapes
+with an exact normal (`Nsphere`, `NboxRounded`, `Nlens`, ...) and those with a distance only (`sd...`), the 2D pieces
+the shapes of revolution are built from, noise, units, the material helpers, and what a scene with an outline or a
+path makes for it (`extrude`, `revolve`, `tube`, `sweep`). Each says which built-in shapes and modifiers use it, and
+whether it is exact or a bound where its code says. The page also has what each kind of block has in scope, and the
+words the page rewrites before compiling, so a variable called `X` (which becomes `vec4<f32>`) is no longer a
+mystery. The comments a new block starts with point to it, and every code box in Properties has a **Functions you
+can call…** button under *Apply code* that opens Help at the page: at the material helpers for a material's code, at
+the noise for a relief's, at the top for the rest.
+
+Each function is a card of its own in the Help panel: its signature on a line of its own, the name in gold and the
+types in green, what it does under it, and what uses it quieter still (`help/markdown.js`: a list item of a code span
+and ` -- ` words; on GitHub the page is still a list).
+
+The signatures are read from the shader library itself (`help/reference.mjs`), so the page cannot disagree with the
+code, and `help/test/coverage.test.mjs` fails on a function the page names that the library no longer has, and on a
+shape or join added to the library without words.
+
+**What to look at:** Help (F1) › Reference › *Functions for code*: the page reads, its links work (to *Parameters and
+code*, the Shapes and Modifiers pages, and the WGSL standard's list of built-ins). A new code node, group code,
+material code and the scene's functions each start with a comment line naming the page. In each of those code boxes,
+and a relief's, **Functions you can call…** opens the Help panel at the page, a material's at *Materials* and a
+relief's at *Noise*, the Help panel opened (floating) if it was closed. Scrolling the page, each function should be
+easy to pick out: a card, its name in gold.
+
+**The Darkroom saves the light itself: OpenEXR, Radiance HDR and PFM, and the developed picture as 16-bit PNG, JPEG or
+WebP.** The kept render is luminance in cd/m², and until now it could leave the page only through an exposure, a tone
+curve and 8 bits. The Save box has a **format**:
+- **PNG 8-bit** as before, now saying in the file how it was made (the build, the size, the samples, the develop
+  settings, as text chunks);
+- **PNG 16-bit**, the develop pass drawn at full size in float strip by strip (`develop.js` `developedRows`) and written
+  at 16 bits, so a steep curve no longer bands in the file;
+- **JPEG** and **WebP**, with a quality;
+- **OpenEXR**, the light as the renderer made it (`develop.js` `lightRows`, `lib/pathtracer/darkroom/export/exr.js`):
+  **absolute cd/m² in float32** by default, the sun and colours outside the gamut kept, or **exposed** (1.0 = white,
+  half float if you like); Rec.709 chromaticities and `whiteLuminance` in the header, so a reader that honours it gets
+  the renderer's numbers either way; ZIP-compressed;
+- **Radiance HDR**, in Radiance's own units (cd/m² ÷ 179) with its Rec.709 `PRIMARIES`, clipped into the display gamut
+  (RGBE holds no negative);
+- **PFM**, the floats and nothing else.
+
+The light formats carry no tone curve, grading or overlay, which the line under the format says, with what the file
+will hold and how large it can be. A render of the illuminance view is saved as lux (×π, as the display shows it). An
+export reads the picture back in strips of about 16 MB with its progress in the status and over the picture, so an 8K
+EXR does not hold half a gigabyte twice over. Every writer is checked against a reader written in its test from the
+format's specification (`lib/pathtracer/test/export.test.mjs`), and against ffmpeg where it is installed.
+
+**What to look at:** Save picture… → Render → Save, each format in turn. Open the EXR in your own tools (Photoshop,
+Affinity, Blender, DJV, or `exrheader`/`oiiotool`) and compare a pixel's value with the Darkroom's cd/m² readout at the
+same place. The HDR and PFM open. A smooth gradient with a steep curve: banding in the 8-bit PNG, none in the 16-bit. A 4K
+or 8K EXR finishes, its rows counting up. The file's text: the build and settings in the PNG's properties.
+
+**The Darkroom's finishing tools and its recipe: output gamma, Levels, a Curves editor, colour wheels, vignette, grain
+and dither; undo and redo, copy and paste, presets, and settings read back from a saved picture.** After the tone curve,
+the picture now goes through these, in this order:
+- an **output** transfer: sRGB as before, gamma 2.2, gamma 2.4 or linear;
+- **Levels**: input black and white, a gamma for the midtones, output black and white;
+- **Curves**: master, then red, green and blue, each drawn by hand in the side column. A click adds a point, a drag
+  moves it, a double-click or a drag out of the square takes it away. **Luminance** puts the master curve on brightness
+  alone, so colours keep their hue. The curves are monotone cubics (Fritsch–Carlson), so a curve never swings past its
+  points (`lib/pathtracer/darkroom/curves.js`, `curveeditor.js`);
+- **Colour wheels**: lift, gamma and gain (shadows, midtones, highlights). Drag a disc's dot towards a colour to tint
+  that part of the picture, and use a slider each for its brightness. They are applied as an ASC CDL
+  (`darkroom/wheels.js`, `grade.js` `cdlFromWheels`);
+- the old contrast, saturation and brightness, unchanged;
+- **Finish**: a **vignette** on the light, darkening or brightening towards the corners as a lens does (its strength
+  in stops, where it starts, how round); **grain**, fixed to the picture's pixels so it is the same in every preview and
+  save; and **dither** for the 8-bit files, against banding (off by default; never in the 16-bit PNG).
+
+**The recipe** (`darkroom/recipe.js`):
+- **Undo** and **Redo** for the look: the buttons, or Ctrl+Z and Ctrl+Y while the Darkroom has focus. The scene's own
+  undo is left alone.
+- **Copy** and **Paste** of the settings.
+- **Presets** kept in this browser: apply one, save as, delete.
+- **From a picture…**: the settings a PNG the Darkroom saved was developed with, read back out of the file.
+
+An untouched develop is still the view's picture to the bit, held on Dawn with the new code in place. Each stage is
+held to its JavaScript twin, and the grain and dither are held to the same hash as their twin's
+(`lib/pathtracer/test/develop.gpu.mjs`).
+
+**What to look at:** Levels' gamma on a flat picture. An S-curve, then Luminance, on a saturated one. A blue lift and a
+warm gain on the same picture. A vignette at −1 stop. Grain at 100 %. Dither on a smooth gradient with a steep curve, in
+an 8-bit PNG. Undo and redo after several changes; Ctrl+Z in the Darkroom does not undo the scene. A preset saved,
+another look made, the preset applied. A PNG saved, every setting changed, then From a picture… with that PNG. An
+untouched save as before.
+
+**The Darkroom's tools that work on the light: white balance with an eyedropper, a spot meter, channel gains, a tone
+equaliser, saturation, vibrance and hue, and an adjustable filmic curve.** The grading the Darkroom had acts on the
+encoded picture, after the tone curve has decided what is white. These act on the light before it, as a camera's raw
+tools do (`lib/pathtracer/darkroom/grade.js` says why, and is their JavaScript twin). The Develop box is now a column of
+boxes in the order the picture is made:
+- **Exposure**: EV, Meter, and **Spot meter**. Click the picture, and a 9 × 9 patch there becomes middle grey.
+- **White balance**: the white's temperature and tint, which a Bradford adaptation takes to D65, so a warm lamp's
+  scene is neutralised by setting the white to the lamp's temperature. **Pick a white**: click a surface that should
+  be white or grey. Red, green and blue gains.
+- **Tone**: the curve, now with a new **Hable, adjustable** (its white point, toe and shoulder; at its defaults it is
+  the Hable curve). Below it, a **tone equaliser**: a gain in stops for each band of light from 7 stops below white to
+  white, which lifts shadows or holds highlights without shifting hues.
+- **Colour**: saturation, vibrance (it raises dull colours and leaves vivid ones alone) and hue, in Oklab.
+- **Grading**: contrast, saturation and brightness as before.
+
+Each box has a Reset. An untouched develop is still the view's picture to the bit: with every tool at its identity,
+the develop pass runs the display's own per-pixel function. The new path at identity was held to it byte for byte on
+Dawn, and each stage to its JavaScript twin (`lib/pathtracer/test/develop.gpu.mjs`). The histogram counts what the
+tools make. Before and Split compare with the picture untouched. The EXR, HDR and PFM exports are still the light as
+rendered, without these tools.
+
+**What to look at:** a scene under a warm lamp. Pick a white on a wall: the cast goes, and Split shows before and after.
+The spot meter on a face or a wall. The equaliser's −5 and −6 EV raised: shadows open, highlights stay. Vibrance against
+saturation on a picture with both dull and vivid colours. The adjustable curve at its defaults against Hable, then its
+shoulder moved. An untouched save as before.
+
+**Save picture is the Darkroom: a tab beside the picture, the render shown as large as the tab.** File › Save picture…
+used to open a floating panel whose preview was at most 320 pixels high, so a 4K render's noise, a firefly or a soft
+edge could not be seen before the file was written. It now opens a tab in the viewport's place
+(`lib/pathtracer/darkroom/viewer.js`): the kept render fills it, with Fit, 100 % (one picture pixel on one screen pixel,
+drawn as a square, not blurred) and anything from 1/32 to 64 times, zoomed about the cursor by the wheel, moved by
+dragging, double-click for 100 % and back; the keys 0, 1, 2, + and − and the arrows. **Before** (held, or `\`) shows the
+picture as the view showed it, **Split** shows it left of a line you drag; **Clipping** stripes what is white in red and
+black in blue; under the cursor, the pixel's place and its light in cd/m². The develop pass is told which part of the
+picture to draw by four numbers (`rendertoscreen.js` `develop_prog`'s `view`), and a save and a scene's card still pass
+the whole picture: run on Dawn, a save is byte for byte what the pass drew before (`lib/pathtracer/test/develop.gpu.mjs`).
+Beside the picture, three boxes: **Render** (size, samples, Render, Abort), **Develop** (with a histogram of what a save
+writes on top, counted on the GPU by `develop_histogram_prog`, and how much is at white and at black) and **Save**. While
+the Darkroom covers the picture the live view is held, so the two do not share the GPU; a Darkroom floated beside the
+picture, from a layout saved before, leaves it running. The rest of the editor -- export as EXR and HDR, white balance,
+curves, levels -- is planned in `roadmap/DARKROOM.md`.
+
+**What to look at:** File › Save picture… opens a tab beside Viewport. Render a picture: it appears fitted. Wheel over a
+detail: it stays under the cursor. 400 %: the pixels are squares. Drag to move, double-click, the keys. Hold Before or `\`;
+Split and drag its line. Clipping on a picture with a blown sky. The readout's cd/m² against the view's own readout. The
+histogram moving with EV. A saved PNG as before. And whether the Develop sliders feel smoother now that the live view
+waits while the Darkroom is in front.
+
+**The page started whole again: the Darkroom's colour wheels no longer throw when made out of sight.** The page makes the
+wheels at its start, in a Darkroom not yet shown, where a disc is 0 wide; its radius came out negative and `arc()`
+threw (`IndexSizeError: The radius provided (-1.5) is negative`). The throw ended `installUI` there, so the Darkroom's
+boxes after the wheels (Grading, the recipe and presets) and everything after it (the Developer switch, the boxes' visibility, the Tests menu) were
+never made. A disc with no room is now not drawn until it has a size, which its ResizeObserver already waited for.
+`darkroomtools.check.mjs` makes the curves editor and the wheels in a host not shown, and draws them once shown.
+
+**What to look at:** no error in the console at the start; the Tests menu, the Developer switch and the Darkroom's
+Grading box there; the colour wheels drawn when the Darkroom is first opened.
+
+**A light inside an array is a light at every copy.** Until now a group's copies refused a light ("not drawn more than
+once yet"). Now a rectangle, disc or ray-file light inside a group with copies is a whole light at each copy, in the
+picture and as an Optics source. Arrays can nest.
+- Each copy keeps the light's settings and has **its own flux**: a 10 lm light in 12 copies is 120 lm.
+- A group's copies box can now make **a ring** (*Make them a ring*: count, ring radius, about the axis), as well as a
+  row. A ring of LEDs is one LED in a ring of copies. The *circular array* modifier is group code, so it still draws no
+  light.
+
+How it works:
+- Every copy is a face of its own: light sampling, the face table, the scene as data's light table and the photons'
+  sources each hold one row per copy, in one order (`builder/lights.js`, *A LIGHT INSIDE ARRAYS*).
+- The shader text stays one light's whatever the count: the pick and the total are one line per light, and `lightFace`
+  is one case per light listing every copy.
+- A hit on any copy is weighed by the light's first face. That is exact because the copies of an array with a light
+  in it **share one scale**, which the model now holds: setting copies, adding a light, moving a node and loading a
+  scene are all checked.
+- An array with a light inside a joining group (CSG) is not drawn, and the Optics page lists the light as skipped
+  with the reason. This is not refused, so that a join changed above cannot make a saved scene unreadable.
+
+Also: `roadmap/LIGHT_CONTROL.md` is the investigation of programmable lights, with what this phase does and the next
+two phases.
+- Phase 2: a colour and intensity per copy.
+- Phase 3: emission over angle and position, written as code and baked into a map.
+
+There is a new benchmark, **Tests › Benchmarks › lightarray**: one light against 16 and 256 copies of it at the same
+lumens, and 16 copies against the same 16 lights placed by hand.
+
+**What to look at:**
+- A row of LEDs: one rectangle light in a group, with *Make it an array: a row of copies* in the group's Properties.
+  Every copy should glow and light the floor under it, the same as the same lights placed by hand.
+- A ring: the same group, *Make them a ring*. With a ring radius of 0, the copies turn about the group's axis, as the
+  circular array's do.
+- The Optics page: each copy is a source ("… (copy 3 of 12)"), and the flux in the analysis is the copies' sum.
+- Give two copies different scales: the panel refuses it and names the light.
+- **Tests › Benchmarks › lightarray:** picking among 256 faces costs nothing measurable. Measured: shade, which holds
+  light sampling's pick, read 11.6 ms a sample for one face and for 256 on Pascal (f4a2a57), and 20-21 ms for both on
+  Ampere (213642c). What the copies did cost was evaluating every one at every step, which the window of an array
+  addresses (`changes/array-window.md`).
+
+**A light's face glows on the face alone, so light sampling off no longer reads a small light brighter than on.**
+The face is a sheet of no thickness, and the march calls a point within the surface tolerance a hit, so a ray could
+meet a rim around the face, as wide as the tolerance. That rim glowed. Light sampling aims at the face itself, and
+MIS gives a small face's glow almost no weight, so the picture with light sampling on was right. With it off, every
+path that met the rim counted it. Measured on lavapipe (`builder/test/lightface.gpu.mjs`), a 0.1 x 0.05 m face over a
+matte floor against the closed form: light sampling off read 1.05 at the automatic 0.5 mm tolerance and 1.25 at ten
+times it, and light sampling on read 1.00 at both. The gap shrank as the face grew (1.02, 1.007, 1.002 at two, four
+and eight times the size). That is the 4 % gap a floor under twelve small lights showed with light sampling on
+against off. Now the rim takes the back's material: black, or clear for a transparent light. The light's frame is
+used, so each copy of a light tests its own face, codegen and the scene as data alike.
+
+**What to look at:** a small rectangle or disc light over a floor, with light sampling on and off (Developer settings):
+the pool of light should be equally bright, where before off was brighter by about the tolerance over the face's size.
+The face seen directly loses an edge as wide as the tolerance, which should not be visible. In the
+`light-vs-emitter` bench, every pair should read 1 and the one pair at the automatic tolerance about 0.82
+(finding 7, now the emissive object's own fatness alone).
+
+**The `light-vs-emitter` bench's 30 cm disc pairs run at a 10 um march tolerance**, as its 1 cm pairs did. With the
+light exact where the camera sees it, they read 0.990-0.994 at the automatic tolerance (Ampere, 2026-10-23), against
+0.995-1.000 before. That was the emissive disc's own excess, passing 0.1 % inside the bench's 1 % floor.
+
+**The march asks the scene for its distance only: 2-35 % less GPU time a sample on five of six bench scenes, the same
+picture** (`lib/pathtracer/core/scene_api.js` FOLD_DIST, `wavefront.js` prog_march and prog_surface, THE HIT ITSELF). Most
+of a sample is sphere tracing, and every march step asked the scene for its whole answer -- each shape's normal turned
+into the world frame, the material, the solid the point is in -- and read one number of it, the distance.
+- **Now a step asks only that number.** The march is built against a second `add_new` and `fold` that keep the nearest
+  surface's distance and nothing else.
+- **The rest is asked once a hit.** The surface kernel asks the scene for the whole hit at the ray the march stopped.
+  - It does so on a trip of the loop it already had, so no second copy of the scene is compiled into it.
+  - It writes the hit back before the photon map and shade read it.
+- **Measured on your Pascal**, Tests › marchdist (`ShadyTracer 0.78.0 · c3be0d6 (ccr-0f3a020a-590jz2) · nvidia pascal`,
+  2026-10-25), GPU ms a sample, before → now:
+
+  | scene | march | surface | the whole sample |
+  |---|---|---|---|
+  | dichroics, its light's photons | 177.8 → 144.0 | 21.1 → 42.0 | 283.7 → 270.9 (−4.5 %) |
+  | the Noise library | 70.7 → 58.8 | 18.8 → 24.8 | 144.3 → 138.3 (−4.2 %) |
+  | the Menger cubes | 49.6 → 41.2 | 4.8 → 7.4 | 90.6 → 88.7 (−2.1 %) |
+  | the showcase | 17.3 → 8.8 | 3.8 → 6.0 | 50.9 → 44.6 (−12.4 %) |
+  | the material test | 11.3 → 10.4 | 4.7 → 6.0 | 39.8 → 40.2 (+1 %) |
+  | the optics bench | 49.3 → 10.2 | 5.5 → 12.5 | 91.9 → 59.3 (−35.5 %) |
+
+  Its drift row read +1.5 %.
+  - **The surface kernel gives back part of the march's saving:** 21 of the 34 ms on dichroics. It now makes the one
+    full evaluation the march's last step used to make.
+  - **Always on, as you asked:** it was the developer setting March on distance only for that run, and the setting is
+    gone. A workspace that saved it has it ignored.
+- **The same picture.** You saw it identical. On a software GPU (`builder/test/marchdist.gpu.mjs`):
+  - every camera ray ends at the same place in the same steps, bit for bit;
+  - the hit the surface kernel writes back is the full march's, field by field;
+  - the whole renderer's pictures, with this march and with the full one put in its place, are the same pixel for pixel.
+- **What stays the same:** the Optics page's trace keeps the full march, because its shading reads the march's hit
+  directly. Shadow rays have an entry of their own.
+
+**What to look at:** your scenes, as ever: nothing in the picture should differ from before, and a heavy scene should
+be quicker. The Performance box has one row fewer.
+
+**Shadow rays ask the scene for its distance only, as the march does: the occlusion kernel 8-83 % less GPU time on five
+of six bench scenes, the same picture** (`lib/pathtracer/core/wavefront.js` prog_occlude and prog_occlude_emit). Every
+shadow-ray step asked the scene for its whole answer and read one number of it, whether anything is in the way.
+- **Now a step asks only that number.** The occlusion kernel is built against the same distance-only `fold` the march
+  uses.
+- **The exception, handled separately.** One shadow ray asks more: one aimed at a glowing surface, when something blocks
+  it, takes the emission of what it met.
+  - The distance-only kernel cannot answer that. So it marks the ray where it was blocked and leaves it in the queue, in
+    the slot it held.
+  - A small kernel of its own, holding the whole scene (`occlude_emit`), then asks the material at that ray and adds the
+    emission, exactly as before. It runs after every round's preparation and once after the sample's last round.
+  - The preparation sizes that kernel at zero when nothing was marked, so a scene with no glowing surfaces pays only
+    for the empty dispatches.
+- **Measured on your Pascal**, Tests › occludedist (`ShadyTracer 0.78.0 · 64535ad (ccr-0f3a020a-590jz2) · nvidia
+  pascal`, 2026-10-25), GPU ms a sample, before → now:
+
+  | scene | occlude (+ occlude_emit) | the whole sample |
+  |---|---|---|
+  | dichroics, its light's photons | 34.6 → 31.5 + 0.5 | 324.3 → 327.8 |
+  | the Noise library | 40.9 → 50.1 + 2.3 | 165.4 → 196.0 |
+  | the Menger cubes | 22.6 → 17.4 + 0.3 | 96.2 → 91.0 |
+  | the showcase | 6.5 → 3.5 + 1.8 | 51.8 → 48.4 |
+  | the material test | 4.9 → 4.1 + 0.2 | 46.7 → 43.5 |
+  | the optics bench | 29.3 → 4.7 + 0.2 | 69.2 → 43.1 (−38 %) |
+
+  Its drift row read −1.2 %.
+  - **The Noise library's row is not understood.** Everything in its second row was slower, the march included (72.1
+    → 87.4), and this change does not touch the march. The likely cause is the card's state during that row, not the
+    change, but that is not shown.
+  - **The shadow queue looked slower to drain** on the Menger cubes and the Noise library, with more shadow rays cut at
+    the end of the sample. The two rows logged different samples: the shadow-ray counts already differed before any
+    occlusion ran. On a software GPU both scenes' shadow rays go through every round the same both ways (below).
+  - **Always on, as you asked:** it was the developer setting Shadow rays on distance only for that run, and the
+    setting is gone, with Tests › occludedist. A workspace that saved it has it ignored.
+- **The same picture.** You saw it identical. On a software GPU (`builder/test/occludedist.gpu.mjs`):
+  - **The scenes' own shadow rays** (the optics bench as code and as data, the showcase, the material test, dichroics,
+    the Noise library, the Menger cubes, Dusty beam), through the full kernel and this one: every deposit bit for bit,
+    and every round's queue the same, with as many cut.
+  - **Glowing-surface shadow rays at panels by hand**, one panel asking for its own point, also inside a haze box: the
+    frame bit for bit.
+  - **The whole renderer**, as built and with the full occlusion kernel put in its place: every pixel bit for bit, but 2
+    of the showcase's 768 in f32's last place (1.5e-7). That is the same light added in another order: a blocked
+    glowing-surface ray's light now lands one round later, among atomic float additions.
+  - The march's own test now has the Noise library and the Menger cubes too, bit for bit.
+- **Memory and compiling:** one more kernel a scene (16 where there were 15), and 16 bytes.
+
+**What to look at:** your scenes, a glowing surface among them and the Menger cubes: nothing in the picture should
+differ, now that there is no switch to compare with. The Performance box has one row fewer, and Tests has no
+occludedist.
+
+**The photon map's room grows with the picture, so a large save is no darker than a small one.** The map held a fixed
+number of photons (the setting *Photon map: photons*, 2 million by default) whatever the picture's size. A larger
+picture sends more photons, one a pixel by default, and the map's gather radius is in pixels, so its disc shrinks too:
+at 3840 x 2160 the map kept 21% of its stores (1,700,191 kept, nothing dropped, no gather cut) where 1920 x 1080 kept
+about 85%, and each gather found far fewer photons. A 4K save in the Optics view came out visibly darker than the same
+scene at 1080p, and right with the setting raised to 16. The keep is exact on average, so the darkening is inferred to be
+the noise it brings: bright pixels clip at white and give back less than they took. Now the setting is the room for a
+1920 x 1080 picture and a larger one gets room in proportion: 8 million at 4K by default, 352 MB, capped by what one GPU
+buffer may hold. Below 1920 x 1080 nothing changes. The room grows as a panel is dragged larger and is given back after
+a save larger than the view; Save an image's memory estimate counts it.
+
+**What to look at:** save the same scene at 1920 x 1080 and 3840 x 2160 with the photon map at its default 2 and the same
+develop settings: the two should now match in brightness, as they did with 16. Render stats' photon-map line during a 4K
+render should say a share near 1080p's rather than 0.21. A large live view (above 1920 x 1080) also gets the larger map:
+say if its memory is a problem.
+
+**The Save an image box's width and height stay as typed.** With "match view aspect" on, typing a width set both
+sizes climbing a couple of pixels a frame, for ever: each size the box wrote came back from its row a frame later as
+if typed, and the width worked out from the height was off by the rounding from the width typed. A row's echo of what
+the box last settled is no longer taken for a change. With it off, a height of 1000 became 1001 when the view was an
+odd number of pixels high: the rows snap to steps of 2 counted from the value they were made with, which was the view's
+own size; they now start even. The rows live in `lib/pathtracer/savesize.js`, driven over the real property table by
+`lib/pathtracer/test/savesize.check.mjs`.
+
+**What to look at:** Render › Save an image. With "match view aspect" on, type a width: the height follows once and
+both stay put. Turn it off and type 1000 × 1000: it stays 1000 × 1000. "Use the live size" with an odd-sized window
+gives the even size next to it.
+
+**A light's rays no longer go dimmer while the photon map runs.** With the photon map on, a sample's photons run first
+in batches of their own. Each batch capped its shadow queue at its own ray count. But the queue also carries the
+shadow rays the rounds before have not finished, and a light's photons connect to the camera at every surface they land
+on. A batch of camera rays and photons together had room to spare, from the camera rays' unused places. A batch of
+photons alone had none, and a connection past the cap was dropped with its light. Measured on Dawn over lavapipe, in
+the `optics-mode` scene (a 1000 lm point source over a floor) with the map running every sample, the floor seen
+directly read 0.94-0.97 of the picture with the map off. With the cap set to what the queue's buffers hold
+(`raytrace_main.js`, shadowcap), it reads 1.000 +- 0.005. That this was the user's `optics-mode` full row reading under
+the illuminance view at all six sensors in the 0.77.0 and 0.78.0 runs is inferred; the illuminance view is the one mode
+the map never runs in.
+
+**The optics trace no longer loses a ray on the last pass.** A ray that was going back to the march on a run's last
+pass was written to a buffer nothing read, with nothing tallied. That was a grazing reflection still inside the hit
+band of the floor it had left, declined there pass after pass. It is now counted lost, as the march's own flush counts
+its rays (`optics/kernels.js` onward). `optics-balance` row 3 read a balance of 2.0e-6 for this, one ray in 400,000. On
+Dawn 20 runs in 100 of that row did, and 0 in 100 after.
+
+**The furnace's dichroic-on-every-face rows run at maxbounce 100 and maxiter 6000.** A coating that reflects nearly all
+of a channel traps that light inside the sphere, and the furnace's caps cut those paths: maxiter 400 is the march's
+steps over a whole path. That cut is what those rows' 0.9976 was (0.9971 in 0.77.0), not the coating. On Dawn the
+sphere read 0.9960 at the old pins and 0.9999 +- 0.0006 at the new ones. The beam splitter's few 1e-4 under 1 is
+different and stays: rays entering within the surface tolerance of the sphere's rim are trapped by total internal
+reflection, and the shortfall moves with the tolerance (the furnace's note).
+
+**Three test rules that failed on noise or on the wrong comparison, from the second 0.78.0 run.**
+- **draft-lamps** warms each row up before it counts. The emitter list is found and published first, then the picture
+  is cleared (the `clearLearned` block, which no test was using). Each row starts from a fresh list, and a Draft path finds
+  the disc only by its seek rays, so the first samples of a Draft row were black. How many depended on timing: 0, 1 or
+  2 of the 64 in the user's three runs (each 1/64 = 1.6 %). The lamps-only row's 0.984 against draft was one row's
+  start-up against the other's. On Dawn a fresh Draft row read 0.971-0.981 of full and a warmed one 0.9994.
+- **optics-colour's two mix rows** trace 250,000 rays a batch instead of 100,000. Each ray picks one LED, and that
+  pick's noise alone went past their 0.002 in 7 runs of 40 on Dawn, and none of 40 at 250,000.
+- **rr-bias** judges each RR-on row against the RR-off row at its own maxbounce. It judged every row against
+  maxbounce 10, so the light past the tenth bounce counted as bias: 0.5 % on the user's scene.
+
+**What to look at:** Tests > furnace: rows 27 and 28 should read about 1.000, and take longer than before. The extra
+cost is not measured: 289 wavefront iterations a sample against 54. Tests > optics-mode: the full row should read with
+the illuminance-view row at every sensor, x 1 about 1.1 or more. Tests > optics-balance: balance 0 on every row, run as
+often as you like. Tests > draft-lamps: draft and lamps only about 1 of full, and the same as each other.
+Tests > optics-colour: du'v' under 0.002 on both mix rows nearly every run. In the picture, a scene with lamps and
+glass in view: the lamps' light on surfaces seen directly should no longer dim when the photon map wakes, which may
+show as a few percent brighter than before.
+
 ## 0.78.0 — 2026-10-22
 
 **Dichroics is an example** (File › Examples › Optical design): the user's own scene as they saved it -- two collimated

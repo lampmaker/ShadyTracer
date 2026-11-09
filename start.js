@@ -1,5 +1,5 @@
 //======================================================================================================================
-// THE PAGE'S START, when the scene it starts on will not compile -- or must not be compiled. index.html calls it; no
+// THE PAGE'S START, when the scene it starts on will not compile -- or must not be compiled. app.html calls it; no
 // DOM, so test/start.test.mjs runs it in node over stand-ins.
 //
 // WHY. Since the work is kept in the browser (0.6.0) the scene a page starts on is the user's, as it was left: a

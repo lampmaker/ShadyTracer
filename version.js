@@ -19,13 +19,13 @@
 // (CLAUDE.md), and a pasted number is only worth what is known about the code that made it. The benchmark already
 // fingerprints its kernels (tests.js kernelFingerprint); this names the whole page, in every result, report and file.
 //
-//   await loadRevision()     once, before the title is drawn (index.html); never throws, gives up after a second
+//   await loadRevision()     once, before the title is drawn (app.html); never throws, gives up after a second
 //   versionText()            'ShadyTracer 0.1.0 · 1819ac6 (main)' -- the title, About, Help › Report, test results
 //   stamp()                  '0.1.0+1819ac6' (semver build metadata) -- what a saved file records as `app`
 //======================================================================================================================
 
 export const NAME = 'ShadyTracer'
-export const VERSION = '0.78.0'
+export const VERSION = '0.84.0'
 
 let REV = null
 

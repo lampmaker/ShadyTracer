@@ -38,14 +38,14 @@ export const CHAPTERS = [
     C('rays', 'distances', 'Shapes as distances', 'How a ray finds the first surface in its way, using nothing but distances.', 'draft',
         ['help/widgets.js', `${K}shapes.js`, `${K}tolerances.js`]),
     C('rays', 'shapes', 'Building and bending shapes', 'Joining, melting, twisting and roughening shapes, and keeping them safe to trace.', 'draft',
-        [`${K}scene_api.js`, `${K}shapes.js`, `${K}noise.js`, 'builder/modifiers.js', 'builder/codegen.js', 'help/widgets.js', 'import/']),
+        [`${K}scene_api.js`, `${K}shapes.js`, `${K}noise.js`, 'builder/modifiers.js', 'builder/codegen.js', 'help/widgets.js', 'import/', 'builder/joins.js']),
     C('rays', 'normals', 'Which way is up', 'Which way a surface faces, and what it costs to find out.', 'draft',
         [`${K}pick.js`, `${K}tracebasics.js`, `${K}tolerances.js`, `${K}sdf.js`, 'lib/pathtracer/PRECISION.md', `${K}test/floor.test.mjs`]),
 
     C('light', 'photometry', 'Measuring light', 'The units of light (lumen, candela, lux), how light weakens with distance and slant, the sun.', 'draft',
         [`${K}photometry.js`, `${K}sdf.js`, 'builder/lights.js', 'builder/sources.js']),
     C('light', 'colour', 'Colour', 'How three numbers stand for a colour, and what colour temperature means.', 'draft',
-        [`${K}colorimetry.js`, `${K}spectral.js`, 'builder/lights.js']),
+        [`${K}colorimetry.js`, `${K}spectral.js`, `${K}spd.js`, `${K}cie1931.js`, 'builder/lights.js']),
     C('light', 'pixels', 'From light to pixels', 'From light to the brightness of a screen: exposure and tone.', 'draft',
         [`${K}autoexposure.js`, `${K}rendertoscreen.js`, `${P}develop.js`, `${K}photometry.js`]),
 
@@ -56,7 +56,7 @@ export const CHAPTERS = [
     C('surfaces', 'glass', 'Glass', 'Light bending into glass, reflecting off it, and coloured by it.', 'draft',
         [`${P}optics/fresnel.js`, `${K}materials_pbr.js`]),
     C('surfaces', 'dispersion', 'Rainbows', 'Why glass splits white light into colours, and how a renderer follows each colour.', 'draft',
-        [`${K}spectral.js`, `${K}materials_pbr.js`]),
+        [`${K}spectral.js`, `${K}lightspectra.js`, `${K}lightspectra_wgsl.js`, `${K}materials_pbr.js`, `${K}test/spectralnoise.test.mjs`]),
 
     C('paths', 'montecarlo', 'Dice and averages', 'Averages of random tries: why they are noisy, and how fast the noise falls.', 'draft',
         [`${K}measure.js`, `${K}noise.js`, `${K}tracebasics.js`, `${K}wavefront.js`, `${K}uniforms.schema.js`]),

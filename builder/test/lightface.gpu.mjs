@@ -1,5 +1,5 @@
 //======================================================================================================================
-// A LIGHT'S FACE GLOWS ON THE FACE ALONE, ON A REAL WEBGPU (0.next; codegen.js object(), ONLY ON THE FACE ITSELF). Run:
+// A LIGHT'S FACE GLOWS ON THE FACE ALONE, ON A REAL WEBGPU (0.79.0; codegen.js object(), ONLY ON THE FACE ITSELF). Run:
 //   node builder/test/lightface.gpu.mjs
 //
 // OPTIONAL, AND LOUD ABOUT IT, as the other GPU checks: the `webgpu` package (npm i -g webgpu) and a Vulkan driver

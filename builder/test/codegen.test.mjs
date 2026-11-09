@@ -14,7 +14,7 @@ import { typedColumn } from '../emit.js'
 import * as Model from '../model.js'
 import { resolve, mapMessages } from '../emit.js'
 import { lineOffsetOf, finish, BODY_MARKER } from '../validate.js'
-import { uniformToGPU } from '../../lib/pathtracer/core/uniforms.schema.js'
+import { uniformToGPU, sceneTextOf } from '../../lib/pathtracer/core/uniforms.schema.js'
 import { carryAcross } from '../../lib/pathtracer/index.js'
 import { PRIMITIVES } from '../../lib/pathtracer/core/sdf.js'
 import { DEFINITIONS } from '../../lib/pathtracer/core/tracebasics.js'
@@ -406,11 +406,14 @@ ok('and none of scenes/common.js\'s override uniforms', !('matColorR' in built.u
        would become the base and be drawn. The optics copy has the plate. */
     {
         const d4 = Model.createDoc()
-        const lim = Model.addMaterial(d4, { id: 'lim', preset: 'diffuse' }); Model.setMaterialType(d4, lim.id, 'limiter')
+        Model.addMaterial(d4, { id: 'lim', preset: 'diffuse' })
         Model.addGroup(d4, 'root', { id: 'ap' })
         Model.addObject(d4, 'ap', { id: 'plate', primitive: 'box', material: 'lim' })
         Model.addObject(d4, 'ap', { id: 'hole', primitive: 'cylinder', join: 'subtract' })
+        Model.setOpticsRole(d4, 'plate', 'limiter'); Model.setFeatures(d4, { analysis: true })
         const g4 = generate(Model.toTree(d4))
+        eq('...the hole\'s wall stops the optics trace too: the group\'s shape takes its base\'s role, as its material',
+            g4.detectorTags.map(t => g4.opticsTags[t - 1]).sort(), ['hole', 'plate'])
         const render = g4.wgsl.slice(g4.wgsl.indexOf('fn SDF('))
         ok('a limiter base is an empty shape in the picture: its block draws nothing, then the base is taken',
             /node plate \(code\): an optics limiter, not in the picture[\s\S]*?k_ap = C\.s; km_ap = C\.m;/.test(render))
@@ -439,7 +442,7 @@ ok('and none of scenes/common.js\'s override uniforms', !('matColorR' in built.u
         ok(`${key}: in a group the menu and the library know`, SHAPE_GROUPS.some(g => g.key === def.group), String(def.group))
     }
     eq('code is the only kind of shape; a light, an export box and a haze box are the other object types (their shapes have to stay known)',
-        Object.keys(NODE_TYPES).sort(), ['code', 'export', 'haze', 'light'])
+        Object.keys(NODE_TYPES).sort(), ['code', 'haze', 'light'])
 
     /* A NEW PRIMITIVE AND A VERSION 8 NODE OF THE SAME TYPE COMPILE ALIKE. The upgrade gives an old
        file the code its type emitted (model.js v8to9); the library is where new ones start. Apart
@@ -630,13 +633,13 @@ eq('uniformName', uniformName('n7', 'radius'), 'radius_n7')
     const g = Model.addGroup(doc, 'root', { label: 'cut', blend: 0.1 })
     Model.addObject(doc, g.id, { primitive: 'box', label: 'base' })
     Model.addObject(doc, g.id, { primitive: 'sphere', label: 'hole', join: 'subtract' })
-    const x = Model.addExportBox(doc, 'root', { label: 'print' })
+    const x = Model.addHazeBox(doc, 'root', { label: 'dust' })
     const tree = Model.toTree(doc)
     const s = generate(tree, { cull: 'all' }), plain = generate(tree, { cull: false })
-    const top = tree.children.filter(n => n.type !== 'export')
+    const top = tree.children.filter(n => n.type !== 'haze')
     const tested = [...s.wgsl.matchAll(/let bd_(\w+) = cullDist\(/g)].map(m => m[1])
     eq('one box test per top-level node that draws something, and no deeper', tested.sort(), top.map(n => n.id).sort())
-    ok('...not for an export box (it draws nothing)', !tested.includes(x.id))
+    ok('...not for a haze box (it draws nothing)', !tested.includes(x.id))
     ok('...a CSG group tested as a whole, its children not', tested.includes(g.id) && !g.children?.some?.(c => tested.includes(c.id)))
     ok('each tested node\'s box declared, unknown (lo.w 0) until measured', top.every(n =>
         s.uniforms[boxLoName(n.id)]?.type === 'vec4<f32>' && JSON.stringify(s.uniforms[boxLoName(n.id)].def) === '[0,0,0,0]'
@@ -666,8 +669,9 @@ eq('uniformName', uniformName('n7', 'radius'), 'radius_n7')
 }
 
 //----------------------------------------------------------------------------------------------
-// OPTICS AND LIGHT (model version 10): detectors and limiters by MATERIAL id; a limiter only in the
-// optics copies; lights drawn as sheets with their own material, glowing for the camera's first look
+// OPTICS AND LIGHT: detectors and limiters by the OBJECT'S tag (0.83.0, version 27: its role; its material's type from
+// 10 to 26); a limiter only in the optics copies; lights drawn as sheets with their own material, glowing for the camera's
+// first look
 //----------------------------------------------------------------------------------------------
 {
     const at = z => ({ pos: { x: 0, y: 0, z }, rot: { x: 0, y: 0, z: 0 }, scale: 1 })
@@ -679,16 +683,23 @@ eq('uniformName', uniformName('n7', 'radius'), 'radius_n7')
     Model.addObject(d, 'root', { id: 'screen', primitive: 'disc', material: 'scr' })
     Model.addObject(d, 'root', { id: 'plane', primitive: 'rectangle', material: 'cut', transform: at(2) })
     const before = generate(Model.toTree(d))
-    eq('no roles, no detectors', before.detectors, [])
+    eq('no roles, no detectors', [before.detectors, before.detectorTags], [[], []])
     ok('no limiter: the optics copies are the render and pick copies',
         before.opticsWgsl === before.wgsl && before.opticsPickWgsl === before.pickWgsl)
-    Model.setMaterialType(d, 'scr', 'detector')
+    Model.setOpticsRole(d, 'screen', 'detector')
+    eq('a role with the scene\'s analysis off: nothing', generate(Model.toTree(d)).detectorTags, [])
+    Model.setFeatures(d, { analysis: true })
     const g = generate(Model.toTree(d))
-    eq('a detector is listed by its material id (the document\'s materials from 2)', g.detectors, [3])
-    ok('the render kernels compile the same text: a detector only matters to the optics trace', g.wgsl === before.wgsl)
-    Model.setMaterialType(d, 'cut', 'limiter')
+    const named = s => s.detectorTags.map(t => s.opticsTags[t - 1])
+    eq('a detector is listed by its tag in the optics copy (opticsTags[t - 1]), no material', [named(g), g.detectors], [['screen'], []])
+    ok('EVERY text the same: a detector is the scene\'s data, not its code (no compile)', ['wgsl', 'pickWgsl', 'opticsWgsl', 'opticsPickWgsl'].every(k => g[k] === before[k]))
+    Model.addObject(d, 'root', { id: 'screen2', primitive: 'disc', material: 'scr', transform: at(-2) })
+    eq('a second object of the same material is no detector until it is made one', named(generate(Model.toTree(d))), ['screen'])
+    Model.setOpticsRole(d, 'screen2', 'detector')
+    eq('...then two independent detectors', named(generate(Model.toTree(d))), ['screen', 'screen2'])
+    Model.setOpticsRole(d, 'plane', 'limiter')
     const h = generate(Model.toTree(d))
-    eq('a limiter is listed too', h.detectors, [3, 4])
+    eq('a limiter is listed too', named(h).sort(), ['plane', 'screen', 'screen2'])
     ok('...and is not in the picture', !/Nrectangle/.test(h.wgsl) && /Nrectangle/.test(h.opticsWgsl))
     ok('...nor in the pick copy, so a click never selects what cannot be seen', !h.tags.includes('plane') && h.opticsTags.includes('plane'))
     ok('its transform and parameters are still declared, for the builder to write', 'xf_plane' in h.uniforms && 'width_plane' in h.uniforms)
@@ -701,7 +712,7 @@ eq('uniformName', uniformName('n7', 'radius'), 'radius_n7')
     const L = generate(Model.toTree(d))
     ok('MATID_BLACK and MATID_CLEAR follow the three materials', /const MATID_BLACK: u32 = 5u;/.test(L.wgsl) && /const MATID_CLEAR: u32 = 6u;/.test(L.wgsl))
     ok('each light has its own material id after them', /const matid_die: u32 = 7u;/.test(L.wgsl) && /const matid_win: u32 = 8u;/.test(L.wgsl))
-    ok('a one-sided light is black behind and past its edge (0.next: the rim the surface tolerance grows it by), a transparent one clear',
+    ok('a one-sided light is black behind and past its edge (0.79.0: the rim the surface tolerance grows it by), a transparent one clear',
         L.body.includes('let MATERIAL = select(MATID_BLACK, matid_die, p.z >= 0.0 && all(abs(p.xy) <= VEC2(width, height) * 0.5));')
         && L.body.includes('let MATERIAL = select(MATID_CLEAR, matid_win, p.z >= 0.0 && dot(p.xy, p.xy) <= radius * radius);'))
     /* PLAN.md L4: a camera path sees the face glow at its first hit, and at a later one when its first
@@ -1051,7 +1062,7 @@ eq('uniformName', uniformName('n7', 'radius'), 'radius_n7')
 }
 
 {
-    /* A LIGHT INSIDE ARRAYS (0.next; lights.js A LIGHT INSIDE ARRAYS): a face a copy, numbered from the light's own place,
+    /* A LIGHT INSIDE ARRAYS (0.79.0; lights.js A LIGHT INSIDE ARRAYS): a face a copy, numbered from the light's own place,
        innermost copy fastest -- and the same faces, in the same order, from the three that enumerate them: codegen's
        lightFace (run here on the uniforms' defaults, line by line as emitted, as the test above runs one light's), the
        scene as data's light table (scenedata.js recordsOf), and the optics' sources (sources.js sourceTable). A light
@@ -1866,7 +1877,6 @@ eq('uniformName', uniformName('n7', 'radius'), 'radius_n7')
     Model.addGroup(d, 'root', { id: 'pair' })
     Model.addObject(d, 'pair', { primitive: 'sphere' })
     Model.addLight(d, 'root', { id: 'lamp' })
-    Model.addExportBox(d, 'root', { id: 'print' })
     const tested = s => [...s.wgsl.matchAll(/let bd_(\w+) = cullDist\(/g)].map(m => m[1]).sort()
     const boxes = s => Object.keys(s.uniforms).filter(n => /^bx(lo|hi)_/.test(n)).sort()
     const on = generate(...Model.generateArgs(d, { id: 'dear', cull: 'all' })), dear = generate(...Model.generateArgs(d, { id: 'dear' }))
@@ -1935,6 +1945,38 @@ eq('uniformName', uniformName('n7', 'radius'), 'radius_n7')
     const made = { ...structuredClone(old.materials[0]) }
     made.params = Object.fromEntries(Object.entries(Model.withFieldDefaults(made).params).reverse())
     ok('...and the same material whatever order its fields are in', Model.sameMaterial(Model.withFieldDefaults(old.materials[0]), made))
+}
+
+//----------------------------------------------------------------------------------------------
+// SCATTER INSIDE A MATERIAL (0.82.0; materials.js scatterDistance, core/haze.js THE MEDIUM'S WALK): in the shader only
+// while above 0, in real mm, its asymmetry only with it -- and the scene says it scatters (scene.scatter), which decides
+// whether the march has the walk (sceneTextOf), only then
+//----------------------------------------------------------------------------------------------
+{
+    const d = Model.createDoc({ title: 'milky' })
+    Model.addMaterial(d, { id: 'glass', preset: 'glass' })
+    Model.addObject(d, 'root', { id: 'box', primitive: 'box', material: 'glass' })
+    const P = d.materials.find(m => m.id === 'glass').params
+    ok('a new material has both fields, at 0', P.scatterDistance === 0 && P.scatterAnisotropy === 0)
+    const ud = uniformName('glass', 'scatterDistance'), ug = uniformName('glass', 'scatterAnisotropy')
+    const off = generate(...Model.generateArgs(d, { id: 'sc' }))
+    ok('at 0: neither declared nor assigned, and the scene does not say it scatters', !(ud in off.uniforms) && !(ug in off.uniforms)
+        && !off.wgsl.includes('scatterDistance') && !('scatter' in off))
+    P.scatterAnisotropy = 0.6
+    const gOnly = generate(...Model.generateArgs(d, { id: 'sc' }))
+    ok('...its asymmetry alone puts nothing in the shader', !(ug in gOnly.uniforms) && !('scatter' in gOnly))
+    P.scatterDistance = 3
+    const on = generate(...Model.generateArgs(d, { id: 'sc' }))
+    ok('above 0: both uniforms with their values, the distance through mm() (real millimetres whatever the unit)',
+        on.uniforms[ud]?.def === 3 && on.uniforms[ug]?.def === 0.6 && on.wgsl.includes(`m.scatterDistance = mm(UB.${ud});`)
+        && on.wgsl.includes(`m.scatterAnisotropy = UB.${ug};`))
+    ok('...and the scene says it scatters, which makes its text another (sceneTextOf)', on.scatter === true && sceneTextOf(on) !== sceneTextOf({ ...on, scatter: undefined }))
+    // an emitter's fields are emission alone: a scatter distance on one scatters nothing
+    Model.addMaterial(d, { id: 'lamp', preset: 'emissive' })
+    P.scatterDistance = 0
+    d.materials.find(m => m.id === 'lamp').params.scatterDistance = 2
+    const em = generate(...Model.generateArgs(d, { id: 'sc' }))
+    ok('...an emitter\'s scatter distance does not make the scene scatter', !('scatter' in em))
 }
 
 //----------------------------------------------------------------------------------------------
@@ -2068,6 +2110,57 @@ eq('uniformName', uniformName('n7', 'radius'), 'radius_n7')
     Model.addObject(none, 'root', { id: 't', primitive: 'capsule' })
     const n1 = generate(...Model.generateArgs(none, { id: 'n' })), n2 = generate(...Model.generateArgs(none, { id: 'n', along: true }))
     ok('a scene where nothing answers: with `along`, the text byte for byte without it', !n2.along && n2.wgsl === n1.wgsl)
+}
+
+//----------------------------------------------------------------------------------------------
+// THE SCENE'S OPTICAL FEATURES (0.83.0; model.js setFeatures, materials.js FEATURES): a feature off is the scene compiled
+// as if no material had its fields -- byte for byte the shader of the same scene with them at their defaults -- and every
+// feature on (the key absent) the shader it always was. The document keeps the values.
+//----------------------------------------------------------------------------------------------
+{
+    const make = () => {
+        const d = Model.createDoc({ title: 'features' })
+        Model.addMaterial(d, { id: 'flint', preset: 'glass' })
+        Model.addMaterial(d, { id: 'dich', preset: 'glass' })
+        Model.addObject(d, 'root', { id: 'pr', primitive: 'prism', material: 'flint' })
+        Model.addObject(d, 'root', { id: 'pl', primitive: 'box', material: 'dich' })
+        Object.assign(d.materials.find(m => m.id === 'flint').params, { abbe: 28, attenuationDistance: 12 })
+        Object.assign(d.materials.find(m => m.id === 'dich').params, { coating: 1, coatEdge: 550 })
+        return d
+    }
+    const gen = d => generate(...Model.generateArgs(d, { id: 'feat' }))
+    const full = make(), fullOut = gen(full)
+    for (const [k, f] of Object.entries(Model.FEATURES)) if (f.fields.length)
+        ok(`Full: ${k}'s fields are in the shader`, f.fields.some(n => Object.keys(fullOut.uniforms).some(u => u.endsWith(`_${n}`) || u === uniformName('flint', n) || u === uniformName('dich', n))))
+    for (const name of [...Object.keys(Model.FEATURES).filter(k => Model.FEATURES[k].fields.length), 'basic']) {
+        const d = make()
+        if (name === 'basic') Model.setFeatures(d, Model.FEATURE_PRESETS.basic.values)
+        else Model.setFeatures(d, { [name]: false })
+        const off = Object.keys(Model.FEATURES).filter(k => !Model.featuresOf(d)[k])
+        // the same scene with those fields at their defaults, and every feature on
+        const plain = make()
+        for (const m of plain.materials) for (const k of off) for (const n of Model.FEATURES[k].fields) m.params[n] = structuredClone(Model.MATERIAL_FIELDS[n].def)
+        const a = gen(d), b = gen(plain)
+        ok(`${name} off: the shader byte for byte the scene's without those values`, a.wgsl === b.wgsl, `${a.wgsl.length} vs ${b.wgsl.length}`)
+        eq(`${name} off: ...and the same uniforms`, Object.keys(a.uniforms).sort(), Object.keys(b.uniforms).sort())
+        ok(`${name} off: the document keeps its values`, d.materials.find(m => m.id === 'flint').params.abbe === 28
+            && d.materials.find(m => m.id === 'dich').params.coating === 1)
+        ok(`${name} off: the shader differs from Full's`, a.wgsl !== fullOut.wgsl)
+    }
+    // the spectral trace (0.83.0) is the Optics page's alone, no material field: the scene's shader is Full's, byte for byte
+    const sp = make()
+    Model.setFeatures(sp, { spectral: true })
+    ok('the spectral trace on: the scene\'s shader Full\'s, byte for byte', gen(sp).wgsl === fullOut.wgsl)
+    // every feature on again is no key, and the text it was
+    const back = make()
+    Model.setFeatures(back, Model.FEATURE_PRESETS.basic.values)
+    Model.setFeatures(back, Model.FEATURE_PRESETS.full.values)
+    ok('Basic then Full: no key, and the shader Full\'s', !('features' in back) && gen(back).wgsl === fullOut.wgsl)
+    // the coating fields of the feature are the material fields marked coat, and every feature's fields are real
+    eq('coatings: the coating and every coat field', Model.FEATURES.coatings.fields, ['coating', ...Model.COAT_FIELDS])
+    ok('every feature\'s fields are material fields, each `only` at its default (what toTree leaves them at)',
+        Object.values(Model.FEATURES).every(f => f.fields.every(n => n in Model.MATERIAL_FIELDS
+            && !(Model.MATERIAL_FIELDS[n].only?.(Model.MATERIAL_FIELDS[n].def, { coating: 0 }) ?? true))))
 }
 
 console.log(fail ? `\n${fail} failed, ${pass} passed.` : `${pass} assertions pass.`)

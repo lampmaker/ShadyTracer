@@ -168,7 +168,7 @@ build itself now, and reads the same steps as the count's table below, to the de
 The user asked (2026-10-24) which techniques could make rendering faster.
 - **Over-relaxation, the list's first step, is gone.** The user saw the picture change with it (below, under
   Rejected).
-- **The march on distance only (0.next)** is review #7 of `PERFORMANCE_REVIEW.md`, without the occlusion half.
+- **The march on distance only (0.79.0)** is review #7 of `PERFORMANCE_REVIEW.md`, without the occlusion half.
   - Every march step asked the scene for its whole answer and read one number of it (read in code: `wavefront.js`
     prog_march, `abs(hit.s.w)`).
   - Now the renderer's march is compiled against a distance-only `add_new` and `fold` (`scene_api.js` FOLD_DIST), and
@@ -197,7 +197,7 @@ Chrome 155, 2026-10-25). Off was the setting `marchDist` 0, on was 1, each baked
     take three looks anyway.
 - **The picture is the same.** The user saw it identical; on lavapipe it is bit for bit (`builder/test/marchdist.gpu.mjs`).
 - **The user's choice:** always on, the setting removed. Tests › marchdist went with it, since there is no off to time.
-- **Then shadow rays on distance only (0.next)**, the occlusion half of review #7.
+- **Then shadow rays on distance only (0.79.0)**, the occlusion half of review #7.
   - The occlusion kernel folds the distance alone (read in code: `wavefront.js` prog_occlude's distOnly).
   - An emitter's shadow ray, the one that asks a material where it is blocked, is marked there, left in its slot in the
     queue, and resolved by `prog_occlude_emit`, a small kernel holding the whole scene, before the next round.
@@ -347,7 +347,7 @@ reading left over from another trace: the map ran no photons there (batches 1). 
    - the studio's share of light samples;
    - Draft's seek rays in a scene that cannot emit.
 8. **The step cache** (off by default):
-   - a bake swap restarts the picture with it on (`index.html` pushStepBox);
+   - a bake swap restarts the picture with it on (`app.html` pushStepBox);
    - moveFast refills it at every move's start and end (renderMode, nee and lt in its key);
    - the photon map's idle key resets on a Sketch round trip.
 
@@ -892,6 +892,10 @@ sized from how long the GPU was busy with the last frame (`R.frameMs`: from its 
 before it ending, whichever is later, so a frame queued behind another is not timed with its wait, since
 0.10.0); frames under 250 ms are not cut; a new scene submits every iteration until it has a timing
 (`raytrace_main.js` NO SUBMIT LONG ENOUGH; not confirmed on hardware as of 2026-09-29). The experimental TRACE2 flow is not cut.
+**2026-10-31:** a 3840 x 2160 render in the Darkroom lost the device "after a few batches" (the user). Inferred, not
+measured: the rule spreads a frame's time evenly over its batches and iterations, and a batch is a band of the picture
+whose first iterations carry nearly all its rays, so the submission holding the object's band ran far over its share.
+Since 0.81.0 each submission is timed and the longest caps the next cut (`raytrace_main.js` THE LONGEST SUBMISSION).
 
 ## Measured: a path edited in the picture (the user's machine, 2026-10-02)
 
@@ -985,7 +989,7 @@ What grows with N objects, today:
 
 - **The uniform buffer, 64 KiB.** Every node's transform, parameters and box are fields of the one
   `var<uniform>` struct (`tinywebgpu.js:1234`). `init` raises only the storage limits (`tinywebgpu.js:211-219`)
-  and the page asks for no limit (`index.html:282`), so the WebGPU default of 65 536 bytes applies. D3D12 caps a
+  and the page asks for no limit (`app.html:282`), so the WebGPU default of 65 536 bytes applies. D3D12 caps a
   constant buffer there in any case (its spec: 4096 x 16 bytes). What the user's adapter reports is not checked:
   `(await navigator.gpu.requestAdapter()).limits.maxUniformBufferBindingSize` in the console says.
   - **Computed** (codegen in Node, sizes by tinywebgpu's layout rules): N copies of the box preset at the root
@@ -1307,9 +1311,9 @@ the scene:** WebGPU takes WGSL source only, and there is no compiled shader form
    arrays), as data an ARRAY record, the children's frames relative to the copy, and an ARRAY_END that goes back for
    the next (the evaluator keeps a base frame only in a scene that has arrays). Checked on a CPU's WebGPU: the field and
    the picks of the copies written out as groups. No light inside an array yet (light sampling's one face a light; a
-   light at every copy since `0.next`, roadmap/LIGHT_CONTROL.md);
+   light at every copy since 0.79.0, roadmap/LIGHT_CONTROL.md);
    no group with code or joins as one (put it inside). Each copy is still a walk of its children at every step near
-   it: the BVH is what would tell which copies are near. **A row's or a ring's copies have a window since `0.next`**
+   it: the BVH is what would tell which copies are near. **A row's or a ring's copies have a window since 0.79.0**
    (builder/arrays.js): the copies near the point walked, the rest a bound in CULL -- measured before it on the user's
    Ampere (Tests > lightarray, 213642c): 256 copies of one light at 465 ms of march a sample against one light's 12.
    After it, on the user's Pascal (a81cac9): **slower**, 1007.5 ms of march against 281.0 with the window off, with

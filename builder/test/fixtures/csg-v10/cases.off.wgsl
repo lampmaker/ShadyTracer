@@ -74,6 +74,14 @@ m.baseColor = fract(p_local);
         }
         case 5u: {     // material lim
             var m = makeDefaultMaterial();
+            m.baseColor = UB.baseColor_lim;
+            m.metallic = UB.metallic_lim;
+            m.roughness = UB.roughness_lim;
+            m.anisotropy = UB.anisotropy_lim;
+            m.specular = UB.specular_lim;
+            m.specularTint = UB.specularTint_lim;
+            m.transmission = UB.transmission_lim;
+            m.ior = UB.ior_lim;
             return m;
         }
         case 1u: { return makeDiffuse(vec3<f32>(0.8), 1.0); }
@@ -534,7 +542,6 @@ C = add_new(C, Ntorus(p, ring, tube), MATERIAL);
                 let xfm_ex = XF_M; let xfs_ex = XF_S;
                 XF_M = XF_M * xfRot(UB.xf_ex); XF_S = XF_S * UB.xf_ex[3].w;
                 let xfp_ex = XF_P; XF_P = p;
-                // node exbox (export): an export box: draws nothing
                 var k_ex = VEC4(0.0, 0.0, 1.0, 1.0e7);
                 var km_ex = MAT_AIR;
                 {

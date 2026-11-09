@@ -78,6 +78,17 @@ let s = await state()
 ok('...reaches the document, as a compile with an undo step and a relabel',
     s.b[0] === 'intersect' && s.structure === before.structure + 1 && s.labels > before.labels && s.commits.at(-1) === null, JSON.stringify(s))
 
+// ITS EDGE (model version 28): smooth by default, round or chamfer a compile with an undo step, smooth again no field
+rows = await rowsOf('b')
+ok('a child shows its edge, smooth by default', rows.includes('edge') && await p.evaluate(() => !('joinShape' in CHECK.M.find(CHECK.doc, 'b').node)), JSON.stringify(rows))
+before = await state()
+ok('setting it round', await set('edge', 'round') === 'set')
+s = await state()
+ok('...reaches the document, as a compile with an undo step', await p.evaluate(() => CHECK.M.find(CHECK.doc, 'b').node.joinShape) === 'round'
+    && s.structure === before.structure + 1 && s.commits.at(-1) === null, JSON.stringify(s))
+await rowsOf('b')
+ok('...and back to smooth: no field', await set('edge', 'smooth') === 'set' && await p.evaluate(() => !('joinShape' in CHECK.M.find(CHECK.doc, 'b').node)))
+
 // THE BASE says so
 rows = await rowsOf('a')
 ok('the first shape is the base', rows.includes('join (base)'), JSON.stringify(rows))
@@ -729,6 +740,99 @@ ok('...and the radius row says so by itself (the panel redrawn), the number kept
     ok('...and the editor shows the colour as the three lines it is', /light.colour.r = tint.r\nlight.colour.g = tint.g\nlight.colour.b = tint.b/.test(lheld.bindText ?? ''), JSON.stringify(lheld.bindText))
 }
 
+/* A LIGHT BY ITS SPECTRUM (0.83.0; core/spd.js): colour by spectrum starts as a blackbody at the colour's own CCT; peaks
+   typed are checked as typed -- a problem said at its line, nothing put in -- and what reads clean is a live write of the
+   light (no compile) with its undo step; a preset puts one in; the readout says the efficacy. */
+{
+    await p.evaluate(() => { CHECK.M.addLight(CHECK.doc, 'root', { id: 'spl', shape: 'rectangle', label: 'spectral led' }) })
+    const light = () => p.evaluate(() => structuredClone(CHECK.M.lightOf(CHECK.M.find(CHECK.doc, 'spl').node)))
+    const said = () => p.evaluate(() => document.querySelector('.builder-spectrum-said')?.textContent ?? '')
+    const typeText = text => p.evaluate(text => {
+        const ta = [...document.querySelectorAll('textarea')].find(t => /\d+ \d+ \d+/.test(t.value) || t.dataset.spectrum)
+        if (!ta) return 'no textarea'
+        ta.dataset.spectrum = '1'
+        ta.value = text; ta.dispatchEvent(new Event('input', { bubbles: true }))
+        return 'typed'
+    }, text)
+    let rr = await rowsOf('spl')
+    ok('a light: colour by offers spectrum', rr.includes('colour by'))
+    ok('colour by spectrum chosen', await set('colour by', 'spectrum') === 'set')
+    await p.waitForTimeout(80)
+    let L = await light()
+    rr = await p.evaluate(() => [...document.querySelectorAll('.tp-lblv')].map(r => r.querySelector('.tp-lblv_l')?.textContent.trim().replace(/^[◇◆]/, '')))
+    ok('...a blackbody at the white it was (D65: about 6500 K), its rows: kind, start from, temperature', L.colourBy === 'spectrum'
+        && L.spectrum.kind === 'planck' && L.spectrum.T > 6400 && L.spectrum.T < 6600 && ['spectrum', 'start from', 'temperature (K)'].every(l => rr.includes(l)),
+        JSON.stringify([L.spectrum, rr]))
+    const readout = await p.evaluate(() => [...document.querySelectorAll('input')].map(i => i.value).find(v => /lm\/W radiated/.test(v)) ?? '')
+    ok('...the readout says its efficacy', /\d+ lm\/W radiated/.test(readout), readout)
+    await p.waitForTimeout(50)
+    const plotLine = () => p.evaluate(() => ({ line: document.querySelector('.builder-spectrum-line')?.textContent ?? '', plot: !!document.querySelector('canvas.builder-spectrum-plot')?.width }))
+    let pl = await plotLine()
+    // a blackbody at D65's 6506 K: above 5000 K its reference is the CIE's daylight, which it is not quite -- Ra 98
+    ok('...its spectrum drawn, and its CRI: Ra 98 against daylight at 6506 K', pl.plot && /^Ra 98 · R9 96 · 650\d K · \d+ lm\/W$/.test(pl.line), JSON.stringify(pl))
+    ok('peaks chosen', await set('spectrum', 'peaks') === 'set')
+    await p.waitForTimeout(80)
+    L = await light()
+    ok('...a white LED to start from, its text in the box', L.spectrum.kind === 'peaks' && L.spectrum.peaks.length === 2
+        && /in use|2 peaks/.test(await said()), JSON.stringify([L.spectrum, await said()]))
+    const before = await state()
+    ok('a peak typed wrong', await typeText('630 17 1\n580 wide 2') === 'typed')
+    await p.waitForTimeout(450)
+    ok('...said at its line and column, nothing put in', /line 2, column 5/.test(await said()) && (await light()).spectrum.peaks.length === 2
+        && (await state()).live.length === before.live.length, await said())
+    ok('a red LED typed', await typeText('630 17 1') === 'typed')
+    await p.waitForTimeout(450)
+    L = await light()
+    const s2 = await state()
+    ok('...put in, live: the light pushed, no compile, its undo step', JSON.stringify(L.spectrum.peaks) === '[{"nm":630,"fwhm":17,"weight":1}]'
+        && s2.live.slice(before.live.length).includes('spl.light') && s2.structure === before.structure && s2.commits.at(-1) === 'spl.light'
+        && /in use/.test(await said()), JSON.stringify([L.spectrum, s2.live.slice(before.live.length), s2.commits.slice(-2), await said()]))
+    pl = await plotLine()
+    ok('...redrawn as typed: a red LED has no CCT, so no CRI', /^no CRI/.test(pl.line), pl.line)
+    ok('a preset chosen: royal blue', await set('start from', 'LED royal blue') === 'set')
+    await p.waitForTimeout(80)
+    ok('...the light\'s spectrum the preset\'s', JSON.stringify((await light()).spectrum.peaks) === '[{"nm":450,"fwhm":20,"weight":1}]')
+    ok('one of the CIE\'s LED lamps', await set('start from', 'CIE LED-B3') === 'set')
+    await p.waitForTimeout(100)
+    pl = await plotLine()
+    ok('...a measured table of 81 points, its CRI the CIE illuminant\'s: Ra 85, R9 24, 4103 K', (await light()).spectrum.points?.length === 81
+        && /^Ra 85 · R9 24 · 410\d K/.test(pl.line), JSON.stringify(pl))
+}
+
+/* A RAY FILE'S COLOUR (0.83.0; lights.js RAYFILE_COLOUR_BY, optics/sources.js rayFileColour): a rectangle's four ways and two
+   of its own first -- from the file (its default) and its header's wavelength, the nm said in the choice -- the line under
+   them saying what each comes to for the file loaded: a flux-only file at 854 nm, as the user's infrared LED's says */
+{
+    await p.evaluate(async () => {
+        const { RAYFILES } = await import('/optics/rayfiles.js')
+        const { writeZemax } = await import('/lib/pathtracer/optics/zemax.js')
+        const rays = [0, 1, 2].map(k => ({ pos: [k, 0, 0], dir: [0, 0, 1], flux: 1 }))
+        await RAYFILES.load(new File([writeZemax(rays, { fluxType: 0, wavelength: 0.854 })], 'ir854.DAT'))
+        CHECK.M.addLight(CHECK.doc, 'root', { id: 'rfc', shape: 'rayfile', label: 'ir led', file: 'ir854.DAT' })
+    })
+    const light = () => p.evaluate(() => structuredClone(CHECK.M.find(CHECK.doc, 'rfc').node.light))
+    const line = () => p.evaluate(() => [...document.querySelectorAll('textarea[readonly], .tp-mllv textarea')].map(t => t.value).join(' | '))
+    const options = () => p.evaluate(() => {
+        const row = [...document.querySelectorAll('.tp-lblv')].find(r => r.querySelector('.tp-lblv_l')?.textContent.trim() === 'colour by')
+        return row ? [...row.querySelector('select').options].map(o => o.textContent.trim()) : []
+    })
+    let rr = await rowsOf('rfc')
+    const opts = await options()
+    ok('a ray file: colour by, from the file first, its header\'s wavelength with its nm, then a rectangle\'s four',
+        rr.includes('colour by') && opts[0] === 'from the file' && opts[1] === "its header's wavelength (854 nm)"
+        && ['RGB', 'CCT + Duv', 'CIE xy', 'spectrum'].every(o => opts.includes(o)), JSON.stringify(opts))
+    ok('...from the file by default, nothing stored, and said: this file gives no colour', !('colourBy' in await light()) && /gives no colour/.test(await line()), await line())
+    ok('its header\'s wavelength chosen', await set('colour by', "its header's wavelength") === 'set')
+    await p.waitForTimeout(80)
+    rr = await rowsOf('rfc')
+    ok('...stored, and said: 854 nm, outside what the eye sees, nothing in the picture', (await light()).colourBy === 'wavelength'
+        && /854 nm: outside what the eye sees/.test(await line()), JSON.stringify([await light(), await line()]))
+    ok('RGB chosen', await set('colour by', 'RGB') === 'set')
+    await p.waitForTimeout(80)
+    rr = await rowsOf('rfc')
+    ok('...kept as RGB (a ray file\'s default is its file), its colour row shown', (await light()).colourBy === 'rgb' && rr.includes('colour'), JSON.stringify([await light(), rr]))
+}
+
 /* THE ASPHERIC LENS'S COEFFICIENTS (2026-10-04): numbers with no range, typed from a datasheet. Tweakpane showed such a
    number to its first value's decimals, two at least -- 0.00 for an a4 of 1.6e-5 and an a10 of 2e-13 -- and a step
    would have rounded them away. Typed, they are kept whole and shown as typed; its radii and conic keep their sliders. */
@@ -791,8 +895,8 @@ ok('...and a conic typed to four places kept on its slider (its step\'s rounding
         f.querySelector(':scope > .tp-fldv_b .tp-fldv_t').textContent.trim(), f.classList.contains('pt-box'),
         [...f.querySelectorAll(':scope > .tp-fldv_c > .tp-lblv .tp-lblv_l')].map(l => l.textContent.trim().replace(/^[◇◆]/, ''))]))
     let SB = await sceneBoxes()
-    ok('...in boxes: the animated values\' first, then the scene\'s own with its rows, then environment and functions',
-       JSON.stringify(SB.map(b => b[0].replace(/\s+◆$/, ''))) === '["animated · 1","Scene","environment","functions"]' && SB.every(b => b[1])
+    ok('...in boxes: the animated values\' first, then the scene\'s own with its rows, then environment, optical features and functions',
+       JSON.stringify(SB.map(b => b[0].replace(/\s+◆$/, ''))) === '["animated · 1","Scene","environment","optical features","functions"]' && SB.every(b => b[1])
        && ['label', 'unit', 'instant hide / show'].every(l => SB[1][2].includes(l)) && SB[1][2].some(l => l.startsWith('environment radius')), JSON.stringify(SB))
     await p.evaluate(() => CHECK.flagPanel.show(CHECK.doc.root.id))
     ok('...drawn again: the same boxes, none left over', JSON.stringify(await sceneBoxes()) === JSON.stringify(SB), JSON.stringify(await sceneBoxes()))
@@ -861,6 +965,98 @@ ok('...and a conic typed to four places kept on its slider (its step\'s rounding
     ok('...taken off: written, and the panel without its values', (await P()).coating === 0 && !VALUES.some(l => rows.includes(l)), JSON.stringify(rows))
 }
 
+/* THE SCENE'S OPTICAL FEATURES (0.83.0; model.js setFeatures): a box on the scene's row, Basic and Full over a switch a
+   feature. A feature off hides its fields on every material; each change is one undo step and a compile; what a feature
+   off hides is said once, in the box. */
+{
+    const FIELDS = ['Abbe number (dispersion)', 'colour depth (mm)', 'coating']
+    const root = await p.evaluate(() => CHECK.doc.root.id)
+    const box = () => p.evaluate(() => {
+        const f = [...document.querySelectorAll('#t .tp-fldv')].find(x => x.querySelector(':scope > .tp-fldv_b .tp-fldv_t')?.textContent.trim().startsWith('optical features'))
+        if (!f) return null
+        return { title: f.querySelector(':scope > .tp-fldv_b .tp-fldv_t').textContent.trim(),
+                 lit: [...f.querySelectorAll('button[data-preset]')].filter(b => b.getAttribute('aria-pressed') === 'true').map(b => b.dataset.preset),
+                 line: f.querySelector('.features-line')?.textContent ?? '', notes: [...f.querySelectorAll('textarea')].map(t => t.value) }
+    })
+    const press = id => p.evaluate(id => { const b = document.querySelector(`#t button[data-preset="${id}"]`); if (!b) return 'no button'; b.click(); return 'pressed' }, id)
+    const features = () => p.evaluate(() => CHECK.M.featuresOf(CHECK.doc))
+    await p.evaluate(() => { CHECK.M.material(CHECK.doc, 'gl').params.abbe = 36 })
+    rows = await rowsOf('gl')
+    ok('Full, the default: the glass shows its Abbe number, colour depth and coating', FIELDS.every(l => rows.includes(l)), JSON.stringify(rows))
+    rows = await rowsOf(root)
+    let b = await box()
+    ok('the scene\'s row: a box, optical features, Full lit, a switch a feature', b?.title === 'optical features' && JSON.stringify(b.lit) === '["full"]'
+        && ['dispersion', 'absorption inside', 'coatings', 'spectral optics trace'].every(l => rows.includes(l)) && /Full/.test(b.line), JSON.stringify([b, rows]))
+    before = await state()
+    ok('Basic pressed', await press('basic') === 'pressed')
+    await p.waitForTimeout(50)
+    s = await state()
+    ok('...every feature off -- every one a preset sets: optics analysis is none of theirs -- one undo step and a compile', JSON.stringify(await features()) === '{"dispersion":false,"absorption":false,"coatings":false,"spectral":false,"analysis":false}'
+        && s.commits.length === before.commits.length + 1 && s.commits.at(-1) === null && s.structure === before.structure + 1,
+        JSON.stringify([await features(), s.commits.slice(before.commits.length), s.structure - before.structure]))
+    b = await box()
+    ok('...the box redrawn: titled basic, Basic lit, the hidden Abbe number said', b?.title === 'optical features · basic' && JSON.stringify(b.lit) === '["basic"]'
+        && b.notes.some(n => /glass has an Abbe number/.test(n)), JSON.stringify(b))
+    rows = await rowsOf('gl')
+    ok('...and the glass without the three, its index still there', !FIELDS.some(l => rows.includes(l)) && rows.includes('ior'), JSON.stringify(rows))
+    ok('...its value kept', await p.evaluate(() => CHECK.M.material(CHECK.doc, 'gl').params.abbe) === 36)
+    await rowsOf(root)
+    before = await state()
+    ok('dispersion ticked on its own', await set('dispersion', true) === 'set')
+    await p.waitForTimeout(50)
+    s = await state()
+    b = await box()
+    ok('...dispersion on, Custom, nothing lit, one undo step', (await features()).dispersion === true && b?.title === 'optical features · custom'
+        && b.lit.length === 0 && /Custom/.test(b.line) && s.commits.length === before.commits.length + 1, JSON.stringify([b, await features()]))
+    rows = await rowsOf('gl')
+    ok('...the Abbe number back on the glass, the colour depth and coating still not', rows.includes('Abbe number (dispersion)')
+        && !rows.includes('colour depth (mm)') && !rows.includes('coating'), JSON.stringify(rows))
+    await rowsOf(root)
+    ok('Full pressed', await press('full') === 'pressed')
+    await p.waitForTimeout(50)
+    ok('...every feature on: no key in the document', !(await p.evaluate(() => 'features' in CHECK.doc)))
+    rows = await rowsOf('gl')
+    ok('...and the glass shows all three again', FIELDS.every(l => rows.includes(l)), JSON.stringify(rows))
+    before = await state()
+    await rowsOf(root)
+    await press('full'); await p.waitForTimeout(50)
+    ok('Full again: nothing written, no undo step', (await state()).commits.length === before.commits.length)
+    /* EXPERT (0.83.0): Full and the spectral optics trace, the one feature off by default -- saved as on, the glass the same */
+    ok('Expert pressed', await press('expert') === 'pressed')
+    await p.waitForTimeout(50)
+    b = await box()
+    ok('...the spectral trace on, saved as that alone, Expert lit, one undo step and a compile', JSON.stringify(await p.evaluate(() => CHECK.doc.features)) === '{"spectral":true}'
+        && b?.title === 'optical features · expert' && JSON.stringify(b.lit) === '["expert"]' && /Expert/.test(b.line)
+        && (await state()).commits.length === before.commits.length + 1, JSON.stringify(b))
+    await press('full'); await p.waitForTimeout(50)
+    ok('...Full again: no key', !(await p.evaluate(() => 'features' in CHECK.doc)))
+    await p.evaluate(() => { CHECK.M.material(CHECK.doc, 'gl').params.abbe = 0 })
+}
+
+// AN OBJECT'S OPTICS ROLE (0.83.0; builder/model.js OPTICS_ROLES): its own box, offered while the scene's optics analysis is
+// on -- a feature of its own, which the presets leave alone -- the role set, one undo step and an apply, taken away again
+{
+    const off = await p.evaluate(() => { CHECK.M.setFeatures(CHECK.doc, { analysis: false }); return CHECK.M.featuresOf(CHECK.doc).analysis })
+    rows = await rowsOf('b')
+    ok('analysis off: an object has no role row', off === false && !rows.includes('role'), JSON.stringify(rows))
+    rows = await rowsOf('root')
+    ok('...and the scene\'s optical features has the optics analysis switch', rows.includes('optics analysis'), JSON.stringify(rows))
+    await p.evaluate(() => CHECK.M.setFeatures(CHECK.doc, { analysis: true }))
+    rows = await rowsOf('b')
+    ok('analysis on: the role row', rows.includes('role'), JSON.stringify(rows))
+    before = await state()
+    ok('detector chosen', await set('role', 'detector') === 'set')
+    await p.waitForTimeout(50)
+    s = await state()
+    const role = () => p.evaluate(() => CHECK.M.find(CHECK.doc, 'b').node.opticsRole ?? null)
+    ok('...the object a detector, with its undo step and an apply', await role() === 'detector' && s.commits.length === before.commits.length + 1
+        && s.structure === before.structure + 1, JSON.stringify([await role(), s.commits.slice(-2), s.structure, before.structure]))
+    ok('...its box titled by it', await p.evaluate(() => [...document.querySelectorAll('.tp-fldv_t')].some(t => t.textContent.trim() === 'optics analysis · detector')))
+    await set('role', 'none'); await p.waitForTimeout(50)
+    ok('none takes it away', await role() === null)
+    await p.evaluate(() => CHECK.M.setFeatures(CHECK.doc, { analysis: false }))
+}
+
 // A HAZE BOX (0.62.0; builder/hazebox.js): where it is, its size, and its dust -- live, the renderer's own uniforms
 rows = await rowsOf('hz')
 ok('a haze box shows its size and its dust (mean free path, albedo, g), no material and no join',
@@ -916,7 +1112,9 @@ ok('...and the visibility beside it follows: 3.912 x 4 m, 15.6 m', /^visibility 
     ok('opened, it stays open when the row is drawn again (remembered)', (await folderOf('camera'))?.open === true && (await folderOf('exposure'))?.open === false)
     const commits0 = (await state()).commits.length
     ok('typing a distance', await typeIn('camera', 'distance', 7.25) === 'set')
-    ok('...moves the camera, and is no undo step', await p.evaluate(() => CHECK.cam.get().distance) === 7.25 && (await state()).commits.length === commits0)
+    // within 1e-9: the camera keeps its pose, and the distance read back from it is 7.249999999999998 as often as 7.25
+    ok('...moves the camera, and is no undo step', Math.abs(await p.evaluate(() => CHECK.cam.get().distance) - 7.25) < 1e-9 && (await state()).commits.length === commits0,
+        JSON.stringify([await p.evaluate(() => CHECK.cam.get().distance), (await state()).commits.slice(commits0)]))
     ok('the exposure\'s EV typed', await typeIn('exposure', 'EV100 (manual)', 9) === 'set')
     ok('...is the exposure\'s', await p.evaluate(() => CHECK.exposure.values.exposureEV) === 9 && (await state()).commits.length === commits0)
     await p.evaluate(() => CHECK.cam.set({ distance: 12.5 })); await p.waitForTimeout(80)
@@ -964,7 +1162,7 @@ ok('...and the visibility beside it follows: 3.912 x 4 m, 15.6 m', /^visibility 
     ok('...the row says the new unit', await unitRow() === to && (await readRows()).some(r => r === `environment radius (${to})`), JSON.stringify(await readRows()))
 }
 
-// A CODE BOX'S "Functions you can call…" (0.next): the host's help hook asked for the code reference, at a material's helpers
+// A CODE BOX'S "Functions you can call…" (0.79.0): the host's help hook asked for the code reference, at a material's helpers
 // for a material's code, at its top for an object's -- each anchor a heading the page has. A panel given no hook has none.
 {
     const { renderMarkdown } = await import(pathToFileURL(join(repo, 'help/markdown.js')).href)
@@ -985,6 +1183,168 @@ ok('...and the visibility beside it follows: 3.912 x 4 m, 15.6 m', /^visibility 
     ok('...every anchor it opens at is a heading of help/reference/code.md', at.length && at.every(a => headings.includes(a)), JSON.stringify(at))
     ok('...a panel given no hook shows none', (await click('top', '#t2')).count === 0)
     await p.evaluate(() => { CHECK.panel.show(null); CHECK.flagPanel.show(null) })
+}
+
+// A MATERIAL'S PICTURES (0.84.0; builder/images.js): + picture… reads a PNG through the browser's own decoder into the scene
+// and the material, a compile with an undo step; each setting of its placement live; its use a compile; a file that is no
+// picture said in the box; taken away again
+{
+    const { deflateSync } = await import('node:zlib')
+    // a 3 x 2 PNG, written here from its specification (8-bit RGBA, no interlace)
+    const crcT = new Uint32Array(256).map((_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; return c >>> 0 })
+    const crc = b => { let c = 0xFFFFFFFF; for (const x of b) c = crcT[(c ^ x) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0 }
+    const chunk = (t, d) => { const o = Buffer.alloc(12 + d.length); o.writeUInt32BE(d.length, 0); o.write(t, 4, 'ascii'); d.copy(o, 8); o.writeUInt32BE(crc(o.subarray(4, 8 + d.length)), 8 + d.length); return o }
+    const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(3, 0); ihdr.writeUInt32BE(2, 4); ihdr[8] = 8; ihdr[9] = 6
+    const raw = Buffer.from([0, 255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 0, 255, 255, 255, 255, 0, 0, 0, 255, 128, 128, 128, 255])   // a filter byte a row, then its pixels
+    const png = Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', deflateSync(raw)), chunk('IEND', Buffer.alloc(0))])
+    const button = (title, id = 'scr') => p.evaluate(([title, id]) => {
+        const b = [...document.querySelectorAll('#t button')].find(x => x.textContent.trim().startsWith(title))
+        if (!b) return `no button '${title}'`
+        b.click(); return 'clicked'
+    }, [title, id])
+    const pick = async (title, file) => {
+        const [chooser] = await Promise.all([p.waitForEvent('filechooser', { timeout: 5000 }), button(title)])
+        await chooser.setFiles(file)
+        await p.waitForTimeout(300)
+    }
+    rows = await rowsOf('scr')
+    const has = await p.evaluate(() => [...document.querySelectorAll('#t button')].some(x => x.textContent.includes('+ image texture')))
+    ok('a material has + image texture… under its image textures', has)
+    before = await state()
+    await pick('+ image texture', { name: 'logo.png', mimeType: 'image/png', buffer: png })
+    const got = await p.evaluate(() => {
+        const m = CHECK.M.material(CHECK.doc, 'scr')
+        const k = m.images?.[0]?.image
+        // (the scene's problems that are not the screen's: a step above left one of its own, which is not this check's)
+        return { slot: m.images?.[0], entry: k && CHECK.doc.images?.[k] && { ...CHECK.doc.images[k], data: CHECK.doc.images[k].data.length }, base: m.params.baseColor, rough: m.params.roughness,
+                 valid: CHECK.M.validate(CHECK.doc) }
+    })
+    s = await state()
+    ok('...a PNG chosen: in the scene by its key, its size the decoder\'s, a slot that is the glow -- a compile and an undo step',
+        got.entry?.width === 3 && got.entry?.height === 2 && got.entry?.type === 'image/png' && got.slot?.use === 'colour' && got.slot?.name === 'texture'
+        && s.structure === before.structure + 1 && s.commits.at(-1) === null && got.valid.every(x => !/scr|image|picture/.test(x)), JSON.stringify([got, s.structure, before.structure]))
+    ok('...the screen\'s surface under the glow its dark glass', got.base?.r === 0.02 && got.rough === 0.05, JSON.stringify(got))
+    await p.waitForTimeout(50)
+    rows = await p.evaluate(() => [...document.querySelectorAll('#t .tp-lblv')].map(r => r.querySelector('.tp-lblv_l')?.textContent.trim()))
+    ok('...its rows: use, projection, size, offset, turn, wraps, filter, faces, colour; and the surface below the glow',
+        ['use', 'projection', 'width (mm)', 'height (mm)', 'offset x (mm)', 'offset y (mm)', 'turn (deg)', 'wrap across', 'wrap up', 'filter', 'faces', 'colour (sRGB)', 'baseColor', 'roughness']
+            .every(r => rows.includes(r)), JSON.stringify(rows))
+    before = await state()
+    ok('the width typed', await set('width (mm)', 55) === 'set')
+    s = await state()
+    ok('...is the slot\'s uniform, live, with its undo step: no compile', s.live.at(-1) === 'scr.img_texture' && s.commits.at(-1) === 'scr.img_texture'
+        && s.structure === before.structure && await p.evaluate(() => CHECK.M.material(CHECK.doc, 'scr').images[0].size.x) === 55, JSON.stringify(s))
+    // HEIGHT FROM THE IMAGE'S ASPECT RATIO: the height the width times the image's own height over its width (3 x 2: 2/3),
+    // the width kept; live, no compile
+    before = await state()
+    ok('Height from the image\'s aspect ratio', await button('Height from the image\'s aspect ratio') === 'clicked')
+    await p.waitForTimeout(50)
+    const sz = await p.evaluate(() => ({ ...CHECK.M.material(CHECK.doc, 'scr').images[0].size }))
+    s = await state()
+    ok('...the height 55 x 2 / 3, the width kept, live', Math.abs(sz.y - 55 * 2 / 3) < 1e-4 && sz.x === 55 && s.structure === before.structure
+        && s.live.at(-1) === 'scr.img_texture', JSON.stringify(sz))
+    ok('wrap across: mirror', await set('wrap across', 'mirror') === 'set')
+    s = await state()
+    ok('...live too', s.live.at(-1) === 'scr.img_texture' && s.structure === before.structure
+        && await p.evaluate(() => CHECK.M.material(CHECK.doc, 'scr').images[0].wrapU) === 'mirror')
+    ok('the projection: triplanar', await set('projection', 'triplanar') === 'set')
+    await p.waitForTimeout(50)
+    rows = await p.evaluate(() => [...document.querySelectorAll('#t .tp-lblv')].map(r => r.querySelector('.tp-lblv_l')?.textContent.trim()))
+    ok('...live, and the box shows its blend\'s sharpness and no faces', (await state()).structure === before.structure && rows.includes('blend sharpness') && !rows.includes('faces'), JSON.stringify(rows))
+    ok('its use: code only', await set('use', 'code only') === 'set')
+    s = await state()
+    ok('...a compile', s.structure === before.structure + 1 && await p.evaluate(() => CHECK.M.material(CHECK.doc, 'scr').images[0].use) === 'none')
+    // a file that is no picture: said in the box, nothing added
+    await p.waitForTimeout(50)
+    await pick('+ image texture', { name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('hello') })
+    await p.waitForTimeout(50)
+    const said = await p.evaluate(() => [...document.querySelectorAll('#t .tp-lblv')].find(r => r.querySelector('.tp-lblv_l')?.textContent.trim() === 'not read')?.querySelector('textarea')?.value ?? null)
+    ok('a text file chosen: said in the box, nothing added', /not a PNG, JPEG or WebP/.test(said ?? '') && await p.evaluate(() => CHECK.M.material(CHECK.doc, 'scr').images.length) === 1, said)
+    // A RELIEF FROM IT (0.84.0): offered in the relief box by the picture's name, its heights' bound worked out on import
+    // from the pixels Chromium decoded, a compile; the box says what such a relief is and is not
+    ok('the picture\'s heights\' bound was worked out as it was read', await p.evaluate(() => { const e = Object.values(CHECK.doc.images)[0]; return e.heights?.colour?.length === 6 && e.heights.data[0] > 0 }))
+    before = await state()
+    ok('the relief: from an image texture', await set('relief', 'from an image texture: texture') === 'set')
+    await p.waitForTimeout(150)
+    s = await state()
+    ok('...a relief reading it, amplitude and raise, a compile', await p.evaluate(() => CHECK.M.pictureReliefOf(CHECK.M.material(CHECK.doc, 'scr').relief)) === 'texture'
+        && s.structure === before.structure + 1)
+    const notes = await p.evaluate(() => [...document.querySelectorAll('#t textarea')].map(t => t.value).find(v => /on every face/.test(v)) ?? null)
+    ok('...and its box says it is read planar (the picture is triplanar), on every face, at 8 bits', /read planar.*triplanar/.test(notes ?? '') && /8 bits a pixel/.test(notes ?? ''), notes)
+    // dev's Insert pane is a second caller: it lists what a code box can read, and knew nothing of image textures
+    const inserts = await p.evaluate(() => {
+        const panes = [...document.querySelectorAll('#t details.rt-code-insert')]
+        panes.forEach(d => d.querySelector('summary').click())                 // its rows are made as it opens
+        return new Promise(r => setTimeout(() => r(panes.map(d => [...d.querySelectorAll('.rt-code-insert-row')].map(r => r.firstChild.textContent))), 50))
+    })
+    ok('...the material\'s Insert pane reads its image texture by name: sample, mapped, sampleAt', inserts.length === 2
+        && ['sample(texture)', 'mapped(texture)', 'sampleAt(texture, uv)'].every(r => inserts[0].includes(r)) && !inserts[0].includes('heightAt(texture, q)'),
+        JSON.stringify(inserts.map(x => x.filter(r => /texture/.test(r)))))
+    ok('...the relief\'s heightAt, and not the material\'s calls', inserts[1]?.includes('heightAt(texture, q)') && !inserts[1].includes('sample(texture)'),
+        JSON.stringify(inserts[1]?.filter(r => /texture/.test(r))))
+    before = await state()
+    ok('Take it away', await button('Take it away') === 'clicked')
+    s = await state()
+    ok('...the slot gone, the picture kept in the scene (no undo step holds it), a compile', s.structure === before.structure + 1
+        && await p.evaluate(() => !CHECK.M.material(CHECK.doc, 'scr').images && Object.keys(CHECK.doc.images).length === 1))
+    ok('...and the relief that read it with it', await p.evaluate(() => !CHECK.M.material(CHECK.doc, 'scr').relief))
+    await p.evaluate(() => CHECK.panel.show(null))
+}
+
+// THE INSERT PANE (builder/codehelper.js, 0.84.0): under a material's code box, every field as the line that sets it from
+// the material's own values; a click puts the line in the code -- at its end, under the comments, when the box was never
+// clicked into -- as an edit, and the document has it; its search finds the coating's line; a relief's lists h and slope,
+// a node's its parameters; under each code box once.
+{
+    const pane = (id, sel = '#t') => p.evaluate(([id, sel]) => {
+        CHECK.panel.show(id)
+        return [...document.querySelectorAll(`${sel} details.rt-code-insert`)].map(d => d.closest('.tp-fldv')?.querySelector('.tp-fldv_t')?.textContent ?? '')
+    }, [id, sel])
+    const open = (k = 0) => p.evaluate(k => {
+        const d = document.querySelectorAll('#t details.rt-code-insert')[k]
+        d.querySelector('summary').click()
+        return new Promise(r => setTimeout(() => r([...d.querySelectorAll('.rt-code-insert-row')].map(r => r.firstChild.textContent)), 50))
+    }, k)
+    const click = (text, k = 0) => p.evaluate(([text, k]) => {
+        const d = document.querySelectorAll('#t details.rt-code-insert')[k]
+        const row = [...d.querySelectorAll('.rt-code-insert-row')].find(r => r.firstChild.textContent === text)
+        if (!row) return 'no row'
+        row.click()
+        return 'clicked'
+    }, [text, k])
+    await p.evaluate(() => { CHECK.M.material(CHECK.doc, 'gl').params.roughness = 0.35; CHECK.M.material(CHECK.doc, 'gl').code = '' })
+    const titles = await pane('gl')
+    ok('a material\'s code box has one Insert pane', titles.length === 1, JSON.stringify(titles))
+    const rows = await open()
+    ok('...whose rows are every field\'s line, from the material\'s own values', rows.includes('m.roughness = 0.35;') && rows.includes('m.ior = 1.5;')
+        && rows.some(r => r.startsWith('m = coatMaterial(m, 1u,')) && rows.includes('m.tangent = grainAlong(R_local, VEC3(1.0, 0.0, 0.0));'), JSON.stringify(rows.slice(0, 30)))
+    ok('...what it reads, its recipes and functions among them', rows.includes('p_local') && rows.some(r => r.includes('600.0, 20.0, 1.8);   // where'))
+        && rows.includes('srfNoise(x, seed)'), JSON.stringify(rows.filter(r => /p_local|srf|600/.test(r))))
+    const before = await state()
+    ok('clicking a row', await click('m.roughness = 0.35;') === 'clicked')
+    const code = await p.evaluate(() => CHECK.M.material(CHECK.doc, 'gl').code)
+    ok('...puts the line in the document\'s code, at its end under the comments', code.startsWith('// Material code') && code.trimEnd().endsWith('\nm.roughness = 0.35;'), JSON.stringify(code.slice(-80)))
+    ok('...as an edit (an undo step under the code\'s key)', (await state()).commits.length > before.commits.length && (await state()).commits.at(-1) === 'gl.code', JSON.stringify((await state()).commits.slice(-2)))
+    await click('m.metallic = 0.0;')
+    const code2 = await p.evaluate(() => CHECK.M.material(CHECK.doc, 'gl').code)
+    ok('...a second after it, on a line of its own', code2.trimEnd().endsWith('m.roughness = 0.35;\nm.metallic = 0.0;'), JSON.stringify(code2.slice(-60)))
+    const found = await p.evaluate(() => {
+        const d = document.querySelector('#t details.rt-code-insert'), q = d.querySelector('input[type=search]')
+        q.value = 'dichroic'; q.dispatchEvent(new Event('input'))
+        return [...d.querySelectorAll('.rt-code-insert-row')].filter(r => !r.hidden && !r.closest('details[hidden]')).map(r => r.firstChild.textContent)
+    })
+    ok('its search finds the dichroics, and only rows that say the word', found.length >= 2 && found.every(r => /coatMaterial/.test(r)), JSON.stringify(found))
+    await p.evaluate(() => { CHECK.M.setRelief(CHECK.doc, 'gl', 'ripple') })
+    const two = await pane('gl')
+    ok('a material with a relief: a pane under each code box', two.length === 2, JSON.stringify(two))
+    const rel = await open(1)
+    ok('...the relief\'s lists h and slope, what it reads and its recipes', rel.some(r => r.startsWith('h = ')) && rel.some(r => r.startsWith('slope = '))
+        && rel.includes('q') && rel.includes('world') && rel.includes('wavelength') && rel.some(r => r.includes('0.70710678')), JSON.stringify(rel))
+    await p.evaluate(() => { CHECK.M.setRelief(CHECK.doc, 'gl', null) })
+    await pane('pr')
+    const node = await open()
+    ok('a node\'s pane lists its parameters by name, its outline as one', node.includes('outline') && node.includes('height') && node.includes('extrude(id, p, height)'), JSON.stringify(node.filter(r => /outline|height|extrude/.test(r))))
+    await p.evaluate(() => { CHECK.panel.show(null) })
 }
 
 ok('no page errors', !errs.length, errs.join('\n'))

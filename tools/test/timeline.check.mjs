@@ -1,7 +1,7 @@
 // node tools/test/timeline.check.mjs
 //
 // THE TIMELINE TOOL IN A BROWSER: tools/test/timeline.html -- the shell, a viewport and the Timeline panel as
-// index.html makes them, over a stand-in renderer -- driven headless. The application's own page stops at
+// app.html makes them, over a stand-in renderer -- driven headless. The application's own page stops at
 // WebGPU, so without this the panel, its registry and the record path were code nothing ever ran (CLAUDE.md:
 // a feature nothing exercises has never run). It checks:
 //   the panel: the editor mounted in the dock, its grip hidden, the export's frame over the picture

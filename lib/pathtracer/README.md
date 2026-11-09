@@ -114,7 +114,7 @@ with the loop submitting, a revisit apply of the Noise library took 1.4-6.8 s ag
 | `await setScene(s)` | swap the scene; returns the milliseconds it took to compile |
 | `tolerances(at = [0, 0, 0])` | the surface tolerance in use and every length made from it (`core/tolerances.js`), resolved at a point in scene units: each in metres and in the scene's unit, how it was chosen, f32's floor there. `hud.tolerance` is what Render stats › Picture and the Ray marching box show (`.line`, the box's text) |
 | `updateScene({ envRadius, unit, extent, haze, tolerance })` | change what the scene says about itself that is not code, without a compile: its radius (scene units, `null` for the 400 m default), its unit, its extent (the automatic tolerance's size), its haze box's values and its surface tolerance (scene units, `null` for the automatic one; 0.66.0). Written into the scene object the engine holds, never a copy (the engine and hosts compare `RT.scene` to tell a scene change); returns the keys it refused |
-| `installUI(shell, { onRefresh, pages, sections, untitled, omit })` | fill the renderer's pages. `pages` routes a named page to a different shell; `sections` routes one FOLDER (Show, Camera, Exposure, Environment, the Renderer panel's boxes -- Quality, Light sources, Paths and noise, Render size, Ray marching, Diagnostics -- Save an image, Tests, and Developer where there is no Quality box) to any property table. The boxes are `settingsui.js` `RENDERER_BOXES`, a list of its own rather than the schema's groups (a group is its settings' parameter path): **Quality** is the presets as buttons, Preview (Sketch, Draft) and Accurate (Standard, High) and Optics, with a line saying what the one in force traces or what Custom changed (`quality.js` `describe`); it is `renderMode`'s control. **Light sources** is a switch per kind of light and how it is traced -- the environment (lamps only, ticked when lit), the caustics of the sun and glowing surfaces (`lt`), the lights' rays (`lightRays`) -- and their photons per pixel, then a developer's light sampling, photon map and emitter search. A switch is a checkbox; every row's tooltip is its schema `gui.help`. A host gives the panel a table of boxes (GUISTUFF's `PropertyTable`, `boxes: true`) to draw each box outlined, with the icon the box names (`boxIcon`); the colours are `--pt-box-*` (`lib/shell/shell.css`). Every `gui.dev` setting, and the Ray marching and Diagnostics boxes whole, wait behind the **Developer** switch (remembered in localStorage): one line at the foot of the Quality box, with a count of those off their default (named in its tooltip) and Reset; a box of its own (section Developer) only for a host that places no Quality box. `test/renderer.check.mjs` runs the panel headless over the real PropertyTable. `untitled` lists sections whose table holds that folder alone: it goes in flat, since the panel or icon already names it (`sections.js`). `omit` lists settings the host shows its own way (the view's mode, as icons). A section given as `null` gets no folder at all (the raytracer's Environment: its scene document carries it). With every section placed, `shell` may be null. `darkroom`, an element, is where the Darkroom's viewer goes (`darkroom/viewer.js`, 0.next): the render Save an image keeps, shown large and panned and zoomed, beside the section's boxes (Render, Develop, Save); without it the boxes develop and save with no picture to look at. `build`, a function returning a line of text, heads every test and benchmark result with the build that produced it -- the raytracer passes its version and git revision (`version.js`) |
+| `installUI(shell, { onRefresh, pages, sections, untitled, omit })` | fill the renderer's pages. `pages` routes a named page to a different shell; `sections` routes one FOLDER (Show, Camera, Exposure, Environment, the Renderer panel's boxes -- Quality, Light sources, Paths and noise, Render size, Ray marching, Diagnostics -- Save an image, Tests, and Developer where there is no Quality box) to any property table. The boxes are `settingsui.js` `RENDERER_BOXES`, a list of its own rather than the schema's groups (a group is its settings' parameter path): **Quality** is the presets as buttons, Preview (Sketch, Draft) and Accurate (Standard, High) and Optics, with a line saying what the one in force traces or what Custom changed (`quality.js` `describe`); it is `renderMode`'s control. **Light sources** is a switch per kind of light and how it is traced -- the environment (lamps only, ticked when lit), the caustics of the sun and glowing surfaces (`lt`), the lights' rays (`lightRays`) -- and their photons per pixel, then a developer's light sampling, photon map and emitter search. A switch is a checkbox; every row's tooltip is its schema `gui.help`. A host gives the panel a table of boxes (GUISTUFF's `PropertyTable`, `boxes: true`) to draw each box outlined, with the icon the box names (`boxIcon`); the colours are `--pt-box-*` (`lib/shell/shell.css`). Every `gui.dev` setting, and the Ray marching and Diagnostics boxes whole, wait behind the **Developer** switch (remembered in localStorage): one line at the foot of the Quality box, with a count of those off their default (named in its tooltip) and Reset; a box of its own (section Developer) only for a host that places no Quality box. `test/renderer.check.mjs` runs the panel headless over the real PropertyTable. `untitled` lists sections whose table holds that folder alone: it goes in flat, since the panel or icon already names it (`sections.js`). `omit` lists settings the host shows its own way (the view's mode, as icons). A section given as `null` gets no folder at all (the raytracer's Environment: its scene document carries it). With every section placed, `shell` may be null. `darkroom`, an element, is where the Darkroom's viewer goes (`darkroom/viewer.js`, 0.79.0): the render Save an image keeps, shown large and panned and zoomed, beside the section's boxes (Render, Develop, Save); without it the boxes develop and save with no picture to look at. `build`, a function returning a line of text, heads every test and benchmark result with the build that produced it -- the raytracer passes its version and git revision (`version.js`) |
 | `view()` / `applyView({ camera, exposure }, { fresh })` / `watchView(fn)` | **the view** (0.66.0): the camera's settings (not its aspect or planes) and every exposure setting, as plain data; put back (the camera only in the fields given, as `applySettings` does; `fresh` starts the auto-exposure meter again, for another picture); and a watcher told whenever either changes, by any way in -- a drag, a popover, a timeline, Meter / lock, a script -- from the camera's `onChange` and from `update()`. A host keeps its own copy per scene with them (the builder: `builder/model.js` VIEW, `demo.js` keepView). `cameraBindings()` / `cameraShown()` hand out the camera popover's fields and which of them show, for a host that shows them elsewhere too |
 | `parameters()` (`params.js`) | the renderer's settings as entries for an application's parameter registry (`lib/shell/params.js`, the timeline's contract with a path for an id): `view/show/…`, `view/exposure/…`, `view/camera/…`, `scene/environment/…`, `renderer/tracing/…`, `renderer/advanced/…`. Each `set` goes the way its slider does (uniforms, the group's reset rule, the host's refresh). `GROUP_PARAMS` there is the one table of each group's path and reset rule, which `installUI` reads too |
 | `installViewToolbar(stage, { PropertyTable, RT, tips })` (`viewtools.js`) | the view's own controls, icons with tooltips (`icons.js`), in two places (2026-10-02). TOP LEFT, the picture: the camera and the exposure, menus (a caret), then the quality, a menu named by the preset in force (Draft▾: the presets, the Quality box's line, what a move traces), and ⚡ fast while moving, a switch in a pill (moveFast: a full picture traced as moveMode, Draft or Sketch, while `RT.interacting` -- `interaction.js`, poked by the camera, a host's live values and its drags -- says something moves, in the live loop only; neither the exposure, the quality nor ⚡ in a false-colour view, which traces in full). BOTTOM RIGHT, the ANALYSE drawer behind one button: DISPLAY -- photographic / lux on surfaces / luminance, the lit one is the view, and the false-colour range there -- and the host's groups (`V.analyse.add`: the measure tool's MEASURE, the raytracer's RAYS); closed, its button shows what is on (`V.analyse.mark`), and what is on stays on. Returns the popovers' tables as `sections`, with `untitled` and `omit` for `installUI`, and `.open('Camera')`. What changes a VIEW sits on the view; the scene's light and the renderer's effort are the host's panels (roadmap/UI_PLAN.md section 8) |
@@ -132,6 +132,7 @@ with the loop submitting, a revisit apply of the Noise library took 1.4-6.8 s ag
     constants: {...},       // name -> {type, def, gui} -- baked into the source, RECOMPILES
     uniforms:  {...},       // name -> {type, def, gui, page?} -- merged into the shared struct
     resources: {...},       // name -> WGSL type, merged into every kernel that compiles the scene
+                            //   (a scene's image textures: `sceneImages`, one texture -- below, An image texture on a surface)
     async init(gpu),        // create buffers, run one-off compute; returns name -> buffer
     dispose(),              // optional: free them -- called when another scene has taken this one's place
     writeData(data),        // optional: the scene's data written in place (the builder's scene as data)
@@ -383,14 +384,76 @@ pdf, so light sampling and BSDF sampling can be weighted against each other hone
 - **Dispersion** (0.40.0; `Material2.abbe`, `core/spectral.js`): an Abbe number beside the index (n_d), n(λ)
   Cauchy's through both. A ray refracted INTO a dispersive medium draws a wavelength there and weighs its channels by
   it (mean 1 in each); every index it meets after is n(that wavelength). It rides in `Ray.tag`'s upper 16 bits
-  (`TAG_LAMBDA_MASK`: a new flag stays below bit 16). The pick and Fresnel at that first refraction are the d line's,
-  so reflections stay white.
+  (`TAG_LAMBDA_MASK`: a new flag stays below bit 17, and bit 16 is `TAG_LENS_X` since 0.83.0). The pick and Fresnel at that first refraction are the d line's,
+  so reflections stay white. The draw (`core/lightspectra.js`, 0.84.0) is from 1 nm cells of 380-780 nm: by the channels'
+  clipped Rec.709 functions from the CIE's table for every ray (10 nm bins of the analytic fit until then), and from its
+  light's own spectrum, with each wavelength's exact colour, for a light's photon that carries one (`Ray.pix` `PIX_LS`).
+  Both tables sit in the learn buffer past the microfacet tables.
 - **Transmission** refracts with the same IOR (the ray's current IOR from the path, the other
   side's from the material, or an SDF probe for glass), reflecting by the exact Fresnel. Rough
-  transmission is SAMPLED (a facet from the visible normals, then reflect or refract by that
-  facet's Fresnel, as Walter et al. 2007) but not EVALUATED: NEE and light tracing do not
-  connect through it. Single scattering loses what masking takes at grazing angles inside, so
-  rough glass reads a little under 1 in the furnace.
+  transmission is sampled (a facet from the visible normals, then reflect or refract by that
+  facet's Fresnel, as Walter et al. 2007) and, since 0.81.0, EVALUATED too: its value is the one
+  its own draw implies, through the refraction's Jacobian (`lobesThroughEval`, *The side beyond*
+  below). Single scattering loses what masking takes at grazing angles inside, so rough glass
+  reads under 1 in the furnace.
+- **Transmission and haze** (0.81.0; `Material2.haze`, `roadmap/DIFFUSERS.md` B1): transmission is how much of what
+  the gloss does not reflect passes THROUGH the surface; haze is the share of that diffused instead of going straight,
+  as a datasheet's haze (ASTM D1003). Of the body: 1 - T reflected diffusely, T (1 - H) refracted (smooth or rough by
+  roughness), T H diffused through in the same form on the far side as the share reflected (`makeLobes`;
+  `materials.js` `refractShare`). Haze 0 is every material as it was. Clear acrylic with a veil is T 1, H 0.06; an opal
+  diffuser, paper or a lampshade H 1. Every face a ray crosses scatters it. A face with haze 1 is the same surface from
+  either side: its gloss takes the index step from the thinner medium to the denser, whichever side the ray is on.
+  The ray inside is in the material's medium, as in glass. An opal sheet of total transmittance T is transmission
+  2T / (1 + T) a face (`builder/materials.js` faceForSheet); a clear sheet's haze from its faces' is a walk
+  (`core/transmission.js` hazySheetJS: 0.06 a face is 10 % for the sheet at n 1.49). Haze replaced *translucency*,
+  a share of the diffuse base alone, before release: at transmission 1 there is no base, so clear glass could not
+  have a little scatter (the user, 2026-10-30).
+- **A face that both refracts and diffuses, seen from inside** (0.81.0; `processMaterial_advanced`): one of two parts
+  drawn per vertex. With probability T (1 - H) it is clear glass, its true index ratio. Otherwise it is the diffuse
+  face, the same surface from either side. This is the area mix the layered model is from outside; inside, the
+  layered model coupled its base to albedo tables made for light from the thinner side, and gave the base no pick
+  where TIR closes the gloss. A hazy glass sphere read 1.23 in the furnace with light sampling and 0.92 without
+  (Dawn); now 0.9995 and 1.0001, at 2000 march steps. Light diffused in past the critical angle walks long:
+  400 steps cut it to 0.992. Transmission between 0 and 1 without haze (half glass, half white) always had the same
+  fault, and now reads 0.998 at the bounce cap of 40, as the cap's trend says (0.977 at 20, 0.994 at 30).
+- **Scatter inside** (0.82.0; `Material2.scatterDistance` and `scatterAnisotropy`, `roadmap/DIFFUSERS.md` A): a
+  material's volume scatters, its mean free path in real millimetres and Henyey-Greenstein's g, so a thick part is
+  milkier than a thin one -- milky glass, a light guide's body. Pure scattering; the colour stays the colour depth's.
+  THE MEDIUM'S WALK (`core/haze.js`) is in the march, not a shade vertex: inside a solid every shadow ray and photon
+  connection is stopped by its own wall, so a collision only turns the ray, and the march marches on -- a collision is
+  a march step against Max Iterations, not a bounce. A leg's flight is drawn from its vertex (`absLtot`), not from the
+  step off the surface: drawn after it, a slab of optical depth 6 passed 3.6 % too much (Dawn). A ray that collided
+  goes on as light sampling could not have made it (`prevPdf` -1), and a shadow ray takes the scattering as extinction
+  (`shadowTransmittance`). The ray's medium is six f16 in the three words the absorption's f32 had
+  (`tracebasics.js` `packMedium`: per millimetre, within 2^-11 of itself), so the Ray stays 112 bytes. Compiled in only
+  for a scene with a scattering material (`scene.scatter`, codegen's); the Optics page's trace has it through the same
+  march (read in code, `optics/index.js`; no test runs that page with it yet). Inside smooth glass light sampling cannot reach, so the light the glass scatters reaches the picture through the
+  photon map in the volume (below) or, without it, by chance. Held by `test/volume.test.mjs` and, on Dawn,
+  `test/volume.gpu.mjs`.
+- **The beam seen inside** (0.82.0; `core/haze.js` THE BEAM SEEN INSIDE, `sppm.js` `sppmGatherVolume`, MEDIA.md phase 2):
+  the photon map in the volume. A photon stores a record where it collides, in the march (SPPM_VOL; the surface map's
+  rules for who stores). A camera ray whose lens field is 1 hands its first collision to the shade queue (RAY_GATHER),
+  the map's kernel gathers there, sum p Phi / (sigma_s 4/3 pi r^3) over n^2, and shade turns it -- the map's D, so the
+  camera's path then leaves the class. A collimated beam, which no camera path can meet, is seen in glass only so. The
+  march takes the map's two buffers, and the sample's `sppmGeom`, only where the stage has room (`volumeOf`): it stored
+  every photon in a cell of size 0 until it was handed the sample's cells (Dawn). A radius near the part's size reads
+  low (the sphere sticks out of the face).
+- **A diffuser film is rough glass** (the user, 2026-10-29: "keep the properties of materials as realistic / physical
+  as possible"): a thin sheet frosted on both faces, anisotropy for an elliptical one (up to 10:1 in alpha,
+  `mfAnisoAlpha`). The library's *diffuser film 10°* is polycarbonate at roughness 0.36, from a walk of two rough faces
+  (`core/transmission.js` roughSheetJS). A lobe of its own (B2: a Gaussian spread about the straight line, no
+  refraction) was built and taken out before release: a thin-sheet model, not a property of a material.
+- **The side beyond** (0.81.0): rough refraction and haze are evaluated below the surface (`Lobes.through`), in
+  the full renderer only -- Draft, Sketch and the Optics view follow them as they always followed
+  frosted glass. Light sampling aims through a face where the medium beyond is air (the face a path
+  leaves glass by, `throughLit`), the sky drawn from the far hemisphere there, and the BSDF's half
+  of MIS weighs a transmitted direction against it; a ray drawn through starts where its shadow ray
+  would. A photon in glass connects out to the camera through such a face, over the glass's n^2
+  (photons carry flux, the camera's side L / n^2). To light tracing's splits a transmission there is
+  EV_EVAL from LT_MIN_ALPHA up (the camera leaves the photons that light); to the photon map EV_OTHER
+  (`LAST_THROUGH`: its gather sees one side). Held by `test/transmission.test.mjs` and, on Dawn,
+  `test/transmission.gpu.mjs`: a slab with one frosted, opal, anisotropically frosted or hazy face reads
+  the same each way, opal and hazy-glass spheres vanish in the furnace.
 - **Anisotropy runs along a grain**, `Material2.tangent` (world space; `roadmap/SURFACES.md`
   phase 1). `makeLobes` projects it onto the surface and builds the one frame that eval, pdf,
   sampling and light tracing's `ltConnect` all use; with it, positive anisotropy is smooth along
@@ -537,7 +600,7 @@ the first surface while photons run -- those paths are the photons', or shared w
 a third strategy there needs a three-way weight -- and not through glass: a shadow ray stops at any
 surface, so a die inside its dome is still found from outside by chance.
 
-**And the face glows on the face alone (0.next).** The face is a sheet of no thickness, and the march
+**And the face glows on the face alone (0.79.0).** The face is a sheet of no thickness, and the march
 calls a point within the surface tolerance a hit, so a ray can meet a rim around it, as wide as the
 tolerance, that is not on the face. That rim glowed: what hits found was a larger light than the one
 light sampling aims at and the photons start on. MIS gives a small face's glow almost no weight, so
@@ -557,6 +620,18 @@ went in 0.61.0, when the photon map (below) went on by default and owned the cla
 **The manifold connection (0.44.0 to 0.60.0)** went with it: a photon landing on a surface *inside* glass joined to the
 camera through one refraction, found by Newton's method on the face in the surface kernel (12.7k characters of WGSL
 there, and 16 bytes of every shade-queue item). The map gathers that light too, through any chain of glass and mirrors.
+**A light with no face, seen through the lens (0.83.0; `lens.js`).** The lens's photons came back for one kind of light:
+a ray file, or a source that is only a description, which is no geometry -- no camera ray can meet it, nothing lands on
+it for the map to gather, and its photons connected only from the surfaces they landed on, so through any aperture the
+light itself was dark (the user, 2026-11-04). Such a photon carries `Ray.ltMis` `LT_FACELESS` (-2) while only delta
+events have turned it (-1 after any other: `pathEnd`, a point in the dust, a collision in a material). The march marks
+the step that takes it across the disc (`lensCrossed`: a step is free space, so a crossing is unblocked) with
+`TAG_LENS_X`, bit 16; shade, where the leg ends, queues a connection of length 0 at the crossing carrying
+`Phi / (A_px A_L cos^4)` for the pixel its ray through the lens meets (`lensArrival`), and a photon that left the scene
+short of the lens -- a camera outside the scene's radius -- is tested ahead of it, since nothing is out there. The
+occlusion kernel deposits it unclamped: it is the light itself. A pinhole has no disc to cross: still dark. A ray file
+is its rays, and only those that point into the aperture can ever be seen there (`lenslight.gpu.mjs`: of a file of 2^20
+rays from a 25 cm disc, 4965 crossed a 10 cm lens at 1 m).
 
 **Through glass and mirrors, the photon map (0.60.0, on by default since 0.61.0; `core/sppm.js`).** The class light ->
 delta+ -> D -> delta+ -> eye -- a floor in air behind a glass pane, lit through it and seen through it (the user's picture,
@@ -630,6 +705,32 @@ One `learn` buffer holds the photon-map counts, the discovery grid and the emitt
 Checked on the CPU with awkward boxes — one covering part of the emitter, one all of it, one
 empty, two overlapping — and emission varying over the surface: NEE + MIS 0.996 of a BSDF-only
 reference, probe-photon irradiance 0.99 (±1.5% run to run). On hardware: the `emitters` bench.
+
+### An image texture on a surface
+
+A material can read an image texture where a ray hits it (0.84.0; `core/images.js`, the builder's `builder/images.js`). What
+the engine gives a scene for it:
+- **`IMAGES_WGSL`**: the lookup, in the scene's text when it has an image texture. A slot is one `mat4x4<f32>` uniform (its
+  rectangle in the atlas, its size and offset in mm, its turn, projection and flags). The point is projected in the
+  object's pattern frame, in mm, then bilinear (or nearest) from four `textureLoad`s, wrapping on the image's own
+  texels and decoding each tap from sRGB before the mix. `sample(slot)` is what a material's code calls.
+- **The atlas**: every image of the scene in one `texture_2d<f32>`, `sceneImages`, a scene resource the scene's
+  `init` makes (the builder's `attachImages`, composed with the scene as data's init).
+- **`sceneCompute`**: every kernel that holds the scene's text is made through it. It gives the kernel its own
+  `imageTexel`: the atlas read where `main` reaches a material, a stub where it does not (the renderer's march and
+  shadow rays). A texture named in a function `main` never calls is declared, bound and missing from `layout:'auto'`:
+  an invalid bind group.
+- **`heightAt(slot, q)`**: an image texture as a height, for a material's relief (in the SDF, so the march's kernels reach the
+  atlas through the shape). Luminance times alpha, read planar from `q.xy`, a cubic B-spline of 16 taps, wrap *none*
+  fading to 0 past its copy; and the bound on its gradient per mm, which the host works out from the image's pixels
+  (`heightStats`, `heightSteep`) and puts in the slot's word 13. A 16-bit grey image is two bytes a texel in the atlas
+  (`pack16`), put together on every read.
+- **A glowing image texture is an emitter only where it glows.** Every test for an emitter reads `max3(emissive) > 0` at the
+  point (the emitter hit, the probe's start, discovery, the photon map's store). So a black pixel is the material's
+  surface there: the builder gives such a material a screen's dark glass for it. Light sampling and the probes evaluate
+  the emission where they land, so an image texture's glow needs nothing of its own from them. Checked on Dawn over lavapipe
+  (`builder/test/images.gpu.mjs`): a floor under a glowing 8 x 8 checker reads its mean's light within its error bar,
+  light sampling on and off.
 
 ### Draft, Sketch and Optics: stopping at the first real scatter
 

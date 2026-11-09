@@ -4,7 +4,7 @@
 // show the render mode in the status bar?"). The baked scene draws what the editing build draws (bake.gpu.mjs: every
 // camera ray the same), so nothing in the picture tells them apart: only this does.
 //
-// PURE: what it is handed, a line and its tooltip. index.html hands it the scene shown, the page's own words for the
+// PURE: what it is handed, a line and its tooltip. app.html hands it the scene shown, the page's own words for the
 // editing build's mode (its modeOf: 'code', 'data', 'data-boxes', ...), the baker's state and the builder's lastLeave.
 //======================================================================================================================
 
@@ -12,7 +12,7 @@ const BOX = /^bx(lo|hi)_/
 
 /**
  * @param scene     RT.scene
- * @param mode      the page's word for the build shown when not baked (index.html shownMode)
+ * @param mode      the page's word for the build shown when not baked (app.html shownMode)
  * @param showing   whether the scene shown is the builder's current one (BUILDER.showing)
  * @param bakeOn    the renderer's sceneBake setting
  * @param baker     the baker's state: 'off' | 'waiting' | 'compiling' | 'shown'

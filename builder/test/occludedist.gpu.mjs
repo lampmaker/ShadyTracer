@@ -1,6 +1,6 @@
 //======================================================================================================================
 // SHADOW RAYS ON DISTANCE ONLY ON A REAL WEBGPU (lib/pathtracer/core/wavefront.js prog_occlude's distOnly, prog_occlude_emit
-// and prog_prep_occlude_indirect's `emit`; 0.next, the renderer's always). Run:
+// and prog_prep_occlude_indirect's `emit`; 0.79.0, the renderer's always). Run:
 //   node builder/test/occludedist.gpu.mjs
 //
 // OPTIONAL, AND LOUD ABOUT IT, as marchdist.gpu.mjs is: the `webgpu` package and a Vulkan driver (lavapipe), or it says

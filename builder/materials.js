@@ -19,6 +19,8 @@
 // renders as it did.
 //======================================================================================================================
 
+import { colourSlot, SCREEN_FIELDS } from './images.js'
+
 /** Every field of Material2 a material sets -- only those the shader reads, since each is a
  *  control in the panel (`model` and `clearcoat` were here and did nothing; model.js 7, 8) -- in
  *  declaration order, with its uniform type and
@@ -56,7 +58,8 @@ export const FIELDS = {
        method: exact for an R that is the same at every wavelength, an approximation of the spectrum for an edge).
        ALL SIX ONLY IN THE SHADER WHILE coating IS ABOVE 0 (`only`, as the colour depth): a material without one
        compiles to the text it did, and putting one on is a compile (demo.js live); after that each is a uniform. The
-       defaults, once on: a dichroic that reflects red, above 600 nm, and passes the rest. */
+       defaults, once on: a dichroic that reflects red, above 600 nm, and passes the rest. On a metal (0.84.0) the
+       stack lies over the metal, which reflects what the coating passes (core/materials_pbr.js metalFresnel). */
     coating:            { type: 'u32', def: 0, gui: { options: { 'none': 0, 'entry faces (AR back)': 1, 'entry faces (bare back)': 2, 'every face': 3 } },
                           only: v => v > 0, onlyHelp: 'a compile to put on or take off a coating (from none); between the others it is live' },
     coatLow:            { type: 'f32', def: 0.0, gui: { min: 0, max: 1, step: 0.001 }, coat: true },
@@ -64,9 +67,94 @@ export const FIELDS = {
     coatEdge:           { type: 'f32', def: 600.0, gui: { min: 380, max: 780, step: 0.5 }, coat: true },
     coatWidth:          { type: 'f32', def: 20.0, gui: { min: 0, max: 200, step: 0.5 }, coat: true },
     coatIndex:          { type: 'f32', def: 1.8, gui: { min: 1, max: 3, step: 0.01 }, coat: true },
+    /* HAZE (0.81.0; core/materials.js haze, roadmap/DIFFUSERS.md B1): of what passes through the surface (transmission),
+       the share diffused -- Lambertian on the far side -- instead of going straight, as ASTM D1003 defines a sheet's haze.
+       Clear acrylic with a veil is transmission 1 and haze 0.1; an opal sheet, paper or a lampshade haze 1, with
+       transmission what passes. Roughness is the other, narrow blur (a datasheet's clarity). Every face a ray crosses
+       scatters it: for a sheet's datasheet numbers, faceForSheet (below). 0 = all that passes refracts, the default and
+       every material before it. It was `translucency`, a share of the diffuse base, which transmission 1 leaves none of
+       -- "translucency only works when transmission is < 1" (the user, 2026-10-30). ONLY IN THE SHADER WHILE ABOVE 0
+       (`only`, as the colour depth): a file without it compiles to the text it did, and the first value is a compile.
+       Shown whatever transmission is (its help says it is a share of it): showing it only above 0 would rebuild the
+       panel under a transmission slider being dragged up from 0. */
+    haze:               { type: 'f32', def: 0.0, gui: { min: 0, max: 1, step: 0.001 }, only: v => v > 0 },
+    /* SCATTER INSIDE (0.82.0; core/materials.js scatterDistance, core/haze.js THE MEDIUM'S WALK, roadmap/DIFFUSERS.md A):
+       the mean free path between scatterings in the material's volume, in REAL MILLIMETRES whatever the scene's unit (as
+       the colour depth), and each scattering's asymmetry (Henyey-Greenstein's g: 0 evenly, towards 0.95 forward). Haze
+       scatters at the faces, whatever the thickness; this in the volume, so a thick part is milkier than a thin one --
+       milky glass, a light guide's diffusing body. It acts where light travels inside, so only with transmission. 0 =
+       a clear volume, the default. ONLY IN THE SHADER WHILE ABOVE 0 (`only`, as the colour depth), and the asymmetry
+       only with it: a file without it compiles to the text it did, and its first value is a compile -- the march has
+       the walk only for a scene that has one (codegen's scene.scatter). */
+    scatterDistance:    { type: 'f32', def: 0.0, gui: { min: 0, step: 0.01 }, only: v => v > 0 },
+    scatterAnisotropy:  { type: 'f32', def: 0.0, gui: { min: -0.95, max: 0.95, step: 0.01 }, only: (v, P) => P?.scatterDistance > 0 },
     emissive:           { type: 'vec3<f32>', def: { r: 1, g: 1, b: 1 } },
     emissiveLuminance:  { type: 'f32', def: 0.0, gui: { min: 0, step: 1 } },
 }
+
+/* THE SCENE'S OPTICAL FEATURES (0.83.0; roadmap/LIGHT_MODEL.md S0a): which of the fields above a scene has at all. The
+   user, 2026-10-30: "I'd rather not have automatic rules -- a choice somewhere that shows extra properties per material.
+   Dispersion is a trace parameter now, but it could be a scene setting: no dispersion, and the materials' Abbe numbers
+   are not shown either. More or fewer options, depending on what the user knows." A feature OFF is the scene compiled
+   as if no material had its fields (model.js toTree puts them at their defaults, so `only` leaves them out of the
+   shader, byte for byte), and the panels, the parameter registry and the timeline do not offer them. Their values stay
+   in the file: switching it on again brings them back. The picture and the Optics page alike, since both trace the
+   scene's own code (the user, 2026-11-02: "follows the scene"). Every feature on is every scene before it, and the
+   default. Switching one is a compile, as the first coating always was ("everything through the compile", the user,
+   2026-11-02: dispersion was a live render setting, `dispersionOff`, 0.74.0 -- gone).
+   A material's OWN CODE that writes one of these fields itself is not stopped: a feature hides the fields, not code. */
+/** Each: its label, its material fields, what a material keeps when it is off (the panel's line), and its help. */
+export const FEATURES = {
+    dispersion: { label: 'Dispersion', fields: ['abbe'], hides: 'an Abbe number',
+        help: 'Glass with an Abbe number splits white light into its colours where it refracts: prisms, a lens\'s colour fringes. '
+            + 'Off, every glass bends all colours alike, at its index, and its Abbe number is not shown -- no fringes, and none of the '
+            + 'colour noise they take to settle.' },
+    absorption: { label: 'Absorption inside', fields: ['attenuationDistance'], hides: 'a colour depth',
+        help: 'A material\'s colour depth: light inside glass or a liquid filtered to its colour over that depth, so a thick part '
+            + 'is deeper in colour than a thin one. Off, the colour tints a ray at each crossing, whatever the thickness, and the '
+            + 'colour depth is not shown.' },
+    coatings: { label: 'Coatings', fields: ['coating', ...Object.keys(FIELDS).filter(k => FIELDS[k].coat)], hides: 'a coating',
+        help: 'Thin-film coatings in place of a surface\'s own reflection: dichroics, beam splitters, anti-reflective layers. '
+            + 'Off, every surface reflects as its index says, and the coating box is not shown.' },
+    /* THE OPTICS TRACE BY WAVELENGTH (0.83.0; roadmap/LIGHT_MODEL.md S2; the user, 2026-11-04: "a feature 'spectral', off by
+       default", over an always-spectral trace). No material field of its own: it compiles the Optics page's trace
+       spectral (optics/kernels.js), and the picture stays RGB. OFF BY DEFAULT, the one feature that is: every scene
+       before it measured in RGB, and Full keeps it so; Expert is Full with it. */
+    spectral: { label: 'Spectral optics trace', fields: [], hides: null, def: false,
+        help: 'The Optics page traces each ray at three wavelengths of its light\'s spectrum, instead of as a colour: coatings '
+            + 'and coloured glass act by wavelength, and a detector records the spectrum it receives -- its Spectrum chart, its '
+            + 'colour rendering index. The picture is unchanged. Each ray\'s brightness is now a draw of its wavelengths, so a '
+            + 'reading takes more rays to settle (1 200 to 2 700 rays for a colour within 0.001 u\'v\', on the cases worked out), where '
+            + 'the colour trace was off by 6 to 10 % through a sharp filter; off, the trace is the colour trace it always was.' },
+    /* OPTICS ANALYSIS (0.83.0; the user, 2026-11-04: detectors and ray limiters "should be an object property ... Maybe make
+       a new scene setting 'optical features -> analysis' that hides or shows these. Maybe it also hides the rays overlay
+       and illuminance, luminance views"). No material field: it is whether the scene's objects may be detectors and ray
+       limiters (model.js OPTICS_ROLES) -- off, every role is kept and does nothing, and the Optics-Analysis box, the rays
+       in the view's drawer and the illuminance and luminance views are not offered. OFF FOR A NEW SCENE (the user's
+       choice), on for an older one that had a detector or a limiter (model.js v26to27). NOT IN THE PRESETS (`preset:
+       false`): Basic, Full and Expert are about the physics traced, and leave it as it is. */
+    analysis: { label: 'Optics analysis', fields: [], hides: null, def: false, preset: false,
+        help: 'Objects can be detectors and ray limiters for the Optics page (each object\'s Optics-Analysis box), and the view '
+            + 'offers the rays drawn over it and the illuminance and luminance views. Off, none of it is shown and a role an '
+            + 'object has does nothing, though it is kept. The picture is unchanged.' },
+}
+/** A feature's default: on, but for one that says otherwise (spectral). */
+export const featureDefault = k => FEATURES[k]?.def ?? true
+/** The presets, in the order shown: Basic is none of them; Full every feature at its default -- every material field, the
+ *  colour trace -- the default and every scene before the features; Expert all of them (0.83.0: Full and the spectral
+ *  trace). "Optics" is Quality's word already (lib/pathtracer/quality.js). */
+/** ...of the features a preset sets: not one that says `preset: false` (analysis), which the presets leave alone */
+export const PRESET_FEATURES = Object.keys(FEATURES).filter(k => FEATURES[k].preset !== false)
+export const FEATURE_PRESETS = {
+    basic:  { label: 'Basic',  values: Object.fromEntries(PRESET_FEATURES.map(k => [k, false])) },
+    full:   { label: 'Full',   values: Object.fromEntries(PRESET_FEATURES.map(k => [k, featureDefault(k)])) },
+    expert: { label: 'Expert', values: Object.fromEntries(PRESET_FEATURES.map(k => [k, true])) },
+}
+const FEATURE_OF_FIELD = Object.fromEntries(Object.entries(FEATURES).flatMap(([f, d]) => d.fields.map(k => [k, f])))
+/** The feature a material field belongs to, or null for one every scene has. */
+export const featureOfField = k => FEATURE_OF_FIELD[k] ?? null
+/** Whether a field is part of a scene with these features (model.js featuresOf: every key there). */
+export const fieldOn = (features, k) => { const f = FEATURE_OF_FIELD[k]; return !f || (features?.[f] ?? featureDefault(f)) !== false }
 /* ...the coating's values are in the shader exactly while it has one: a value of theirs is `only` its material's
    coating being on (codegen passes the material's params, demo.js and params.js ask the same) */
 for (const f of Object.values(FIELDS)) if (f.coat) f.only = (v, P) => P?.coating > 0
@@ -80,25 +168,17 @@ export const hasCoating = P => P?.coating > 0
  *  something is written (codegen skips a block with no code left once comments are removed --
  *  and it looks for p_local only there too, so mentioning it here does not switch it on). */
 export const MATERIAL_CODE_TEMPLATE = [
-    '// Material code: runs once per hit (cheap), after the fields above are put into m.',
-    '//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...',
-    '//   p, n     the hit point and surface normal, world space;  C  the Hit',
-    '//   p_local  the hit in the object\'s own frame, so a pattern moves with the object',
-    '//            (costs one extra SDF evaluation per hit on this material)',
-    '//   R_local  that frame\'s rotation to the world, for a direction written in it',
-    '//   S_local  its scale: p_local * S_local is in scene units; metres(x) is x m in them, mm(x) x mm',
-    '//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe; one marked',
-    '//            as a length is in real mm, whatever the scene\'s unit -- read the point in mm too:',
-    '//   let q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object',
-    '// e.g. a checker fixed in the world:',
-    '//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));',
-    '// e.g. stripes that travel with the object:',
-    '//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;',
-    '// e.g. brushed along the object\'s x, for an anisotropy above 0 (or turned: grainAround):',
-    '//   m.tangent = grainAlong(R_local, VEC3(1.0, 0.0, 0.0));',
-    '// e.g. with a length width (mm) and a colour stripe added with +, and q as above:',
-    '//   m.baseColor = mix(m.baseColor, stripe, step(fract(q.x / width), 0.5));',
-    '// every function there is to call -- noise, grains, streaks: Help > Reference > Functions for code',
+    '// Material code: runs once where a ray hits, after the settings above are put into m.',
+    '// It changes m, the material at that hit, a field at a time: WGSL, each line ending in ;',
+    '// e.g. a number, a colour (linear red, green, blue), a coating (a dichroic reflecting red):',
+    '//   m.roughness = 0.2;',
+    '//   m.baseColor = VEC3(1.0, 0.5, 0.0);',
+    '//   m = coatMaterial(m, 1u, 0.0, 1.0, 600.0, 20.0, 1.8);',
+    '// It reads p and n, the hit and its normal in the world; p_local, the hit in the object\'s',
+    '// own frame, so a pattern moves with it; and its parameters (+ above) by name -- one marked',
+    '// as a length is in real mm. n cannot be changed: a relief (below) changes the shape.',
+    '// INSERT, under this box, lists every field of m with the line that sets it, all it can read',
+    '// and call, and recipes: click one to put it here. Ctrl+Enter applies.',
     '',
 ].join('\n')
 
@@ -134,6 +214,14 @@ export const make = {
     emissive: (color, luminance = 1000) => ({ ...defaults(), emissive: color, emissiveLuminance: luminance, ior: 1 }),
 }
 
+/** A SHEET'S FACES FROM ITS DATASHEET (0.81.0): a sheet whose every transmitted ray is diffused (haze 1: an opal sheet,
+ *  paper) and whose datasheet gives a total transmittance T (0..1, both faces, no absorption). Each face passes t and
+ *  reflects 1 - t, diffusely, and the light between the two adds up to T = t^2 / (1 - (1 - t)^2) = t / (2 - t), so the
+ *  face's transmission is t = 2 T / (1 + T), its haze 1. For a white base with specular 0 (no gloss on top, which would
+ *  reflect a few % more at each face); core/test/transmission.test.mjs walks it. A clear sheet's haze compounds over its
+ *  two faces about as 1 - (1 - h)^2 (the help's table, from the same walk: hazeOfSheetJS). */
+export const faceForSheet = T => { const t = Math.min(1, Math.max(0, +T || 0)); return { transmission: 2 * t / (1 + t), haze: 1 } }
+
 /** What + under Materials offers: a label and the parameters it starts from. */
 export const PRESETS = {
     diffuse: { label: 'diffuse', params: () => make.diffuse(rgb(0.8, 0.8, 0.8), 1.0) },
@@ -148,20 +236,27 @@ export const PRESETS = {
  *  codegen assigns. Every field is still a uniform for every material, so switching the type
  *  back and forth loses nothing and never writes to a uniform that is not there. An emitter is
  *  emission alone -- a surface that emits ends every path that reaches it (materials_pbr.js), so
- *  its other fields never did anything; a surface and a detector have no emission; a limiter is
- *  not in the picture at all. */
-const SURFACE_FIELDS = ['baseColor', 'metallic', 'roughness', 'anisotropy', 'specular', 'specularTint', 'transmission', 'ior',
-    'abbe', 'attenuationDistance', 'coating', 'coatLow', 'coatHigh', 'coatEdge', 'coatWidth', 'coatIndex']
+ *  its other fields never did anything; a surface has no emission. (A detector and a limiter were types too until 0.83.0:
+ *  an object's optics role now, model.js OPTICS_ROLES.) */
+const SURFACE_FIELDS = ['baseColor', 'metallic', 'roughness', 'anisotropy', 'specular', 'specularTint', 'transmission', 'haze', 'ior',
+    'abbe', 'attenuationDistance', 'scatterDistance', 'scatterAnisotropy', 'coating', 'coatLow', 'coatHigh', 'coatEdge', 'coatWidth', 'coatIndex']
 export const FIELDS_OF = {
     surface: SURFACE_FIELDS,
-    detector: SURFACE_FIELDS,
     emitter: ['emissive', 'emissiveLuminance'],
-    limiter: [],
+}
+/** THE FIELDS ONE MATERIAL USES: its type's (FIELDS_OF), and for an emitter whose glow is a picture (images.js
+ *  colourSlot) a surface's first few too, which show where the picture is dark (images.js SCREEN_FIELDS says why). What
+ *  codegen assigns, the panel shows and the parameter registry offers -- one list, read by all three. */
+export const fieldsOf = m => {
+    const t = m?.type ?? 'surface'
+    const own = FIELDS_OF[t] ?? FIELDS_OF.surface
+    return t === 'emitter' && colourSlot(m) ? [...SCREEN_FIELDS, ...own] : own
 }
 /** What the panel calls a field, where its name says too little */
 export const FIELD_LABELS = { emissive: 'colour', emissiveLuminance: 'luminance (cd/m\u00b2)',
     attenuationDistance: 'colour depth (mm)', abbe: 'Abbe number (dispersion)', coating: 'coating', coatLow: 'R below edge', coatHigh: 'R above edge',
-    coatEdge: 'edge (nm)', coatWidth: 'edge width (nm)', coatIndex: 'stack index' }
+    coatEdge: 'edge (nm)', coatWidth: 'edge width (nm)', coatIndex: 'stack index', haze: 'haze',
+    scatterDistance: 'scatter distance (mm)', scatterAnisotropy: 'scatter forward (g)' }
 /** What a coating is for, put on in one click (the panel's coating presets): values for the coating fields. A beam
  *  splitter and an AR layer are the same at every wavelength, so their edge does nothing. */
 export const COAT_PRESETS = {
@@ -343,5 +438,35 @@ export const RELIEFS = {
         ].join('\n'),
     },
 }
+/* A RELIEF FROM A PICTURE (0.84.0; lib/pathtracer/core/images.js heightAt, A PICTURE AS A HEIGHT): one of the material's
+   pictures as a height -- white `amplitude` mm up, or with `raise` -1 engraved as far down, black at the surface. Not one
+   of RELIEFS: it names a picture, and every preset there is compiled on materials that have none (check-shaders, the
+   tests), where it would not compile. Made for the picture it reads, so its code is that picture's (pictureReliefOf). */
+export const PICTURE_RELIEF_LABEL = 'from an image texture'
+export const pictureRelief = name => ({
+    params: { amplitude: 1.0, raise: 1.0 },
+    ranges: { amplitude: MM(0, 20, 0.01), raise: { min: -1, max: 1, step: 0.01 } },
+    lengths: ['amplitude'],
+    code: [
+        `// Relief from an image texture: "${name}" as a height -- its luminance times its alpha -- white "amplitude" mm`,
+        '// up (raise 1) or engraved as far down (raise -1), black at the surface. Read planar from the object\'s x and y in mm,',
+        '// at the image texture\'s own size, offset, turn and wrap, on every face; smooth (a cubic B-spline of its pixels:',
+        '// sixteen reads at every march step near the surface). heightAt\'s second number is the bound on its slope per mm,',
+        '// worked out from the image\'s own pixels when it was read, and from its size and wrap: the march never steps through it.',
+        `let texture_height = heightAt(${name}, q);`,
+        'h = amplitude * raise * texture_height.x;',
+        'slope = amplitude * abs(raise) * texture_height.y;',
+    ].join('\n'),
+})
+/* WHICH PICTURE A RELIEF READS, by its code WITHOUT ITS COMMENTS: the comment is words for the user, worded again since
+   (picture became image texture in what users see), and a relief must not stop being one for that. Its local was
+   picture_height in the first files of 0.84.0's branch: read as the same relief. */
+const reliefCodeOnly = c => String(c ?? '').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '').replace(/picture_height/g, 'texture_height').replace(/\s+/g, ' ').trim()
+/** The picture a relief from a picture reads, by its code; null for any other relief. */
+export const pictureReliefOf = relief => {
+    const m = relief && /let (?:texture|picture)_height = heightAt\(([A-Za-z][A-Za-z0-9_]*), q\);/.exec(relief.code ?? '')
+    return m && reliefCodeOnly(relief.code) === reliefCodeOnly(pictureRelief(m[1]).code) ? m[1] : null
+}
+
 /** The relief preset a relief is, by its code; null for code of one's own. */
 export const reliefPresetOf = relief => relief ? Object.keys(RELIEFS).find(k => RELIEFS[k].code === relief.code) ?? null : null

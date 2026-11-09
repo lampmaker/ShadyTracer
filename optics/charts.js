@@ -1,5 +1,5 @@
 //======================================================================================================================
-// THE OPTICS CHARTS THAT EXIST -- the six kinds, and every chart of each kind, with its own settings.
+// THE OPTICS CHARTS THAT EXIST -- the seven kinds, and every chart of each kind, with its own settings.
 //
 //   const CHARTS = chartSet({ key: 'raytracer.charts' })   // the host, BEFORE its layout is restored
 //   CHARTS.list()          // [{ id, type, n, title, help, s }] -- one panel each
@@ -10,7 +10,7 @@
 // three charts read off it. The user (2026-10-02): the quantity per chart, and a chart of the same kind added --
 // "compare 2D map of intensity and 2D map of CCT". So a chart is an ENTRY here: a kind and its own settings.
 //
-// THE FIRST OF EACH KIND ALWAYS EXISTS, at the kind's own id ('optics.map'): the Analyse preset opens those six,
+// THE FIRST OF EACH KIND ALWAYS EXISTS, at the kind's own id ('optics.map'): the Analyse preset opens the first six (Spectrum's first is opened from the Analysis menu),
 // the Analysis menu opens them, and a layout saved before this keeps their places. Those can be closed, as any
 // panel, but not removed. An added one is `<the kind's id>.<n>`, titled "<the kind's title> <n>".
 //
@@ -33,8 +33,10 @@ export const OPTICS_CHARTS = [
     { key: 'profiles', id: 'optics.profiles', title: 'Profiles', help: 'Along both axes of the map through its point, in what this chart is set to show.' },
     { key: 'rings', id: 'optics.rings', title: 'Rings', help: 'The map averaged over rings about its point, in what this chart is set to show: a round spot with the noise of a whole ring.' },
     { key: 'encircled', id: 'optics.encircled', title: 'Encircled flux', help: 'The share of the map\'s flux within a radius of its point.' },
+    { key: 'spectrum', id: 'optics.spectrum', title: 'Spectrum',
+      help: 'What the map\'s detector received by wavelength -- the whole detector, or the zoomed part -- with its colour and CRI. Needs the trace by wavelength: the scene\'s Optical features, Spectral optics trace.' },
 ]
-export const FAR_CHARTS = ['polar', 'igamma'], MAP_CHARTS = ['map', 'profiles', 'rings', 'encircled']
+export const FAR_CHARTS = ['polar', 'igamma'], MAP_CHARTS = ['map', 'profiles', 'rings', 'encircled', 'spectrum']
 
 /* WHAT A MAP-READ CHART SHOWS (quantities.js): the quantity, and the target Δu'v' is from -- the detector's own
    whole colour ('mix'), a CCT and Duv, or an xy (the Colour mixing tool's two ways to say one) */
@@ -48,6 +50,7 @@ export const CHART_DEFAULTS = {
     profiles: { ...QUANTITY },
     rings: { ...QUANTITY },
     encircled: {},
+    spectrum: { scale: 'relative' },
 }
 
 const KIND = Object.fromEntries(OPTICS_CHARTS.map(c => [c.key, c]))

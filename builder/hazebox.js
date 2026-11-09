@@ -1,7 +1,7 @@
 //======================================================================================================================
 // HAZE BOX -- dust in the air (0.62.0; the renderer's side is lib/pathtracer/core/haze.js, which says what it does).
 //
-// A BOX IS AN OBJECT OF ITS OWN TYPE, `type: 'haze'`, as an export box is (exportbox.js) and for the same reason: its
+// A BOX IS AN OBJECT OF ITS OWN TYPE, `type: 'haze'`, as a light is (lights.js) and for the same reason: its
 // shape has to stay known -- the renderer tests every ray's leg against it exactly -- and a code node's cannot. It draws
 // nothing: codegen emits a comment for it, declaring its transform's uniform as it does for anything left out, and the
 // scene it generates carries the box as `scene.haze` (hazeOf, below). It has what every object has: a place in the tree,
@@ -16,7 +16,15 @@
 //
 // ONLY THE AIR IN IT SCATTERS: glass and solids inside the box stay clear (the user's condition, 2026-10-16). One box a
 // scene: a second is refused (model.js) -- several overlapping media would need the collision drawn over their sum, and
-// nobody has asked. In an array the box is its first copy's, as an export box is.
+// nobody has asked. In an array the box is its first copy's.
+//
+// NOT A MATERIAL (asked 2026-11-04, and answered in code: it stays a box). A box of index-1 material that scatters
+// inside (materials.js scatterDistance, core/haze.js THE MEDIUM'S WALK) walks its rays correctly, but its walls are
+// surfaces, every shadow ray stops at a surface, and inside a material a collision samples no light and connects no
+// photon (the walk assumes the solid's own wall would block them): a beam in such "air" would show only by chance. The
+// haze box has no surface, which is exactly why light sampling works in it (roadmap/DIFFUSERS.md, Option A). For 0.83.0
+// it was the scene's for a while (in its environment); the user wanted it back as a box to place round a region, "a
+// useful tool to visualize light in a specific region" -- so it is a node, as before.
 //
 // THE DEFAULTS ARE CHOICES, NOT SEEN (2026-10-16): mfp 1 m -- dense, thicker than the dust a sunbeam shows in a room
 // (a rough figure, not measured) -- so a box placed in a small scene shows something; albedo 0.9; g 0.7, about what
@@ -25,19 +33,29 @@
 // Pure functions over the document or codegen's tree, so tested in node (test/hazebox.test.mjs).
 //======================================================================================================================
 
-import { toParent } from './bounds.js'
+import { toParent, lineage, framesTo } from './bounds.js'
+import { corners } from './exportbox.js'
 import { HAZE_G_MAX } from '../lib/pathtracer/core/haze.js'
 
 export { HAZE_G_MAX }
 export const HAZE_PARAMS = Object.freeze({ size: Object.freeze({ x: 1, y: 1, z: 1 }) })
 /** Which of its parameters the Transform gizmo's cube on each axis multiplies (stretch.js): its size, whole along each
- *  axis, so a cube pulls that face out -- as an export box's. */
+ *  axis, so a cube pulls that face out. */
 export const HAZE_STRETCH = Object.freeze({ x: ['size.x'], y: ['size.y'], z: ['size.z'] })
 export const HAZE_DEFAULTS = Object.freeze({ mfp: 1, albedo: Object.freeze({ r: 0.9, g: 0.9, b: 0.9 }), g: 0.7 })
 /** Koschmieder's constant: the distance at which a black object's contrast against the sky falls to 2% is -ln(0.02)
  *  mean free paths. The panel shows it beside the mean free path, the number a weather report gives. */
 export const KOSCHMIEDER = -Math.log(0.02)
 export const visibilityOf = mfp => KOSCHMIEDER * mfp
+
+/** The box's eight corners in the world, for drawing and framing it (overlay.js, focus.js); null for anything else.
+ *  (They were exportbox.js's, shared with the export box, until 0.83.0.) */
+export function boxCorners(doc, id) {
+    const node = lineage(doc, id)[0]
+    if (!node || node.type !== 'haze') return null
+    const s = node.params?.size || HAZE_PARAMS.size
+    return corners({ frames: framesTo(doc, id), lo: [-s.x / 2, -s.y / 2, -s.z / 2], hi: [s.x / 2, s.y / 2, s.z / 2] })
+}
 
 /** The box's settings with the defaults filled in. */
 export const hazeSettings = node => ({ ...HAZE_DEFAULTS, ...(node?.haze || {}) })

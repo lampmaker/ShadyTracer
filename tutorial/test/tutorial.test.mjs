@@ -798,11 +798,19 @@ for (const [name, { mod }] of modules) {
     ok('ch.11: the flint fans blue 3.24 degrees more than red, BK7 0.71, none 0.00', fl('flint').includes('blue bent 3.24°') && fl('bk7').includes('blue bent 0.71°') && fl('none').includes('blue bent 0.00°'), fl('flint'))
     const d = X.throughPrism(SP.LAMBDA_D, 1.75, 28, 31)
     ok('ch.11: at a tilt of 31 degrees the flint\'s yellow ray leaves 31 degrees down: least deviation, symmetric', Math.abs(d.angle - 31) < 0.2, d.angle)
-    // the draw: each channel's weight averages exactly 1; at most 3
-    const exact = [0, 1, 2].map(c => SP.SPEC_PICK.reduce((a, p, k) => a + (p > 0 ? SP.SPEC_WEIGHTS[k][c] : 0), 0))
-    const maxw = Math.max(...SP.SPEC_PICK.flatMap((p, k) => p > 0 ? SP.SPEC_WEIGHTS[k].map(w => w / p) : []))
+    // the draw (lightspectra.js CAMERA_TABLE, 1 nm cells since 0.84.0): each channel's weight averages exactly 1; at most 3
+    const LSm = await import('../../lib/pathtracer/core/lightspectra.js'), CT = LSm.CAMERA_TABLE
+    const exact = [0, 1, 2].map(c => X.PICK.reduce((a, p, k) => a + p * CT.col[3 * k + c], 0))
+    const maxw = Math.max(...CT.col)
     ok('ch.11: the draw\'s weights average exactly 1 in each channel, and never pass 3', exact.every(v => Math.abs(v - 1) < 1e-12) && maxw <= 3 + 1e-12)
-    ok('ch.11: 20,000 draws average 0.993, 1.014, 0.993', X.figures.draw.readout({ n: 20000, seed: 1 }).includes('R 0.993, G 1.014, B 0.993'))
+    ok('ch.11: 20,000 draws average 0.992, 1.015, 0.993', X.figures.draw.readout({ n: 20000, seed: 1 }).includes('R 0.992, G 1.015, B 0.993'))
+    // the worked pick, the cell from 445 nm; the three humps
+    const c445 = 445 - LSm.LS_LO, w445 = [0, 1, 2].map(c => CT.w[3 * c445 + c])
+    ok('ch.11: the cell from 445 nm is picked 0.614% of the time, responses 0.00107, 0, 0.01736, weights 0.17, 0, 2.83',
+        (100 * X.PICK[c445]).toFixed(3) === '0.614' && w445[0].toFixed(5) === '0.00107' && w445[1] === 0 && w445[2].toFixed(5) === '0.01736'
+        && [0, 1, 2].map(c => CT.col[3 * c445 + c].toFixed(2)).join() === '0.17,0.00,2.83', `${X.PICK[c445]} ${w445}`)
+    const humps = []; for (let k = 1; k < X.PICK.length - 1; k++) if (X.PICK[k] > X.PICK[k - 1] && X.PICK[k] >= X.PICK[k + 1] && X.PICK[k] > 1e-3) humps.push(LSm.LS_LO + k)
+    ok('ch.11: the draw\'s humps at 443, 539 and 588 nm', humps.join() === '443,539,588', humps.join())
     // the coating: a constant reflectance is that reflectance in every channel; the edge at 45 degrees is the bench's 551.8 nm
     ok('ch.11: a coating that reflects 0.3 everywhere reflects 0.3 in every channel; the edge at 45 degrees moves to 551.8 nm, the bench\'s', SP.edgeRGB(0.3, 0.3, 600, 20).every(v => Math.abs(v - 0.3) < 1e-12)
         && X.coatEdge(600, 45).toFixed(1) === '551.8' && readFileSync(join(REPO, 'docs/TESTING.md'), 'utf8').includes('the edge at 551.8 nm'))
@@ -810,8 +818,19 @@ for (const [name, { mod }] of modules) {
     const zero = []; for (let l = 440; l <= 560; l += 0.5) if (SP.rgbBar(l)[0] === 0) zero.push(l)
     ok('ch.11: the tag holds 15 bits from bit 17; 40 bins; red\'s weight 0 from 460 to 552 nm', SP.LAMBDA_SHIFT === 17 && 32 - SP.LAMBDA_SHIFT === 15 && SP.SPEC_BINS === 40 && zero[0] === 460 && zero[zero.length - 1] === 552
         && SPs.includes('is 41 softplus') && SPs.includes('upper 16 bits'), `${zero[0]}-${zero[zero.length - 1]}`)
-    const tail = SP.SPEC_PICK.reduce((a, p, k) => a + (SP.SPEC_LO + k * SP.SPEC_STEP >= 730 ? p : 0), 0)
-    ok('ch.11: the fit\'s red end: red 0 from 733 nm, and those bins drawn 1.25e-5 of the time', SP.rgbBar(733)[0] === 0 && SP.rgbBar(732)[0] > 0 && tail.toExponential(2) === '1.25e-5', tail)
+    const tail = X.PICK.reduce((a, p, k) => a + (LSm.LS_LO + k >= 730 ? p : 0), 0)
+    ok('ch.11: the fit\'s red end, red 0 from 733 nm; the CIE table\'s red to 780 nm, its cells from 730 drawn 9.8e-5 of the time',
+        SP.rgbBar(733)[0] === 0 && SP.rgbBar(732)[0] > 0 && tail.toExponential(1) === '9.8e-5' && Array.from({ length: 50 }, (_, k) => CT.w[3 * (350 + k)]).every(v => v > 0), tail)
+    // the 10 nm bins' colour step at 480 nm and the 1 nm cells'; a coating's 0.009 at most
+    const { rgbToXYZ } = await import('../../lib/pathtracer/core/colorimetry.js')
+    const uv = c => { const x = rgbToXYZ(c), dd = x[0] + 15 * x[1] + 3 * x[2]; return [4 * x[0] / dd, 9 * x[1] / dd] }
+    const du = (a, b) => { const p = uv(a), q = uv(b); return Math.hypot(p[0] - q[0], p[1] - q[1]) }
+    const at10 = Math.max(...Array.from({ length: 30 }, (_, k) => du(SP.SPEC_WEIGHTS[k + 2], SP.SPEC_WEIGHTS[k + 3])))
+    const cell = k => [0, 1, 2].map(c => CT.w[3 * k + c])
+    let at1 = 0, at1nm = 0
+    for (let k = 20; k < 320; k++) { const d = du(cell(k), cell(k + 1)); if (d > at1) { at1 = d; at1nm = LSm.LS_LO + k + 1 } }
+    ok('ch.11: two neighbouring 10 nm bins\' colours up to 0.136 u\'v\' apart (near 480 nm), two 1 nm cells\' 0.014 (at 478 nm)',
+        at10.toFixed(3) === '0.136' && du(SP.SPEC_WEIGHTS[9], SP.SPEC_WEIGHTS[10]) === at10 && at1.toFixed(3) === '0.014' && at1nm === 478, `${at10} ${at1} ${at1nm}`)
 }
 
 {
@@ -1022,8 +1041,8 @@ for (const [name, { mod }] of modules) {
     ok('ch.21: kit/gpu.js lays out a struct as tinywebgpu does: the small one in both orders, every type, and ShadyTracer\'s UB', agree(Gc.SMALL) && agree(Gc.SMALL_BAD) && agree(Gc.ENGINE_UB)
         && agree([['a', 'f32'], ['m3', 'mat3x3<f32>'], ['b', 'u32'], ['v2', 'vec2<i32>'], ['m2', 'mat2x2<f32>'], ['c', 'f32'], ['m4', 'mat4x4<f32>'], ['v3', 'vec3<u32>'], ['d', 'i32']]))
     const L1 = K.layoutStruct(Gc.SMALL), L2 = K.layoutStruct(Gc.SMALL_BAD), L3 = K.layoutStruct(Gc.ENGINE_UB)
-    ok('ch.21: the page\'s structs: 64 bytes (8 padding), 80 (24), and UB 109 fields in 768 bytes (48)', L1.bytes === 64 && 4 * L1.padWords === 8 && L2.bytes === 80 && 4 * L2.padWords === 24
-        && L3.fields.length === 109 && L3.bytes === 768 && 4 * L3.padWords === 48, `${L3.fields.length} ${L3.bytes} ${4 * L3.padWords}`)
+    ok('ch.21: the page\'s structs: 64 bytes (8 padding), 80 (24), and UB 111 fields in 784 bytes (44)', L1.bytes === 64 && 4 * L1.padWords === 8 && L2.bytes === 80 && 4 * L2.padWords === 24
+        && L3.fields.length === 111 && L3.bytes === 784 && 4 * L3.padWords === 44, `${L3.fields.length} ${L3.bytes} ${4 * L3.padWords}`)
     // lock-step: a group is as long as its slowest lane
     const ls = K.lockstep([1, 5, 2, 2, 3, 3], 2)
     ok('ch.21: lockstep: groups as long as their slowest lane', ls.time === 2 * (5 + 2 + 3) && ls.work === 16 && Math.abs(ls.use - 0.8) < 1e-12)
@@ -1035,8 +1054,8 @@ for (const [name, { mod }] of modules) {
     // the engine's numbers the page states
     const rm = readFileSync(join(REPO, 'lib/pathtracer/core/raytrace_main.js'), 'utf8'), perf = readFileSync(join(REPO, 'docs/PERFORMANCE.md'), 'utf8')
     const TB = await import('../../lib/pathtracer/core/tracebasics.js')
-    ok('ch.21: 64 threads a group, 150 and 250 ms, a 1 GiB ray budget of 496 bytes a ray, the compile times where the page says', /wvf_wg: 64,/.test(rm) && rm.includes('export const SUBMIT_MS = 150, SPLIT_OVER_MS = 250')
-        && rm.includes('rayBudgetBytes: 1024 * 1024 * 1024,') && 2 * TB.RAY_BYTES + TB.SHADE_ITEM_BYTES === 496 && (2 ** 30 / 496 / 1e6).toFixed(2) === '2.16'
+    ok('ch.21: 64 threads a group, 150 and 250 ms, a 1 GiB ray budget of 512 bytes a ray, the compile times where the page says', /wvf_wg: 64,/.test(rm) && rm.includes('export const SUBMIT_MS = 150, SPLIT_OVER_MS = 250')
+        && rm.includes('rayBudgetBytes: 1024 * 1024 * 1024,') && 2 * TB.RAY_BYTES + TB.SHADE_ITEM_BYTES === 512 && (2 ** 30 / 512 / 1e6).toFixed(2) === '2.10'
         && perf.includes('ready at (ms): shade 18546, occlude 3365, march 1765, genrays 507') && perf.includes('read 21.2 and\n22.7 s for the Noise library on Ampere') && perf.includes('7.9-8.1 s on the 1080 Ti'))
 }
 
@@ -1111,7 +1130,7 @@ for (const [name, { mod }] of modules) {
         streams.forEach((n, s) => { let t = 0; for (let k = 0; k < p.batches; k++) t += p.part(s, k); if (t !== n) plans = false })
     }
     const pl = st => A.planOf(A.figures.batches.steps[st]).plan
-    ok('ch.23: planBatches\' batches each fit and add up to every stream; the page\'s 2,164,802 rays, 1 batch, 5 of 1,658,880 and 200,000, 2 with the photon map first', plans && A.BUDGET === 2164802
+    ok('ch.23: planBatches\' batches each fit and add up to every stream; the page\'s 2,097,152 rays, 1 batch, 5 of 1,658,880 and 200,000, 2 with the photon map first', plans && A.BUDGET === 2097152
         && pl('fits').batches === 1 && pl('over').batches === 5 && pl('over').part(0, 2) === 1658880 && pl('over').part(1, 4) === 200000 && pl('map').batches === 2 && pl('map').firstBatches === 1 && pl('map').part(0, 0) === 0)
     const tj = readFileSync(join(REPO, 'lib/pathtracer/tests.js'), 'utf8'), rmn = readFileSync(join(REPO, 'lib/pathtracer/core/raytrace_main.js'), 'utf8')
     ok('ch.23: the measured and counted numbers are where the page says', tj.includes('FIRST RUN (Pascal, 1188x969): 70 ms with light tracing, 9 ms without -- 7.8x') && tj.includes('read about 1.4x')

@@ -1,6 +1,6 @@
 //======================================================================================================================
 // THE FILE MENU -- the projects and the files, as the menu bar's commands (lib/shell registry.js); and the scenes'
-// commands, which have no menu row. Data and functions, no DOM: the page registers them (index.html) and
+// commands, which have no menu row. Data and functions, no DOM: the page registers them (app.html) and
 // builder/test/filemenu.test.mjs runs them.
 //
 // FIVE ROWS (0.63.0; the user, 2026-10-17: "I dont like how the file menu is organized ... Minimise the number of menu
@@ -65,7 +65,7 @@ export function fileCommands({ actions = {}, item = null } = {}) {
             title: 'Every scene, their cameras and the render settings: opens as a project of its own, or adds its scenes to another' },
         actions.exportPrint && { separator: true },
         actions.exportPrint && { label: '3D print (3MF / STL)…', run: () => actions.exportPrint(),
-            title: 'The scene\'s Export box, whose Properties hold Export 3MF and Export STL' },
+            title: 'The selected object or the whole scene, cut by a box fitted to it, as 3MF with colour or STL' },
     ].filter(Boolean)
     if (exports.length) out.push({ menu: 'File', id: 'file.export', group: 'files', label: 'Export', items: () => exports,
         help: 'A scene file, a project file, or a mesh to print' })

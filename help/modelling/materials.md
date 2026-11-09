@@ -43,6 +43,38 @@ coatings, glow -- are in the [Material fields](../reference/materials.md) refere
 the picture follows. Three turn a feature on and compile the first time: the Abbe number, the colour depth, and a
 coating.
 
+## Optical features
+
+Those three are also the scene's to have or not. The scene's row in the tree has a box, **optical features**, with a
+switch for each:
+- **dispersion**: the Abbe number;
+- **absorption inside**: the colour depth;
+- **coatings**: the coating box;
+- **spectral optics trace**: the [Analysis pane](../optics/analysis.md)'s rays traced by wavelength rather than in
+  colour (below). It has no field of its own.
+
+A feature switched off is not traced at all, in the picture or on the Optics page, and its fields are not shown on any
+material. Their values are kept: switch it on and they are back. The box says which materials have a value it is
+hiding, for instance one a library glass brought in.
+
+**Basic** switches the first three off, for a scene that needs no more than colour and glass. **Full**, the default and
+every older scene, switches them on. **Expert** is Full with the spectral optics trace. Anything between reads Custom.
+Each change is a compile and one undo step.
+
+### The spectral optics trace
+
+Off, the Analysis pane's rays carry a colour, as the picture's do: red, green and blue. On, each ray carries three
+wavelengths, drawn afresh for every ray, and everything it meets is worked out at those wavelengths:
+- a material's colour, as a smooth spectrum of that colour;
+- a coating, at each wavelength rather than averaged over a channel (a dichroic's edge falls where it is);
+- dispersion, a ray taking one of its wavelengths at the first glass with an Abbe number.
+
+A detector then knows the [spectrum](../optics/charts.md#spectrum) it received, and its colour rendering index. A
+light given by its spectrum is traced with that spectrum, and one given by a CCT with Duv 0 as that blackbody. Any
+other light, a ray file's included, is traced as a spectrum of its exact colour, which the Spectrum chart says.
+
+The picture stays in colour whichever way this is set: it changes only the Analysis pane's trace.
+
 ## Glowing
 
 A **glowing** material makes any shape a light. Its brightness is a luminance in cd/m²: 300 is a monitor, 5000 a
@@ -78,6 +110,55 @@ intersection, a blend, a round, a shell), the material is laid out in the **grou
 pattern frame. The
 box on one of its shapes says so, and there it moves only that shape's relief.
 
+## Image textures
+
+A material can show an **image texture**: a PNG, JPEG or WebP image, up to 4096 pixels on its longer side (a larger one
+is scaled down, and the console says so). In a material's Properties, **image textures** › **+ image texture…** chooses
+one. The image is kept in the scene, so a saved file, an exported scene, a copy and a library item all carry it.
+
+**What it does.** The first image texture is the material's colour:
+- on a surface, its **base colour**;
+- on a **glowing** material, its **glow**. A white pixel glows at the material's luminance, a pixel half as bright half as
+  much, and a black one not at all. It works like a screen showing the image at that brightness: 200 cd/m² is a
+  television, 300 an office monitor.
+
+Where the image is transparent, the material's own colour or glow shows. A second image texture, or one set to *code
+only*, is for the material's code: `sample(texture)` is the image texture at the hit, `mapped(texture)` the position on
+it, and `sampleAt(texture, uv)` the image texture at a position of your own
+([Functions for code](../reference/code.md#a-materials-image-textures)).
+
+**Where it goes.** A shape has no built-in texture coordinates, so the image texture is projected onto it, in the
+object's [pattern frame](#turning-a-pattern-the-pattern-frame). It moves and turns with the object, and *pattern at* and
+*pattern turn* move and turn it like any pattern. The **projection** says how:
+- **planar**: along the frame's z, the image's top towards +y. For a screen, a sign, a poster or a floor.
+- **box**: one of six faces, picked by the direction the surface faces. Each reads the right way round from outside.
+- **triplanar**: the three directions blended, for stone or concrete on any shape with no visible seam.
+- **cylindrical**: round the frame's z. Across the image is the distance round in mm, so a label of 207 mm goes once
+  round a 66 mm can.
+- **spherical**: the whole image once over a sphere.
+
+Then the image texture is placed:
+- **width** and **height** are one copy, in real millimetres whatever the scene's unit.
+  - *Height from the image's aspect ratio* sets the height to the width times the image's own height over its width.
+  - That gives the image its own proportions back, undistorted; the width stays as it is.
+- **offset** is where its centre is, in mm, and **turn** turns it in its own plane.
+- **wrap**, across and up separately: *repeat*, *mirror* (every other copy flipped, so the edges meet with no seam),
+  *clamp* (the edge pixels go on) or *none* (one copy, the material's own value outside it).
+- **filter**: *smooth* mixes between pixels; *pixels* keeps each one a sharp square, for an LED wall or pixel art.
+- **faces**, for planar: the *front* faces only (where the surface faces +z), *both* (the back mirrored, as a slide seen
+  from behind) or *all*.
+- **colour (sRGB)**: on for a colour image. Off reads it as data, for a roughness map or a mask.
+
+Every one of these is live. Choosing another image, renaming the image texture, changing its use or taking it away is a
+compile.
+
+**A glowing image texture's dark parts.** A black pixel emits nothing, so there the material is not a light, and its
+surface shows. A glowing material with an image texture keeps a surface's base colour, metallic, roughness and specular
+for that. They start as a screen's dark glass, so a black pixel looks like a switched-off screen reflecting the room. A
+pixel that glows reflects nothing, as every glowing surface: on a real screen the reflection is small next to the glow.
+
+Try [Image textures](example:pictures.json): one test card on a glowing screen, on a poster, round a can and on a ball.
+
 ## Relief
 
 A material can have a **relief**: a height on the surface of everything that wears it, in real millimetres. Plaster,
@@ -86,6 +167,25 @@ in the silhouette and casts its own small shadows. That makes it costly: it is e
 that comes within two of its heights of the surface, so a scene full of relief renders more slowly.
 
 Compare them in a low, raking light: [Relief and texture](example:relief-texture.json).
+
+### A relief from an image texture
+
+A material's image texture can be its relief: in the **relief** box choose **from an image texture:** and its name.
+- **The height:** the image's luminance (times its alpha). White is `amplitude` mm up, black is the surface itself, and
+  *raise* -1 engraves it instead.
+- **Placement:** the image texture's own width, height, offset, turn and wrap, read **planar** along the object's z
+  whatever its projection, and on every face. The sides of a box show its edge unless the wrap is *none* and the image
+  has a black border.
+- **Smooth:** the height between pixels is a smooth curve through them (a cubic B-spline). Shading does not show the
+  pixel grid, and sharp edges come out slightly rounded.
+- **Safe to march:** how steep the relief can be is worked out from the image's own pixels when it is read, so a ray
+  never steps through it. A steep image texture, small and high, makes the march take more steps near it.
+- **16 bits:** a 16-bit greyscale PNG keeps all of its 65 536 heights; any other image has 256, a step of
+  amplitude / 255. For a tall relief under a raking light, use a 16-bit height map.
+- **Its cost:** sixteen reads of the image at every march step near the surface, on top of what a relief costs.
+
+To show the image texture's colour without the relief, or the relief without the colour, set its **use** to *code only*:
+the relief still reads it. [Image textures](example:pictures.json) has an embossed plaque made this way.
 
 ## Realistic values
 

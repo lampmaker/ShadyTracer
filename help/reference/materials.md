@@ -14,18 +14,33 @@ What each field of a material does. Every field is live -- a slider moves the pi
 | anisotropy | anisotropy | Roughness different along and across a direction -- brushed or turned metal. 0 the same every way; the direction is the material code's `m.tangent`. |
 | specular | specular | How strong a dielectric's reflection is: 0.5 the physical value for its index of refraction, 0 none at all (a pure diffuse surface), 1 twice. |
 | specularTint | specularTint | Tints a dielectric's reflection with its base colour: 0 white, as real plastics and paints reflect. |
-| transmission | transmission | How much light passes into the material instead of being scattered off it: 1 glass and clear plastics, 0 everything opaque. |
+| transmission | transmission | How much of the light the surface does not reflect passes THROUGH it instead of back off a diffuse body: 1 glass and clear plastics, 0 everything opaque, 0.5 an opal sheet that passes half at each face. Haze says how much of what passes is diffused instead of going straight. With roughness it is frosted glass -- and a diffuser film is a thin sheet of it: roughness 0.36 spreads a ray head-on through a polycarbonate sheet by about 10 degrees, anisotropy makes the spread elliptical along the grain, up to 10:1. |
 | ior | ior | The index of refraction, at the d line (587.6 nm): 1.5 a typical glass, 1.333 water, 1.49 PMMA, 1.586 polycarbonate. Sets how much a transparent material bends light and how strongly it reflects. |
 | abbe | Abbe number (dispersion) | The Abbe number V_d -- how much the index changes with colour: 0 none (no dispersion), 64 a crown glass (BK7), 36 a flint, 30 polycarbonate. Lower spreads colours more. Turning it on is a compile. |
 | attenuationDistance | colour depth (mm) | The colour depth, in real mm whatever the scene's unit: light that has travelled this far inside has been filtered to the base colour, so a thick part is darker than a thin one. 0 off: each crossing tints by the colour, whatever the thickness. Turning it on is a compile. |
-| coating | coating | A thin-film coating whose reflectance replaces the surface's own: none, on the faces light enters by (the back anti-reflective, or bare), or on every face. Putting one on is a compile. |
+| coating | coating | A thin-film coating whose reflectance replaces the surface's own: none, on the faces light enters by (the back anti-reflective, or bare), or on every face. On a metal it lies over the metal, which reflects back what the coating passes. Putting one on is a compile. |
 | coatLow | R below edge | The coating's reflectance below its edge wavelength (0..1). |
 | coatHigh | R above edge | The coating's reflectance above its edge wavelength (0..1). |
 | coatEdge | edge (nm) | Where the coating switches, in nm, head-on. At an angle it moves to shorter wavelengths, as real interference filters do. |
 | coatWidth | edge width (nm) | How sharp the switch is: nm from 10 % to 90 % of the way. |
 | coatIndex | stack index | The coating stack's effective index: how fast the edge moves with the angle -- higher moves it less. |
+| haze | haze | Of the light that passes through (transmission), how much is diffused -- spread evenly on the far side -- instead of going straight on: what a datasheet calls haze (ASTM D1003). 0 clear, 1 all of it (an opal diffuser, paper, a lampshade). Clear acrylic with haze 0.06 keeps a sharp image behind it under a veil; roughness is the other, narrow blur (frosting). Each face a ray crosses scatters it, so a sheet scatters twice. A clear sheet of n 1.49 whose faces have haze 0.01, 0.03, 0.06, 0.1, 0.2, 0.5 has about 1.7, 5, 10, 17, 33, 72 % haze itself, passing 92 to 84 % (a walk of the sheet in core/transmission.js). An opal sheet whose datasheet gives a total transmittance T (white, specular 0) is transmission 2T / (1 + T) a face with haze 1 -- 0.667 for 50 %. Thickness does not change it: it scatters at the faces. Light sampling and the lights' rays reach through it in Standard and High; Draft follows it as it follows frosted glass. Turning it on is a compile. |
+| scatterDistance | scatter distance (mm) | How far light travels inside the material, on average, before something in it scatters it: in millimetres, whatever the scene's unit, as the colour depth. 0 a clear volume. Haze scatters at the faces, whatever the thickness; this scatters inside, so a thick part is milkier than a thin one -- milky or opal glass by the block, a light guide's diffusing body, frosted ice. A few millimetres in a part a few centimetres thick is milky; a free path well under the part's size makes it glow through, like opal. It only acts where light travels inside, so with transmission. Each scattering is a step of the march, so a dense, thick part walks long: raise Max Iterations if it reads dark. Light sampling cannot reach inside smooth glass, so what the glass scatters -- a beam's track, a lamp's glow -- shows through the photon map (Light sources), sharpening as samples come in, and without it only by chance; the Optics page's rays walk it too. Turning it on is a compile. |
+| scatterAnisotropy | scatter forward (g) | Which way each scattering inside sends the light (Henyey-Greenstein's g): 0 evenly in every direction, towards 0.95 mostly onwards, as large particles do (milk about 0.8, fine particles nearer 0). Forward scattering lets light through deeper, so a forward-scattering part is clearer for the same scatter distance. Only with a scatter distance. |
 | emissive | colour | An emitter's colour. Only its hue counts: the brightness is the luminance. |
 | emissiveLuminance | luminance (cd/m²) | An emitter's brightness in cd/m²: 300 a monitor, 5000 a frosted bulb, 20 000 a fluorescent tube, 1.6 billion the sun. |
+
+## Optical features
+
+The scene's [optical features](../modelling/materials.md#optical-features) decide which of these a scene has. With one off, its fields are not shown or traced, and their values are kept.
+
+| feature | fields | does |
+|---|---|---|
+| Dispersion | Abbe number (dispersion) | Glass with an Abbe number splits white light into its colours where it refracts: prisms, a lens's colour fringes. Off, every glass bends all colours alike, at its index, and its Abbe number is not shown -- no fringes, and none of the colour noise they take to settle. |
+| Absorption inside | colour depth (mm) | A material's colour depth: light inside glass or a liquid filtered to its colour over that depth, so a thick part is deeper in colour than a thin one. Off, the colour tints a ray at each crossing, whatever the thickness, and the colour depth is not shown. |
+| Coatings | coating, R below edge, R above edge, edge (nm), edge width (nm), stack index | Thin-film coatings in place of a surface's own reflection: dichroics, beam splitters, anti-reflective layers. Off, every surface reflects as its index says, and the coating box is not shown. |
+| Spectral optics trace | (none: the trace itself) | The Optics page traces each ray at three wavelengths of its light's spectrum, instead of as a colour: coatings and coloured glass act by wavelength, and a detector records the spectrum it receives -- its Spectrum chart, its colour rendering index. The picture is unchanged. Each ray's brightness is now a draw of its wavelengths, so a reading takes more rays to settle (1 200 to 2 700 rays for a colour within 0.001 u'v', on the cases worked out), where the colour trace was off by 6 to 10 % through a sharp filter; off, the trace is the colour trace it always was. |
+| Optics analysis | (none: the trace itself) | Objects can be detectors and ray limiters for the Optics page (each object's Optics-Analysis box), and the view offers the rays drawn over it and the illuminance and luminance views. Off, none of it is shown and a role an object has does nothing, though it is kept. The picture is unchanged. |
 
 ## Starting points
 
@@ -37,6 +52,24 @@ The Properties panel's **+** makes a material from one of these: *diffuse*, *pla
 - **dichroic: reflects blue**: R below edge 1, R above edge 0, edge (nm) 500, edge width (nm) 20, stack index 1.8
 - **beam splitter 50/50**: R below edge 0.5, R above edge 0.5
 - **anti-reflective**: R below edge 0, R above edge 0
+
+## Image textures
+
+A material can show image textures (PNG, JPEG, WEBP, up to 4096 pixels on the longer side; a larger one is scaled down), each placed on every object wearing it by a projection in the object's [pattern frame](../modelling/materials.md#turning-a-pattern-the-pattern-frame). One can be the material's colour; the others are for its code (`sample(name)`: [Functions for code](code.md#a-materials-image-textures)). Every setting is live but the image itself, its name and its use: a compile. See [Image textures](../modelling/materials.md#image-textures).
+
+| setting | starts at | does |
+|---|---|---|
+| use | colour | colour: the material's colour with no code -- a surface's base colour, a glowing material's glow (its white at the luminance, its black dark, the surface below it showing there); none: only its code reads it. A compile. |
+| projection | planar | How the point is put on the image texture, in the object's pattern frame: planar along its z; box, one of six faces by the normal, each read the right way round from outside; triplanar, the three blended by the normal; cylindrical round its z, across being the distance round in mm; spherical, the whole image once over a sphere. |
+| size | 100, 100 | One copy of the image texture, across and up, in real millimetres whatever the scene's unit (spherical: unused). |
+| offset | 0, 0 | Where the image texture's centre is in its plane, in mm. |
+| turn | 0 | The image texture turned in its own plane, anticlockwise, in degrees. |
+| wrapU | repeat | Across: repeat (copies side by side), mirror (every other copy flipped, no seam), clamp (the edge pixels go on) or none (one copy; the material's own value outside it). |
+| wrapV | repeat | Up: the same four. |
+| filter | smooth | smooth: mixed between pixels; pixels: each pixel a sharp square. |
+| faces | front | Planar only: front (where the surface faces +z), both (front and back, the back mirrored as a slide seen from behind) or all (every face; the edges smear across the sides). |
+| colour | true | true: a colour image, decoded from sRGB to light; false: data (a roughness map, a mask), read as its numbers. |
+| sharpness | 4 | Triplanar only: how quickly the three projections hand over where the surface turns, 1 to 64. |
 
 ## Reliefs
 
@@ -57,4 +90,8 @@ Hammered: a dent "amplitude" mm deep in every cell of a Worley pattern "size" mm
 ### 3D-print layers
 
 3D-print layers: a bead of plastic every "layer" mm up the SCENE's z -- the build plate is its z = 0, so the layers stay level and line up across parts however they are turned or joined; for a part printed lying another way than it is shown, read the object's own z, q.z, in place of world.z. Each bead rounded -- a parabola across it -- with a groove "amplitude" mm deep where it meets the next, and a little fuller or flatter than the next, by up to "variation" of it, as a printer's extrusion is never quite even; pinned at the grooves, so the height is continuous and its slope is at most 4 (1 + variation) amplitude / layer, at a groove. this layer's own number: value noise at a lattice point is that point's value, in [-1, 1]
+
+### from an image texture
+
+Relief from an image texture: "texture" as a height -- its luminance times its alpha -- white "amplitude" mm up (raise 1) or engraved as far down (raise -1), black at the surface. Read planar from the object's x and y in mm, at the image texture's own size, offset, turn and wrap, on every face; smooth (a cubic B-spline of its pixels: sixteen reads at every march step near the surface). heightAt's second number is the bound on its slope per mm, worked out from the image's own pixels when it was read, and from its size and wrap: the march never steps through it.
 

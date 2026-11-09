@@ -8,7 +8,6 @@ import * as M from '../model.js'
 import { PRIMITIVES, primitiveObject } from '../primitives.js'
 import { stretchOf, stretched, startOf, refKey, MIN_SIZE } from '../stretch.js'
 import { stretchFactor } from '../gizmo.js'
-import { exportProblems } from '../exportbox.js'
 
 let pass = 0, fail = 0
 const ok = (name, cond, extra = '') => {
@@ -31,13 +30,13 @@ for (const [key, s] of Object.entries(PRIMITIVES)) {
     const n = add(key)
     eq(`${key}: every axis it maps is offered, as the entry says`, axesOf(n), s.stretch)
 }
-eq('a sphere, the octahedron, the reflector: no stretch -- scaled whole', [axesOf(add('sphere')), axesOf(add('octahedron')), axesOf(add('reflector'))], [null, null, null])
+eq('a sphere, the octahedron, the reflectors: no stretch -- scaled whole', [axesOf(add('sphere')), axesOf(add('octahedron')), axesOf(add('reflector')), axesOf(add('faceted reflector'))], [null, null, null, null])
 // LOOKED AT AGAIN (2026-10-02, "don't force it"): a ring in the xy plane, the link's straight sides -- and no z by a round tube
 eq('a torus and a capped torus: x and y by the ring, no z', [axesOf(add('torus')), axesOf(add('capped torus'))], [{ x: ['ring'], y: ['ring'] }, { x: ['ring'], y: ['ring'] }])
 eq('a link: y by its span only', axesOf(add('link')), { y: ['span'] })
 eq('the shapes from points: none (their points are their sizes)', [axesOf(add('revolution')), axesOf(add('bent tube')), axesOf(add('light guide'))], [null, null, null])
 
-// A LIGHT AND AN EXPORT BOX: not code, their shape is their type (lights.js, exportbox.js)
+// A LIGHT: not code, its shape is its type (lights.js)
 {
     const rect = M.addLight(d, 'root', { shape: 'rectangle' }), disc = M.addLight(d, 'root', { shape: 'disc' }), file = M.addLight(d, 'root', { shape: 'rayfile' })
     eq('a rectangle light: x its width, y its height; a disc light: its radius both; a ray file: none',
@@ -48,11 +47,6 @@ eq('the shapes from points: none (their points are their sizes)', [axesOf(add('r
     const R = node(rect), W = stretchOf(R).x
     eq('...stretched: its width only, no range to hold it but never through zero', [stretched(R, W, 2, startOf(R, W)), stretched(R, W, 0, startOf(R, W)).width],
         [{ width: 2 }, MIN_SIZE])
-    const box = M.addExportBox(d, 'root', {}), X = node(box)
-    eq('an export box: its size, whole, along each axis', axesOf(box), { x: ['size.x'], y: ['size.y'], z: ['size.z'] })
-    const tiny = stretched(X, stretchOf(X).y, 0, startOf(X, stretchOf(X).y))
-    ok('...squeezed to nothing: still more than nothing, as an export box must be (exportProblems)', tiny.size.y > 0 && tiny.size.x === 1 && tiny.size.z === 1
-        && exportProblems({ ...X, params: { ...X.params, ...tiny } }).length === 0, JSON.stringify(tiny))
 }
 
 // FOUND BY ITS CODE, its comments aside

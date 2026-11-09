@@ -1,6 +1,6 @@
 //======================================================================================================================
 // ONE QUESTION OVER THE PAGE, with a few answers -- what Import from file… asks of a project file: a project of its own,
-// or its scenes added to this one (index.html; UI_PLAN.md section 11). A card over the page in the Projects list's
+// or its scenes added to this one (app.html; UI_PLAN.md section 11). A card over the page in the Projects list's
 // look (shell.css .shell-proj): a title, a line, a button per answer with what it does under it, and Cancel.
 // Escape, or a click beside the card, is Cancel.
 //

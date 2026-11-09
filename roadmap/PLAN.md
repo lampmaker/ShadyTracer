@@ -13,7 +13,68 @@ a browser starved by heavy scenes) has its own too: `PERFORMANCE.md`, in `../doc
 STATUS section. **Where the scene should go** (data, rays answered by objects, shading without geometry, and the
 order of that work): `ARCHITECTURE.md`, beside this file (2026-10-04). **Media** -- dust in the air, then a volume
 photon map, scattering inside materials, an Optics-view beam view -- has its own: `MEDIA.md`, beside this file
-(2026-10-16).
+(2026-10-16). **Translucent and scattering materials** -- opal sheets, diffuser films, light guides, milky glass:
+the options in `DIFFUSERS.md` (2026-10-29), the first two built (below).
+
+## Image textures on surfaces — built 2026-11-06 (0.84.0), NOT yet seen
+
+The user (2026-11-06): "a texture that can act as an emitting surface as well ... alignment, positioning, repeating,
+mirror, scaling etc is the big question". Proposed in `TEXTURES.md` and its T1 built: a material's image textures, projected
+in the object's pattern frame (planar, box, triplanar, cylindrical, spherical), sized in mm, wrapped per axis, a
+surface's colour or a glowing material's glow with a screen's glass under its black, or read by code. Kept in the scene
+by its bytes, outside the undo history; one atlas a scene. Verified on Dawn over lavapipe, not on hardware: what to look
+at and the numbers are `TEXTURES.md` STATUS. Next, when asked: T2 (an image texture's settings on the timeline, Fit to object,
+any field from a channel, HDR image textures).
+
+## The special objects stop being add-ons — built 2026-11-04 (0.83.0), NOT yet seen
+
+The user (2026-11-04): detectors, ray limiters, the haze box and the STL export "feel like add-ons, weird hacks and are not
+always properly placed". Decided with the user, from options each:
+- **3D print export:** no export box. File › Export ▸ 3D print… asks for the selected object (alone, a scene of it
+  compiled for the export) or the whole scene, with a box fitted to it from the measured boxes and editable
+  (`builder/printdialog.js`, `exportbox.js` `fittedBox`, `subjectTree`; `RT.sampleField(…, own)`).
+- **Haze: not a material.** A box of index-1 scattering material walks correctly (`volume.gpu.mjs`), but its walls stop
+  every shadow ray and the walk inside samples no light (`core/haze.js` THE MEDIUM'S WALK): a beam in such air shows
+  only by chance. So it stays a box. For a while it was the scene's, in its environment; the user wanted the box back
+  ("a useful tool to visualize light in a specific region"), so it is the haze box node it was, and a file saved in
+  between with the scene's haze reads it back as one (`model.js` `hazeNodeFromDoc`).
+- **Detectors and limiters: an object's role** (`model.js` `OPTICS_ROLES`), tested by the object's tag in the optics
+  kernel (`optIsDetectorTag`), so a detector given or taken is live. Shown with a new feature, **optics analysis**, off
+  for new scenes, out of the presets, which also hides the rays overlay and the lux and luminance views (the user kept
+  the measure tool and the Analysis pane).
+Scene format 27 (`model.js` v26to27). Checked without a GPU: `exportbox`, `hazebox`, `model`, `codegen` (the golden
+refrozen for this: its header says what moved), every `*.test.mjs`, check-shaders with naga; headless: `panel.check`,
+`printdialog.check`, `page.check`. **Not seen on hardware.**
+
+**What to look at** (the user, on hardware): the two change notes (`changes/print-export-dialog.md`,
+`changes/optics-roles.md`), each's *What to look at*; and that + › Haze box adds one, as before.
+
+## Transmission and haze, frosted glass evaluated — built 2026-10-29/30 (0.81.0), its benches pass on hardware, the picture NOT yet seen
+
+The user chose `DIFFUSERS.md` B1 and B2 first ("do B1 and B2 first. It will make rough glass more correct too right?" --
+in its average no, it was unbiased; in its noise a lot). Built on one foundation, evaluable transmission:
+- **Rough glass's transmission is evaluated.** Light sampling aims through the face a path leaves glass by. A photon in
+  glass connects out to the camera through it, over n^2. To light tracing's splits it is EV_EVAL; to the photon map,
+  EV_OTHER. This holds only in the full renderer.
+- **Transmission and haze (B1):** transmission how much passes, haze how much of it is diffused (ASTM D1003). Clear
+  glass with a little scatter is transmission 1, haze 0.06. It replaced *translucency*, a share of the diffuse base,
+  which transmission 1 left none of (the user, 2026-10-30: "a transmissive material that has a bit of scatter"). A face
+  that both refracts and diffuses is an area mix of clear glass and a diffuse face when seen from inside; a hazy sphere
+  read 1.23 and 0.92 in the furnace before that, and half glass, half white always had that fault.
+- **A diffuser film is rough glass.** B2, a film lobe of its own, was built and taken out: a thin-sheet model, not a
+  physical property (the user: "keep the properties of materials as realistic / physical as possible"). The library's
+  *diffuser film 10°* is polycarbonate at roughness 0.36; anisotropy makes a film elliptical, up to 10:1.
+- **Scene format 25.** Material2 is 112 bytes, about 3 % fewer rays a batch.
+- **Scatter inside (`DIFFUSERS.md` A), built 2026-11-02:** a scatter distance and asymmetry beside the colour depth,
+  walked in the march kernel. To press: `volume` and `volume-light`. To look at: the library's *milky glass*, a thin
+  sheet and a thick block of it side by side, and the light guide example on the Optics page with a scatter distance.
+
+How it works: README § *Materials*. What changed while it was built, and what was measured on Dawn over lavapipe:
+`DIFFUSERS.md` STATUS.
+- **Pressed (Ampere, 2026-11-02, 86ed2ca):** `furnace-beyond` 14 of 14, `transmission-parity` 16 of 16 (TESTING.md).
+- **To press:** `light-vs-emitter`'s frosted and opal diffuser pairs.
+- **To look at:** an LED behind a frosted cover, an opal sheet, the library's 10° film and its hazy acrylic, in Standard. The brightness should be as
+  before and the noise far lower; Draft should look as it always did.
 
 ## STEP and STL import as shapes — built 2026-10-21 (0.73.0), NOT yet seen
 
@@ -320,10 +381,10 @@ instead of averaging into it.
    luminance derived from the area of their sheets). Emissive objects are still cd/m² only -- an SDF
    gives no area to divide by (README § *Units*); *Lights* L8 measures their flux by Crofton lines
    instead. IES profiles: not built.
-6. **Deferred material work.** Rough transmission is still sampled and not evaluated, so NEE cannot
-   connect through frosted glass (`materials_pbr.js`, rough transmission's "no evaluable BTDF on the
-   other side"); a multiple-scattering compensation for rough glass is *C* below. The anisotropy
-   tangent is done (SURFACES.md phase 1, `Material2.tangent`).
+6. **Deferred material work.** Rough transmission is evaluated since 0.81.0, so NEE and the photons'
+   connection reach through frosted glass (`materials_pbr.js` THE SIDE BEYOND; built with B1 of
+   `DIFFUSERS.md`, *Translucency, frosted glass evaluated* above). A multiple-scattering compensation for rough
+   glass is *C* below. The anisotropy tangent is done (SURFACES.md phase 1, `Material2.tangent`).
 7. **The performance pass** — PERFORMANCE.md is that pass now; the parked light-tracing cost is in *To
    check or review later*.
 
@@ -502,14 +563,87 @@ code, a look each.
      covered: a cube beam splitter (an interface between two touching solids -- not checked whether a ray inside
      one stops at a face it shares with the other), polarising splitters (polarisation, below), a rough coating's
      single-scatter loss. Material2 is 96 bytes, the shade item 272: ~2.16 M rays in flight (2.24 M).
+     **On a metal (0.84.0), built, not yet seen:** until then the metal lobe never read the coating; now the stack lies
+     over the metal, the bounces between them summed as intensities (`materials_pbr.js` `metalFresnel`), the metal's F
+     its reflectance in air. Rows in `coating.gpu.mjs`.
   2. **Dispersion -- built (0.40.0), not yet seen.** An Abbe number on a material (ior as n_d; Cauchy through both);
      at the first refraction into a dispersive medium a wavelength is drawn and the ray weighted by that wavelength's
      channel weights (mean 1 per channel, at most 3), refracting with n(λ) from then on; the pick and Fresnel there the
      d line's, so reflections stay white. The wavelength rides in Ray.tag's upper 16 bits (the user's choice: the Ray
      stays 112). Bench `optics-dispersion` (a wedge's per-channel exit angles) and three furnace rows.
+     **A light's own spectrum at the prism (0.84.0; `core/lightspectra.js`), not yet seen on hardware.** The user, 2026-11-07:
+     a 450 nm LED (10 nm) threw red at the red end of its rainbow, and a red LED red in the violet -- the draw above
+     spreads each channel over its own wavelengths, whatever the light emits. A photon of a light given by its spectrum
+     (or a CCT on the locus) now carries it (Ray.pix PIX_LS, the tables in learn past the microfacet tables) and draws
+     from it in 1 nm cells, taking each wavelength's exact colour. On Dawn (`core/test/prism.gpu.mjs`) a beam through a
+     30 degree prism leaves nothing where the old draw put red. Open: the camera's own paths still draw by the
+     channels (a light seen through a prism, which only they reach through a pinhole); that needs a light's face to
+     name its spectrum (codegen LIGHTS, scenedata.js) and a draw whose weights a spectrum can divide.
+     **The channels' draw at 1 nm (0.84.0).** Its weights measured: `optics-dispersion` PASS on the user's NVIDIA
+     Pascal (2026-11-07, af3cd7c), each channel's mean exit angle within 0.001 degrees of the 1 nm weights' (red
+     -23.8867 against -23.8858, green -24.1774 against -24.1773, blue -24.8590 against -24.8593). The picture's rainbow
+     without bands not yet seen. The user asked (2026-11-07) whether the spectral resolution could
+     go to 1 nm, as a setting if it cost speed. What was 10 nm: the camera's draw, its colour constant over each bin --
+     a rainbow seen through glass stepped by up to 0.136 u'v' between two bins at 480 nm, 0.014 between two 1 nm cells
+     (computed) -- and a coating's per-channel average. The draw is now a 1 nm table from the CIE's own 1931 table, in
+     the learn buffer beside the lights' (`lightspectra.js` CAMERA_TABLE), drawn by binary search: 9 reads where the
+     bins took up to 40 (read in code; untimed). No setting: nothing to gain by turning it off, and a second draw would
+     be code that does not run. Coatings keep 10 nm: at 1 nm the same arithmetic moves R by at most 0.009 (computed)
+     for 400 softplus terms a coated hit instead of 40.
   3. **The exact method for the optics trace** -- a source's spectrum (an LED's SPD, Planck, a Zemax file's own
      wavelength: optRays' unused 4th word), watts as watts, X Y Z from the CMFs at the detector, R(λ) and n(λ) per
      ray; and a true-colour detector map.
+  4. **The spectral ray: the numbers (2026-10-29), before one is built.** The user asked for spectral sources,
+     phosphor conversion, and whether a ray carrying N bands (a scene setting) beats one wavelength a ray. Three ways
+     a ray can carry a spectrum were computed on an LED's light by `core/test/spectralnoise.test.mjs`: exact sums
+     over every wavelength draw on a 0.1 nm grid, no GPU, checked against seeded Monte Carlo. Noise from the draw is
+     the estimator's property, not the card's. Speed is NOT in it. One path's sigma, and the paths a reading needs
+     before the draw alone leaves 0.001 u'v' and 1 % of Y; for the deterministic ways their bias against the 0.1 nm
+     integral (LED 5656 K; dichroic a long-pass at 500 nm, 10 nm wide; amber an 80 nm edge at 585; gather a dichroic
+     on the photon's side times a cyan glass on the camera's; phosphor a 450 nm pump through A(lambda), QE 0.9, Kasha's
+     rule):
+
+     | way | sigma_Y/Y a path | paths to 0.001 u'v' | paths to 1 % Y | bias Y (dichroic / amber / gather / phosphor) | bias u'v' (same) |
+     |---|---|---|---|---|---|
+     | 1 wavelength (p ~ x+y+z) | 0.94-1.71 | 20 000-90 000 | 8 800-29 000 | none | none |
+     | hero 4, Wilkie (uniform, 100 nm apart) | 0.18-1.60 | 4 800-24 000 | 315-26 000 | none | none |
+     | hero 4, pbrt-v4 (stratified in p's CDF) | 0.07-0.25 | 800-1 400 | 48-635 | none | none |
+     | hero 3, pbrt-v4 (added 2026-11-04: what the optics trace carries) | 0.12-0.40 | 1 200-2 700 | 150-1 600 | none | none |
+     | bands 8 | 0 | - | - | -4.8 / +4.6 / -10.3 / -9.6 % | 0.009 / 0.013 / 0.019 / 0.044 |
+     | bands 16 | 0 | - | - | -0.5 / +1.3 / -1.3 / -9.1 % | 0.001 / 0.004 / 0.003 / 0.038 |
+     | bands 40 | 0 | - | - | -0.1 / +0.2 / -0.3 / -1.2 % | 2e-4 / 7e-4 / 6e-4 / 0.005 |
+     | RGB, today | 0 | - | - | -9.1 / -9.6 / -5.8 % / cannot | 0.016 / 0.018 / 0.028 / cannot |
+
+     Every way but the sampled ones is exact through neutral optics (to 1e-12). What follows:
+     - **One wavelength is the noise PLAN.md said** (computed): a path's Y off by about its own size.
+     - **Hero wavelengths pay only drawn pbrt-v4's way**: 4-11 times fewer paths to 0.001 u'v' than Wilkie's uniform rotation. Through
+       the phosphor, 18 times fewer, where the uniform draw rarely lands on a narrow pump.
+     - **Bands' bias is a narrow spectrum against a slope inside a band.** The phosphor's is nearly all its absorption,
+       averaged flat over a band under a 20 nm pump; a photon's energy at the band's centre costs a few tenths of a %
+       (a scratch run). No band average can fix that after other optics, which have reshaped the light inside the
+       band (inferred). 16 bands are about 1 % through filters and 9 % through a phosphor; 40 bands are under 0.3 %
+       and 1.2 %.
+     - **Today's RGB through an edge filter is 6-10 % off in Y** on these cases: the "looks" method's assumption (a
+       channel's light spread as its weights) against an LED's narrow blue. That is the same arithmetic as
+       coatEdgeRGB (`core/spectral.js:100-112`) and a light's exact RGB (`builder/lights.js:64-72`). On hardware it
+       is unseen: `optics-coating` checks the arithmetic, not an LED's spectrum.
+     - **What the numbers leave open (inferred):**
+       - Whether ~1000 paths for 0.001 u'v' shows in a picture. A pixel's geometry is noisy anyway, and a reading
+         over a detector area sums far more paths.
+       - What a wider ray costs. 40 bands with beta and mu a ray is 408 B, and about 0.99 M rays in flight against
+         2.16 M (rayBudgetBytes over 2 rays + a shade item; arithmetic). Hero is about 128 B and 2.03 M.
+       - The photon map with hero wavelengths. A photon's wavelengths are not the camera path's; the options are
+         one shared draw a sample, a kernel in wavelength, or bands for photons only.
+       What follows from here -- a ray that pays only for what the scene chooses, colour, polarisation, coatings,
+       media and diffraction, and the order -- is `roadmap/LIGHT_MODEL.md` (2026-10-30).
+     - **Built since (0.83.0), not yet seen on hardware:** the scene's optical features (S0a); lights given by a spectrum
+       (S1); and the optics trace by wavelength with its Spectrum chart and CRI (S0 and S2 for the optics trace, the
+       user's choice of 2026-11-04: three hero wavelengths in the `beta` a ray already has, the renderer untouched).
+       On lavapipe the trace reads a white LED's colour within 2.2e-5 u'v' and a dichroic plate 0.9672 ± 0.0006
+       against its integral 0.9677, where the colour trace reads 0.8345 (`optics/test/spectral.gpu.mjs`). The row
+       for the user's cards is `optics-spectral`. What its speed costs is theirs to measure: per ray it adds a
+       spectrum lookup at the source, three table reads per material and coating, and four floats more per detector
+       hit (read in code; untimed).
 - **The camera's lens -- built (0.43.0), not yet seen; its photons removed (0.61.0)** (the user, 2026-10-09: "a more
   realistic camera model that has a lens with certain diameter, and that could work in parallel"). A thin lens (aperture,
   focus; `core/lens.js`): depth of field, and connections to a point of its disc. Until 0.61.0 it was also an area a
@@ -543,6 +677,7 @@ code, a look each.
 - **Polarisation** -- unpolarised Fresnel per interface is -0.3% on a slab's transmission at 45
   degrees and -3% at 70 (optics-refraction's `vs polar.`). Matters for beam splitters and near
   Brewster. Stokes vector + frame: +28 bytes a ray (112 -> 144), the one item here that costs memory.
+  Planned with the rest of what a ray carries: `roadmap/LIGHT_MODEL.md` §4.4.
 - **Rough glass** loses a few % to single-scatter masking (furnace 0.959), booked by the trace as
   ABSORBED by the frosted part -- a textured lens reads a little too inefficient. Multiple-scattering
   compensation for the rough dielectric.
@@ -659,7 +794,7 @@ light's face by (L1). A scene without lights compiles to main's text exactly.
    - A LIGHT is right where it lights things -- its photons and light sampling (L7) start on the
      exact face -- and fat only where a camera path meets its face: a 1 cm die glows over 1.2x its
      area in the picture. An EMISSIVE OBJECT is fat for everything it lights.
-     **0.next: a light no longer is.** Its rim takes the back's material in the SDF (codegen `ONLY ON THE FACE
+     **0.79.0: a light no longer is.** Its rim takes the back's material in the SDF (codegen `ONLY ON THE FACE
      ITSELF`), so a camera path meets a glowing face exactly where light sampling and the photons have it. The
      tolerance itself stays as it is: the rim is a black (or clear) edge `eps` wide, as fat as every surface
      is. It showed as light sampling off reading a small face brighter than on, since MIS gives a small face's glow

@@ -9,8 +9,8 @@
 //
 // WHICH SHAPES. An object whose code is a preset's (primitives.js), its comments aside: that entry's `stretch` says
 // which parameters each axis multiplies. Code of the user's own, or a preset's code edited, is not known to have its
-// sizes there -- it is scaled whole, by the transform. A light and an export box are not code: their shape is their
-// type, and they say theirs beside their parameters (lights.js LIGHT_SHAPES, exportbox.js EXPORT_STRETCH). Of all
+// sizes there -- it is scaled whole, by the transform. A light and a haze box are not code: their shape is their
+// type, and they say theirs beside their parameters (lights.js LIGHT_SHAPES, hazebox.js HAZE_STRETCH). Of all
 // those, only the axes whose every parameter is a live number now: a compile-time constant would compile at every
 // step, and a value the user wrote another way is theirs.
 //
@@ -19,7 +19,6 @@
 
 import { PRIMITIVES } from './primitives.js'
 import { LIGHT_SHAPES } from './lights.js'
-import { EXPORT_STRETCH } from './exportbox.js'
 import { HAZE_STRETCH } from './hazebox.js'
 import { codeOnly } from './codegen.js'
 import { inRange, tidy } from './pointedit.js'
@@ -41,7 +40,6 @@ export const refKey = r => r.c ? `${r.k}.${r.c}` : r.k
 export function stretchOf(node) {
     if (!node || node.kind !== 'object') return null
     const map = node.type === 'light' ? LIGHT_SHAPES[node.light?.shape]?.stretch
-        : node.type === 'export' ? EXPORT_STRETCH
         : node.type === 'haze' ? HAZE_STRETCH
         : typeof node.code === 'string' ? BY_CODE.get(textOf(node.code)) : null
     if (!map) return null

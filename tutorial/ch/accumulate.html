@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Adding up light on a GPU · ShadyTracer, inside out</title>
+<meta name="description" content="Adding up the light of millions of rays into pixels, on a graphics card.">
 <link rel="stylesheet" href="../kit/kit.css">
 <script type="module" src="accumulate.js"></script>
 </head>
@@ -116,8 +117,8 @@
   <div class="prose">
     <h2><span class="n">3</span>Bigger than the buffer</h2>
     <p data-step="batches:fits">A sample traces a camera ray for every pixel and every photon the light tracer asked for,
-      and the rays in flight must fit the ray buffers: 1 GiB, 496 bytes a ray (two ray buffers and a shade queue
-      item), 2,164,802 rays. At 1280 × 720, 921,600 camera rays and a million photons fit at once: one batch. The
+      and the rays in flight must fit the ray buffers: 1 GiB, 512 bytes a ray (two ray buffers and a shade queue
+      item), 2,097,152 rays. At 1280 × 720, 921,600 camera rays and a million photons fit at once: one batch. The
       batches' plan here is ShadyTracer's own function, run in this page.</p>
     <p data-step="batches:over">At 3840 × 2160, 8,294,400 camera rays and a million photons are 5 batches. Each batch is a
       fair slice of every stream (1,658,880 camera rays and 200,000 photons each), runs the whole wavefront chain of
@@ -217,6 +218,13 @@
       <li><strong>No caustics in a large picture.</strong> Before the batches, the camera's rays took the buffer first
         and the photons shared what was left: above about 2.3 million pixels (the buffer then held 2.31 million rays, a
         ray taking 464 bytes) they got none, and light tracing switched itself off (<code>photons.js</code>'s header; chapter 18).</li>
+      <li><strong>A light dimmed by the photon map.</strong> The shadow queue was capped at the batch's own rays, one
+        place each. But the queue also holds the shadow rays the rounds before have not finished, and a light's photons
+        connect to the camera at every surface they land on. In a batch of camera rays and photons together, the camera
+        rays' unused places left room; in a batch of photons alone (section 3) there was none, and a connection past the
+        cap was dropped with its light. The floor under a point light, seen directly, read about 5 % dark while the map
+        ran (counted on a software GPU). The cap is now what the queue's buffers hold
+        (<cite data-src="lib/pathtracer/core/raytrace_main.js" data-sym="/* shadowcap is what the occlusion queue can hold: WHAT ITS BUFFERS HOLD" data-to="the one mode without the map, at all six sensors of the user's 0.77.0 and 0.78.0 runs). */"></cite>).</li>
     </ul>
   </div>
 </section>

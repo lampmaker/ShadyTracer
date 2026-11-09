@@ -32,7 +32,7 @@ sends twice the rays.
 
 ## Colour
 
-As **RGB**, as **CCT + Duv**, or as **CIE xy**, carried exactly ([Light in numbers](units.md#colour)). Several sources
+As **RGB**, as **CCT + Duv**, as **CIE xy**, or by its **spectrum**, carried exactly ([Light in numbers](units.md#colour)). Several sources
 of different colours mix exactly: [RGBW colour mixing](example:rgbw-mixing.json) has four. **Analysis › Colour
 mixing** picks three of the scene's lights, a target colour and a total flux, and sets their fluxes for it, in one
 undo step.
@@ -51,5 +51,17 @@ flux-only and spectral records, in any of their units, in the file's own placeme
 flux is the file's unless you give one. The file is kept in the browser by its name, so a reload keeps it. A
 malformed file is refused, with the numbers that are wrong.
 
-A ray file has no face: the camera does not see it glow, and only its rays light the picture. With **Render settings ›
-Lights' rays** off, it lights nothing ([limits](limits.md)).
+**Its colour** is chosen as a rectangle's is, with two more ways first:
+- **from the file** (the default): a file with a wavelength on every ray lights the picture in each ray's own colour
+  ([units](units.md)); a flux-only file has no colour of its own and is white;
+- **its header's wavelength**: every ray at the one wavelength the file's header names. Outside what the eye sees (an
+  850 nm infrared LED, say) the light shows nothing in the picture, as a camera would see it, and lights nothing; it
+  still traces on the Optics page, in its file's unit;
+- **RGB, CCT + Duv, CIE xy or a spectrum**: every ray of the file in that colour, its own wavelengths left aside.
+
+A ray file has no face: the camera's rays cannot meet it, and only its rays light the picture. **Through a lens with an
+aperture** (the Camera's aperture above 0) you see the light itself: each of its rays that crosses the lens lands on the
+picture where a real camera would put it, straight from the file or in a mirror or through clear glass. Only the
+file's rays that point into the aperture can ever do that, so a small aperture, or a file of few rays, shows the light
+as specks; a larger aperture shows more of them. Through a pinhole (aperture 0) it does not show at all. With
+**Render settings › Lights' rays** off, it lights nothing ([limits](limits.md)).

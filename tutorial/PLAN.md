@@ -129,7 +129,21 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
    need none), no two products only touching inside the solid (a seam a ray in glass would stop at), the formula a
    bound by min and max of exact distances, a cut that shares a cap with what it cuts worth only the distance to that
    cap across the opening (so what is cut away reaches past it), four corner cylinders one rounded prism, and the
-   facets of an STL fitted back to the cylinders they were -> import/csg.js, shapes.js, fit.js. *Read:* iq-distfunctions, iq-interior, iq-fbmsdf,
+   facets of an STL fitted back to the cylinders they were -> import/csg.js, shapes.js, fit.js. Planned for it too (0.83.0):
+   a join's shape -- the round join a circular fillet where two faces meet at a right angle (two planes, a plane met
+   squarely by a cylinder or a prism), from the two distances alone: a first version read the normals' angle into the
+   distance, the renderer's distance-only march had none, and the fillets came out black (march and shading on two
+   surfaces); its rounding capped at what it adds on the fillet, so far off it is never above the true distance; the
+   chamfer its chord -- and a CAD fillet read as the round
+   join of its two supports, one half-space with no separators; the two sheets such half-spaces make possible (a
+   fillet with the other side of its support: zero along the support; walls across a surface a fillet shares) and
+   how the cover keeps them out; a freeform face fitted with the nearest regular surface, and the deviation shown
+   -> builder/joins.js, scene_api.js csgRound*, import/fillet.js, import/freeform.js. Planned for it too (0.84.0): a
+   convex solid as the intersection of half-spaces, exact inside by the largest plane distance -- the faceted
+   reflector, flat facets with their corners on a paraboloid (the lifting map's lower hull, so convex while the count
+   round it halves no finer than a ring's width: past that a coarse facet rose through a finer one), each facet a
+   line in its fold's (u, z), the point's own sector the largest -> shapes.js NfacetedReflector.
+   *Read:* iq-distfunctions, iq-interior, iq-fbmsdf,
    iq-smin; Shapiro and Vossler 1991 (named in words, not yet in kit/reading.js).
 4. **Which way is up** (draft): the normal as the field's gradient; a shape's own against forward differences (the
    shade kernel's 3 looks) and central ones (the pick's 6), their errors as h and h², a crease; the same differences
@@ -184,10 +198,12 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
 11. **Rainbows** (draft): white light through a prism, 31 wavelengths each at its own index (spectral.js cauchyN,
    optics/fresnel.js refract), the flint against BK7 at least deviation; n(lambda) through n_d and V_d with BK7's
    catalogue against it; the wavelength draw and its weights averaging exactly 1, drawn live; a dichroic coat's edge
-   moving with the tilt and each channel's reflectance (edgeAt, edgeRGB); the shading kernel's dispersion block and
-   its off switch (UB.dispersionOff, 0.74.0: every Abbe number read as 0, the picture only); the
+   moving with the tilt and each channel's reflectance (edgeAt, edgeRGB); a light's photon drawing its wavelength from
+   its light's own spectrum, and why (a 450 nm LED's red rainbow, 0.84.0: lightspectra.js); the draw in 1 nm cells of the CIE's table
+   (0.84.0, 10 nm bins of the fit before: the rainbow's colour in steps), coatings kept at 10 nm and why; the shading kernel's dispersion block and
+   its off switch (the scene's optical features, 0.83.0: every material compiled without its Abbe number, the picture and the Optics page alike; a render setting, UB.dispersionOff, from 0.74.0 until then); the
    comments' stale bit count, softplus count, red's range and BK7 accuracy; the green reflections of 0.44.1 ->
-   spectral.js, materials_pbr.js. *Read:* wiki-dispersion, wiki-abbe, wiki-cauchy, pbr-spectra.
+   spectral.js, lightspectra.js, lightspectra_wgsl.js, materials_pbr.js. *Read:* wiki-dispersion, wiki-abbe, wiki-cauchy, pbr-spectra.
 
 **IV. Path tracing**
 12. **Dice and averages** (draft): π from darts with measure.js's error bar, 240 estimates a column against 1/√N,
@@ -213,8 +229,10 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
 16. **Every glowing thing is a light** (draft): discovery by the paths that hit a glow (a 16 × 16 grid in the flat
     world, the bar behind a wall found by bounces), unbiased from the first sample; Crofton's random lines, crossings
     against perimeters and their cosine spread; the brightness code, linear against log (the comment's "2e-5 of a stop"
-    was 4.8e-6 by its own constants; corrected in 0.67.3); emitConePdf, emitLineDensity; 2.3× a sample and 1.4× sooner (PLAN.md) →
-    materials_pbr.js emitDeposit, tracebasics.js LUM_CODE. *Read:* wiki-crofton, pbr-lights, pbr-spheres.
+    was 4.8e-6 by its own constants; corrected in 0.67.3); emitConePdf, emitLineDensity; 2.3× a sample and 1.4× sooner (PLAN.md);
+    a glow that varies over its surface -- an image texture on a glowing material (0.84.0) -- evaluated where each ray lands, a
+    black pixel no light at all (every test reads max3(emissive) > 0 at the point), and a floor under a glowing checker
+    lit as by its mean (builder/test/images.gpu.mjs) → materials_pbr.js emitDeposit, tracebasics.js LUM_CODE, core/images.js. *Read:* wiki-crofton, pbr-lights, pbr-spheres.
 17. **The camera's lens** (draft): the thin lens from the side, its blur by lens.js lensImage against 2R |1/F − 1/D|;
     a 3D picture through the lens (space.js cameraRayLens on lensDisc and lensRay), three balls, the focus and
     aperture the reader's; why the lens was added (light → glass → floor → glass → eye) and what it no longer does
@@ -298,7 +316,9 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
     of noise 4): every object at every step, culling boxes on every object, on the dear ones only, and the reliefs in
     their shell; why only at the root (a lens and a blend, one disc culled inside the join: a surface where there is
     none, a bridge gone); one relief divided everywhere or in its shell, with the modifier's 17.2 or the measured 11.2;
-    the step cache's balls, its own cell and the cells ahead, filled from the copy with boxes (the orange shell).
+    a relief from an image texture (0.84.0): its slope bound from its own pixels (exact on a ramp, 2.4 times the steepest on
+    random noise), what a loose bound costs in steps, and why a test of it must shoot rays sideways (straight down, the
+    field is exact whatever the bound: builder/test/images.gpu.mjs); the step cache's balls, its own cell and the cells ahead, filled from the copy with boxes (the orange shell).
     -> scene_api.js (cullDist, cullMargin), codegen.js (the root's comment, `culled`, the CULL line), modifiers.js
     (reliefCode), wavefront.js (scStep, the march's cache step). Measured: PERFORMANCE.md's runs 3 to 5 (culling, the
     shell), ARCHITECTURE.md's boxcost and stepcache runs. Inferred and said so: with the shell, a relief's box may no
@@ -344,7 +364,8 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
     diagram, the peak read high by the largest of many noisy bins and the beam angle with it, and pooling round the
     axis; the same source over a floor mapped by detmap.js detectorMap, plain, Gaussian and the photon map's nearest
     hits, against E = I0 cos^(n+3) / h^2; a ray total in a 32-bit float stalling at 2^24 against the kernels' integer
-    pair (OPT_FX copied). -> kernels.js optAdd, farfield.js farBin, detmap.js's smoothing. Measured:
+    pair (OPT_FX copied); the trace by wavelength (0.83.0: three a ray in the colour's place, a detector's spectrum and
+    CRI). -> kernels.js optAdd, farfield.js farBin, detmap.js's smoothing, spectral.js, spectrum.js. Measured:
     optics-refraction (Pascal), the readbacks, the colour mix. Never run and said so: optics-farfield. *Read:*
     pbr-radiometry, wiki-photometry.
 

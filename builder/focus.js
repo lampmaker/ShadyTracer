@@ -3,7 +3,7 @@
 // double-click on an object, you zoom in on it" ... "I mean clicking on an object in the tree").
 //
 // PURE: no DOM, no renderer -- the box a node has, the orbit that frames it, a pose between two; test/focus.test.mjs.
-// The page (index.html focusOn) asks for them and moves the camera.
+// The page (app.html focusOn) asks for them and moves the camera.
 //
 //   focusBox(doc, id, boxes)     the world box to frame, { lo, hi, open, measured } -- or null: nothing to frame
 //   framing(lo, hi, opts)        { target, distance, radius }: a camera at that distance sees the sphere round the box
@@ -16,7 +16,7 @@
 
 import { find } from './model.js'
 import { estimateBox } from './bounds.js'
-import { boxCorners } from './exportbox.js'
+import { boxCorners } from './hazebox.js'
 import { orbitOf } from '../lib/pathtracer/params.js'
 
 const union = (a, b) => !a ? b : !b ? a
@@ -27,7 +27,7 @@ const size = b => Math.hypot(b.hi[0] - b.lo[0], b.hi[1] - b.lo[1], b.hi[2] - b.l
 /**
  * THE BOX TO FRAME, in the world: { lo, hi, open, measured }, or null when there is none to frame -- the root, an id
  * not in the scene, a node with no size known. In this order:
- *  - an EXPORT BOX: its own box, exactly (exportbox.js), which the estimate leaves out;
+ *  - a HAZE BOX: its own box, exactly (hazebox.js), which the estimate leaves out;
  *  - the MEASURED box (boxes.js), when it is for the node as it is now (fresh) -- the shape the code really draws.
  *    A group's is put together from its children's, and is only whole once each is measured, hence fresh. `open`
  *    says it is endless (a plane): the page frames nothing then;
@@ -40,7 +40,7 @@ export function focusBox(doc, id, boxes = null) {
     const f = id != null && find(doc, id)
     if (!f || f.node === doc.root) return null
     const node = f.node
-    if (node.type === 'export' || node.type === 'haze') {
+    if (node.type === 'haze') {
         const c = boxCorners(doc, id)
         return c ? { ...boxOf(c), open: false, measured: true } : null
     }
@@ -51,7 +51,7 @@ export function focusBox(doc, id, boxes = null) {
     let b = null
     const walk = n => {
         if (n.enabled === false) return
-        if (n.kind === 'object' && n.type !== 'export' && n.type !== 'haze') b = union(b, estimateBox(doc.root, n, doc))
+        if (n.kind === 'object' && n.type !== 'haze') b = union(b, estimateBox(doc.root, n, doc))
         for (const c of n.children || []) walk(c)
     }
     walk(node)

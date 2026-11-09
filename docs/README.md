@@ -1,7 +1,8 @@
 # The documents
 
 ShadyTracer is the LED and luminaire tool built on `lib/pathtracer`, at the root of this repository: open
-`index.html` through a local server, or at <https://shadytracer.com>. What the
+`app.html` through a local server, or at <https://shadytracer.com/app.html> (its front page,
+`index.html`, says what it is and links there). What the
 program does is the repository's `README.md`; what is built, feature by feature, with its evidence, is
 `FEATURES.md` at the root.
 
@@ -34,7 +35,7 @@ number, so a section that is cut leaves a stub rather than renumbering the rest.
 
 | | |
 |---|---|
-| `index.html` | the application: the shell, the view, the menus, every panel |
+| `app.html` | the application: the shell, the view, the menus, every panel |
 | `version.js`, `CHANGELOG.md` | the version (semver 0.x, set by the release from the PRs' change notes) and the git revision the page reads from `.git`; one changelog entry per version, with what to look at |
 | `release.mjs`, `changes/` | the release: the change notes merged into `dev` made one version, and `dev` pushed to `main` (CLAUDE.md, *Versions*; VS Code's *Release dev → main* task) |
 | `builder/` | the scene builder: the document model, codegen to WGSL, the tree, the properties panel, the gizmo, export for 3D printing |

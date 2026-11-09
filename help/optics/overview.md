@@ -21,7 +21,7 @@ lights' rays also light the picture: a lens's spot on a screen shows in the pict
 ## A first run
 
 1. Open [LED, lens and screen](example:led-lens-screen.json): a 1 × 1 mm LED of 100 lm, a PMMA lens 25 mm across,
-   and a screen 250 mm away whose material is a **detector**.
+   and a screen 250 mm away that is a **detector** (its *optics analysis* box in Properties).
 2. **Analysis › Analysis setup** ([open it](cmd:analysis.setup)) opens the Analysis pane.
 3. Press **▶ Run**. The charts fill: the screen's illuminance map in lux, its profiles and rings, and the far field.
 4. Move the lens up or down in the picture, and press ▶ Run again, or switch **Live** on to have the analysis follow
@@ -40,3 +40,9 @@ lights' rays also light the picture: a lens's spot on a screen shows in the pict
 The examples for **Optical design** (the Project panel: the project's name over the tree) each show one thing: an aspheric condenser, a Fresnel lens
 beside a plano-convex one, a parabolic reflector, a light guide, RGBW colour mixing, a prism's dispersion, a
 dichroic combiner, and an office's work-plane illuminance.
+
+The **+** menu's Optics shapes include two parabolic reflectors, their focus at the node's origin. The **reflector** is
+smooth, and the **faceted reflector** is made of flat facets: `facets` round the rim, `rings` along the radius, and
+fewer facets round the centre wherever they would be narrower than `minWidth`. Each has a `solid` switch. At 0 it is a
+mirror with a wall behind it. At 1 it is the filled paraboloid, capped flat at the rim: give it a glass for a TIR
+reflector, or subtract it from another shape for a parabolic cavity.

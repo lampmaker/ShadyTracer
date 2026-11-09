@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>The camera's lens · ShadyTracer, inside out</title>
+<meta name="description" content="A camera with a lens: focus and blur.">
 <link rel="stylesheet" href="../kit/kit.css">
 <script type="module" src="lens.js"></script>
 </head>
@@ -139,7 +140,7 @@
       diffuse (matte, free), specular. A lens is an area, which light leaving the glass can hit. The lens's own file
       says so:</p>
     <pre data-src="lib/pathtracer/core/lens.js" data-sym="// WHY. The camera was a pinhole, a point." data-to="0.61.0 (below); the depth of field stays."
-         data-why="'A photon' is light traced from the lamp (chapters 18 and 19); the words in quotation marks are the user's suggestion, as written. That second reason has gone since version 0.61.0: the photon map (chapter 19) finds this light now, through any lens or none, and the lens is kept for its depth of field." data-hash="1cea6da8"></pre>
+         data-why="'A photon' is light traced from the lamp (chapters 18 and 19); the words in quotation marks are the user's suggestion, as written. That second reason has gone since version 0.61.0: the photon map (chapter 19) finds this light now, through any lens or none, and the lens is kept for its depth of field -- and, since version 0.83.0, for a light that has no surface to see (section 5)." data-hash="1cea6da8"></pre>
     <p>The camera ray, in the <a data-g="kernel">kernel</a> that makes them, piece by piece. right, up and fwd are the
       camera's three directions as seen in the scene; fwd points backwards, out of the scene, so −fwd looks into it.
       <code>dirCam</code> is the pixel's point on the picture one unit in front of the eye, in the camera's own
@@ -174,6 +175,12 @@
         pixel's value, written as a measurement").</p>
     </div>
     <div data-claim="code">
+      <p><strong>A crossing needs no shadow ray.</strong> A light traced from a ray file is seen when its ray passes through
+        the lens (section 5). The march moves a ray in steps that the distance to the nearest surface allows, so nothing
+        is in the way of any step: a step that crosses the lens reached it, and the renderer adds it to the picture without
+        asking again whether the way was clear (<code>lens.js</code>, "A faceless light seen through the lens").</p>
+    </div>
+    <div data-claim="code">
       <p><strong>No lens, no change.</strong> The lens's two random numbers are drawn whether there is a lens or not, so
         turning the lens on or off changes nothing else in the sequence of random numbers a picture uses.</p>
     </div>
@@ -190,6 +197,13 @@
         the pixel they crossed. That counted the floor behind glass only when a photon happened through: white specks in
         the user's picture of 2026-10-15. The photon map (chapter 19) took that light over in 0.61.0, through any
         aperture or none, and the lens kept only its depth of field.</li>
+      <li><strong>A ray file nobody could see.</strong> A ray file is a lamp maker's list of the rays leaving a lamp, with
+        no surface: no camera ray can hit it, and its light reached the picture only from the surfaces it lit. Looking at
+        the lamp itself through a lens, the user saw nothing (2026-11-04). Since version 0.83.0 a ray of such a light that
+        passes through the lens adds itself where a real camera would put it, straight from the lamp or by a mirror or
+        clear glass, and only then: light that has bounced off a matte surface is that surface's to show, and counting it
+        at the lens too would count it twice. Through a pinhole it still shows nothing, since no ray passes through a
+        point.</li>
       <li><strong>Focal length and aperture that did nothing.</strong> Depth-of-field settings once existed that no part
         of the renderer used; they were removed in version 0.22.6, and the lens came back, working, as aperture and focus
         in 0.43.0 (the comment in <code>lib/camera.js</code>).</li>

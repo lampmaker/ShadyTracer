@@ -41,18 +41,18 @@ const LOCAL = 'm.baseColor = fract(p_local);'
     given.pos.x = 99
     ok('setPattern: kept, a copy of what it was given', o.pattern.pos.x === 1 && o.pattern.rot.y === 90 && M.validate(d).length === 0)
     ok('setPattern(null): taken away', (M.setPattern(d, o.id, null), !('pattern' in o)))
-    const L = M.addLight(d, 'root', { shape: 'disc' }), E = M.addExportBox(d, 'root', {})
-    ok('refused: the root, a light, an export box, a scale, a number that is none, a field it has not',
+    const L = M.addLight(d, 'root', { shape: 'disc' }), E = M.addHazeBox(d, 'root', {})
+    ok('refused: the root, a light, a haze box, a scale, a number that is none, a field it has not',
         throws(() => M.setPattern(d, 'root', P1)) && throws(() => M.setPattern(d, L.id, P1)) && throws(() => M.setPattern(d, E.id, P1))
         && throws(() => M.setPattern(d, o.id, { ...P1, scale: 2 })) && throws(() => M.setPattern(d, o.id, { pos: { x: NaN, y: 0, z: 0 }, rot: P1.rot }))
         && throws(() => M.setPattern(d, o.id, { pos: P1.pos })) && !('pattern' in o))
     ok('a parameter may not be called pat (its uniform is pat_<id>)', M.RESERVED_PARAMS.includes('pat'))
     M.setPattern(d, o.id, P1)
     const back = M.parse(JSON.stringify(d))
-    ok('saved and read back whole, at version 24', M.VERSION === 24 && JSON.stringify(M.find(back, o.id).node.pattern) === JSON.stringify(P1))
+    ok('saved and read back whole, at version 24 or later', M.VERSION >= 24 && JSON.stringify(M.find(back, o.id).node.pattern) === JSON.stringify(P1))
     const old = structuredClone(d); old.version = 23; delete M.find(old, o.id).node.pattern
     const up = M.upgrade(old)
-    ok('a file of 23 is read as 24, nothing else changed', up.version === 24 && JSON.stringify({ ...up, version: 23 }) === JSON.stringify(old))
+    ok('a file of 23 is read as the current version, nothing else changed', up.version === M.VERSION && JSON.stringify({ ...up, version: 23 }) === JSON.stringify(old))
     const t = M.toTree(d).children.find(n => n.id === o.id)
     ok('toTree carries it', JSON.stringify(t.pattern) === JSON.stringify(P1))
     const copy = M.duplicate(d, o.id)

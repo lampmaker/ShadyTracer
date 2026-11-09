@@ -162,13 +162,13 @@ drop('a top-level node, up to the first place', 'a', 'g', 'before')
     {
         const d = M.createDoc()
         M.addGroup(d, 'root', { id: 'g' })
-        M.addLight(d, 'g', { id: 'lamp' }); M.addObject(d, 'g', { id: 'a', primitive: 'box' }); M.addExportBox(d, 'g', { id: 'out' })
+        M.addLight(d, 'g', { id: 'lamp' }); M.addObject(d, 'g', { id: 'a', primitive: 'box' }); M.addHazeBox(d, 'g', { id: 'out' })
         M.addObject(d, 'g', { id: 'b', primitive: 'sphere', join: 'intersect' })
         M.setEnabled(d, 'a', false)
         const k = contents(P.createProject([d])).find(r => r.mid === 'g').children
-        eq('a light and an export box: no join, no letter; a hidden first shape keeps its letter, the next shown is the base',
+        eq('a light and a haze box: no join, no letter; a hidden first shape keeps its letter, the next shown is the base',
             k.map(r => [r.mid, r.toggles.join, r.label.split('  ')[0]]),
-            [['lamp', null, 'rectangle light'], ['a', 'union', '∪ a'], ['out', null, 'export box'], ['b', 'base', '● b']])
+            [['lamp', null, 'rectangle light'], ['a', 'union', '∪ a'], ['out', null, 'haze box'], ['b', 'base', '● b']])
         eq('...and the group\'s row counts the shown shapes only', contents(P.createProject([d])).find(r => r.mid === 'g').label, 'group  · b')
     }
 }
@@ -201,7 +201,7 @@ drop('a top-level node, up to the first place', 'a', 'g', 'before')
     ok('every shape listed once', listed.length === Object.keys(PRIMITIVES).length && new Set(listed).size === listed.length
         && Object.keys(PRIMITIVES).every(k => listed.includes(k)), JSON.stringify(menu))
     ok('none of them empty', menu.every(g => g.keys.length > 0))
-    ok('the lenses and the reflector in Optics; the extrusion in From points', ['lens', 'fresnel lens', 'reflector'].every(k => menu[1].keys.includes(k)) && menu[2].keys.includes('extrusion'))
+    ok('the lenses and the reflector in Optics; the extrusion in From points', ['lens', 'fresnel lens', 'reflector', 'faceted reflector'].every(k => menu[1].keys.includes(k)) && menu[2].keys.includes('extrusion'))
 }
 
 // A LOCK PER NODE ROW (TOGGLES.lock, model.js setLock): open, both, or one alone; none on what is not a node

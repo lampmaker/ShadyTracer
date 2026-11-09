@@ -48,21 +48,21 @@ eq('handles: a .. z, aa, ab .. zz, aaa', [0, 1, 25, 26, 27, 51, 52, 701, 702].ma
     ok(`every group's own recipe reads back and applies as a no-op (${groups} groups)`, groups > 20 && !bad.length, bad.slice(0, 3).join('\n      '))
 }
 
-// A GROUP TO WRITE RECIPES FOR: a light first and an export box among the shapes, two labelled alike
+// A GROUP TO WRITE RECIPES FOR: a light first and a haze box among the shapes, two labelled alike
 const fresh = () => {
     const d = M.createDoc()
     M.addGroup(d, 'root', { id: 'g', blend: 0.1 })
     M.addLight(d, 'g', { id: 'lamp', shape: 'disc' })
     M.addObject(d, 'g', { id: 'p', primitive: 'box', label: 'Plate' })
     M.addObject(d, 'g', { id: 'r1', primitive: 'box', label: 'Rib' })
-    M.addExportBox(d, 'g', { id: 'out' })
+    M.addHazeBox(d, 'g', { id: 'out' })
     M.addObject(d, 'g', { id: 'r2', primitive: 'box', label: 'Rib' })
     M.addObject(d, 'g', { id: 'h', primitive: 'cylinder', label: 'Hole', join: 'subtract', joinBlend: 0.02 })
     return d
 }
 {
     const d = fresh(), g = M.find(d, 'g').node
-    eq('handles by position among the shapes: a light and an export box are none', [...handlesOf(g)], [['p', 'a'], ['r1', 'b'], ['r2', 'c'], ['h', 'd']])
+    eq('handles by position among the shapes: a light and a haze box are none', [...handlesOf(g)], [['p', 'a'], ['r1', 'b'], ['r2', 'c'], ['h', 'd']])
     eq('the recipe: the group\'s blend, consecutive alike joins on one line, the labels as a comment', recipeOf(g).split('\n').map(l => l.replace(/\s+#.*/, '')),
         ['blend 0.1', 'union a, b, c', 'subtract d  blend 0.02'])
     ok('...the comment names each letter\'s child', /# a Plate, b Rib, c Rib/.test(recipeOf(g)) && /# d Hole/.test(recipeOf(g)))
@@ -79,7 +79,7 @@ const apply = (d, text) => { const r = parseRecipe(text, M.find(d, 'g').node); i
     const r = apply(d, 'blend 0.3\nunion c, a\nintersect b  blend 0.05\n- d')
     eq('no errors', r.errors, [])
     const g = M.find(d, 'g').node
-    eq('the shapes in the recipe\'s order; the light and the export box keep their places',
+    eq('the shapes in the recipe\'s order; the light and the haze box keep their places',
         g.children.map(c => c.id), ['lamp', 'r2', 'p', 'out', 'r1', 'h'])
     eq('each one\'s join and own blend; the base joins nothing', g.children.filter(c => c.kind === 'object' && c.type === 'code').map(c => [c.id, c.join ?? 'union', c.joinBlend ?? null]),
         [['r2', 'union', null], ['p', 'union', null], ['r1', 'intersect', 0.05], ['h', 'subtract', null]])

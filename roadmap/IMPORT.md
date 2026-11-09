@@ -106,8 +106,11 @@ in the generated SDF (`builder/codegen.js:1395-1433`).
   `texWH`/`sz` at `:1058-1059`).
 - **check-shaders counts every resource as a storage binding** (`nStorage = Object.keys(k.resources).length`,
   `:632`). It would need to count textures apart.
+  (No longer: since then check-shaders and the renderer count textures and samplers apart,
+  `core/check-shaders.mjs:923`, `core/raytrace_main.js:499`. Noted 2026-11-06, `roadmap/TEXTURES.md`.)
 - **The builder's compile probe declares only its own buffer** (`builder/validate.js:60-61`). A scene naming
   a texture would fail the probe before it reached the renderer.
+  (No longer: it declares the scene's resources, `builder/validate.js:62-71`. Noted 2026-11-06.)
 
 ### What the march asks of a distance
 
@@ -724,6 +727,68 @@ and `docsdf.mjs` mirrors the new rule.
 - **MAX_FACES = 400** a solid (csg.js). The rounded box's STL as 2598 facets, before fitting found its surfaces,
   took 144 s to convert in Node.
 - **Not read:** IGES, B-spline faces, open shells (a STEP surface model), meshes that are not closed.
+
+### 11.7 Fillets, freeform faces and the import dialog (0.83.0, 2026-11-04)
+
+The user, 2026-11-04, with an Onshape part (a tray with filleted uprights, a U slot, two slanted slots; 121 faces, 62
+of them 1 mm fillets) and a render with black notches: *"step/stl could use improvements ... especially the fillets
+are difficult"*; a progress bar; *"when importing and certain surfaces fail, is it possible to import the rest
+anyway? ... indicate those surfaces with a different (red) material? maybe propose a max error (surface deviation)"*.
+
+**How sure each line is:** as at the top. Measured in Node, in the container, against OpenCascade 7.9's classification
+(make.py's `facts`, on the user's file locally; the file is not committed, the user did not say it may be).
+
+- **What was wrong with the user's part (measured).** 6 of OpenCascade's 3000 points on the wrong side of the formula,
+  9 over their distance, 4 seams; 235 shapes in 85 groups; 24-29 s. The 6 wrong were near where the slanted slots
+  cut the U's fillet tori and at the U's mouth: where a fillet face ends on a boundary that is neither a radial plane
+  nor a cone, which is all a separator can be. *Inferred, not seen:* those are the render's black notches.
+- **A join's shape (builder, model version 28).** `joinShape: 'round' | 'chamfer'`. The round join is the circle of
+  radius r tangent to both sides where they meet at a right angle (two planes, a plane met squarely by a cylinder or a
+  prism: the fillet CAD makes), from the two distances alone (builder/joins.js). Held to closed forms in JS and on Dawn
+  (joins.test, roundjoin.gpu).
+  - **The fillets came out black, every mode (the user, 2026-11-04; found then).** The first version read the angle
+    between the two sides' normals into the distance. The renderer marches, and casts every ray leaving a surface, in
+    the distance-only build, where a shape's normal is the empty hit's (0, 0, 1): the angle read "parallel", the join
+    was the hard op, the march stopped on the sharp corner, and the shading (the full build) found that point inside
+    the fillet. Measured on Dawn on the user's scene: 76 black pixels, 0 with the fix. roundjoin.gpu.mjs now holds the
+    two builds to one distance at every point, and draws the user's scene with no black pixel.
+  - **Capped.** Without the angle, the round read more than the true distance far from a fillet whose sides were a
+    box's and a prism's (0.48 mm over 6.4 mm out on the user's part). Its rounding is held to what it adds on the
+    fillet itself and fades to the hard op by 2 r: none over, both parts.
+- **Fillets (import/fillet.js).** A cylinder or torus face tangent across its rails to exactly two faces is their round
+  join: one half-space (geom.js `rounded`), no separators, checked to be zero on its own face first. A rounded
+  rectangle of a fillet chain's cylinders is left to the fillets, so a rim round a rounded tray is one compound.
+  - Two sheets the compounds made possible, found on the holder fixture and kept out of the cover (csg.js): a product
+    holding the other side of a fillet's support reads |S| beyond the fillet, zero along S (175 points far outside
+    near zero; the *anti-supports* go first); and crossing a support flips the fillets built on it, so the cells
+    either side were no wall pair (7 seams; a surface's *family* is a wall now, where no cell outside agrees).
+  - A rounded corner where a fillet's supports meet away from the fillet, a millimetre across, was missed by
+    sampling (1 point wrong): points are put along where the supports meet now.
+- **The results (measured).**
+
+  | part | faces | wrong side | over the distance | seams / skins | literals | shapes / groups | time |
+  |---|---|---|---|---|---|---|---|
+  | the user's, before | 121 | 6 | 9 | 4 / 1 | 302 | 235 / 85 | 24-29 s |
+  | the user's, now | 121 | 0 | 0 | 0 / 3 | 95 | 139 / 87 | 15-17 s |
+  | holder (make.py), before | 81 | 7 | 11 | 0 / 2 | 209 | 178 / 76 | 11 s |
+  | holder, now | 81 | 0 | 0 | 0 / 0 | 49 | 64 / 39 | 9-14 s |
+
+  On Dawn the holder's 256 rays end where the formula's do, codegen, as data and baked (import.gpu.mjs). The groups
+  did not fall on the user's part: each fillet is a group of two.
+- **Freeform faces (import/freeform.js).** step.js reads B-spline surfaces and linear extrusions as evaluable; a face on
+  one is sampled and fitted with a plane, sphere, cylinder, cone or torus. Exact: it is that surface (the plate made all
+  NURBS imports as the plate's 6 shapes). Within the deviation allowed (0.05 mm by default): red and called fitted.
+  Beyond: the solid is refused with the deviation it needs (the twisted block: 0.2 mm). Found on the way: a closed
+  B-spline edge was read as one point.
+- **The dialog (builder/importdialog.js).** Progress by csg.js's stages, weighted by what each took on the user's part;
+  Cancel; when not clean, each part's disagreements, fitted faces, refusals; leave parts out; Re-convert at another
+  deviation; the red on or off.
+
+**Not done, said:** STL fillets (a mesh has no edges to tell rails by: an STL keeps the old route); a fillet between
+curved faces met obliquely (kept as before, counted); mirror, row and ring detection (the user moved it to a later PR;
+inside a CSG group an array's copies are each evaluated, so its gain there is the shader's size and editing, not the
+march -- read in code, arrays.js `WHERE`); the 3 remaining skins on the user's part (a plane face's extension a slot
+interrupts: a slower march there, each value above the hit tolerance).
 
 ---
 

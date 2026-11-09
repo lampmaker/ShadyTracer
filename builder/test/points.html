@@ -71,7 +71,7 @@ B.onRestructure = () => { B.apply() }
 await B.apply()
 const picks = []
 const overlay = installSelectionOverlay({ stage, canvas, RT, BUILDER: B, onPick: id => { picks.push(id); overlay.select(id) } })
-// the view's toolbar, stood in for: the host puts the Points mode's legs switch there (index.html, beside the boxes')
+// the view's toolbar, stood in for: the host puts the Points mode's legs switch there (app.html, beside the boxes')
 document.getElementById('bar').append(overlay.points.viewPill)
 
 /* where a node's own point is on the stage, worked out here from the camera, not by the overlay */

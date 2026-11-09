@@ -5,10 +5,17 @@
 //
 // A DOCK PANEL OF ITS OWN (the user, 2026-10-17: "project view is a dockable panel of its own. if it isnt open, open it
 // in the same pane as the viewport, as these will rarely have to be viewed side by side"): the host opens it as a tab
-// beside the picture, and brings the picture back (showWork) once a scene, an example or another project is chosen.
+// beside the picture, and brings the picture back (showWork) once a scene or an example is chosen.
+//
+// ANOTHER PROJECT OPENED HERE STAYS HERE (the user, 2026-10-29: "when switching projects, it immediately switches to
+// viewport. I'd rather stay in the project view and be able to chose which scene to open"): its scenes become this
+// panel's cards and nothing compiles until one is chosen -- a compile of seconds for the scene it was last left on, which
+// may not be the one wanted. Until then the picture is the last project's, shown as nobody's (demo.js replace); the
+// host compiles the chosen one (`compile`), and the scene worked on if the picture is brought back without a choice.
 //
 //   PROJECTS     the column at its side: each with its scenes and when it changed, the one open here and one another
-//                tab has marked. A click opens one (what this tab has is saved first); ⋯ renames, duplicates,
+//                tab has marked. A click opens one (what this tab has is saved first) and shows its scenes, compiling
+//                none; ⋯ renames, duplicates,
 //                downloads as a file, deletes -- deleting asks, in the row: it is the one thing here no undo brings
 //                back. The project open here and one another tab has cannot be deleted. + New project, Import from
 //                file…, and where they live (the browser's storage, which clearing site data empties).
@@ -23,7 +30,7 @@
 // pictures, the list of projects (read again every few seconds: another tab may have changed it).
 //
 //   const V = installProjectView(element, { session, BUILDER, ops, picture, examples, importFile, exportProject, exportScene,
-//                                           download, app, showWork, item, onRemoved, say })
+//                                           download, app, showWork, compile, item, onRemoved, say })
 //   V.visible(true | false)   V.at('examples')   V.refresh()
 //======================================================================================================================
 import { popupMenu } from '../lib/shell/menu.js'
@@ -59,13 +66,15 @@ export const fileName = name => `${String(name || 'project').replace(/[^\w.-]+/g
  * @param download      (filename, text) => void
  * @param app           () => the application's stamp for a file written
  * @param showWork      () => void: the picture brought forward again
+ * @param compile       key => Promise | null: scene `key` made the one worked on and compiled -- the host's, which after a
+ *                      project opened here also puts the empty scene in if it does not compile (app.html openChosen)
  * @param item          () => bool: a library item is being edited
  * @param onRemoved     id => void: a project deleted (its pictures go too)
  * @param say           a status line
  */
 export function installProjectView(host, { session, BUILDER, ops, picture = () => null, examples = null, importFile = () => { },
                                            exportProject = () => { }, exportScene = () => { }, download = () => { }, app = () => null,
-                                           showWork = () => { }, item = () => false, onRemoved = () => { }, say = () => { } }) {
+                                           showWork = () => { }, compile = key => ops.enter(key), item = () => false, onRemoved = () => { }, say = () => { } }) {
     const P = BUILDER.projectModel
     host.classList.add('shell-pv')
     const side = el('div', 'shell-pv-side'), main = el('div', 'shell-pv-main')
@@ -157,11 +166,11 @@ export function installProjectView(host, { session, BUILDER, ops, picture = () =
             plist.appendChild(r)
         }
     }
+    // ...and stays here, its scenes the cards, none compiled (above)
     const openProject = guard(async m => {
-        if (m.here) return showWork()
-        if (blocked()) return
-        await session.open(m.id)
-        showWork()
+        if (m.here || blocked()) return
+        await session.open(m.id, { compile: false })
+        sig = ''; lastList = 0; look()
     })
     const drawWhere = async () => {
         const st = globalThis.navigator?.storage
@@ -202,14 +211,16 @@ export function installProjectView(host, { session, BUILDER, ops, picture = () =
         meta.textContent = `${n} scene${n === 1 ? '' : 's'} · ${i?.copy ? 'not saved yet' : 'saved in this browser as it changes'}`
         back.replaceChildren(document.createTextNode(`Back to ${P.scene(BUILDER.project, BUILDER.current)?.doc.title ?? 'the picture'}`))
     }
+    /* the scene worked on is shown already -- or being compiled; when it is neither (a project just opened here, or
+       its last compile failed), a click compiles it */
     const openScene = key => {
-        if (key === BUILDER.current) return showWork()
+        if (key === BUILDER.current && (BUILDER.showing || BUILDER.applying)) return showWork()
         if (blocked()) return
-        ops.enter(key)
+        guard(() => compile(key))()
         showWork()
     }
     const drawScenes = () => {
-        const off = item()
+        const off = item(), shown = BUILDER.showing || BUILDER.applying
         grid.replaceChildren(...sceneCards(BUILDER.project, BUILDER.current).map(c => {
             const shot = picture(c.key)
             const d = el('div', `shell-pv-card${c.here ? ' here' : ''}${off && !c.here ? ' off' : ''}`)
@@ -224,9 +235,10 @@ export function installProjectView(host, { session, BUILDER, ops, picture = () =
             const b = el('div', 'shell-pv-cardb')
             b.append(el('div', 'shell-pv-title', c.title),
                 el('div', 'shell-pv-cmeta', `${c.unit} · ${c.objects} object${c.objects === 1 ? '' : 's'} · ${c.lights} light${c.lights === 1 ? '' : 's'}`),
-                el('div', 'shell-pv-cmeta faint', shot?.openMs ? `opened in ${seconds(shot.openMs)} last time` : c.here ? 'being worked on' : 'not opened here yet'))
+                el('div', 'shell-pv-cmeta faint', c.here && !shown ? 'not compiled yet: a click opens it'
+                    : shot?.openMs ? `opened in ${seconds(shot.openMs)} last time` : c.here ? 'being worked on' : 'not opened here yet'))
             d.append(pic, b, more)
-            d.title = c.here ? `The scene being worked on: back to it` : `Open it (a compile${shot?.openMs ? `; ${seconds(shot.openMs)} last time` : ''})`
+            d.title = c.here && shown ? `The scene being worked on: back to it` : `Open it (a compile${shot?.openMs ? `; ${seconds(shot.openMs)} last time` : ''})`
             d.onclick = () => openScene(c.key)
             return d
         }), (() => {
@@ -292,7 +304,7 @@ export function installProjectView(host, { session, BUILDER, ops, picture = () =
         if (!shown) return
         drawTop()
         const cards = sceneCards(BUILDER.project, BUILDER.current)
-        const now = `${BUILDER.revision}|${BUILDER.current}|${item()}|${cards.map(c => { const s = picture(c.key); return `${c.key}:${s?.url ?? ''}:${s?.openMs ?? ''}` }).join(',')}`
+        const now = `${BUILDER.revision}|${BUILDER.current}|${item()}|${BUILDER.showing || BUILDER.applying}|${cards.map(c => { const s = picture(c.key); return `${c.key}:${s?.url ?? ''}:${s?.openMs ?? ''}` }).join(',')}`
         if (now !== sig) { sig = now; drawScenes() }
         // the list of projects: another tab may change it, and reading it is a store's read -- every few seconds
         if (Date.now() - lastList > 4000 && !renaming && !asking) { lastList = Date.now(); drawProjects() }

@@ -25,7 +25,7 @@
 // precompiled (it compiles its own for the baked scene when it next runs).
 //======================================================================================================================
 
-/** How long nothing may be edited before a bake starts: the boxes are measured at rest first (index.html, every
+/** How long nothing may be edited before a bake starts: the boxes are measured at rest first (app.html, every
  *  half second), and a drag paused for a moment should not start a compile it will throw away. */
 export const IDLE_MS = 2000
 

@@ -270,8 +270,8 @@ throws('another version is refused, not guessed at',
     throws('...by setJoin too', () => M.setJoin(d, 'g', 'subtract'), /top level/)
     const lamp = M.addLight(d, 'g', { id: 'lamp', shape: 'disc' })
     throws('a light is no shape of its group: no join', () => M.setJoin(d, lamp.id, 'subtract'), /no join/)
-    const box = M.addExportBox(d, 'g', { id: 'box' })
-    throws('nor an export box', () => M.setJoinBlend(d, box.id, 0.1), /no join/)
+    const box = M.addHazeBox(d, 'g', { id: 'box' })
+    throws('nor a haze box', () => M.setJoinBlend(d, box.id, 0.1), /no join/)
     M.setJoin(d, 'c', 'intersect'); M.setJoin(d, 'b', 'union'); M.setJoinBlend(d, 'b', null)
     eq('setJoin and setJoinBlend: union and null store nothing', [c.join, 'join' in b, 'joinBlend' in b], ['intersect', false, false])
     throws('setJoin refuses an unknown join', () => M.setJoin(d, 'c', 'minus'), /join must be one of/)
@@ -320,8 +320,9 @@ throws('another version is refused, not guessed at',
     const u = M.parse(JSON.stringify(v10))
     const j = id => M.find(u, id).node.join
     eq('10 -> 14, and on to the current version', u.version, M.VERSION)
-    eq('...every shape after the first takes the op; the first (hidden or not), a light and an export box none',
-        ['ebox', 'lamp', 'first', 'second', 'third'].map(j), [undefined, undefined, undefined, 'subtract', 'subtract'])
+    eq('...every shape after the first takes the op; the first (hidden or not) and a light none',
+        ['lamp', 'first', 'second', 'third'].map(j), [undefined, undefined, 'subtract', 'subtract'])
+    ok('...and the export box is gone at 27 (v26to27: the print export fits its own box)', !M.find(u, 'ebox'))
     ok('...no group keeps an op, the root included', ['root', 'cut', 'blob', 'lonely'].every(id => !('op' in M.find(u, id).node)))
     eq('...a union needs no joins, its blend stays on the group', [j('u1'), j('u2'), M.find(u, 'blob').node.blend], [undefined, undefined, 0.2])
     ok('...and the upgraded document saves and loads as itself', M.serialize(M.parse(M.serialize(u))) === M.serialize(u))
@@ -333,7 +334,8 @@ throws('another version is refused, not guessed at',
     const d = M.createDoc()
     const put = M.insertAsset(d, { kind: 'node', unit: 'm', materials: [], node: structuredClone(v10.root.children[0]) })
     eq('an asset with an op is upgraded as it goes in', [('op' in put), put.children.map(c => c.join)],
-        [false, [undefined, undefined, undefined, 'subtract', 'subtract']])
+        [false, [undefined, undefined, 'subtract', 'subtract']])
+    ok('...its export box left out, as a file of 26 has it (v26to27)', put.children.every(c => c.type !== 'export'))
     eq('...and the document is sound', M.validate(d), [])
 
     /* versions 11 to 13 are the optics branch's alone: this line never saved them */
@@ -792,16 +794,16 @@ throws('another version is refused, not guessed at',
     const d = M.createDoc()
     M.addMaterial(d, { id: 'scr' })
     eq('a new material is a surface, stored as no field', [M.typeOf(M.material(d, 'scr')), 'type' in M.material(d, 'scr')], ['surface', false])
-    M.setMaterialType(d, 'scr', 'detector')
-    eq('setMaterialType sets it', M.material(d, 'scr').type, 'detector')
+    throws('a detector is no material type any more (an object\'s role, version 27)', () => M.setMaterialType(d, 'scr', 'detector'), /type/)
     M.setMaterialType(d, 'scr', 'emitter')
+    eq('setMaterialType sets it', M.material(d, 'scr').type, 'emitter')
     ok('an emitter gets a glow if it had none', M.material(d, 'scr').params.emissiveLuminance > 0)
     M.setMaterialType(d, 'scr', 'surface')
     ok('surface removes the field', !('type' in M.material(d, 'scr')))
     throws('an unknown type is refused', () => M.setMaterialType(d, 'scr', 'source'), /type/)
     ok('the glowing preset is an emitter', M.typeOf(M.addMaterial(d, { preset: 'emissive' })) === 'emitter')
-    ok('the fields each type shows: an emitter its emission, a limiter nothing',
-        M.MATERIAL_FIELDS_OF.emitter.join() === 'emissive,emissiveLuminance' && M.MATERIAL_FIELDS_OF.limiter.length === 0)
+    ok('the fields each type shows: an emitter its emission; no detector or limiter type',
+        M.MATERIAL_FIELDS_OF.emitter.join() === 'emissive,emissiveLuminance' && !('detector' in M.MATERIAL_FIELDS_OF) && !('limiter' in M.MATERIAL_FIELDS_OF))
 
     const L = M.addLight(d, 'root', { id: 'die', shape: 'rectangle', params: { width: 0.2, height: 0.1 }, flux: 100 })
     eq('a light: its own type, no material, its size as parameters', [L.type, L.material, L.params.width], ['light', null, 0.2])
@@ -829,6 +831,22 @@ throws('another version is refused, not guessed at',
     throws('a CCT past the locus is refused', () => M.setLight(d, 'die', { colourBy: 'cct', cct: 20000 }), /cct/)
     throws('an xy outside the diagram is refused', () => M.setLight(d, 'die', { colourBy: 'xy', xy: { x: 0.7, y: 0.5 } }), /xy/)
     throws('an unknown colourBy is refused', () => M.setLight(d, 'die', { colourBy: 'hsv' }), /colourBy/)
+    /* ...AND BY ITS SPECTRUM (0.83.0; core/spd.js): its exact XYZ at Y = 1 (the CIE's table), the optics source the same,
+       a spectrum with no visible light refused, its efficacy said, saved and read back, the default dropped */
+    const red = { kind: 'peaks', peaks: [{ nm: 630, fwhm: 17, weight: 1 }] }
+    M.setLight(d, 'die', { colourBy: 'spectrum', spectrum: red })
+    const redRGB = M.lightRGB(M.lightOf(M.find(d, 'die').node))
+    const redXYZ = M.spdSummary(red)
+    const back = [0.4124 * redRGB[0] + 0.3576 * redRGB[1] + 0.1805 * redRGB[2], 0.2126 * redRGB[0] + 0.7152 * redRGB[1] + 0.0722 * redRGB[2]]
+    ok('a light by its spectrum: luminance 1 and the spectrum\'s own x', near(back[1], 1, 1e-12)
+        && near(back[0] / (back[0] + 1 + 0.0193 * redRGB[0] + 0.1192 * redRGB[1] + 0.9505 * redRGB[2]), redXYZ.xy[0], 1e-9), JSON.stringify([back, redXYZ.xy]))
+    ok('...the optics source carries it', S.sourceTable(d).sources.find(x => x.id === 'die').colour.every((v, i) => v === redRGB[i]))
+    ok('...its efficacy said with its chromaticity', near(M.lightChromaticity(M.lightOf(M.find(d, 'die').node)).ler, redXYZ.ler, 1e-9))
+    eq('...saved and read back', M.parse(M.serialize(d)).root.children.find(n => n.id === 'die').light.spectrum, red)
+    throws('a spectrum with no light the eye sees is refused', () => M.setLight(d, 'die', { spectrum: { kind: 'peaks', peaks: [{ nm: 950, fwhm: 10, weight: 1 }] } }), /no light the eye sees/)
+    throws('...and one of an unknown kind', () => M.setLight(d, 'die', { spectrum: { kind: 'laser', nm: 532 } }), /kind/)
+    M.setLight(d, 'die', { spectrum: { kind: 'planck', T: 4000 } })
+    ok('...the default spectrum is not stored', !('spectrum' in M.find(d, 'die').node.light))
     M.setLight(d, 'die', { colourBy: 'rgb', xy: { x: 0.3127, y: 0.329 } })
     ok('back to RGB at the defaults: nothing stored', !('colourBy' in M.find(d, 'die').node.light) && !('xy' in M.find(d, 'die').node.light))
     const bad = JSON.parse(M.serialize(d)); bad.root.children[0].material = 'scr'
@@ -837,6 +855,18 @@ throws('another version is refused, not guessed at',
     eq('a ray file starts with no file', rf.light.file, '')
     M.setLight(d, rf.id, { file: 'ZEMAXRAYFILE.DAT', box: [[-2, -2, 0], [2, 2, 1.4]] })
     ok('...and round-trips with one', M.parse(M.serialize(d)).root.children.find(n => n.id === rf.id).light.file === 'ZEMAXRAYFILE.DAT')
+    /* A RAY FILE'S COLOUR (0.83.0; lights.js RAYFILE_COLOUR_BY): from the file by default, its header's wavelength, or a
+       rectangle's four ways -- its default its own, so RGB, the faces' default, is kept when chosen, not dropped as one */
+    ok('a ray file\'s colour is from its file by default, nothing stored', M.lightOf(rf).colourBy === 'file' && !('colourBy' in rf.light))
+    M.setLight(d, rf.id, { colourBy: 'rgb' })
+    ok('...RGB chosen is kept, and reads back RGB (a face\'s default, not a ray file\'s)', rf.light.colourBy === 'rgb'
+        && M.lightOf(M.parse(M.serialize(d)).root.children.find(n => n.id === rf.id)).colourBy === 'rgb')
+    M.setLight(d, rf.id, { colourBy: 'wavelength' })
+    ok('...its header\'s wavelength, kept', M.parse(M.serialize(d)).root.children.find(n => n.id === rf.id).light.colourBy === 'wavelength')
+    M.setLight(d, rf.id, { colourBy: 'file' })
+    ok('...back to from the file: nothing stored', !('colourBy' in rf.light))
+    throws('...the file\'s two are a ray file\'s alone: a rectangle at its header\'s wavelength refused', () => M.setLight(d, 'die', { colourBy: 'wavelength' }), /colourBy/)
+    ok('...and a light\'s colour by RGB on a face still stores nothing (its default)', (M.setLight(d, 'die', { colourBy: 'rgb' }), !('colourBy' in M.find(d, 'die').node.light)))
     M.setOpticsMaxDist(d, 15)
     ok('the optics maximum distance saves with the scene', M.parse(M.serialize(d)).optics.maxDist === 15)
     throws('a negative maximum distance is refused', () => M.setOpticsMaxDist(d, -1), /maxDist/)
@@ -896,7 +926,9 @@ throws('another version is refused, not guessed at',
     ok('branch 13 -> 10: the LED sheet is a light with its flux, facing down', die?.type === 'light' && die.light.shape === 'rectangle'
         && Math.abs(die.light.flux - 100) < 1e-9 && die.params.width === 0.2 && die.transform.rot.x === 180)
     ok('branch 13 -> 10: the lens is a code node calling Nlens', u.root.children.some(n => n.type === 'code' && /Nlens\(/.test(M.codeOf(u, n))))
-    ok('branch 13 -> 10: the screen\'s material is still a detector', u.materials.some(m => m.type === 'detector'))
+    ok('branch 13 -> 10 -> 27: the screen is still a detector, as its role now, and its material a surface',
+        u.root.children.some(n => n.opticsRole === 'detector') && !u.materials.some(m => m.type === 'detector'))
+    ok('...with the scene\'s optics analysis on', M.featuresOf(u).analysis === true)
     ok('branch 13 -> 10: the LED\'s source material is gone, nothing else used it', !u.materials.some(m => m.type === 'source' || m.source))
     ok('branch 13 -> 10: its maximum distance kept', u.optics?.maxDist === 20)
 
@@ -910,8 +942,8 @@ throws('another version is refused, not guessed at',
               transform: { pos: { x: 0, y: 0, z: 1 }, rot: { x: 0, y: 0, z: 0 }, scale: 1 }, rayfile: { file: 'LED.DAT', flux: 10 } } ] } }
     const v = M.parse(JSON.stringify(b9))
     const ball = v.root.children.find(n => n.id === 'ball'), rs = v.root.children.find(n => n.id === 'rs')
-    ok('branch 9 -> 10: the flagged sphere is a code node with a detector material',
-        ball.type === 'code' && /Nsphere/.test(M.codeOf(v, ball)) && M.typeOf(M.material(v, ball.material)) === 'detector' && !('detector' in ball))
+    ok('branch 9 -> 27: the flagged sphere is a code node and a detector again, by its role',
+        ball.type === 'code' && /Nsphere/.test(M.codeOf(v, ball)) && ball.opticsRole === 'detector' && M.typeOf(M.material(v, ball.material)) === 'surface' && !('detector' in ball))
     ok('branch 9 -> 10: the ray set is a ray-file light', rs.type === 'light' && rs.light.shape === 'rayfile' && rs.light.file === 'LED.DAT' && rs.light.flux === 10)
     ok('a file of this line\'s version 9 is not taken for one from the branch', M.typeOf(M.parse(JSON.stringify(v9)).materials[0]) === 'emitter')
 
@@ -922,41 +954,47 @@ throws('another version is refused, not guessed at',
        detector in use came back an emitter (found 2026-09-30, reproduced in node). */
     const d10 = M.createDoc()
     const used = M.addMaterial(d10, { label: 'used', preset: 'diffuse' })
-    M.addMaterial(d10, { label: 'lamp, unused', preset: 'emissive', type: 'emitter' })
+    const lamp = M.addMaterial(d10, { label: 'lamp, unused', preset: 'emissive', type: 'emitter' })
     const glowDet = M.addMaterial(d10, { label: 'detector with emission', preset: 'emissive', type: 'emitter' })
-    M.setMaterialType(d10, glowDet.id, 'detector')
     const glowDetUsed = M.addMaterial(d10, { label: 'used detector with emission', preset: 'emissive', type: 'emitter' })
-    M.setMaterialType(d10, glowDetUsed.id, 'detector')
     const lim = M.addMaterial(d10, { label: 'limiter', preset: 'diffuse' })
-    M.setMaterialType(d10, lim.id, 'limiter')
-    M.addObject(d10, 'root', { primitive: 'sphere', material: used.id })
-    M.addObject(d10, 'root', { primitive: 'box', material: glowDetUsed.id })
+    M.addObject(d10, 'root', { id: 'ball10', primitive: 'sphere', material: used.id })
+    M.addObject(d10, 'root', { id: 'box10', primitive: 'box', material: glowDetUsed.id })
+    M.addObject(d10, 'root', { id: 'cut10', primitive: 'box', material: lim.id })
     M.setOpticsMaxDist(d10, 12)
     /* STAMPED 10: createDoc makes the current version, which never takes the version 10 path -- this test
-       passed without testing anything from the move to 14 until the merge with main showed it (2026-09-30) */
-    const text10 = M.serialize(d10), as10 = JSON.parse(text10); as10.version = 10
+       passed without testing anything from the move to 14 until the merge with main showed it (2026-09-30). Its
+       detector and limiter TYPES are written in by hand: version 27 has none to set (they are an object's role) */
+    const as10 = JSON.parse(M.serialize(d10)); as10.version = 10
+    const typed = { [glowDet.id]: 'detector', [glowDetUsed.id]: 'detector', [lim.id]: 'limiter' }
+    for (const m of as10.materials) if (typed[m.id]) m.type = typed[m.id]
     const back10 = M.parse(JSON.stringify(as10))
-    const mats = d => d.materials.map(m => `${m.id} ${M.typeOf(m)}`)
-    eq('a version 10 file of this line keeps its typed materials, used or not', mats(back10), mats(d10))
-    ok('...and loads exactly as it was saved, at the current version', M.serialize(back10) === text10)
+    eq('a version 10 file of this line keeps every material, used or not, the emitter an emitter, and nothing taken for a source',
+        back10.materials.map(m => `${m.id} ${M.typeOf(m)}`), d10.materials.map(m => `${m.id} ${m.id === lamp.id ? 'emitter' : typed[m.id] ? 'surface' : M.typeOf(m)}`))
+    eq('...each object wearing a detector or a limiter takes the role (27); the others none', ['ball10', 'box10', 'cut10'].map(id => M.find(back10, id).node.opticsRole ?? null),
+        [null, 'detector', 'limiter'])
+    ok('...the scene\'s optics analysis on, the reach kept', M.featuresOf(back10).analysis === true && back10.optics?.maxDist === 12)
     /* ...NOR ONE OF ITS VERSION 10: a material type and optics settings are this line's there. Taken for
        the branch's, an unused glowing material was turned into a source and dropped on every parse --
        every undo and redo -- and a detector with any emission became one too */
     const own = M.createDoc({ title: 'own 10' })
     M.addObject(own, 'root', { primitive: 'sphere' })
     M.addMaterial(own, { id: 'glow', preset: 'emissive' })
-    M.addMaterial(own, { id: 'det', type: 'detector' })
+    M.addMaterial(own, { id: 'det' })
     M.setOpticsMaxDist(own, 5)
     const own10 = JSON.parse(M.serialize(own)); own10.version = 10          // as a version 10 file (createDoc makes 14)
+    own10.materials.find(m => m.id === 'det').type = 'detector'
     const back = M.parse(JSON.stringify(own10))
-    eq('this line\'s version 10 reads back as it was: an unused glowing material, a detector, optics settings',
-        M.serialize(back), M.serialize(own))
-    /* and the branch's 10 (roles, not types) still goes the branch's way */
+    eq('this line\'s version 10 reads back as it was: an unused glowing material, a detector (a surface now, used by nothing), optics settings',
+        M.serialize({ ...back, features: undefined }), M.serialize(own))
+    /* and the branch's 10 (roles, not types) still goes the branch's way: its role a type at 10, a surface at 27 */
     const b10 = JSON.parse(M.serialize(M.createDoc({ title: 'b10' })))
     b10.materials = [{ ...JSON.parse(M.serialize(own)).materials[1], id: 'scr', optics: 'detector' }]
     delete b10.materials[0].type
     b10.version = 10
-    eq('the branch\'s version 10: a detector role becomes a detector type', M.typeOf(M.parse(JSON.stringify(b10)).materials[0]), 'detector')
+    const bb = M.parse(JSON.stringify(b10))
+    ok('the branch\'s version 10: a detector role becomes a detector type, then a surface (nothing wears it) with analysis on',
+        M.typeOf(bb.materials[0]) === 'surface' && M.featuresOf(bb).analysis === true)
 }
 
 //----------------------------------------------------------------------------------------------
@@ -1499,7 +1537,7 @@ throws('another version is refused, not guessed at',
         M.addGroup(d, 'root', { id: 'cut' }); M.addObject(d, 'cut', { primitive: 'box' }); M.addObject(d, 'cut', { primitive: 'sphere', join: 'subtract' })
         M.setCopies(d, 'cut', M.copiesRow(2, 1))
     }, /join.*no copies/)
-    /* A LIGHT INSIDE (0.next): drawn once a copy, if the copies share one scale (lights.js A LIGHT INSIDE ARRAYS) -- held
+    /* A LIGHT INSIDE (0.79.0): drawn once a copy, if the copies share one scale (lights.js A LIGHT INSIDE ARRAYS) -- held
        on every way a light comes to be in an array: its copies set, a light added, a node moved, a scene read */
     M.addGroup(d, 'root', { id: 'lamps' }); M.addLight(d, 'lamps', { id: 'lp', shape: 'disc' })
     M.setCopies(d, 'lamps', M.copiesRow(2, 1))
@@ -1613,6 +1651,9 @@ throws('another version is refused, not guessed at',
     throws('the camera\'s mode is a word, not a value a curve passes through', () => M.setAnimated(a, 'view/camera/mode', true), /not a value/)
     throws('...nor its target, three numbers at once', () => M.setAnimated(a, 'view/camera/target', true), /not a value/)
     throws('...nor an exposure setting that is not one', () => M.setAnimated(a, 'view/exposure/iso', true), /not a value/)
+    M.setAnimated(a, 'view/camera/pose', true)
+    ok('the whole camera as one value is (0.84.0: lib/pathtracer/params.js CAMERA POSE)', M.isAnimated(a, 'view/camera/pose'))
+    M.setAnimated(a, 'view/camera/pose', false)
     M.setAnimated(a, 'view/camera/azimuth', false)
     eq('unflagged', M.animatedPaths(a), ['view/exposure/exposureEV', 'scene/environment/uSunElevation'])
     // a node may be called camera: its values are scene/camera/..., the view's view/camera/...
@@ -1668,6 +1709,103 @@ throws('another version is refused, not guessed at',
     ok('...and an export setting that is no film\'s', M.validate({ ...M.createDoc(), timeline: { export: { bitrate: 12 } } }).some(p => /timeline\.export\.bitrate/.test(p)))
     M.setTimeline(d, null)
     ok('taken away: no timeline at all', !('timeline' in d))
+}
+
+//----------------------------------------------------------------------------------------------
+// THE SCENE'S OPTICAL FEATURES (0.83.0; setFeatures): every feature on is no key (an old file, every example), only what
+// is off saved, a refusal changing nothing, the presets, what is hidden said, and toTree putting a feature's fields at
+// their defaults without touching the document. No version change: an older builder of the same version carries the key along.
+//----------------------------------------------------------------------------------------------
+{
+    const d = M.createDoc({ title: 'features' })
+    M.addMaterial(d, { id: 'g', preset: 'glass', label: 'flint' })
+    d.materials.find(m => m.id === 'g').params.abbe = 36
+    eq('a scene with no key: every feature at its default (the spectral trace off), Full', [M.featuresOf(d), M.featurePresetOf(d)],
+        [{ dispersion: true, absorption: true, coatings: true, spectral: false, analysis: false }, 'full'])
+    M.setFeatures(d, { dispersion: false })
+    eq('dispersion off: only that saved, Custom', [d.features, M.featurePresetOf(d)], [{ dispersion: false }, 'custom'])
+    eq('...and read back from the file', M.featuresOf(M.parse(M.serialize(d))), { dispersion: false, absorption: true, coatings: true, spectral: false, analysis: false })
+    ok('...the Abbe number not shown, the index still', !M.fieldShown(d, 'abbe') && M.fieldShown(d, 'ior') && M.fieldShown(d, 'attenuationDistance'))
+    eq('...and said: the material whose value is kept, not traced', M.hiddenByFeatures(d), { dispersion: ['flint'] })
+    const tree = M.toTree(d)
+    ok('toTree: the Abbe number at its default for codegen, the features on the root', tree.materials[0].params.abbe === 0
+        && tree.features?.dispersion === false)
+    ok('...the document untouched', d.materials[0].params.abbe === 36)
+    M.setFeatures(d, M.FEATURE_PRESETS.basic.values)
+    eq('Basic: all three off', [d.features, M.featurePresetOf(d)], [{ dispersion: false, absorption: false, coatings: false }, 'basic'])
+    d.materials[0].params.coatEdge = 520
+    ok('...a coating\'s edge with no coating on hides no coating: only the Abbe number is said', JSON.stringify(M.hiddenByFeatures(d)) === JSON.stringify({ dispersion: ['flint'] }))
+    d.materials[0].params.coating = 1
+    eq('...one on is', M.hiddenByFeatures(d), { dispersion: ['flint'], coatings: ['flint'] })
+    d.materials[0].params.coating = 0
+    const before = JSON.stringify(d.features)
+    throws('an unknown feature is refused', () => M.setFeatures(d, { polarisation: true }), /not a feature/)
+    throws('...a feature not true or false', () => M.setFeatures(d, { dispersion: 0 }), /true or false/)
+    eq('...and a refusal changes nothing', JSON.stringify(d.features), before)
+    M.setFeatures(d, M.FEATURE_PRESETS.full.values)
+    ok('Full again: no key at all, as every scene before', !('features' in d) && M.featurePresetOf(d) === 'full')
+    /* THE SPECTRAL TRACE (0.83.0): the one feature off by default -- on is what is saved; Expert is Full with it; it has no
+       field, so toTree's materials are as they were, and the root says it is on */
+    M.setFeatures(d, { spectral: true })
+    eq('the spectral trace on: that alone saved, Expert', [d.features, M.featurePresetOf(d)], [{ spectral: true }, 'expert'])
+    const st = M.toTree(d)
+    ok('...toTree: the root says so, every material as it was', st.features?.spectral === true && st.materials[0].params.abbe === 36)
+    M.setFeatures(d, M.FEATURE_PRESETS.full.values)
+    ok('...Full takes it off again: no key', !('features' in d))
+    M.setFeatures(d, M.FEATURE_PRESETS.expert.values)
+    eq('Expert: every feature on -- every one a preset sets: not analysis', M.featuresOf(d), { dispersion: true, absorption: true, coatings: true, spectral: true, analysis: false })
+    M.setFeatures(d, M.FEATURE_PRESETS.full.values)
+    ok('toTree with every feature on: no features on the root, the value as it is', !('features' in M.toTree(d)) && M.toTree(d).materials[0].params.abbe === 36)
+    ok('a file with a wrong feature is refused', M.validate({ ...M.createDoc(), features: { dispersion: 'no' } }).some(p => /features\.dispersion/.test(p))
+        && M.validate({ ...M.createDoc(), features: [] }).some(p => /features must be/.test(p)))
+    ok('a file of this version with features reads them, one without reads Full', M.featurePresetOf(M.parse(M.serialize(M.createDoc()))) === 'full')
+}
+
+//----------------------------------------------------------------------------------------------
+// OPTICS ROLES (0.83.0, version 27): a detector or a limiter is an OBJECT's, not its material's -- set, refused, in the
+// tree only while the scene's analysis is on, which no preset touches; carried by a copy and an asset; an old asset's
+// detector material made the role, and the analysis switched on for it
+//----------------------------------------------------------------------------------------------
+{
+    const d = M.createDoc({ title: 'roles' })
+    const grey = M.addMaterial(d, { id: 'grey' })
+    M.addObject(d, 'root', { id: 'a', primitive: 'box', material: grey.id })
+    M.addObject(d, 'root', { id: 'b', primitive: 'box', material: grey.id })
+    M.addGroup(d, 'root', { id: 'g' })
+    M.addLight(d, 'root', { id: 'lamp', shape: 'disc' })
+    eq('a new scene: analysis off, no role', [M.featuresOf(d).analysis, M.roleOf(M.find(d, 'a').node)], [false, null])
+    M.setOpticsRole(d, 'a', 'detector')
+    eq('two objects of ONE material: one a detector, one not', [M.roleOf(M.find(d, 'a').node), M.roleOf(M.find(d, 'b').node)], ['detector', null])
+    eq('...the document sound, saved and read back', [M.validate(d), M.find(M.parse(M.serialize(d)), 'a').node.opticsRole], [[], 'detector'])
+    throws('a group has none', () => M.setOpticsRole(d, 'g', 'detector'), /group/)
+    throws('nor a light', () => M.setOpticsRole(d, 'lamp', 'limiter'), /light/)
+    M.addHazeBox(d, 'root', { id: 'dust' })
+    throws('nor a haze box', () => M.setOpticsRole(d, 'dust', 'detector'), /haze box/)
+    throws('an unknown role is refused', () => M.setOpticsRole(d, 'b', 'mirror'), /optics role/)
+    ok('...a file with one on a group refused', M.validate({ ...structuredClone(d), root: { ...structuredClone(d.root), children: d.root.children.map(c => c.id === 'g' ? { ...structuredClone(c), opticsRole: 'detector' } : structuredClone(c)) } }).some(p => /group has no optics role/.test(p)))
+    ok('analysis off: the role kept, not in the tree', M.toTree(d).children.find(n => n.id === 'a').opticsRole === undefined)
+    M.setFeatures(d, { analysis: true })
+    ok('analysis on: in the tree', M.toTree(d).children.find(n => n.id === 'a').opticsRole === 'detector')
+    eq('...saved as the one feature it differs by; still Full', [d.features, M.featurePresetOf(d)], [{ analysis: true }, 'full'])
+    M.setFeatures(d, M.FEATURE_PRESETS.basic.values)
+    ok('a preset leaves analysis alone', M.featuresOf(d).analysis === true && M.featurePresetOf(d) === 'basic')
+    M.setFeatures(d, M.FEATURE_PRESETS.full.values)
+    const copy = M.duplicate(d, 'a')
+    ok('a duplicate keeps the role', copy.opticsRole === 'detector')
+    M.setOpticsRole(d, copy.id, null)
+    ok('...and null takes it away', !('opticsRole' in copy))
+    // an asset saved before 27: a library item wearing a detector material
+    const e = M.createDoc({ title: 'into' })
+    const asset = { kind: 'node', unit: 'm', materials: [{ ...structuredClone(grey), id: 'scr', label: 'screen', type: 'detector' }],
+        node: { id: 's', kind: 'group', label: 'stand', enabled: true, transform: M.identity(), blend: 0, material: 'scr', children: [
+            { id: 'plate', kind: 'object', type: 'code', label: 'plate', enabled: true, transform: M.identity(), material: null, params: {},
+              code: 'C = add_new(C, Nsphere(p, 1.0), MATERIAL);' }] } }
+    const put = M.insertAsset(e, asset)
+    ok('an old asset\'s detector material: the object wearing it (its group\'s) a detector, the material a surface',
+        put.children[0].opticsRole === 'detector' && M.typeOf(M.material(e, put.material)) === 'surface')
+    ok('...and the scene\'s analysis switched on with it, sound', M.featuresOf(e).analysis === true && M.validate(e).length === 0)
+    ok('...the asset itself untouched', asset.materials[0].type === 'detector' && !('opticsRole' in asset.node.children[0]))
+    ok('an object with a role carried by extractAsset and put in again', M.insertAsset(M.createDoc(), M.extractAsset(d, 'a')).opticsRole === 'detector')
 }
 
 console.log(fail ? `\n${fail} FAILED, ${pass} passed` : `${pass} assertions pass.`)

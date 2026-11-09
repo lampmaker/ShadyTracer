@@ -7,9 +7,10 @@
   A page is a SHEET: a drawn border, a title block, and sections where the text runs beside a figure that stays put
   (sticky) while its paragraphs scroll past. On a phone the figure sticks to the top and the text runs under it.
 
-  Theme: light by default, dark under prefers-color-scheme, and an explicit data-theme on <html> wins both ways (the
-  toggle, page.js). Each style defines both, on [data-style=...] so a card on the styles page can show a style that is
-  not the page's own.
+  Theme: light by default, dark under prefers-color-scheme, and an explicit data-theme on <html> wins both ways. page.js
+  always sets one: the reader's choice from the toggle, else the default (kit/styles.js DEFAULT_THEME, dark), so the
+  system's preference rules only until the script runs. Each style defines both, on [data-style=...] so a card on the
+  styles page can show a style that is not the page's own.
 ======================================================================================================================*/
 @import url("fonts/fonts.css");          /* every style's faces, kept in the repository (fonts/fetch.mjs) */
 @import url("styles/notebook.css");

@@ -17,8 +17,8 @@
 //             number the mean over the batches with the standard error from their spread. Its result
 //             is kept here (ANA), apart from the module's own, which every trace -- the rays' too --
 //             replaces.
-//   CHARTS    PANELS OF THEIR OWN, of six kinds: the map, the polar diagram, I against gamma, the
-//             profiles, the rings, the encircled flux. Each is a line of ITS OWN CONTROLS -- what it
+//   CHARTS    PANELS OF THEIR OWN, of seven kinds: the map, the polar diagram, I against gamma, the
+//             profiles, the rings, the encircled flux, the spectrum. Each is a line of ITS OWN CONTROLS -- what it
 //             shows and how, its saves, ⧉ and ✕ -- over a canvas, with one line of readout under the
 //             pointer. One of each always; MORE OF A KIND MADE AT WILL (a chart's ⧉, or Optics › New
 //             chart), each with its own settings -- an illuminance map beside a CCT map (charts.js: the
@@ -35,11 +35,11 @@
 // Everything that traces is lib/pathtracer/optics; this file is controls, charts and a table.
 //======================================================================================================================
 import { createOptics } from '../lib/pathtracer/optics/index.js'
-import { detectorMap } from '../lib/pathtracer/optics/detmap.js'
+import { detectorMap, mapFrame, mapSum, addToMapSum, copyMapSum } from '../lib/pathtracer/optics/detmap.js'
 import { UNITS } from '../lib/pathtracer/core/photometry.js'
 import { rgbToXYZ, XYZtoxy, xyToXYZ, xyToCctDuv, cctDuvToXy, mixToTarget } from '../lib/pathtracer/core/colorimetry.js'
 import { sourceTable, faceSource } from '../builder/sources.js'
-import { placeRays } from '../lib/pathtracer/optics/sources.js'
+import { placeRays, rayFileColour } from '../lib/pathtracer/optics/sources.js'
 import { RAYFILES } from './rayfiles.js'
 import { intensity, planeCurve, farStats, intensityCSV } from '../lib/pathtracer/optics/farfield.js'
 import { drawPolar, polarAngleAt, nearestPoint, polarStyle } from '../lib/pathtracer/optics/polar.js'
@@ -49,6 +49,8 @@ import { drawXY, xyAt, nearestX, ticks } from '../lib/pathtracer/optics/xychart.
 import { drawHeatmap, heatmapAt } from '../lib/pathtracer/optics/heatmap.js'
 import { quantityMap, quantitiesOf, MAP_QUANTITIES, cellChroma } from '../lib/pathtracer/optics/quantities.js'
 import { chartStrip, saveCanvases, saveText } from '../lib/pathtracer/strip.js'
+import { detectorSpectrum, spectrumCSV } from '../lib/pathtracer/optics/spectrum.js'
+import { drawSpectrum, spectrumAt } from '../lib/pathtracer/optics/spectrumchart.js'
 import { stampedName } from '../lib/filename.js'
 import { icon, iconButton, iconPill, lit } from '../lib/pathtracer/icons.js'
 import { OPTICS_CHARTS, FAR_CHARTS, MAP_CHARTS, chartSet } from './charts.js'
@@ -90,7 +92,7 @@ const RAYS_MAX = 5e7
  * @param tableIn   (el, opts) -> a property table in it, in the host's style; opts the table's own (`boxes`)
  * @param charts    { set, el: { [id]: the chart panel's element }, onVisible(id, fn(seen)),
  *                  add(chart, nearId) -> element, remove(id) } -- the host's panels, one per chart of `set`
- *                  (charts.js chartSet; without one, the six kinds' first alone). `add` registers a panel for a
+ *                  (charts.js chartSet; without one, the seven kinds' first alone). `add` registers a panel for a
  *                  chart made here and opens it beside nearId's; `remove` lets an added one's go. Without `add`
  *                  no chart is made here. A chart without an element is simply not drawn.
  * @param optics    optional: the optics module to use instead of making one (a test's stand-in)
@@ -98,7 +100,7 @@ const RAYS_MAX = 5e7
  *                  (Tools menu), not a folder in the Analysis pane; without it there is no colour mixing
  */
 export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () => { }, charts = null, boxes = null, view = null,
-                                          optics = null, mixing = null }) {
+                                          optics = null, mixing = null, mapHits = null }) {
     /* `optics`: a stand-in for the optics module -- optics/test/page.check.mjs drives this page in a browser
        with no GPU, and a made-up far field and hits, so the charts and the pane are run by something */
     const O = optics ?? createOptics(RT, WG)
@@ -178,16 +180,27 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
             const frame = { origin: x.origin, u: x.u, v: x.v, w: x.normal, scale: x.scale / mpu }
             // a copy of one in an array is placed on its own, under its own key (builder/sources.js INSIDE AN ARRAY)
             const own = x.key ?? x.id
-            const key = `${own}|${x.file}|${JSON.stringify(frame)}`
+            /* ITS COLOUR, AS ITS LIGHT CHOOSES IT (0.83.0; optics/sources.js rayFileColour): from the file -- a spectral
+               file's own wavelength on each ray, what they add up to for the set -- its header's one wavelength on every
+               ray, or the light's own colour, as a rectangle's. Which wavelengths the rays keep is part of the key. */
+            const C = rayFileColour(f, x)
+            const key = `${own}|${x.file}|${JSON.stringify(frame)}|${C.wavelengths ?? ''}${C.nm ?? ''}`
             if (placedKey.get(own) !== key) {
                 if (placedKey.has(own)) O.dropRayData(placedKey.get(own))
-                O.setRayData(key, placeRays(f.rays, frame))
+                O.setRayData(key, placeRays(f.rays, { ...frame, wavelengths: C.wavelengths === 'rays', wavelength: C.wavelengths === 'header' ? C.nm : 0 }))
                 placedKey.set(own, key)
             }
-            sources.push({ ...x, rays: key, flux: x.flux ?? f.total, unit: f.header.fluxUnit, header: f.header })
+            const { spectrum, planck, ...rest } = x
+            sources.push({ ...rest, rays: key, flux: x.flux ?? f.total, unit: f.header.fluxUnit, header: f.header,
+                           colour: C.colour, fileColour: C.fromFile, ownWavelength: C.own,
+                           ...(C.spectrum ? { spectrum: C.spectrum } : {}), ...(C.planck ? { planck: C.planck } : {}) })
         }
         // a sheet in the scene starts its rays off it (builder/sources.js faceSource, shared with the bench)
-        const describe = x => x.kind === 'rayset' ? { type: 'rayset', rays: x.rays, flux: x.flux, emitN: x.emitN, colour: x.colour } : faceSource(x)
+        const describe = x => x.kind === 'rayset' ? { type: 'rayset', rays: x.rays, flux: x.flux, emitN: x.emitN, colour: x.colour, unit: x.unit,
+            ownWavelength: x.ownWavelength,
+            /* the spectrum rayFileColour gave (the light's own, or the header's line); a file's own colour (its wavelengths)
+               otherwise the stand-in of that colour */
+            ...(x.spectrum ? { spectrum: x.spectrum } : x.planck ? { planck: x.planck } : {}) } : faceSource(x)
         // the trace starts from every light, and the picture light-traces every one (codegen LIGHTS:
         // the camera's paths count a light's face only where these photons cannot connect)
         const list = sources.map(describe)
@@ -245,7 +258,7 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
         if (d !== SRC.text) { SRC.text = d; try { table.refresh?.() } catch { } try { raysTable?.refresh?.() } catch { } }
         raysSay()
         oplFollowRange()
-        // the data's lists follow the scene's lights and detector materials
+        // the data's lists follow the scene's lights and detectors
         buildData()
         if (mixSeen) mixBuild()
     }, 500)
@@ -409,8 +422,21 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
         O.drawPaths(true, { colorMode: V.colour, brightness: V.brightness, maxOpl: oplLimit() })
         // an analysis has the module: Live traces them between its rounds, and ▶ Run's end starts them (pauseRays)
         if (held) return
-        O.live(true, () => { push(); return { rays: T.rays | 0, steps: T.steps | 0 } }, (r, err) => {
-            if (err) { say(`rays stopped: ${err.message}`); showRays(false) }
+        /* THROUGH A STRUCTURAL EDIT, as Live's rounds (liveRounds below): nothing traced while a scene is built or swapped
+           in, and a trace that fails with the scene changed or a build begun since it started is let go -- the next is
+           of the new scene. Only one that fails with the scene as it was switches the rays off. They switched off at
+           any failure (the user, 2026-10-28: "often shuts off ... need to manually enable the ray view"), and every
+           edit that rebuilds the scene, the background bake once the edits stand still among them, is such a window. */
+        let scene = null, builds = 0
+        O.live(true, () => {
+            if (sceneBusy()) return null
+            push()
+            scene = RT.scene; builds = LIVE.builds
+            return { rays: T.rays | 0, steps: T.steps | 0 }
+        }, (r, err) => {
+            if (!err) return
+            if (RT.scene !== scene || LIVE.builds !== builds || sceneBusy()) return true
+            say(`rays stopped: ${err.message}`); showRays(false)
         })
     }
     /* an analysis needs the module to itself (a second trace while one runs is refused): the live rays
@@ -518,7 +544,7 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
     // THE DATA every chart is made from: in the Analysis pane, once -- not repeated on each chart
     //==================================================================================================================
     /* THE FAR FIELD (optics/farfield.js). WHAT FEEDS IT is a choice, because which rays count is the
-       user's question: every ray that leaves the scene, or every ray arriving at one DETECTOR material --
+       user's question: every ray that leaves the scene, or every ray arriving at one DETECTOR object --
        a surface made to catch the light of interest (the rays through the lens, not the ones off the
        mount). Either way a ray is binned by its DIRECTION alone: the luminaire seen from far away.
        THE FRAME is a light's: gamma = 0 along its axis (+z, where it shines), C = 0 along its +x.
@@ -539,11 +565,23 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
     const symmetry = () => F.rot ? 'rotational' : 'none'
     const DG = { '0.25°': 0.25, '0.5°': 0.5, '1°': 1, '2°': 2, '2.5°': 2.5, '5°': 5 }
     const DC = { '1°': 1, '2.5°': 2.5, '5°': 5, '10°': 10, '15°': 15, '22.5°': 22.5, '30°': 30, '45°': 45, '90°': 90 }
-    const detectorMats = () => (BUILDER?.doc?.materials || []).map((m, i) => ({ m, id: i + 2 }))
-        .filter(({ m }) => m.type === 'detector' || m.type === 'limiter')
+    /* THE DETECTORS: the scene's objects whose optics role is detector or limiter (0.83.0: an object's role, builder/model.js
+       OPTICS_ROLES -- a material's type before), each with the tag the optics trace knows it by (codegen detectorTags:
+       tag k is opticsTags[k - 1]). Only those the scene shown has compiled in: none while its analysis feature is off */
+    const detectorObjects = () => {
+        const tags = RT.scene?.opticsTags ?? RT.scene?.tags ?? [], out = []
+        for (const t of RT.scene?.detectorTags || []) {
+            const id = tags[t - 1]
+            if (id == null) continue
+            const find = n => n?.id === id ? n : (n?.children || []).map(find).find(Boolean)
+            const node = BUILDER?.doc ? find(BUILDER.doc.root) : null
+            out.push({ id, tag: t, label: node?.label || id })
+        }
+        return out
+    }
     const fromOptions = () => {
         const from = { 'escaping rays': 'escaped' }
-        for (const d of detectorMats()) from[`at ${d.m.label || `material ${d.id}`}`] = `mat:${d.id}`
+        for (const d of detectorObjects()) from[`at ${d.label}`] = `obj:${d.id}`
         return from
     }
     const lightOptions = () => {
@@ -555,8 +593,9 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
     }
     const farSettings = () => {
         const x = isCustom() ? null : (found.sources || [])[F.light]
-        const mode = F.from === 'escaped' ? 'escaped' : F.from.startsWith('mat:') ? 'detector' : 'off'
-        return { mode, material: mode === 'detector' ? +F.from.slice(4) : 0,
+        const det = F.from.startsWith('obj:') ? detectorObjects().find(d => d.id === F.from.slice(4)) : null
+        const mode = F.from === 'escaped' ? 'escaped' : det ? 'detector' : 'off'
+        return { mode, material: 0, tag: det ? det.tag : 0,
                  nC: Math.round(360 / F.dC), nG: Math.round(180 / F.dG) + 1,
                  axis: (isCustom() ? F.axisV : x?.normal ?? [0, 0, 1]).map(v => F.flip ? -v : v), c0: x?.u ?? [1, 0, 0] }
     }
@@ -587,7 +626,7 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
         opts['the far field on a plane'] = 'plane'
         return opts
     }
-    /* the lists follow the scene (its detector materials, its lights) and the analysis (the objects hit):
+    /* the lists follow the scene (its detectors, its lights) and the analysis (the objects hit):
        a choice that is no longer in its list goes back to the first */
     const keepChoices = () => {
         if (!Object.values(fromOptions()).includes(F.from)) F.from = 'escaped'
@@ -653,7 +692,7 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
     /* THE POINTER, shared: an angle on the far field's charts, and on the map's a place on the map (every map
        marks it: two maps side by side are read at the same place), a radius about its point (rings and encircled
        flux mark the same one) or a profile's x */
-    const hover = { angle: null, pos: null, r: null, px: null }
+    const hover = { angle: null, pos: null, r: null, px: null, nm: null }
     const draw = (...ids) => {
         for (const id of ids) {
             const p = panes[id]
@@ -729,22 +768,17 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
             return v
         }
         const hits = lastMap?.hits
-        if (!hits?.length) return { why: 'No detector hits yet: give a surface a detector material (Builder), then ▶ Run in the Analysis pane.' }
-        /* WHAT IT COVERS: a zoom when there is one; else the whole detector, from its measured box --
-           the node the hits' tag names, its box's corners in the world (boxes.js; null until measured,
-           and then the map is where the light landed) -- else where the light landed */
-        const tag = tagOf()
-        const id = (RT.scene?.opticsTags ?? RT.scene?.tags)?.[tag - 1]
-        const corners = IL.area === 'detector' && id && boxes && BUILDER?.doc ? boxes.corners(BUILDER.doc, id) : null
-        const range = IL.zoom ? rangeOfView(IL.zoom) : corners ? rangeOfPoints(corners) : null
-        const covers = IL.zoom ? 'zoomed' : corners ? 'the whole detector'
-            : IL.area === 'detector' ? 'where the light landed (the detector\'s box is not measured yet)' : 'where the light landed'
-        const key = [tag, MP.cells, MP.smooth, MP.bandwidth, MP.k, RT.scene?.unit, IL.area, JSON.stringify(IL.zoom), JSON.stringify(corners)].join('|')
+        if (!hits?.length) return { why: 'No detector hits yet: make an object a detector (Builder: its Optics-Analysis box; the scene\'s optics analysis on), then ▶ Run in the Analysis pane.' }
+        const { tag, range, covers, key: setKey, mpu } = mapSetup()
+        // the hits past the list (OVER below), when binned for the map as it is set up now
+        const over = lastMap.over?.key === setKey ? lastMap.over : null
+        const key = `${setKey}|${over?.batches ?? 0}`
         if (ilMemo?.key === key && ilMemo.hits === hits) return ilMemo.v
         const list = hits.filter(h => h.tag === tag)
-        const mpu = UNITS[RT.scene?.unit] ?? 1
+        const K = lastMap.kept + (over?.batches ?? 0)
         const m0 = list.length >= 3 ? detectorMap(list, { cells: MP.cells | 0, metresPerUnit: mpu, unit: lastMap.unit,
-                                                           smooth: MP.smooth, bandwidth: MP.bandwidth, k: MP.k | 0, range }) : null
+                                                           smooth: MP.smooth, bandwidth: MP.bandwidth, k: MP.k | 0, range,
+                                                           more: over ? { sum: over.sum, w: lastMap.kept / K, s: 1 / K } : null }) : null
         let v
         if (!m0) v = { why: 'Too few hits on that detector for a map.' }
         else {
@@ -752,10 +786,54 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
             const offB = m0.axisNames ? m0.origin[0] * m0.v[0] + m0.origin[1] * m0.v[1] + m0.origin[2] * m0.v[2] : 0
             const m = { ...m0, range: { a: [m0.range.a[0] + offA, m0.range.a[1] + offA], b: [m0.range.b[0] + offB, m0.range.b[1] + offB] },
                         lengthUnit: RT.scene?.unit ?? 'units', axisNames: m0.axisNames ?? ['u (fitted)', 'v (fitted)'] }
-            v = { m, covers, name: nameOfTag(tag, `tag ${tag}`) }
+            v = { m, list, covers, name: nameOfTag(tag, `tag ${tag}`) }
         }
         ilMemo = { key, hits, v }
         return v
+    }
+    /* WHAT A DETECTOR MAP IS OF, as the map is set up now: the detector (`tags`: the ones there are hits on, when the
+       map's choice is none of them -- the first, as keepChoices will choose), what it covers, and a key that changes
+       with any of it. WHAT IT COVERS: a zoom when there is one; else the whole detector, from its measured box -- the
+       node the hits' tag names, its box's corners in the world (boxes.js; null until measured, and then the map is
+       where the light landed) -- else where the light landed */
+    const mapSetup = (tags = null) => {
+        let tag = tagOf()
+        if (tags?.size && !tags.has(tag)) tag = Math.min(...tags)
+        const id = (RT.scene?.opticsTags ?? RT.scene?.tags)?.[tag - 1]
+        const corners = IL.area === 'detector' && id && boxes && BUILDER?.doc ? boxes.corners(BUILDER.doc, id) : null
+        const range = IL.zoom ? rangeOfView(IL.zoom) : corners ? rangeOfPoints(corners) : null
+        const covers = IL.zoom ? 'zoomed' : corners ? 'the whole detector'
+            : IL.area === 'detector' ? 'where the light landed (the detector\'s box is not measured yet)' : 'where the light landed'
+        const key = [tag, MP.cells, MP.smooth, MP.bandwidth, MP.k, RT.scene?.unit, IL.area, JSON.stringify(IL.zoom), JSON.stringify(corners)].join('|')
+        return { tag, range, covers, key, mpu: UNITS[RT.scene?.unit] ?? 1 }
+    }
+    /* THE HITS PAST THE LIST (the user, 2026-11-07: "when doing analysis - map and live, cumulative, the 2d Map stops
+       converging after a little while"). The map is made from a list of at most MAP_HITS_MAX hits, and Live's rounds added
+       up stopped adding to it once it was full. Past it, each batch's hits are binned as they come into the cells of
+       the map as it is set up now (detmap.js mapSum: the list's own frame, so both land in the same cells), and the map
+       adds the sum in, every batch weighed alike. OF ONE LIST AND ONE SETUP: another list (a new Run, Σ starting over)
+       starts a new sum, and a change to the map's setup (its cells, smoothing, detector, zoom) starts this one over --
+       its batches binned in the old cells are let go, and the map is the list's alone until the next batch. The k
+       nearest are not linear in the hits, so they bin nothing: that map stays the list's, as before. */
+    let OVER = null
+    const overFor = list => OVER?.list === list ? OVER : (OVER = { list, tags: null, key: null, sum: null, batches: 0 })
+    /** One batch past the list: `read` its hits only when there is a sum to bin them into. */
+    const overAdd = async (over, read) => {
+        over.tags ??= new Set(over.list.map(h => h.tag))     // the list is full: it no longer changes
+        const S = mapSetup(over.tags)
+        if (S.key !== over.key) {
+            const list = over.list.filter(h => h.tag === S.tag)
+            const F = MP.smooth === 'knn' ? null : mapFrame(list, { cells: MP.cells | 0, range: S.range })
+            Object.assign(over, { key: S.key, batches: 0, tag: S.tag,
+                                  sum: F ? mapSum(F, { smooth: MP.smooth, bandwidth: MP.bandwidth, metresPerUnit: S.mpu,
+                                                       colour: list.every(h => Array.isArray(h.xyz)) }) : null })
+        }
+        if (!over.sum) return
+        const h = await read()
+        if (!h) return
+        // every batch read counts, hits on the detector or none: each is a whole estimate, an empty one too
+        addToMapSum(over.sum, h.hits.filter(x => x.tag === over.tag))
+        over.batches++
     }
     /* THE POINT the profiles, rings and encircled flux are taken about: one for every chart, found on the
        illuminance whatever a chart shows -- the brightest cell is a bright one */
@@ -803,6 +881,29 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
         : s.isolines === 'relative' ? [0.1, 0.25, 0.5, 0.75, 0.9].map(f => V.isE ? f * V.qm.hi : V.qm.lo + f * (V.qm.hi - V.qm.lo))
         : ticks(V.isE ? 0 : V.qm.lo, V.qm.hi, 5).filter(v => v > (V.isE ? 0 : V.qm.lo) && v < V.qm.hi)
     const pos = (V, v) => `${num(v)} ${V.lu}`
+    /* WHAT THE MAP'S PLACE RECEIVED BY WAVELENGTH (0.83.0): the hits the map is made of -- the detector chosen, zoomed or
+       whole -- binned (optics/spectrum.js), once a map. A trace in colour has no wavelengths to bin: the chart says where
+       the trace by wavelength is switched on. */
+    let SPM = { m: null, S: null }
+    const spectrumView = () => {
+        if (isPlane()) return { why: 'The far field on a plane has no spectrum: choose a detector (Detector › map of) for the light it received.' }
+        const cur = currentIllum()
+        if (!cur?.m) return { why: cur?.why ?? '' }
+        if (SPM.m !== cur.m) SPM = { m: cur.m, S: detectorSpectrum(cur.list.filter((h, i) => cur.m.within[i])) }
+        if (!SPM.S) return { why: 'This trace was in colour, not by wavelength. For the spectrum a detector received, switch on '
+                                  + 'Spectral optics trace in the scene\'s Optical features (Builder, the scene\'s row; or Expert), then ▶ Run.' }
+        return { cur, S: SPM.S }
+    }
+    const standIn = () => (O.layout?.ownSpectrum ?? []).some(own => !own)
+    const spectrumLine = (V, S) => {
+        const r = S.cri, se = S.criSe, f = (v, e) => `${Math.round(v)}${e != null ? ` ± ${Math.max(1, Math.round(e))}` : ''}`
+        return [S.xy ? `x ${S.xy[0].toFixed(4)} y ${S.xy[1].toFixed(4)}` : '',
+                S.cct != null ? `${Math.round(S.cct)} K Duv ${S.duv >= 0 ? '+' : ''}${S.duv.toFixed(4)}` : 'no CCT',
+                r ? `Ra ${f(r.Ra, se?.Ra)} · R9 ${f(r.R[8], se?.R9)}${r.valid ? '' : ` (DC ${r.dc.toExponential(1)}: past 5.4e-3, the index means little)`}` : 'no CRI (no CCT)',
+                `${num(S.W)} W · ${S.hits} hits`, V.cur.covers === 'zoomed' ? 'zoomed' : '',
+                standIn() ? 'a light given by its colour stands in as a spectrum of that colour: give it a spectrum for its own' : '']
+            .filter(Boolean).join(' · ')
+    }
 
     const DRAW = {
         polar: farChart((c, o, s) => drawPolar(c, { ...o, view: s.view })),
@@ -846,6 +947,14 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
             p.readout.textContent = q ? `ring at r ${pos(V, q.x)}: ${pm(q.y, q.se)} ${V.qm.unit} (${q.cells} cells${q.full ? '' : ', past the map\'s edge'})` : ''
             return L
         },
+        spectrum: p => {
+            const V = spectrumView()
+            if (!V.S) return blank(p, V.why)
+            const L = drawSpectrum(p.c, { values: V.S.values, lo: V.S.lo, step: V.S.step, hover: hover.nm,
+                                          unit: p.s.scale === 'absolute' ? 'W/nm' : '', title: V.cur.name })
+            p.readout.textContent = spectrumLine(V, V.S)
+            return L
+        },
         encircled: p => {
             const V = mapView()
             if (!V.m) return blank(p, V.why)
@@ -876,6 +985,7 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
         profiles: (p, L, x, y) => { hover.px = xyAt(L, x, y); drawKinds('profiles') },
         rings: (p, L, x, y) => { hover.r = xyAt(L, x, y); hover.pos = null; drawKinds('rings', 'encircled') },
         encircled: (p, L, x, y) => { hover.r = xyAt(L, x, y); hover.pos = null; drawKinds('rings', 'encircled') },
+        spectrum: (p, L, x) => { const nm = spectrumAt(L, x); if (nm !== hover.nm) { hover.nm = nm; drawKinds('spectrum') } },
     }
 
     /* A CHART'S PANEL, filled: the host's, at the start or when a chart is made here. Its own strip along the
@@ -896,7 +1006,7 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
         cv.addEventListener('pointermove', e => { const r = cv.getBoundingClientRect(); if (p.layout) MOVE[p.type](p, p.layout, e.clientX - r.left, e.clientY - r.top) })
         cv.addEventListener('pointerleave', () => {
             if (p.drag) return                    // held: the pointer is captured, and comes back
-            Object.assign(hover, { angle: null, pos: null, r: null, px: null })
+            Object.assign(hover, { angle: null, pos: null, r: null, px: null, nm: null })
             if (FAR_CHARTS.includes(p.type)) drawFarCharts(); else drawMapCharts()
         })
         if (p.type === 'map') mapPointer(p)
@@ -984,7 +1094,7 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
     /* the kept hits as a file: position, flux, the direction they arrived from, the object, the colour */
     const hitsCSV = () => {
         const hits = lastMap?.hits
-        if (!hits?.length) return say('no detector hits: give a surface a detector material (Builder), then ▶ Run')
+        if (!hits?.length) return say('no detector hits: make an object a detector (its Optics-Analysis box), then ▶ Run')
         const u = lastMap.unit
         const rows = [`# ${hits.length} detector hits${lastMap.note || ''}; flux in ${u} (each batch's share); X_, Z_ the colour in the same unit`,
                       'x,y,z,flux_' + u + ',dx,dy,dz,object,X_' + u + ',Z_' + u]
@@ -997,6 +1107,11 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
         igamma: [['table', 'Save the intensity table (CSV)', farCSV]],
         map: [['table', 'Save the map (CSV)', ilCSV],
               ['download', 'Save the detector hits the analysis kept (CSV): position, flux, direction, object, colour', hitsCSV]],
+        spectrum: [['table', 'Save the spectrum (CSV): nm, W/nm', () => {
+            const V = spectrumView()
+            if (!V.S) return say(V.why)
+            saveText(spectrumCSV(V.S, V.cur.name), 'spectrum.csv')
+        }]],
     }
     /* A CHART'S OWN STRIP (lib/pathtracer/strip.js), on the chart: the user, 2026-10-02, "put the controls for the
        chart (what it shows) into the chart itself. Not in the analysis pane" -- with two maps side by side, each
@@ -1065,6 +1180,9 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
                 options: [{ value: 'lux', text: 'steps', tip: 'Isolines at round steps' }, { value: 'relative', text: '%', tip: 'Isolines at 10, 25, 50, 75 and 90 % of the range' },
                           { value: 'off', text: 'off', tip: 'No isolines' }] })
             back = S.action('back', 'Zoomed: back to the whole detector (or double-click the map)', () => { IL.zoom = null; mapChanged() })
+        } else if (type === 'spectrum') {
+            S.choice('scale', { tip: 'The power axis', get: () => s.scale, set: keep('scale', go),
+                options: [{ value: 'relative', text: 'rel', tip: 'Relative to its peak' }, { value: 'absolute', text: 'W/nm', tip: 'Watts per nanometre' }] })
         } else {
             S.choice('about', { tip: 'The point the profiles, rings and encircled flux are taken about: one for all of them. Press on a map to put it there.',
                 get: () => IL.through, set: v => { IL.through = v; syncAbout(); drawMapCharts(); results() },
@@ -1261,14 +1379,19 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
     }
 
     /* THE DETECTOR HITS the map is made of: an analysis's, every batch's together, each batch carrying
-       its share of the flux -- up to MAP_HITS of them, beyond which the later batches are left out (each
+       its share of the flux -- up to MAP_HITS_MAX of them, past which the later batches are binned, not kept (each
        batch is a whole estimate on its own, so leaving some out adds noise, not bias). The hit buffer
        holds 262 144, more than an analysis batch's rays, and a ray stops at the first detector it
        reaches, so no batch overflows it. ONLY THE ANALYSIS WRITES THEM: the live rays trace into the
        same buffer, and their 2 000 rays are a look, not a measurement. LIVE'S ROUNDS ADDED UP share the one
-       allowance: the map stops filling in at it, while the totals and the far field go on converging. */
+       allowance -- and past it the map no longer stopped (0.84.0): the later batches' hits are binned into the map's
+       cells as they come (OVER above), so the map goes on converging as the totals and the far field do. What reads
+       the hits themselves -- the k nearest, the spectrum of a place, the hits' CSV, a script's map -- reads the list. */
     // a hit kept for the map is a JS object of a few hundred bytes: half a million is ~100 MB
-    const MAP_HITS = 500000
+    const MAP_HITS_MAX = 500000
+    // `mapHits`: a smaller allowance, asked of a function each round -- optics/test/page.check.mjs's, so that the hits
+    // past it are binned by something with no half a million hits to make
+    const mapHitsMax = () => mapHits?.() ?? MAP_HITS_MAX
 
     const buttons = () => {
         runBtn.disabled = analysing || LIVE.on
@@ -1282,28 +1405,38 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
         sumBtn.title = LIVE.sum ? 'Σ on: Live\'s rounds add up while nothing changes -- the error bars shrink, the map fills in. Click for every round on its own'
             : 'Σ off: every round of Live on its own, the same number of rays each, to compare one with another. Click to add them up while nothing changes'
     }
-    const runAnalysis = async () => {
-        if (analysing || LIVE.on) return say(LIVE.on ? 'the analysis is live: switch Live off to run it once' : 'an analysis is already running')
+    /* ONE ANALYSIS, as ▶ Run runs it -- and a script (O.analyse below), which needs what it throws rather than a line
+       saying it failed: so the run is here, and the button's handler only says. */
+    const analyseOnce = async () => {
+        if (LIVE.on) throw new Error('the analysis is live: switch Live off to run it once')
+        if (analysing) throw new Error('an analysis is already running')
         analysing = true; buttons()
         const resume = await pauseRays()
         try {
             await analysis()
             // the run bar says how many and when; its tooltip how long -- the status line has nothing to add but the dust's absence
             say(hazeNote())
-        } catch (e) {
+        } finally { analysing = false; resume(); buttons() }
+    }
+    const runAnalysis = async () => {
+        if (analysing || LIVE.on) return say(LIVE.on ? 'the analysis is live: switch Live off to run it once' : 'an analysis is already running')
+        try { await analyseOnce() } catch (e) {
             console.error('[optics]', e)
             say(`analysis failed: ${e.message}`)
-        } finally { analysing = false; resume(); buttons() }
+        }
     }
     runBtn.onclick = runAnalysis
 
     /* ONE ANALYSIS'S BATCHES: the ray count in batches, into an estimate (optics/estimate.js: each number the mean
        over the batches with the standard error from their spread), and the detector hits kept for the map -- whole
-       batches of them while there is room (`room`, of MAP_HITS). ▶ Run shows each readback's batches as they come; a
+       batches of them while there is room (`room`, of MAP_HITS_MAX). ▶ Run shows each readback's batches as they come; a
        live round shows nothing itself: liveRounds decides what it is shown with. Throws what the trace throws, and
        STOPPED when Live is switched off during it. */
     const STOPPED = new Error('stopped'), SCENE_CHANGED = new Error('the scene changed during the round')
-    const traceRound = async ({ live = false, room = MAP_HITS } = {}) => {
+    /* `extend`: the list the batches past the room extend (OVER): the round's own hits by default, Live's added-up
+       list when the round adds to it with no room left, null for none (a round adding to a list it has room in: those
+       few batches are left out, as before, and the next round extends the list it fills) */
+    const traceRound = async ({ live = false, room = mapHitsMax(), extend } = {}) => {
         const scene = RT.scene
         push()
         const { rays, batches } = batchesFor(raysTotal())
@@ -1315,11 +1448,12 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
             if (live && !LIVE.on) throw STOPPED
             // the batches of one readback arrive together: drawn once, at the last of them
             if (!live && (batch?.last ?? true)) { ANA.results = r; ANA.far = O.far; render(r); farRead(); say(`batch ${b} of ${batches}`) }
+            // read back with the batch (index.js); a stand-in module without it (a check's, a mockup's): as it stands
+            const read = async () => batch?.hits ? batch.hits() : await O.readHits()
             if (hits.length < room) {
-                // read back with the batch (index.js); a stand-in module without it (a check's, a mockup's): as it stands
-                const h = batch?.hits ? batch.hits() : await O.readHits()
+                const h = await read()
                 if (h) { for (const x of h.hits) hits.push(x); kept++ }
-            }
+            } else if (extend !== null) await overAdd(overFor(extend ?? hits), read)
         } })
         // a live round the scene was swapped under is of two scenes: let go, as one that failed for it is (liveRounds)
         if (live && RT.scene !== scene) throw SCENE_CHANGED
@@ -1336,7 +1470,11 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
                              secs, live, rounds })
         if (map) {
             const n = Math.max(1, kept)
-            lastMap = { hits: hits.map(h => ({ ...h, flux: h.flux / n, xyz: h.xyz?.map(v => v / n) })), unit: 'lm', note: ` from ${kept} of ${r.batches} batches` }
+            // the hits past the list, as they stand now: a copy, for the next round goes on adding to them
+            const ov = OVER?.list === hits && OVER.sum && OVER.batches ? { key: OVER.key, batches: OVER.batches, sum: copyMapSum(OVER.sum) } : null
+            const past = ov ? ` and ${ov.batches} more binned (${ov.sum.hits.toLocaleString()} hits past the ${hits.length.toLocaleString()} kept)` : ''
+            lastMap = { hits: hits.map(h => ({ ...h, flux: h.flux / n, xyz: h.xyz?.map(v => v / n), ...(h.w ? { w: h.w.map(v => v / n) } : {}) })),
+                        kept: n, over: ov, unit: 'lm', note: ` from ${kept} of ${r.batches} batches${past}` }
         }
         buildData()
         render(r); farRead(); if (map) drawMapCharts(); results(); sayWhen()
@@ -1382,7 +1520,8 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
                 const scene = RT.scene, builds = LIVE.builds, resets = RT.resets?.(), key = liveKey()
                 const adds = LIVE.sum && !!ACC.est && ACC.scene === scene && ACC.resets === resets && ACC.key === key
                 let round
-                try { round = await traceRound({ live: true, room: adds ? MAP_HITS - ACC.hits.length : MAP_HITS }) } catch (e) {
+                const room = adds ? mapHitsMax() - ACC.hits.length : mapHitsMax()
+                try { round = await traceRound({ live: true, room, extend: !adds ? undefined : room <= 0 ? ACC.hits : null }) } catch (e) {
                     if (e === STOPPED || (RT.scene === scene && LIVE.builds === builds && !sceneBusy())) throw e
                     ACC.est = null
                     await nextFrame(); continue
@@ -1393,9 +1532,13 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
                     ACC.est.merge(round.est)
                     for (const h of round.hits) ACC.hits.push(h)
                     ACC.kept += round.kept; ACC.rounds++
-                } else Object.assign(ACC, { est: round.est, hits: round.hits, kept: round.kept, rounds: 1, mapHits: -1, scene, resets, key })
-                const map = ACC.hits.length > 1.25 * ACC.mapHits
-                if (map) ACC.mapHits = ACC.hits.length
+                } else Object.assign(ACC, { est: round.est, hits: round.hits, kept: round.kept, rounds: 1, mapHits: -1, mapOver: null, scene, resets, key })
+                // made again when the hits have grown by a quarter -- the list's and those binned past it together -- or
+                // when what is binned past it started over for another setup of the map
+                const ov = OVER?.list === ACC.hits && OVER.sum ? OVER : null
+                const n = ACC.hits.length + (ov?.sum.hits ?? 0)
+                const map = n > 1.25 * ACC.mapHits || (ov?.key ?? null) !== ACC.mapOver
+                if (map) { ACC.mapHits = n; ACC.mapOver = ov?.key ?? null }
                 show({ est: ACC.est, hits: ACC.hits, kept: ACC.kept, secs: round.secs, live: true, rounds: ACC.rounds, map })
                 if (moved) ACC.est = null             // of two states: the next round starts over
                 if (LIVE.on && V.show) await raysBetween()
@@ -1427,7 +1570,7 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
     /* ANOTHER CHART from the host's menu (Analysis › New chart): O.addChart('map') -- on the module the page
        returns, because that is what the host keeps (window.OPTICS); its id, or null where no panel is made */
     O.addChart = type => addChart(type)
-    /* THE PICTURE'S LIGHTS FOLLOW A MOVE AT ONCE (0.61.4): the host calls this after every live change (index.html,
+    /* THE PICTURE'S LIGHTS FOLLOW A MOVE AT ONCE (0.61.4): the host calls this after every live change (app.html,
        BUILDER.afterLive: a gizmo's drag, a slider, the timeline). The lights' photons start from the source table this
        reads off the document, and it was read only by the half-second tick above, or by the live rays' rounds while they
        were shown: a lamp group dragged moved its reflector and its face every frame (uniforms) while its photons kept
@@ -1435,5 +1578,93 @@ export function installOpticsPage(host, { RT, WG, BUILDER, tableIn, onEdit = () 
        second, its photons leaving from behind the reflector's new place (the user, 2026-10-16, Reflector.json).
        A table is about 0.03 ms of the CPU (measured on the user's laptop, three scenes). */
     O.followScene = () => { followScene() }
+    /* THE DETECTOR MAP AS IT IS SHOWN: its flux and its hits -- the list's and those binned past it (OVER) -- or null
+       with none. For optics/test/page.check.mjs, which has no other way to read the map's own numbers. */
+    O.mapShown = () => { const m = isPlane() ? null : currentIllum()?.m; return m ? { total: m.total, hits: m.hits, more: !!m.moreUsed } : null }
+
+    /*==================================================================================================================
+      FOR A SCRIPT (tools/scriptapi.js, 0.82.0): the analysis as ▶ Run runs it, its setup as the Analysis pane's data
+      sets it, and what it found as data. THE PANE'S OWN, not a second analysis: a script's run is shown in the pane and
+      the charts as a click's is, and a click's is what a script reads afterwards -- one result, never two that differ.
+    ==================================================================================================================*/
+    /** What the next analysis runs with: the rays, what feeds the far field and its axis and grid, and the choices the
+     *  scene offers (`fromOptions` and `axisOptions`, label -> value, as the pane lists them). */
+    O.analysisSetup = () => {
+        keepChoices()
+        return { rays: raysTotal(), from: F.from, axis: isCustom() ? F.axisV.slice() : F.light, flip: !!F.flip, dG: F.dG, dC: F.dC,
+                 fromOptions: fromOptions(), axisOptions: Object.fromEntries(Object.entries(lightOptions()).filter(([, v]) => v !== -1)),
+                 dGOptions: Object.values(DG), dCOptions: Object.values(DC) }
+    }
+    /** Change the setup, any of { rays, from, axis, flip, dG, dC } -- each checked first, and a refusal (thrown, naming
+     *  what is allowed) changes nothing. `from`: 'escaped', a detector object by its label or id, or a value of
+     *  fromOptions; `axis`: a light by its label or its place in axisOptions, or a vector [x, y, z]. The pane follows. */
+    O.setupAnalysis = (patch = {}) => {
+        const known = ['rays', 'from', 'axis', 'flip', 'dG', 'dC']
+        for (const k of Object.keys(patch)) if (!known.includes(k)) throw new Error(`analysis setup: '${k}' is not one of ${known.join(', ')}`)
+        const next = {}
+        if (patch.rays !== undefined) {
+            const n = Math.round(+patch.rays)
+            if (!(n >= 1 && n <= RAYS_MAX)) throw new Error(`analysis setup: rays must be 1 to ${RAYS_MAX.toLocaleString()}`)
+            // the multiplier the count reads best with: the largest that leaves a whole number of at least 1
+            const times = Object.values(TIMES).filter(t => t <= n && Number.isInteger(n / t)).pop() ?? 1
+            next.T = { count: n / times, times }
+        }
+        if (patch.from !== undefined) {
+            const opts = fromOptions(), v = String(patch.from)
+            const obj = detectorObjects().find(d => d.label === v || d.id === v)
+            const hit = Object.values(opts).includes(v) ? v : opts[v] ?? (obj ? `obj:${obj.id}` : null)
+            if (!hit) throw new Error(`analysis setup: from '${v}' is none of ${['escaped', ...detectorObjects().map(d => d.label)].join(', ')}`)
+            next.from = hit
+        }
+        if (patch.axis !== undefined) {
+            const a = patch.axis
+            if (Array.isArray(a)) {
+                if (!(a.length === 3 && a.every(Number.isFinite) && Math.hypot(...a) > 0)) throw new Error('analysis setup: an axis vector is three numbers, not all 0')
+                next.axis = { light: -1, axisV: a.slice(), axisText: a.join(', ') }
+            } else {
+                const opts = Object.entries(lightOptions()).filter(([, v]) => v !== -1)
+                const i = typeof a === 'number' ? (opts.some(([, v]) => v === a) ? a : null) : opts.find(([k]) => k === String(a))?.[1]
+                if (i == null) throw new Error(`analysis setup: axis '${a}' is none of the lights (${opts.map(([k]) => k).join(', ')}) nor a vector`)
+                next.axis = { light: i }
+            }
+        }
+        if (patch.flip !== undefined) next.flip = !!patch.flip
+        for (const [k, list] of [['dG', Object.values(DG)], ['dC', Object.values(DC)]]) if (patch[k] !== undefined) {
+            if (!list.includes(+patch[k])) throw new Error(`analysis setup: ${k} must be one of ${list.join(', ')} (degrees)`)
+            next[k] = +patch[k]
+        }
+        if (next.T) { Object.assign(T, next.T); showCount() }
+        const far = 'from' in next || 'axis' in next || 'flip' in next || 'dG' in next || 'dC' in next
+        if ('from' in next) F.from = next.from
+        if (next.axis) Object.assign(F, next.axis)
+        if ('flip' in next) F.flip = next.flip
+        if ('dG' in next) F.dG = next.dG
+        if ('dC' in next) F.dC = next.dC
+        if (far) { buildData(true); farChanged() }
+        return O.analysisSetup()
+    }
+    /** Run the analysis (with `setup` first, as setupAnalysis takes it) and resolve with what it found (O.analysis). Throws
+     *  what the trace throws, and while Live is on or another analysis runs. */
+    O.analyse = async (setup = null) => {
+        if (setup) O.setupAnalysis(setup)
+        await analyseOnce()
+        return O.analysis()
+    }
+    /** WHAT THE LAST ANALYSIS FOUND, as data, or null before one: its totals (estimate.js results), its far field (each bin's
+     *  flux and error, for optics/farfield.js), the detector hits it kept for the map (each batch's share of the flux,
+     *  as the map reads them), and what names them -- an object's tag its node's label, a detector's box its corners. */
+    O.analysis = () => {
+        if (!ANA.results) return null
+        const unit = RT.scene?.unit
+        return { results: ANA.results, far: ANA.far, rays: ANA.rays, at: ANA.at, stale: !!ANA.stale, live: !!ANA.live,
+                 hits: lastMap?.hits ?? [], hitsUnit: lastMap?.unit ?? 'lm', lengthUnit: unit ?? 'units', metresPerUnit: UNITS[unit] ?? 1,
+                 setup: O.analysisSetup(), haze: hazeNote(),
+                 tagName: t => nameOfTag(t, `tag ${t}`),
+                 matName: i => nameOfMat(i),
+                 corners: t => {
+                     const id = (RT.scene?.opticsTags ?? RT.scene?.tags)?.[t - 1]
+                     return id && boxes && BUILDER?.doc ? boxes.corners(BUILDER.doc, id) : null
+                 } }
+    }
     return O
 }

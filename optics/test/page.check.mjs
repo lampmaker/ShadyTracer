@@ -1,7 +1,7 @@
 // node optics/test/page.check.mjs
 //
 // THE OPTICS PAGE IN A BROWSER: optics/test/page.html -- the Analysis pane and the chart panels as
-// index.html makes them, over a stand-in optics module whose analysis is made-up data -- driven headless.
+// app.html makes them, over a stand-in optics module whose analysis is made-up data -- driven headless.
 // The application's own page stops at WebGPU, so without this the pane, the charts, their bars, the
 // shared hover, the zoom and the results were code nothing ever ran (CLAUDE.md: a feature nothing
 // exercises has never run). It checks:
@@ -11,7 +11,8 @@
 //   Save the chart (PNG): a file named with the chart's kind and the time, a second save in that second its own file
 //   the ray count: a number times a multiplier, 500k typed setting both, more than the most refused, either way
 //   Live: round after round, the count each; ▶ Run disabled; Σ off at first, each round on its own; with Σ the rounds
-//     adding up, and a reset of the picture starting them over; Σ off again; the rays traced between rounds and their own loop not started; switched off mid-round, the round let
+//     adding up, and a reset of the picture starting them over; past the map's allowance its hits binned, the map still
+//     filling in and each batch weighed alike (0.84.0); Σ off again; the rays traced between rounds and their own loop not started; switched off mid-round, the round let
 //     go and the totals as the whole rounds left them; the rays switched on
 //     during a ▶ Run start when it ends; no round while a scene is built (the run bar says it waits); a round the
 //     scene was swapped under let go, Live going on; one that fails with the scene as it was stops it, and says why
@@ -65,7 +66,7 @@ let failed = 0
 const ok = (n, c, x = '') => { if (!c) failed++; console.log((c ? 'ok    ' : 'FAIL  ') + n + (c ? '' : '  ' + x)) }
 await p.goto(`http://localhost:${port}/optics/test/page.html`); await p.waitForTimeout(900)
 
-const KEYS = ['map', 'polar', 'igamma', 'profiles', 'rings', 'encircled']
+const KEYS = ['map', 'polar', 'igamma', 'profiles', 'rings', 'encircled', 'spectrum']
 /* a chart by its id less 'optics.': 'map' is the first map, 'map.2' the one made after it. Its strip
    (lib/pathtracer/strip.js): each control SHOWN, by what it sets (data-key), and what it says -- a dropdown's
    chosen text, a segmented choice's lit word, a field's value; its actions shown, by their tooltips */
@@ -184,7 +185,7 @@ ok('back to the light\'s axis: the vector\'s row goes', await dataSelect('axis',
    && await asked() === JSON.stringify([[0, 0, 1], [1, 0, 0]]), `${await asked()} ${(await paneRows()).join('|')}`)
 // EACH CHART'S OWN CONTROLS, on it (the user, 2026-10-02), and none of them in the pane
 const WANT = { map: ['q', 'isolines'], polar: ['planes', 'log', 'view'], igamma: ['planes', 'log', 'span'],
-               profiles: ['about', 'q'], rings: ['about', 'q'], encircled: ['about'] }
+               profiles: ['about', 'q'], rings: ['about', 'q'], encircled: ['about'], spectrum: ['scale'] }
 ok('every chart has its own strip, first, with its controls and only those that apply', KEYS.every(k => st.bars[k]?.first && WANT[k].join() === st.bars[k].labels.join()),
    JSON.stringify(Object.fromEntries(KEYS.map(k => [k, st.bars[k]?.labels]))))
 ok('...each saying its value itself', st.bars.map.fields.q === 'Illuminance' && st.bars.map.fields.isolines === 'steps' && st.bars.polar.fields.planes === '0, 90'
@@ -245,6 +246,38 @@ st = await state()
 ok('pointing at the map reads the cell', /lx/.test(st.readouts.map), JSON.stringify(st.readouts))
 ok('...and the rings and encircled flux read the same radius', /ring at r/.test(st.readouts.rings) && /within r/.test(st.readouts.encircled), JSON.stringify(st.readouts))
 ok('...and the far field\'s charts let go of theirs', !st.readouts.polar, JSON.stringify(st.readouts))
+
+// THE SPECTRUM (0.83.0): a trace in colour has none -- the chart says where to switch it on, and reads nothing
+ok('a trace in colour: the spectrum reads nothing', st.readouts.spectrum === '', JSON.stringify(st.readouts.spectrum))
+ok('...its strip: rel or W/nm, and a CSV to save', st.bars.spectrum.fields.scale === 'rel' && st.bars.spectrum.tools.some(t => t.startsWith('Save the spectrum (CSV)')),
+   JSON.stringify(st.bars.spectrum))
+const specPx0 = await pixels('spectrum')
+await p.evaluate(() => { CHECK.O.spectralHits = true })
+await p.click('.shell-runbar button'); await p.waitForTimeout(1200)
+st = await state()
+ok('a trace by wavelength: the spectrum drawn, its colour and CRI said, of the detector\'s hits', (await pixels('spectrum')) !== specPx0
+   && /x 0\.\d{4} y 0\.\d{4}/.test(st.readouts.spectrum) && /Ra -?\d+ ± \d+ · R9 -?\d+ ± \d+/.test(st.readouts.spectrum) && /\d+ hits/.test(st.readouts.spectrum),
+   st.readouts.spectrum)
+;[x, y] = await at('spectrum', 0.5, 0.5)
+await p.mouse.move(x, y); await p.waitForTimeout(150)
+const specHover = await pixels('spectrum')
+;[x, y] = await at('spectrum', 0.3, 0.5)
+await p.mouse.move(x, y); await p.waitForTimeout(150)
+ok('...pointed at, drawn again at the wavelength under the pointer', (await pixels('spectrum')) !== specHover)
+ok('...W/nm: its own axis', await choose('spectrum', 'scale', 'W/nm') && (await p.waitForTimeout(150), (await state()).bars.spectrum.fields.scale === 'W/nm'))
+const spDl = p.waitForEvent('download', { timeout: 5000 }).catch(() => null)
+await p.evaluate(() => [...CHECK.el['optics.spectrum'].querySelectorAll('.chart-strip > button')].find(b => b.title.startsWith('Save the spectrum'))?.click())
+const spFile = await spDl
+const spText = spFile ? await (await import('node:fs/promises')).readFile(await spFile.path(), 'utf8') : ''
+ok('...saved: nm and W/nm, every 5 nm from 360 to 830', spFile?.suggestedFilename() === 'spectrum.csv' && /^nm,W_per_nm$/m.test(spText)
+   && /^360,/m.test(spText) && /^830,/m.test(spText) && spText.trim().split('\n').length === 2 + 95, spText.slice(0, 200))
+await p.evaluate(() => { CHECK.O.layout = { ownSpectrum: [false] } })
+await choose('spectrum', 'scale', 'rel'); await p.waitForTimeout(150)
+ok('...a light given by its colour said as a stand-in', /stands in/.test((await state()).readouts.spectrum), (await state()).readouts.spectrum)
+await p.evaluate(() => { CHECK.O.layout = undefined; CHECK.O.spectralHits = false })
+await p.click('.shell-runbar button'); await p.waitForTimeout(1200)
+st = await state()
+ok('...and a trace in colour again: nothing', st.readouts.spectrum === '', st.readouts.spectrum)
 
 // A CHART'S STRIP: a choice that brings a control of its own, a field typed
 ok('I – γ\'s log scale', await choose('igamma', 'log', 'log')); await p.waitForTimeout(200)
@@ -600,6 +633,41 @@ ok('...and started when it ends', (await liveState()).living === true)
 await p.evaluate(() => { CHECK.O.batchMs = 0 })
 await raysButton()
 
+/* THE MAP PAST ITS ALLOWANCE (0.84.0; the user, 2026-11-07: "when doing analysis - map and live, cumulative, the 2d Map
+   stops converging after a little while"). With room for 12 000 hits -- three of the stand-in's 5 000-hit batches --
+   Live's rounds added up go on adding to the map: its hits per lit cell keep growing round after round, where they
+   stopped at the allowance before, and every batch weighs alike, so its flux stays each batch's 0.16 lm */
+{
+    const mapNote = () => p.evaluate(() => [...document.querySelectorAll('.shell-note')].map(e => e.textContent).join(' | '))
+    const hpcOf = t => +(/about (\d+) hits per lit cell/.exec(t)?.[1] ?? NaN)
+    // the map of the screen's hits again (THE DATA above left it on the far field on a plane), and put back after
+    const mapOf = label => p.evaluate(l => {
+        const s = [...document.querySelectorAll('select')].find(s => [...s.options].some(o => o.textContent === 'the far field on a plane'))
+        s.value = [...s.options].find(o => l ? o.textContent === l : o.textContent !== 'the far field on a plane').value
+        s.dispatchEvent(new Event('change', { bubbles: true }))
+    }, label)
+    await mapOf(null); await p.waitForTimeout(300)
+    await p.evaluate(() => { CHECK.mapHits = 12000; CHECK.O.batchMs = 20 })
+    if (!(await sumOn())) await p.click('.shell-runbar .sum')
+    const d0 = (await liveState()).done
+    await p.click('.shell-runbar .live')
+    await p.waitForFunction(d => CHECK.O.done >= d + 2, d0, { timeout: 8000 }); await p.waitForTimeout(60)
+    const n1 = await mapNote(), h1 = hpcOf(n1)
+    await p.waitForFunction(d => CHECK.O.done >= d + 7, d0, { timeout: 15000 }); await p.waitForTimeout(60)
+    const n2 = await mapNote(), h2 = hpcOf(n2)
+    await p.click('.shell-runbar .live'); await p.waitForTimeout(400)
+    ok('Live with Σ past the map\'s allowance: the map goes on filling in, round after round', h1 > 0 && h2 > 2 * h1, `${h1} -> ${h2}: ${n2}`)
+    const shown = await p.evaluate(() => CHECK.O.mapShown()), tot = shown?.total
+    // every stand-in hit carries 0.16 / 5000 lm; a hit or two of the halo fall outside the screen's box, so the batches
+    // are the hits over 5 000 rounded, and the flux exactly theirs over that many batches -- w = 1 for the list, or the
+    // sum left out, would be far from it
+    const K = Math.round((shown?.hits ?? 0) / 5000), want = shown ? shown.hits * 0.16 / 5000 / K : NaN
+    ok('...every batch weighed alike: the map\'s flux each batch\'s 0.16 lm', shown?.more && K > 12000 / 5000 && Math.abs(tot - want) < 1e-12 * want
+       && Math.abs(tot - 0.16) < 1e-3, JSON.stringify({ ...shown, K, want }))
+    await p.evaluate(() => { CHECK.mapHits = undefined; CHECK.O.batchMs = 0 })
+    await mapOf('the far field on a plane'); await p.waitForTimeout(300)
+}
+
 /* LIVE THROUGH A STRUCTURAL EDIT: the renderer puts the new scene in before it builds, and its uniforms in after, so
    a round in between can be refused by name. While a scene is built no round starts; one the scene changed under is
    let go and the next goes on; one that fails with the scene as it was stops Live and says why. */
@@ -633,6 +701,38 @@ ok('a round failing with a build begun since it started: let go, and Live goes o
    JSON.stringify([ls, await noteNow()]))
 await p.evaluate(() => { CHECK.O.batchMs = 0 })
 await p.click('.shell-runbar .live'); await p.waitForTimeout(300)
+
+/* THE RAYS' OWN LOOP THROUGH A STRUCTURAL EDIT, as Live's rounds (0.81.0; the user, 2026-10-28: the rays "often shut
+   off", and had to be switched on again): nothing traced while a scene is built, a trace failing with the scene swapped
+   or a build begun under it let go, one failing with the scene as it was switching the rays off and saying why. The
+   stand-in hands a check what the page gave the loop (O.liveGet, O.liveOnResult): the check plays the loop's part. */
+await raysButton(); await p.waitForTimeout(100)          // on
+const raysLoop = (what, msg) => p.evaluate(([what, msg]) => {
+    const O = CHECK.O
+    if (what === 'get') return JSON.stringify(O.liveGet())
+    if (what === 'swap') CHECK.RT.scene = { ...CHECK.RT.scene }     // as setScene does before it builds
+    if (what === 'build') CHECK.compiled()
+    return { goOn: O.liveOnResult(null, new Error(msg)) === true, living: O.living, note: document.querySelector('.shell-runbar').nextElementSibling.textContent }
+}, [what, msg])
+ok('the rays on: their loop asked for rays and steps', /"rays":\d+,"steps":\d+/.test(await raysLoop('get')) && await p.evaluate(() => CHECK.O.living))
+await p.evaluate(() => { CHECK.busy = true })
+ok('...a scene being built: the loop told to trace nothing this frame', await raysLoop('get') === 'null')
+await p.evaluate(() => { CHECK.busy = false })
+await raysLoop('get')
+let rl = await raysLoop('swap', "Unknown uniform 'mengerScale'")
+ok('...a trace failing with the scene swapped under it: let go, the rays still on', rl.goOn && rl.living && !/rays stopped/.test(rl.note), JSON.stringify(rl))
+await raysLoop('get')
+rl = await raysLoop('build', 'No resources bound')
+ok('...one failing with a build begun since it started: let go too', rl.goOn && rl.living && !/rays stopped/.test(rl.note), JSON.stringify(rl))
+await raysLoop('get')
+await p.evaluate(() => { CHECK.busy = true })
+rl = await raysLoop('', 'Unknown uniform')
+await p.evaluate(() => { CHECK.busy = false })
+ok('...one failing while a scene is being built: let go', rl.goOn && rl.living, JSON.stringify(rl))
+await raysLoop('get')
+rl = await raysLoop('', 'kernel refused')
+ok('...one failing with the scene as it was: the rays switched off, and the reason said', !rl.goOn && !rl.living && /^rays stopped: kernel refused/.test(rl.note),
+   JSON.stringify(rl))
 
 if (errs.length) failed++
 console.log(errs.join('\n') || 'no page errors'); await b.close(); server.close()

@@ -23,8 +23,9 @@ LED, a softbox. Its settings in Properties:
 
 - **how bright**: a **flux** in lumens, or a **luminance** in cd/m². Set one and the other follows from the face's
   area. With a flux set, resizing the face keeps the lumens;
-- **colour**: as RGB, as a colour temperature (2700 K warm, 4000 K neutral, 6500 K daylight), or as a CIE xy
-  chromaticity from a datasheet;
+- **colour**: as RGB, as a colour temperature (2700 K warm, 4000 K neutral, 6500 K daylight), as a CIE xy
+  chromaticity from a datasheet, or by its **spectrum**: a blackbody, an LED's peaks, or a measured table from a CSV
+  ([Light in numbers](../optics/units.md#colour));
 - **distribution**: cosine (Lambertian: a diffuser, a panel, an LED), a narrower cosⁿ, uniform, or collimated,
   limited to a cone if you like;
 - **two-sided**, **transparent** (a sheet of light that does not block the view), and the index it emits into.
@@ -61,6 +62,9 @@ A picture that is all white or all black usually means one of these:
 - **the lens**: an **aperture** (its diameter, in the scene's unit) and a **focus** distance (0 is focused on the
   target). An aperture above 0 gives depth of field: what is nearer or farther than the focus blurs, more for a
   larger aperture.
+- **Pick focus**, under the lens's numbers: the popover closes, and a press on the picture focuses the lens on the
+  surface under the mouse. Hold the button and move to try other surfaces: the focus follows. Let go, and it stays
+  focused there. Esc, or a press anywhere else, cancels. Nothing changes in the picture until the aperture is above 0.
 
 [Depth of field](example:depth-of-field.json) is a row of pawns, focused on the third.
 
@@ -73,6 +77,38 @@ The same settings are in the **scene's own Properties** (click the scene's row a
 **camera** and **exposure**, folded until you open them. There, a **◇** before a value flags it for the
 [Timeline](cmd:view.tools.timeline): a flagged camera or exposure value is offered by the Timeline's **+ track** alongside
 the scene's own flagged values.
+
+### Saved views
+
+At the foot of the camera popover, **Saved views** keeps cameras you want to come back to. Move about the scene, change
+what you like, and go back to a view with one click.
+
+- **Save view** keeps the camera as it is now: where it stands, what it looks at, which way is up, perspective or
+  orthographic, its field of view or width, and its lens. It gets the next name, *View 1*, *View 2* ..., ready to type
+  over. Enter keeps the name.
+- **Click a name** to put the camera back there at once. The row of the view the camera is at now is lit (●).
+- **Double-click a name** to rename it. Enter or clicking elsewhere keeps the new name, Esc does not. Each name is used
+  once in a scene.
+- **↻** keeps the camera as it is now under that name.
+- **✕** takes a view away. It asks for a second click, because no undo brings a view back.
+
+A saved view keeps the camera only, not the exposure: going back to one leaves the picture's brightness as it is. The
+views are the scene's, saved in its file with its camera, and go with a duplicate and a scene sent to someone. Like
+moving the camera, saving, renaming or deleting a view is not an undo step. A change of the scene's unit converts them
+as it converts the camera.
+
+### The camera as one Timeline value
+
+The Timeline's **+ track** offers **Camera › pose (position, target, up, fov)**: the whole camera as one value. One key
+holds where the camera is, what it looks at, which way is up and the field of view, so a camera move is one track rather
+than one for each number. Put the camera where you want it (a saved view is a quick way), key it, move the playhead,
+put the camera somewhere else, and key again.
+
+Between keys each of the ten numbers moves on its own. With **linear** or **smooth** the camera and what it looks at
+each travel in a straight line. With **spline** they follow a curve through the keys, which suits a path through
+several. An orbit camera stays an orbit, turning about the target the key gives it. The lens (aperture and focus) and
+an orthographic view's width keep their own tracks. In the scene's camera folder, **◇** before *pose* flags it, so it is
+still offered while the Timeline shows only animated values.
 
 ## The surface tolerance
 

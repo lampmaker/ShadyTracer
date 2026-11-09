@@ -35,9 +35,13 @@
 //   BUILDER.saveWorkspace()  every scene, which is current, and the renderer's own settings
 //                            (quality, sampling, size; each scene's camera and exposure are its own)
 //   BUILDER.views()   every scene's view { key: view } (model.js VIEW): what the browser's session keeps
+//   BUILDER.savedViews()  the scene shown's saved views [{ name, camera }] (model.js VIEW, 0.84.0); saveView(name?),
+//                     goToView(name), updateView(name), renameView(from, to), removeView(name) each on it, and
+//                     BUILDER.onSavedViews(list), the host's, told the list whenever it or the scene shown changes
 //   BUILDER.timeline()   the scene shown's timeline, whole (model.js TIMELINE); keepTimeline(t) writes it,
 //                     and BUILDER.onTimeline(t), the host's, is told the next scene's as it is shown
-//   BUILDER.exportPrint(id, '3mf' | 'stl')  export box `id`'s contents for a printer (exportbox.js)
+//   BUILDER.exportPrint({ subject, box, format, cell, colours })  an object, or the scene, for a printer (exportbox.js;
+//                     the File > Export > 3D print... dialog, printdialog.js)
 //   BUILDER.open()    pick a file, any of the three -- it says which it is: a scene or a project
 //                     is ADDED to the open scenes, a workspace replaces everything;
 //                     BUILDER.load(text) does the same from text, loadFile(file) from a File
@@ -48,7 +52,9 @@
 // `error at line 431 of a file you never saw`.
 //======================================================================================================================
 
-import { generate, uniformName, xfName, patName, patterned, isCsg, readsLocal, blendName, joinBlendName, visName, paramUniform, livePointsUpdate, copyName } from './codegen.js'
+import { generate, uniformName, xfName, patName, patterned, isCsg, materialReadsLocal, blendName, joinBlendName, visName, paramUniform, livePointsUpdate, copyName } from './codegen.js'
+import { slotOfKey } from './images.js'
+import { slotMatrix } from '../lib/pathtracer/core/images.js'
 import { validate } from './validate.js'
 import { computeUniformTypes } from '../lib/pathtracer/core/uniforms.schema.js'
 import * as M from './model.js'
@@ -56,7 +62,7 @@ import { createHistory } from './history.js'
 import * as P from './project.js'
 import { syncSources } from './sources.js'
 import { lightRGBObject, beamOf } from './lights.js'
-import { runExport } from './exportbox.js'
+import { runExport, subjectTree } from './exportbox.js'
 import { hazeOf } from './hazebox.js'
 import { copyPattern, codeOf as codeOfPattern } from './arrays.js'
 import { stamp } from '../version.js'
@@ -103,6 +109,11 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
     /* ...AND A TIMELINE KEPT (keepTimeline): written with the project as an edit is, but no undo step and nothing the
        bake waits out -- a key set changes no shader -- so counted apart from `revision`, which those two read */
     let timelineKept = 0
+    /* ...AND A SCRIPT KEPT (keepScript, model.js SCRIPT): the same, for the same reasons */
+    let scriptKept = 0
+    /* ...AND A SAVED VIEW KEPT, renamed or taken away (model.js VIEW, 0.84.0): the same again -- a view saved is work,
+       written within the second, but no undo step (it is the view's, outside the history) */
+    let viewsKept = 0
 
     /* A RESTORED PROJECT, and what the renderer needs to follow it. AN EDIT INSIDE A SCENE: the scene the step
        changed becomes current -- undoing an edit made in another scene shows that scene, rather than changing
@@ -137,7 +148,7 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
         }
         const values = {}
         for (const [k, u] of Object.entries(scene.uniforms)) {
-            /* NOT THE CULLING BOXES: their defaults are "unknown", and the host keeps what it last sent (index.html
+            /* NOT THE CULLING BOXES: their defaults are "unknown", and the host keeps what it last sent (app.html
                pushCull), so a box written back to unknown here was never sent again -- undo left the scene unculled
                until a box changed. The host is asked to send them again below, from the document as it is now. */
             if (/^bx(lo|hi)_/.test(k)) continue
@@ -231,6 +242,48 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
         /* ...AND ITS TIMELINE (model.js TIMELINE), whole too: the host's panel loads it (tools/timeline.js showScene).
            Said here, where the view changes hands, so the keys and the camera they move always belong to one scene. */
         try { BUILDER.onTimeline?.(M.sceneTimelineOf(d)) } catch (e) { console.warn('[builder] onTimeline', e) }
+        /* ...AND ITS SCRIPT (model.js SCRIPT): the Script panel shows the one of the scene the renderer shows, whose
+           parameters it names. Shown, never run (tools/script.js). */
+        try { BUILDER.onScript?.(M.sceneScriptOf(d)) } catch (e) { console.warn('[builder] onScript', e) }
+        /* ...AND ITS SAVED VIEWS: the Camera popover's list is the scene's the camera moves over */
+        tellSavedViews()
+    }
+    /* THE SAVED VIEWS (model.js VIEW, 0.84.0), of the scene the renderer SHOWS, as its view is (keepView): the camera
+       saved is the one over its picture. While a unit change waits to be shown (unitPending) the renderer's numbers are
+       k times the document's away, so a camera saved is converted on its way in and one gone to on its way out. */
+    const shownDoc = () => shown != null ? P.scene(project, shown)?.doc ?? null : null
+    const tellSavedViews = () => {
+        try { BUILDER.onSavedViews?.(M.savedViewsOf(shownDoc())) } catch (e) { console.warn('[builder] onSavedViews', e) }
+    }
+    const liveCamera = () => {
+        const c = RT.view?.()?.camera
+        return c && unitPending?.key === shown ? cameraTimes(c, unitPending.k) : c
+    }
+    /* one change to the list: kept, counted for the autosave, told; a refusal (a name taken, too many) thrown as it is */
+    const changeViews = fn => {
+        const d = shownDoc()
+        if (!d) throw new Error('no scene of the project is shown yet: its compile has not ended')
+        const out = fn(d)
+        memorize(shown, d)
+        viewsKept++
+        tellSavedViews()
+        return out
+    }
+    /* THE SCRIPT KEPT, into the scene the renderer shows, as the timeline is (keepTimeline below). */
+    let scriptRefused = null
+    const keepScript = text => {
+        const d = shown != null ? P.scene(project, shown)?.doc : null
+        if (!d) return false
+        if (M.sceneScriptOf(d) === (text ?? '')) return true
+        try { M.setScript(d, text) }
+        catch (e) {
+            const why = `[builder] the script of '${d.title}' not kept: ${e.message}`
+            if (why !== scriptRefused) console.warn(scriptRefused = why)
+            return false
+        }
+        memorize(shown, d)
+        scriptKept++
+        return true
     }
     /* THE TIMELINE KEPT, into the scene the renderer SHOWS, as its view is (keepView): the one the panel was handed
        (markShown) and whose picture the keys move. Refused as one reason is said once, not at every key. */
@@ -348,7 +401,7 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
         return generate(...M.generateArgs(doc(), { id: 'built', title: doc().title || 'Scene builder', editing: editedNow(), data, along: alongMode(),
                                                    carry: data ? carried() : null }))
     }
-    /* THE CULLING BOXES the records carry (scenedata.js recordsOf `boxes`), from the host (BUILDER.cullBoxes: index.html,
+    /* THE CULLING BOXES the records carry (scenedata.js recordsOf `boxes`), from the host (BUILDER.cullBoxes: app.html,
        boxes.js cullBoxes nested) -- none known is never culled, as a codegen scene's unknown boxes are not */
     const boxesNow = () => { try { return BUILDER.cullBoxes?.() ?? null } catch (e) { console.warn('[builder] cullBoxes', e); return null } }
     const same = (a, b) => a.length === b.length && a.every((x, i) => x === b[i])
@@ -586,7 +639,7 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
             if (!f.node.pattern) return false
             const name = patName(id)
             if (!(name in (RT.scene?.uniforms || {}))) return !patterned(f.node.kind === 'group' ? { ...f.node, csg: isCsg(f.node) } : f.node,
-                { wantLocal: doc.materials.some(m => readsLocal(m.code)), relief: !!M.material(doc, f.node.kind === 'object' ? M.wornMaterial(doc, id).material : null)?.relief })
+                { wantLocal: doc.materials.some(materialReadsLocal), relief: !!M.material(doc, f.node.kind === 'object' ? M.wornMaterial(doc, id).material : null)?.relief })
             return RT.set({ [name]: M.matrixOf({ ...f.node.pattern, scale: 1 }) }).length === 0
         }
         /* AN ARRAY'S COPIES (model.js version 17): a uniform each -- refused when the count is not the one compiled, or when
@@ -632,10 +685,51 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
         /** WHAT THE AUTOSAVE LOOKS AT (workspace/autosave.js): `revision`, and one more for every timeline kept -- saved
          *  as an edit is, so a key set is in the project within the second and makes a second tab's copy, without
          *  being an undo step or an edit the bake waits out (`timelineKept` above). */
-        get saveRevision() { return `${revision}.${timelineKept}` },
+        get saveRevision() { return `${revision}.${timelineKept}.${scriptKept}.${viewsKept}` },
         /** Every scene's view: { key: view }, what the browser's session keeps between the project's writes. The one
          *  shown is written as it changes (keepView), so this is it as it is now. */
         views: () => P.viewsOf(project),
+        /** THE SAVED VIEWS OF THE SCENE SHOWN (model.js VIEW): [{ name, camera }], [] while none of the project's is shown. */
+        savedViews: () => M.savedViewsOf(shownDoc()),
+        /** Save the camera as it is now as a view called `name` (the next "View N" if none is given); returns its name.
+         *  A name taken is refused, as the model refuses it. */
+        saveView(name) {
+            return changeViews(d => {
+                const n = name ?? M.nextViewName(d), c = liveCamera()
+                if (!c) throw new Error('there is no camera to save')
+                M.saveView(d, n, c)
+                return n
+            })
+        },
+        /** The view `name` kept as the camera is now. */
+        updateView(name) {
+            return changeViews(d => {
+                const c = liveCamera()
+                if (!c) throw new Error('there is no camera to save')
+                M.updateView(d, name, c)
+                return name
+            })
+        },
+        renameView: (from, to) => changeViews(d => { M.renameView(d, from, to); return to }),
+        removeView: name => changeViews(d => { M.removeView(d, name); return name }),
+        /** THE CAMERA PUT BACK where the view `name` has it, at once (the user's choice: a jump, not a glide) -- whole,
+         *  every setting it leaves out the default, as a scene's own camera comes back (model.js sceneViewOf). The
+         *  scene keeps it as its camera from there (keepView, through RT.watchView). Returns whether it did. */
+        goToView(name) {
+            const d = shownDoc()
+            const v = d && M.savedViewsOf(d).find(s => s.name === name)
+            if (!v) return false
+            const whole = { ...structuredClone(M.CAMERA_DEFAULTS), ...v.camera }
+            RT.applyView?.({ camera: unitPending?.key === shown ? cameraTimes(whole, 1 / unitPending.k) : whole })
+            return true
+        },
+        /** The host's: told the saved views of the scene shown, whenever they or the scene change. */
+        onSavedViews: null,
+        /** WHETHER A SCENE OF THE PROJECT IS THE ONE OVER THE PICTURE: what the saved views' list offers anything for. Not
+         *  `showing`, which is also false while another scene is the one worked on and this one's camera still the
+         *  picture's -- the views are the shown scene's. False for the safe start's empty scene and a test's or bench's
+         *  (RT.scene not the builder's); a renderer that names no scene (a stand-in) is taken to show it. */
+        get viewsShown() { return !!shownDoc() && (RT.scene?.id ?? 'built') === 'built' },
         /** THE TIMELINE OF THE SCENE SHOWN, whole (model.js sceneTimelineOf): the one the panel holds, as the camera is.
          *  The defaults while the renderer shows none of the project's (a workspace just opened, the safe start), when
          *  nothing is kept (keepTimeline). */
@@ -648,6 +742,15 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
         keepTimeline,
         /** The host's: told the timeline of each scene as it is shown (markShown), whole. */
         onTimeline: null,
+        /** THE SCRIPT OF THE SCENE SHOWN (model.js SCRIPT), '' for none or while none of the project's is shown. */
+        script() {
+            const d = shown != null ? P.scene(project, shown)?.doc : null
+            return M.sceneScriptOf(d ?? null)
+        },
+        /** Keep `text` as the scene shown's script ('' takes it away). False when none is shown or the model refused it. */
+        keepScript,
+        /** The host's: told the script of each scene as it is shown (markShown). */
+        onScript: null,
         /** ANOTHER PROJECT ALTOGETHER -- one kept in the browser, opened from the list (workspace/session.js): its
          *  scenes, each with its view, and the one to work on. Its own undo history from here: undoing into the
          *  project before would write that one's scenes into this one. The renderer still shows the last
@@ -676,7 +779,7 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
          *  showed had is kept, and this one's put back. A host that shows a scene itself calls it. */
         markShown,
         /** SAY THE RENDERER SHOWS NO SCENE OF THE PROJECT: the page started it on an empty one, because the
-         *  scene being worked on did not compile or was not to be compiled at start (index.html, safe start).
+         *  scene being worked on did not compile or was not to be compiled at start (app.html, safe start).
          *  Live edits then wait for the next apply, which shows the current scene; the camera stays as it is. */
         unshow() { shown = null },
         model: M,
@@ -697,7 +800,7 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
         },
         /** THE SCENE SHOWN, BAKED (bake.js; baker.js bakes it in the background once the edits stop): codegen's scene of
          *  the document as it is, every value a constant, the culling boxes kept uniforms (the host measures and sends
-         *  them: index.html pushCull). Null when the scene being edited is not the one shown. */
+         *  them: app.html pushCull). Null when the scene being edited is not the one shown. */
         bakeScene() {
             if (current !== shown) return null
             M.resolveBindings(doc())         // first: the luminance syncSources derives reads what they write (build above)
@@ -759,13 +862,16 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
             const took = BUILDER.liveValue(id, k)
             /* A MATERIAL FIELD ONLY IN THE SHADER WHILE IN USE (materials.js `only`: the colour depth) that the compiled
                scene does not declare yet: its first value in use is a compile, asked as pushBound asks one. Back to
-               unused is no compile -- the uniform stays declared and its 0 means none until the next one. */
-            if (!took && current === shown && applying === 0 && M.MATERIAL_FIELDS[k]?.only && M.material(P.scene(project, current).doc, id)
+               unused is no compile -- the uniform stays declared and its 0 means none until the next one. Not for a field
+               of a feature the scene has off (model.js setFeatures): toTree keeps it out of every build, so a compile
+               asked for it would declare nothing, and a timeline track on it would ask one every frame. */
+            const sceneDoc = P.scene(project, current).doc
+            if (!took && current === shown && applying === 0 && M.MATERIAL_FIELDS[k]?.only && M.material(sceneDoc, id) && M.fieldShown(sceneDoc, k)
                 && BUILDER.onRestructure) {
                 try { BUILDER.onRestructure() } catch (e) { console.warn('[builder] onRestructure', e) }
             }
             /* AFTER EVERY LIVE CHANGE, whoever made it (the properties panel, the parameter registry, the
-               timeline -- all come here): the host's hook, the culling boxes (index.html), which must stop
+               timeline -- all come here): the host's hook, the culling boxes (app.html), which must stop
                trusting a box in the same call that changed its shape -- not at the boxes' next look half a
                second later, when an object grown by a slider would have been cut off by its old box. */
             try { BUILDER.afterLive?.(id, k) } catch (e) { console.warn('[builder] afterLive', e) }
@@ -823,6 +929,16 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
                 return RT.set({ [paramUniform(id, k)]: v && typeof v === 'object' ? { ...v } : v }).length === 0
             }
             const mat = M.material(doc, id)
+            /* A PICTURE'S SLOT (version 29, images.js): its uniform, its picture's place in the atlas the shown scene was
+               compiled with and its settings -- live while that atlas has its picture, a compile when not (a new picture,
+               or one the scene was compiled without) */
+            const slot = mat && slotOfKey(mat, k)
+            if (slot) {
+                const rect = RT.scene?.imageRects?.get(slot.image)
+                const name = uniformName(id, k)
+                if (RT.scene?.id !== 'built' || !rect || !(name in (RT.scene.uniforms || {}))) return false
+                return RT.set({ [name]: slotMatrix(M.imageSlotOf(slot), rect, doc.images?.[slot.image]) }).length === 0
+            }
             if (mat) {
                 if (RT.scene?.id !== 'built' || !(k in (mat.params || {}))) return false
                 const v = mat.params[k]
@@ -830,9 +946,9 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
             }
             const f = M.find(doc, id)
             if (!f || RT.scene?.id !== 'built') return false
-            /* THE HAZE BOX: moved and sized with whatever moved or sized it (its size uniform is declared as an export
-               box's is, and written below like any parameter); its settings are no uniform of the scene's -- the
-               engine's own (core/haze.js) -- so they are taken here or not at all */
+            /* THE HAZE BOX: moved and sized with whatever moved or sized it (its size uniform is declared, and written
+               below like any parameter); its settings are no uniform of the scene's -- the engine's own (core/haze.js) --
+               so they are taken here or not at all */
             const hazeTook = pushHaze(doc)
             if (f.node.type === 'haze' && k === 'haze') return hazeTook
             if (!RT.scene.writeData) return nodeLive(doc, f, id, k, !!doc.liveVisibility)
@@ -857,7 +973,7 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
         /** Whether codegen's scenes answer along the ray now (the renderer's alongRay): its text and the bake's. */
         get alongMode() { return alongMode() },
         /** Set by the host: run a compile in its own queue -- a live change to a path that only a compile can make
-         *  (liveValue). The tree's apply() in the page (index.html). */
+         *  (liveValue). The tree's apply() in the page (app.html). */
         onRestructure: null,
         /** Path or profile `k` of node `id` is being edited in the picture: compile it live, with room for more
          *  points, until this is called with null (see `editing` above). Asks the host for a compile (onRestructure)
@@ -882,16 +998,22 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
             const id = RT.scene.tags?.[tag - 1]
             return id != null && M.find(P.scene(project, current).doc, id) ? id : null
         },
-        /** EXPORT FOR PRINTING (exportbox.js): everything solid inside export box `id`, as a 3MF with
-         *  colour or an STL, downloaded. The field is the renderer's, so the scene has to be the one
-         *  showing -- its uniforms are the ones the export kernel is compiled against. Resolves to
-         *  what runExport says (triangles, palette, bytes). */
-        async exportPrint(id, format = '3mf', onProgress = () => { }) {
+        /** EXPORT FOR PRINTING (exportbox.js, 0.83.0): what `subject` is -- an object's id, or null for the whole
+         *  scene -- inside `box` ({ frames, lo, hi }: exportbox.js fittedBox, as the print dialog has it), as a 3MF with
+         *  colour or an STL, downloaded. Nothing is added to the scene. The whole scene is the renderer's field; one
+         *  object is a scene of that object alone (subjectTree), generated here and sampled by a kernel of its own
+         *  (RT.sampleField's `own`). Either way the scene has to be the one showing: the engine's values -- the unit
+         *  the field is in, the tolerance -- are the ones it was given for it. Resolves to what runExport says
+         *  (triangles, palette, bytes). */
+        async exportPrint({ subject = null, box, format = '3mf', cell, colours } = {}, onProgress = () => { }) {
             if (current !== shown || RT.scene?.id !== 'built') throw new Error('this scene is not the one showing: show it first (its \u25B6 in the tree)')
             const d = doc()
-            const r = await runExport({ sample: (input, n) => RT.sampleField(input, n), doc: d, id, format, onProgress })
-            const label = M.find(d, id)?.node.label
-            const stem = fileName(`${d.title || 'scene'}${label && label !== 'export box' ? '-' + label : ''}`).replace(/\.json$/, '')
+            const one = subject != null && subject !== d.root.id
+            const own = one ? generate(subjectTree(d, subject), { id: 'print', title: d.title || 'print' }) : null
+            const sample = (input, n) => RT.sampleField(input, n, own)
+            const label = one ? M.find(d, subject)?.node.label : null
+            const r = await runExport({ sample, doc: d, box, format, cell, colours, name: label || d.title || 'scene', onProgress })
+            const stem = fileName(`${d.title || 'scene'}${label ? '-' + label : ''}`).replace(/\.json$/, '')
             saveBytes(`${stem}.${format}`, r.bytes, format === '3mf' ? 'model/3mf' : 'model/stl')
             return r
         },

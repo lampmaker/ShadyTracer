@@ -17,7 +17,8 @@ writes at once, if you like to press it.
 - **Undo** (Ctrl Z, Edit, or ↶ on the menu bar) of a change to the list of scenes -- a scene deleted, a copy sent to
   another scene -- keeps you on the scene you are working on.
 - The **project's name** over the tree, or **File › Projects…**, opens the **Project panel**, a tab beside the picture:
-  - your projects in this browser: open, new, rename, duplicate, download, delete;
+  - your projects in this browser: open, new, rename, duplicate, download, delete. Opening one keeps you in the panel
+    with its scenes, and nothing is compiled until you click the scene you want;
   - this project's scenes, larger;
   - the **examples**, by who they are for, each with what it shows: a click adds a copy to the project.
 - Right-click a row in the tree to copy or move it to another scene.
@@ -32,9 +33,24 @@ The browser's storage is per browser and per computer. To move work elsewhere or
 | **File › Import from file…** (Ctrl O), or drop a file on the page | a scene file joins this project; a project file asks: open it as a project of its own, or add its scenes to this one |
 | **File › Export ▸ Scene file…** | the scene being worked on, alone (a card's ⋯ exports another) |
 | **File › Export ▸ Project file…** | every scene, with their cameras and the render settings: exactly what you see |
-| **File › Export ▸ 3D print (3MF / STL)…** | the scene's export box: its Properties hold the two exports (below) |
+| **File › Export ▸ 3D print (3MF / STL)…** | the selected object or the whole scene, as a mesh to print (below) |
 
 Files from older versions are upgraded when opened. A file with problems is refused, with every problem listed.
+
+**A STEP or STL file** (`.step`, `.stp`, `.stl`) is converted into the builder's own shapes and pasted into the scene
+being worked on. A box shows how far the conversion is, with Cancel. When everything converted exactly it closes by
+itself; otherwise it says, part by part, what happened before anything is pasted:
+
+- how many of the conversion's own check points disagree with the part: small errors are possible there;
+- the part's **fillets**, which come in as *round* joins of the two faces each one rounds (a group called *fillet R1*),
+  and any it could not make one;
+- faces on **freeform** (B-spline) surfaces: each is fitted with the nearest plane, cylinder, cone, sphere or torus.
+  One that fits exactly is that surface. One that does not, but is within **Max surface deviation** (0.05 mm unless
+  you change it), comes in **red** and is called *fitted* in the tree. A part with a face further off is left out,
+  and the box says the deviation it would import at: type it and press **Re-convert**. Untick *Show the fitted faces
+  in red* to give them the part's material;
+- parts that could not be converted, and why. Each part of an assembly has a box: untick one to leave it out, then
+  **Import what converted**.
 
 ## The library
 
@@ -48,15 +64,22 @@ optics parts. Each has a rendered picture. Rest the pointer on one to see it ren
 
 ## Export for 3D printing
 
-Put an **export box** (+ in the tree) around what you want printed, and size it with its handles. Its Properties
-export:
+**File › Export ▸ 3D print (3MF / STL)…** asks what to print:
+
+- **Selected object**: that object alone -- or a group and everything in it -- with nothing of its neighbours, in its
+  own frame: its z is up on the print bed.
+- **Whole scene**: everything solid, as the picture shows it, in the world's frame. Lights and an endless floor are
+  left out of the box it starts with.
+
+The box is fitted to it, and drawn dashed in the picture while the dialog is open. Type another **size** to cut it, or
+**Fit** to fit it again. Nothing is added to the scene. Then:
 
 - **3MF with colour**: each triangle coloured from its material, reduced to as many colours as your printer holds
   (*colours*, 4 to start), for a slicer's filament mapping;
 - **STL**, in millimetres.
 
-The shape is sampled on a grid -- the box's **cell**, in millimetres of the printed part, 0.4 to start -- and made into
-a closed mesh. What to expect:
+The shape is sampled on a grid -- the **cell**, in millimetres of the printed part, 0.4 to start -- and made into
+a closed mesh, cut by the box. The cell, the colours and the format are remembered for the next export. What to expect:
 
 - features thinner than a cell disappear;
 - sharp edges are bevelled by up to a cell;

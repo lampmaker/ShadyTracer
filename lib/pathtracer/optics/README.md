@@ -17,7 +17,8 @@ await O.run({ rays: 100000, batches: 4 })   // every ray to the end; mean +- sta
 await O.reset({ rays: 10000 })              // or: rays at the source, then
 await O.step()                              // every live ray on to its next interaction
 await O.trace({ rays: 5000, steps: 6 })     // N interactions in one go -- the same rays each time
-O.live(true, () => ({ rays, steps }))       // ...again and again, for moving things and watching
+O.live(true, () => ({ rays, steps }),        // ...again and again, for moving things and watching; get() null: none this frame
+       (r, err) => err && sceneChanged())   // a failure answered true is let go (a scene swapped or built under it)
 await O.readHits()                          // what the detectors caught: pos, flux, dir, object
 O.results                                   // totals, per object, per material, in lm (or W)
 O.drawPaths(true)                           // the last trace's or step's rays as lines over the picture
@@ -37,7 +38,9 @@ The UI is `optics/page.js`, the Optics page beside Builder: the **Rays** (one ra
 | `illum.js` | illuminance read off a map: profiles, the radial profile, encircled flux (r50, r90), isolux lines, and the far field projected onto a plane (`virtualPlane`) |
 | `xychart.js`, `heatmap.js` | the raytracer's Profiles, Rings and Encircled flux panels, and its Map with isolux lines; a map of another quantity is drawn over its own range (`lo`..`hi`), a line chart can start where its values are (`yMin: 'auto'`) and breaks where a value is missing |
 | `quantities.js` | what a map shows: E, and from a map with colour each cell's CCT, x, y, Duv or Δu′v′ from a target (`quantityMap`), as a map of the same shape; or the light itself, painted in its own colour (`paint`: true colour, or colour only); adding a quantity is an entry in `MAP_QUANTITIES` |
-| `test/illum.test.mjs`, `test/charts.test.mjs` | the illuminance arithmetic against known maps; every chart drawn into a recording fake canvas |
+| `spectral.js` | the trace by wavelength: the draw, its tables (one storage buffer, `optSpectral`), a light's spectrum or a stand-in of its colour, and the spectral texts derived from the colour trace's |
+| `spectrum.js`, `spectrumchart.js` | what a detector received by wavelength (5 nm bins, xy, CCT, Duv, CRI with error bars), and a spectrum drawn: the Spectrum chart's and a light's in its Properties |
+| `test/illum.test.mjs`, `test/charts.test.mjs`, `test/spectrum.test.mjs` | the illuminance arithmetic against known maps; every chart drawn into a recording fake canvas; a detector's spectrum against the light's |
 | `cartesian.js` | I against γ on a signed angle axis that zooms to the light: for beams too narrow for the polar diagram (the I – γ panel) |
 | `test/farfield.test.mjs` | the far field against closed forms (Lambertian, cosⁿ), the binning, the polar scale (Node, no GPU) |
 | `test/optics.test.mjs` | the sampling against closed forms, and the tally decoding (Node, no GPU) |
@@ -82,10 +85,10 @@ The UI is `optics/page.js`, the Optics page beside Builder: the **Rays** (one ra
 
 ## Detectors, tracing N steps, Live, path length
 
-**Detectors and limiters: a material's type** (model version 10; Builder, material → type: surface, glowing surface, optics detector, ray limiter).
-- **detector:** a surface of that material stops every ray that arrives at it from outside, whatever its fields say. Its flux counts as DETECTED, and each hit is recorded (position, flux, arriving direction, object) for analysis elsewhere; `readHits()` returns the records and the page saves them as CSV. The picture renders it as its fields say.
-- **ray limiter:** the same in the trace, and not in the picture at all: codegen leaves its objects out of the render and pick copies and gives the trace copies of its own (`opticsWgsl` for the march, `opticsPickWgsl` / `opticsTags` for the shade). For cutting the rays off where a cross-section is wanted.
-- The kernels test the hit's MATERIAL id (codegen `detectors`, a 256-bit mask), so a detector needs no pick tag. It was an object flag in files from the optics branch; loading such a file gives the flag to the material, or to a copy where the material was shared (model.js `branchToV10`).
+**Detectors and limiters: an object's role** (0.83.0, model version 27: builder/model.js `OPTICS_ROLES`, the object's Optics-Analysis box in Properties, shown while the scene's `analysis` feature is on; a material's type from version 10 to 26).
+- **detector:** the object stops every ray that arrives at it from outside, whatever its material's fields say. Its flux counts as DETECTED, and each hit is recorded (position, flux, arriving direction, object) for analysis elsewhere; `readHits()` returns the records and the page saves them as CSV. The picture renders it as its fields say.
+- **ray limiter:** the same in the trace, and not in the picture at all: codegen leaves its objects out of the render and pick copies and gives the trace copies of its own (`opticsWgsl` for the march, `opticsPickWgsl` / `opticsTags` for the shade). For cutting the rays off where a cross-section is wanted. A CSG group whose base is one takes the role for every shape in it, as it takes the base's material: an aperture's hole wall stops rays too.
+- The kernels test the hit's TAG (codegen `detectorTags`, the optics copy's numbering, a 256-bit mask `optDetTagA/B`; the tag is found before the test, `kernels.js`), so a role given or taken changes no text: it is the scene's data (`SCENE_DATA_KEYS`), no compile, a limiter aside. A tag past 255 is clamped by the kernel and so refused by codegen (`opticsProblem`). The mask by MATERIAL id (codegen `detectors`, `optDetA/B`) stays for a scene written by hand, the benches'. A detector was an object flag in files from the optics branch, a material's type from 10 to 26; loading such a file gives the role to every object that wore it (model.js `branchToV10`, then `v26to27`).
 
 **The detector map** (`detmap.js`; the page's Analysis → detector map) turns the hits on each detector into an illuminance map: a plane fitted to the hits (squared up to the world axes when it is within a degree of them), square cells over their extent, E = flux / cell area in m², so lux for a source in lm. With it: E max, mean and min over the lit cells, U0, the flux, and the hits per cell, which says how noisy each cell is (about 1/√hits). An analysis maps every batch's hits together, each carrying its batch's share, up to half a million hits. The hits' own extent is a little short of the lit area, so edge cells read slightly high; `range` fixes a known extent.
 
@@ -125,7 +128,7 @@ caps), C bins on 0, ΔC, … A trace that does not ask for it has no grid and pa
 
 **What feeds it** (`O.setFar({ mode })`):
 - `'escaped'`: every ray that leaves the scene.
-- `'detector'`: every ray arriving at one detector MATERIAL (`material`, its id). This is how the
+- `'detector'`: every ray arriving at one detector OBJECT (`tag`, its tag; 0.83.0), or, with no tag, at one detector MATERIAL (`material`, its id: a scene written by hand). This is how the
   user says which rays count: a surface placed to catch the light through the lens and not the
   light off the mount.
 
@@ -190,11 +193,21 @@ ordinary emitter. The page turns the scene's lights into descriptions (`builder/
     channel's wavelengths (`core/spectral.js`). A beam splitter's or an AR layer's R is the same at every
     wavelength, so the trace is exact for it; a dichroic's edge is an approximation of the spectrum, the
     "looks right" method: it assumes the light in a channel is spread over its wavelengths as the channel's
-    weights say, whatever the source really emits. The exact way -- a wavelength per ray from the source's own
-    spectrum, CMFs at the detector -- is planned for this module (PLAN.md C). Bench: `optics-coating`.
+    weights say, whatever the source really emits. The exact way is the trace by wavelength (below). Bench:
+    `optics-coating`.
   - **Dispersion (0.40.0).** A material's Abbe number makes its index n(λ); a ray refracted into it takes a wavelength
     and that wavelength's colour, so a prism fans white light out by colour. The detectors read the colour (XYZ) of
     what arrives, as before -- not the wavelength. Bench: `optics-dispersion`.
+  - **By wavelength (0.83.0; `spectral.js`, `roadmap/LIGHT_MODEL.md` S0 and S2).** A scene with its optical feature
+    *Spectral optics trace* on (codegen's `scene.spectral`) compiles `prog_opt_gen` and `prog_opt_shade` from spectral
+    texts: each ray carries three wavelengths, u, u + 1/3 and u + 2/3 through the CDF of x̄ + ȳ + z̄ (u in the tag's
+    wavelength bits), and its `beta`'s three channels are their weights, S(λ)/(3 p(λ)), the light's spectrum at
+    luminance 1. A material's colour becomes a smooth spectrum at those wavelengths when it is read (`specMaterial`),
+    a coating's edge is evaluated at each, and dispersion collapses a ray to its first (tag bit 16). The tallies weigh
+    a ray by Σ c ȳ(λ), so lumens stay lumens; a detector hit keeps its weights (`DET_WORDS` 14), and `spectrum.js`
+    bins them for the Spectrum chart and the CRI. The texts are the colour trace's with anchors replaced, each exactly
+    once or a throw (`specialise`); the renderer and `prog_opt_photons` never see them, and with the feature off the
+    trace is byte for byte the colour trace. Bench: `optics-spectral`; on Dawn: `test/spectral.gpu.mjs`.
   - The maths is `core/colorimetry.js`: the Planckian locus (Krystek, as in the user's older luminaire
     tool), CCT and Duv both ways, and `mixToTarget`, three lights' fluxes for a target colour.
 - **Off the sheet, in its medium.** A sheet is geometry, so its rays start two march tolerances off it

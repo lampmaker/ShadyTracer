@@ -133,7 +133,9 @@ const throws = f => { try { f(); return false } catch (e) { return e instanceof 
 
 /* ---- THE NAMING HELD TO THE BUILDER'S: every live entry of every bundled scene, through the real builder ---- */
 {
-    const WG = { createStorageBuffer: bytes => ({ b: { size: bytes, destroy() { } }, w() { } }), createBuffer: bytes => ({ b: { size: bytes, destroy() { } }, w() { } }) }
+    // ...and a texture, which a scene with a picture asks for (builder/images.js attachImages: the Pictures example)
+    const WG = { createStorageBuffer: bytes => ({ b: { size: bytes, destroy() { } }, w() { } }), createBuffer: bytes => ({ b: { size: bytes, destroy() { } }, w() { } }),
+                 createTexture: () => ({ destroy() { } }), device: { queue: { writeTexture() { }, copyExternalImageToTexture() { } } } }
     const gpu = { makeCompute: (b, m) => ({ wgsl: `${b}\n${m}`, module: { getCompilationInfo: async () => ({ messages: [] }) }, ready: Promise.resolve() }),
                   makeShader: () => ({ getCompilationInfo: async () => ({ messages: [] }) }), device: { limits: { maxStorageBuffersPerShaderStage: 16 } } }
     let state = { sceneData: 0 }

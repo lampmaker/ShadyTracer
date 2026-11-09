@@ -10,7 +10,7 @@ some habits carry over and some do not. This page is the short list.
 | a shape is | triangles | faces, edges and vertices with exact curves | a distance function: a rule, no surface stored |
 | a sphere is | many flat facets | an exact surface | exact, at any zoom |
 | booleans | can fail on bad meshes | can fail on tangent or tiny faces | always work: a min or a max of two numbers |
-| a fillet | modelled or beveled | picked on an edge | a blend between two shapes, or the *round* modifier |
+| a fillet | modelled or beveled | picked on an edge | a join set to *round* (exact, its radius the blend) or *chamfer*, a smooth blend, or the *round* modifier |
 | copies | each one costs | each one costs | a *repeat* or an array: many for the price of one |
 | editing | move vertices | edit sketches and features | change numbers; most changes need no rebuild |
 
@@ -22,8 +22,8 @@ See [How shapes are made](sdf.md) for why booleans and blends are free here.
   [tree](tree.md) or in the picture.
 - **Sketches with constraints.** Dimensions are parameters: numbers in Properties, and component
   parameters that drive what is inside a group ([Parameters and code](parameters.md)).
-- **Exact export.** A file for a slicer is made by sampling the shape on a grid and meshing it (the
-  [export box](projects.md#export-for-3d-printing)). Edges come out bevelled by up to a cell, and features
+- **Exact export.** A file for a slicer is made by sampling the shape on a grid and meshing it (File ›
+  Export ▸ [3D print](projects.md#export-for-3d-printing)). Edges come out bevelled by up to a cell, and features
   thinner than a cell disappear.
 - **Importing meshes or CAD files.** Not there yet (`roadmap/IMPORT.md` has the routes looked at).
 

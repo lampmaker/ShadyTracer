@@ -19,6 +19,11 @@ The [Render settings](show:renderer) panel's **Quality** box has the same preset
 The line under the buttons says what the preset in force traces. If you change a setting by hand, it reads
 **Custom** and says what differs.
 
+**Everything diffuse**, in the Quality box while Sketch is chosen, shows every surface as plain matte paint of its
+own colour: mirrors, metal and glass too, so you see their shapes rather than what they reflect or what is behind
+them. Lamps and glowing surfaces keep glowing. It applies only to a Sketch you chose, not to a Standard picture
+traced as Sketch while you move.
+
 **What each one traces, side by side.** A camera path is a ray followed from the camera into the scene. *Stops at the
 first matte surface* means it ends at the first diffuse or glossy surface it meets, after any mirrors, clear or frosted
 glass and near-mirror metal on the way.
@@ -31,7 +36,6 @@ glass and near-mirror metal on the way.
 | lights' rays | off | as set | on | on, twice the photons | on, to the first matte surface |
 | seen through glass (photon map) | off | as set | on | on | as set |
 | dust in the air | off | light scattered once | in full | in full | off |
-| dispersion | as set | as set | on | on | as set |
 | diffuse bounces | — | — | all | all | — |
 
 **Why Draft can be little faster than Standard.** Draft leaves out only the camera's bounce light. The photons of the
@@ -61,9 +65,8 @@ you stop.
   - **0** is the direct light alone, but through lenses, mirrors and glass, caustics included: what Draft shows, done
     exactly. **1** adds one bounce off a wall, and so on.
   - Fewer reads as Custom; Standard and High put all of them back. At or above Max Bounces it changes nothing.
-  **Dispersion** (ticked by default): glass with an Abbe number splits white light into its colours where it
-  refracts. Untick it and every glass bends all colours alike: no colour fringes, and none of the colour noise they
-  take to settle. Standard and High tick it again. The Optics page always traces dispersion.
+  **Dispersion** is no render setting: it is the scene's, with absorption and coatings, in its
+  [optical features](materials.md#optical-features).
 - **Render size**: fit the view, or a fixed width and height; and a **resolution** of 100 % down to 25 %, which keeps the picture's size on screen, softer, with a quarter of the pixels to trace at 50 %.
 
 The **Developer** switch at the foot of the Quality box shows the rest: ray marching, performance, diagnostics.
@@ -83,6 +86,8 @@ so do the sun's shafts and a lamp's glow. Whatever is seen through it, or lit th
   direction: real dust scatters mostly forward, so a beam is brightest when you look into it. The panel shows the
   **visibility** beside the mean free path. See [Haze box settings](../reference/haze.md).
 - **One box a scene.** Its outline shows when it is selected; stretch it with the Transform gizmo's cubes.
+- **Why it is a box and not a material.** A material can scatter inside too (its *scatter distance*), but only inside
+  a solid: its surface would stop the light sampling that makes a beam in air show. The haze box has no surface.
 
 **What a small scene can show.** Physical dust is faint at the size of a lamp. A beam a centimetre or two across,
 seen from the side in dust with a 10 m mean free path, is thousands of times dimmer than the spot it lights on a white
@@ -121,10 +126,16 @@ goes straight back to the editable build.
 ## Saving a picture
 
 **File › Save picture…** opens the **Darkroom**, a tab beside the picture. Its boxes on the right: **Render** renders
-offscreen at its own size, up to 16 384 pixels on a side, with its own number of samples (you can stop it early);
+offscreen at its own size, up to 16 384 pixels on a side, with its own number of samples;
 **Develop** shows a histogram of what will be saved, and the boxes under it develop the picture; **Save** writes the
 file. The render is kept as light, so you can develop it and save it as often as you like. Each save is a file of its
 own: the name you give, with the date and time it was saved after it (`render-2026-10-19_14-03-22.png`).
+
+While it renders, the Darkroom shows the picture as far as it has got: after a second, then every **show every**
+seconds (0 shows it only at the end); **Show now** shows it at once. Every developing box works on it meanwhile, so
+the exposure and the look can be chosen while the samples come in. When it looks good enough, **Stop and keep** ends
+the render and keeps what it has, saying how many samples that is. To render further, raise **samples** while it
+runs. Saving waits for the end of the render.
 
 **Save** offers the developed picture -- **PNG** at 8 or 16 bits a channel, **JPEG**, **WebP** -- or the light itself:
 **OpenEXR**, **Radiance HDR** and **PFM**. These hold the render as the renderer made it, in cd/m² (or multiplied by your

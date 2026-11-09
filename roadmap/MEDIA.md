@@ -50,7 +50,8 @@ This is why a thin-limit "beam view" for the Optics view is phase 4, a visualisa
 ## Phase 1 — a haze box (0.62.0, built)
 
 What is in it, briefly (the README has the rest):
-- **Builder:** a `haze` node (`builder/hazebox.js`, scene format 22), one a scene, a box like the export box.
+- **Builder:** a `haze` node (`builder/hazebox.js`, scene format 22), one a scene. Asked in 0.83.0 whether it could be a
+  material instead: no -- `hazebox.js`'s header says why (a material's walls stop the shadow rays the dust is lit by).
 - **Scene:** codegen hands it over as `scene.haze`, in the world, in the scene's unit.
 - **Engine:** DERIVED uniforms, and the kernels' code only for a scene with a box.
 - **The collision:** drawn as a leg starts and kept in the ray's `tmax`; the march stops the ray there (`RAY_SCATTER`).
@@ -75,7 +76,20 @@ What is in it, briefly (the README has the rest):
   A light's photon leaving its face starts a leg like any other (newRay: ltot and absLtot 0), so it collides as one;
   that is inferred from the code. The example puts its LED inside the box.
 
-## Phase 2 — a volume photon map (open)
+## Phase 2 — a volume photon map (built 0.82.0 for a scattering material; the haze box's points still open)
+
+**STATUS (2026-11-02).** The user shone a collimated beam through slightly milky glass and saw nothing inside, "just
+like you'd see when using a laser and very slightly hazy acrylic". So the map now holds the volume for a scattering
+material (core/haze.js THE BEAM SEEN INSIDE, sppm.js `sppmGatherVolume`):
+- **Photons store a record where they collide**, in the march, by the surface map's rules.
+- **A camera ray gathers at its first collision** while its lens field is 1; that collision is the map's D. This
+  is the estimate below with sigma_s, for pure scattering.
+- **The march takes the map's buffers** only where the stage has room for them (raytrace_main.js `volumeOf`).
+
+Measured on Dawn over lavapipe (volume.gpu.mjs): a sunlit milky slab seen side on reads 0.952 +- 0.042 of the camera's
+own paths. **The radius stays the surface map's** (r^2 shrinking); r^3's schedule is not derived yet. A radius near the
+part's size reads low, because the sphere sticks out of the face (0.747 at 7 cm). **Still open:** the haze box's points
+in the air as D, and a beam estimate along camera rays.
 
 The class light → delta+ → M → delta+ → eye: a beam seen through a lens or a window, or in a mirror. Photons would be
 stored at their medium vertices after TAG_PASSED, with a volume flag in the record (the record's normal unused). A
@@ -89,13 +103,19 @@ checked. A JS mirror against a closed form would come first (`sppm.test.mjs`'s s
 glass slab. A beam radiance estimate along camera rays (Jarosz 2008) is far less noisy, but walks the hash grid along a
 ray. It is a later choice, measured.
 
-## Phase 3 — scattering inside materials (open)
+## Phase 3 — scattering inside materials (built 0.82.0: core/haze.js THE MEDIUM'S WALK; what follows was the plan)
 
 Milky glass, smoke in a dome, an opal diffuser at low density. The ray has to carry σ_s and g as well as the absorption
 it carries now (`muR/G/B`). That takes the Ray from 112 to 128 bytes: (2·112 + 272) = 496 → 544 bytes a ray, about 9 %
 fewer rays a batch at the cap (read in code, not timed). The collision would read the ray's own medium instead of the
 box. From outside, such glass glows only through phase 2: light reaches the inside through a refraction, and gets out
-to the camera through another. A dense diffuser (hundreds of scatters) is a surface's job, not a random walk's.
+to the camera through another. A dense diffuser (tens of scatters or more) is a surface's job, not a random walk's.
+
+**The options and their costs are in `DIFFUSERS.md`** (2026-10-29), beside this file. It covers a translucent surface lobe
+for opal sheets, a forward lobe for narrow-angle films, and this phase as a material's medium for light guides and thick
+milky glass. It also explains why a scatter inside smooth glass can never sample a light, and why the Optics page needs
+no connections at all. Its colour axis (σ(λ), colour over angle, a phosphor in silicone) is `roadmap/LIGHT_MODEL.md`
+§4.3, step S7.
 
 ## Phase 4 — beams in the Optics view, and less noise (open)
 

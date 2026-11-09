@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>The optics bench · ShadyTracer, inside out</title>
+<meta name="description" content="Measuring light like a lab bench: beams, maps of light on a wall, ray files.">
 <link rel="stylesheet" href="../kit/kit.css">
 <script type="module" src="optics.js"></script>
 </head>
@@ -182,6 +183,15 @@
         model's average of them off by 3% at 70°, as predicted (the user's Pascal
         card, 2026-09-27, <code>docs/TESTING.md</code>).</p>
     </div>
+    <div data-claim="code">
+      <p><strong>Wavelengths in the colour's place.</strong> A scene can ask for its optics rays to be traced by
+        wavelength (one of its optical features, off by default). A ray then carries three wavelengths of its light's
+        spectrum in the three numbers that held its colour, each weighed by the spectrum over how often that wavelength is
+        drawn; a coating is worked out at each, and a detector hit keeps them, so the light that arrived can be binned
+        into a spectrum and rated for colour rendering (<code>optics/spectral.js</code>, <code>optics/spectrum.js</code>).
+        Nothing new is added to the ray, and the picture's kernels are not touched: the spectral kernels are the colour
+        kernels' text with a few lines replaced, each found exactly once or the build stops.</p>
+    </div>
     <div data-claim="measured">
       <p><strong>One readback for many batches.</strong> The optics module traces its rays in batches and reads each
         batch's totals back from the card to the page. A readback waits for everything sent to the card before it, the
@@ -219,6 +229,12 @@
       <li><strong>Batches flashing over the view.</strong> The drawn rays were whatever was in the trace's buffer last,
         and a Live analysis's batches would have drawn over them; each trace now publishes its paths to a copy of its
         own (<code>optics/README.md</code>).</li>
+      <li><strong>Rays that switched themselves off.</strong> The live rays stopped at the first trace that failed, and
+        "often" had to be switched on again (the user, 2026-10-28). A scene rebuilt under them can make a trace fail:
+        the renderer puts the new scene in before its values are ready, and every structural edit, the background bake
+        among them, opens that window. The Live analysis already waited it out and let such a round go; the rays now do
+        the same, and stop only on a failure with the scene as it was (<code>optics/page.js</code>,
+        <code>showRays</code>).</li>
     </ul>
   </div>
 </section>

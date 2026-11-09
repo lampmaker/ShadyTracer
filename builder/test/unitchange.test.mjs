@@ -125,7 +125,6 @@ const own = () => {
     M.addLight(d, lum.id, { shape: 'rectangle', params: { width: 0.4, height: 0.2 }, luminance: 5000 })
     M.addLight(d, 'root', { shape: 'disc', params: { radius: 0.3 }, flux: 120, transform: { pos: { x: 1, y: 1, z: 6 }, rot: { x: 0, y: 0, z: 0 }, scale: 1 } })
     M.addHazeBox(d, 'root', { size: { x: 4, y: 4, z: 3 } })
-    M.addExportBox(d, 'root', { size: { x: 2, y: 2, z: 2 } })
     M.setView(d, { camera: { ...M.CAMERA_DEFAULTS, distance: 30, target: [1, 2, 3], aperture: 0.5, focus: 25 } })
     return d
 }
@@ -377,6 +376,22 @@ for (const f of scenes) {
     const e = P.blankScene(); e.libraryItem = { id: 'y', kind: 'node', unit: null }
     changeUnit(e, 'mm', 'scale')
     ok('a library item\'s unit follows; null stays null', d.libraryItem.unit === 'mm' && e.libraryItem.unit === null)
+}
+
+// ---- THE CAMERA AS ONE VALUE (0.84.0, lib/pathtracer/params.js CAMERA POSE): a key on `view/camera/pose` is ten numbers,
+// eye xyz, target xyz, up xyz, field of view -- only the first six are lengths
+{
+    const d = M.createDoc({ title: 'pose' })
+    M.setTimeline(d, { fps: 30, duration: 1, tracks: [{ prop: 'view/camera/pose', interp: 'smooth', keys: [{ t: 0, v: [1, 2, 3, 0, 0, 0.5, 0, 0.6, 0.8, 40] }] }] })
+    for (const how of ['scale', 'dimensions']) {
+        const e = structuredClone(d)
+        changeUnit(e, 'mm', how)
+        ok(`a pose key to mm (${how}): its eye and target a thousand times, its up and its field as they were`,
+            JSON.stringify(e.timeline.tracks[0].keys[0].v) === JSON.stringify([1000, 2000, 3000, 0, 0, 500, 0, 0.6, 0.8, 40]), JSON.stringify(e.timeline.tracks[0].keys[0].v))
+    }
+    const e = structuredClone(d)
+    changeUnit(e, 'mm', 'keep')
+    ok('...kept: nothing', JSON.stringify(e.timeline) === JSON.stringify(d.timeline))
 }
 
 console.log(`unitchange: ${pass} passed, ${fail} failed`)

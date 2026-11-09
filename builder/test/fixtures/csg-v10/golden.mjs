@@ -168,12 +168,12 @@
 // (scenes/make.mjs lists it, `made: false`). No codegen change: the freeze added its entry and moved no other document's
 // (key by key, against the expected.json before).
 //
-// THE SAME DOCUMENT REFROZEN (2026-10-23, 0.next): the user saved scenes/dichroics.json again (f002d0b, "updated dichroics
+// THE SAME DOCUMENT REFROZEN (2026-10-23, 0.79.0): the user saved scenes/dichroics.json again (f002d0b, "updated dichroics
 // example") and dev's codegen.test failed on its two entries. The document moved, not codegen: f002d0b changed that file
 // alone, and the freeze moved both modes of its entry and no other document's (key by key, against the expected.json
 // before). The user asked for the refreeze.
 //
-// REFROZEN FOR EVERY DOCUMENT WITH A LIGHT (2026-10-23, 0.next), for a fix the user asked for (light sampling off read a
+// REFROZEN FOR EVERY DOCUMENT WITH A LIGHT (2026-10-23, 0.79.0), for a fix the user asked for (light sampling off read a
 // small face brighter than on: codegen.js ONLY ON THE FACE ITSELF, builder/test/lightface.gpu.mjs). Each light's
 // `let MATERIAL = select(<back>, matid_<id>, p.z >= 0.0);` (two-sided: `let MATERIAL = matid_<id>;`) gained the face's
 // own extent -- `&& all(abs(p.xy) <= VEC2(width, height) * 0.5)` for a rectangle, `&& dot(p.xy, p.xy) <= radius * radius`
@@ -181,7 +181,7 @@
 // against a worktree of the code before (89a8731): 200 texts (render, pick and the optics trace's two) moved, by 340 lines,
 // every one a light's MATERIAL line as above; no line count, uniform or tag moved. cases.*.wgsl moved by that line alone.
 //
-// REFROZEN FOR ONE SCENE (2026-10-23, 0.next), for a feature the user chose ("faster large arrays", after Tests >
+// REFROZEN FOR ONE SCENE (2026-10-23, 0.79.0), for a feature the user chose ("faster large arrays", after Tests >
 // lightarray measured 256 copies of a light at 465 ms of march a sample): a row's or a ring's copies evaluated in a
 // window around the point (builder/arrays.js). Checked before freezing: generated with arrayWindow false, every one of the
 // 51 documents' fingerprints was the one frozen, both modes; with the window, only scenes/parametric-part.json moved (its
@@ -206,10 +206,35 @@
 // wgsl and opticsWgsl by the window's functions, its pickWgsl and opticsPickWgsl by the copy number -- the one document
 // with an array.
 //
+// THE SPECIAL OBJECTS STOP BEING ADD-ONS (0.83.0, scene format 27; the user, 2026-11-04). Three agreed changes, the
+// documents compared key by key before this freeze, each against the codegen of the commit before (be7b523):
+// - THE ROLES ARE THE OBJECTS' (a detector, a limiter: model.js OPTICS_ROLES): the fingerprint's `roles` now holds
+//   `detectorTags` beside `detectors` and `passes`, so it moved for EVERY document, and only that key for all but two.
+// - cases.json: its export box is dropped on load (v26to27), so its comment and uniforms (xf_exbox, size_exbox) left
+//   every text and its `vis_exbox` block the live text; and its limiter material is a surface now (the role went to
+//   the object wearing it), so getMaterial2 assigns that material's fields (baseColor_lim and the rest, declared).
+//   Nothing else in its texts moved (cases.*.wgsl, diffed by hand).
+// (For a while the haze box was the scene's too, and dusty-beam.json's texts moved with it; the user wanted the box
+// back, so they are base's again, its `roles` key aside.)
+//
+// ONE SCENE ADDED (0.84.0, scene format 29): scenes/pictures.json, the Pictures example (builder/images.js). Frozen with
+// expected.json compared key by key before and after: its entry added, and none of the 51 documents before it moved --
+// a scene with no picture compiles to the text it did -- cases.*.wgsl among them.
+//
+// AND AGAIN FOR IT (0.84.0, the same day): a relief from a picture -- heightAt in the lookup's text, a 16-bit picture's
+// read, a slot's height bound -- and an embossed plaque in the example. scenes/pictures.json alone moved, checked key by
+// key; no other document has a picture.
+//
+// AND ONCE MORE (0.84.0): "picture" became "image texture" in what users see -- the example's title, its textures' default
+// name (texture), its relief's comment and local. scenes/pictures.json alone moved, checked key by key.
+//
 // A DOCUMENT ADDED (2026-10-26, 0.next): bench/scenes/prism.json, scenes/prism-dispersion.json frozen for Tests > alongray
 // (bench/alongray.js: its camera rays and its slit beam graze its table). No codegen change in the freeze: answers along
 // the ray are codegen's `along`, off by default, and with it off every document's text is what it was. The freeze added
 // the new document's entries, both modes, and moved no other document's (key by key, against the expected.json before).
+// ...AND REFROZEN FOR IT WHEN DEV CAME IN (2026-11-09): dev had moved every document's `roles` (THE SPECIAL OBJECTS, above)
+// while this branch froze the prism scene before that, so its two entries alone moved, by `roles` alone (key by key,
+// against the merged expected.json).
 //======================================================================================================================
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
@@ -243,7 +268,7 @@ export function fingerprint(scene) {
     return {
         wgsl: sha(scene.wgsl), pickWgsl: sha(scene.pickWgsl), opticsWgsl: sha(scene.opticsWgsl), opticsPickWgsl: sha(scene.opticsPickWgsl),
         uniforms: sha(sorted(scene.uniforms)), tags: sha(JSON.stringify([scene.tags, scene.opticsTags])),
-        roles: sha(JSON.stringify([scene.detectors, scene.passes])),
+        roles: sha(JSON.stringify([scene.detectors, scene.passes, scene.detectorTags ?? []])),
     }
 }
 

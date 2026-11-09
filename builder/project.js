@@ -59,7 +59,7 @@ export function addScene(p, doc, index) {
  *  or a lamp, and its + shapes are 1 unit across (primitives.js), so a 1 cm sphere. createDoc stays in
  *  metres with the 400 m default: it is what every test, bench and library document is built on. */
 export const NEW_SCENE = Object.freeze({ unit: 'cm', envRadius: 25 })
-/* ...and seen from close by (model.js VIEW): the page's start angle (index.html camera), 4 units off -- a 1-unit shape
+/* ...and seen from close by (model.js VIEW): the page's start angle (app.html camera), 4 units off -- a 1-unit shape
    a third of the view's height at the 40 degree field -- rather than wherever the scene before left the camera, 20 m
    off or 150 mm. dimensions is the parallel view's width. In the document since 0.66.0, as every scene's camera is: it
    was held beside it, for the first time the scene was shown, and a new scene saved before it was shown had none. */
@@ -130,17 +130,24 @@ const uniqueTitle = (p, t) => {
 
 /* `app`, the version of the application writing a FILE (model.js withApp): given only by the File menu's saves
    (demo.js), never by undo's snapshots or the start-up copy, which are the project itself */
-export const serialize = (p, { app } = {}) => JSON.stringify(M.withApp(p, app), null, 2)
+export const serialize = (p, { app } = {}) => JSON.stringify(M.withApp(withUsedPictures(p), app), null, 2)
+/* each scene with only the pictures its materials use (model.js withUsedPictures): the project as a file and as the
+   browser keeps it */
+const withUsedPictures = p => p?.scenes?.some(s => s.doc?.images) ? { ...p, scenes: p.scenes.map(s => s.doc?.images ? { ...s, doc: M.withUsedPictures(s.doc) } : s) } : p
 
-/* WHAT A SCENE HAS THAT NO UNDO STEP HOLDS: its view (model.js VIEW) and its timeline (model.js TIMELINE, 0.67.0).
-   One list, read by every place that leaves them out or puts them back -- the history's text, a restore (carryOutside),
+/* WHAT A SCENE HAS THAT NO UNDO STEP HOLDS: its view (model.js VIEW), its timeline (model.js TIMELINE, 0.67.0) and its
+   script (model.js SCRIPT, 0.82.0: a text editor's lines, which an undo of the scene's must not take back). One list, read by every place that leaves them out or puts them back -- the history's text, a restore (carryOutside),
    the builder's memory of a scene taken out and its comparison of a scene before and after a step (demo.js) -- so a
    third such part is one word here, not a fourth place found missing. */
-export const OUTSIDE_HISTORY = Object.freeze(['view', 'timeline'])
+/* ...AND ITS PICTURES (version 29, builder/images.js): megabytes each, which a snapshot a step would carry, and which no
+   undo needs to take away -- the step undoes the slot that names one. A picture's entry never changes once made, so it
+   is carried by reference, not copied (carryCopy). */
+export const OUTSIDE_HISTORY = Object.freeze(['view', 'timeline', 'script', 'images'])
+const carryCopy = (k, v) => k === 'images' ? { ...v } : structuredClone(v)
 /** A scene's document without what no undo step holds (OUTSIDE_HISTORY), a shallow copy. */
 export const withoutOutside = doc => Object.fromEntries(Object.entries(doc).filter(([k]) => !OUTSIDE_HISTORY.includes(k)))
 /** What a scene's document has of OUTSIDE_HISTORY, copied: { view, timeline }, each only when it has one. */
-export const outsideOf = doc => Object.fromEntries(OUTSIDE_HISTORY.filter(k => doc?.[k] !== undefined).map(k => [k, structuredClone(doc[k])]))
+export const outsideOf = doc => Object.fromEntries(OUTSIDE_HISTORY.filter(k => doc?.[k] !== undefined).map(k => [k, carryCopy(k, doc[k])]))
 /* THE HISTORY'S TEXT (demo.js): the project without any scene's view or timeline (OUTSIDE_HISTORY). Looking is not an
    edit: a snapshot that held the camera would make an undo move it back to where it was at that edit, and a commit
    after an orbit -- harmless by history.js's rule, nothing changed -- would record the orbit as a step. A timeline is
@@ -156,7 +163,7 @@ export function carryOutside(next, from, memory = null) {
         const was = scene(from, s.key)?.doc, kept = memory?.get?.(s.key)
         for (const k of OUTSIDE_HISTORY) {
             const v = was?.[k] ?? kept?.[k]
-            if (v) s.doc[k] = structuredClone(v)
+            if (v) s.doc[k] = carryCopy(k, v)
             else delete s.doc[k]
         }
     }
@@ -165,12 +172,14 @@ export function carryOutside(next, from, memory = null) {
 
 /* THE RENDERER'S SETTINGS AS A PROJECT KEEPS THEM (0.66.0): everything the renderer hands over (RT.settings) but what
    the scenes have of their own now -- the camera, the exposure (model.js VIEW_EXPOSURE) and the surface tolerance
-   (`eps`). Saved, they were put back over the scene shown at every start (index.html applySettings), one scene's
-   camera over another's, and one exposure and one tolerance for all. */
+   (`eps`). Saved, they were put back over the scene shown at every start (app.html applySettings), one scene's
+   camera over another's, and one exposure and one tolerance for all. And `dispersionOff` (0.74.0 to 0.83.0), whose
+   uniform is gone: dispersion is each scene's feature now (model.js setFeatures), read into them by adoptViews. */
 export function rendererSettings(s) {
     if (!s || typeof s !== 'object' || Array.isArray(s)) return {}
     const { camera: _, values = {}, ...rest } = s
-    return { ...rest, values: Object.fromEntries(Object.entries(values || {}).filter(([k]) => !(k in M.VIEW_EXPOSURE) && k !== 'eps')) }
+    return { ...rest, values: Object.fromEntries(Object.entries(values || {})
+        .filter(([k]) => !(k in M.VIEW_EXPOSURE) && k !== 'eps' && k !== 'dispersionOff')) }
 }
 /**
  * WHAT A PROJECT KEPT BESIDE ITS SCENES, PUT INTO THEM (0.66.0): `views` { key: view } -- the browser's session, newer
@@ -178,7 +187,9 @@ export function rendererSettings(s) {
  * session every second: workspace/autosave.js) -- and, from a project or a workspace written before, `cameras`
  * { key: camera }, each scene's kept camera, and `renderer`, whose exposure was every scene's and whose tolerance
  * (eps, metres) was set while `current` was being worked on. A scene's own view comes first; a kept view that is not
- * sound is left out, never the reason a project does not open. Changes `p`; returns it.
+ * sound is left out, never the reason a project does not open. And the renderer's dispersion switch (`dispersionOff`
+ * 1, 0.74.0 to 0.83.0), which was every scene's: each scene's dispersion off (model.js setFeatures). Changes `p`;
+ * returns it.
  */
 export function adoptViews(p, { views = null, cameras = null, renderer = null, current = null } = {}) {
     const obj = o => o && typeof o === 'object' && !Array.isArray(o)
@@ -191,6 +202,8 @@ export function adoptViews(p, { views = null, cameras = null, renderer = null, c
         if (!d.view?.camera && obj(c)) tryView(d, { camera: c })
         if (!d.view?.exposure && exposure && Object.keys(exposure).length) tryView(d, { exposure })
     }
+    if (renderer?.values?.dispersionOff === 1)
+        for (const s of p.scenes) { try { M.setFeatures(s.doc, { dispersion: false }) } catch (e) { console.warn(`[project] dispersion off left out: ${e.message}`) } }
     const eps = +renderer?.values?.eps, cur = scene(p, current)?.doc
     if (eps > 0 && cur && !cur.tolerance) {
         try { M.setTolerance(cur, Number((eps / (M.UNITS[cur.unit] ?? 1)).toPrecision(12))) }
@@ -207,7 +220,7 @@ export const WORKSPACE_VERSION = 1
  *  their own (rendererSettings): each scene's camera and exposure are in its document (model.js VIEW). A workspace
  *  written before 0.66.0 had `cameras` beside the project; workspaceOf still reads them into the scenes. */
 export const serializeWorkspace = (p, current, renderer = {}, { app } = {}) => JSON.stringify(
-    M.withApp({ format: WORKSPACE_FORMAT, version: WORKSPACE_VERSION, current, renderer: rendererSettings(renderer), project: p }, app), null, 2)
+    M.withApp({ format: WORKSPACE_FORMAT, version: WORKSPACE_VERSION, current, renderer: rendererSettings(renderer), project: withUsedPictures(p) }, app), null, 2)
 /** THE PROJECT AS A FILE HOLDS IT: without the scenes of library items being edited (library/edit.js) --
  *  they are the library's, saved there -- and with a current scene it still has: the one the item was opened
  *  from, else the first. Returns { project, current }; the same project when it has no such scene. Two

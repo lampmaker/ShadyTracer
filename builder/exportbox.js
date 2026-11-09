@@ -1,22 +1,27 @@
 //======================================================================================================================
-// EXPORT BOX -- the part of a scene that becomes a printable file: a box object, and the export it
-// drives (3MF with colour, or STL).
+// PRINT EXPORT -- the part of a scene that becomes a printable file (3MF with colour, or STL), and the
+// export that makes it.
 //
-// A BOX IS AN OBJECT OF ITS OWN TYPE, `type: 'export'`, like a light (lights.js) and for the same
-// reason: its shape has to stay known, and a code node's cannot. It draws nothing -- codegen emits a
-// comment for it, declaring its uniforms as it does for anything left out -- so adding one changes
-// no picture. It has what every object has: a place in the tree, a transform the handles move and
-// rotate, a size (its `size` parameter, the full edge lengths in its own frame, centred on its
-// origin). And `export`, its settings:
+// NO OBJECT IN THE SCENE (0.83.0). This was an "export box", a node of its own type added from the +
+// menu, only so that its panel could hold the Export buttons; it sat in the tree, in the undo history and
+// in every file afterwards. Now File > Export > 3D print... (printdialog.js) asks what to print -- the
+// SELECTED OBJECT or the WHOLE SCENE -- and offers a box fitted to it, which the user may change. The box
+// lives in the dialog and nowhere else: nothing is added to the scene, so nothing has to be taken away.
+// A file of version 26 or older that has an export box opens without it (model.js v26to27).
+//
+// THE BOX, `box` below: { frames, lo, hi } -- a box from lo to hi in a frame of its own, and `frames` the
+// transforms from that frame to the world, innermost first (bounds.js framesTo's order). For an object it
+// is the object's own frame and its measured box there (boxes.js get), so a turned part prints in its
+// own orientation; for the scene, the world. THE BOX'S FRAME IS THE PART'S: its z is up on the print bed
+// and its min corner the file's origin.
+//
+// WHAT IS EXPORTED is everything solid inside the box, cut by its faces -- of the scene the renderer
+// shows (the render copy: an optics limiter is not in it, and a light is a sheet with no inside), or, for
+// one object, of a scene made of THAT OBJECT ALONE (subjectTree), compiled for the export: a box fitted to
+// an object still holds the edges of its neighbours, which "the selected object" must not print.
 //   cell      the grid's spacing, in MILLIMETRES of the printed part -- a printer's number, not the
 //             scene's, so it means the same in a metre scene and a millimetre one
 //   colours   how many colours a 3MF may have: the filaments the printer holds
-//
-// WHAT IS EXPORTED is everything solid inside the box, cut by its faces: the whole scene, as the
-// picture shows it (the render copy of the scene -- an optics limiter is not in it, and a light is a
-// sheet with no inside). THE BOX'S FRAME IS THE PART'S: its z is up on the print bed and its min
-// corner the file's origin, so turning the box turns the print, and a scene with z not up needs no
-// edit to print upright.
 //
 // HOW (see each file's header):
 //   1. the grid (exportGrid): cells of about `cell` mm fitted to the box exactly, with the box's
@@ -28,20 +33,17 @@
 //   5. the colour at each triangle's centre, on the GPU again, reduced to `colours` (mesh.js quantize);
 //   6. the file (print.js).
 //
-// PURE EXCEPT runExport, which talks to the renderer (RT.sampleField) and nothing else; the host
-// downloads what it returns.
+// PURE EXCEPT runExport, which talks to the renderer through the `sample` it is given and nothing else;
+// the host downloads what it returns.
 //======================================================================================================================
 
 import { lineage, toParent, framesTo } from './bounds.js'
+import { find, toTree } from './model.js'
 import { UNITS } from '../lib/pathtracer/core/photometry.js'
 import { FIELD_GRID, FIELD_POINTS, FIELD_MAX_POINTS, fieldInput } from '../lib/pathtracer/core/field.js'
 import { createMesher, centroids, quantize, toSRGB, openEdges } from './mesh.js'
 import { write3MF, writeSTL } from './print.js'
 
-export const EXPORT_PARAMS = Object.freeze({ size: Object.freeze({ x: 1, y: 1, z: 1 }) })
-/** Which of its parameters the Transform gizmo's cube on each axis multiplies (stretch.js): its size, whole along each
- *  axis (boxCorners), so a cube pulls that face out. */
-export const EXPORT_STRETCH = Object.freeze({ x: ['size.x'], y: ['size.y'], z: ['size.z'] })
 export const EXPORT_DEFAULTS = Object.freeze({ cell: 0.4, colours: 4 })
 export const FORMATS = ['3mf', 'stl']
 /** Refused past this: a layer of the grid has to fit one dispatch (field.js). */
@@ -49,31 +51,113 @@ export const MAX_LAYER = FIELD_MAX_POINTS
 /** ...and past this in all, which is already an hour of meshing and a file no slicer wants. */
 export const MAX_POINTS = 1.2e9
 
-/** The box's settings with the defaults filled in. */
-export const exportOf = node => ({ ...EXPORT_DEFAULTS, ...(node?.export || {}) })
-
-/** Everything wrong with an export box, as strings. */
-export function exportProblems(n) {
-    const p = [], id = n.id
-    const s = n.params?.size
-    if (!s || !['x', 'y', 'z'].every(k => Number.isFinite(s[k]) && s[k] > 0)) p.push(`'${id}': an export box needs a size {x, y, z} > 0`)
-    for (const k of Object.keys(n.params || {})) if (k !== 'size') p.push(`'${id}': an export box has no parameter '${k}'`)
-    if (n.material != null) p.push(`'${id}': an export box has no material`)
-    if (n.code !== undefined) p.push(`'${id}': an export box has no code`)
-    if (n.constants !== undefined || n.ranges !== undefined) p.push(`'${id}': an export box has no constants or ranges`)
-    const E = n.export
-    if (E !== undefined) {
-        if (!E || typeof E !== 'object' || Array.isArray(E)) return [...p, `'${id}': export settings must be an object`]
-        for (const k of Object.keys(E)) if (!(k in EXPORT_DEFAULTS)) p.push(`'${id}': unknown export setting '${k}'`)
-        if (E.cell !== undefined && !(Number.isFinite(E.cell) && E.cell > 0)) p.push(`'${id}': export cell must be mm > 0`)
-        if (E.colours !== undefined && !(Number.isInteger(E.colours) && E.colours >= 1 && E.colours <= 64)) p.push(`'${id}': export colours must be a whole number from 1 to 64`)
-    }
+/** Everything wrong with the export's settings { cell, colours }, as strings. */
+export function settingsProblems(E) {
+    const p = []
+    if (!(Number.isFinite(E?.cell) && E.cell > 0)) p.push('the cell must be mm > 0')
+    if (!(Number.isInteger(E?.colours) && E.colours >= 1 && E.colours <= 64)) p.push('the colours must be a whole number from 1 to 64')
     return p
 }
 
+/** Everything wrong with a box { frames, lo, hi }, as strings. */
+export function boxProblems(box) {
+    if (!box || !Array.isArray(box.frames) || !Array.isArray(box.lo) || !Array.isArray(box.hi)) return ['no box']
+    for (let k = 0; k < 3; k++) {
+        if (!(Number.isFinite(box.lo[k]) && Number.isFinite(box.hi[k]))) return ['the box is not a number']
+        if (!(box.hi[k] > box.lo[k])) return [`the box has no size along ${'xyz'[k]}`]
+    }
+    return []
+}
+
+/** The box's centre and full size, in its own frame; and a box made from a centre and a size in a frame. */
+export const centreOf = box => [0, 1, 2].map(k => (box.lo[k] + box.hi[k]) / 2)
+export const sizeOf = box => [0, 1, 2].map(k => box.hi[k] - box.lo[k])
+export const boxOf = (frames, centre, size) => ({ frames, lo: centre.map((c, k) => c - size[k] / 2), hi: centre.map((c, k) => c + size[k] / 2) })
+
+/** A box's eight corners in the world, for drawing it (overlay.js outline): corner c has x from bit 0, y from bit 1,
+ *  z from bit 2. And its twelve edges, as corner pairs. */
+export function corners(box) {
+    return [0, 1, 2, 3, 4, 5, 6, 7].map(c => box.frames.reduce((q, t) => toParent(t, q),
+        [c & 1 ? box.hi[0] : box.lo[0], c & 2 ? box.hi[1] : box.lo[1], c & 4 ? box.hi[2] : box.lo[2]]))
+}
+export const BOX_EDGES = [[0, 1], [2, 3], [4, 5], [6, 7], [0, 2], [1, 3], [4, 6], [5, 7], [0, 4], [1, 5], [2, 6], [3, 7]]
+
 /**
- * The grid an export samples, from the document: where the box is in the world and how it is cut
- * into cells. Pure, so tested in node (test/exportbox.test.mjs).
+ * THE BOX FITTED TO WHAT IS PRINTED, from the measured boxes (boxes.js: `B` has its get), or null when nothing is
+ * measured yet -- the dialog then says so, and the user can type a size.
+ *   id null or the root: THE WHOLE SCENE, in the world: the union of the top-level nodes' boxes, leaving out the
+ *       lights (a sheet, nothing to print), a haze box (dust) and an OPEN box -- a floor plane's, which goes on to where the search
+ *       stopped (boxes.js) and would print a slab the size of a room. A group whose box is open is looked into
+ *       instead, so a floor grouped with the furniture leaves the furniture.
+ *   an object or a group: ITS OWN box in its own frame, the frames from it to the world, so the print is upright
+ *       in the object's frame and fits it however it is turned.
+ */
+export function fittedBox(doc, B, id = null) {
+    const n = id == null ? doc.root : find(doc, id)?.node
+    if (!n) return null
+    if (n === doc.root) {
+        let lo = null, hi = null
+        const grow = p => { lo = lo ? lo.map((v, k) => Math.min(v, p[k])) : p.slice(); hi = hi ? hi.map((v, k) => Math.max(v, p[k])) : p.slice() }
+        const visit = (c, frames) => {
+            if (c.enabled === false || (c.kind === 'object' && (c.type === 'light' || c.type === 'haze'))) return
+            const here = c.transform ? [c.transform, ...frames] : frames
+            const b = B.get(c.id)
+            if (b && !b.open) { for (const p of corners({ frames: here, lo: b.lo, hi: b.hi })) grow(p); return }
+            // an open box, or none: what is inside it, at each copy of an array
+            for (const k of c.children || []) for (const cp of c.copies?.length ? c.copies : [null]) visit(k, cp ? [cp, ...here] : here)
+        }
+        for (const c of doc.root.children) visit(c, [])
+        return lo ? { frames: [], lo, hi } : null
+    }
+    if (n.kind === 'object' && (n.type === 'light' || n.type === 'haze')) return null
+    const b = B.get(n.id)
+    return b ? { frames: framesTo(doc, n.id), lo: b.lo.slice(), hi: b.hi.slice() } : null
+}
+
+/**
+ * THE SCENE OF ONE OBJECT ALONE, for the export of "the selected object": the tree toTree makes, with the
+ * object -- an object or a group, everything under it -- put at the top level inside plain groups that carry
+ * each frame between it and the world (framesTo's), so it is exactly where it is in the scene and nothing else
+ * is there. What the groups above it DO is left out: their joins (a part subtracted from another is printed as
+ * itself), their blends, their code (a modifier), and the copies of an array (one copy is printed: the first,
+ * where the object is shown and moved). Its materials are the ones it wears (toTree resolves a group's), and a
+ * pattern frame above it stays where it was (pattern.test: where a material lays its pattern out).
+ * Throws for a hidden object, a light, a haze box, or one not in the document.
+ */
+export function subjectTree(doc, id) {
+    const f = find(doc, id)
+    if (!f) throw new Error(`'${id}' is not in this scene`)
+    if (f.node === doc.root) return toTree(doc)
+    if (f.node.kind === 'object' && f.node.type === 'light') throw new Error('a light is a sheet with nothing to print')
+    if (f.node.kind === 'object' && f.node.type === 'haze') throw new Error('a haze box is dust: nothing to print')
+    const tree = toTree(doc)
+    const findIn = (n, want) => n.id === want ? n : (n.children || []).reduce((r, c) => r || findIn(c, want), null)
+    const own = findIn(tree, id)
+    if (!own) throw new Error(`'${id}' is hidden, or inside something hidden: show it to print it`)
+    const subject = structuredClone(own)
+    for (const k of ['join', 'joinBlend', 'enabled']) delete subject[k]
+    // its own transform stays its own; each ancestor a group of one carrying its transform and pattern frame
+    let inner = subject
+    const chain = lineage(doc, id)
+    chain.forEach((n, i) => {
+        if (n === doc.root) return
+        if (i > 0) {
+            const g = { id: `${n.id}__print`, kind: 'group', blend: 0, csg: false, children: [inner] }
+            if (n.transform) g.transform = structuredClone(n.transform)
+            if (n.pattern) g.pattern = structuredClone(n.pattern)
+            inner = g
+        }
+        const up = chain[i + 1]
+        if (up && up !== doc.root && up.copies?.length)
+            inner = { id: `${up.id}__copy`, kind: 'group', blend: 0, csg: false, transform: structuredClone(up.copies[0]), children: [inner] }
+    })
+    const { children: _c, ...rest } = tree
+    return { ...rest, children: [inner] }
+}
+
+/**
+ * The grid an export samples: where the box is in the world and how it is cut into cells. Pure, so tested in
+ * node (test/exportbox.test.mjs). `unit` is the scene's (doc.unit).
  *
  * GRID POINTS SIT AT CELL CENTRES of a box cut into m cells per axis -- the cell adjusted so m is
  * whole -- plus one point outside each face: n = m + 2 points, point k at (k - 0.5) cells from the
@@ -83,24 +167,19 @@ export function exportProblems(n) {
  * @returns { n: [nx, ny, nz], spacing: [mm per cell, per axis], sizeMm, mmPerUnit,
  *            origin, ax, ay, az -- world (scene units): grid point (0,0,0), and one step along each axis }
  */
-export function exportGrid(doc, id, { cell } = {}) {
-    const chain = lineage(doc, id)
-    const node = chain[0]
-    if (!node || node.type !== 'export') throw new Error(`'${id}' is not an export box`)
-    const bad = exportProblems(node)
+export function exportGrid(unit, box, { cell = EXPORT_DEFAULTS.cell } = {}) {
+    const bad = boxProblems(box)
     if (bad.length) throw new Error(bad[0])
-    const E = exportOf(node)
-    const cellMm = cell ?? E.cell
-    const frames = framesTo(doc, id)
-    const toWorld = p => frames.reduce((q, t) => toParent(t, q), p)
-    const scale = frames.reduce((s, t) => s * (t.scale ?? 1), 1)
-    const mmPerUnit = (UNITS[doc.unit ?? 'm'] ?? 1) * 1000
-    const size = [node.params.size.x, node.params.size.y, node.params.size.z]
+    if (!(Number.isFinite(cell) && cell > 0)) throw new Error('the cell must be mm > 0')
+    const toWorld = p => box.frames.reduce((q, t) => toParent(t, q), p)
+    const scale = box.frames.reduce((s, t) => s * (t.scale ?? 1), 1)
+    const mmPerUnit = (UNITS[unit ?? 'm'] ?? 1) * 1000
+    const size = sizeOf(box)
     const sizeMm = size.map(v => v * scale * mmPerUnit)
-    const m = sizeMm.map(v => Math.max(1, Math.round(v / cellMm)))
+    const m = sizeMm.map(v => Math.max(1, Math.round(v / cell)))
     const n = m.map(k => k + 2)
     const step = size.map((v, k) => v / m[k])                     // in the box's own frame
-    const local = (i, j, k) => [(i - 0.5) * step[0] - size[0] / 2, (j - 0.5) * step[1] - size[1] / 2, (k - 0.5) * step[2] - size[2] / 2]
+    const local = (i, j, k) => [(i - 0.5) * step[0] + box.lo[0], (j - 0.5) * step[1] + box.lo[1], (k - 0.5) * step[2] + box.lo[2]]
     const origin = toWorld(local(0, 0, 0))
     const along = q => toWorld(q).map((v, k) => v - origin[k])
     return {
@@ -108,20 +187,6 @@ export function exportGrid(doc, id, { cell } = {}) {
         origin, ax: along(local(1, 0, 0)), ay: along(local(0, 1, 0)), az: along(local(0, 0, 1)),
     }
 }
-
-/** The box's eight corners in the world, for drawing it (overlay.js): corner c has x from bit 0,
- *  y from bit 1, z from bit 2. And its twelve edges, as corner pairs. A haze box's too (hazebox.js): the same
- *  `size` in the same frame. */
-export function boxCorners(doc, id) {
-    const chain = lineage(doc, id)
-    const node = chain[0]
-    if (!node || (node.type !== 'export' && node.type !== 'haze')) return null
-    const frames = framesTo(doc, id)
-    const s = node.params?.size || EXPORT_PARAMS.size
-    return [0, 1, 2, 3, 4, 5, 6, 7].map(c => frames.reduce((q, t) => toParent(t, q),
-        [(c & 1 ? 0.5 : -0.5) * s.x, (c & 2 ? 0.5 : -0.5) * s.y, (c & 4 ? 0.5 : -0.5) * s.z]))
-}
-export const BOX_EDGES = [[0, 1], [2, 3], [4, 5], [6, 7], [0, 2], [1, 3], [4, 6], [5, 7], [0, 4], [1, 5], [2, 6], [3, 7]]
 
 /** Why a grid cannot be exported, or null. */
 export function gridProblem(g) {
@@ -138,16 +203,17 @@ export function boxDistance(g, i, j, k) {
 }
 
 /**
- * Sample, mesh, colour and write. `sample(input, outFloats)` is the renderer's RT.sampleField; it
- * must be showing the scene the box is in. Resolves to { bytes, triangles, vertices, colours,
- * palette, open } -- `open` the number of edges that are not closed (null: not checked, a big mesh),
- * which is 0 unless something is wrong with the mesher, and is said rather than hidden.
+ * Sample, mesh, colour and write. `sample(input, outFloats)` is the renderer's field at points, of the scene being
+ * printed: the one showing, or one made of the selected object alone (subjectTree). `doc` gives the unit and the
+ * file's name, `box` where to print. Resolves to { bytes, triangles, vertices, colours, palette, open } -- `open`
+ * the number of edges that are not closed (null: not checked, a big mesh), which is 0 unless something is wrong
+ * with the mesher, and is said rather than hidden.
  */
-export async function runExport({ sample, doc, id, format = '3mf', onProgress = () => { } }) {
+export async function runExport({ sample, doc, box, format = '3mf', cell = EXPORT_DEFAULTS.cell, colours = EXPORT_DEFAULTS.colours, name, onProgress = () => { } }) {
     if (!FORMATS.includes(format)) throw new Error(`format must be one of ${FORMATS.join(', ')}`)
-    const node = lineage(doc, id)[0]
-    const E = exportOf(node)
-    const g = exportGrid(doc, id)
+    const bad = settingsProblems({ cell, colours })
+    if (bad.length) throw new Error(bad[0])
+    const g = exportGrid(doc.unit, box, { cell })
     const why = gridProblem(g)
     if (why) throw new Error(why)
     const [nx, ny, nz] = g.n
@@ -197,11 +263,11 @@ export async function runExport({ sample, doc, id, format = '3mf', onProgress = 
             for (let t = 0; t < cnt; t++) for (let a = 0; a < 3; a++) rgb[3 * (s + t) + a] = toSRGB(out[4 * t + a])
             onProgress(`colouring: ${Math.min(nt, s + cnt).toLocaleString()} of ${nt.toLocaleString()} triangles`)
         }
-        ;({ palette, index } = quantize(rgb, E.colours))
+        ;({ palette, index } = quantize(rgb, colours))
     }
 
     onProgress('writing the file')
-    const name = doc.title || 'scene'
+    name ??= doc.title || 'scene'
     const bytes = format === '3mf' ? await write3MF({ ...mesh, palette, index, name }) : writeSTL({ ...mesh, name })
     return { bytes, triangles: nt, vertices: mesh.positions.length / 3, palette, open, grid: g }
 }
