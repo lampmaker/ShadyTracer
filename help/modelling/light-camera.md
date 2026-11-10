@@ -59,6 +59,8 @@ A picture that is all white or all black usually means one of these:
 - **orbit** (drag to turn about a target) or **walk** (W A S D, Space, Q and the arrows);
 - **perspective** or **orthographic**, with its field of view or width;
 - its position and target as numbers you can type;
+- its **roll**: the camera turned about its own line of sight, in degrees (positive turns the picture clockwise).
+  **Ctrl + drag** on the picture turns it too. It is its own number, so an orbit still turns level about its target;
 - **the lens**: an **aperture** (its diameter, in the scene's unit) and a **focus** distance (0 is focused on the
   target). An aperture above 0 gives depth of field: what is nearer or farther than the focus blurs, more for a
   larger aperture.

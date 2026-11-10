@@ -95,6 +95,7 @@ export const CAMERA_HELP = {
     dimensions: 'The parallel view\'s width, in the scene\'s unit.',
     aperture: 'The lens\'s diameter, in the scene\'s unit: 0 is a pinhole, everything sharp; larger blurs what is off the focus.',
     focus: 'The distance in focus, in the scene\'s unit: 0 is the target\'s.',
+    roll: 'The camera turned about its own line of sight, in degrees: positive turns the picture clockwise. Ctrl + drag on the picture turns it too.',
     target: 'What the camera looks at, in the scene\'s unit.',
     position: 'Where the camera stands, in the scene\'s unit.',
     pose: 'The whole camera as one value for the Timeline: where it stands, what it looks at, which way is up and its '
