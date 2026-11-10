@@ -2518,7 +2518,8 @@ export const cameraSettings = c => c && typeof c === 'object'
    changes, so without this every scene's file would gain `roll: 0` and a builder of 0.84.0 would refuse it ("not a
    camera setting"). sceneViewOf puts the 0 back from CAMERA_DEFAULTS. Dropped AFTER a merge (setView), never before:
    dropped first, a roll set back to 0 would leave the old one standing under it. */
-const unrolled = c => { if (c && c.roll === 0) delete c.roll; return c }
+export const CAMERA_UNSTORED_AT_DEFAULT = Object.freeze(['roll'])
+const unrolled = c => { if (c) for (const k of CAMERA_UNSTORED_AT_DEFAULT) if (c[k] === CAMERA_DEFAULTS[k]) delete c[k]; return c }
 /** An exposure with only the Exposure group's settings, copied (RT.get() hands out every setting at once). */
 export const exposureSettings = e => e && typeof e === 'object'
     ? Object.fromEntries(Object.keys(VIEW_EXPOSURE).filter(k => e[k] !== undefined).map(k => [k, e[k]])) : null

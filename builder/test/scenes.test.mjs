@@ -74,7 +74,8 @@ ok('the examples\' titles are unique -- they are what the menu and the tree tell
         if (c.mode !== 'orbit' || c.target?.length !== 3 || !nums.every(Number.isFinite) || !(c.distance > 0) || c.elevation < 0 || c.elevation > 180)
             p.push(`${e.file}: camera ${JSON.stringify(c)}`)
         const lack = (o, keys) => keys.filter(k => !(k in (o || {})))
-        const missing = [...lack(d.view?.camera, Object.keys(M.CAMERA_DEFAULTS)), ...lack(d.view?.exposure, Object.keys(M.VIEW_EXPOSURE)),
+        // the roll (0.next) is no key at its default (model.js CAMERA_UNSTORED_AT_DEFAULT): a file is whole without it
+        const missing = [...lack(d.view?.camera, Object.keys(M.CAMERA_DEFAULTS).filter(k => !M.CAMERA_UNSTORED_AT_DEFAULT.includes(k))), ...lack(d.view?.exposure, Object.keys(M.VIEW_EXPOSURE)),
                          ...lack(d.environment, Object.keys(M.ENVIRONMENT))]
         if (missing.length) p.push(`${e.file}: not whole, no ${missing.join(', ')}`)
         return p
