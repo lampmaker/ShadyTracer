@@ -207,6 +207,26 @@ await p.waitForTimeout(100)
 ok('a sample changed by hand is "its own"', await (await selectOf('sample')).evaluate(e => e.selectedOptions[0]?.textContent) === 'its own')
 ok('...and has no size to offer: a shape is picked first', !(await labels()).includes('sample size'))
 
+// A CODE BOX BUILT WHILE THE PANEL IS OUT OF THE PAGE (0.next): the shell takes a covered tab's element out of the
+// document, and the highlighter's layer copied the textarea's line height from a computed style that is empty there --
+// 16.9px lines of colours under 22px lines of caret. Built again once the panel is back, the two agree.
+const lines = () => p.evaluate(() => [...document.querySelectorAll('#p textarea[data-highlighting]')].map(ta => {
+    const ov = ta.parentNode.children[0], a = getComputedStyle(ta), o = getComputedStyle(ov)
+    return { ta: a.lineHeight, ov: o.lineHeight, taSize: a.fontSize, ovSize: o.fontSize, taWrap: a.whiteSpace, ovWrap: o.whiteSpace }
+}))
+const agree = L => L.length > 0 && L.every(l => l.ta === l.ov && l.taSize === l.ovSize && l.taWrap === l.ovWrap && parseFloat(l.ta) > 0)
+await p.evaluate(() => { CHECK.openPlain(); CHECK.panel.show('a') }); await p.waitForTimeout(200)
+ok('a code box built in the page: the colours\' lines are the textarea\'s', agree(await lines()), JSON.stringify(await lines()))
+await p.evaluate(async () => {
+    const host = document.getElementById('p'), parent = host.parentNode
+    host.remove()
+    CHECK.panel.show('stone'); CHECK.panel.show('a')            // selected while another tab covers the panel
+    await new Promise(r => setTimeout(r, 200))
+    parent.append(host)
+})
+await p.waitForTimeout(300)
+ok('...and one built while the panel was out of the page, once it is back', agree(await lines()), JSON.stringify(await lines()))
+
 if (errs.length) failed++
 console.log(errs.join('\n') || 'no page errors'); await b.close(); server.close()
 console.log(failed ? `${failed} failed` : 'all passed')

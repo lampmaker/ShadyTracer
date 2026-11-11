@@ -264,7 +264,11 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
         dragIn = false
         try { doc0.dispatchEvent(new MouseEvent('mouseup', { clientX: pointer.x, clientY: pointer.y, bubbles: true })) } catch { }
     }
+    // a build while the table is out of the document is built again once it is in it (the end of this function says why)
+    const host = table.element ?? table.container ?? null
+    let builtOut = false
     const clear = () => {
+        builtOut = !!host && !host.isConnected
         endDrag()
         for (const f of [...boxes, folder]) try { f?.dispose() } catch { }
         folder = null; boxes = []; rechecks.clear(); entries = null; viewFolders.length = 0
@@ -2184,6 +2188,24 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
         run()
     }
 
-    return { show, showScene, shown: () => shownId, card: () => card?.key ?? null,
-             refresh: () => card ? showScene(card.key, card) : show(shownId) }
+    const refresh = () => card ? showScene(card.key, card) : show(shownId)
+
+    /* BUILT WHILE OUT OF THE PAGE, BUILT AGAIN ONCE IN IT (the user, 2026-11-11: in a code box "the cursor can stand a
+       line lower than the place you are editing ... the first line is fine, further down it gets worse"). A code box is
+       a transparent textarea over a layer that draws the same text in colours, and PropertyTable's highlighter gives the
+       layer the textarea's line height, font and white-space ONCE, from getComputedStyle, as it makes it. The shell
+       takes a panel's element out of the document while another tab covers it (dockview, unless `renderer: 'always'`),
+       and a computed style out of the document is all empty strings: something selected while Properties was behind
+       Parameters built a layer with none of them, which then inherited a row's 16.9px lines under a textarea's 22px
+       (read in headless Chromium, builder/test/properties.check.mjs) -- 5px more for every line down. The copy belongs
+       to GUISTUFF (lib/guistuff, a submodule: not ours to change here); until it copies again on its own, what was
+       built out of the page is built again when it comes in, where nothing typed can be lost: it was not on screen.
+       Every build starts in clear(), which is where it is noted (show has twenty callers in here). */
+    if (host && globalThis.ResizeObserver) new ResizeObserver(() => {
+        if (!builtOut || !host.isConnected) return
+        builtOut = false
+        refresh()
+    }).observe(host)
+
+    return { show, showScene, shown: () => shownId, card: () => card?.key ?? null, refresh }
 }
