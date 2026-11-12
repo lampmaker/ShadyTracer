@@ -994,19 +994,19 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
         },
         /** EXPORT FOR PRINTING (exportbox.js, 0.83.0): what `subject` is -- an object's id, or null for the whole
          *  scene -- inside `box` ({ frames, lo, hi }: exportbox.js fittedBox, as the print dialog has it), as a 3MF with
-         *  colour or an STL, downloaded. Nothing is added to the scene. The whole scene is the renderer's field; one
-         *  object is a scene of that object alone (subjectTree), generated here and sampled by a kernel of its own
+         *  colour or an STL, simplified to within `deviation` mm (simplify.js, 0.next), downloaded. Nothing is added to
+         *  the scene. The whole scene is the renderer's field; one object is a scene of that object alone (subjectTree), generated here and sampled by a kernel of its own
          *  (RT.sampleField's `own`). Either way the scene has to be the one showing: the engine's values -- the unit
          *  the field is in, the tolerance -- are the ones it was given for it. Resolves to what runExport says
-         *  (triangles, palette, bytes). */
-        async exportPrint({ subject = null, box, format = '3mf', cell, colours } = {}, onProgress = () => { }) {
+         *  (triangles, meshed, palette, bytes). */
+        async exportPrint({ subject = null, box, format = '3mf', cell, colours, deviation } = {}, onProgress = () => { }) {
             if (current !== shown || RT.scene?.id !== 'built') throw new Error('this scene is not the one showing: show it first (its \u25B6 in the tree)')
             const d = doc()
             const one = subject != null && subject !== d.root.id
             const own = one ? generate(subjectTree(d, subject), { id: 'print', title: d.title || 'print' }) : null
             const sample = (input, n) => RT.sampleField(input, n, own)
             const label = one ? M.find(d, subject)?.node.label : null
-            const r = await runExport({ sample, doc: d, box, format, cell, colours, name: label || d.title || 'scene', onProgress })
+            const r = await runExport({ sample, doc: d, box, format, cell, colours, deviation, name: label || d.title || 'scene', onProgress })
             const stem = fileName(`${d.title || 'scene'}${label ? '-' + label : ''}`).replace(/\.json$/, '')
             saveBytes(`${stem}.${format}`, r.bytes, format === '3mf' ? 'model/3mf' : 'model/stl')
             return r

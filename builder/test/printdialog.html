@@ -20,7 +20,7 @@ const open = selected => openPrintDialog({
     doc: () => doc, selected, boxes, estimate: () => null,
     // the overlay asks its function every frame: kept, and asked when the check looks
     outline: get => { T_.get = get; T_.outline.push(get ? get() : null) },
-    onExport: async (o, say) => { T_.exports.push(structuredClone(o)); say('meshing'); return { triangles: 1234, bytes: new Uint8Array(2 * 1048576), palette: [[1, 0, 0]], open: 0 } },
+    onExport: async (o, say) => { T_.exports.push(structuredClone(o)); say('meshing'); return { triangles: 1234, meshed: 5678, bytes: new Uint8Array(2 * 1048576), palette: [[1, 0, 0]], open: 0 } },
 })
 window.CHECK = { M, doc, T: T_, open, close, isOpen }
 </script>

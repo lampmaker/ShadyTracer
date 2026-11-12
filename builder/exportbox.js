@@ -22,6 +22,8 @@
 //   cell      the grid's spacing, in MILLIMETRES of the printed part -- a printer's number, not the
 //             scene's, so it means the same in a metre scene and a millimetre one
 //   colours   how many colours a 3MF may have: the filaments the printer holds
+//   deviation how far, in mm, the mesh may be simplified from what the grid gave (simplify.js, 0.next): 0 keeps every
+//             triangle; above it, flat regions become a few large triangles and curved ones keep small ones
 //
 // HOW (see each file's header):
 //   1. the grid (exportGrid): cells of about `cell` mm fitted to the box exactly, with the box's
@@ -31,7 +33,10 @@
 //   3. cut by the box: max(field, distance to the box), so the part is closed where the box cuts it;
 //   4. a closed mesh by marching tetrahedra, streamed a layer at a time (mesh.js);
 //   5. the colour at each triangle's centre, on the GPU again, reduced to `colours` (mesh.js quantize);
-//   6. the file (print.js).
+//   6. simplified to within `deviation` (simplify.js), the colours' borders kept: AFTER the colours, so each triangle's
+//      colour is the one sampled at full resolution and a border between two is held where it was, not re-sampled at
+//      the centre of a triangle ten times larger that straddles it;
+//   7. the file (print.js).
 //
 // PURE EXCEPT runExport, which talks to the renderer through the `sample` it is given and nothing else;
 // the host downloads what it returns.
@@ -43,18 +48,24 @@ import { UNITS } from '../lib/pathtracer/core/photometry.js'
 import { FIELD_GRID, FIELD_POINTS, FIELD_MAX_POINTS, fieldInput } from '../lib/pathtracer/core/field.js'
 import { createMesher, centroids, quantize, toSRGB, openEdges } from './mesh.js'
 import { write3MF, writeSTL } from './print.js'
+import { simplify } from './simplify.js'
 
-export const EXPORT_DEFAULTS = Object.freeze({ cell: 0.4, colours: 4 })
+/* deviation 0.05 mm: on a sphere of 10 mm meshed at the default cell, 70 056 triangles become about 7 100 and no point
+   of the mesh moves more than 0.013 mm from the true sphere (test/simplify.test.mjs, in node) -- under a tenth of a
+   0.4 mm nozzle's line. */
+export const EXPORT_DEFAULTS = Object.freeze({ cell: 0.4, colours: 4, deviation: 0.05 })
 export const FORMATS = ['3mf', 'stl']
 /** Refused past this: a layer of the grid has to fit one dispatch (field.js). */
 export const MAX_LAYER = FIELD_MAX_POINTS
 /** ...and past this in all, which is already an hour of meshing and a file no slicer wants. */
 export const MAX_POINTS = 1.2e9
 
-/** Everything wrong with the export's settings { cell, colours }, as strings. */
+/** Everything wrong with the export's settings { cell, colours, deviation }, as strings. A deviation left out is the
+ *  default's. */
 export function settingsProblems(E) {
     const p = []
     if (!(Number.isFinite(E?.cell) && E.cell > 0)) p.push('the cell must be mm > 0')
+    if (E?.deviation !== undefined && !(Number.isFinite(E.deviation) && E.deviation >= 0)) p.push('the deviation must be mm >= 0 (0: not simplified)')
     if (!(Number.isInteger(E?.colours) && E.colours >= 1 && E.colours <= 64)) p.push('the colours must be a whole number from 1 to 64')
     return p
 }
@@ -203,15 +214,17 @@ export function boxDistance(g, i, j, k) {
 }
 
 /**
- * Sample, mesh, colour and write. `sample(input, outFloats)` is the renderer's field at points, of the scene being
+ * Sample, mesh, colour, simplify and write. `sample(input, outFloats)` is the renderer's field at points, of the scene being
  * printed: the one showing, or one made of the selected object alone (subjectTree). `doc` gives the unit and the
- * file's name, `box` where to print. Resolves to { bytes, triangles, vertices, colours, palette, open } -- `open`
- * the number of edges that are not closed (null: not checked, a big mesh), which is 0 unless something is wrong
- * with the mesher, and is said rather than hidden.
+ * file's name, `box` where to print. Resolves to { bytes, triangles, vertices, colours, palette, open, meshed } --
+ * `meshed` the triangles before simplifying, `open` the number of edges of the file's mesh that are not closed (null:
+ * not checked, a big mesh), which is 0 unless something is wrong with the mesher or the simplifier, and is said rather
+ * than hidden.
  */
-export async function runExport({ sample, doc, box, format = '3mf', cell = EXPORT_DEFAULTS.cell, colours = EXPORT_DEFAULTS.colours, name, onProgress = () => { } }) {
+export async function runExport({ sample, doc, box, format = '3mf', cell = EXPORT_DEFAULTS.cell, colours = EXPORT_DEFAULTS.colours,
+                                  deviation = EXPORT_DEFAULTS.deviation, name, onProgress = () => { } }) {
     if (!FORMATS.includes(format)) throw new Error(`format must be one of ${FORMATS.join(', ')}`)
-    const bad = settingsProblems({ cell, colours })
+    const bad = settingsProblems({ cell, colours, deviation })
     if (bad.length) throw new Error(bad[0])
     const g = exportGrid(doc.unit, box, { cell })
     const why = gridProblem(g)
@@ -238,11 +251,9 @@ export async function runExport({ sample, doc, box, format = '3mf', cell = EXPOR
         }
         onProgress(`meshing: ${Math.min(nz, z0 + k)} of ${nz} layers`)
     }
-    const mesh = M.finish()
-    const nt = mesh.triangles.length / 3
+    let mesh = M.finish()
+    const meshed = mesh.triangles.length / 3, nt = meshed
     if (!nt) throw new Error('nothing solid inside the box')
-    /* checked when it is cheap: a Map of every directed edge stops fitting past a few million */
-    const open = nt <= 1e6 ? openEdges(mesh.triangles, 1).length : null
 
     // ---- the colours: each triangle's centre back to the world, the material's colour there
     let palette = null, index = null
@@ -266,8 +277,21 @@ export async function runExport({ sample, doc, box, format = '3mf', cell = EXPOR
         ;({ palette, index } = quantize(rgb, colours))
     }
 
+    // ---- simplified, each triangle keeping its colour (the order: the header's 6)
+    if (deviation > 0) {
+        onProgress(`simplifying ${nt.toLocaleString()} triangles to within ${deviation} mm`)
+        const s = await simplify(mesh, { tol: deviation, labels: palette?.length > 1 ? index : null,
+            onProgress: f => onProgress(`simplifying ${nt.toLocaleString()} triangles to within ${deviation} mm: ${Math.round(100 * f)} %`) })
+        mesh = { positions: s.positions, triangles: s.triangles }
+        if (s.labels) index = s.labels
+        else if (index) index = new Uint16Array(mesh.triangles.length / 3)     // one colour: the palette's first
+    }
+    const final = mesh.triangles.length / 3
+    /* checked when it is cheap: a Map of every directed edge stops fitting past a few million */
+    const open = final <= 1e6 ? openEdges(mesh.triangles, 1).length : null
+
     onProgress('writing the file')
     name ??= doc.title || 'scene'
     const bytes = format === '3mf' ? await write3MF({ ...mesh, palette, index, name }) : writeSTL({ ...mesh, name })
-    return { bytes, triangles: nt, vertices: mesh.positions.length / 3, palette, open, grid: g }
+    return { bytes, triangles: final, meshed, vertices: mesh.positions.length / 3, palette, open, grid: g }
 }

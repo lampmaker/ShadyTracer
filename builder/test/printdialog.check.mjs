@@ -77,16 +77,20 @@ await type('input[step="0.01"]', 0)
 s = await shown()
 ok('a cell of 0: refused, said, Export off', !s.exportOn && /cell/.test(s.text), JSON.stringify(s))
 await type('input[step="0.01"]', 0.25)
+await type('input[data-setting="deviation"]', -0.1)
+s = await shown()
+ok('a negative deviation: refused, said, Export off', !s.exportOn && /deviation/.test(s.text), JSON.stringify(s))
+await type('input[data-setting="deviation"]', 0.02)
 await p.evaluate(() => { const f = document.querySelector('.print-dialog select'); f.value = 'stl'; f.dispatchEvent(new Event('change')) })
 s = await shown()
 ok('...a good one: Export on; STL has no colour count', s.exportOn && await p.evaluate(() => document.querySelector('.print-dialog input[max="64"]').parentElement.style.display === 'none'), JSON.stringify(s))
 await press('Export')
 await p.waitForTimeout(50)
 const asked = await p.evaluate(() => CHECK.T.exports.at(-1))
-ok('Export: the object, its box in its frame, STL, the cell', asked?.subject === 'a' && asked.format === 'stl' && asked.cell === 0.25
+ok('Export: the object, its box in its frame, STL, the cell, the deviation', asked?.subject === 'a' && asked.format === 'stl' && asked.cell === 0.25 && asked.deviation === 0.02
     && near(asked.box.lo, [-2, -1, -3]) && asked.box.frames.length === 1 && asked.box.frames[0].rot.z === 90, JSON.stringify(asked))
 s = await shown()
-ok('...and what it made said', /STL: 1,234 triangles, 2\.0 MB/.test(s.text), s.text)
+ok('...and what it made said, simplified from what', /STL: 1,234 triangles \(simplified from 5,678\), 2\.0 MB/.test(s.text), s.text)
 ok('the scene is untouched: nothing added to it', await p.evaluate(() => CHECK.doc.root.children.map(c => c.id).join() === 'a,b,lamp,dust'))
 
 // ---- the whole scene: the world, the light left out; the settings remembered
@@ -99,7 +103,8 @@ ok('Close: the dialog gone, and its outline', !(await p.evaluate(() => CHECK.isO
 await p.evaluate(() => CHECK.open(null))
 s = await shown()
 ok('opened with nothing selected: the whole scene, the object not offered', s.what === 'scene' && !s.objectOffered, JSON.stringify(s))
-ok('...the cell and format remembered from the last export', await p.evaluate(() => document.querySelector('.print-dialog input[step="0.01"]').value === '0.25'
+ok('...the cell, deviation and format remembered from the last export', await p.evaluate(() => document.querySelector('.print-dialog input[step="0.01"]').value === '0.25'
+    && document.querySelector('.print-dialog input[data-setting="deviation"]').value === '0.02'
     && document.querySelector('.print-dialog select').value === 'stl'))
 await p.focus('.print-dialog input[data-axis="x"]')
 await p.keyboard.press('Escape')

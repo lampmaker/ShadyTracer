@@ -435,9 +435,10 @@ number carries its standard error**.
   it that you can resize. Nothing is added to the scene.
 - The distance field is sampled on the GPU and meshed into a **closed surface** (marching
   tetrahedra), each triangle coloured from its material and reduced to at most 16 colours.
+- The mesh is **simplified** to within a deviation you choose (0.05 mm to start): large triangles on
+  flat faces, small ones where the surface curves, the borders between colours kept.
 - Saved as **3MF with colour**, made for Bambu Studio's filament mapping, or as **STL**, in mm.
-- Known limits: features thinner than a cell disappear, sharp edges are bevelled by up to a cell,
-  and meshes are dense (no decimation yet).
+- Known limits: features thinner than a cell disappear and sharp edges are bevelled by up to a cell.
 
 ### Animation and video
 

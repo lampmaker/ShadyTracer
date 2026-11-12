@@ -79,10 +79,15 @@ The box is fitted to it, and drawn dashed in the picture while the dialog is ope
 - **STL**, in millimetres.
 
 The shape is sampled on a grid -- the **cell**, in millimetres of the printed part, 0.4 to start -- and made into
-a closed mesh, cut by the box. The cell, the colours and the format are remembered for the next export. What to expect:
+a closed mesh, cut by the box. That mesh is then **simplified**: flat regions become a few large triangles, curved
+ones keep small ones, and no vertex moves further than the **deviation** (in mm, 0.05 to start) from the planes of
+the triangles it replaced. The borders between colours stay where they were, and no triangle changes colour. A
+deviation of 0 keeps every triangle the grid gives. The cell, the colours, the deviation and the format are remembered
+for the next export. What to expect:
 
 - features thinner than a cell disappear;
 - sharp edges are bevelled by up to a cell;
-- the meshes are dense, because nothing reduces them yet.
+- a wall thinner than about twice the deviation can have its two sides pass through each other; a smaller deviation
+  avoids it.
 
-A smaller cell is finer and slower, and makes a larger file.
+A smaller cell is finer and slower, and makes a larger file. A larger deviation makes a smaller file.

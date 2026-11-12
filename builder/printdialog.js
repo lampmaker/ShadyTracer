@@ -9,7 +9,7 @@
 //
 // Plain DOM, not a Tweakpane folder, as paramdialog.js and unitdialog.js are and for their reason: the panel is rebuilt
 // after every edit. NOT MODAL: the camera can be turned to look at the box, so a click elsewhere leaves it open; Close
-// or Escape shuts it. The cell, the colour count and the format are remembered per browser -- an export's settings,
+// or Escape shuts it. The cell, the colour count, the deviation (0.next) and the format are remembered per browser -- an export's settings,
 // not the scene's, so not in its file or its undo history -- and the box is not remembered at all.
 //======================================================================================================================
 
@@ -30,7 +30,7 @@ let open = null
  * @param boxes      the page's measured boxes (boxes.js: get, request), for the fitted box
  * @param estimate   (id | null) => { lo, hi } in the WORLD, or null: the guess while nothing is measured
  * @param outline    (cornersFn | null) => void: draws the box in the picture (overlay.js outline)
- * @param onExport   ({ subject, box, format, cell, colours }, say) => Promise<{ triangles, bytes, palette, open }>
+ * @param onExport   ({ subject, box, format, cell, colours, deviation }, say) => Promise<{ triangles, meshed, bytes, palette, open }>
  * @returns the dialog's element
  */
 export function openPrintDialog({ doc, selected = null, boxes = null, estimate = () => null, outline = () => { }, onExport }) {
@@ -45,6 +45,7 @@ export function openPrintDialog({ doc, selected = null, boxes = null, estimate =
         format: FORMATS.includes(R.format) ? R.format : '3mf',
         cell: Number.isFinite(R.cell) && R.cell > 0 ? R.cell : EXPORT_DEFAULTS.cell,
         colours: Number.isInteger(R.colours) && R.colours >= 1 && R.colours <= 64 ? R.colours : EXPORT_DEFAULTS.colours,
+        deviation: Number.isFinite(R.deviation) && R.deviation >= 0 ? R.deviation : EXPORT_DEFAULTS.deviation,
         box: null, fitted: 'none', typed: false, busy: false,
     }
 
@@ -94,11 +95,16 @@ export function openPrintDialog({ doc, selected = null, boxes = null, estimate =
     // ---- the settings
     const cell = row('cell (mm)', add('input', { type: 'number', step: '0.01', min: '0.01', value: S.cell }, fieldStyle)).querySelector('input')
     const colours = row('colours', add('input', { type: 'number', step: '1', min: '1', max: '64', value: S.colours }, fieldStyle)).querySelector('input')
+    // how far the simplified mesh may move: 0 keeps every triangle the grid gave (simplify.js)
+    const deviation = row('deviation (mm)', add('input', { type: 'number', step: '0.005', min: '0', value: S.deviation,
+        title: 'How far the mesh may be simplified, in mm: flat regions become a few large triangles, curved ones keep small ones. 0: every triangle the grid gives.' }, fieldStyle)).querySelector('input')
+    deviation.dataset.setting = 'deviation'
     const format = row('format', add('select', {}, fieldStyle)).querySelector('select')
     for (const [v, t] of [['3mf', '3MF (with colour)'], ['stl', 'STL (no colour)']]) format.appendChild(add('option', { value: v, textContent: t }))
     format.value = S.format
     cell.oninput = () => { S.cell = +cell.value; refresh() }
     colours.oninput = () => { S.colours = Math.round(+colours.value); refresh() }
+    deviation.oninput = () => { S.deviation = deviation.value === '' ? NaN : +deviation.value; refresh() }
     format.onchange = () => { S.format = format.value; refresh() }
 
     const grid = el.appendChild(add('div', {}, { color: '#8a8f96', fontSize: '11px', margin: '4px 0', whiteSpace: 'pre-wrap' }))
@@ -139,7 +145,7 @@ export function openPrintDialog({ doc, selected = null, boxes = null, estimate =
             : (S.typed ? 'typed; Fit takes the fitted box again. ' : S.fitted === 'estimated' ? 'a first guess, while the box is measured. ' : 'fitted to it. ')
               + (S.subject === 'object' && S.box.frames.length ? 'In the object\'s own frame, its z up on the bed.' : 'In the world, z up on the bed.')
         let text = '', problem = null
-        const bad = [...settingsProblems({ cell: S.cell, colours: S.colours }), ...(S.box ? boxProblems(S.box) : ['no box'])]
+        const bad = [...settingsProblems({ cell: S.cell, colours: S.colours, deviation: S.deviation }), ...(S.box ? boxProblems(S.box) : ['no box'])]
         if (bad.length) problem = bad[0]
         else {
             try {
@@ -158,13 +164,15 @@ export function openPrintDialog({ doc, selected = null, boxes = null, estimate =
     async function run() {
         if (S.busy || go.disabled) return
         S.busy = true; refresh(false)
-        remember({ cell: S.cell, colours: S.colours, format: S.format })
+        remember({ cell: S.cell, colours: S.colours, deviation: S.deviation, format: S.format })
         const t0 = performance.now()
         try {
-            const r = await onExport({ subject: S.subject === 'object' ? node.id : null, box: S.box, format: S.format, cell: S.cell, colours: S.colours }, t => say(t))
-            say(`${S.format.toUpperCase()}: ${r.triangles.toLocaleString()} triangles, ${(r.bytes.length / 1048576).toFixed(1)} MB`
+            const r = await onExport({ subject: S.subject === 'object' ? node.id : null, box: S.box, format: S.format, cell: S.cell, colours: S.colours, deviation: S.deviation }, t => say(t))
+            say(`${S.format.toUpperCase()}: ${r.triangles.toLocaleString()} triangles`
+                + (r.meshed > r.triangles ? ` (simplified from ${r.meshed.toLocaleString()})` : '')
+                + `, ${(r.bytes.length / 1048576).toFixed(1)} MB`
                 + (r.palette ? `, ${r.palette.length} colour(s)` : '')
-                + (r.open ? `, ${r.open}+ OPEN EDGES (a mesher bug: please report)` : '')
+                + (r.open ? `, ${r.open}+ OPEN EDGES (a mesher or simplifier bug: please report)` : '')
                 + `, ${((performance.now() - t0) / 1000).toFixed(1)} s`)
         } catch (e) {
             console.error('[print] export failed:', e)
