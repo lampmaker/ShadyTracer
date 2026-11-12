@@ -75,7 +75,12 @@ The box is fitted to it, and drawn dashed in the picture while the dialog is ope
 **Fit** to fit it again. Nothing is added to the scene. Then:
 
 - **3MF with colour**: each triangle coloured from its material, reduced to as many colours as your printer holds
-  (*colours*, 4 to start), for a slicer's filament mapping;
+  (*colours*, 4 to start), for a slicer's filament mapping. With **colour from: As lit (the picture)** the colours are
+  the part as the picture shows it instead: its light, shadows and glow, with the view's exposure and tone curve. The
+  renderer traces the light at each point of the mesh, looking straight at the surface, for *samples* samples each
+  (64 to start: more is less speckle, and longer). This suits matte surfaces. A glossy or mirror-like surface shows
+  what it reflects straight out of it, and glass shows what is behind it. A light that is only a ray file (no face) gives
+  no light here. Faces the box cuts through keep their material's colour;
 - **STL**, in millimetres.
 
 The shape is sampled on a grid -- the **cell**, in millimetres of the printed part, 0.4 to start -- and made into
@@ -83,7 +88,7 @@ a closed mesh, cut by the box. That mesh is then **simplified**: flat regions be
 ones keep small ones, and no vertex moves further than the **deviation** (in mm, 0.05 to start) from the planes of
 the triangles it replaced. The borders between colours stay where they were, and no triangle changes colour. A
 deviation of 0 keeps every triangle the grid gives. The cell, the colours, the deviation and the format are remembered
-for the next export. What to expect:
+for the next export, and so is the choice of colour. What to expect:
 
 - features thinner than a cell disappear;
 - sharp edges are bevelled by up to a cell;

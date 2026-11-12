@@ -22,6 +22,8 @@
 //   cell      the grid's spacing, in MILLIMETRES of the printed part -- a printer's number, not the
 //             scene's, so it means the same in a metre scene and a millimetre one
 //   colours   how many colours a 3MF may have: the filaments the printer holds
+//   light     'material', the material's own colour, or 'lit', the part as the picture shows it lit (0.next)
+//   samples   for 'lit', the renderer's samples at each point: more is less speckle and longer
 //   deviation how far, in mm, the mesh may be simplified from what the grid gave (simplify.js, 0.next): 0 keeps every
 //             triangle; above it, flat regions become a few large triangles and curved ones keep small ones
 //
@@ -32,7 +34,9 @@
 //      of z-layers per dispatch;
 //   3. cut by the box: max(field, distance to the box), so the part is closed where the box cuts it;
 //   4. a closed mesh by marching tetrahedra, streamed a layer at a time (mesh.js);
-//   5. the colour at each triangle's centre, on the GPU again, reduced to `colours` (mesh.js quantize);
+//   5. the colour at each triangle's centre, on the GPU again -- or, `light` 'lit' (0.next), the colour the picture gives
+//      the part there, the renderer traced along a ray at each vertex (litcolour.js, core/probes.js) -- reduced to
+//      `colours` (mesh.js quantize);
 //   6. simplified to within `deviation` (simplify.js), the colours' borders kept: AFTER the colours, so each triangle's
 //      colour is the one sampled at full resolution and a border between two is held where it was, not re-sampled at
 //      the centre of a triangle ten times larger that straddles it;
@@ -49,23 +53,29 @@ import { FIELD_GRID, FIELD_POINTS, FIELD_MAX_POINTS, fieldInput } from '../lib/p
 import { createMesher, centroids, quantize, toSRGB, openEdges } from './mesh.js'
 import { write3MF, writeSTL } from './print.js'
 import { simplify } from './simplify.js'
+import { boxCuts, cutsOf, vertexProbes, smoothVertices, triangleColours } from './litcolour.js'
 
 /* deviation 0.05 mm: on a sphere of 10 mm meshed at the default cell, 70 056 triangles become about 7 100 and no point
    of the mesh moves more than 0.013 mm from the true sphere (test/simplify.test.mjs, in node) -- under a tenth of a
    0.4 mm nozzle's line. */
-export const EXPORT_DEFAULTS = Object.freeze({ cell: 0.4, colours: 4, deviation: 0.05 })
+export const EXPORT_DEFAULTS = Object.freeze({ cell: 0.4, colours: 4, deviation: 0.05, light: 'material', samples: 64 })
+/** What a 3MF's colours are: the material's own (its baseColor, as before 0.next), or the part as the picture shows it,
+ *  lit (litcolour.js) */
+export const LIGHTS = ['material', 'lit']
 export const FORMATS = ['3mf', 'stl']
 /** Refused past this: a layer of the grid has to fit one dispatch (field.js). */
 export const MAX_LAYER = FIELD_MAX_POINTS
 /** ...and past this in all, which is already an hour of meshing and a file no slicer wants. */
 export const MAX_POINTS = 1.2e9
 
-/** Everything wrong with the export's settings { cell, colours, deviation }, as strings. A deviation left out is the
- *  default's. */
+/** Everything wrong with the export's settings { cell, colours, deviation, light, samples }, as strings. One left out
+ *  is the default's. */
 export function settingsProblems(E) {
     const p = []
     if (!(Number.isFinite(E?.cell) && E.cell > 0)) p.push('the cell must be mm > 0')
     if (E?.deviation !== undefined && !(Number.isFinite(E.deviation) && E.deviation >= 0)) p.push('the deviation must be mm >= 0 (0: not simplified)')
+    if (E?.light !== undefined && !LIGHTS.includes(E.light)) p.push(`the colours must be one of ${LIGHTS.join(', ')}`)
+    if (E?.samples !== undefined && !(Number.isInteger(E.samples) && E.samples >= 1 && E.samples <= 65536)) p.push('the samples must be a whole number from 1 to 65536')
     if (!(Number.isInteger(E?.colours) && E.colours >= 1 && E.colours <= 64)) p.push('the colours must be a whole number from 1 to 64')
     return p
 }
@@ -215,16 +225,19 @@ export function boxDistance(g, i, j, k) {
 
 /**
  * Sample, mesh, colour, simplify and write. `sample(input, outFloats)` is the renderer's field at points, of the scene being
- * printed: the one showing, or one made of the selected object alone (subjectTree). `doc` gives the unit and the
- * file's name, `box` where to print. Resolves to { bytes, triangles, vertices, colours, palette, open, meshed } --
- * `meshed` the triangles before simplifying, `open` the number of edges of the file's mesh that are not closed (null:
+ * printed: the one showing, or one made of the selected object alone (subjectTree). `probe({ points, dirs, offset,
+ * samples, onProgress })` the renderer's light along a ray at each point, for `light` 'lit' (index.js renderProbes):
+ * resolves to { colour } in [0, 1], 3 a point -- the scene SHOWN, whatever is printed, so one object is lit as it
+ * stands among the rest. `doc` gives the unit and the file's name, `box` where to print. Resolves to { bytes,
+ * triangles, vertices, colours, palette, open, meshed } -- `meshed` the triangles before simplifying, `open` the number of edges of the file's mesh that are not closed (null:
  * not checked, a big mesh), which is 0 unless something is wrong with the mesher or the simplifier, and is said rather
  * than hidden.
  */
-export async function runExport({ sample, doc, box, format = '3mf', cell = EXPORT_DEFAULTS.cell, colours = EXPORT_DEFAULTS.colours,
-                                  deviation = EXPORT_DEFAULTS.deviation, name, onProgress = () => { } }) {
+export async function runExport({ sample, probe = null, doc, box, format = '3mf', cell = EXPORT_DEFAULTS.cell, colours = EXPORT_DEFAULTS.colours,
+                                  deviation = EXPORT_DEFAULTS.deviation, light = EXPORT_DEFAULTS.light, samples = EXPORT_DEFAULTS.samples,
+                                  smooth = 1, name, onProgress = () => { } }) {
     if (!FORMATS.includes(format)) throw new Error(`format must be one of ${FORMATS.join(', ')}`)
-    const bad = settingsProblems({ cell, colours, deviation })
+    const bad = settingsProblems({ cell, colours, deviation, light, samples })
     if (bad.length) throw new Error(bad[0])
     const g = exportGrid(doc.unit, box, { cell })
     const why = gridProblem(g)
@@ -232,6 +245,7 @@ export async function runExport({ sample, doc, box, format = '3mf', cell = EXPOR
     const [nx, ny, nz] = g.n
     const plane = nx * ny
     const M = createMesher(nx, ny, nz, g.spacing, g.spacing.map(s => -0.5 * s))
+    const cuts = boxCuts(g.n, g.spacing)
 
     // ---- the field, a slab of layers per dispatch, cut by the box, into the mesher
     onProgress(`sampling ${g.n.map(k => k - 2).join(' x ')} cells (the first export of a scene compiles its kernel: seconds)`)
@@ -244,8 +258,10 @@ export async function runExport({ sample, doc, box, format = '3mf', cell = EXPOR
         for (let l = 0; l < k; l++) {
             const layer = new Float32Array(plane), z = z0 + l
             for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
-                const q = i + nx * j
-                layer[q] = Math.max(f[l * plane + q] * g.mmPerUnit, boxDistance(g, i, j, z))
+                const q = i + nx * j, fs = f[l * plane + q]
+                layer[q] = Math.max(fs * g.mmPerUnit, boxDistance(g, i, j, z))
+                // the planes each side of the box's faces: where the solid goes on through a face, it is a cut (litcolour.js)
+                if (i <= 1 || j <= 1 || z <= 1 || i >= nx - 2 || j >= ny - 2 || z >= nz - 2) cuts.record(i, j, z, fs * g.mmPerUnit)
             }
             M.push(layer)
         }
@@ -273,6 +289,34 @@ export async function runExport({ sample, doc, box, format = '3mf', cell = EXPOR
             if (!out) throw new Error('the scene changed during the export, or the renderer was busy with an offscreen render: try again')
             for (let t = 0; t < cnt; t++) for (let a = 0; a < 3; a++) rgb[3 * (s + t) + a] = toSRGB(out[4 * t + a])
             onProgress(`colouring: ${Math.min(nt, s + cnt).toLocaleString()} of ${nt.toLocaleString()} triangles`)
+        }
+        // ---- LIT (litcolour.js): the light the picture gives each vertex, the material's colour where the box cuts
+        if (light === 'lit') {
+            if (!probe) throw new Error('lit colours need the renderer (no probe given)')
+            const { cut, onCut } = cutsOf(mesh.positions, mesh.triangles, g.sizeMm, g.spacing, cuts)
+            const P = vertexProbes(mesh.positions, mesh.triangles, cut, onCut)
+            if (P.count) {
+                /* mm in the box's frame -> the world: a point by the grid, a direction by its unit axes (the box's frame
+                   is the world's turned and scaled alike on every axis, so a normal turns as a direction does) */
+                const unit = [g.ax, g.ay, g.az].map(v => { const l = Math.hypot(...v); return v.map(x => x / l) })
+                const points = new Float32Array(3 * P.count), dirs = new Float32Array(3 * P.count)
+                for (let k = 0; k < P.count; k++) {
+                    const gi = [0, 1, 2].map(a => P.points[3 * k + a] / g.spacing[a] + 0.5)
+                    for (let a = 0; a < 3; a++) {
+                        points[3 * k + a] = g.origin[a] + gi[0] * g.ax[a] + gi[1] * g.ay[a] + gi[2] * g.az[a]
+                        // looking AT the surface: against its outward normal
+                        dirs[3 * k + a] = -(P.normals[3 * k] * unit[0][a] + P.normals[3 * k + 1] * unit[1][a] + P.normals[3 * k + 2] * unit[2][a])
+                    }
+                }
+                /* HALF A CELL OFF THE SURFACE: past the mesher's own error (a vertex is within a fraction of a cell of the
+                   surface), short of most of the part's other faces */
+                const offset = 0.5 * Math.max(...[g.ax, g.ay, g.az].map(v => Math.hypot(...v)))
+                onProgress(`lighting: ${P.count.toLocaleString()} points, ${samples} samples each`)
+                const r = await probe({ points, dirs, offset, samples,
+                    onProgress: (k, n) => onProgress(`lighting: ${P.count.toLocaleString()} points, ${Math.round(100 * k / n)} %`) })
+                const lit = smoothVertices(r.colour, mesh.triangles, P.probe, smooth)
+                rgb.set(triangleColours(mesh.triangles, P.probe, lit, cut, rgb))
+            }
         }
         ;({ palette, index } = quantize(rgb, colours))
     }

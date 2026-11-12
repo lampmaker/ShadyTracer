@@ -258,7 +258,7 @@
       written in <a data-g="wgsl">WGSL</a>, inside a JavaScript file. Here is the part that makes one ray. It is the
       flat world's recipe with one more direction (up) and a jitter:</p>
     <pre data-src="lib/pathtracer/core/genrays.js" data-sym="let tile = UB.rayFirst + rayindex;" data-to="origin = camPos;"
-         data-why="tile is which ray of the sample this is; cellxy its column and row in the grid of rays; uv0 the middle of that cell, from 0 to 1 across the picture; rnd.xy a random point inside it (the jitter); xy the position from −1 to 1, the fold-out's x; fx and fy the screen's half-widths. The ray's direction is dir, and it starts at origin, the camera's position: the eye." data-hash="17a02015"></pre>
+         data-why="tile is which ray of the sample this is; cellxy its column and row in the grid of rays; uv0 the middle of that cell, from 0 to 1 across the picture; rnd.xy a random point inside it (the jitter); xy the position from −1 to 1, the fold-out's x; fx and fy the screen's half-widths. The ray's direction is dir, and it starts at origin, the camera's position: the eye." data-hash="071c675c"></pre>
     <p>Line by line, the parts that need saying:</p>
     <ul>
       <li><strong>The kernel gets a number, not a pixel.</strong> Each copy of it is handed its own number 0, 1, 2 …
@@ -290,7 +290,11 @@
       <li><strong><code>isPersp</code></strong> says which camera this is. There is a second kind, orthographic, where
         every ray points the same way and they start side by side instead
         (<cite data-src="lib/pathtracer/core/genrays.js" data-sym="// camtype: 0 = perspective, 1 = orthographic" data-doc="no"></cite>).
-        Technical drawings use it: sizes do not shrink with distance.</li>
+        Technical drawings use it: sizes do not shrink with distance. A third kind, further down the kernel, is no camera
+        at all: each pixel's ray is read from a list the program hands over, the same ray every sample, so a pixel's
+        average is the light along that one ray. The 3D print export uses it to colour a part as the picture shows it lit:
+        one ray from just off each point of the part, straight at it
+        (<cite data-src="lib/pathtracer/core/genrays.js" data-sym="THE PROBES (camtype 2" data-doc="no"></cite>).</li>
     </ul>
     <p>The comments in the code (<code>// Stable method only</code>) are its authors' notes to each other; the caption
       above says what each line does. <code>VEC2</code>, <code>u32</code> and <code>f32</code> are WGSL's kinds of
