@@ -1,5 +1,5 @@
 //======================================================================================================================
-// PRINT EXPORT -- the part of a scene that becomes a printable file (3MF with colour, or STL), and the
+// PRINT EXPORT -- the part of a scene that becomes a printable file (3MF or OBJ with colour, or STL), and the
 // export that makes it.
 //
 // NO OBJECT IN THE SCENE (0.83.0). This was an "export box", a node of its own type added from the +
@@ -40,7 +40,7 @@
 //   6. simplified to within `deviation` (simplify.js), the colours' borders kept: AFTER the colours, so each triangle's
 //      colour is the one sampled at full resolution and a border between two is held where it was, not re-sampled at
 //      the centre of a triangle ten times larger that straddles it;
-//   7. the file (print.js).
+//   7. the file (print.js): a 3MF, an OBJ and its MTL, or an STL.
 //
 // PURE EXCEPT runExport, which talks to the renderer through the `sample` it is given and nothing else;
 // the host downloads what it returns.
@@ -51,7 +51,7 @@ import { find, toTree } from './model.js'
 import { UNITS } from '../lib/pathtracer/core/photometry.js'
 import { FIELD_GRID, FIELD_POINTS, FIELD_MAX_POINTS, fieldInput } from '../lib/pathtracer/core/field.js'
 import { createMesher, centroids, quantize, toSRGB, openEdges } from './mesh.js'
-import { write3MF, writeSTL } from './print.js'
+import { write3MF, writeSTL, writeOBJ } from './print.js'
 import { simplify } from './simplify.js'
 import { boxCuts, cutsOf, vertexProbes, smoothVertices, triangleColours } from './litcolour.js'
 
@@ -62,7 +62,9 @@ export const EXPORT_DEFAULTS = Object.freeze({ cell: 0.4, colours: 4, deviation:
 /** What a 3MF's colours are: the material's own (its baseColor, as before 0.next), or the part as the picture shows it,
  *  lit (litcolour.js) */
 export const LIGHTS = ['material', 'lit']
-export const FORMATS = ['3mf', 'stl']
+/** The files: 3MF with colour, OBJ with its MTL (colour, for a slicer that reads an OBJ's and not a 3MF's: print.js
+ *  writeOBJ, 0.next), STL with none */
+export const FORMATS = ['3mf', 'obj', 'stl']
 /** Refused past this: a layer of the grid has to fit one dispatch (field.js). */
 export const MAX_LAYER = FIELD_MAX_POINTS
 /** ...and past this in all, which is already an hour of meshing and a file no slicer wants. */
@@ -229,13 +231,14 @@ export function boxDistance(g, i, j, k) {
  * samples, onProgress })` the renderer's light along a ray at each point, for `light` 'lit' (index.js renderProbes):
  * resolves to { colour } in [0, 1], 3 a point -- the scene SHOWN, whatever is printed, so one object is lit as it
  * stands among the rest. `doc` gives the unit and the file's name, `box` where to print. Resolves to { bytes,
- * triangles, vertices, colours, palette, open, meshed } -- `meshed` the triangles before simplifying, `open` the number of edges of the file's mesh that are not closed (null:
+ * files, triangles, vertices, colours, palette, open, meshed } -- `files` [{ name, bytes, type }] to save, named from
+ * `stem` (an OBJ and its MTL two, the OBJ naming the MTL), `bytes` the first's, `meshed` the triangles before simplifying, `open` the number of edges of the file's mesh that are not closed (null:
  * not checked, a big mesh), which is 0 unless something is wrong with the mesher or the simplifier, and is said rather
  * than hidden.
  */
 export async function runExport({ sample, probe = null, doc, box, format = '3mf', cell = EXPORT_DEFAULTS.cell, colours = EXPORT_DEFAULTS.colours,
                                   deviation = EXPORT_DEFAULTS.deviation, light = EXPORT_DEFAULTS.light, samples = EXPORT_DEFAULTS.samples,
-                                  smooth = 1, name, onProgress = () => { } }) {
+                                  smooth = 1, name, stem, onProgress = () => { } }) {
     if (!FORMATS.includes(format)) throw new Error(`format must be one of ${FORMATS.join(', ')}`)
     const bad = settingsProblems({ cell, colours, deviation, light, samples })
     if (bad.length) throw new Error(bad[0])
@@ -273,7 +276,7 @@ export async function runExport({ sample, probe = null, doc, box, format = '3mf'
 
     // ---- the colours: each triangle's centre back to the world, the material's colour there
     let palette = null, index = null
-    if (format === '3mf') {
+    if (format === '3mf' || format === 'obj') {
         const c = centroids(mesh.positions, mesh.triangles)
         const rgb = new Float32Array(3 * nt)
         const chunk = 1 << 20
@@ -336,6 +339,16 @@ export async function runExport({ sample, probe = null, doc, box, format = '3mf'
 
     onProgress('writing the file')
     name ??= doc.title || 'scene'
-    const bytes = format === '3mf' ? await write3MF({ ...mesh, palette, index, name }) : writeSTL({ ...mesh, name })
-    return { bytes, triangles: final, meshed, vertices: mesh.positions.length / 3, palette, open, grid: g }
+    /* THE FILES, named from `stem` (the host's; an OBJ's MTL is named in the OBJ, so the host must save both under these
+       names, in one folder) */
+    stem ??= String(name).replace(/[^\w.-]+/g, '_') || 'scene'
+    let files
+    if (format === '3mf') files = [{ name: `${stem}.3mf`, bytes: await write3MF({ ...mesh, palette, index, name }), type: 'model/3mf' }]
+    else if (format === 'stl') files = [{ name: `${stem}.stl`, bytes: writeSTL({ ...mesh, name }), type: 'model/stl' }]
+    else {
+        const o = writeOBJ({ ...mesh, palette, index, name, mtlName: `${stem}.mtl` })
+        files = [{ name: `${stem}.obj`, bytes: o.obj, type: 'model/obj' }, ...(o.mtl ? [{ name: `${stem}.mtl`, bytes: o.mtl, type: 'model/mtl' }] : [])]
+    }
+    const bytes = files[0].bytes
+    return { bytes, files, triangles: final, meshed, vertices: mesh.positions.length / 3, palette, open, grid: g }
 }

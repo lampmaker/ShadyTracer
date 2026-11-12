@@ -274,6 +274,16 @@ async function unzipModel(bytes) {
     ok('STL: the grid only, no colour pass', calls2.every(c => c.mode === 0))
     ok('STL: the same mesh before simplifying, simplified too, and every triangle written', s.meshed === r.meshed && s.triangles < s.meshed / 2
         && s.bytes.length === 84 + 50 * s.triangles)
+    // OBJ + MTL (0.next): two files from the stem given, the OBJ naming the MTL, coloured as the 3MF is
+    const calls3 = []
+    const ob = await runExport({ ...opts, sample: standIn(f, colour, calls3), format: 'obj', stem: 'ball-1' })
+    ok('OBJ: two files, the OBJ and its MTL, named from the stem', ob.files.map(x => `${x.name} ${x.type}`).join() === 'ball-1.obj model/obj,ball-1.mtl model/mtl', JSON.stringify(ob.files.map(x => x.name)))
+    const objText = new TextDecoder().decode(ob.files[0].bytes), mtlText = new TextDecoder().decode(ob.files[1].bytes)
+    ok('...the OBJ naming the MTL, the colours sampled as for a 3MF', /^mtllib ball-1\.mtl$/m.test(objText) && calls3.some(c => c.mode === 1))
+    ok('...two colours, red and blue, as the 3MF\'s palette', ob.palette.length === 2 && /Kd 1\.000000 0\.000000 0\.000000/.test(mtlText) && /Kd 0\.000000 0\.000000 1\.000000/.test(mtlText), mtlText)
+    ok('...every triangle written, the mesh closed', (objText.match(/^f /gm) || []).length === ob.triangles && ob.open === 0)
+    ok('the 3MF and STL one file each, from the stem', r.files.length === 1 && /\.3mf$/.test(r.files[0].name) && s.files.length === 1 && s.files[0].name.endsWith('.stl'))
+
     // no simplification: the mesher's triangles, as before 0.next
     const raw = await runExport({ ...opts, sample: standIn(f, colour, []), format: '3mf', deviation: 0 })
     ok('deviation 0: every triangle the mesher made', raw.triangles === raw.meshed && raw.meshed === r.meshed)

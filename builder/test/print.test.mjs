@@ -8,7 +8,7 @@
 // the colour group, the object's default colour, a pid and p1 on every triangle. Whether Bambu
 // Studio then paints it is for the user's screen.
 //======================================================================================================================
-import { zip, crc32, write3MF, writeSTL, modelXml } from '../print.js'
+import { zip, crc32, write3MF, writeSTL, modelXml, writeOBJ, materialName } from '../print.js'
 import { createMesher, openEdges } from '../mesh.js'
 
 let pass = 0, fail = 0
@@ -119,6 +119,59 @@ ok('the test mesh is closed', openEdges(mesh.triangles).length === 0)
         if (nrm[0] * c[0] + nrm[1] * c[1] + nrm[2] * c[2] > 0) outward++
     }
     ok('STL: the normals of a sphere point out', outward === nt, `${outward} of ${nt}`)
+}
+
+//----------------------------------------------------------------------------------------------
+// OBJ AND ITS MTL (0.next), read back by a reader written from the format (Wavefront's): `v`, `f` 1-based, `usemtl`
+// naming the material of the faces after it, `mtllib` the file; in the MTL `newmtl`, `Kd`, `Ka`, `d`. And what Bambu
+// Studio's own loader does with them (print.js's header): Kd as the colour, a tenth of Ka added unless it is 0, d the
+// opacity.
+//----------------------------------------------------------------------------------------------
+function readOBJ(text) {
+    const v = [], f = [], mat = [], libs = []
+    let cur = null
+    for (const line of text.split('\n')) {
+        const t = line.trim().split(/\s+/)
+        if (t[0] === 'v') v.push(+t[1], +t[2], +t[3])
+        else if (t[0] === 'f') { f.push(...t.slice(1, 4).map(x => +x.split('/')[0] - 1)); mat.push(cur) }
+        else if (t[0] === 'usemtl') cur = t[1]
+        else if (t[0] === 'mtllib') libs.push(t[1])
+    }
+    return { v, f, mat, libs }
+}
+function readMTL(text) {
+    const m = {}
+    let cur = null
+    for (const line of text.split('\n')) {
+        const t = line.trim().split(/\s+/)
+        if (t[0] === 'newmtl') m[cur = t[1]] = {}
+        else if (cur && ['Kd', 'Ka', 'd'].includes(t[0])) m[cur][t[0]] = t.slice(1).map(Number)
+    }
+    return m
+}
+{
+    const index = Uint16Array.from({ length: nt }, (_, i) => (mesh.positions[3 * mesh.triangles[3 * i]] > 0 ? 1 : 0) + (mesh.positions[3 * mesh.triangles[3 * i] + 2] > 0.3 ? 1 : 0))
+    const palette = [[1, 0.5, 0], [0, 0, 1], [0.25, 0.75, 0.125]]
+    const { obj, mtl } = writeOBJ({ ...mesh, palette, index, name: 'a ball', mtlName: 'ball-2026.mtl' })
+    const o = readOBJ(new TextDecoder().decode(obj)), m = readMTL(new TextDecoder().decode(mtl))
+    ok('OBJ: every vertex, as given (to 4 decimals of a mm)', o.v.length === mesh.positions.length && o.v.every((x, i) => Math.abs(x - mesh.positions[i]) < 6e-5))
+    ok('...every triangle once, closed and wound as given', o.f.length === mesh.triangles.length && openEdges(Uint32Array.from(o.f)).length === 0)
+    // each written face is one of the mesh's, with its colour: by its corners
+    const key = (a, b, c) => [a, b, c].join()
+    const want = new Map()
+    for (let i = 0; i < nt; i++) want.set(key(mesh.triangles[3 * i], mesh.triangles[3 * i + 1], mesh.triangles[3 * i + 2]), index[i])
+    let wrong = 0
+    for (let i = 0; i < o.f.length / 3; i++) if (o.mat[i] !== materialName(want.get(key(o.f[3 * i], o.f[3 * i + 1], o.f[3 * i + 2])))) wrong++
+    ok('...each face its own colour\'s material', wrong === 0, `${wrong} wrong`)
+    const runs = o.mat.filter((x, i) => i === 0 || x !== o.mat[i - 1]).length
+    ok('...the faces of a colour together: one usemtl a colour', runs === 3, runs)
+    ok('...naming its MTL by the name given', o.libs.join() === 'ball-2026.mtl')
+    ok('MTL: a material a colour, Kd the palette\'s sRGB', Object.keys(m).length === 3 && palette.every((c, i) => m[materialName(i)].Kd.every((x, k) => Math.abs(x - c[k]) < 1e-6)), JSON.stringify(m))
+    ok('...Ka 0 (Bambu Studio adds a tenth of it otherwise) and d 1 (its opacity)', Object.values(m).every(x => x.Ka.every(k => k === 0) && x.d[0] === 1))
+    const plain = writeOBJ({ ...mesh })
+    const p = readOBJ(new TextDecoder().decode(plain.obj))
+    ok('no palette: no MTL, no usemtl, no mtllib, the same faces in their order', plain.mtl === null && p.libs.length === 0 && p.mat.every(x => x === null)
+        && p.f.every((x, i) => x === mesh.triangles[i]))
 }
 
 console.log(`${pass} passed, ${fail} failed`)

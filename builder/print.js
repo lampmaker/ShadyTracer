@@ -1,5 +1,6 @@
 //======================================================================================================================
-// PRINT -- a mesh (mesh.js) as a file a slicer opens: 3MF with a colour per triangle, or binary STL.
+// PRINT -- a mesh (mesh.js) as a file a slicer opens: 3MF with a colour per triangle, OBJ with its MTL (0.next), or
+// binary STL.
 //
 // PURE, like mesh.js: bytes out, no DOM, tested in node (test/print.test.mjs). The host downloads
 // the Blob.
@@ -160,4 +161,75 @@ export function writeSTL({ positions, triangles, name = 'scene' }) {
         for (let k = 0; k < 3; k++) for (let j = 0; j < 3; j++) dv.setFloat32(at + 12 + 12 * k + 4 * j, p[k][j], true)
     }
     return new Uint8Array(buf)
+}
+
+//----------------------------------------------------------------------------------------------
+// OBJ WITH ITS MTL (0.next): the colours as materials, one a palette entry, each face naming its own
+//
+// FOR SLICERS THAT READ AN OBJ'S COLOURS AND NOT A 3MF'S: Bambu Studio before 2.5 loaded a 3MF that it had not
+// written as geometry alone ("The 3mf is not from Bambu Lab, load geometry data only"), and reads an OBJ's colours,
+// mapping them to filaments in a dialog. What it reads, from its own loader (BambuStudio master, 2026-11:
+// libslic3r/Format/OBJ.cpp and objparser.cpp):
+//   - a face's colour is its material's Kd, as given (no gamma unless asked): so Kd is the palette's sRGB, as the
+//     3MF's colour group is;
+//   - PLUS A TENTH OF Ka when Ka is between 0.01 and 0.99, so Ka is written 0 0 0;
+//   - `d` as the colour's opacity, 1 when absent or out of (0, 1]: written 1;
+//   - the MTL found by `mtllib`'s name beside the OBJ: so the two files go into the same folder under the names
+//     written here (the host makes them unique, lib/filename.js, so a browser does not rename one "(1)").
+// MATERIALS, NOT VERTEX COLOURS, though it reads those too: a vertex colour is the vertex's, and a face takes the mean
+// of its three, so a border between two colours would come out a blend unless its vertices were split -- and a mesh
+// split there is no longer closed. With materials every face has its colour and the mesh stays the one mesh.js made,
+// each vertex once.
+//
+// OBJ HAS NO UNITS: millimetres, as the STL, which is what a slicer takes them for; z up, as the bed.
+//----------------------------------------------------------------------------------------------
+
+/** The OBJ and, with a palette, its MTL: { obj, mtl } as Uint8Arrays (mtl null without colours). `mtlName` is the
+ *  MTL's file name as the OBJ names it. Faces are written by colour, the palette's order, each colour's run after one
+ *  `usemtl`; the vertices as given, 1-based. */
+export function writeOBJ({ positions, triangles, palette = null, index = null, name = 'scene', mtlName = 'scene.mtl', per = 50000 }) {
+    const nv = positions.length / 3, nt = triangles.length / 3
+    const coloured = !!(palette?.length && index)
+    const chunks = [`# ${String(name).replace(/[\r\n]+/g, ' ')}\n# ShadyTracer scene builder: millimetres, z up\n`]
+    if (coloured) chunks.push(`mtllib ${mtlName}\n`)
+    chunks.push(`o ${String(name).replace(/\s+/g, '_') || 'scene'}\n`)
+    for (let s = 0; s < nv; s += per) {
+        let t = ''
+        for (let i = s; i < Math.min(nv, s + per); i++) t += `v ${num(positions[3 * i])} ${num(positions[3 * i + 1])} ${num(positions[3 * i + 2])}\n`
+        chunks.push(t)
+    }
+    const face = i => `f ${triangles[3 * i] + 1} ${triangles[3 * i + 1] + 1} ${triangles[3 * i + 2] + 1}\n`
+    if (!coloured) {
+        for (let s = 0; s < nt; s += per) { let t = ''; for (let i = s; i < Math.min(nt, s + per); i++) t += face(i); chunks.push(t) }
+    } else {
+        // the faces of each colour together: counted, then placed (a stable sort by colour, in linear time)
+        const start = new Int32Array(palette.length + 1)
+        for (let i = 0; i < nt; i++) start[index[i] + 1]++
+        for (let c = 0; c < palette.length; c++) start[c + 1] += start[c]
+        const order = new Int32Array(nt), at = start.slice(0, palette.length)
+        for (let i = 0; i < nt; i++) order[at[index[i]]++] = i
+        for (let c = 0; c < palette.length; c++) {
+            if (start[c] === start[c + 1]) continue
+            chunks.push(`usemtl ${materialName(c)}\n`)
+            for (let s = start[c]; s < start[c + 1]; s += per) {
+                let t = ''
+                for (let k = s; k < Math.min(start[c + 1], s + per); k++) t += face(order[k])
+                chunks.push(t)
+            }
+        }
+    }
+    const mtl = coloured ? enc.encode(`# ShadyTracer scene builder: ${palette.length} colour(s), sRGB\n` + palette.map((c, i) =>
+        `\nnewmtl ${materialName(i)}\nKd ${c.map(v => Math.min(1, Math.max(0, v)).toFixed(6)).join(' ')}\nKa 0 0 0\nd 1\nillum 1\n`).join('')) : null
+    return { obj: joinText(chunks), mtl }
+}
+/** Palette entry i's material name in the MTL: numbered in the palette's order, the most used first (mesh.js quantize). */
+export const materialName = i => `colour_${i + 1}`
+
+/** Text chunks as one UTF-8 array, without one string of the whole (a print-resolution OBJ is hundreds of MB). */
+function joinText(chunks) {
+    const parts = chunks.map(c => enc.encode(c))
+    const out = new Uint8Array(parts.reduce((s, b) => s + b.length, 0))
+    let at = 0
+    for (const b of parts) { out.set(b, at); at += b.length }
+    return out
 }

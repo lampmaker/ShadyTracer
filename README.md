@@ -439,7 +439,8 @@ number carries its standard error**.
   reduced to as many as your printer holds.
 - The mesh is **simplified** to within a deviation you choose (0.05 mm to start): large triangles on
   flat faces, small ones where the surface curves, the borders between colours kept.
-- Saved as **3MF with colour**, made for Bambu Studio's filament mapping, or as **STL**, in mm.
+- Saved as **3MF with colour**, made for Bambu Studio's filament mapping, as **OBJ + MTL** with the same
+  colours (for slicers that read an OBJ's colours but not a 3MF's), or as **STL**, in mm.
 - Known limits: features thinner than a cell disappear and sharp edges are bevelled by up to a cell.
 
 ### Animation and video

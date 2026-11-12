@@ -33,7 +33,7 @@ The browser's storage is per browser and per computer. To move work elsewhere or
 | **File › Import from file…** (Ctrl O), or drop a file on the page | a scene file joins this project; a project file asks: open it as a project of its own, or add its scenes to this one |
 | **File › Export ▸ Scene file…** | the scene being worked on, alone (a card's ⋯ exports another) |
 | **File › Export ▸ Project file…** | every scene, with their cameras and the render settings: exactly what you see |
-| **File › Export ▸ 3D print (3MF / STL)…** | the selected object or the whole scene, as a mesh to print (below) |
+| **File › Export ▸ 3D print (3MF / OBJ / STL)…** | the selected object or the whole scene, as a mesh to print (below) |
 
 Files from older versions are upgraded when opened. A file with problems is refused, with every problem listed.
 
@@ -64,7 +64,7 @@ optics parts. Each has a rendered picture. Rest the pointer on one to see it ren
 
 ## Export for 3D printing
 
-**File › Export ▸ 3D print (3MF / STL)…** asks what to print:
+**File › Export ▸ 3D print (3MF / OBJ / STL)…** asks what to print:
 
 - **Selected object**: that object alone -- or a group and everything in it -- with nothing of its neighbours, in its
   own frame: its z is up on the print bed.
@@ -81,7 +81,11 @@ The box is fitted to it, and drawn dashed in the picture while the dialog is ope
   (64 to start: more is less speckle, and longer). This suits matte surfaces. A glossy or mirror-like surface shows
   what it reflects straight out of it, and glass shows what is behind it. A light that is only a ray file (no face) gives
   no light here. Faces the box cuts through keep their material's colour;
-- **STL**, in millimetres.
+- **OBJ + MTL**, the same colours as an OBJ file and its material file, for a slicer that reads an OBJ's colours but
+  not a 3MF's. Bambu Studio before 2.5 is one: it opens another program's 3MF as geometry only. It downloads as
+  two files with matching names. Keep them in one folder, because the OBJ finds its colours by the MTL's name. In
+  millimetres;
+- **STL**, in millimetres, no colour.
 
 The shape is sampled on a grid -- the **cell**, in millimetres of the printed part, 0.4 to start -- and made into
 a closed mesh, cut by the box. That mesh is then **simplified**: flat regions become a few large triangles, curved

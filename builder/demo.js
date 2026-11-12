@@ -69,6 +69,7 @@ import { stamp } from '../version.js'
 import { baked } from './bake.js'
 import { animatedKeys, keptUniforms, liveUniformsOf } from './animate.js'
 import { changeUnit, outsideAcross, unitFactor, cameraTimes } from './unitchange.js'
+import { stampedName } from '../lib/filename.js'
 
 /* THE DEMO SCENE IS A FILE, scenes/demo.json, loaded with the other bundled scenes. It was built
    here in code once, the one scene that was not a file -- so it could not be opened, saved over
@@ -1010,9 +1011,11 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
             /* LIT (0.next): the scene SHOWN traced at the part's points (RT.renderProbes), whatever is printed -- one object
                lit as it stands among the rest */
             const probe = o => RT.renderProbes(o)
-            const r = await runExport({ sample, probe, doc: d, box, format, cell, colours, deviation, light, samples, name: label || d.title || 'scene', onProgress })
-            const stem = fileName(`${d.title || 'scene'}${label ? '-' + label : ''}`).replace(/\.json$/, '')
-            saveBytes(`${stem}.${format}`, r.bytes, format === '3mf' ? 'model/3mf' : 'model/stl')
+            /* THE NAME WITH THE TIME (lib/filename.js): an OBJ names its MTL, and a browser that found a file of that name in
+               the folder would save the MTL as "name (1).mtl", which the OBJ does not name -- a name made once is not taken */
+            const stem = stampedName(fileName(`${d.title || 'scene'}${label ? '-' + label : ''}`).replace(/\.json$/, ''))
+            const r = await runExport({ sample, probe, doc: d, box, format, cell, colours, deviation, light, samples, name: label || d.title || 'scene', stem, onProgress })
+            for (const f of r.files) saveBytes(f.name, f.bytes, f.type)
             return r
         },
         /** Call after any edit. Cheap when nothing changed -- the text is compared, and an

@@ -70,7 +70,7 @@ export function openPrintDialog({ doc, selected = null, boxes = null, estimate =
         el.appendChild(r); return r
     }
 
-    el.appendChild(add('div', { textContent: '3D print (3MF / STL)' }, { fontWeight: 'bold', marginBottom: '4px' }))
+    el.appendChild(add('div', { textContent: '3D print (3MF / OBJ / STL)' }, { fontWeight: 'bold', marginBottom: '4px' }))
 
     // ---- what
     const what = add('div', {}, { margin: '4px 0' })
@@ -113,7 +113,9 @@ export function openPrintDialog({ doc, selected = null, boxes = null, estimate =
     deviation.dataset.setting = 'deviation'
     const format = row('format', add('select', {}, fieldStyle)).querySelector('select')
     format.dataset.setting = 'format'
-    for (const [v, t] of [['3mf', '3MF (with colour)'], ['stl', 'STL (no colour)']]) format.appendChild(add('option', { value: v, textContent: t }))
+    // OBJ + MTL (0.next): the colours as an OBJ's materials, for a slicer that reads those and not a 3MF's (print.js writeOBJ)
+    for (const [v, t] of [['3mf', '3MF (with colour)'], ['obj', 'OBJ + MTL (with colour, two files)'], ['stl', 'STL (no colour)']])
+        format.appendChild(add('option', { value: v, textContent: t }))
     format.value = S.format
     cell.oninput = () => { S.cell = +cell.value; refresh() }
     colours.oninput = () => { S.colours = Math.round(+colours.value); refresh() }
@@ -173,9 +175,10 @@ export function openPrintDialog({ doc, selected = null, boxes = null, estimate =
         grid.style.color = problem ? '#ff8a80' : '#8a8f96'
         go.disabled = !!problem || S.busy
         go.style.opacity = go.disabled ? '0.5' : ''
-        colours.parentElement.style.display = S.format === '3mf' ? 'flex' : 'none'
-        light.parentElement.style.display = S.format === '3mf' ? 'flex' : 'none'
-        samples.parentElement.style.display = S.format === '3mf' && S.light === 'lit' ? 'flex' : 'none'
+        const coloured = S.format === '3mf' || S.format === 'obj'
+        colours.parentElement.style.display = coloured ? 'flex' : 'none'
+        light.parentElement.style.display = coloured ? 'flex' : 'none'
+        samples.parentElement.style.display = coloured && S.light === 'lit' ? 'flex' : 'none'
     }
 
     async function run() {
@@ -186,7 +189,7 @@ export function openPrintDialog({ doc, selected = null, boxes = null, estimate =
         try {
             const r = await onExport({ subject: S.subject === 'object' ? node.id : null, box: S.box, format: S.format, cell: S.cell, colours: S.colours, deviation: S.deviation,
                 light: S.light, samples: S.samples }, t => say(t))
-            say(`${S.format.toUpperCase()}: ${r.triangles.toLocaleString()} triangles`
+            say(`${S.format === 'obj' ? 'OBJ + MTL (keep the two files together)' : S.format.toUpperCase()}: ${r.triangles.toLocaleString()} triangles`
                 + (r.meshed > r.triangles ? ` (simplified from ${r.meshed.toLocaleString()})` : '')
                 + `, ${(r.bytes.length / 1048576).toFixed(1)} MB`
                 + (r.palette ? `, ${r.palette.length} colour(s)` : '')
