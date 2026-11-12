@@ -18,10 +18,14 @@ import { installBuilderPanel } from '../panel.js'
 // the host's hook for a material item's sample, as app.html hands it over
 import { itemSceneDoc, SAMPLE_CHOICES, SAMPLE_SIZES, sampleOf, setSample } from '../../library/edit.js'
 
-let doc = M.createDoc({ title: 'props' })
-doc.unit = 'cm'
-M.addMaterial(doc, { id: 'stone', preset: 'diffuse' })
-M.addObject(doc, 'root', { id: 'a', primitive: 'box', material: 'stone' })
+const plain = () => {
+    const d = M.createDoc({ title: 'props' })
+    d.unit = 'cm'
+    M.addMaterial(d, { id: 'stone', preset: 'diffuse' })
+    M.addObject(d, 'root', { id: 'a', primitive: 'box', material: 'stone' })
+    return d
+}
+let doc = plain()
 const T = { live: [], commits: [], structure: 0, messages: [], checked: 0 }
 const BUILDER = {
     model: M, get doc() { return doc },
@@ -34,6 +38,8 @@ const panel = installBuilderPanel(table, BUILDER, { onStructure: () => { T.struc
     itemSample: { choices: SAMPLE_CHOICES, sizes: SAMPLE_SIZES, of: sampleOf, set: setSample } })
 window.CHECK = { T, M, get doc() { return doc }, panel, sampleOf,
     // a material item's own scene, as library/edit.js opens it, made the panel's document
+    // the scene the page starts with, again (after an item's)
+    openPlain: () => { doc = plain() },
     openItem: () => { doc = itemSceneDoc({ id: 'mine:s', name: 'stone item', asset: M.extractAsset(doc, 'stone') }); return doc.libraryItem } }
 </script>
 </body>
