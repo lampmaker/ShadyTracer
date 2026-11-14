@@ -16,6 +16,63 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.85.0 — 2026-11-14
+
+**The camera rolls: a `roll` setting turns it about its own line of sight.** The Camera popover (⌖) has a **roll**
+row in degrees, for a perspective and an orthographic camera, an orbit and a free one alike; positive turns the
+picture clockwise. **Ctrl + drag** on the picture turns it too: that gesture turned the camera's `up` about the
+world's z until now, which with the z-up every scene has did nothing. The roll is its own number rather than a turned
+`up`, so an orbit still turns level about its target, and it is a Timeline track of its own (`view/camera/roll`, not
+part of the ten-number pose). Every kernel and overlay reads the camera's right and up from `invView`, so the roll is
+in the picture, the light's connections to the lens, the haze, the optics paths, the gizmo and the measure tool at
+once. A scene keeps its roll in its view; a roll of 0 is no key, so a scene never rolled is byte for byte what it was,
+and only a rolled one is refused by a builder of 0.84.0 ("not a camera setting").
+
+Fixed beside it: a free (fps) camera given a position, target or `up` through `set` -- a scene's view put back, the
+pose track, a script's `camera.set` -- did not move until the next drag or walk, because nothing marked its matrix
+dirty (lib/camera.js set).
+
+**What to look at:** open ⌖ and move **roll**: the picture turns about its centre, the horizon tilting clockwise for a
+positive roll. Then orbit (drag) with a roll set: it should turn about the target as before, with the picture staying
+tilted by the same angle. Ctrl + drag left and right on an empty part of the picture. Switch to another scene and
+back: each keeps its own roll. Select an object with a roll set: the gizmo's arrows should sit on the object and turn
+with the picture. A free (fps) camera's saved view, put back, should now land at once.
+
+**A code box's caret no longer drifts below the line being edited.** A code box in the Properties panel is a
+transparent textarea over a layer that draws the same text in colours, and the property table gives that layer the
+textarea's line height, font and white-space once, as it makes it, from the textarea's computed style. The shell takes
+a panel out of the document while another tab covers it, and there a computed style is empty: an object selected while
+Properties was behind another tab (Parameters, say) got a layer with 16.9px lines under a textarea with 22px lines
+(read in headless Chromium), so the caret stood 5px lower for every line down, and the layer's text lost its
+indentation. The panel now builds what it built out of the page again once it is back in it
+(`builder/panel.js`). The copy itself is the property table's (GUISTUFF, a submodule), and is still made once: this is
+the host's side of it. `properties.check.mjs` builds a code box with the panel out of the page and holds the two line
+heights equal.
+
+**What to look at:** put the Parameters tab in front of Properties, select an object with code in the tree, then
+bring Properties to the front and click into a line near the bottom of its code box: the caret is on the line you
+clicked, and typing lands where the text is. If the caret still drifts, say which box (an object's code, a material's,
+the Script panel) and at what browser zoom: that would be a second cause, not this one.
+
+**The Darkroom shows a render while it runs, and Stop keeps it.** A render in the Darkroom used to show nothing until
+its last sample, so whether it had enough samples was only seen at the end, and Abort threw the samples away. Now the
+render so far is copied into the Darkroom after a second and then every *show every* seconds (a new row in Render; 0
+shows it only at the end), or at once with **Show now**. It is the picture kept, so every developing box -- exposure,
+white balance, tone, colour, curves, wheels, grading, finish, the histogram, the spot meter and the eyedropper -- works
+on it while the samples come in. **Stop and keep** (it was Abort) ends the render and keeps what it has, its sample
+count said; raising **samples** while it runs renders further. Save and Discard wait for the render's end: an export
+reads the picture in strips, and the render copies into it between them. The progress line sits at the top of the
+picture, not in its middle. The copies go into the buffer already kept (`develop.js` update), so watching costs one
+buffer copy each time and no memory; the exposure the display metered is read with the first copy and the last.
+A script's `render` is unchanged.
+
+**What to look at:** Darkroom, a render of a few hundred samples at a size that takes a minute: the picture should
+appear after about a second and sharpen every five; drag the exposure and a curve while it runs and see the picture
+follow (each change may lag by about a sample's time, since the GPU finishes the sample in flight first -- say if
+that is too slow); **Show now** at once; **Stop and keep** part way, and the caption and status should say the samples
+kept; raise **samples** during a render and it should go on past the old number. Whether the live view or the render
+slows down while the Darkroom is redrawn during it is a measurement only your card can make.
+
 ## 0.84.0 — 2026-11-08
 
 **A coating on a metal now does something.** Before this, a metal's reflection never read the material's coating, so a

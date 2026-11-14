@@ -2514,7 +2514,7 @@ function viewProblems(view) {
  *  aspect, its near and far planes), which are the canvas's and the renderer's, not the scene's. */
 export const cameraSettings = c => c && typeof c === 'object'
     ? Object.fromEntries(Object.keys(VIEW_CAMERA).filter(k => c[k] !== undefined).map(k => [k, structuredClone(c[k])])) : null
-/* A ROLL OF 0 IS NO KEY (0.next): the camera hands one out always (lib/camera.js get), and the view is written as it
+/* A ROLL OF 0 IS NO KEY (0.85.0): the camera hands one out always (lib/camera.js get), and the view is written as it
    changes, so without this every scene's file would gain `roll: 0` and a builder of 0.84.0 would refuse it ("not a
    camera setting"). sceneViewOf puts the 0 back from CAMERA_DEFAULTS. Dropped AFTER a merge (setView), never before:
    dropped first, a roll set back to 0 would leave the old one standing under it. */

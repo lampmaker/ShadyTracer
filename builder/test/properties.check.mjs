@@ -207,7 +207,7 @@ await p.waitForTimeout(100)
 ok('a sample changed by hand is "its own"', await (await selectOf('sample')).evaluate(e => e.selectedOptions[0]?.textContent) === 'its own')
 ok('...and has no size to offer: a shape is picked first', !(await labels()).includes('sample size'))
 
-// A CODE BOX BUILT WHILE THE PANEL IS OUT OF THE PAGE (0.next): the shell takes a covered tab's element out of the
+// A CODE BOX BUILT WHILE THE PANEL IS OUT OF THE PAGE (0.85.0): the shell takes a covered tab's element out of the
 // document, and the highlighter's layer copied the textarea's line height from a computed style that is empty there --
 // 16.9px lines of colours under 22px lines of caret. Built again once the panel is back, the two agree.
 const lines = () => p.evaluate(() => [...document.querySelectorAll('#p textarea[data-highlighting]')].map(ta => {
