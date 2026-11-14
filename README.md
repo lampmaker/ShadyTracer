@@ -434,10 +434,14 @@ number carries its standard error**.
 - **File › Export ▸ 3D print**: the selected object alone, or the whole scene, cut by a box fitted to
   it that you can resize. Nothing is added to the scene.
 - The distance field is sampled on the GPU and meshed into a **closed surface** (marching
-  tetrahedra), each triangle coloured from its material and reduced to at most 16 colours.
-- Saved as **3MF with colour**, made for Bambu Studio's filament mapping, or as **STL**, in mm.
-- Known limits: features thinner than a cell disappear, sharp edges are bevelled by up to a cell,
-  and meshes are dense (no decimation yet).
+  tetrahedra), each triangle coloured from its material, or **as lit**: the colour the picture gives
+  that point, traced by the renderer and developed with the view's exposure. The colours are then
+  reduced to as many as your printer holds.
+- The mesh is **simplified** to within a deviation you choose (0.05 mm to start): large triangles on
+  flat faces, small ones where the surface curves, the borders between colours kept.
+- Saved as **3MF with colour**, made for Bambu Studio's filament mapping, as **OBJ + MTL** with the same
+  colours (for slicers that read an OBJ's colours but not a 3MF's), or as **STL**, in mm.
+- Known limits: features thinner than a cell disappear and sharp edges are bevelled by up to a cell.
 
 ### Animation and video
 

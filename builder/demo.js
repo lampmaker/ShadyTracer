@@ -69,6 +69,7 @@ import { stamp } from '../version.js'
 import { baked } from './bake.js'
 import { animatedKeys, keptUniforms, liveUniformsOf } from './animate.js'
 import { changeUnit, outsideAcross, unitFactor, cameraTimes } from './unitchange.js'
+import { stampedName } from '../lib/filename.js'
 
 /* THE DEMO SCENE IS A FILE, scenes/demo.json, loaded with the other bundled scenes. It was built
    here in code once, the one scene that was not a file -- so it could not be opened, saved over
@@ -994,21 +995,27 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
         },
         /** EXPORT FOR PRINTING (exportbox.js, 0.83.0): what `subject` is -- an object's id, or null for the whole
          *  scene -- inside `box` ({ frames, lo, hi }: exportbox.js fittedBox, as the print dialog has it), as a 3MF with
-         *  colour or an STL, downloaded. Nothing is added to the scene. The whole scene is the renderer's field; one
-         *  object is a scene of that object alone (subjectTree), generated here and sampled by a kernel of its own
+         *  colour -- the materials' own, or with `light` 'lit' the part as the picture shows it (litcolour.js, 0.next) -- or an
+         *  STL, simplified to within `deviation` mm (simplify.js, 0.next), downloaded. Nothing is added to
+         *  the scene. The whole scene is the renderer's field; one object is a scene of that object alone (subjectTree), generated here and sampled by a kernel of its own
          *  (RT.sampleField's `own`). Either way the scene has to be the one showing: the engine's values -- the unit
          *  the field is in, the tolerance -- are the ones it was given for it. Resolves to what runExport says
-         *  (triangles, palette, bytes). */
-        async exportPrint({ subject = null, box, format = '3mf', cell, colours } = {}, onProgress = () => { }) {
+         *  (triangles, meshed, palette, bytes). */
+        async exportPrint({ subject = null, box, format = '3mf', cell, colours, deviation, light, samples } = {}, onProgress = () => { }) {
             if (current !== shown || RT.scene?.id !== 'built') throw new Error('this scene is not the one showing: show it first (its \u25B6 in the tree)')
             const d = doc()
             const one = subject != null && subject !== d.root.id
             const own = one ? generate(subjectTree(d, subject), { id: 'print', title: d.title || 'print' }) : null
             const sample = (input, n) => RT.sampleField(input, n, own)
             const label = one ? M.find(d, subject)?.node.label : null
-            const r = await runExport({ sample, doc: d, box, format, cell, colours, name: label || d.title || 'scene', onProgress })
-            const stem = fileName(`${d.title || 'scene'}${label ? '-' + label : ''}`).replace(/\.json$/, '')
-            saveBytes(`${stem}.${format}`, r.bytes, format === '3mf' ? 'model/3mf' : 'model/stl')
+            /* LIT (0.next): the scene SHOWN traced at the part's points (RT.renderProbes), whatever is printed -- one object
+               lit as it stands among the rest */
+            const probe = o => RT.renderProbes(o)
+            /* THE NAME WITH THE TIME (lib/filename.js): an OBJ names its MTL, and a browser that found a file of that name in
+               the folder would save the MTL as "name (1).mtl", which the OBJ does not name -- a name made once is not taken */
+            const stem = stampedName(fileName(`${d.title || 'scene'}${label ? '-' + label : ''}`).replace(/\.json$/, ''))
+            const r = await runExport({ sample, probe, doc: d, box, format, cell, colours, deviation, light, samples, name: label || d.title || 'scene', stem, onProgress })
+            for (const f of r.files) saveBytes(f.name, f.bytes, f.type)
             return r
         },
         /** Call after any edit. Cheap when nothing changed -- the text is compared, and an

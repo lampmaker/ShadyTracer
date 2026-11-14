@@ -81,7 +81,7 @@ const titles = () => p.evaluate(() => CHECK.BUILDER.project.scenes.map(s => s.do
 const applied = () => p.evaluate(() => CHECK.T.applied.length)
 r = await p.evaluate(() => CHECK.menu.file())
 ok('File: New project, Projects…, Import from file…, Export, Save picture', JSON.stringify(r) === '["New project","Projects…","Import from file…","Export","Save picture…"]', JSON.stringify(r))
-for (const [label, key] of [['Scene file…', 'exportScene:'], ['Project file…', 'exportProject'], ['3D print (3MF / STL)…', 'exportPrint']]) {
+for (const [label, key] of [['Scene file…', 'exportScene:'], ['Project file…', 'exportProject'], ['3D print (3MF / OBJ / STL)…', 'exportPrint']]) {
     await p.evaluate(l => CHECK.menu.choose('file.export', l), label)
     r = await p.evaluate(() => CHECK.T.files.at(-1))
     ok(`Export ▸ ${label}: the host's`, r.startsWith(key), r)

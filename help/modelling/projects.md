@@ -33,7 +33,7 @@ The browser's storage is per browser and per computer. To move work elsewhere or
 | **File › Import from file…** (Ctrl O), or drop a file on the page | a scene file joins this project; a project file asks: open it as a project of its own, or add its scenes to this one |
 | **File › Export ▸ Scene file…** | the scene being worked on, alone (a card's ⋯ exports another) |
 | **File › Export ▸ Project file…** | every scene, with their cameras and the render settings: exactly what you see |
-| **File › Export ▸ 3D print (3MF / STL)…** | the selected object or the whole scene, as a mesh to print (below) |
+| **File › Export ▸ 3D print (3MF / OBJ / STL)…** | the selected object or the whole scene, as a mesh to print (below) |
 
 Files from older versions are upgraded when opened. A file with problems is refused, with every problem listed.
 
@@ -64,7 +64,7 @@ optics parts. Each has a rendered picture. Rest the pointer on one to see it ren
 
 ## Export for 3D printing
 
-**File › Export ▸ 3D print (3MF / STL)…** asks what to print:
+**File › Export ▸ 3D print (3MF / OBJ / STL)…** asks what to print:
 
 - **Selected object**: that object alone -- or a group and everything in it -- with nothing of its neighbours, in its
   own frame: its z is up on the print bed.
@@ -75,14 +75,28 @@ The box is fitted to it, and drawn dashed in the picture while the dialog is ope
 **Fit** to fit it again. Nothing is added to the scene. Then:
 
 - **3MF with colour**: each triangle coloured from its material, reduced to as many colours as your printer holds
-  (*colours*, 4 to start), for a slicer's filament mapping;
-- **STL**, in millimetres.
+  (*colours*, 4 to start), for a slicer's filament mapping. With **colour from: As lit (the picture)** the colours are
+  the part as the picture shows it instead: its light, shadows and glow, with the view's exposure and tone curve. The
+  renderer traces the light at each point of the mesh, looking straight at the surface, for *samples* samples each
+  (64 to start: more is less speckle, and longer). This suits matte surfaces. A glossy or mirror-like surface shows
+  what it reflects straight out of it, and glass shows what is behind it. A light that is only a ray file (no face) gives
+  no light here. Faces the box cuts through keep their material's colour;
+- **OBJ + MTL**, the same colours as an OBJ file and its material file, for a slicer that reads an OBJ's colours but
+  not a 3MF's. Bambu Studio before 2.5 is one: it opens another program's 3MF as geometry only. It downloads as
+  two files with matching names. Keep them in one folder, because the OBJ finds its colours by the MTL's name. In
+  millimetres;
+- **STL**, in millimetres, no colour.
 
 The shape is sampled on a grid -- the **cell**, in millimetres of the printed part, 0.4 to start -- and made into
-a closed mesh, cut by the box. The cell, the colours and the format are remembered for the next export. What to expect:
+a closed mesh, cut by the box. That mesh is then **simplified**: flat regions become a few large triangles, curved
+ones keep small ones, and no vertex moves further than the **deviation** (in mm, 0.05 to start) from the planes of
+the triangles it replaced. The borders between colours stay where they were, and no triangle changes colour. A
+deviation of 0 keeps every triangle the grid gives. The cell, the colours, the deviation and the format are remembered
+for the next export, and so is the choice of colour. What to expect:
 
 - features thinner than a cell disappear;
 - sharp edges are bevelled by up to a cell;
-- the meshes are dense, because nothing reduces them yet.
+- a wall thinner than about twice the deviation can have its two sides pass through each other; a smaller deviation
+  avoids it.
 
-A smaller cell is finer and slower, and makes a larger file.
+A smaller cell is finer and slower, and makes a larger file. A larger deviation makes a smaller file.

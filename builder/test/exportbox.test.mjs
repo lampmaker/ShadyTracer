@@ -241,7 +241,8 @@ async function unzipModel(bytes) {
     const r = await runExport({ ...opts, sample: standIn(f, colour, calls), format: '3mf', onProgress: t => said.push(t) })
     ok('the grid is sampled, then the triangles coloured', calls[0].mode === 0 && calls.at(-1).mode === 1)
     ok('...every grid point once', calls.filter(c => c.mode === 0).reduce((s, c) => s + c.count, 0) === r.grid.n.reduce((a, b) => a * b))
-    ok('...every triangle once', calls.filter(c => c.mode === 1).reduce((s, c) => s + c.count, 0) === r.triangles)
+    ok('...every triangle the mesher made once, before simplifying', calls.filter(c => c.mode === 1).reduce((s, c) => s + c.count, 0) === r.meshed)
+    ok('...simplified (deviation 0.05 mm by default): fewer triangles in the file', r.triangles < r.meshed / 2, `${r.triangles} of ${r.meshed}`)
     eq('the mesh is closed', r.open, 0)
     // a sphere of radius 15 cut at z = +-10: the cap above 10 is pi h^2 (3R - h) / 3 with h = 5
     const cap = Math.PI * 25 * (45 - 5) / 3, want = 4 / 3 * Math.PI * 15 ** 3 - 2 * cap
@@ -268,12 +269,37 @@ async function unzipModel(bytes) {
 
     // STL: no colour lookup at all
     const calls2 = []
+    let msg = ''
     const s = await runExport({ ...opts, sample: standIn(f, colour, calls2), format: 'stl' })
     ok('STL: the grid only, no colour pass', calls2.every(c => c.mode === 0))
-    ok('STL: the same triangles', s.triangles === r.triangles && s.bytes.length === 84 + 50 * s.triangles)
+    ok('STL: the same mesh before simplifying, simplified too, and every triangle written', s.meshed === r.meshed && s.triangles < s.meshed / 2
+        && s.bytes.length === 84 + 50 * s.triangles)
+    // OBJ + MTL (0.next): two files from the stem given, the OBJ naming the MTL, coloured as the 3MF is
+    const calls3 = []
+    const ob = await runExport({ ...opts, sample: standIn(f, colour, calls3), format: 'obj', stem: 'ball-1' })
+    ok('OBJ: two files, the OBJ and its MTL, named from the stem', ob.files.map(x => `${x.name} ${x.type}`).join() === 'ball-1.obj model/obj,ball-1.mtl model/mtl', JSON.stringify(ob.files.map(x => x.name)))
+    const objText = new TextDecoder().decode(ob.files[0].bytes), mtlText = new TextDecoder().decode(ob.files[1].bytes)
+    ok('...the OBJ naming the MTL, the colours sampled as for a 3MF', /^mtllib ball-1\.mtl$/m.test(objText) && calls3.some(c => c.mode === 1))
+    ok('...two colours, red and blue, as the 3MF\'s palette', ob.palette.length === 2 && /Kd 1\.000000 0\.000000 0\.000000/.test(mtlText) && /Kd 0\.000000 0\.000000 1\.000000/.test(mtlText), mtlText)
+    ok('...every triangle written, the mesh closed', (objText.match(/^f /gm) || []).length === ob.triangles && ob.open === 0)
+    ok('the 3MF and STL one file each, from the stem', r.files.length === 1 && /\.3mf$/.test(r.files[0].name) && s.files.length === 1 && s.files[0].name.endsWith('.stl'))
+
+    // no simplification: the mesher's triangles, as before 0.next
+    const raw = await runExport({ ...opts, sample: standIn(f, colour, []), format: '3mf', deviation: 0 })
+    ok('deviation 0: every triangle the mesher made', raw.triangles === raw.meshed && raw.meshed === r.meshed)
+    eq('...closed', raw.open, 0)
+    const vr = meshVolume(...(await (async () => {
+        const x = await unzipModel(raw.bytes)
+        return [[...x.matchAll(/<vertex x="([-\d.e]+)" y="([-\d.e]+)" z="([-\d.e]+)"\/>/g)].map(m => [+m[1], +m[2], +m[3]]).flat(),
+                [...x.matchAll(/<triangle v1="(\d+)" v2="(\d+)" v3="(\d+)"/g)].flatMap(m => [+m[1], +m[2], +m[3]])]
+    })()))
+    ok('...and the simplified file\'s volume within 0.5 % of it', Math.abs(v / vr - 1) < 0.005, `${v} against ${vr}`)
+    msg = ''
+    try { await runExport({ ...opts, sample: standIn(f, colour, []), deviation: -1 }) } catch (e) { msg = e.message }
+    ok('a negative deviation refused', /deviation/.test(msg), msg)
 
     // nothing in the box
-    let msg = ''
+    msg = ''
     try { await runExport({ ...opts, sample: standIn(() => 1, colour, []) }) } catch (e) { msg = e.message }
     ok('an empty box says so', /nothing solid/.test(msg), msg)
     // a scene change mid-export

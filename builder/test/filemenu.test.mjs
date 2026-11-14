@@ -44,7 +44,7 @@ for (const [id, k] of [['file.newProject', 'newProject'], ['file.projects', 'pro
 }
 // EXPORT ▸: a submenu (no palette answer), its three files
 const ex = by('file.export').items()
-ok('Export ▸: Scene file, Project file, then 3D print', ex.map(x => x.separator ? '--' : x.label).join(' | ') === 'Scene file… | Project file… | -- | 3D print (3MF / STL)…',
+ok('Export ▸: Scene file, Project file, then 3D print', ex.map(x => x.separator ? '--' : x.label).join(' | ') === 'Scene file… | Project file… | -- | 3D print (3MF / OBJ / STL)…',
     ex.map(x => x.label).join())
 ex.filter(x => x.run).forEach(x => x.run())
 ok('...each the host\'s', calls.slice(-3).map(c => c[0]).join() === 'exportScene,exportProject,exportPrint', calls.slice(-3).join(' '))

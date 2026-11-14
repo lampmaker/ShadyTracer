@@ -64,7 +64,7 @@ export function fileCommands({ actions = {}, item = null } = {}) {
         actions.exportProject && { label: 'Project file…', run: () => actions.exportProject(),
             title: 'Every scene, their cameras and the render settings: opens as a project of its own, or adds its scenes to another' },
         actions.exportPrint && { separator: true },
-        actions.exportPrint && { label: '3D print (3MF / STL)…', run: () => actions.exportPrint(),
+        actions.exportPrint && { label: '3D print (3MF / OBJ / STL)…', run: () => actions.exportPrint(),
             title: 'The selected object or the whole scene, cut by a box fitted to it, as 3MF with colour or STL' },
     ].filter(Boolean)
     if (exports.length) out.push({ menu: 'File', id: 'file.export', group: 'files', label: 'Export', items: () => exports,
