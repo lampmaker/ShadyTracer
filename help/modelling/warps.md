@@ -45,6 +45,8 @@ scaled with its object stays the same warp.
 |---|---|
 | `dir` | the direction of this step, in the object's frame |
 | `pos` | move the ray there (the object's frame) before it goes on |
+| `posWorld` | move the ray there in the scene (the scene's unit): a portal to anywhere |
+| `dirWorld` | the direction of this step in the scene's own frame, over what `dir` says |
 | `tint` | the colour kept per unit of length: `VEC3(1.0, 0.5, 0.5)` halves green and blue in each unit |
 | `glow` | light added per unit of length (cd/m² per unit): glowing fog |
 | `stop()` | end the ray here. What it gathered so far is kept, nothing more |
@@ -61,13 +63,24 @@ dir = normalize(dir - normalize(p) * pull * ds / dot(p, p));    // pulled toward
 dir = normalize(dir + (VEC3(rand(), rand(), rand()) - 0.5) * 0.3 * ds);   // a shimmer
 tint = VEC3(0.9, 0.6, 0.8); glow = VEC3(1.0, 0.2, 0.6) * exp(dist * 8.0); // pink fog, glowing at the core
 if (p.z > 0.45) { pos = VEC3(p.x, p.y, -0.45); }                // a portal: out at the top, in at the bottom
+posWorld = world + shift;                                       // a portal to elsewhere, "shift" away, same direction
 ```
+
+## Portals
+
+A ray that steps into a portal's region and is given a new `posWorld` goes on from there, the way it was going. Make the
+region a thin slab and the slab becomes a window onto another place: `posWorld = world + shift;`, with `shift` a
+parameter, shows what is `shift` away. The example has one, onto another part of its row of shapes. Land the ray
+somewhere empty: in a solid object it would be inside without knowing it. To come out turned, set `dirWorld` as well.
 
 ## What stays straight, and other things to know
 
-- **Shadows stay straight.** Light sampling aims straight at a lamp, and shadow rays are not warped. Light that reaches
-  something *through* a warp is found only by paths that happen to find it, so it is grainier and takes more samples.
-  A tinted region does not cast a tinted shadow that way.
+- **Shadows go straight through.** Light sampling aims straight at the sun or a lamp, and its shadow rays pass through
+  a warp as if it were not there: a warp casts no shadow, and a tinted one no tinted shadow.
+- **What the camera sees through a warp is its own.** A lamp's light on a surface is usually brought to the picture
+  by the lamp's own photons, connected to the camera in a straight line. Through a warp that line is not how the
+  camera sees, so a camera ray a warp has acted on lights what it reaches itself, and a straight connection into a
+  warp is refused. Through a warp under a small lamp, expect a little more grain than beside it.
 - **Light from lamps is warped too**, but a warp need not work the same both ways. A twist turns a ray walking
   backwards the other way. So caustics seen through a warp can disagree with what the camera sees. For art that is
   allowed.

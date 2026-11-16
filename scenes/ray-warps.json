@@ -2,7 +2,7 @@
   "format": "raytracer-scene",
   "version": 30,
   "title": "Ray warps",
-  "nextId": 27,
+  "nextId": 29,
   "unit": "mm",
   "materials": [
     {
@@ -352,6 +352,24 @@
       "params": {
         "radius": 40,
         "strength": 400
+      }
+    },
+    {
+      "id": "b28",
+      "label": "portal",
+      "kind": "object",
+      "code": "// the region: a thin slab \"size\" across, the portal's window\nC = add_new(C, sdBox(p, size * 0.5), MATERIAL);",
+      "params": {
+        "size": {
+          "x": 60,
+          "y": 4,
+          "z": 80
+        },
+        "shift": {
+          "x": -350,
+          "y": 0,
+          "z": 0
+        }
       }
     }
   ],
@@ -720,6 +738,45 @@
           "draw": true,
           "step": 1
         }
+      },
+      {
+        "id": "n27",
+        "kind": "object",
+        "type": "code",
+        "label": "portal",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 250,
+            "y": 0,
+            "z": 50
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": null,
+        "params": {
+          "size": {
+            "x": 60,
+            "y": 4,
+            "z": 80
+          },
+          "shift": {
+            "x": -350,
+            "y": 0,
+            "z": 0
+          }
+        },
+        "block": "b28",
+        "warp": {
+          "code": "// out \"shift\" away in the scene, going the way it went\nposWorld = world + shift;",
+          "draw": false,
+          "step": 1
+        }
       }
     ]
   },
@@ -746,15 +803,15 @@
       "mode": "orbit",
       "camtype": 0,
       "fov": 40,
-      "dimensions": 620,
+      "dimensions": 720,
       "target": [
-        0,
+        40,
         30,
         45
       ],
       "azimuth": -90,
       "elevation": 78,
-      "distance": 620,
+      "distance": 720,
       "up": [
         0,
         0,

@@ -118,7 +118,7 @@ const plain = () => {
     const b = baked(s)
     ok('baked: the warp kept, its uniforms constants, none of its reads left', b.warp === true && !/UB\.(xf_g|twist_w|size_w)\b/.test(b.wgsl) && b.wgsl.includes('bk_twist_w'))
     // the engine's side reads the scene's names only through the boundary (core/unitlint.js; check-shaders runs it)
-    ok('the boundary calls sceneWarp once and sceneWarpDist once', (WARP_BOUNDARY.match(/\bsceneWarp\(/g) || []).length === 1 && (WARP_BOUNDARY.match(/\bsceneWarpDist\(/g) || []).length === 1)
+    ok('the boundary calls sceneWarp once', (WARP_BOUNDARY.match(/\bsceneWarp\(/g) || []).length === 1)
     ok('the march adds no glow on the Optics page', warpMarchWGSL({ glow: true }).includes('wo.add') && !warpMarchWGSL({ glow: false }).includes('wo.add'))
 }
 

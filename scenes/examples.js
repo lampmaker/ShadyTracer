@@ -119,7 +119,7 @@ export const EXAMPLES = [
   "title": "Ray warps",
   "audience": "Modelling and rendering",
   "group": "Art",
-  "description": "Regions where rays do what their code says: a twist, a pull, a shimmer, a glowing glass ball"
+  "description": "Regions where rays do what their code says: a twist, a pull, a shimmer, a glowing glass ball, a portal"
  },
  {
   "file": "led-lens-screen.json",

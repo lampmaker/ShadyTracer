@@ -10,7 +10,8 @@
 //   - sceneWarp, the scene's own function, called on Dawn against its JS twin -- in a moved, turned and scaled group:
 //     outside the region the step ends just past its surface and nothing else changes; inside, the template changes
 //     nothing but the step (no longer than the warp's); a twist turns the direction by rotZ(rate ds) in the region's
-//     frame; a ray moved lands where the frame's point is in the world; tint and glow per unit of the frame's length;
+//     frame; a ray moved lands where the frame's point is in the world, one moved in the world (posWorld, 0.next: a portal)
+//     where it says; a direction in the world (dirWorld) over the frame's; tint and glow per unit of the frame's length;
 //     stop() said; a direction of nothing changes nothing;
 //   - THE WHOLE RENDERER (raytrace_main.js R.trace, every kernel, the real tinywebgpu), the camera inside a warp's region
 //     in a scene with nothing else to see:
@@ -119,6 +120,8 @@ async function run(scene, body, input, n) {
         ['template', M.newWarp(STEP).code],
         ['twist', 'dir = rotZ(rate * ds) * dir;'],
         ['moved', 'pos = p + VEC3(0.1, -0.05, 0.2);'],
+        ['moved in the world', 'posWorld = world + VEC3(0.1, -0.05, 0.2);'],
+        ['turned in the world', 'dir = rotZ(rate * ds) * dir; dirWorld = VEC3(0.0, 0.0, 2.0);'],
         ['tint and glow', 'tint = VEC3(0.5, 0.25, 0.8); glow = VEC3(1.0, 2.0, 3.0);'],
         ['stopped', 'stop();'],
         ['nothing', 'dir = VEC3(0.0);'],
@@ -170,6 +173,8 @@ async function run(scene, body, input, n) {
             let b = q.map((x, k) => x + [0.1, -0.05, 0.2][k]); for (const m of [...chain].reverse()) b = warpUp(b, m)
             want.pos = b; want.flags |= WARP_FLAGS.MOVED
         }
+        if (name === 'moved in the world') { want.pos = inside.map((x, k) => x + [0.1, -0.05, 0.2][k]); want.flags |= WARP_FLAGS.MOVED }
+        if (name === 'turned in the world') want.dir = [0, 0, 1]          // over what dir said, and made unit
         if (name === 'tint and glow') { want.mult = [0.5, 0.25, 0.8].map(x => x ** ls); want.add = [1, 2, 3].map(x => x * ls) }
         if (name === 'stopped') want.flags |= WARP_FLAGS.STOPPED
         ok(`${name}: inside, the step the warp's (${STEP}) and the ray as its code says`,
@@ -261,6 +266,88 @@ async function run(scene, body, input, n) {
         ok(`pos: without it the black floor fills the picture (${dark(plainR)} of ${W * H} black), moved above it none is (${dark(movedR)})`,
             dark(plainR) === W * H && dark(movedR) === 0)
     }
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// UNDER A LAMP, THE LIGHTS' PHOTONS ON (the user, 2026-11-16: with a light and no sun or studio, the warp was not seen from
+// the camera -- core/warp.js WHOSE LIGHT A WARPED PATH IS). A white floor under a 0.4 m square light, the camera in the
+// middle of a ball-shaped warp 0.5 m across, so every camera ray walks exactly 0.5 m in it (to a step) before it meets
+// anything: a tint of 0.25 per metre halves the whole picture, and stop() makes it black -- the photons' straight
+// connections to the camera, which used to bring the floor's light around the warp, refused.
+//----------------------------------------------------------------------------------------------------------------------
+{
+    const { RAYTRACER } = await import('../../lib/pathtracer/core/raytrace_main.js')
+    const { CAMERA } = await import('../../lib/camera.js')
+    const { engineCamera } = await import('../../lib/pathtracer/core/units.js')
+    const { effective } = await import('../../lib/pathtracer/quality.js')
+    const { createOptics } = await import('../../lib/pathtracer/optics/index.js')
+    const { sourceTable, faceSource } = await import('../sources.js')
+    const W = 32, H = 32, EYE = [0, -1.2, 0.6]
+    const target = WG.device.createTexture({ size: [W, H], format: WG.format, usage: GPUTextureUsage.RENDER_ATTACHMENT }).createView()
+    const cam = CAMERA({ aspect: W / H, fov: 50, up: [0, 0, 1] })
+    cam.setPose({ pos: EYE, target: [0, 0, 0], up: [0, 0, 1] })
+    const docOf = warpCode => {
+        const d = M.createDoc({})
+        M.addMaterial(d, { id: 'matte', params: { ...PRESETS.diffuse.params(), baseColor: { r: 0.8, g: 0.8, b: 0.8 }, specular: 0 } })
+        M.addObject(d, 'root', { id: 'floor', primitive: 'box', material: 'matte', params: { size: { x: 4, y: 4, z: 0.05 }, rounding: 0 }, transform: at(0, 0, -0.025) })
+        M.addLight(d, 'root', { id: 'lamp', shape: 'rectangle', params: { width: 0.4, height: 0.4 }, transform: at(0, 0, 1.2, 180, 0, 0) })
+        if (warpCode != null) {
+            M.addObject(d, 'root', { id: 'w', code: 'C = add_new(C, Nsphere(p, 0.5), MATERIAL);', params: {}, transform: at(...EYE) })
+            M.setWarp(d, 'w', { ...M.newWarp(0.005), code: warpCode })
+        }
+        return d
+    }
+    const render = async (d, id, samples = 96) => {
+        const scene = generate(...M.generateArgs(d, { id }))
+        const Q = { w: W, h: H, resetframecount: 1 }
+        const R = RAYTRACER(WG, null, Q, scene)
+        R.hud = () => { }
+        let err = null
+        try { await quietly(() => R.init()) } catch (e) { err = e?.message ?? String(e) }
+        const v = { ...U.defaultUniformValues(), envMode: 0, sunIlluminance: 0, skyIlluminance: 0, nee: 1, lt: 0, ltPhotons: 1, ltLearn: 0,
+                    maxbounce: 4, rr: 0, fireflyClamp: 0, maxaverages: 0, autoExposure: 0, sppm: 0 }
+        const traced = effective(v)
+        const derived = derive(traced, { unit: scene.unit, extent: scene.extent, envRadius: scene.envRadius, tolerance: scene.tolerance })
+        const EC = engineCamera(cam.getUniforms(), 0, derived.sceneUnit)
+        const bag = Object.fromEntries(Object.entries({ ...Object.fromEntries(Object.entries(traced).map(([k, x]) => [k, U.uniformToGPU(x, U.UniformSpec[k]?.type)])),
+            ...derived, invView: EC.invView, invProjection: EC.invProjection, camPos: EC.camPos, camLens: EC.camLens, camtype: 0 })
+            .filter(([k]) => k in U.ComputeUniformTypes || k in U.UniformSpec))
+        for (const [k, u] of Object.entries(scene.uniforms || {})) bag[k] = flat(u.def)
+        const sums = []
+        if (!err) try {
+            const O = createOptics(R, WG)
+            const list = sourceTable(d).sources.map(faceSource)
+            O.setSources(list, list)
+            await quietly(() => O.lightPicture(true, 48))
+            R.kernelOptions = R.kernelOptionsOf(bag)
+            await quietly(() => R.applyKernelOptions())
+            for (let done = 0; done < samples; done += 16) {
+                await quietly(() => R.trace(Q, bag, 16, target))
+                Q.resetframecount = 0
+                await WG.device.queue.onSubmittedWorkDone()
+                const a = await R.accumulation_u32.r(W * H * 16, 0, Uint32Array), f = new Float32Array(a.buffer, a.byteOffset, a.length)
+                // the whole picture's light, as a running sum of every sample (the count word), for batch means
+                let S = 0, N = 0
+                for (let i = 0; i < W * H; i++) { S += lum([f[i * 4], f[i * 4 + 1], f[i * 4 + 2]]) * a[i * 4 + 3]; N += a[i * 4 + 3] }
+                sums.push({ S, N })
+            }
+        } catch (e) { err = e?.message ?? String(e) }
+        const g = sums.map((x, j) => (x.S - (j ? sums[j - 1].S : 0)) / Math.max(1, x.N - (j ? sums[j - 1].N : 0)))
+        const m = g.reduce((s, x) => s + x, 0) / Math.max(1, g.length)
+        return { err, mean: m, se: Math.sqrt(g.reduce((s, x) => s + (x - m) ** 2, 0) / Math.max(1, g.length - 1) / Math.max(1, g.length)) }
+    }
+    const lum = c => LUMA[0] * c[0] + LUMA[1] * c[1] + LUMA[2] * c[2]
+    const plain = await render(docOf(null), 'lamp-plain')
+    const half = await render(docOf('tint = VEC3(0.25);'), 'lamp-tint')
+    const none = await render(docOf('stop();'), 'lamp-stop', 32)
+    ok('under a lamp: the renders ran, the floor lit', plain.err === null && half.err === null && none.err === null && plain.mean > 0,
+       `${plain.err} | ${half.err} | ${none.err} | ${plain.mean}`)
+    const ratio = half.mean / plain.mean, se = Math.hypot(half.se / plain.mean, ratio * plain.se / plain.mean)
+    // 0.5 m walked, to one step of 5 mm more: 0.25^0.5 = 0.5 down to 0.25^0.505 = 0.4965
+    console.log(`  under a lamp: tinted ${ratio.toFixed(4)} +- ${se.toFixed(4)} of the plain picture (0.4965 to 0.5), stopped ${none.mean.toExponential(2)}`)
+    ok(`under a lamp: every ray through the tinting warp, the picture halved (${ratio.toFixed(4)} +- ${se.toFixed(4)})`,
+       Math.abs(ratio - 0.4983) < Math.max(0.02, 3.5 * se))
+    ok(`under a lamp: every ray stopped in the warp, the picture black -- no photon's straight connection around it (${none.mean})`, none.mean === 0)
 }
 
 console.log(`ray warps on Dawn: ${pass} passed, ${fail} failed`)

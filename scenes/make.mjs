@@ -325,9 +325,9 @@ function infinite() {
     return { doc, camera: orbit([0, 0, 1.6], -50, 12, 9) }
 }
 
-/* RAY WARPS (0.next; builder/warp.js): four objects that are regions where the march does what their warp code says,
+/* RAY WARPS (0.next; builder/warp.js): five objects that are regions where the march does what their warp code says,
    in front of a row of coloured shapes on a checker floor in the sun, so each shows by what it does to what is behind it --
-   a twist, a pull towards a point, a shimmer, and a glass ball glowing pink inside. For pictures, not physics. Each warp's
+   a twist, a pull towards a point, a shimmer, a glass ball glowing pink inside, and a portal onto another part of the row. For pictures, not physics. Each warp's
    numbers are its parameters (its object's), so they move live; its step a fiftieth or so of its size. Sizes in mm. */
 function rayWarps() {
     const doc = scene('Ray warps', { radius: 3000, env: SUN(40, -150) })
@@ -368,7 +368,13 @@ function rayWarps() {
         '// pink light added towards the middle (cd/m^2 per mm), and what passes tinted\n'
             + 'glow = VEC3(1.0, 0.25, 0.6) * strength * smoothstep(0.0, -radius, dist);\n'
             + 'tint = VEC3(0.995, 0.98, 0.99);', 1, { material: lib(doc, 'clear glass'), draw: true })
-    return { doc, camera: orbit([0, 30, 45], -90, 12, 620) }
+    // a portal (the user, 2026-11-16): a ray entering this thin slab goes on from 350 mm to the left, the way it was going --
+    // a window onto the row of shapes over there, between the twist and the pull, where nothing stands
+    warp('portal', [250, 0, 50],
+        '// the region: a thin slab "size" across, the portal\'s window\nC = add_new(C, sdBox(p, size * 0.5), MATERIAL);',
+        { size: V(60, 4, 80), shift: V(-350, 0, 0) },
+        '// out "shift" away in the scene, going the way it went\nposWorld = world + shift;', 1)
+    return { doc, camera: orbit([40, 30, 45], -90, 12, 720) }
 }
 
 /* MATERIAL BOARD: the library's materials, each on a 40 mm sphere, in four rows -- under a studio's even light and a
@@ -807,7 +813,7 @@ export const EXAMPLES = [
         ['product-shot.json', productShot, 'A perfume bottle on a plinth in studio light'],
     ] },
     { audience: 'Modelling and rendering', group: 'Art', items: [
-        ['ray-warps.json', rayWarps, 'Regions where rays do what their code says: a twist, a pull, a shimmer, a glowing glass ball'],
+        ['ray-warps.json', rayWarps, 'Regions where rays do what their code says: a twist, a pull, a shimmer, a glowing glass ball, a portal'],
     ] },
     { audience: 'Optical design', group: 'Optical design', items: [
         ['led-lens-screen.json', ledLens, 'An LED, a PMMA lens and a detector: illuminance in lux'],

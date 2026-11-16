@@ -28,6 +28,7 @@ export const WARP_TEMPLATE = [
     '//        ds (this step\'s length)  pathLength (how far the ray has come)  bounces  isPhoton  its parameters',
     '// Set:   dir (where the step goes)  pos (move the ray there, in this frame)  tint (colour kept per unit of length)',
     '//        glow (light added per unit of length)  stop() ends the ray here;  rand() is a random number in [0, 1)',
+    '//        posWorld, dirWorld: pos and dir in the scene\'s own frame -- a portal: posWorld = world + VEC3(2.0, 0.0, 0.0);',
     '// Rotations: rotX(a) rotY(a) rotZ(a) rotAxis(axis, a), angles in radians.  Lengths are this object\'s own units.',
     '// e.g. a twist about z:   dir = rotZ(2.0 * ds) * dir;',
     '// e.g. a pull inwards:    dir = normalize(dir - normalize(p) * 0.5 * ds);',
@@ -37,7 +38,7 @@ export const WARP_TEMPLATE = [
 ].join('\n')
 
 /** The names a warp's code reads and sets (the panel's tip, Help > Ray warps). */
-export const WARP_NAMES = 'p, world, dist, ds, pathLength, bounces, isPhoton and its parameters; it sets dir, pos, tint, glow and calls stop(), rand()'
+export const WARP_NAMES = 'p, world, dist, ds, pathLength, bounces, isPhoton and its parameters; it sets dir, pos, posWorld, dirWorld, tint, glow and calls stop(), rand()'
 
 /** Whether a node can carry a warp: an object with code -- not a light, nor a haze box. */
 export const canWarp = n => n?.kind === 'object' && n.type !== 'light' && n.type !== 'haze'

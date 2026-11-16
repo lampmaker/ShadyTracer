@@ -1089,7 +1089,7 @@ export function generate(tree, opts = {}) {
 ======================================================================================================================*/
 const WARP_LIB = `// THE RAY WARPS' OWN (builder/codegen.js THE RAY WARPS; lib/pathtracer/core/warp.js)
 struct WarpIO { pos: vec3<f32>, dir: vec3<f32>, mult: vec3<f32>, add: vec3<f32>, step: f32, ltot: f32, tol: f32, bounces: u32, photon: u32, seed: u32, flags: u32 }
-struct WarpLocal { dir: vec3<f32>, pos: vec3<f32>, tint: vec3<f32>, glow: vec3<f32> }
+struct WarpLocal { dir: vec3<f32>, pos: vec3<f32>, tint: vec3<f32>, glow: vec3<f32>, posWorld: vec3<f32>, dirWorld: vec3<f32> }
 var<private> WARP_STOP: bool = false;
 var<private> WARP_RNG: u32 = 0u;
 // a warp's code: end the ray here, and a random number in [0, 1) (PCG, seeded per step by the march)
@@ -1140,16 +1140,19 @@ function emitWarps(e, warps, { uniforms, matConst }) {
         e.raw('    return C.s.w;')
         e.raw('}')
         e.raw(`// node ${w.id}: what its warp code does to a ray at p (its frame) on a step of ds`)
-        e.raw(`fn warpCode_${w.id}(p: vec3<f32>, world: vec3<f32>, dist: f32, ds: f32, pathLength: f32, bounces: u32, isPhoton: bool, dirIn: vec3<f32>) -> WarpLocal {`)
+        e.raw(`fn warpCode_${w.id}(p: vec3<f32>, world: vec3<f32>, dist: f32, ds: f32, pathLength: f32, bounces: u32, isPhoton: bool, dirIn: vec3<f32>, dirW: vec3<f32>) -> WarpLocal {`)
         e.raw('    var dir = dirIn;')
         e.raw('    var pos = p;')
+        // ...and the same two in the scene's own frame, for a portal to somewhere else in it (the user, 2026-11-16)
+        e.raw('    var posWorld = world;')
+        e.raw('    var dirWorld = dirW;')
         e.raw('    var tint = vec3<f32>(1.0);')
         e.raw('    var glow = vec3<f32>(0.0);')
         e.raw('    {')
         for (const a of aliasPrelude(w.id, params, null, consts)) e.raw('        ' + a)
         e.from(warpOwner(w.id), String(w.warp?.code ?? ''))
         e.raw('    }')
-        e.raw('    return WarpLocal(dir, pos, tint, glow);')
+        e.raw('    return WarpLocal(dir, pos, tint, glow, posWorld, dirWorld);')
         e.raw('}')
     }
     const lit = x => wgslLiteral(x, 'f32')
@@ -1174,18 +1177,23 @@ function emitWarps(e, warps, { uniforms, matConst }) {
     e.raw('    w.step = step;')
     warps.forEach((w, i) => {
         e.raw(`    if (d${i} < 0.0) {      // node ${w.id}`)
+        e.raw('        let pw = w.pos; let dw = w.dir;      // as this warp is given them: what its posWorld and dirWorld start as')
         e.raw('        var q = w.pos;')
         e.raw('        var R = mat3x3<f32>(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0);')
         e.raw('        var s = 1.0;')
         for (const g of w.chain) e.raw(`        q = xfPoint(q, ${T(g)}); R = R * xfRot(${T(g)}); s = s * ${T(g)}[3].w;`)
-        e.raw(`        let o = warpCode_${w.id}(q, w.pos, d${i} / s, step / s, w.ltot / s, w.bounces, w.photon != 0u, transpose(R) * w.dir);`)
+        e.raw(`        let o = warpCode_${w.id}(q, pw, d${i} / s, step / s, w.ltot / s, w.bounces, w.photon != 0u, transpose(R) * dw, dw);`)
         e.raw('        let nd = R * o.dir;')
         e.raw('        if (dot(nd, nd) > 1.0e-20) { w.dir = normalize(nd); }     // a direction of nothing changes nothing')
+        // dirWorld set: the scene's own direction, over what dir said
+        e.raw('        if (any(o.dirWorld != dw) && dot(o.dirWorld, o.dirWorld) > 1.0e-20) { w.dir = normalize(o.dirWorld); }')
         e.raw('        if (any(o.pos != q)) {')
         e.raw('            var b = o.pos;')
         for (const g of [...w.chain].reverse()) e.raw(`            b = warpUp(b, ${T(g)});`)
         e.raw(`            w.pos = b; w.flags = w.flags | ${WARP_FLAGS.MOVED}u;`)
         e.raw('        }')
+        // posWorld set: there in the scene, over what pos said
+        e.raw(`        if (any(o.posWorld != pw)) { w.pos = o.posWorld; w.flags = w.flags | ${WARP_FLAGS.MOVED}u; }`)
         e.raw('        let ls = step / s;      // the step in its own frame: tint and glow are per unit of its length')
         e.raw('        w.add = w.add + w.mult * max(o.glow, vec3<f32>(0.0)) * ls;')
         e.raw('        w.mult = w.mult * pow(max(o.tint, vec3<f32>(0.0)), vec3<f32>(ls));')

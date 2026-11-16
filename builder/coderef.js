@@ -419,6 +419,8 @@ export const CODE_BLOCKS = {
         sets: [
             { name: 'dir', code: () => 'dir = rotZ(1.0 * ds) * dir;', brief: 'where this step goes, in the object\'s frame: turned here, a twist about z of 1 radian per unit' },
             { name: 'pos', code: () => 'pos = p + VEC3(0.0, 0.0, 0.5);', brief: 'move the ray there (the object\'s frame) before it steps on' },
+            { name: 'posWorld', code: () => 'posWorld = world + VEC3(0.0, 0.0, 0.5);', brief: 'move the ray there in the scene (its unit): a portal to anywhere, another object\'s place' },
+            { name: 'dirWorld', code: () => 'dirWorld = VEC3(0.0, 0.0, 1.0);', brief: 'where this step goes, in the scene\'s own frame: over what dir says' },
             { name: 'tint', code: () => 'tint = VEC3(1.0, 0.5, 0.5);', brief: 'the colour kept per unit of length: 0.5 halves what passes in each unit' },
             { name: 'glow', code: () => 'glow = VEC3(0.2, 0.5, 1.0);', brief: 'light added per unit of length (cd/m² per unit): a glowing fog' },
             { name: 'stop()', code: () => 'stop();', brief: 'end the ray here: what it gathered so far is kept, nothing more' },
@@ -430,6 +432,7 @@ export const CODE_BLOCKS = {
             { title: 'A mirror world: up and down swapped where the ray goes in', code: ['if (dist > -ds) { dir.z = -dir.z; }'] },
             { title: 'Pink fog with a glowing core', code: ['tint = VEC3(0.9, 0.6, 0.8);', 'glow = VEC3(1.0, 0.2, 0.6) * exp(dist * 8.0);'] },
             { title: 'A portal: a ray reaching the top comes out of the bottom', code: ['if (p.z > 0.45) { pos = VEC3(p.x, p.y, -0.45); }'] },
+            { title: 'A portal to elsewhere: in here, out 2 units to the right, going the way it went', code: ['posWorld = world + VEC3(2.0, 0.0, 0.0);'] },
             { title: 'Stripes that swallow light', code: ['if (fract(p.z * 5.0) < 0.2) { stop(); }'] },
         ],
         fns: ['Noise', 'Units'],

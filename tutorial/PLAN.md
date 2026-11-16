@@ -133,7 +133,10 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
    bending the ray instead of space, a ray warp -- an object's shape a region where the user's code turns, moves, tints,
    lights or stops the ray at each march step, safe because a path no longer than the distance stays in its empty ball
    whatever its shape, the step shortened inside to follow a curve and outside to just past the region's surface; what
-   stays straight (shadow rays, so light through it is found by chance) and why a twist is not reversible ->
+   stays straight (light sampling's shadow rays pass through it) and why a twist is not reversible; whose light a warped
+   path is: a camera ray a warp acted on before its first surface keeps that surface's light from the lamps' photons,
+   whose straight connection to the camera is refused where it enters a warp (the user's lamp-lit scene of 2026-11-16
+   showed the warp only in the light it bent, the photons drawing the floor around it) ->
    core/warp.js, builder/warp.js, codegen.js THE RAY WARPS. Planned for it too (0.83.0):
    a join's shape -- the round join a circular fillet where two faces meet at a right angle (two planes, a plane met
    squarely by a cylinder or a prism), from the two distances alone: a first version read the normals' angle into the
