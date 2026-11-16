@@ -22,10 +22,11 @@
 //   cell      the grid's spacing, in MILLIMETRES of the printed part -- a printer's number, not the
 //             scene's, so it means the same in a metre scene and a millimetre one
 //   colours   how many colours a 3MF may have: the filaments the printer holds
-//   light     'material', the material's own colour, or 'lit', the part as the picture shows it lit (0.next)
-//   samples   for 'lit', the renderer's samples at each point: more is less speckle and longer
-//   litStops, litContrast  for 'lit' (0.next): brighter by so many stops of exposure than the view, and contrast added
-//             to the view's (core/probes.js probeView)
+//   light     'material', the material's own colour; 'lit', the part as the view shows it, on the side the camera
+//             sees; 'allsides', lit by the renderer at every point from every side (0.next; LIGHTS)
+//   samples   for 'allsides', the renderer's samples at each point: more is less speckle and longer
+//   litStops, litContrast  for 'lit' and 'allsides' (0.next): brighter by so many stops of exposure than the view, and
+//             contrast added to the view's (core/probes.js probeView); 0 and 0 the view's own look
 //   deviation how far, in mm, the mesh may be simplified from what the grid gave (simplify.js, 0.next): 0 keeps every
 //             triangle; above it, flat regions become a few large triangles and curved ones keep small ones
 //
@@ -36,9 +37,9 @@
 //      of z-layers per dispatch;
 //   3. cut by the box: max(field, distance to the box), so the part is closed where the box cuts it;
 //   4. a closed mesh by marching tetrahedra, streamed a layer at a time (mesh.js);
-//   5. the colour at each triangle's centre, on the GPU again -- or, `light` 'lit' (0.next), the colour the picture gives
-//      the part there, the renderer traced along a ray at each vertex (litcolour.js, core/probes.js) -- reduced to
-//      `colours` (mesh.js quantize);
+//   5. the colour at each triangle's centre, on the GPU again -- or (0.next) `light` 'lit', the colour the view's own
+//      picture shows at each vertex the camera sees, or 'allsides', the renderer traced along a ray at each vertex
+//      (litcolour.js, core/probes.js) -- reduced to `colours` (mesh.js quantize);
 //   6. simplified to within `deviation` (simplify.js), the colours' borders kept: AFTER the colours, so each triangle's
 //      colour is the one sampled at full resolution and a border between two is held where it was, not re-sampled at
 //      the centre of a triangle ten times larger that straddles it;
@@ -62,9 +63,11 @@ import { boxCuts, cutsOf, vertexProbes, smoothVertices, triangleColours } from '
    of the mesh moves more than 0.013 mm from the true sphere (test/simplify.test.mjs, in node) -- under a tenth of a
    0.4 mm nozzle's line. */
 export const EXPORT_DEFAULTS = Object.freeze({ cell: 0.4, colours: 4, deviation: 0.05, light: 'material', samples: 64, litStops: 0, litContrast: 0 })
-/** What a 3MF's colours are: the material's own (its baseColor, as before 0.next), or the part as the picture shows it,
- *  lit (litcolour.js) */
-export const LIGHTS = ['material', 'lit']
+/** What a 3MF's colours are (0.next): the material's own (its baseColor, as before); 'lit', the part as the view shows
+ *  it -- its own picture's colours, every light in them, on the side the camera sees; or 'allsides', the light the
+ *  renderer traces at every point from every side, without the light that comes only by the lights' rays (through
+ *  glass, a ray file's) (litcolour.js) */
+export const LIGHTS = ['material', 'lit', 'allsides']
 /** The files: 3MF with colour, OBJ with its MTL (colour, for a slicer that reads an OBJ's and not a 3MF's: print.js
  *  writeOBJ, 0.next), STL with none */
 export const FORMATS = ['3mf', 'obj', 'stl']
@@ -232,17 +235,19 @@ export function boxDistance(g, i, j, k) {
 
 /**
  * Sample, mesh, colour, simplify and write. `sample(input, outFloats)` is the renderer's field at points, of the scene being
- * printed: the one showing, or one made of the selected object alone (subjectTree). `probe({ points, dirs, offset,
- * samples, onProgress })` the renderer's light along a ray at each point, for `light` 'lit' (index.js renderProbes):
- * resolves to { colour } in [0, 1], 3 a point -- the scene SHOWN, whatever is printed, so one object is lit as it
- * stands among the rest. `doc` gives the unit and the file's name, `box` where to print. Resolves to { bytes,
- * files, lit, triangles, vertices, colours, palette, open, meshed } -- `lit` for lit colours { points, ev, spread }
+ * printed: the one showing, or one made of the selected object alone (subjectTree). `see({ points, normals, offset,
+ * look })` the view's colour at each point, for `light` 'lit' (index.js viewColours): { colour, seen, view } -- and
+ * `probe({ points, dirs, offset, samples, look, onProgress })` the renderer's light along a ray at each point, for
+ * 'allsides' (index.js renderProbes): { colour, view }. Both the scene SHOWN, whatever is printed, so one object is
+ * coloured as it stands among the rest. `doc` gives the unit and the file's name, `box` where to print. Resolves to { bytes,
+ * files, lit, triangles, vertices, colours, palette, open, meshed } -- `lit` for lit colours { mode, points, seen, ev,
+ * spread }
  * (core/probes.js colourSpread), `files` [{ name, bytes, type }] to save, named from
  * `stem` (an OBJ and its MTL two, the OBJ naming the MTL), `bytes` the first's, `meshed` the triangles before simplifying, `open` the number of edges of the file's mesh that are not closed (null:
  * not checked, a big mesh), which is 0 unless something is wrong with the mesher or the simplifier, and is said rather
  * than hidden.
  */
-export async function runExport({ sample, probe = null, doc, box, format = '3mf', cell = EXPORT_DEFAULTS.cell, colours = EXPORT_DEFAULTS.colours,
+export async function runExport({ sample, probe = null, see = null, doc, box, format = '3mf', cell = EXPORT_DEFAULTS.cell, colours = EXPORT_DEFAULTS.colours,
                                   deviation = EXPORT_DEFAULTS.deviation, light = EXPORT_DEFAULTS.light, samples = EXPORT_DEFAULTS.samples,
                                   litStops = EXPORT_DEFAULTS.litStops, litContrast = EXPORT_DEFAULTS.litContrast,
                                   smooth = 1, name, stem, onProgress = () => { } }) {
@@ -300,32 +305,47 @@ export async function runExport({ sample, probe = null, doc, box, format = '3mf'
             for (let t = 0; t < cnt; t++) for (let a = 0; a < 3; a++) rgb[3 * (s + t) + a] = toSRGB(out[4 * t + a])
             onProgress(`colouring: ${Math.min(nt, s + cnt).toLocaleString()} of ${nt.toLocaleString()} triangles`)
         }
-        // ---- LIT (litcolour.js): the light the picture gives each vertex, the material's colour where the box cuts
-        if (light === 'lit') {
-            if (!probe) throw new Error('lit colours need the renderer (no probe given)')
+        /* ---- AS LIT (litcolour.js): each vertex the colour the view shows there -- or, 'allsides', the light the renderer
+           traces at it from every side -- and the material's colour where the box cuts or the view does not reach */
+        if (light === 'lit' || light === 'allsides') {
+            if (light === 'lit' && !see) throw new Error('colours as lit need the view (no see given)')
+            if (light === 'allsides' && !probe) throw new Error('colours lit from all sides need the renderer (no probe given)')
             const { cut, onCut } = cutsOf(mesh.positions, mesh.triangles, g.sizeMm, g.spacing, cuts)
             const P = vertexProbes(mesh.positions, mesh.triangles, cut, onCut)
             if (P.count) {
                 /* mm in the box's frame -> the world: a point by the grid, a direction by its unit axes (the box's frame
                    is the world's turned and scaled alike on every axis, so a normal turns as a direction does) */
                 const unit = [g.ax, g.ay, g.az].map(v => { const l = Math.hypot(...v); return v.map(x => x / l) })
-                const points = new Float32Array(3 * P.count), dirs = new Float32Array(3 * P.count)
+                const points = new Float32Array(3 * P.count), normals = new Float32Array(3 * P.count)
                 for (let k = 0; k < P.count; k++) {
                     const gi = [0, 1, 2].map(a => P.points[3 * k + a] / g.spacing[a] + 0.5)
                     for (let a = 0; a < 3; a++) {
                         points[3 * k + a] = g.origin[a] + gi[0] * g.ax[a] + gi[1] * g.ay[a] + gi[2] * g.az[a]
-                        // looking AT the surface: against its outward normal
-                        dirs[3 * k + a] = -(P.normals[3 * k] * unit[0][a] + P.normals[3 * k + 1] * unit[1][a] + P.normals[3 * k + 2] * unit[2][a])
+                        normals[3 * k + a] = P.normals[3 * k] * unit[0][a] + P.normals[3 * k + 1] * unit[1][a] + P.normals[3 * k + 2] * unit[2][a]
                     }
                 }
                 /* HALF A CELL OFF THE SURFACE: past the mesher's own error (a vertex is within a fraction of a cell of the
                    surface), short of most of the part's other faces */
                 const offset = 0.5 * Math.max(...[g.ax, g.ay, g.az].map(v => Math.hypot(...v)))
-                onProgress(`lighting: ${P.count.toLocaleString()} points, ${samples} samples each`)
-                const r = await probe({ points, dirs, offset, samples, look: { stops: litStops, contrast: litContrast },
-                    onProgress: (k, n) => onProgress(`lighting: ${P.count.toLocaleString()} points, ${Math.round(100 * k / n)} %`) })
-                // what came out, said by the dialog: whether the colours are mostly black, white or in between
-                lit = { points: P.count, ev: r.view?.ev ?? null, spread: colourSpread(r.colour) }
+                const look = { stops: litStops, contrast: litContrast }
+                let r, seen = null
+                if (light === 'lit') {
+                    onProgress(`colouring from the view: ${P.count.toLocaleString()} points`)
+                    r = await see({ points, normals, offset, look })
+                    if (!r) throw new Error('the scene changed during the export, or the renderer was busy with an offscreen render: try again')
+                    // a vertex the view does not show has no colour from it: no probe, so its triangles take the others'
+                    seen = r.seen
+                    for (let v = 0; v < P.probe.length; v++) if (P.probe[v] >= 0 && !seen[P.probe[v]]) P.probe[v] = -1
+                } else {
+                    const dirs = normals.map(x => -x)            // looking AT the surface: against its outward normal
+                    onProgress(`lighting: ${P.count.toLocaleString()} points, ${samples} samples each`)
+                    r = await probe({ points, dirs, offset, samples, look,
+                        onProgress: (k, n) => onProgress(`lighting: ${P.count.toLocaleString()} points, ${Math.round(100 * k / n)} %`) })
+                }
+                // what came out, said by the dialog: how much the view reached, and whether it was dark, bright or flat
+                const shown = seen ? seen.reduce((s, x) => s + x, 0) : P.count
+                const kept = seen ? r.colour.filter((_, i) => seen[Math.floor(i / 3)]) : r.colour
+                lit = { mode: light, points: P.count, seen: shown, ev: r.view?.ev ?? null, spread: colourSpread(kept) }
                 const smoothed = smoothVertices(r.colour, mesh.triangles, P.probe, smooth)
                 rgb.set(triangleColours(mesh.triangles, P.probe, smoothed, cut, rgb))
             }

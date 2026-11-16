@@ -101,10 +101,14 @@ export function openPrintDialog({ doc, selected = null, boxes = null, estimate =
     // ---- the settings
     const cell = row('cell (mm)', add('input', { type: 'number', step: '0.01', min: '0.01', value: S.cell }, fieldStyle)).querySelector('input')
     const colours = row('colours', add('input', { type: 'number', step: '1', min: '1', max: '64', value: S.colours }, fieldStyle)).querySelector('input')
-    /* WHAT THE COLOURS ARE (0.next): the materials' own, or the part as the picture shows it -- lit, traced at its points
-       with the view's exposure and tone curve (exportbox.js `light`) -- and for that, how many samples a point */
-    const light = row('colour from', add('select', { title: 'Material: each surface its material\'s colour. As lit: the colour the picture gives it -- its light, shadows and glow, as the view shows them (best for matte surfaces: a glossy one shows what it reflects straight out of it).' }, fieldStyle)).querySelector('select')
-    for (const [v, t] of [['material', 'Material'], ['lit', 'As lit (the picture)']]) light.appendChild(add('option', { value: v, textContent: t }))
+    /* WHAT THE COLOURS ARE (0.next; exportbox.js `light`): the materials' own; as lit, the view's own picture on the side
+       the camera sees -- its exposure, tone curve and every light in it; or lit from all sides, traced at each point,
+       without the light that only the lights' rays bring (through glass) -- and for that, how many samples a point */
+    const light = row('colour from', add('select', { title: 'Material: each surface its material\'s colour. '
+        + 'As lit: the colours the view shows -- its light, shadows and glow, its exposure and tone curve -- on the side the camera sees; the rest keeps its material\'s colour. '
+        + 'Lit from all sides: the light traced at every point, the hidden side too, but without light that only comes through glass or from a ray file.' }, fieldStyle)).querySelector('select')
+    for (const [v, t] of [['material', 'Material'], ['lit', 'As lit (the view)'], ['allsides', 'Lit from all sides (no light through glass)']])
+        light.appendChild(add('option', { value: v, textContent: t }))
     light.value = S.light
     light.dataset.setting = 'light'
     const samples = row('samples', add('input', { type: 'number', step: '1', min: '1', max: '65536', value: S.samples,
@@ -192,7 +196,9 @@ export function openPrintDialog({ doc, selected = null, boxes = null, estimate =
         const coloured = S.format === '3mf' || S.format === 'obj'
         colours.parentElement.style.display = coloured ? 'flex' : 'none'
         light.parentElement.style.display = coloured ? 'flex' : 'none'
-        for (const e of [samples, litStops, litContrast]) e.parentElement.style.display = coloured && S.light === 'lit' ? 'flex' : 'none'
+        const lit = coloured && (S.light === 'lit' || S.light === 'allsides')
+        for (const e of [litStops, litContrast]) e.parentElement.style.display = lit ? 'flex' : 'none'
+        samples.parentElement.style.display = coloured && S.light === 'allsides' ? 'flex' : 'none'
     }
 
     async function run() {
@@ -244,10 +250,12 @@ export function openPrintDialog({ doc, selected = null, boxes = null, estimate =
 }
 
 /* WHAT THE LIT COLOURS CAME TO (exportbox.js runExport's `lit`): enough to say whether they were too dark, too bright or
-   too flat, and to paste back -- the points, the exposure, the brightness of the middle and the ends, the share clipped */
+   too flat, and to paste back -- the points (and for the view's colours how many it shows), the exposure, the brightness
+   of the middle and the ends, the share clipped */
 export function litLine(l) {
     const s = l.spread, pc = x => `${Math.round(100 * x)} %`
-    return `lit: ${l.points.toLocaleString()} points${Number.isFinite(l.ev) ? ` at EV ${l.ev.toFixed(1)}` : ''}`
+    const seen = l.mode === 'lit' ? `, ${l.seen.toLocaleString()} (${pc(l.seen / Math.max(1, l.points))}) seen from the view, the rest the material's colour` : ''
+    return `lit: ${l.points.toLocaleString()} points${seen}${Number.isFinite(l.ev) ? `; EV ${l.ev.toFixed(1)}` : ''}`
         + (s ? `; brightness 5 % / median / 95 %: ${s.p5.toFixed(2)} / ${s.median.toFixed(2)} / ${s.p95.toFixed(2)}, black ${pc(s.black)}, white ${pc(s.white)}` : '')
 }
 

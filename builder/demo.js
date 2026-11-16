@@ -1008,13 +1008,14 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
             const own = one ? generate(subjectTree(d, subject), { id: 'print', title: d.title || 'print' }) : null
             const sample = (input, n) => RT.sampleField(input, n, own)
             const label = one ? M.find(d, subject)?.node.label : null
-            /* LIT (0.next): the scene SHOWN traced at the part's points (RT.renderProbes), whatever is printed -- one object
-               lit as it stands among the rest */
+            /* AS LIT (0.next): the view's own picture at the part's points (RT.viewColours), or the scene SHOWN traced at them
+               from every side (RT.renderProbes) -- whatever is printed, one object coloured as it stands among the rest */
             const probe = o => RT.renderProbes(o)
+            const see = o => RT.viewColours(o)
             /* THE NAME WITH THE TIME (lib/filename.js): an OBJ names its MTL, and a browser that found a file of that name in
                the folder would save the MTL as "name (1).mtl", which the OBJ does not name -- a name made once is not taken */
             const stem = stampedName(fileName(`${d.title || 'scene'}${label ? '-' + label : ''}`).replace(/\.json$/, ''))
-            const r = await runExport({ sample, probe, doc: d, box, format, cell, colours, deviation, light, samples, litStops, litContrast,
+            const r = await runExport({ sample, probe, see, doc: d, box, format, cell, colours, deviation, light, samples, litStops, litContrast,
                                        name: label || d.title || 'scene', stem, onProgress })
             for (const f of r.files) saveBytes(f.name, f.bytes, f.type)
             return r

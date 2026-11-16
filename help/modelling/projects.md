@@ -75,16 +75,22 @@ The box is fitted to it, and drawn dashed in the picture while the dialog is ope
 **Fit** to fit it again. Nothing is added to the scene. Then:
 
 - **3MF with colour**: each triangle coloured from its material, reduced to as many colours as your printer holds
-  (*colours*, 4 to start), for a slicer's filament mapping. With **colour from: As lit (the picture)** the colours are
-  the part as the picture shows it instead: its light, shadows and glow, with the view's exposure and tone curve. The
-  renderer traces the light at each point of the mesh, looking straight at the surface, for *samples* samples each
-  (64 to start: more is less speckle, and longer). **brightness** (in stops: +1 doubles the light, −1 halves it) and
-  **contrast** (added to the view's, −1 to 1) adjust the look for the print, over the view's own. After the export,
-  the dialog says how the colours came out: how many points, the exposure, how bright the darkest 5 %, the middle and
-  the brightest 5 % are, how many came out black or white, and the colours chosen. Too dark or too bright: change
-  brightness. All one tone: raise contrast, or the colour count. This suits matte surfaces. A glossy or mirror-like surface shows
-  what it reflects straight out of it, and glass shows what is behind it. A light that is only a ray file (no face) gives
-  no light here. Faces the box cuts through keep their material's colour;
+  (*colours*, 4 to start), for a slicer's filament mapping. **colour from** chooses what the colours are:
+  - **Material**: each surface its material's colour.
+  - **As lit (the view)**: the colours the view shows, on the side the camera sees. They come from the picture itself,
+    with its exposure, tone curve and every light in it: shadows, glow, light through glass. Let the view settle first,
+    because the export takes the picture as it is. A point the camera can't see takes its material's colour: the back,
+    a face turned away, or one hidden behind something.
+  - **Lit from all sides (no light through glass)**: the renderer traces the light at every point, the hidden side too,
+    for *samples* samples each (64 to start: more is less speckle, and longer). Light that only arrives through glass or
+    a mirror, or from a ray file, is missing. Use it when the back of the part matters and the light falls on it directly.
+
+  For both lit choices, **brightness** (in stops: +1 doubles the light, −1 halves it) and **contrast** (added to the
+  view's, −1 to 1) adjust the look; 0 and 0 is the view's own. After the export, the dialog says how the colours came
+  out: how many points, how many the view showed, the exposure, how bright the darkest 5 %, the middle and the brightest
+  5 % are, how many came out black or white, and the colours chosen. Too dark or too bright: change brightness. All one
+  tone: raise contrast, or the colour count. Glossy surfaces show what they reflect, as in the picture. Faces the box
+  cuts through keep their material's colour;
 - **OBJ + MTL**, the same colours as an OBJ file and its material file, for a slicer that reads an OBJ's colours but
   not a 3MF's. Bambu Studio before 2.5 is one: it opens another program's 3MF as geometry only. It downloads as
   two files with matching names. Keep them in one folder, because the OBJ finds its colours by the MTL's name. In
