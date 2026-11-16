@@ -1,0 +1,835 @@
+{
+  "format": "raytracer-scene",
+  "version": 30,
+  "title": "Ray warps",
+  "nextId": 29,
+  "unit": "mm",
+  "materials": [
+    {
+      "id": "m1",
+      "label": "checker",
+      "params": {
+        "baseColor": {
+          "r": 0.85,
+          "g": 0.85,
+          "b": 0.83
+        },
+        "metallic": 0,
+        "roughness": 0.5,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "second": {
+          "r": 0.06,
+          "g": 0.06,
+          "b": 0.06
+        },
+        "square": 10,
+        "softness": 0,
+        "level": 0,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "haze": 0,
+        "scatterDistance": 0,
+        "scatterAnisotropy": 0
+      },
+      "code": "// The base colour and the second in alternate cubes `square` mm on a side, moving with the object -- drawn as a\n// wave, so the edges can be softened and the squares shrunk to dots. s is +1 or -1 at a cube's centre and 0 where\n// two cubes meet; the second colour is where s is above `level`, blended over `softness` either side of it:\n//   level 0            the checker: softness 0 sharp edges, 1 as soft as the wave itself\n//   level up to 1      round dots of the second colour, shrinking, in alternate squares: on a face through cube\n//                      centres, a dot of radius r mm at level = cos(PI * r / square)\n//   level down to -1   the reverse: dots of the base colour in the other squares\n// A cube's centre is at the object's origin (cos, not sin), so the floor's plane z = 0, and a box whose half-sizes\n// are whole squares, have faces through centres. A flat face half a square off that -- where two cubes meet -- has\n// s = 0 all over and shows no squares: change `square` for that object.\nlet q = p_local * S_local / mm(1.0);   // the point in mm, moving with the object\nlet w = cos(PI * q / square);\nlet s = w.x * w.y * w.z;\nlet e = max(softness, 1e-4);           // smoothstep's two edges must differ\nm.baseColor = mix(m.baseColor, second, smoothstep(level - e, level + e, s));",
+      "ranges": {
+        "square": {
+          "min": 0.5,
+          "max": 1000,
+          "step": 0.5
+        },
+        "softness": {
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        "level": {
+          "min": -1,
+          "max": 1,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "square"
+      ]
+    },
+    {
+      "id": "m4",
+      "label": "soft red",
+      "params": {
+        "baseColor": {
+          "r": 0.72,
+          "g": 0.22,
+          "b": 0.19
+        },
+        "metallic": 0,
+        "roughness": 1,
+        "anisotropy": 0,
+        "specular": 0,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "haze": 0,
+        "scatterDistance": 0,
+        "scatterAnisotropy": 0
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
+    },
+    {
+      "id": "m5",
+      "label": "sage green",
+      "params": {
+        "baseColor": {
+          "r": 0.36,
+          "g": 0.52,
+          "b": 0.36
+        },
+        "metallic": 0,
+        "roughness": 1,
+        "anisotropy": 0,
+        "specular": 0,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "haze": 0,
+        "scatterDistance": 0,
+        "scatterAnisotropy": 0
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
+    },
+    {
+      "id": "m6",
+      "label": "sky blue",
+      "params": {
+        "baseColor": {
+          "r": 0.3,
+          "g": 0.5,
+          "b": 0.8
+        },
+        "metallic": 0,
+        "roughness": 1,
+        "anisotropy": 0,
+        "specular": 0,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "haze": 0,
+        "scatterDistance": 0,
+        "scatterAnisotropy": 0
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
+    },
+    {
+      "id": "m7",
+      "label": "satin yellow plastic",
+      "params": {
+        "baseColor": {
+          "r": 0.85,
+          "g": 0.65,
+          "b": 0.1
+        },
+        "metallic": 0,
+        "roughness": 0.45,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 0,
+        "ior": 1.5,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "abbe": 0,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "haze": 0,
+        "scatterDistance": 0,
+        "scatterAnisotropy": 0
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
+    },
+    {
+      "id": "m24",
+      "label": "clear glass",
+      "params": {
+        "baseColor": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "metallic": 0,
+        "roughness": 0,
+        "anisotropy": 0,
+        "specular": 0.5,
+        "specularTint": 0,
+        "transmission": 1,
+        "ior": 1.52,
+        "emissive": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "emissiveLuminance": 0,
+        "abbe": 59,
+        "attenuationDistance": 0,
+        "coating": 0,
+        "coatLow": 0,
+        "coatHigh": 1,
+        "coatEdge": 600,
+        "coatWidth": 20,
+        "coatIndex": 1.8,
+        "haze": 0,
+        "scatterDistance": 0,
+        "scatterAnisotropy": 0
+      },
+      "code": "// Material code: runs once per hit (cheap), after the fields above are put into m.\n//   m        the Material2 to change -- m.baseColor, m.roughness, m.metallic, m.emissive, ...\n//   p, n     the hit point and surface normal, world space;  C  the Hit\n//   p_local  the hit in the object's own frame, so a pattern moves with the object\n//            (costs one extra SDF evaluation per hit on this material)\n//   your own parameters (+ in the parameters header) by name, e.g. a colour stripe\n// e.g. a checker fixed in the world:\n//   m.baseColor = mix(m.baseColor, VEC3(0.05), step(0.0, sin(p.x * 3.0) * sin(p.y * 3.0) * sin(p.z * 3.0)));\n// e.g. stripes that travel with the object:\n//   m.roughness = step(0.5, fract(p_local.x * 4.0)) * 0.6;\n// e.g. with a number width and a colour stripe added with +:\n//   m.baseColor = mix(m.baseColor, stripe, step(fract(p.x / width), 0.5));\n"
+    }
+  ],
+  "blocks": [
+    {
+      "id": "b3",
+      "label": "plane",
+      "kind": "object",
+      "code": "// The plane z = 0, solid below.\nC = add_new(C, Nplane(p), MATERIAL);",
+      "params": {},
+      "builtin": "plane@1"
+    },
+    {
+      "id": "b9",
+      "label": "cylinder",
+      "kind": "object",
+      "code": "// A cylinder along z, centred on this node's origin.\nC = add_new(C, Ncylinder(p, height * 0.5, radius), MATERIAL);",
+      "params": {
+        "radius": 0.5,
+        "height": 1
+      },
+      "ranges": {
+        "radius": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        },
+        "height": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "radius",
+        "height"
+      ],
+      "builtin": "cylinder@1"
+    },
+    {
+      "id": "b11",
+      "label": "sphere",
+      "kind": "object",
+      "code": "// A sphere around this node's origin.\nC = add_new(C, Nsphere(p, radius), MATERIAL);",
+      "params": {
+        "radius": 0.5
+      },
+      "ranges": {
+        "radius": {
+          "min": 0.01,
+          "max": 10,
+          "step": 0.01
+        }
+      },
+      "lengths": [
+        "radius"
+      ],
+      "builtin": "sphere@1"
+    },
+    {
+      "id": "b19",
+      "label": "twist",
+      "kind": "object",
+      "code": "// the region: a box \"size\" across\nC = add_new(C, sdBox(p, size * 0.5), MATERIAL);",
+      "params": {
+        "size": {
+          "x": 70,
+          "y": 70,
+          "z": 100
+        },
+        "twist": 0.03
+      }
+    },
+    {
+      "id": "b21",
+      "label": "pull",
+      "kind": "object",
+      "code": "// the region: a ball of \"radius\"\nC = add_new(C, Nsphere(p, radius), MATERIAL);",
+      "params": {
+        "radius": 40,
+        "pull": 2
+      }
+    },
+    {
+      "id": "b23",
+      "label": "shimmer",
+      "kind": "object",
+      "code": "// the region: a slab \"size\" across\nC = add_new(C, sdBox(p, size * 0.5), MATERIAL);",
+      "params": {
+        "size": {
+          "x": 70,
+          "y": 20,
+          "z": 100
+        },
+        "amount": 0.02
+      }
+    },
+    {
+      "id": "b26",
+      "label": "glowing glass",
+      "kind": "object",
+      "code": "// the region, drawn as glass too: a ball of \"radius\"\nC = add_new(C, Nsphere(p, radius), MATERIAL);",
+      "params": {
+        "radius": 40,
+        "strength": 400
+      }
+    },
+    {
+      "id": "b28",
+      "label": "portal",
+      "kind": "object",
+      "code": "// the region: a thin slab \"size\" across, the portal's window\nC = add_new(C, sdBox(p, size * 0.5), MATERIAL);",
+      "params": {
+        "size": {
+          "x": 60,
+          "y": 4,
+          "z": 80
+        },
+        "shift": {
+          "x": -350,
+          "y": 0,
+          "z": 0
+        }
+      }
+    }
+  ],
+  "root": {
+    "id": "root",
+    "kind": "group",
+    "label": "Ray warps",
+    "enabled": true,
+    "blend": 0,
+    "children": [
+      {
+        "id": "n2",
+        "kind": "object",
+        "type": "code",
+        "label": "floor",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m1",
+        "params": {},
+        "block": "b3"
+      },
+      {
+        "id": "n8",
+        "kind": "object",
+        "type": "code",
+        "label": "column 0",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -175,
+            "y": 120,
+            "z": 60
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m4",
+        "params": {
+          "radius": 10,
+          "height": 120
+        },
+        "block": "b9"
+      },
+      {
+        "id": "n10",
+        "kind": "object",
+        "type": "code",
+        "label": "ball 1",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -125,
+            "y": 120,
+            "z": 18
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m5",
+        "params": {
+          "radius": 18
+        },
+        "block": "b11"
+      },
+      {
+        "id": "n12",
+        "kind": "object",
+        "type": "code",
+        "label": "column 2",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -75,
+            "y": 120,
+            "z": 60
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m6",
+        "params": {
+          "radius": 10,
+          "height": 120
+        },
+        "block": "b9"
+      },
+      {
+        "id": "n13",
+        "kind": "object",
+        "type": "code",
+        "label": "ball 3",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -25,
+            "y": 120,
+            "z": 18
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m7",
+        "params": {
+          "radius": 18
+        },
+        "block": "b11"
+      },
+      {
+        "id": "n14",
+        "kind": "object",
+        "type": "code",
+        "label": "column 4",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 25,
+            "y": 120,
+            "z": 60
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m4",
+        "params": {
+          "radius": 10,
+          "height": 120
+        },
+        "block": "b9"
+      },
+      {
+        "id": "n15",
+        "kind": "object",
+        "type": "code",
+        "label": "ball 5",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 75,
+            "y": 120,
+            "z": 18
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m5",
+        "params": {
+          "radius": 18
+        },
+        "block": "b11"
+      },
+      {
+        "id": "n16",
+        "kind": "object",
+        "type": "code",
+        "label": "column 6",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 125,
+            "y": 120,
+            "z": 60
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m6",
+        "params": {
+          "radius": 10,
+          "height": 120
+        },
+        "block": "b9"
+      },
+      {
+        "id": "n17",
+        "kind": "object",
+        "type": "code",
+        "label": "ball 7",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 175,
+            "y": 120,
+            "z": 18
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m7",
+        "params": {
+          "radius": 18
+        },
+        "block": "b11"
+      },
+      {
+        "id": "n18",
+        "kind": "object",
+        "type": "code",
+        "label": "twist",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -150,
+            "y": 0,
+            "z": 50
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": null,
+        "params": {
+          "size": {
+            "x": 70,
+            "y": 70,
+            "z": 100
+          },
+          "twist": 0.03
+        },
+        "block": "b19",
+        "warp": {
+          "code": "// turn the ray about this box's z by \"twist\" radians per mm\ndir = rotZ(twist * ds) * dir;",
+          "draw": false,
+          "step": 1.5
+        }
+      },
+      {
+        "id": "n20",
+        "kind": "object",
+        "type": "code",
+        "label": "pull",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": -50,
+            "y": 0,
+            "z": 45
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": null,
+        "params": {
+          "radius": 40,
+          "pull": 2
+        },
+        "block": "b21",
+        "warp": {
+          "code": "// pulled towards the middle by \"pull\", as 1/r^2, held at 5 mm so the middle is no hole\ndir = normalize(dir - normalize(p) * pull * ds / max(dot(p, p), 25.0));",
+          "draw": false,
+          "step": 1
+        }
+      },
+      {
+        "id": "n22",
+        "kind": "object",
+        "type": "code",
+        "label": "shimmer",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 50,
+            "y": 0,
+            "z": 50
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": null,
+        "params": {
+          "size": {
+            "x": 70,
+            "y": 20,
+            "z": 100
+          },
+          "amount": 0.02
+        },
+        "block": "b23",
+        "warp": {
+          "code": "// turned at random by about \"amount\" radians per mm: what is behind it blurs, like heat haze\ndir = normalize(dir + (VEC3(rand(), rand(), rand()) - 0.5) * amount * ds);",
+          "draw": false,
+          "step": 1
+        }
+      },
+      {
+        "id": "n25",
+        "kind": "object",
+        "type": "code",
+        "label": "glowing glass",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 150,
+            "y": 0,
+            "z": 40
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": "m24",
+        "params": {
+          "radius": 40,
+          "strength": 400
+        },
+        "block": "b26",
+        "warp": {
+          "code": "// pink light added towards the middle (cd/m^2 per mm), and what passes tinted\nglow = VEC3(1.0, 0.25, 0.6) * strength * smoothstep(0.0, -radius, dist);\ntint = VEC3(0.995, 0.98, 0.99);",
+          "draw": true,
+          "step": 1
+        }
+      },
+      {
+        "id": "n27",
+        "kind": "object",
+        "type": "code",
+        "label": "portal",
+        "enabled": true,
+        "transform": {
+          "pos": {
+            "x": 250,
+            "y": 0,
+            "z": 50
+          },
+          "rot": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": 1
+        },
+        "material": null,
+        "params": {
+          "size": {
+            "x": 60,
+            "y": 4,
+            "z": 80
+          },
+          "shift": {
+            "x": -350,
+            "y": 0,
+            "z": 0
+          }
+        },
+        "block": "b28",
+        "warp": {
+          "code": "// out \"shift\" away in the scene, going the way it went\nposWorld = world + shift;",
+          "draw": false,
+          "step": 1
+        }
+      }
+    ]
+  },
+  "functions": "// Functions: WGSL helpers any code node or material in this scene can call.\n// Compiled once, before the materials and the SDF; errors show here at their own lines.\n// e.g. a gyroid, usable in a code node as  C = add_new(C, sd(gyroid(p, 4.0)), MATERIAL);\n//   fn gyroid(p: VEC3, s: f32) -> f32 {\n//       let q = p * s;\n//       return abs(dot(sin(q), cos(q.zxy))) / s - 0.03;\n//   }\n// what is already there to call: Help > Reference > Functions for code\n",
+  "envRadius": 3000,
+  "environment": {
+    "envMode": 0,
+    "studioIlluminance": 1000,
+    "studioColor": {
+      "r": 1,
+      "g": 1,
+      "b": 1
+    },
+    "studioTop": 0.5,
+    "sunIlluminance": 100000,
+    "sunDiameter": 0.53,
+    "skyIlluminance": 15000,
+    "uSunAzimuth": -150,
+    "uSunElevation": 40,
+    "uSkyTurbidity": 0.7
+  },
+  "view": {
+    "camera": {
+      "mode": "orbit",
+      "camtype": 0,
+      "fov": 40,
+      "dimensions": 720,
+      "target": [
+        40,
+        30,
+        45
+      ],
+      "azimuth": -90,
+      "elevation": 78,
+      "distance": 720,
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "aperture": 0,
+      "focus": 0
+    },
+    "exposure": {
+      "exposureEV": 15,
+      "autoExposure": 1,
+      "exposureComp": 0,
+      "aeSpeed": 0.1,
+      "aeHeadroom": 2,
+      "toneMap": 1,
+      "contrast": 0,
+      "saturation": 0,
+      "brightness": 0
+    }
+  }
+}

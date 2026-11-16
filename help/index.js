@@ -20,6 +20,7 @@ export const HELP = [
         { id: 'tree', file: 'modelling/tree.md', title: 'Objects, groups and the tree' },
         { id: 'points', file: 'modelling/points.md', title: 'Shapes from points' },
         { id: 'parameters', file: 'modelling/parameters.md', title: 'Parameters and code' },
+        { id: 'warps', file: 'modelling/warps.md', title: 'Ray warps: rays that do what you write' },
         { id: 'materials', file: 'modelling/materials.md', title: 'Materials' },
         { id: 'light-camera', file: 'modelling/light-camera.md', title: 'Light, environment and camera' },
         { id: 'rendering', file: 'modelling/rendering.md', title: 'Render settings and saving pictures' },

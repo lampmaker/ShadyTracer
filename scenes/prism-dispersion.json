@@ -1,6 +1,6 @@
 {
   "format": "raytracer-scene",
-  "version": 29,
+  "version": 30,
   "title": "Dispersion in a prism",
   "nextId": 11,
   "unit": "mm",

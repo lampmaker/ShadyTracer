@@ -140,8 +140,15 @@ with the loop submitting, a revisit apply of the Noise library took 1.4-6.8 s ag
     unit,                   // optional: 'm' (default), 'cm' or 'mm' -- what the scene's numbers are in
     extent,                 // optional: its size in those units, for the automatic tolerance
     envRadius,              // optional: where it stops and the sky begins, in those units (default 400 m)
+    warp,                   // optional: true when `wgsl` defines sceneWarp and sceneWarpDist -- its ray warps (below)
 }
 ```
+
+**A ray warp** (`core/warp.js`, the builder's `builder/warp.js`) is a region where the march runs the scene's own code at
+each step instead of stepping straight: `sceneWarp(w: WarpIO) -> WarpIO`, in the scene's units, may shorten the step and
+turn, move, tint, light or stop the ray; `sceneWarpDist(q)` is how far the nearest region is. The march compiles the
+boundary that calls them (`warpAt`, `warpClear`) only for a scene with `warp`, so every other scene's march is the text it
+was. Shadow rays stay straight; `core/warp.js`'s header says what else does and why a step still cannot pass a surface.
 
 **`pickWgsl` is how a scene says what was clicked.** The pick kernel compiles it in place of
 `wgsl`; while it has capture on, `fold()` records the XF_TAG of the winning surface, and that is

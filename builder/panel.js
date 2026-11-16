@@ -54,6 +54,8 @@ import { UNITS } from '../lib/pathtracer/core/photometry.js'
 import { changeUnit } from './unitchange.js'
 import { openUnitDialog } from './unitdialog.js'
 import { visibilityOf, HAZE_G_MAX } from './hazebox.js'
+import { warpOwner, WARP_NAMES } from './warp.js'
+import { estimateBox } from './bounds.js'
 import { makeAfter } from './params.js'
 import { codeOnly, wgslTypeOf, isProfile, isPath } from './codegen.js'
 import { codeHelper, placeInsert } from './codehelper.js'
@@ -631,6 +633,54 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
         const sharers = () => { const b = M.blockOf(doc, node); return b ? M.usersOf(doc, b.id).map(n => n.id) : [] }
         codeEditor(folder, holder, { kind: 'object', title: 'code', names: 'p, C, MATERIAL, and its parameters: C = add_new(C, <shape>, MATERIAL)', same: sharers,
             params: () => paramRows(M.viewOf(doc, node), Object.keys(node.params || {})) })
+        // ---- what the march does inside it, if it is a ray warp (model.js version 30, warp.js)
+        warpFolder(folder, doc, node)
+    }
+
+    /* A RAY WARP (model.js setWarp, version 30; builder/warp.js, lib/pathtracer/core/warp.js; the user, 2026-11-15, for art):
+       this object's shape a region in which the march runs the warp's code at every step -- the ray bent, moved, tinted,
+       glowing, stopped. Offered folded on every object with code; Add gives it the template (the straight step) and a step
+       of about a fiftieth of its size. Every row here is the shader's text: a compile each, one undo step each. */
+    function warpFolder(parent, doc, node) {
+        if (!M.canWarp(node)) return
+        const w = node.warp
+        const f = parent.addFolder({ title: w ? `ray warp${w.draw ? ' · drawn' : ''}` : 'ray warp', expanded: !!w || !!foldState()['object.warp'] })
+        f.on('fold', ev => keepFold('object.warp', ev.expanded))
+        const t = f.element?.querySelector?.('.tp-fldv_t')
+        if (t) t.title = 'A region of space where rays do what you write: this object\'s shape is the region, and its warp code runs at '
+            + 'every step a ray takes inside it -- turn the ray (dir), move it (pos), tint it, make it glow, stop it. For pictures, not '
+            + 'physics: shadows stay straight. Help > Ray warps.'
+        const change = fn => {
+            try { fn() } catch (e) { console.warn('[builder]', e.message); return }
+            edited(null)
+            onStructure()
+            setTimeout(() => { if (shownId === node.id) show(node.id) })
+        }
+        if (!w) {
+            const note = { note: 'Off. With a ray warp this object\'s shape becomes a region in which the march runs your code at every '
+                + 'step: bend rays, move them, tint them, add glow, stop them. Its surface is not drawn unless you ask.' }
+            f.addBinding(note, 'note', { readonly: true, multiline: true, rows: 3, label: '' })
+            f.addButton({ title: 'Add a ray warp' }).on('click', () => change(() => {
+                const b = estimateBox(doc.root, node, doc)
+                const size = b ? Math.hypot(b.hi[0] - b.lo[0], b.hi[1] - b.lo[1], b.hi[2] - b.lo[2]) : null
+                M.setWarp(doc, node.id, M.newWarp(M.warpStepFor(size)))
+            }))
+            return
+        }
+        const S = { draw: w.draw, step: w.step }
+        rowTip(f.addBinding(S, 'draw', { label: 'draw its surface' }).on('change', ev => change(() => M.setWarp(doc, node.id, { draw: !!ev.value }))),
+            'Off: the shape is only the region, invisible -- what you see is what is behind it, warped. On: the shape is drawn too, in its '
+            + 'material (a glass ball whose inside twists), and rays go into it as into any object.')
+        rowTip(f.addBinding(S, 'step', { label: `step (${doc.unit ?? 'm'})`, min: 0 }).on('change', ev => {
+            if (!(ev.value > 0) || ev.value === node.warp?.step) return
+            change(() => M.setWarp(doc, node.id, { step: +ev.value }))
+        }), 'The longest step a ray takes inside the region, in the scene\'s unit. Smaller follows a bend more smoothly and costs more '
+            + 'steps: a ray stops when it runs out (Render settings > Ray marching > Max Iterations). Larger looks stepped. Tint and glow '
+            + 'are per unit of length, so they do not change with it.')
+        const holder = { id: warpOwner(node.id), get code() { return node.warp?.code ?? '' }, set code(v) { if (node.warp) node.warp.code = String(v) } }
+        codeEditor(f, holder, { kind: 'warp', title: 'warp code', names: WARP_NAMES, owner: node.id,
+            params: () => paramRows(M.viewOf(doc, node), Object.keys(node.params || {})) })
+        f.addButton({ title: 'Remove the ray warp' }).on('click', () => change(() => M.setWarp(doc, node.id, null)))
     }
 
     /* AN ARRAY (model.js copies, version 17): the group's children drawn at each of its copies -- one copy of their code
@@ -2075,7 +2125,7 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
        the names in scope are the header's tooltip (a title is one line and would be cut). */
     /* `same`: the other nodes whose errors are this code's -- a block's other users (model.js version 16): the scene as
        data compiles a block once, its errors reported against the first node that uses it */
-    const CODE_HELP_AT = { material: 'materials', relief: 'noise' }
+    const CODE_HELP_AT = { material: 'materials', relief: 'noise', warp: 'noise' }
     /* A BLOCK'S OWN PARAMETERS as the Insert pane lists them: each by the name its code reads, its type, and its unit --
        a material's and a relief's lengths are real mm, a node's in the scene's unit (unitOf) */
     const paramRows = (owner, keys) => keys.map(k => {

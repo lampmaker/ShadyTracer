@@ -26,7 +26,9 @@ import { envRadiusMetres } from '../../lib/pathtracer/core/photometry.js'
 
 let pass = 0, fail = 0
 const ok = (name, cond, extra = '') => { if (cond) { pass++; return } fail++; console.log(`FAIL  ${name}${extra ? '\n      ' + extra : ''}`) }
-const near = (a, b, tol = 1e-9) => Math.abs(a - b) <= tol * Math.max(1e-12, Math.abs(a), Math.abs(b))
+/* ...relative, but never finer than 1e-15 of a metre: a box's edge at 0 comes back from a scale as -3.5e-18 (the Ray warps
+   example's balls stand on the floor, 0.next), which no relative tolerance holds */
+const near = (a, b, tol = 1e-9) => Math.abs(a - b) <= tol * Math.max(1e-6, Math.abs(a), Math.abs(b))
 const nearV = (a, b, tol = 1e-9) => a.length === b.length && a.every((v, k) => near(v, b[k], tol))
 const mpu = d => M.UNITS[d.unit ?? 'm']
 

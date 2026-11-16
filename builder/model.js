@@ -168,7 +168,12 @@ export const FORMAT = 'raytracer-scene'
    `images` on a material, its slots -- each a picture placed on the surface by a projection in its object's pattern
    frame, read as the material's colour (a surface's base colour, an emitter's glow) or by its code. Nothing in a
    version 28 file changes; a builder of 28 refuses a file of 29 rather than drop every picture on its first save. */
-export const VERSION = 29
+/* 30: A RAY WARP ON AN OBJECT (0.next; builder/warp.js, lib/pathtracer/core/warp.js; the user, 2026-11-15, for art): `warp`
+   on an object with code -- { code, draw, step }: its own code the region, the warp's code what a march step inside it
+   does to a ray (where it goes, where it is, its colour, light added, whether it stops), `step` the longest step inside
+   (the scene's unit), `draw` whether the object is drawn too. Nothing in a version 29 file changes; a builder of 29
+   refuses a file of 30 rather than draw a warp's region as a solid and save the scene without its warp. */
+export const VERSION = 30
 /** The most copies an array has: each is a walk of its children at every step near them, until a BVH can tell which
  *  copies are near (call 4: chosen, not measured). */
 export const ARRAY_MAX = 16
@@ -196,6 +201,8 @@ export { SPD_PRESETS, spdAt, spdProblems, spdSummary, parsePeaks, parseSpdCsv, p
 import { LIGHT_SHAPES, LIGHT_DEFAULTS, lightOf, lightDefaults, lightProblems, rotationTowards } from './lights.js'
 export { HAZE_PARAMS, HAZE_DEFAULTS, hazeSettings } from './hazebox.js'
 import { HAZE_PARAMS, HAZE_DEFAULTS, hazeProblems, hazeNode } from './hazebox.js'
+import { warpProblems, canWarp } from './warp.js'
+export { WARP_TEMPLATE, newWarp, warpStepFor, canWarp } from './warp.js'
 /** The object types that are boxes rather than shapes (a haze box): no material, no code, no join -- a size in their
  *  own frame and settings of their own. (An export box was one until 0.83.0: the print export's box is its dialog's
  *  now, exportbox.js, and a file of 26 or older that has one opens without it: v26to27.) */
@@ -2324,6 +2331,18 @@ export function setHaze(doc, id, patch) {
     return doc
 }
 
+/** Give object `id` a ray warp (version 30, warp.js) -- `warp` a whole { code, draw, step }, or a patch over the one it
+ *  has -- or take it away (null). Every change is the shader's text: the caller compiles. */
+export function setWarp(doc, id, warp) {
+    const { node } = must(doc, id)
+    if (warp == null) { delete node.warp; return doc }
+    const next = { ...(node.warp || {}), ...structuredClone(warp) }
+    const bad = warpProblems({ ...node, warp: next })
+    if (bad.length) throw new ModelError(bad)
+    node.warp = next
+    return doc
+}
+
 /*======================================================================================================================
   THE ENVIRONMENT -- the sun and sky, or the studio light -- is the scene's (UI_PLAN.md section 8): a room
   keeps its sun. It was a renderer setting saved with the workspace, so a scene opened on its own came
@@ -2927,7 +2946,11 @@ export function toTree(doc, { keepDisabled = false } = {}) {
     // an object's optics role is in the tree only while the scene's analysis feature is on (OPTICS_ROLES): off, inert
     const analysis = featuresOf(doc).analysis === true
     // `over`: the material a group above gives its objects (version 23, wornMaterial), null for none
-    const go = (node, over = null) => {
+    /* ITS RAY WARPS (version 30, warp.js): every warp on a shown object, with its region's code and values and the
+       transforms above it -- in `root.warps`, for codegen's THE RAY WARPS. One not drawn is taken out of the tree here,
+       so nothing else that reads the tree meets it. `chain`: the groups above a node (not the root), outermost first. */
+    const warps = []
+    const go = (node, over = null, chain = []) => {
         if (node.enabled === false && !keepDisabled) return null
         const off = n => {
             if (node.enabled === false) n.enabled = false
@@ -2939,7 +2962,7 @@ export function toTree(doc, { keepDisabled = false } = {}) {
         if (node.kind === 'group') {
             const mine = node !== doc.root && node.material != null ? node.material : over
             const g = off({ id: node.id, kind: 'group', blend: node.blend ?? 0, csg: isCsg(node),
-                            children: node.children.map(c => go(c, mine)).filter(Boolean) })
+                            children: node.children.map(c => go(c, mine, node === doc.root ? chain : [...chain, node])).filter(Boolean) })
             if (node.transform) g.transform = structuredClone(node.transform)
             /* ITS CODE AND SCHEMA FROM ITS BLOCK (version 16), its values in the block's order: what codegen reads is
                what a node with its own code would have been, so a version 15 file compiles to the shader it did */
@@ -2972,6 +2995,12 @@ export function toTree(doc, { keepDisabled = false } = {}) {
         if (schema.lengths?.length) n.lengths = [...schema.lengths]
         // which of its profiles are live: codegen writes their pieces as uniforms (a field toTree does not copy is not there)
         if (node.liveProfiles) n.liveProfiles = [...node.liveProfiles]
+        if (node.warp && canWarp(node) && node.enabled !== false && chain.every(g => g.enabled !== false)) {
+            warps.push({ id: node.id, code: n.code, params: structuredClone(n.params), constants: { ...(n.constants || {}) }, material: worn,
+                         chain: [...chain, node].filter(g => g.transform).map(g => ({ id: g.id, transform: structuredClone(g.transform) })),
+                         warp: structuredClone(node.warp) })
+            if (!node.warp.draw) return null
+        }
         return n
     }
     const root = go(doc.root) || { id: doc.root.id, kind: 'group', blend: 0, children: [] }
@@ -2991,6 +3020,7 @@ export function toTree(doc, { keepDisabled = false } = {}) {
     const used = usedImages(doc).filter(k => doc.images?.[k])
     if (used.length) root.images = Object.fromEntries(used.map(k => [k, doc.images[k]]))
     root.functions = doc.functions ?? ''
+    if (warps.length) root.warps = warps
     root.unit = doc.unit ?? 'm'
     // where the scene stops, in that unit (codegen hands it to the renderer); absent is the renderer's default
     if (doc.envRadius !== undefined) root.envRadius = doc.envRadius
@@ -3101,6 +3131,7 @@ export function validate(doc) {
         if (typeof n.enabled !== 'boolean') p.push(`'${n.id}': enabled must be true or false`)
         if (n !== doc.root) checkTransform(n, p)
         if (n.pattern !== undefined) p.push(...patternProblems(n, n === doc.root))
+        if (n.warp !== undefined) p.push(...warpProblems(n))           // a ray warp (version 30, warp.js)
         if (n.kind === 'group' && n.opticsRole !== undefined) p.push(`'${n.id}': a group has no optics role: each of its objects has its own`)
         // true or absent (setLock); the root has none to lock
         for (const key of Object.values(LOCKS)) if (n[key] !== undefined && (n === doc.root || n[key] !== true))
@@ -3271,6 +3302,7 @@ export function upgrade(doc) {
     if (d.version === 26) d = v26to27(d)
     if (d.version === 27) d.version = 28          // nothing to change: a join's shape is new
     if (d.version === 28) d.version = 29          // nothing to change: pictures are new
+    if (d.version === 29) d.version = 30          // nothing to change: ray warps are new
     return d
 }
 

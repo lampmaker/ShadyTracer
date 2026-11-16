@@ -115,6 +115,13 @@ export const EXAMPLES = [
   "description": "A perfume bottle on a plinth in studio light"
  },
  {
+  "file": "ray-warps.json",
+  "title": "Ray warps",
+  "audience": "Modelling and rendering",
+  "group": "Art",
+  "description": "Regions where rays do what their code says: a twist, a pull, a shimmer, a glowing glass ball, a portal"
+ },
+ {
   "file": "led-lens-screen.json",
   "title": "LED, lens and screen",
   "audience": "Optical design",
