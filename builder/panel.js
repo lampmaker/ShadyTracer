@@ -69,7 +69,9 @@ import { imageFromFile, slotKey, withHeights, PROJECTIONS, WRAPS, FILTERS, FACES
  *  measurements of this renderer. */
 export const ENVIRONMENT_HELP = {
     envMode: 'What surrounds the scene. Sun & sky: daylight, a sun you can move and the sky it lights. Studio: an even light '
-        + 'from every direction, brighter above, with no sun and no shadows to speak of -- for showing an object as it is.',
+        + 'from every direction, brighter above, with no sun and no shadows to speak of -- for showing an object as it is. '
+        + 'Sky in code: a background of your own in WGSL -- it starts as the sun & sky model, written out, or as stars -- '
+        + 'with the sun as in sun & sky. Its code is a compile; every row is live.',
     studioIlluminance: 'How much light the studio gives, in lux on a level surface facing up. An office is about 500 lx, '
         + 'an overcast day outdoors 10 000.',
     studioColor: 'The studio light\'s colour. Only its hue counts: the brightness is the lux above, whatever colour is chosen.',
@@ -83,7 +85,10 @@ export const ENVIRONMENT_HELP = {
         + 'towards -x.',
     uSunElevation: 'How high the sun is, in degrees above the horizon: 90 overhead, 0 on the horizon, below 0 it has set.',
     // the sun's own colour is fixed (sdf.js sunRadiance, SUN_TINT): only the sky's scattering reads this
-    uSkyTurbidity: 'Haze in the sky: 0 the clearest; higher scatters more, for a hazier, paler sky. The sun\'s own colour does not change.',
+    uSkyTurbidity: 'Haze in the sky: 0 the clearest; higher scatters more, for a hazier, paler sky. The sun\'s own colour does not change. '
+        + 'In a sky in code, what its code makes of UB.uSkyTurbidity (the sun & sky model reads it as this).',
+    skyCodeIlluminance: 'How bright the sky in code is: the lux a level surface would get were the code 1.0 in every direction, '
+        + 'so 1.0 is this over pi in cd/m². Not measured -- a few stars on black give far less. Live, never a compile.',
 }
 
 /* THE VIEW'S ROWS' TOOLTIPS (0.66.0): the scene row's camera and exposure folders, the popovers' fields */
@@ -1018,6 +1023,9 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
             const put = x => {
                 if (!A.environment(doc, k, vec ? { r: +x.r, g: +x.g, b: +x.b } : x, {}, base)) return
                 said(`scene/environment/${k}`)
+                /* THE SKY IN CODE CHOSEN with no block yet: it is given the sun & sky model written out, and compiled --
+                   the mode with no block is black but for the sun (sdf.js THE SKY IN CODE) */
+                if (k === 'envMode' && (x | 0) === 2 && !M.hasSky(BUILDER.doc.sky)) { BUILDER.doc.sky = M.SKY_TEMPLATE; edited(null); onApply() }
                 if (k === 'envMode' && (x | 0) !== mode) setTimeout(() => { if (shownId === doc.root.id) show(shownId) })
             }
             /* A COLOUR IS BOUND TO AN OBJECT THAT STAYS, and written on 'change' -- as a light's colour is. Tweakpane sets
@@ -1029,6 +1037,38 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
             if (vec) b.on('change', () => put(H.v))
             flagRow(b, `scene/environment/${k}`)
         }
+        if (mode === 2) skyCode(folder, doc)
+    }
+
+    /* THE SKY IN CODE (envMode 2; builder/sky.js): the scene's sky block under the environment's rows, edited through a
+       holder whose `code` IS doc.sky, as the functions block is -- its errors at its own lines (SKY_ID) -- and what to
+       start it from: the sun & sky model written out, or the stars. A start replaces the block, so a block of the user's
+       own, which is none of the starts, is asked about first; an undo brings it back either way. */
+    function skyCode(folder, doc) {
+        const pick = { start: '' }
+        const options = { 'choose…': '', ...Object.fromEntries(M.SKY_PRESETS.map(p => [p.label, p.id])) }
+        rowTip(folder.addBinding(pick, 'start', { label: 'start sky from', options }),
+            'Replaces the sky code below with a start: the sun & sky model as the "sun & sky" source draws it, written out to '
+            + 'change, or a fractal of stars. A compile.')
+            .on('change', ev => {
+                const p = M.SKY_PRESETS.find(x => x.id === ev.value)
+                if (!p) return
+                const now = BUILDER.doc.sky ?? ''
+                const own = M.hasSky(now) && !M.SKY_PRESETS.some(x => x.code === now)
+                if (own && !globalThis.confirm?.(`Replace your sky code with "${p.label}"? (Undo brings it back.)`)) {
+                    setTimeout(() => { if (shownId === doc.root.id) show(shownId) })
+                    return
+                }
+                BUILDER.doc.sky = p.code
+                edited(null)
+                onApply()
+                setTimeout(() => { if (shownId === doc.root.id) show(shownId) })
+            })
+        const holder = { id: M.SKY_ID,
+            get code() { return BUILDER.doc.sky ?? '' }, set code(v) { BUILDER.doc.sky = v } }
+        codeEditor(folder, holder, { kind: 'sky', title: 'sky code', owner: doc.root.id,
+            names: `fn ${M.SKY_FN}(dir: VEC3) -> VEC3 -- dir a unit direction (z up), the light seen that way; sunDirection(), `
+                + 'UB.uSkyTurbidity and the prelude\'s functions, not the functions block' })
     }
 
 

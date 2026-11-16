@@ -792,7 +792,8 @@
     "skyIlluminance": 15000,
     "uSunAzimuth": -140,
     "uSunElevation": 35,
-    "uSkyTurbidity": 0.7
+    "uSkyTurbidity": 0.7,
+    "skyCodeIlluminance": 15000
   },
   "view": {
     "camera": {

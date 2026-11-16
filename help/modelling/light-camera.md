@@ -2,7 +2,7 @@
 
 ## The environment
 
-What surrounds the scene is in the **scene's own Properties**: click the scene's row at the top of the tree. Two
+What surrounds the scene is in the **scene's own Properties**: click the scene's row at the top of the tree. Three
 choices:
 
 - **Sun & sky**: daylight. The sun is a disc of real size (0.53°) whose light is given in lux (a clear noon is about
@@ -13,6 +13,17 @@ choices:
 
 Every setting has a tooltip. The scene's **environment radius** sits next to them: how far the scene reaches. Anything
 beyond it is not drawn, and a ray that passes it sees the sky. Keep it larger than everything in the scene.
+
+- **Sky in code**: a background of your own, in WGSL, with the sun as in *sun & sky*. Choosing it gives the scene a
+  **sky code** block under the environment's rows, which defines `fn background(dir: VEC3) -> VEC3`: `dir` is the
+  direction a ray leaves in (a unit vector, z up), and what it returns is the light seen that way -- and the light the
+  sky casts on the scene. It starts as the *sun & sky* model itself, written out to read and change; **start sky from**
+  replaces it with that or with a fractal of stars (set the Sun to 0 lx for a night sky). **Sky (lx at 1.0)** scales it:
+  1.0 in every direction would put that many lux on a level surface. It is not measured, as the *sun & sky* source's
+  is, so a few stars on black light the scene far less. Its code reads `sunDirection()`, `UB.uSkyTurbidity` and the
+  functions of Help › Reference › Functions for code (noise among them) -- not the scene's functions block or its
+  parameters: the sky is compiled into a kernel that holds no scene. A change to it is a compile of that one kernel;
+  every row is live.
 
 **Sun, sky or studio**, unticked in Render settings › Light sources (*lamps only*), turns the environment off without changing it, to see what the scene's own lights do.
 

@@ -202,6 +202,8 @@ import { LIGHT_SHAPES, LIGHT_DEFAULTS, lightOf, lightDefaults, lightProblems, ro
 export { HAZE_PARAMS, HAZE_DEFAULTS, hazeSettings } from './hazebox.js'
 import { HAZE_PARAMS, HAZE_DEFAULTS, hazeProblems, hazeNode } from './hazebox.js'
 import { warpProblems, canWarp } from './warp.js'
+import { skyProblems } from './sky.js'
+export { SKY_TEMPLATE, STARS_TEMPLATE, SKY_PRESETS, SKY_FN, SKY_ID, hasSky, skyProblems } from './sky.js'
 export { WARP_TEMPLATE, newWarp, warpStepFor, canWarp } from './warp.js'
 /** The object types that are boxes rather than shapes (a haze box): no material, no code, no join -- a size in their
  *  own frame and settings of their own. (An export box was one until 0.83.0: the print export's box is its dialog's
@@ -243,7 +245,8 @@ import { INTERPS, EASES } from '../lib/timeline/timeline.js'
 export const RESERVED_PARAMS = ['xf', 'blend', 'bxlo', 'bxhi', 'vis', 'jblend', 'pat']
 
 /** Ids codegen uses for things that are not nodes -- the functions block maps its lines to
- *  'functions' -- so no node or material may take them. */
+ *  'functions' -- so no node or material may take them. (The sky block's, '#sky', builder/sky.js SKY_ID, is no id a
+ *  node can have, so it needs no place here: a scene with a node called sky stays a scene this builder reads.) */
 export const RESERVED_IDS = ['root', 'functions']
 
 /** The WGSL types a compile-time parameter may have. A constant is a scalar: it exists to be a
@@ -3020,6 +3023,8 @@ export function toTree(doc, { keepDisabled = false } = {}) {
     const used = usedImages(doc).filter(k => doc.images?.[k])
     if (used.length) root.images = Object.fromEntries(used.map(k => [k, doc.images[k]]))
     root.functions = doc.functions ?? ''
+    // ...and the sky block (builder/sky.js), compiled into the shade kernel alone (codegen.js THE SKY)
+    root.sky = doc.sky ?? ''
     if (warps.length) root.warps = warps
     root.unit = doc.unit ?? 'm'
     // where the scene stops, in that unit (codegen hands it to the renderer); absent is the renderer's default
@@ -3201,6 +3206,7 @@ export function validate(doc) {
     // the bindings, once the tree itself is sound (their targets are read off each node's parameters and its block)
     if (!p.length) walk(doc, (n, parent) => { if (parent) p.push(...bindProblems(doc, n, parent)) })
     if (doc.functions !== undefined && typeof doc.functions !== 'string') p.push('functions must be a string of WGSL')
+    p.push(...skyProblems(doc.sky, typeof doc.functions === 'string' ? doc.functions : ''))
     for (const id of seen) if (RESERVED_IDS.includes(id) && id !== doc.root.id) p.push(`'${id}' is a reserved id`)
     return p
 }

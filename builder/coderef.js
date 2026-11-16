@@ -441,6 +441,33 @@ export const CODE_BLOCKS = {
             { name: 'shadows', why: 'Shadow rays aim straight at a lamp and are not warped: light through the region is found by the paths alone, so it is grainier.' },
         ],
     },
+    /* THE SKY IN CODE (builder/sky.js, sdf.js THE SKY IN CODE): a module of its own, defining background(dir). Its
+       recipes are lines for that function's body, each a whole answer (a return), so one put in at the top replaces what
+       the function gave. */
+    sky: {
+        label: 'the sky\'s code',
+        runs: 'for every ray that leaves the scene and every light sample aimed at the sky, in its function background(dir)',
+        reads: [
+            { name: 'dir', type: 'VEC3', text: 'where the ray goes, a unit direction: z up, x and y level (the sun\'s azimuth is from +y towards +x)' },
+            { name: 'sunDirection()', type: 'VEC3', text: 'towards the sun, as the Sun rows set it' },
+            { name: 'UB.uSkyTurbidity', type: 'f32', text: 'the Sky Turbidity row: the sun & sky model\'s haze, or anything of your own' },
+            { name: 'UB.uSunElevation', type: 'f32', text: 'the sun\'s elevation row, in degrees' },
+        ],
+        sets: [],
+        recipes: [
+            { title: 'Evening: deep blue above, warm at the horizon', code: 'return mix(VEC3(1.0, 0.55, 0.3), VEC3(0.05, 0.1, 0.35), smoothstep(-0.05, 0.4, dir.z));' },
+            { title: 'Black, with a grey ground below the horizon', code: 'return select(VEC3(0.0), VEC3(0.2), dir.z < 0.0);' },
+            { title: 'Clouds: noise across the sky, white on blue', code: [
+                'let cloud = smoothstep(0.1, 0.6, fbm3(dir * 4.0, 3u, 5u, 2.0, 0.5).w);',
+                'return mix(VEC3(0.25, 0.45, 0.9), VEC3(1.0), cloud) * smoothstep(-0.1, 0.1, dir.z);'] },
+            { title: 'A glow round the sun', code: 'return VEC3(1.0, 0.8, 0.5) * pow(max(dot(dir, sunDirection()), 0.0), 64.0) * 4.0;' },
+        ],
+        fns: ['Noise'],
+        cannot: [
+            { name: 'the functions block, the scene\'s parameters', why: 'The sky is compiled into the one kernel that holds no scene: it reaches the prelude\'s functions and the environment\'s settings, and a helper it needs goes in its own block.' },
+            { name: 'the sun\'s disc', why: 'The sun is its own light, sampled directly and sending photons: set by its rows (0 lx turns it off), never by this code.' },
+        ],
+    },
     functions: {
         label: 'the scene\'s functions',
         runs: 'when the other blocks call them',

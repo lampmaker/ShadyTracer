@@ -59,6 +59,7 @@ import { BODY_MARKER } from './validate.js'
 import { matrixOf } from './transform.js'
 import { hazeOf } from './hazebox.js'
 import { warpOwner } from './warp.js'
+import { SKY_ID, SKY_FN, hasSky } from './sky.js'
 import { WARP_FLAGS } from '../lib/pathtracer/core/warp.js'
 /* the most objects the optics trace tells apart (optics/kernels.js OPT_TAGS: a tag past it is clamped to its last) */
 import { OPT_TAGS as OPT_TAG_LIMIT } from '../lib/pathtracer/optics/kernels.js'
@@ -2358,6 +2359,19 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
        is (readsLocal); a scene whose code does not name it keeps the text it had. */
     const scatter = (tree.materials || []).some(m => (FIELDS_OF[m.type ?? 'surface'] ?? FIELDS_OF.surface).includes('scatterDistance')
                                                     && (m.params?.scatterDistance > 0 || /\bm\.scatterDistance\b/.test(codeOnly(m.code ?? ''))))
+    /* THE SKY (builder/sky.js; the renderer's sdf.js THE SKY IN CODE): the scene's sky block, LAST, so the check
+       compiles it and lists its errors at its own lines (mapped to SKY_ID) while `wgsl` -- what the scene's kernels
+       compile -- stops before it: shade alone is given it, as `sky`, so a change to it compiles that kernel alone. The
+       line after it calls the block's function as skyCode will (withSkyCode), so a block that defines none, or one of
+       another signature, fails here and not first in the kernel. Only for a block with code: every other scene is the
+       text it was. */
+    const skyAt = e.lines.length
+    const sky = !Array.isArray(tree) && hasSky(tree.sky) ? String(tree.sky) : null
+    if (sky) {
+        e.raw('// THE SKY BLOCK (builder/sky.js): compiled into the shade kernel alone, checked here')
+        e.from(SKY_ID, sky)
+        e.raw(`fn skyBlockCalled(d: VEC3) -> VEC3 { return ${SKY_FN}(d); }`)
+    }
     /* `wgsl` for the scene contract is the materials onwards -- the same place the three
        hand-written scenes put there, since the kernels prepend the engine prelude themselves
        and would otherwise see it twice. `body` is the whole file, which is what the probe
@@ -2382,7 +2396,9 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
         /* ...and whether the Optics page traces it by wavelength (0.83.0; model.js setFeatures `spectral`): the optics kernels'
            text, never the picture's -- said only when it does, so every other scene's object is what it was */
         ...(tree.features?.spectral ? { spectral: true } : {}),
-        wgsl: e.lines.slice(preludeLines).join('\n'),
+        /* ...and its sky block, for the shade kernel (above): said only when it has one */
+        ...(sky ? { sky } : {}),
+        wgsl: e.lines.slice(preludeLines, skyAt).join('\n'),
         uniforms,
         body: e.wgsl,
         map: e.map,
