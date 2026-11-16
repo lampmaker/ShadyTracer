@@ -1,5 +1,5 @@
 //======================================================================================================================
-// A RAY WARP ON A REAL WEBGPU (0.next; builder/warp.js, codegen.js THE RAY WARPS, lib/pathtracer/core/warp.js). Run:
+// A RAY WARP ON A REAL WEBGPU (0.86.0; builder/warp.js, codegen.js THE RAY WARPS, lib/pathtracer/core/warp.js). Run:
 //   node builder/test/warp.gpu.mjs
 //
 // OPTIONAL, AND LOUD ABOUT IT, as the other GPU checks: the `webgpu` package (npm i -g webgpu) and a Vulkan driver
@@ -10,7 +10,7 @@
 //   - sceneWarp, the scene's own function, called on Dawn against its JS twin -- in a moved, turned and scaled group:
 //     outside the region the step ends just past its surface and nothing else changes; inside, the template changes
 //     nothing but the step (no longer than the warp's); a twist turns the direction by rotZ(rate ds) in the region's
-//     frame; a ray moved lands where the frame's point is in the world, one moved in the world (posWorld, 0.next: a portal)
+//     frame; a ray moved lands where the frame's point is in the world, one moved in the world (posWorld, 0.86.0: a portal)
 //     where it says; a direction in the world (dirWorld) over the frame's; tint and glow per unit of the frame's length;
 //     stop() said; a direction of nothing changes nothing;
 //   - THE WHOLE RENDERER (raytrace_main.js R.trace, every kernel, the real tinywebgpu), the camera inside a warp's region

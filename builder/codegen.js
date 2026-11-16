@@ -1073,7 +1073,7 @@ export function generate(tree, opts = {}) {
 }
 
 /*======================================================================================================================
-  THE RAY WARPS (0.next, model version 30; builder/warp.js says what one is, lib/pathtracer/core/warp.js what the march does
+  THE RAY WARPS (0.86.0, model version 30; builder/warp.js says what one is, lib/pathtracer/core/warp.js what the march does
   with it). All of it in the scene's units and on the scene's side of the boundary: sceneWarp is what the engine's
   warpAt calls, sceneWarpDist what its warpClear does. Per warp, two functions:
     warpRegion_<id>(q)  the object's own code -- its block's, its values the object's uniforms -- evaluated at q (the

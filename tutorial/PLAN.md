@@ -129,7 +129,7 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
    need none), no two products only touching inside the solid (a seam a ray in glass would stop at), the formula a
    bound by min and max of exact distances, a cut that shares a cap with what it cuts worth only the distance to that
    cap across the opening (so what is cut away reaches past it), four corner cylinders one rounded prism, and the
-   facets of an STL fitted back to the cylinders they were -> import/csg.js, shapes.js, fit.js. Planned for it too (0.next):
+   facets of an STL fitted back to the cylinders they were -> import/csg.js, shapes.js, fit.js. Planned for it too (0.86.0):
    bending the ray instead of space, a ray warp -- an object's shape a region where the user's code turns, moves, tints,
    lights or stops the ray at each march step, safe because a path no longer than the distance stays in its empty ball
    whatever its shape, the step shortened inside to follow a curve and outside to just past the region's surface; what

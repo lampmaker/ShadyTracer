@@ -325,7 +325,7 @@ function infinite() {
     return { doc, camera: orbit([0, 0, 1.6], -50, 12, 9) }
 }
 
-/* RAY WARPS (0.next; builder/warp.js): five objects that are regions where the march does what their warp code says,
+/* RAY WARPS (0.86.0; builder/warp.js): five objects that are regions where the march does what their warp code says,
    in front of a row of coloured shapes on a checker floor in the sun, so each shows by what it does to what is behind it --
    a twist, a pull towards a point, a shimmer, a glass ball glowing pink inside, and a portal onto another part of the row. For pictures, not physics. Each warp's
    numbers are its parameters (its object's), so they move live; its step a fiftieth or so of its size. Sizes in mm. */

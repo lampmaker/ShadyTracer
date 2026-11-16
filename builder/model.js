@@ -168,7 +168,7 @@ export const FORMAT = 'raytracer-scene'
    `images` on a material, its slots -- each a picture placed on the surface by a projection in its object's pattern
    frame, read as the material's colour (a surface's base colour, an emitter's glow) or by its code. Nothing in a
    version 28 file changes; a builder of 28 refuses a file of 29 rather than drop every picture on its first save. */
-/* 30: A RAY WARP ON AN OBJECT (0.next; builder/warp.js, lib/pathtracer/core/warp.js; the user, 2026-11-15, for art): `warp`
+/* 30: A RAY WARP ON AN OBJECT (0.86.0; builder/warp.js, lib/pathtracer/core/warp.js; the user, 2026-11-15, for art): `warp`
    on an object with code -- { code, draw, step }: its own code the region, the warp's code what a march step inside it
    does to a ray (where it goes, where it is, its colour, light added, whether it stops), `step` the longest step inside
    (the scene's unit), `draw` whether the object is drawn too. Nothing in a version 29 file changes; a builder of 29

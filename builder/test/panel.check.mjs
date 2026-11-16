@@ -1347,7 +1347,7 @@ ok('...and the visibility beside it follows: 3.912 x 4 m, 15.6 m', /^visibility 
     await p.evaluate(() => { CHECK.panel.show(null) })
 }
 
-/* A RAY WARP (0.next; panel.js warpFolder, builder/warp.js): offered on an object with code, folded, with its Add button;
+/* A RAY WARP (0.86.0; panel.js warpFolder, builder/warp.js): offered on an object with code, folded, with its Add button;
    added, the template with a step from its size, its rows and its code box with the Insert pane's warp lists; draw its
    surface a compile; the step typed a compile; Remove takes it away -- each one structure change */
 {

@@ -1,5 +1,5 @@
 //======================================================================================================================
-// A RAY WARP ON AN OBJECT (0.next, model version 30; the renderer's side is lib/pathtracer/core/warp.js, which says what
+// A RAY WARP ON AN OBJECT (0.86.0, model version 30; the renderer's side is lib/pathtracer/core/warp.js, which says what
 // the march does with it).
 //
 // The user (2026-11-15), for art: "an object with no ordinary material in which another function is used for ray marching
