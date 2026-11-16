@@ -1347,6 +1347,52 @@ ok('...and the visibility beside it follows: 3.912 x 4 m, 15.6 m', /^visibility 
     await p.evaluate(() => { CHECK.panel.show(null) })
 }
 
+/* A RAY WARP (0.next; panel.js warpFolder, builder/warp.js): offered on an object with code, folded, with its Add button;
+   added, the template with a step from its size, its rows and its code box with the Insert pane's warp lists; draw its
+   surface a compile; the step typed a compile; Remove takes it away -- each one structure change */
+{
+    const clickButton = title => p.evaluate(title => {
+        const btn = [...document.querySelectorAll('button')].find(x => x.textContent.trim() === title)
+        if (!btn) return false
+        btn.click(); return true
+    }, title)
+    const warpOf = () => p.evaluate(() => CHECK.M.find(CHECK.doc, 'top').node.warp ?? null)
+    const s0 = (await state()).structure
+    await p.evaluate(() => CHECK.panel.show('top'))
+    ok('an object offers a ray warp, none yet', await clickButton('Add a ray warp') && true, 'no Add button')
+    await p.waitForTimeout(50)
+    const w = await warpOf()
+    ok('Add gives it the template, not drawn, a step from its size', !!w && w.draw === false && w.step > 0 && /dir = dir;/.test(w.code), JSON.stringify(w))
+    ok('...one structure change', (await state()).structure === s0 + 1, String((await state()).structure - s0))
+    const rows = await rowsOf('top')
+    ok('its rows: draw its surface, its step in the scene\'s unit, its code', rows.includes('draw its surface') && rows.some(r => /^step \(/.test(r)) && rows.includes('warp code'), JSON.stringify(rows))
+    const lists = await p.evaluate(() => {
+        const d = [...document.querySelectorAll('details.rt-code-insert')].at(-1)
+        d.open = true; d.dispatchEvent(new Event('toggle'))
+        return [...d.querySelectorAll('.rt-code-insert-row')].map(r => r.firstChild.textContent)
+    })
+    ok('...its Insert pane the warp\'s: what it sets, reads and its recipes', lists.some(r => r.startsWith('dir = rotZ')) && lists.includes('pathLength') && lists.some(r => r.includes('stop();')), JSON.stringify(lists.slice(0, 12)))
+    ok('draw its surface: set', await set('draw its surface', true) === 'set')
+    await p.waitForTimeout(50)
+    ok('...drawn, and a compile', (await warpOf())?.draw === true && (await state()).structure === s0 + 2)
+    await p.evaluate(() => CHECK.panel.show('top'))
+    const stepRow = (await rowsOf('top')).find(r => /^step \(/.test(r))
+    ok('the step typed: set', await set(stepRow, 0.125) === 'set')
+    await p.waitForTimeout(50)
+    ok('...that step, and a compile', (await warpOf())?.step === 0.125 && (await state()).structure === s0 + 3, JSON.stringify(await warpOf()))
+    await p.evaluate(() => CHECK.panel.show('top'))
+    ok('Remove the ray warp', await clickButton('Remove the ray warp'))
+    await p.waitForTimeout(50)
+    ok('...gone, and a compile', (await warpOf()) === null && (await state()).structure === s0 + 4)
+    ok('a light offers none', (await rowsOf('L1').catch(() => [])).length >= 0 && !(await p.evaluate(() => {
+        const L = CHECK.doc.root.children.find(n => n.type === 'light')
+        if (!L) return false
+        CHECK.panel.show(L.id)
+        return [...document.querySelectorAll('button')].some(x => x.textContent.trim() === 'Add a ray warp')
+    })))
+    await p.evaluate(() => { CHECK.panel.show(null) })
+}
+
 ok('no page errors', !errs.length, errs.join('\n'))
 await b.close(); server.close()
 console.log(failed ? `${failed} FAILED` : 'builder panel: all passed')

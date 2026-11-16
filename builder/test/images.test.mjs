@@ -92,9 +92,9 @@ const doc = () => {
     ok('a file keeps the pictures its materials use, and only those', Object.keys(f.images).length === 1 && f.images[a.key].data === a.entry.data)
     ok('...and the document in memory keeps every one (an undo may want it back)', Object.keys(d.images).length === 2)
     const back = M.parse(M.serialize(d))
-    ok('read back: the picture and the slot, at version 29', back.version === 29 && back.images[a.key].width === 64 && back.materials[0].images[0].image === a.key)
+    ok('read back: the picture and the slot, at the current version (29 when they came)', back.version === M.VERSION && M.VERSION >= 29 && back.images[a.key].width === 64 && back.materials[0].images[0].image === a.key)
     const old = JSON.parse(M.serialize(doc())); old.version = 28
-    ok('a file of 28 read as 29, nothing else changed', M.parse(JSON.stringify(old)).version === 29 && !('images' in M.parse(JSON.stringify(old))))
+    ok('a file of 28 read as the current version, nothing else changed', M.parse(JSON.stringify(old)).version === M.VERSION && !('images' in M.parse(JSON.stringify(old))))
     ok('no picture: no images key in the file', !('images' in JSON.parse(M.serialize(doc()))))
     // the project: the history's text holds no picture, a restore puts the scene's back
     const p = P.createProject([d])

@@ -1,6 +1,6 @@
 {
   "format": "raytracer-scene",
-  "version": 29,
+  "version": 30,
   "title": "Beam in dusty air",
   "nextId": 14,
   "unit": "mm",

@@ -58,6 +58,8 @@ import { plainShapeOf } from './plainshape.js'
 import { BODY_MARKER } from './validate.js'
 import { matrixOf } from './transform.js'
 import { hazeOf } from './hazebox.js'
+import { warpOwner } from './warp.js'
+import { WARP_FLAGS } from '../lib/pathtracer/core/warp.js'
 /* the most objects the optics trace tells apart (optics/kernels.js OPT_TAGS: a tag past it is clamped to its last) */
 import { OPT_TAGS as OPT_TAG_LIMIT } from '../lib/pathtracer/optics/kernels.js'
 
@@ -1068,6 +1070,131 @@ export function generate(tree, opts = {}) {
        its own to the page's mode watcher (app.html), never the one it wants */
     if (opts.cull === false) Object.defineProperty(result, 'unculled', { enumerable: false, value: true })
     return result
+}
+
+/*======================================================================================================================
+  THE RAY WARPS (0.next, model version 30; builder/warp.js says what one is, lib/pathtracer/core/warp.js what the march does
+  with it). All of it in the scene's units and on the scene's side of the boundary: sceneWarp is what the engine's
+  warpAt calls, sceneWarpDist what its warpClear does. Per warp, two functions:
+    warpRegion_<id>(q)  the object's own code -- its block's, its values the object's uniforms -- evaluated at q (the
+                        scene's point), moved into its frame by the transforms above it and its own (toTree's `chain`,
+                        outermost first), its distance back in the scene's units (add_new's XF_S);
+    warpCode_<id>(...)  the warp's code, in a block of its own so an alias or a `let` of the user's shadows rather than
+                        redeclares, as an object's code is; mapped to `<id>#warp` (warp.js warpOwner) so an error is
+                        reported at its own lines.
+  THE FRAMES ARE THE TRANSFORMS' ALONE: an array's copies and a group's code above it are not followed (warp.js says so).
+  A region's uniforms (its frames, its parameters) are declared here as an object's are, so a value moved writes to a
+  uniform the scene has -- in a scene as data too (demo.js liveValue writes a node's uniforms whatever else it writes).
+  A parameter that is a profile or a path (isCompiledIn) has no handle here: such a region compiles, and draws nothing.
+======================================================================================================================*/
+const WARP_LIB = `// THE RAY WARPS' OWN (builder/codegen.js THE RAY WARPS; lib/pathtracer/core/warp.js)
+struct WarpIO { pos: vec3<f32>, dir: vec3<f32>, mult: vec3<f32>, add: vec3<f32>, step: f32, ltot: f32, tol: f32, bounces: u32, photon: u32, seed: u32, flags: u32 }
+struct WarpLocal { dir: vec3<f32>, pos: vec3<f32>, tint: vec3<f32>, glow: vec3<f32> }
+var<private> WARP_STOP: bool = false;
+var<private> WARP_RNG: u32 = 0u;
+// a warp's code: end the ray here, and a random number in [0, 1) (PCG, seeded per step by the march)
+fn stop() { WARP_STOP = true; }
+fn rand() -> f32 {
+    WARP_RNG = WARP_RNG * 747796405u + 2891336453u;
+    let s = WARP_RNG;
+    var w = ((s >> ((s >> 28u) + 4u)) ^ s) * 277803737u;
+    w = (w >> 22u) ^ w;
+    return f32(w >> 8u) * (1.0 / 16777216.0);
+}
+// rotations by an angle in radians, right-handed: rotZ(a) * VEC3(1, 0, 0) is (cos a, sin a, 0)
+fn rotX(a: f32) -> mat3x3<f32> { let c = cos(a); let s = sin(a); return mat3x3<f32>(1.0, 0.0, 0.0, 0.0, c, s, 0.0, -s, c); }
+fn rotY(a: f32) -> mat3x3<f32> { let c = cos(a); let s = sin(a); return mat3x3<f32>(c, 0.0, -s, 0.0, 1.0, 0.0, s, 0.0, c); }
+fn rotZ(a: f32) -> mat3x3<f32> { let c = cos(a); let s = sin(a); return mat3x3<f32>(c, s, 0.0, -s, c, 0.0, 0.0, 0.0, 1.0); }
+fn rotAxis(axis: vec3<f32>, a: f32) -> mat3x3<f32> {
+    let k = normalize(axis); let c = cos(a); let s = sin(a); let t = 1.0 - c;
+    return mat3x3<f32>(t * k.x * k.x + c, t * k.x * k.y + s * k.z, t * k.x * k.z - s * k.y,
+                       t * k.x * k.y - s * k.z, t * k.y * k.y + c, t * k.y * k.z + s * k.x,
+                       t * k.x * k.z + s * k.y, t * k.y * k.z - s * k.x, t * k.z * k.z + c);
+}
+// a point in a child's frame back in its parent's: xfPoint undone
+fn warpUp(q: vec3<f32>, T: mat4x4<f32>) -> vec3<f32> { return T[3].xyz + xfRot(T) * (q * T[3].w); }`
+
+function emitWarps(e, warps, { uniforms, matConst }) {
+    e.raw('')
+    e.raw(WARP_LIB)
+    const T = g => `UB.${xfName(g.id)}`
+    for (const w of warps) {
+        for (const g of w.chain) uniforms[xfName(g.id)] = { type: 'mat4x4<f32>', def: matrixOf(g.transform) }
+        const params = w.params || {}, consts = w.constants || {}
+        for (const [k, v] of Object.entries(params)) if (!consts[k] && !isCompiledIn(v)) uniforms[uniformName(w.id, k)] = { type: wgslTypeOf(v), def: defOf(v) }
+        e.raw('')
+        e.raw(`// node ${w.id}: a ray warp -- its region, the object's own code`)
+        e.raw(`fn warpRegion_${w.id}(q: vec3<f32>) -> f32 {`)
+        e.raw('    var r: Ray;')
+        e.raw('    r.pos = q;')
+        e.raw('    var C = emptyHit(r);')
+        e.raw('    let xfm0 = XF_M; let xfs0 = XF_S; let xfk0 = XF_K;')
+        e.raw('    XF_M = mat3x3<f32>(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0); XF_S = 1.0; XF_K = 1.0;')
+        e.raw('    var p = q;')
+        for (const g of w.chain) e.raw(`    p = xfPoint(p, ${T(g)}); XF_M = XF_M * xfRot(${T(g)}); XF_S = XF_S * ${T(g)}[3].w;`)
+        e.raw('    {')
+        for (const a of aliasPrelude(w.id, params, matConst(w.material), consts)) e.raw('        ' + a)
+        e.from(w.id, String(w.code ?? ''))
+        e.raw('    }')
+        e.raw('    XF_M = xfm0; XF_S = xfs0; XF_K = xfk0;')
+        e.raw('    return C.s.w;')
+        e.raw('}')
+        e.raw(`// node ${w.id}: what its warp code does to a ray at p (its frame) on a step of ds`)
+        e.raw(`fn warpCode_${w.id}(p: vec3<f32>, world: vec3<f32>, dist: f32, ds: f32, pathLength: f32, bounces: u32, isPhoton: bool, dirIn: vec3<f32>) -> WarpLocal {`)
+        e.raw('    var dir = dirIn;')
+        e.raw('    var pos = p;')
+        e.raw('    var tint = vec3<f32>(1.0);')
+        e.raw('    var glow = vec3<f32>(0.0);')
+        e.raw('    {')
+        for (const a of aliasPrelude(w.id, params, null, consts)) e.raw('        ' + a)
+        e.from(warpOwner(w.id), String(w.warp?.code ?? ''))
+        e.raw('    }')
+        e.raw('    return WarpLocal(dir, pos, tint, glow);')
+        e.raw('}')
+    }
+    const lit = x => wgslLiteral(x, 'f32')
+    e.raw('')
+    e.raw('// the nearest warp region, in the scene\'s units: what a straight step may cross (core/warp.js warpClear)')
+    e.raw('fn sceneWarpDist(q: vec3<f32>) -> f32 {')
+    e.raw('    var d = 1.0e30;')
+    for (const w of warps) e.raw(`    d = min(d, warpRegion_${w.id}(q));`)
+    e.raw('    return d;')
+    e.raw('}')
+    e.raw('// a march step through the warps (core/warp.js warpAt): the step shortened, then each warp the ray is in, in order')
+    e.raw('fn sceneWarp(w_in: WarpIO) -> WarpIO {')
+    e.raw('    var w = w_in;')
+    e.raw('    WARP_RNG = w.seed;')
+    e.raw('    WARP_STOP = false;')
+    e.raw('    var step = w.step;')
+    warps.forEach((w, i) => {
+        e.raw(`    let d${i} = warpRegion_${w.id}(w.pos);`)
+        // inside: no longer than its step; outside: just past its surface, so the warp starts where its region does
+        e.raw(`    if (d${i} < 0.0) { step = min(step, ${lit(w.warp.step)}); } else { step = min(step, d${i} + w.tol); }`)
+    })
+    e.raw('    w.step = step;')
+    warps.forEach((w, i) => {
+        e.raw(`    if (d${i} < 0.0) {      // node ${w.id}`)
+        e.raw('        var q = w.pos;')
+        e.raw('        var R = mat3x3<f32>(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0);')
+        e.raw('        var s = 1.0;')
+        for (const g of w.chain) e.raw(`        q = xfPoint(q, ${T(g)}); R = R * xfRot(${T(g)}); s = s * ${T(g)}[3].w;`)
+        e.raw(`        let o = warpCode_${w.id}(q, w.pos, d${i} / s, step / s, w.ltot / s, w.bounces, w.photon != 0u, transpose(R) * w.dir);`)
+        e.raw('        let nd = R * o.dir;')
+        e.raw('        if (dot(nd, nd) > 1.0e-20) { w.dir = normalize(nd); }     // a direction of nothing changes nothing')
+        e.raw('        if (any(o.pos != q)) {')
+        e.raw('            var b = o.pos;')
+        for (const g of [...w.chain].reverse()) e.raw(`            b = warpUp(b, ${T(g)});`)
+        e.raw(`            w.pos = b; w.flags = w.flags | ${WARP_FLAGS.MOVED}u;`)
+        e.raw('        }')
+        e.raw('        let ls = step / s;      // the step in its own frame: tint and glow are per unit of its length')
+        e.raw('        w.add = w.add + w.mult * max(o.glow, vec3<f32>(0.0)) * ls;')
+        e.raw('        w.mult = w.mult * pow(max(o.tint, vec3<f32>(0.0)), vec3<f32>(ls));')
+        e.raw(`        w.flags = w.flags | ${WARP_FLAGS.IN}u;`)
+        e.raw('    }')
+    })
+    e.raw(`    if (WARP_STOP) { w.flags = w.flags | ${WARP_FLAGS.STOPPED}u; }`)
+    e.raw('    return w;')
+    e.raw('}')
 }
 
 /* PICKING. A second copy of the scene, for the renderer's pick kernel alone (core/pick.js), that
@@ -2209,6 +2336,10 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
     e.raw('}')
     }
 
+    /* THE RAY WARPS (builder/warp.js, model version 30; the renderer's lib/pathtracer/core/warp.js): only in a scene with
+       one, so every other scene is the text it was */
+    const warps = Array.isArray(tree) ? [] : (tree.warps || [])
+    if (warps.length) emitWarps(e, warps, { uniforms, matConst })
     // the haze box in the world, if the scene has one (the tree is the root group here)
     const haze = hazeOf({ root: tree })
     /* ...and whether a material scatters inside (materials.js scatterDistance, 0.82.0): the march has the walk's code
@@ -2238,6 +2369,8 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
            has one: whether it does decides the kernels' text (sceneTextOf), so a scene without one says nothing */
         ...(haze ? { haze } : {}),
         ...(scatter ? { scatter: true } : {}),
+        /* ...and whether it has a ray warp (core/warp.js): the march's text, said only when it does */
+        ...(warps.length ? { warp: true } : {}),
         /* ...and whether the Optics page traces it by wavelength (0.83.0; model.js setFeatures `spectral`): the optics kernels'
            text, never the picture's -- said only when it does, so every other scene's object is what it was */
         ...(tree.features?.spectral ? { spectral: true } : {}),

@@ -325,6 +325,52 @@ function infinite() {
     return { doc, camera: orbit([0, 0, 1.6], -50, 12, 9) }
 }
 
+/* RAY WARPS (0.next; builder/warp.js): four objects that are regions where the march does what their warp code says,
+   in front of a row of coloured shapes on a checker floor in the sun, so each shows by what it does to what is behind it --
+   a twist, a pull towards a point, a shimmer, and a glass ball glowing pink inside. For pictures, not physics. Each warp's
+   numbers are its parameters (its object's), so they move live; its step a fiftieth or so of its size. Sizes in mm. */
+function rayWarps() {
+    const doc = scene('Ray warps', { radius: 3000, env: SUN(40, -150) })
+    floor(doc, lib(doc, 'checker'))
+    // what is seen through them: a row of columns and balls 120 mm behind, in four colours
+    const colours = [lib(doc, 'soft red'), lib(doc, 'sage green'), lib(doc, 'sky blue'), lib(doc, 'satin yellow plastic')]
+    for (let i = 0; i < 8; i++) {
+        const x = -175 + i * 50
+        if (i % 2) shape(doc, 'root', 'sphere', { label: `ball ${i}`, params: { radius: 18 }, at: [x, 120, 18], material: colours[i % 4] })
+        else shape(doc, 'root', 'cylinder', { label: `column ${i}`, params: { radius: 10, height: 120 }, at: [x, 120, 60], material: colours[i % 4] })
+    }
+    const warp = (label, at, code, params, warpCode, step, more = {}) => {
+        const o = M.addObject(doc, 'root', { label, code, params, transform: T(at), ...more })
+        M.setWarp(doc, o.id, { ...M.newWarp(step), code: warpCode, ...(more.draw ? { draw: true } : {}) })
+        return o
+    }
+    // a twist about the box's z: "twist" radians per mm, so a ray crossing it turns the scene behind it round
+    warp('twist', [-150, 0, 50],
+        '// the region: a box "size" across\nC = add_new(C, sdBox(p, size * 0.5), MATERIAL);',
+        { size: V(70, 70, 100), twist: 0.03 },
+        '// turn the ray about this box\'s z by "twist" radians per mm\ndir = rotZ(twist * ds) * dir;', 1.5)
+    // pulled towards the middle, more so close in: a lens of gravity, everything behind it bent round it
+    warp('pull', [-50, 0, 45],
+        '// the region: a ball of "radius"\nC = add_new(C, Nsphere(p, radius), MATERIAL);',
+        { radius: 40, pull: 2 },
+        '// pulled towards the middle by "pull", as 1/r^2, held at 5 mm so the middle is no hole\n'
+            + 'dir = normalize(dir - normalize(p) * pull * ds / max(dot(p, p), 25.0));', 1)
+    // a shimmer: each step turned a little at random, a different way each sample, so it averages to a blur
+    warp('shimmer', [50, 0, 50],
+        '// the region: a slab "size" across\nC = add_new(C, sdBox(p, size * 0.5), MATERIAL);',
+        { size: V(70, 20, 100), amount: 0.02 },
+        '// turned at random by about "amount" radians per mm: what is behind it blurs, like heat haze\n'
+            + 'dir = normalize(dir + (VEC3(rand(), rand(), rand()) - 0.5) * amount * ds);', 1)
+    // a glass ball, drawn, whose inside glows pink towards its middle and tints what passes
+    warp('glowing glass', [150, 0, 40],
+        '// the region, drawn as glass too: a ball of "radius"\nC = add_new(C, Nsphere(p, radius), MATERIAL);',
+        { radius: 40, strength: 400 },
+        '// pink light added towards the middle (cd/m^2 per mm), and what passes tinted\n'
+            + 'glow = VEC3(1.0, 0.25, 0.6) * strength * smoothstep(0.0, -radius, dist);\n'
+            + 'tint = VEC3(0.995, 0.98, 0.99);', 1, { material: lib(doc, 'clear glass'), draw: true })
+    return { doc, camera: orbit([0, 30, 45], -90, 12, 620) }
+}
+
 /* MATERIAL BOARD: the library's materials, each on a 40 mm sphere, in four rows -- under a studio's even light and a
    soft key, so each shows its own colour and sheen. */
 function materialBoard() {
@@ -759,6 +805,9 @@ export const EXAMPLES = [
         ['depth-of-field.json', depthOfField, 'A row of pawns through an open lens, focused on the third'],
         ['animation.json', animation, 'Values marked animated, for the Timeline'],
         ['product-shot.json', productShot, 'A perfume bottle on a plinth in studio light'],
+    ] },
+    { audience: 'Modelling and rendering', group: 'Art', items: [
+        ['ray-warps.json', rayWarps, 'Regions where rays do what their code says: a twist, a pull, a shimmer, a glowing glass ball'],
     ] },
     { audience: 'Optical design', group: 'Optical design', items: [
         ['led-lens-screen.json', ledLens, 'An LED, a PMMA lens and a detector: illuminance in lux'],

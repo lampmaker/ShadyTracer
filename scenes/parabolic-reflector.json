@@ -1,6 +1,6 @@
 {
   "format": "raytracer-scene",
-  "version": 29,
+  "version": 30,
   "title": "Parabolic reflector",
   "nextId": 8,
   "unit": "mm",

@@ -402,6 +402,42 @@ export const CODE_BLOCKS = {
         ],
         fns: ['Putting shapes into the scene', 'Joining shapes', 'Noise', 'Units'],
     },
+    /* A RAY WARP's code (builder/warp.js, model version 30; codegen.js THE RAY WARPS) */
+    warp: {
+        label: 'a ray warp\'s code',
+        runs: 'at every march step a ray takes inside this object\'s shape',
+        reads: [
+            { name: 'p', type: 'VEC3', text: 'where the ray is, in the object\'s own frame and units' },
+            { name: 'world', type: 'VEC3', text: 'where the ray is, in the scene, in the scene\'s unit' },
+            { name: 'dist', type: 'f32', text: 'the object\'s distance there, in its units: negative inside, more so deeper in' },
+            { name: 'ds', type: 'f32', text: 'the length of this step, in its units: no longer than the warp\'s step' },
+            { name: 'pathLength', type: 'f32', text: 'how far the ray has come since the camera or the lamp, in its units (in glass, times the index)' },
+            { name: 'bounces', type: 'u32', text: 'how many surfaces the ray has met: 0 is the camera\'s own view' },
+            { name: 'isPhoton', type: 'bool', text: 'true for light from a lamp travelling outwards, false for a camera\'s ray' },
+            { name: 'rand()', type: 'f32', text: 'a random number in [0, 1), another each call: a different one every sample, so it averages out' },
+        ],
+        sets: [
+            { name: 'dir', code: () => 'dir = rotZ(1.0 * ds) * dir;', brief: 'where this step goes, in the object\'s frame: turned here, a twist about z of 1 radian per unit' },
+            { name: 'pos', code: () => 'pos = p + VEC3(0.0, 0.0, 0.5);', brief: 'move the ray there (the object\'s frame) before it steps on' },
+            { name: 'tint', code: () => 'tint = VEC3(1.0, 0.5, 0.5);', brief: 'the colour kept per unit of length: 0.5 halves what passes in each unit' },
+            { name: 'glow', code: () => 'glow = VEC3(0.2, 0.5, 1.0);', brief: 'light added per unit of length (cd/m² per unit): a glowing fog' },
+            { name: 'stop()', code: () => 'stop();', brief: 'end the ray here: what it gathered so far is kept, nothing more' },
+        ],
+        recipes: [
+            { title: 'A twist about z, faster deeper in', code: 'dir = rotZ(-dist * 4.0 * ds) * dir;' },
+            { title: 'Pulled towards the middle (a lens of gravity)', code: 'dir = normalize(dir - normalize(p) * 0.8 * ds / max(dot(p, p), 0.05));' },
+            { title: 'A shimmer that blurs what is behind', code: 'dir = normalize(dir + (VEC3(rand(), rand(), rand()) - 0.5) * 0.3 * ds);' },
+            { title: 'A mirror world: up and down swapped where the ray goes in', code: ['if (dist > -ds) { dir.z = -dir.z; }'] },
+            { title: 'Pink fog with a glowing core', code: ['tint = VEC3(0.9, 0.6, 0.8);', 'glow = VEC3(1.0, 0.2, 0.6) * exp(dist * 8.0);'] },
+            { title: 'A portal: a ray reaching the top comes out of the bottom', code: ['if (p.z > 0.45) { pos = VEC3(p.x, p.y, -0.45); }'] },
+            { title: 'Stripes that swallow light', code: ['if (fract(p.z * 5.0) < 0.2) { stop(); }'] },
+        ],
+        fns: ['Noise', 'Units'],
+        cannot: [
+            { name: 'the step count, the path length', why: 'The march\'s own: changed, the renderer would weigh light wrongly. pathLength is read only; stop() ends a ray, and the warp\'s step sets how fine it walks.' },
+            { name: 'shadows', why: 'Shadow rays aim straight at a lamp and are not warped: light through the region is found by the paths alone, so it is grainier.' },
+        ],
+    },
     functions: {
         label: 'the scene\'s functions',
         runs: 'when the other blocks call them',

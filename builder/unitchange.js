@@ -213,6 +213,8 @@ export function changeUnit(doc, to, how = 'keep') {
         if (d.envRadius > 0) d.envRadius = round(d.envRadius * k)
         if (d.tolerance > 0) d.tolerance = round(d.tolerance * k)
         if (d.optics?.maxDist > 0) d.optics.maxDist = round(d.optics.maxDist * k)
+        // a ray warp's step (warp.js, version 30) is a length in the world, in the scene's unit: by the factor either way
+        walk(d, n => { if (n.warp?.step > 0) n.warp.step = round(n.warp.step * k) })
         convertOutside(d, from, to, how)
         if (how === 'scale') scaleTop(d, k)
         else dimensions(d, k, skipped)
