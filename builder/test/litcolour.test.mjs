@@ -15,7 +15,7 @@ import { runExport, boxOf, settingsProblems, LIGHTS } from '../exportbox.js'
 import { createMesher, openEdges } from '../mesh.js'
 import { toParent } from '../bounds.js'
 import { boxCuts, cutsOf, vertexProbes, smoothVertices, triangleColours } from '../litcolour.js'
-import { probePicture, probeRays, probePlace, PROBE_OVERRIDES, PROBES_PER_RENDER } from '../../lib/pathtracer/core/probes.js'
+import { probePicture, probeRays, probePlace, PROBE_OVERRIDES, PROBES_PER_RENDER, probeView, colourSpread } from '../../lib/pathtracer/core/probes.js'
 import { FIELD_GRID, FIELD_HEADER } from '../../lib/pathtracer/core/field.js'
 
 let pass = 0, fail = 0
@@ -49,6 +49,18 @@ const T = (pos = [0, 0, 0], rot = [0, 0, 0], scale = 1) => ({ pos: { x: pos[0], 
     let threw = false
     try { probeRays([[0, 0, 0]], [[0, 0, 0]]) } catch { threw = true }
     ok('a probe with no direction refused', threw)
+    // THE LOOK OVER THE VIEW'S (0.next): brighter by stops (the EV down by as many), contrast added and held to -1..1
+    const view = { ev: 9, contrast: 0.2, toneMap: 6 }
+    const v = probeView(view, { stops: 1.5, contrast: 0.3 })
+    ok('the look: 1.5 stops brighter is EV 7.5, contrast 0.2 + 0.3, the rest the view\'s, the view untouched',
+        v.ev === 7.5 && Math.abs(v.contrast - 0.5) < 1e-12 && v.toneMap === 6 && view.ev === 9 && view.contrast === 0.2, JSON.stringify(v))
+    ok('...contrast held to 1, none asked the view as it is', probeView(view, { contrast: 2 }).contrast === 1 && JSON.stringify(probeView(view)) === JSON.stringify(view))
+    // how the colours came out: luminance percentiles and the clipped shares
+    const cs = new Float32Array(300)
+    for (let k = 0; k < 100; k++) cs.fill(k < 10 ? 0 : k >= 95 ? 1 : k / 100, 3 * k, 3 * k + 3)
+    const sp = colourSpread(cs)
+    ok('the spread: 10 % black, 5 % white, the median a half', Math.abs(sp.black - 0.1) < 1e-9 && Math.abs(sp.white - 0.05) < 1e-9 && Math.abs(sp.median - 0.5) < 1e-6
+        && sp.p5 === 0 && sp.p95 === 1, JSON.stringify(sp))
 }
 
 //----------------------------------------------------------------------------------------------
@@ -198,6 +210,8 @@ const standIn = f => async (input, outFloats) => {
     const said = []
     const r = await runExport({ sample: standIn(f), probe, doc: d, box, cell: 1, colours: 3, format: '3mf', light: 'lit', samples: 16, onProgress: t => said.push(t) })
     ok('lit: the probe asked once, at its samples', asked && asked.samples === 16)
+    ok('...with the look asked for (none: the view\'s own)', asked.look?.stops === 0 && asked.look?.contrast === 0, JSON.stringify(asked.look))
+    ok('...and what came of it returned: the points and the colours\' spread', r.lit?.points === asked.points.length / 3 && r.lit.spread?.median >= 0, JSON.stringify(r.lit))
     const n = asked.points.length / 3
     // away from the cuts (the box's z, the world's y here, more than a cell and a half from its faces): on the ball and
     // looking along its radius; on the bevels at the rims, within a cell and facing it
@@ -224,6 +238,10 @@ const standIn = f => async (input, outFloats) => {
     ok('three colours: red and blue lit, green on the faces the box cuts', pal.length === 3 && has([255, 0, 0]) && has([0, 0, 255]) && has([0, 255, 0]), JSON.stringify(pal))
     ok('...the mesh closed', r.open === 0)
     ok('...the box\'s z the world\'s -y here (the test turns it 90 about x)', Math.abs(zAxis[1] + 2) < 1e-9, JSON.stringify(zAxis))
+
+    await runExport({ sample: standIn(f), probe, doc: d, box, cell: 1, colours: 3, format: '3mf', light: 'lit', samples: 16, litStops: -2, litContrast: 0.25 })
+    ok('the look given: handed to the probe as it is', asked.look.stops === -2 && asked.look.contrast === 0.25)
+    ok('...refused out of range', settingsProblems({ cell: 1, colours: 4, litStops: 11 }).length === 1 && settingsProblems({ cell: 1, colours: 4, litContrast: -1.5 }).length === 1)
 
     // material: no probe asked; STL: none
     asked = null

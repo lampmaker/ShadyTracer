@@ -14,12 +14,18 @@ is a cut is decided by the sampled field, not by its position, so a part whose o
 light. The probes' vertex colours are averaged once over each vertex's neighbours, and a triangle takes its corners'
 mean.
 
+Two settings adjust the look for the print over the view's own: **brightness**, in stops of exposure, and **contrast**,
+added to the view's. Both are applied as the probes are developed, through the same pass as the picture
+(`core/probes.js` probeView). After the export the dialog says what the lit colours came to: the points, the EV, the
+brightness of the darkest 5 %, the median and the brightest 5 %, the share black and the share white, and the palette.
+
 Measured on Dawn over lavapipe in this container (`builder/test/probes.gpu.mjs`): 250 probes on a white floor under one
 light face read 0.9985 ± 0.0030 of the closed form with light sampling on (512 samples) and 1.047 ± 0.024 with it off
 (4096). The probes keep their order through the darkroom's develop. Nothing about how it looks printed, or how long it
 takes on a real GPU, has been measured.
 
-**What to look at:** export a scene with a matte part lit by a lamp (a shadow on it helps) as 3MF, with *colour from: As
+**What to look at:** paste back the dialog's "lit:" line from an export that looked wrong; it says whether the colours
+were dark, washed out or flat. Then export a scene with a matte part lit by a lamp (a shadow on it helps) as 3MF, with *colour from: As
 lit*, at 64 samples and at more colours than usual (say 8 to 16). In the slicer, check that the colours follow the
 picture's light and shadow, how much speckle there is, and how long the "lighting" step took for how many points. Also
 try a part whose box cuts through it (a floor), and check that the cut faces are the material's colour.

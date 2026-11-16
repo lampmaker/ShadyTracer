@@ -24,6 +24,8 @@
 //   colours   how many colours a 3MF may have: the filaments the printer holds
 //   light     'material', the material's own colour, or 'lit', the part as the picture shows it lit (0.next)
 //   samples   for 'lit', the renderer's samples at each point: more is less speckle and longer
+//   litStops, litContrast  for 'lit' (0.next): brighter by so many stops of exposure than the view, and contrast added
+//             to the view's (core/probes.js probeView)
 //   deviation how far, in mm, the mesh may be simplified from what the grid gave (simplify.js, 0.next): 0 keeps every
 //             triangle; above it, flat regions become a few large triangles and curved ones keep small ones
 //
@@ -50,6 +52,7 @@ import { lineage, toParent, framesTo } from './bounds.js'
 import { find, toTree } from './model.js'
 import { UNITS } from '../lib/pathtracer/core/photometry.js'
 import { FIELD_GRID, FIELD_POINTS, FIELD_MAX_POINTS, fieldInput } from '../lib/pathtracer/core/field.js'
+import { colourSpread } from '../lib/pathtracer/core/probes.js'
 import { createMesher, centroids, quantize, toSRGB, openEdges } from './mesh.js'
 import { write3MF, writeSTL, writeOBJ } from './print.js'
 import { simplify } from './simplify.js'
@@ -58,7 +61,7 @@ import { boxCuts, cutsOf, vertexProbes, smoothVertices, triangleColours } from '
 /* deviation 0.05 mm: on a sphere of 10 mm meshed at the default cell, 70 056 triangles become about 7 100 and no point
    of the mesh moves more than 0.013 mm from the true sphere (test/simplify.test.mjs, in node) -- under a tenth of a
    0.4 mm nozzle's line. */
-export const EXPORT_DEFAULTS = Object.freeze({ cell: 0.4, colours: 4, deviation: 0.05, light: 'material', samples: 64 })
+export const EXPORT_DEFAULTS = Object.freeze({ cell: 0.4, colours: 4, deviation: 0.05, light: 'material', samples: 64, litStops: 0, litContrast: 0 })
 /** What a 3MF's colours are: the material's own (its baseColor, as before 0.next), or the part as the picture shows it,
  *  lit (litcolour.js) */
 export const LIGHTS = ['material', 'lit']
@@ -78,6 +81,8 @@ export function settingsProblems(E) {
     if (E?.deviation !== undefined && !(Number.isFinite(E.deviation) && E.deviation >= 0)) p.push('the deviation must be mm >= 0 (0: not simplified)')
     if (E?.light !== undefined && !LIGHTS.includes(E.light)) p.push(`the colours must be one of ${LIGHTS.join(', ')}`)
     if (E?.samples !== undefined && !(Number.isInteger(E.samples) && E.samples >= 1 && E.samples <= 65536)) p.push('the samples must be a whole number from 1 to 65536')
+    if (E?.litStops !== undefined && !(Number.isFinite(E.litStops) && Math.abs(E.litStops) <= 10)) p.push('the brightness must be stops from -10 to 10')
+    if (E?.litContrast !== undefined && !(Number.isFinite(E.litContrast) && Math.abs(E.litContrast) <= 1)) p.push('the contrast must be from -1 to 1')
     if (!(Number.isInteger(E?.colours) && E.colours >= 1 && E.colours <= 64)) p.push('the colours must be a whole number from 1 to 64')
     return p
 }
@@ -231,16 +236,18 @@ export function boxDistance(g, i, j, k) {
  * samples, onProgress })` the renderer's light along a ray at each point, for `light` 'lit' (index.js renderProbes):
  * resolves to { colour } in [0, 1], 3 a point -- the scene SHOWN, whatever is printed, so one object is lit as it
  * stands among the rest. `doc` gives the unit and the file's name, `box` where to print. Resolves to { bytes,
- * files, triangles, vertices, colours, palette, open, meshed } -- `files` [{ name, bytes, type }] to save, named from
+ * files, lit, triangles, vertices, colours, palette, open, meshed } -- `lit` for lit colours { points, ev, spread }
+ * (core/probes.js colourSpread), `files` [{ name, bytes, type }] to save, named from
  * `stem` (an OBJ and its MTL two, the OBJ naming the MTL), `bytes` the first's, `meshed` the triangles before simplifying, `open` the number of edges of the file's mesh that are not closed (null:
  * not checked, a big mesh), which is 0 unless something is wrong with the mesher or the simplifier, and is said rather
  * than hidden.
  */
 export async function runExport({ sample, probe = null, doc, box, format = '3mf', cell = EXPORT_DEFAULTS.cell, colours = EXPORT_DEFAULTS.colours,
                                   deviation = EXPORT_DEFAULTS.deviation, light = EXPORT_DEFAULTS.light, samples = EXPORT_DEFAULTS.samples,
+                                  litStops = EXPORT_DEFAULTS.litStops, litContrast = EXPORT_DEFAULTS.litContrast,
                                   smooth = 1, name, stem, onProgress = () => { } }) {
     if (!FORMATS.includes(format)) throw new Error(`format must be one of ${FORMATS.join(', ')}`)
-    const bad = settingsProblems({ cell, colours, deviation, light, samples })
+    const bad = settingsProblems({ cell, colours, deviation, light, samples, litStops, litContrast })
     if (bad.length) throw new Error(bad[0])
     const g = exportGrid(doc.unit, box, { cell })
     const why = gridProblem(g)
@@ -275,7 +282,7 @@ export async function runExport({ sample, probe = null, doc, box, format = '3mf'
     if (!nt) throw new Error('nothing solid inside the box')
 
     // ---- the colours: each triangle's centre back to the world, the material's colour there
-    let palette = null, index = null
+    let palette = null, index = null, lit = null
     if (format === '3mf' || format === 'obj') {
         const c = centroids(mesh.positions, mesh.triangles)
         const rgb = new Float32Array(3 * nt)
@@ -315,10 +322,12 @@ export async function runExport({ sample, probe = null, doc, box, format = '3mf'
                    surface), short of most of the part's other faces */
                 const offset = 0.5 * Math.max(...[g.ax, g.ay, g.az].map(v => Math.hypot(...v)))
                 onProgress(`lighting: ${P.count.toLocaleString()} points, ${samples} samples each`)
-                const r = await probe({ points, dirs, offset, samples,
+                const r = await probe({ points, dirs, offset, samples, look: { stops: litStops, contrast: litContrast },
                     onProgress: (k, n) => onProgress(`lighting: ${P.count.toLocaleString()} points, ${Math.round(100 * k / n)} %`) })
-                const lit = smoothVertices(r.colour, mesh.triangles, P.probe, smooth)
-                rgb.set(triangleColours(mesh.triangles, P.probe, lit, cut, rgb))
+                // what came out, said by the dialog: whether the colours are mostly black, white or in between
+                lit = { points: P.count, ev: r.view?.ev ?? null, spread: colourSpread(r.colour) }
+                const smoothed = smoothVertices(r.colour, mesh.triangles, P.probe, smooth)
+                rgb.set(triangleColours(mesh.triangles, P.probe, smoothed, cut, rgb))
             }
         }
         ;({ palette, index } = quantize(rgb, colours))
@@ -350,5 +359,5 @@ export async function runExport({ sample, probe = null, doc, box, format = '3mf'
         files = [{ name: `${stem}.obj`, bytes: o.obj, type: 'model/obj' }, ...(o.mtl ? [{ name: `${stem}.mtl`, bytes: o.mtl, type: 'model/mtl' }] : [])]
     }
     const bytes = files[0].bytes
-    return { bytes, files, triangles: final, meshed, vertices: mesh.positions.length / 3, palette, open, grid: g }
+    return { bytes, files, lit, triangles: final, meshed, vertices: mesh.positions.length / 3, palette, open, grid: g }
 }

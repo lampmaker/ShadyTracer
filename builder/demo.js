@@ -1001,7 +1001,7 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
          *  (RT.sampleField's `own`). Either way the scene has to be the one showing: the engine's values -- the unit
          *  the field is in, the tolerance -- are the ones it was given for it. Resolves to what runExport says
          *  (triangles, meshed, palette, bytes). */
-        async exportPrint({ subject = null, box, format = '3mf', cell, colours, deviation, light, samples } = {}, onProgress = () => { }) {
+        async exportPrint({ subject = null, box, format = '3mf', cell, colours, deviation, light, samples, litStops, litContrast } = {}, onProgress = () => { }) {
             if (current !== shown || RT.scene?.id !== 'built') throw new Error('this scene is not the one showing: show it first (its \u25B6 in the tree)')
             const d = doc()
             const one = subject != null && subject !== d.root.id
@@ -1014,7 +1014,8 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
             /* THE NAME WITH THE TIME (lib/filename.js): an OBJ names its MTL, and a browser that found a file of that name in
                the folder would save the MTL as "name (1).mtl", which the OBJ does not name -- a name made once is not taken */
             const stem = stampedName(fileName(`${d.title || 'scene'}${label ? '-' + label : ''}`).replace(/\.json$/, ''))
-            const r = await runExport({ sample, probe, doc: d, box, format, cell, colours, deviation, light, samples, name: label || d.title || 'scene', stem, onProgress })
+            const r = await runExport({ sample, probe, doc: d, box, format, cell, colours, deviation, light, samples, litStops, litContrast,
+                                       name: label || d.title || 'scene', stem, onProgress })
             for (const f of r.files) saveBytes(f.name, f.bytes, f.type)
             return r
         },

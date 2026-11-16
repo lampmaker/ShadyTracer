@@ -119,10 +119,21 @@ await type('input[data-setting="samples"]', 0)
 s = await shown()
 ok('...0 samples refused, said, Export off', !s.exportOn && /samples/.test(s.text), JSON.stringify(s))
 await type('input[data-setting="samples"]', 128)
+// the look over the view's (0.next): brightness in stops and contrast, offered for lit colours, refused out of range
+ok('...its brightness and contrast offered, 0 to start', await shownRow('input[data-setting="litStops"]') && await shownRow('input[data-setting="litContrast"]')
+    && await p.evaluate(() => ['litStops', 'litContrast'].every(k => document.querySelector(`.print-dialog input[data-setting="${k}"]`).value === '0')))
+await type('input[data-setting="litContrast"]', 3)
+s = await shown()
+ok('...a contrast past 1 refused, said, Export off', !s.exportOn && /contrast/.test(s.text), JSON.stringify(s))
+await type('input[data-setting="litContrast"]', 0.3)
+await type('input[data-setting="litStops"]', 1.5)
 await press('Export')
 await p.waitForTimeout(50)
 const lit = await p.evaluate(() => CHECK.T.exports.at(-1))
-ok('...Export asks for the colours as lit, at its samples', lit?.light === 'lit' && lit.samples === 128 && lit.format === '3mf', JSON.stringify(lit))
+ok('...Export asks for the colours as lit, at its samples, brightness and contrast', lit?.light === 'lit' && lit.samples === 128 && lit.format === '3mf'
+    && lit.litStops === 1.5 && lit.litContrast === 0.3, JSON.stringify(lit))
+s = await shown()
+ok('...and says what the lit colours came to: points, EV, the spread, the black and white shares', /lit: 4,321 points at EV 9\.5; brightness 5 % \/ median \/ 95 %: 0\.05 \/ 0\.31 \/ 0\.62, black 2 %, white 0 %; colours #FF0000/.test(s.text), s.text)
 // ---- OBJ + MTL (0.next): coloured as a 3MF is, its colour rows offered, asked as 'obj'
 await p.evaluate(() => { const f = document.querySelector('.print-dialog select[data-setting="format"]'); f.value = 'obj'; f.dispatchEvent(new Event('change')) })
 ok('OBJ: the colour count, "colour from" and its samples offered as for a 3MF', await shownRow('input[max="64"]') && await shownRow('select[data-setting="light"]')
@@ -138,7 +149,9 @@ await p.waitForTimeout(50)
 await press('Close')
 await p.evaluate(() => CHECK.open(null))
 ok('...remembered', await p.evaluate(() => document.querySelector('.print-dialog select[data-setting="light"]').value === 'lit'
-    && document.querySelector('.print-dialog input[data-setting="samples"]').value === '128'))
+    && document.querySelector('.print-dialog input[data-setting="samples"]').value === '128'
+    && document.querySelector('.print-dialog input[data-setting="litStops"]').value === '1.5'
+    && document.querySelector('.print-dialog input[data-setting="litContrast"]').value === '0.3'))
 await p.focus('.print-dialog input[data-axis="x"]')
 await p.keyboard.press('Escape')
 ok('Escape, in the dialog, closes it', !(await p.evaluate(() => CHECK.isOpen())))

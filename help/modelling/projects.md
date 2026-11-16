@@ -78,7 +78,11 @@ The box is fitted to it, and drawn dashed in the picture while the dialog is ope
   (*colours*, 4 to start), for a slicer's filament mapping. With **colour from: As lit (the picture)** the colours are
   the part as the picture shows it instead: its light, shadows and glow, with the view's exposure and tone curve. The
   renderer traces the light at each point of the mesh, looking straight at the surface, for *samples* samples each
-  (64 to start: more is less speckle, and longer). This suits matte surfaces. A glossy or mirror-like surface shows
+  (64 to start: more is less speckle, and longer). **brightness** (in stops: +1 doubles the light, −1 halves it) and
+  **contrast** (added to the view's, −1 to 1) adjust the look for the print, over the view's own. After the export,
+  the dialog says how the colours came out: how many points, the exposure, how bright the darkest 5 %, the middle and
+  the brightest 5 % are, how many came out black or white, and the colours chosen. Too dark or too bright: change
+  brightness. All one tone: raise contrast, or the colour count. This suits matte surfaces. A glossy or mirror-like surface shows
   what it reflects straight out of it, and glass shows what is behind it. A light that is only a ray file (no face) gives
   no light here. Faces the box cuts through keep their material's colour;
 - **OBJ + MTL**, the same colours as an OBJ file and its material file, for a slicer that reads an OBJ's colours but
