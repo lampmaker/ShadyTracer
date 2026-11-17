@@ -91,12 +91,12 @@ throws('and so is broken JSON', () => P.parse('{'), /JSON/)
 {
     // a workspace: the project, the current scene, and the renderer's settings, whatever they are -- but what each
     // scene has of its own (0.66.0): the camera, the exposure and the tolerance are in the scenes (model.js VIEW)
-    const settings = { values: { sunIlluminance: 90000, tint: [1, 0.9, 0.8], exposureEV: 9, eps: 0 }, camera: { mode: 'orbit', azimuth: 12 }, size: { mode: 'fit' } }
+    const settings = { values: { sunOutside: 90000, tint: [1, 0.9, 0.8], exposureEV: 9, eps: 0 }, camera: { mode: 'orbit', azimuth: 12 }, size: { mode: 'fit' } }
     const w = P.parse(P.serializeWorkspace(p, p.scenes[1].key, settings)).workspace
     ok('a workspace round-trips its project', w && P.serialize(w.project) === P.serialize(p))
     eq('and which scene was current', w.current, p.scenes[1].key)
     eq('and the renderer settings, without the camera, the exposure or the tolerance', w.renderer,
-        { size: { mode: 'fit' }, values: { sunIlluminance: 90000, tint: [1, 0.9, 0.8] } })
+        { size: { mode: 'fit' }, values: { sunOutside: 90000, tint: [1, 0.9, 0.8] } })
     const lost = JSON.parse(P.serializeWorkspace(p, 's999', {}))
     eq('a current scene it does not have falls back to the first', P.parse(JSON.stringify(lost)).workspace.current, p.scenes[0].key)
     const noRenderer = JSON.parse(P.serializeWorkspace(p, 's1')); noRenderer.renderer = 3

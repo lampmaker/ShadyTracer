@@ -173,7 +173,14 @@ export const FORMAT = 'raytracer-scene'
    does to a ray (where it goes, where it is, its colour, light added, whether it stops), `step` the longest step inside
    (the scene's unit), `draw` whether the object is drawn too. Nothing in a version 29 file changes; a builder of 29
    refuses a file of 30 rather than draw a warp's region as a solid and save the scene without its warp. */
-export const VERSION = 30
+/* 31: THE ENVIRONMENT IS CODE (0.next; lib/pathtracer/core/environment.js, builder/sky.js; the user, 2026-11-17): `sky` on
+   the scene, the WGSL of its environment -- background(dir), cd/m^2 -- and the sun & sky physical, so the environment's
+   settings change: `sunOutside`, the sunlight above the air, replaces `sunIlluminance`, the sun's at the ground, and
+   `skyIlluminance` goes -- the sky's light follows from the sun's and the air now, it is no longer set; `sunHint` says
+   whether light sampling aims at the sun. v30to31: sunOutside = 1.28 x sunIlluminance (128 klx above the air for the
+   old default's 100 klx: the new model's own figure at the default sun is 95 klx), the sky's setting dropped. A
+   builder of 30 refuses a file of 31 rather than read its environment without a sun. */
+export const VERSION = 31
 /** The most copies an array has: each is a walk of its children at every step near them, until a BVH can tell which
  *  copies are near (call 4: chosen, not measured). */
 export const ARRAY_MAX = 16
@@ -203,7 +210,7 @@ export { HAZE_PARAMS, HAZE_DEFAULTS, hazeSettings } from './hazebox.js'
 import { HAZE_PARAMS, HAZE_DEFAULTS, hazeProblems, hazeNode } from './hazebox.js'
 import { warpProblems, canWarp } from './warp.js'
 import { skyProblems } from './sky.js'
-export { SKY_TEMPLATE, STARS_TEMPLATE, SKY_PRESETS, SKY_FN, SKY_ID, hasSky, skyProblems } from './sky.js'
+export { SKY_TEMPLATE, STUDIO_TEMPLATE, STARS_TEMPLATE, SKY_PRESETS, SKY_FN, SKY_ID, hasSky, skyProblems, skyTextOf, skyReads } from './sky.js'
 export { WARP_TEMPLATE, newWarp, warpStepFor, canWarp } from './warp.js'
 /** The object types that are boxes rather than shapes (a haze box): no material, no code, no join -- a size in their
  *  own frame and settings of their own. (An export box was one until 0.83.0: the print export's box is its dialog's
@@ -2186,6 +2193,16 @@ export function addImage(doc, { key, entry }) {
     if (!doc.images[key]) doc.images[key] = entry
     return key
 }
+/** THE ENVIRONMENT'S IMAGE (0.next, version 31; lib/pathtracer/core/envimage.js): the key of the scene's picture its
+ *  environment's code reads with envImage(dir), or null to have none. The picture is the scene's (addImage), kept by its
+ *  key like a material's; naming one the scene does not have is no error (images.js: an undo's text may) -- it reads
+ *  black, as a slot's does. Its presence is the kernels' text: a compile. */
+export function setEnvImage(doc, key) {
+    if (key == null) { delete doc.envImage; return doc }
+    if (!IMAGE_KEY.test(key)) throw new ModelError(`'${key}' is not an image's key`)
+    doc.envImage = key
+    return doc
+}
 /** The names a slot of material `m` may not take: its parameters', and those its code already has. */
 const mustMaterial = (doc, id) => {
     const m = material(doc, id)
@@ -3023,8 +3040,9 @@ export function toTree(doc, { keepDisabled = false } = {}) {
     const used = usedImages(doc).filter(k => doc.images?.[k])
     if (used.length) root.images = Object.fromEntries(used.map(k => [k, doc.images[k]]))
     root.functions = doc.functions ?? ''
-    // ...and the sky block (builder/sky.js), compiled into the shade kernel alone (codegen.js THE SKY)
+    // ...and the environment's code (builder/sky.js) and its image, for the kernels that ask the environment (codegen.js THE SKY)
     root.sky = doc.sky ?? ''
+    if (doc.envImage && root.images?.[doc.envImage]) root.envImage = doc.envImage
     if (warps.length) root.warps = warps
     root.unit = doc.unit ?? 'm'
     // where the scene stops, in that unit (codegen hands it to the renderer); absent is the renderer's default
@@ -3207,6 +3225,7 @@ export function validate(doc) {
     if (!p.length) walk(doc, (n, parent) => { if (parent) p.push(...bindProblems(doc, n, parent)) })
     if (doc.functions !== undefined && typeof doc.functions !== 'string') p.push('functions must be a string of WGSL')
     p.push(...skyProblems(doc.sky, typeof doc.functions === 'string' ? doc.functions : ''))
+    if (doc.envImage !== undefined && !(typeof doc.envImage === 'string' && IMAGE_KEY.test(doc.envImage))) p.push('envImage must be an image\'s key')
     for (const id of seen) if (RESERVED_IDS.includes(id) && id !== doc.root.id) p.push(`'${id}' is a reserved id`)
     return p
 }
@@ -3309,6 +3328,7 @@ export function upgrade(doc) {
     if (d.version === 27) d.version = 28          // nothing to change: a join's shape is new
     if (d.version === 28) d.version = 29          // nothing to change: pictures are new
     if (d.version === 29) d.version = 30          // nothing to change: ray warps are new
+    if (d.version === 30) d = v30to31(d)
     return d
 }
 
@@ -3319,6 +3339,20 @@ export function upgrade(doc) {
  *  - A DETECTOR OR A LIMITER IS AN OBJECT'S ROLE, not a material's type (OPTICS_ROLES): each object wearing such a
  *    material takes its role and the material is a surface; and the scene's `analysis` feature, off for a new scene, is
  *    on for one that had any -- so it shows and measures what it did. */
+/* THE ENVIRONMENT AS CODE (version 31): the sun's illuminance at the ground becomes the sunlight above the air, the sky's
+   goes (VERSION's note says why), and a `sky` block written before the version -- this branch's own, never released --
+   stays as it is. Every scene keeps its envMode: without code of its own it is lit by the default, which envMode
+   steers as before. */
+export const ENV_RETIRED = Object.freeze(['sunIlluminance', 'skyIlluminance', 'skyCodeIlluminance'])
+function v30to31(d) {
+    const env = d.environment
+    if (env && typeof env === 'object' && !Array.isArray(env)) {
+        if (Number.isFinite(env.sunIlluminance) && !('sunOutside' in env)) env.sunOutside = Math.round(env.sunIlluminance * 1.28)
+        for (const k of ENV_RETIRED) delete env[k]
+    }
+    d.version = 31
+    return d
+}
 function v26to27(d) {
     dropExportBoxes(d.root)
     // a scene that had a detector or a limiter has them as roles, and the analysis that shows them on

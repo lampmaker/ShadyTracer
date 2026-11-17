@@ -1,6 +1,6 @@
 {
   "format": "raytracer-scene",
-  "version": 30,
+  "version": 31,
   "title": "Optics test: LED, lens, screen",
   "nextId": 6,
   "unit": "cm",

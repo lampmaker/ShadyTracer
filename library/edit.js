@@ -52,7 +52,7 @@ import { icon, iconButton } from '../lib/pathtracer/icons.js'
    row then shows them all) and a setting the studio does not name is what it was. */
 export function studioEnvironment(base = {}) {
     const env = Object.fromEntries(Object.keys(Model.ENVIRONMENT).filter(k => base[k] !== undefined).map(k => [k, structuredClone(base[k])]))
-    return { ...env, envMode: 0, sunIlluminance: 100000, skyIlluminance: 15000, uSkyTurbidity: 1.5,
+    return { ...env, envMode: 0, sunHint: 1, sunOutside: 128000, uSkyTurbidity: 1.5,
              uSunElevation: STUDIO.sunElevation, uSunAzimuth: sunAzimuthFor(STUDIO.azimuth) }
 }
 

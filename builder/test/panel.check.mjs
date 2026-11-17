@@ -582,17 +582,24 @@ ok('...and the radius row says so by itself (the panel redrawn), the number kept
     ok('0 is the automatic one: nothing in the scene', await set(TOL, '0') === 'set' && await p.evaluate(() => !('tolerance' in CHECK.doc)))
     void field
 }
-// THE ENVIRONMENT, in the Scene folder since 0.52.0 (the user, 2026-10-10): its source and its settings after the radius;
-// its old id shows the scene; a source chosen redraws it with that source's settings
+// THE ENVIRONMENT, in the Scene folder since 0.52.0 (the user, 2026-10-10): its settings after the radius; its old id shows
+// the scene. AS CODE (0.next; builder/sky.js): the rows are the ones its code reads -- the default's sun & sky its sun and
+// haze -- then its code, and a start chosen gives it that start's text and redraws it with that text's settings
 {
     const rows = await rowsOf('root'), folders = await p.evaluate(() => [...document.querySelectorAll('.tp-fldv_t')].map(t => t.textContent.trim()))
-    ok('the Scene folder holds the environment: its folder, its source after the radius', folders.includes('environment')
-        && rows.indexOf('Source') > rows.indexOf('environment radius (cm)'), JSON.stringify({ rows, folders }))
+    ok('the Scene folder holds the environment: its folder, the sun & sky\'s rows after the radius, then its start and its code', folders.includes('environment')
+        && rows.indexOf('Sun above the air (lx)') > rows.indexOf('environment radius (cm)') && rows.indexOf('start from') > rows.indexOf('Sun above the air (lx)')
+        && rows.includes('environment code') && !rows.includes('Source') && !rows.includes('Studio (lx, horizontal)'), JSON.stringify({ rows, folders }))
     const old = await rowsOf('#environment')
     ok('...and the environment\'s old id shows the Scene', JSON.stringify(old) === JSON.stringify(rows), JSON.stringify(old))
-    ok('choosing the studio', await set('Source', 'studio') === 'set')
+    const shown = await p.evaluate(() => [...document.querySelectorAll('textarea')].map(t => t.value).find(v => /fn background/.test(v)) ?? null)
+    ok('...its code box showing what the scene is lit by: the default\'s sun & sky, word for word', shown === (await import('../model.js')).SKY_TEMPLATE)
+    ok('choosing the studio', await set('start from', 'studio') === 'set')
     await p.waitForTimeout(50)
-    ok('...redraws it with the studio\'s settings', (await readRows()).includes('Studio (lx, horizontal)'), JSON.stringify(await readRows()))
+    ok('...gives the scene the studio\'s code, its own, no sun to aim at', await p.evaluate(() => /fn studioLight/.test(CHECK.doc.sky ?? '')
+        && CHECK.doc.environment?.envMode === 2 && CHECK.doc.environment?.sunHint === 0), JSON.stringify(await p.evaluate(() => CHECK.doc.environment)))
+    ok('...and redraws it with the studio\'s settings, not the sun\'s', (await readRows()).includes('Studio (lx, horizontal)')
+        && !(await readRows()).includes('Sun above the air (lx)'), JSON.stringify(await readRows()))
     /* THE STUDIO COLOUR SET (the user, 2026-10-10: "it always resets to white"): its picker's red field typed, the scene
        holding it, and the row still showing it once redrawn */
     const red = v => p.evaluate(v => {
@@ -615,11 +622,11 @@ ok('...and the radius row says so by itself (the panel redrawn), the number kept
         return [...document.querySelectorAll('.tp-lblv_l, .tp-fldv_t')].filter(l => l.textContent.trim() && !l.title).map(l => l.textContent.trim()) })
     const inStudio = await untitled()
     ok('every row and folder of the scene\'s properties has a tooltip, in the studio', !inStudio.length, JSON.stringify(inStudio))
-    await set('Source', 'sun')
-    await p.evaluate(() => CHECK.M.setAnimated(CHECK.doc, 'scene/environment/sunIlluminance', true))
+    await set('start from', 'sun & sky')
+    await p.evaluate(() => CHECK.M.setAnimated(CHECK.doc, 'scene/environment/sunOutside', true))
     const inSun = await untitled()
     ok('...in sun and sky, with a value animated', !inSun.length, JSON.stringify(inSun))
-    await p.evaluate(() => CHECK.M.setAnimated(CHECK.doc, 'scene/environment/sunIlluminance', false))
+    await p.evaluate(() => CHECK.M.setAnimated(CHECK.doc, 'scene/environment/sunOutside', false))
     const { ENVIRONMENT_HELP } = await import('../panel.js').catch(() => ({}))
     const M = await import('../model.js')
     ok('...and every environment setting has its explanation', !!ENVIRONMENT_HELP && Object.keys(M.ENVIRONMENT).every(k => ENVIRONMENT_HELP[k]),

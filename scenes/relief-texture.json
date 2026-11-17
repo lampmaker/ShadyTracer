@@ -1,6 +1,6 @@
 {
   "format": "raytracer-scene",
-  "version": 30,
+  "version": 31,
   "title": "Relief and texture",
   "nextId": 20,
   "unit": "mm",
@@ -838,13 +838,14 @@
       "b": 1
     },
     "studioTop": 0.5,
-    "sunIlluminance": 100000,
+    "sunHint": 1,
     "sunDiameter": 0.53,
-    "skyIlluminance": 15000,
     "uSunAzimuth": 110,
     "uSunElevation": 15,
+    "sunOutside": 128000,
     "uSkyTurbidity": 0.7,
-    "skyCodeIlluminance": 15000
+    "envImageLuminance": 179,
+    "envImageTurn": 0
   },
   "view": {
     "camera": {

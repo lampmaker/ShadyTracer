@@ -53,7 +53,7 @@ for (const it of all) {
     const sample = M.find(doc, li.sample).node
     ok('a material is edited on its sample, wearing it, standing on the floor', sample.material === li.subject && doc.unit === 'mm'
         && M.find(doc, li.stage[0]).node.transform.pos.z < 0 && sample.transform.pos.z === sample.params.radius)
-    ok('...lit by the studio: its sun and sky are the scene\'s', doc.environment.envMode === 0 && doc.environment.sunIlluminance === 100000)
+    ok('...lit by the studio: its sun and sky are the scene\'s', doc.environment.envMode === 0 && doc.environment.sunOutside === 128000)
     let got = extractItem(doc)
     ok('its sample saved as nothing while it is the default', got.preview === null && got.asset.kind === 'material')
     sample.params.radius = 12
@@ -142,7 +142,7 @@ ok('the studio\'s light keeps the settings it does not name', studioEnvironment(
     M.setView(home, { camera: { mode: 'orbit', distance: 99, fov: 60 }, exposure: { autoExposure: 0 } })
     const other = M.createDoc({ title: 'lit' })
     M.setEnvironment(other, { envMode: 1 })
-    const R = { values: { envMode: 1, sunIlluminance: 3, skyIlluminance: 4, autoExposure: 0 }, camera: { mode: 'orbit', distance: 99, fov: 60 } }
+    const R = { values: { envMode: 1, sunOutside: 3, uSkyTurbidity: 4, autoExposure: 0 }, camera: { mode: 'orbit', distance: 99, fov: 60 } }
     const RT = {
         scene: { id: 'built' },
         get: () => structuredClone(R.values),
@@ -231,7 +231,7 @@ ok('the studio\'s light keeps the settings it does not name', studioEnvironment(
     E.close()
     ok('close: back to the scene it came from, the item\'s scene gone', B.current === homeKey && !B.project.scenes.some(s => s.doc.libraryItem) && !E.active)
     ok('...the camera, the lighting and the exposure mode given back', R.camera.distance === 99 && R.camera.fov === 60
-        && R.values.envMode === 1 && R.values.sunIlluminance === 3 && R.values.autoExposure === 0, JSON.stringify([R.camera, R.values]))
+        && R.values.envMode === 1 && R.values.sunOutside === 3 && R.values.autoExposure === 0, JSON.stringify([R.camera, R.values]))
     B.undo(); applied()
     ok('an undo of the close opens it again, as it was', E.active && B.doc.title === 'my brushed' && !E.dirty)
     B.undo(); applied()                                       // the details

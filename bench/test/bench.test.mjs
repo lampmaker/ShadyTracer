@@ -596,7 +596,7 @@ ok('no anisotropy or glass row: the Noise library has neither', (noise.materials
         }), steps.map(e => `${e.scene.id}:${grids(e).emitHalf}`).join(' '))
         ok('...the old 2 cm margin only where a row says so, automatic elsewhere', steps.every((e, i) => e.state.emitMargin === (/old/i.test(T.cases[i].label) ? 0.02 : 0)),
             steps.map(e => e.state.emitMargin).join(' '))
-        ok('...sun and sky off, the disc a 1 cm one in a cm scene', steps.every(e => e.state.sunIlluminance === 0 && e.state.skyIlluminance === 0 && e.state.tDiscR === 0.5 && e.scene.unit === 'cm'))
+        ok('...sun and sky off, the disc a 1 cm one in a cm scene', steps.every(e => e.state.envSun === 0 && e.state.envSky === 0 && e.state.tDiscR === 0.5 && e.scene.unit === 'cm'))
         ok('...read by the disc\'s sensors', rows.every(r => Array.isArray(r.discRatio) && r.discRatio.length === 4))
     }
     {

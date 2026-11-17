@@ -311,10 +311,14 @@
     </div>
     <div data-claim="code">
       <p><strong>The sky counts as a light too.</strong> Half of the environment's shadow rays go to the sun's disc and
-        half to the sky, spread like a cosine. The comment records why: with shadow rays for the sun alone, the noise
+        half to the sky. The comment records why: with shadow rays for the sun alone, the noise
         fell 36% with the sun turned up but only 4% at the default, "because at the default most of the light in the
         scene is sky, and nothing was sampling it". (The comment gives no hardware for that measurement.)
-        <cite data-src="lib/pathtracer/core/tracebasics.js" data-sym="WHAT IS SAMPLED." data-doc="no"></cite></p>
+        <cite data-src="lib/pathtracer/core/tracebasics.js" data-sym="WHAT IS SAMPLED." data-doc="no"></cite>
+        The sky's half is split again: half spread like a cosine, half drawn from a map of where the environment is
+        bright (<code>core/envmap.js</code>), so stars or a bright window in a photograph are aimed at too -- the
+        environment is code that may put its light anywhere. Not measured yet: what would test it is a starry sky's
+        noise with the map's share at 0 and at its half.</p>
     </div>
     <div data-claim="code">
       <p><strong>Memory only when used.</strong> The shadow-ray queue is two more ray-sized buffers, about 200 MB at
@@ -344,7 +348,7 @@
       in that ring carried the full brightness of the sun divided by the probability of hitting <em>sky</em> (a direction's
       chance mixes the sun's half of the shadow rays and the sky's half, section 8):</p>
     <pre data-src="lib/pathtracer/core/tracebasics.js" data-sym="fn envPdf"
-         data-why="The fix: one test for the disc's edge, inSunDisc, used by both, and the old angle constant deleted so a second test cannot come back." data-hash="44157c68"></pre>
+         data-why="The fix: one test for the disc's edge, inSunDisc, used by both, and the old angle constant deleted so a second test cannot come back. (m and envMapPdf are the map of the environment's bright places, which section 8 says came later: the sky's half split between it and the cosine.)" data-hash="9c49bf90"></pre>
     <p>The result was a floor 142 times too bright <em>on average</em>, while its typical (median) pixel looked right: a
       few pixels were enormous. It was found because a test compared the floor with a number known in advance.</p>
     <p><strong>Two sizes for one lamp.</strong> In ShadyTracer a lamp is a flat rectangle or disc with no thickness,

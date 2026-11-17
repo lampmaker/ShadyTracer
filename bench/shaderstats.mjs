@@ -97,6 +97,7 @@ const device = {
     pushErrorScope() { }, popErrorScope: async () => null,
     createComputePipeline: stubPipeline, createComputePipelineAsync: async () => stubPipeline(),
     createRenderPipeline: stubPipeline, createRenderPipelineAsync: async () => stubPipeline(),
+    createTexture: ({ size, format }) => ({ size, format, width: size?.width ?? size?.[0], height: size?.height ?? size?.[1], createView: () => ({}), destroy() { } }),   // the environment's map (core/envmap.js)
     createBuffer: ({ size, usage }) => ({ size, usage, destroy() { }, mapAsync: async () => { }, getMappedRange: () => new ArrayBuffer(size), unmap() { } }),
     createBindGroup: () => ({}),
     createCommandEncoder: () => ({
@@ -104,7 +105,7 @@ const device = {
         copyBufferToBuffer(a, b, c, d, n) { C.copies++; C.copyBytes += n },
         finish: () => ({}),
     }),
-    queue: { writeBuffer() { }, submit: cbs => { C.submits += cbs.length }, onSubmittedWorkDone: async () => { } },
+    queue: { writeBuffer() { }, writeTexture() { }, submit: cbs => { C.submits += cbs.length }, onSubmittedWorkDone: async () => { } },
 }
 const S = WEBGPU()
 S.device = device

@@ -62,33 +62,36 @@ import { codeHelper, placeInsert } from './codehelper.js'
 import { imageTextureReads } from './coderef.js'
 import { SEG, SEGBTN } from '../lib/pathtracer/strip.js'
 import { lit } from '../lib/pathtracer/icons.js'
-import { imageFromFile, slotKey, withHeights, PROJECTIONS, WRAPS, FILTERS, FACES, IMAGE_MAX_EDGE } from './images.js'
+import { imageFromFile, slotKey, withHeights, PROJECTIONS, WRAPS, FILTERS, FACES, IMAGE_MAX_EDGE, HDR_TYPE } from './images.js'
+import { RADIANCE_EFFICACY, PHOTO_WHITE_CD } from '../lib/pathtracer/core/envimage.js'
 
 /** WHAT EACH ENVIRONMENT SETTING DOES (model.js ENVIRONMENT, the renderer's Lighting schema), said on its row. Every key
  *  has one (test/panel.check.mjs): a setting added to the schema with none fails there. Numbers are typical values, not
  *  measurements of this renderer. */
 export const ENVIRONMENT_HELP = {
-    envMode: 'What surrounds the scene. Sun & sky: daylight, a sun you can move and the sky it lights. Studio: an even light '
-        + 'from every direction, brighter above, with no sun and no shadows to speak of -- for showing an object as it is. '
-        + 'Sky in code: a background of your own in WGSL -- it starts as the sun & sky model, written out, or as stars -- '
-        + 'with the sun as in sun & sky. Its code is a compile; every row is live.',
+    envMode: 'What lights a scene without environment code of its own: the sun & sky, or the studio. A start below gives '
+        + 'the scene its own code, and this no longer matters.',
     studioIlluminance: 'How much light the studio gives, in lux on a level surface facing up. An office is about 500 lx, '
         + 'an overcast day outdoors 10 000.',
     studioColor: 'The studio light\'s colour. Only its hue counts: the brightness is the lux above, whatever colour is chosen.',
     studioTop: 'How much more light comes from above than from the horizon: 0 the same from every direction, 1 twice as much '
         + 'straight up as at the horizon, and none from straight below.',
-    sunIlluminance: 'The sun\'s light in lux on a surface facing it. A clear day\'s noon sun is about 100 000 lx.',
+    sunHint: 'Whether the environment has a sun that light sampling and the sun\'s photons aim at: a cone where the rows '
+        + 'below put it. The code says what is in it -- the sun & sky draws its disc there. Off for an environment with no '
+        + 'sun (a studio, stars, a photograph without one): the cone would only be sampled for nothing.',
+    sunOutside: 'The sunlight above the atmosphere, in lux on a surface facing the sun: the real sun gives 128 000. What reaches '
+        + 'the ground -- about 95 000 at 45 degrees up -- and how bright the sky is follow from it and the air, so a low sun is '
+        + 'dimmer, redder and lights a darker sky.',
     sunDiameter: 'How big the sun looks, in degrees: 0.53 is the real sun. Larger gives softer shadow edges, as a hazy sun does.',
-    skyIlluminance: 'The sky\'s own light, without the sun, in lux on a level surface: about 15 000 on a clear day, more under '
-        + 'thin cloud. It lights the shadows.',
     uSunAzimuth: 'Which way the sun is, as a compass bearing in degrees: 0 towards the scene\'s +y, 90 towards +x, -90 '
         + 'towards -x.',
     uSunElevation: 'How high the sun is, in degrees above the horizon: 90 overhead, 0 on the horizon, below 0 it has set.',
-    // the sun's own colour is fixed (sdf.js sunRadiance, SUN_TINT): only the sky's scattering reads this
-    uSkyTurbidity: 'Haze in the sky: 0 the clearest; higher scatters more, for a hazier, paler sky. The sun\'s own colour does not change. '
-        + 'In a sky in code, what its code makes of UB.uSkyTurbidity (the sun & sky model reads it as this).',
-    skyCodeIlluminance: 'How bright the sky in code is: the lux a level surface would get were the code 1.0 in every direction, '
-        + 'so 1.0 is this over pi in cd/m². Not measured -- a few stars on black give far less. Live, never a compile.',
+    uSkyTurbidity: 'Haze in the air: 0 the clearest; higher scatters more, for a hazier, paler sky, a dimmer, redder sun and a '
+        + 'brighter glow round it.',
+    envImageLuminance: 'How bright the image is: the luminance, in cd/m², of a pixel of value 1.0. 179 for a calibrated Radiance '
+        + '.hdr (its own lm/W: the file then gives its real luminance); a photograph is set to a daylight sky\'s 5000 at its '
+        + 'white when loaded -- set it by eye, or to what a light meter read there.',
+    envImageTurn: 'The image turned about the vertical, in degrees, anticlockwise seen from above: where its middle faces.',
 }
 
 /* THE VIEW'S ROWS' TOOLTIPS (0.66.0): the scene row's camera and exposure folders, the popovers' fields */
@@ -1001,32 +1004,41 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
         }
     }
 
+    /* THE ENVIRONMENT (0.next; builder/sky.js, lib/pathtracer/core/environment.js): its code, background(dir) in cd/m^2,
+       and the rows its code reads. The code box shows what the scene is lit by -- its own code, or the default's preset for
+       its envMode, the very text the renderer compiles -- and the first edit makes it the scene's. Its ROWS ARE THE
+       CODE'S: a setting is shown when the text reads it (UB.<name>), so the sun & sky shows the sun above the air and the
+       haze, the studio its lux, colour and top, the stars none; the sun's hint -- whether light sampling aims at a sun --
+       always, with its place and size while it is on or the code reads the sun's place. Every row is live; the code is a
+       compile of the kernels that hold it alone. */
+    const SUN_ROWS = ['sunDiameter', 'uSunAzimuth', 'uSunElevation']
     function environmentFolder(parent, doc) {
         const animated = (doc.root.animate || []).some(k => String(k).startsWith('environment/'))
-        const folder = parent.addFolder({ title: `environment${animated ? '  \u25C6' : ''}` })
+        const folder = parent.addFolder({ title: `environment${animated ? '  ◆' : ''}` })
         const t = folder.element?.querySelector?.('.tp-fldv_t')
-        if (t) t.title = 'What lights the scene from beyond its radius, and what a ray that leaves it sees: the sun and sky, or a '
-            + 'studio\'s even light. Kept in the scene\'s file; every value live, never a compile.'
+        if (t) t.title = 'What lights the scene from beyond its radius, and what a ray that leaves it sees: the environment\'s '
+            + 'code, in cd/m², and the settings it reads. Kept in the scene\'s file; every value live, the code a compile.'
         const base = () => { try { return environment() || {} } catch { return {} } }
         // the scene's, whole (model.js environmentOf: what it leaves out is the default it is shown with), else the renderer's
         const now = k => (M.environmentOf(doc) ?? base())[k] ?? M.ENVIRONMENT[k].def
         const mode = now('envMode') | 0
+        const reads = M.skyReads(M.skyTextOf(BUILDER.doc, mode))
         /* LAMPS ONLY (the renderer's, lib/pathtracer/quality.js): the view is lit by the scene's own lights
            and this environment is set aside -- kept, not changed. Said here, where moving the sun would
            otherwise do nothing visible. environment() is the renderer's whole state (RT.get), so it has it. */
         if ((base().lampsOnly | 0) === 1)
             folder.addBinding({ note: 'Lamps only is on (Render settings): this environment is not lighting the view' }, 'note', { readonly: true, label: '' })
+        const sunRows = (now('sunHint') | 0) !== 0 || reads.sun
         for (const [k, sp] of Object.entries(M.ENVIRONMENT)) {
+            // envMode is the default's switch, made by a start below; a row the code does not read is no row
+            const shown = k === 'sunHint' || (SUN_ROWS.includes(k) ? sunRows : k !== 'envMode' && reads.names.has(k))
+            if (!shown) continue
             const { showIf, ...gui } = sp.gui
-            if (showIf && !Object.entries(showIf).every(([key, vals]) => vals.includes(now(key) | 0))) continue
             const vec = String(sp.type).startsWith('vec3')
             const put = x => {
                 if (!A.environment(doc, k, vec ? { r: +x.r, g: +x.g, b: +x.b } : x, {}, base)) return
                 said(`scene/environment/${k}`)
-                /* THE SKY IN CODE CHOSEN with no block yet: it is given the sun & sky model written out, and compiled --
-                   the mode with no block is black but for the sun (sdf.js THE SKY IN CODE) */
-                if (k === 'envMode' && (x | 0) === 2 && !M.hasSky(BUILDER.doc.sky)) { BUILDER.doc.sky = M.SKY_TEMPLATE; edited(null); onApply() }
-                if (k === 'envMode' && (x | 0) !== mode) setTimeout(() => { if (shownId === doc.root.id) show(shownId) })
+                if (k === 'sunHint') setTimeout(() => { if (shownId === doc.root.id) show(shownId) })
             }
             /* A COLOUR IS BOUND TO AN OBJECT THAT STAYS, and written on 'change' -- as a light's colour is. Tweakpane sets
                an object colour's r, g and b on the object the binding reads, and never assigns it: through a getter
@@ -1037,38 +1049,78 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
             if (vec) b.on('change', () => put(H.v))
             flagRow(b, `scene/environment/${k}`)
         }
-        if (mode === 2) skyCode(folder, doc)
+        skyCode(folder, doc, mode, base)
     }
 
-    /* THE SKY IN CODE (envMode 2; builder/sky.js): the scene's sky block under the environment's rows, edited through a
-       holder whose `code` IS doc.sky, as the functions block is -- its errors at its own lines (SKY_ID) -- and what to
-       start it from: the sun & sky model written out, or the stars. A start replaces the block, so a block of the user's
-       own, which is none of the starts, is asked about first; an undo brings it back either way. */
-    function skyCode(folder, doc) {
+    /* THE ENVIRONMENT'S CODE (builder/sky.js): edited through a holder whose `code` reads what the scene is lit by and
+       writes doc.sky, as the functions block's holder does -- its errors at its own lines (SKY_ID) -- and what to start it
+       from: the renderer's presets, each with its sun hint. A start replaces the code, so code of the user's own, which
+       is none of the starts, is asked about first; an undo brings it back either way. A start, or the first edit of the
+       default's text, sets envMode to 2 (the scene's code): the default's studio (1) would hold the sun's cone off. */
+    function skyCode(folder, doc, mode, base) {
+        const env = (k, v) => A.environment(doc, k, v, {}, base) && said(`scene/environment/${k}`)
+        const again = () => setTimeout(() => { if (shownId === doc.root.id) show(shownId) })
+        /* AN IMAGE OF THE SURROUNDINGS (core/envimage.js): a .hdr, PNG, JPEG or WebP into the scene's pictures and named its
+           environment's image; a photograph's white made a daylight sky's (envimage.js PHOTO_WHITE_CD), a .hdr's units
+           Radiance's. `then` after it is in. What went wrong is said where it was asked for. */
+        const chooseImage = then => {
+            const input = Object.assign(document.createElement('input'), { type: 'file', accept: '.hdr,.rgbe,image/png,image/jpeg,image/webp' })
+            input.onchange = async () => {
+                const file = input.files?.[0]
+                if (!file) return
+                try {
+                    const got = await imageFromFile(file)
+                    M.addImage(BUILDER.doc, got)
+                    M.setEnvImage(BUILDER.doc, got.key)
+                    if (got.scaled) console.warn(`[builder] '${file.name}' was ${got.scaled.width} x ${got.scaled.height}: scaled to ${got.entry.width} x ${got.entry.height}`)
+                    env('envImageLuminance', got.entry.type === HDR_TYPE ? RADIANCE_EFFICACY : PHOTO_WHITE_CD)
+                    then(got)
+                } catch (e) { console.warn('[builder]', e.message); pictureError.set('#environment', e.message); again() }
+            }
+            input.click()
+        }
+        if (pictureError.has('#environment')) { folder.addBinding({ why: pictureError.get('#environment') }, 'why', { readonly: true, label: 'not read', multiline: true, rows: 2 }); pictureError.delete('#environment') }
+        if (M.skyReads(M.skyTextOf(BUILDER.doc, mode)).image) {
+            const e = BUILDER.doc.envImage ? BUILDER.doc.images?.[BUILDER.doc.envImage] : null
+            const info = e ? `${e.name}: ${e.width} x ${e.height}` : BUILDER.doc.envImage ? 'its image is not in this scene: choose it again' : 'no image yet: choose one'
+            folder.addBinding({ info }, 'info', { readonly: true, label: 'image' })
+            folder.addButton({ title: 'Choose an image…' }).on('click', () => chooseImage(() => { edited(null); onApply(); again() }))
+        }
         const pick = { start: '' }
         const options = { 'choose…': '', ...Object.fromEntries(M.SKY_PRESETS.map(p => [p.label, p.id])) }
-        rowTip(folder.addBinding(pick, 'start', { label: 'start sky from', options }),
-            'Replaces the sky code below with a start: the sun & sky model as the "sun & sky" source draws it, written out to '
-            + 'change, or a fractal of stars. A compile.')
+        rowTip(folder.addBinding(pick, 'start', { label: 'start from', options }),
+            'Replaces the environment\'s code below with a start: the sun & sky (physical: the sunlight above the air, '
+            + 'scattered once), the studio, a fractal of stars, or an image of the surroundings (a .hdr, PNG, JPEG or WebP '
+            + 'panorama, 360 x 180 degrees) -- each the renderer\'s own text, to read and change. A compile.')
             .on('change', ev => {
                 const p = M.SKY_PRESETS.find(x => x.id === ev.value)
                 if (!p) return
-                const now = BUILDER.doc.sky ?? ''
-                const own = M.hasSky(now) && !M.SKY_PRESETS.some(x => x.code === now)
-                if (own && !globalThis.confirm?.(`Replace your sky code with "${p.label}"? (Undo brings it back.)`)) {
-                    setTimeout(() => { if (shownId === doc.root.id) show(shownId) })
-                    return
+                const had = BUILDER.doc.sky ?? ''
+                const own = M.hasSky(had) && !M.SKY_PRESETS.some(x => x.code === had)
+                if (own && !globalThis.confirm?.(`Replace your environment code with "${p.label}"? (Undo brings it back.)`)) return again()
+                const start = () => {
+                    BUILDER.doc.sky = p.code
+                    env('envMode', 2)
+                    env('sunHint', p.sunHint)
+                    edited(null)
+                    onApply()
+                    again()
                 }
-                BUILDER.doc.sky = p.code
-                edited(null)
-                onApply()
-                setTimeout(() => { if (shownId === doc.root.id) show(shownId) })
+                // the image's start asks for its picture first, and starts nothing if none is chosen
+                if (p.id === 'image') chooseImage(start)
+                else start()
             })
         const holder = { id: M.SKY_ID,
-            get code() { return BUILDER.doc.sky ?? '' }, set code(v) { BUILDER.doc.sky = v } }
-        codeEditor(folder, holder, { kind: 'sky', title: 'sky code', owner: doc.root.id,
-            names: `fn ${M.SKY_FN}(dir: VEC3) -> VEC3 -- dir a unit direction (z up), the light seen that way; sunDirection(), `
-                + 'UB.uSkyTurbidity and the prelude\'s functions, not the functions block' })
+            get code() { return M.skyTextOf(BUILDER.doc, mode) },
+            set code(v) {
+                const first = !M.hasSky(BUILDER.doc.sky)
+                BUILDER.doc.sky = v
+                if (first && mode !== 2) setTimeout(() => { env('envMode', 2); if (mode === 1) env('sunHint', 0) })
+            } }
+        codeEditor(folder, holder, { kind: 'sky', title: 'environment code', owner: doc.root.id,
+            names: `fn ${M.SKY_FN}(dir: VEC3) -> VEC3: the luminance, cd/m², seen in direction dir (a unit vector, z up), and the `
+                + 'light the environment casts; sunDirection(), inSunDisc(dir), UB.<setting> and the prelude\'s shapes and noise -- '
+                + 'not the functions block or the scene\'s parameters' })
     }
 
 
@@ -1644,6 +1696,8 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
                 if (!file) return
                 try {
                     const got = await imageFromFile(file)
+                    // a .hdr is light, for the environment (core/envimage.js): a texture's atlas holds 8 bits a channel
+                    if (got.entry.type === HDR_TYPE) throw new Error(`'${file.name}' is a Radiance HDR: an image of the surroundings for the environment (the scene's environment code, start from: image…), not a material's texture`)
                     M.addImage(BUILDER.doc, got)
                     if (got.scaled) console.warn(`[builder] '${file.name}' was ${got.scaled.width} x ${got.scaled.height}: scaled to ${got.entry.width} x ${got.entry.height} (the longest edge an image may have is ${IMAGE_MAX_EDGE})`)
                     then(got)

@@ -637,12 +637,12 @@ throws('another version is refused, not guessed at',
     // a version 14 file: the radius in environment, in metres
     const v14 = (unit, env) => { const o = JSON.parse(M.serialize(M.createDoc())); o.version = 14; o.unit = unit; if (env) o.environment = env; return o }
     const up = o => M.parse(JSON.stringify(o))
-    const full = { envMode: 0, sunIlluminance: 90000, envRadius: 400 }
+    const full = { envMode: 0, sunOutside: 90000, envRadius: 400 }
     const a = up(v14('m', full))
     eq('14 -> 15, and on to the current version', a.version, M.VERSION)
     ok('the 400 m default, which every environment copied from the renderer holds, is dropped -- not moved',
         !('envRadius' in a) && !('envRadius' in a.environment))
-    eq('...and the rest of the environment stays', a.environment, { envMode: 0, sunIlluminance: 90000 })
+    eq('...and the rest of the environment stays', a.environment, { envMode: 0, sunOutside: 90000 })
     const b = up(v14('mm', { envMode: 0, envRadius: 0.3 }))
     eq('another radius moves to the scene, in its unit (0.3 m in a mm scene), rounded clean', b.envRadius, 300)
     eq('...gone from the environment', b.environment, { envMode: 0 })

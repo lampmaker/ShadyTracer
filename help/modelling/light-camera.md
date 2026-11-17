@@ -2,28 +2,39 @@
 
 ## The environment
 
-What surrounds the scene is in the **scene's own Properties**: click the scene's row at the top of the tree. Three
-choices:
+What surrounds the scene is in the **scene's own Properties**: click the scene's row at the top of the tree. It is
+**code**: one function, `fn background(dir: VEC3) -> VEC3`, which returns the luminance in cd/m² seen in the
+direction `dir` (a unit vector, z up). That is both what a ray leaving the scene sees and all the light the
+surroundings cast on it, so stars, a second sun or a bright window in a photograph light the scene as they look.
+The **environment code** box shows what the scene is lit by, and the first edit makes it the scene's own. **start
+from** puts in one of four, each the renderer's own text, to read and change:
 
-- **Sun & sky**: daylight. The sun is a disc of real size (0.53°) whose light is given in lux (a clear noon is about
-  100 000), placed by its azimuth (a compass bearing: 0 towards +y, 90 towards +x) and its elevation. The sky's own
-  light is given in lux on a level surface (about 15 000), and its haze by the turbidity.
-- **Studio**: an even light from every direction, brighter from above by a share you set. There is no sun and no hard shadow,
-  which is good for showing an object as it is. Its level is in lux, and its colour is a tint.
+- **Sun & sky**: daylight, physically. Sunlight of **Sun above the air** lux (128 000 is the real sun's) comes down
+  through the air and its haze (**Sky Turbidity**) and is scattered once on the way: the disc is what gets through,
+  and the sky is what is scattered towards you. The sun is placed by its azimuth (a compass bearing: 0 towards +y,
+  90 towards +x) and its elevation. With the sun 45° up it gives about 95 000 lux from the sun and 12 000 from the
+  sky; a low sun is dimmer and redder, and the sky darker.
+- **Studio**: an even light from every direction, brighter from above by a share you set. There is no sun and no
+  hard shadow, which is good for showing an object as it is. Its level is in lux, and its colour is a tint.
+- **Stars**: a fractal night sky. Turn the exposure up, or leave auto exposure on.
+- **Image…**: a panorama of the surroundings, as CAD and render programs light with: a Radiance `.hdr`, or a PNG,
+  JPEG or WebP, 360° across and 180° up (equirectangular). It is kept in the scene's file. **Image (cd/m² at 1.0)**
+  sets its brightness: 179 for a calibrated `.hdr` (Radiance's own lumens per watt), and a daylight sky's 5000 at a
+  photograph's white, as it is loaded. **Image turn** turns it about the vertical.
+
+The rows above the box are the settings the code reads: change the code and they change with it. **Sun sampled
+directly** says whether the environment has a sun that light sampling and the sun's photons should aim at: a cone at
+the sun's azimuth and elevation, of the sun's diameter. The code says what is in it (the sun & sky draws its disc
+there); turn it off for an environment with no sun. A bright spot it does not mark is still found, through a map of
+where the environment is bright, only with more grain.
+
+The code can call `sunDirection()`, `inSunDisc(dir)`, `envImage(dir)`, `UB.` and the name of any environment setting,
+and the functions of Help › Reference › Functions for code (noise among them). It cannot reach the scene's functions
+block or its parameters: it is compiled into the kernels that hold no scene. A change to it is a compile of those
+alone; every row is live.
 
 Every setting has a tooltip. The scene's **environment radius** sits next to them: how far the scene reaches. Anything
-beyond it is not drawn, and a ray that passes it sees the sky. Keep it larger than everything in the scene.
-
-- **Sky in code**: a background of your own, in WGSL, with the sun as in *sun & sky*. Choosing it gives the scene a
-  **sky code** block under the environment's rows, which defines `fn background(dir: VEC3) -> VEC3`: `dir` is the
-  direction a ray leaves in (a unit vector, z up), and what it returns is the light seen that way -- and the light the
-  sky casts on the scene. It starts as the *sun & sky* model itself, written out to read and change; **start sky from**
-  replaces it with that or with a fractal of stars (set the Sun to 0 lx for a night sky). **Sky (lx at 1.0)** scales it:
-  1.0 in every direction would put that many lux on a level surface. It is not measured, as the *sun & sky* source's
-  is, so a few stars on black light the scene far less. Its code reads `sunDirection()`, `UB.uSkyTurbidity` and the
-  functions of Help › Reference › Functions for code (noise among them) -- not the scene's functions block or its
-  parameters: the sky is compiled into a kernel that holds no scene. A change to it is a compile of that one kernel;
-  every row is live.
+beyond it is not drawn, and a ray that passes it sees the environment. Keep it larger than everything in the scene.
 
 **Sun, sky or studio**, unticked in Render settings › Light sources (*lamps only*), turns the environment off without changing it, to see what the scene's own lights do.
 

@@ -26,7 +26,8 @@
 // 4: a modifier acts on an F, not a block
 // 5: lights shown lit, a hair of floor below each item, a repeat's copies framed
 // 6: materials on a sample at real size (a 25 mm sphere, or the item's own), the tolerance each item's own
-export const THUMB_VERSION = 6
+// 7: the sun & sky physical (0.next, core/environment.js): its sky and the sun's colour follow from the air
+export const THUMB_VERSION = 7
 
 /** The key of an item's picture: SHA-256 of its asset, its preview and THUMB_VERSION, hex. */
 export async function thumbKey(item, version = THUMB_VERSION) {

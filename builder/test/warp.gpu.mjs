@@ -201,7 +201,7 @@ async function run(scene, body, input, n) {
         R.hud = () => { }
         let err = null
         try { await quietly(() => R.init()) } catch (e) { err = e?.message ?? String(e) }
-        const v = { ...U.defaultUniformValues(), envMode: 0, sunIlluminance: 0, skyIlluminance: 0, nee: 1, lt: 0, maxbounce: 4, rr: 0,
+        const v = { ...U.defaultUniformValues(), envMode: 0, envSun: 0, envSky: 0, nee: 1, lt: 0, maxbounce: 4, rr: 0,
                     fireflyClamp: 0, maxaverages: 0, autoExposure: 0, sppm: 0, ...over }
         const traced = effective(v)
         const derived = derive(traced, { unit: scene.unit, extent: scene.extent, envRadius: scene.envRadius, tolerance: scene.tolerance })
@@ -245,7 +245,7 @@ async function run(scene, body, input, n) {
     }
     // DIR: every ray turned straight up sees the zenith
     {
-        const sky = { skyIlluminance: 10000 }
+        const sky = { envSky: 1 }   // the sky on: the default environment's, outside the sun's cone (the base has both off)
         const plainR = await render(sceneOf(docWith(null), 'warp-none'), sky)
         const upR = await render(sceneOf(docWith('dir = VEC3(0.0, 0.0, 1.0);'), 'warp-up'), sky)
         ok('dir: the renders ran', plainR.err === null && upR.err === null, `${plainR.err} | ${upR.err}`)
@@ -258,7 +258,7 @@ async function run(scene, body, input, n) {
     // (15 to 75 degrees down) meets the floor without the warp, and the plane z = -0.5 within the region with it
     {
         cam.setPose({ pos: [0, 0, 0], target: [0, 1, -1], up: [0, 0, 1] })
-        const sky = { skyIlluminance: 10000 }
+        const sky = { envSky: 1 }   // the sky on: the default environment's, outside the sun's cone (the base has both off)
         const plainR = await render(sceneOf(docWith(null, { floor: true }), 'warp-floor'), sky)
         const movedR = await render(sceneOf(docWith('if (p.z < -0.5) { pos = VEC3(p.x, p.y, 0.5); dir = VEC3(0.0, 0.0, 1.0); }', { floor: true }), 'warp-moved'), sky)
         ok('pos: the renders ran', plainR.err === null && movedR.err === null, `${plainR.err} | ${movedR.err}`)
@@ -304,7 +304,7 @@ async function run(scene, body, input, n) {
         R.hud = () => { }
         let err = null
         try { await quietly(() => R.init()) } catch (e) { err = e?.message ?? String(e) }
-        const v = { ...U.defaultUniformValues(), envMode: 0, sunIlluminance: 0, skyIlluminance: 0, nee: 1, lt: 0, ltPhotons: 1, ltLearn: 0,
+        const v = { ...U.defaultUniformValues(), envMode: 0, envSun: 0, envSky: 0, nee: 1, lt: 0, ltPhotons: 1, ltLearn: 0,
                     maxbounce: 4, rr: 0, fireflyClamp: 0, maxaverages: 0, autoExposure: 0, sppm: 0 }
         const traced = effective(v)
         const derived = derive(traced, { unit: scene.unit, extent: scene.extent, envRadius: scene.envRadius, tolerance: scene.tolerance })
