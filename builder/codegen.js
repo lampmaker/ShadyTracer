@@ -60,6 +60,7 @@ import { matrixOf } from './transform.js'
 import { hazeOf } from './hazebox.js'
 import { warpOwner } from './warp.js'
 import { SKY_ID, SKY_FN, hasSky } from './sky.js'
+import { envWithParams } from '../lib/pathtracer/core/environment.js'
 import { WARP_FLAGS } from '../lib/pathtracer/core/warp.js'
 /* the most objects the optics trace tells apart (optics/kernels.js OPT_TAGS: a tag past it is clamped to its last) */
 import { OPT_TAGS as OPT_TAG_LIMIT } from '../lib/pathtracer/optics/kernels.js'
@@ -2374,9 +2375,12 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
     const skyAt = e.lines.length
     const envImg = !Array.isArray(tree) && tree.envImage && tree.images?.[tree.envImage] ? tree.envImage : null
     const sky = !Array.isArray(tree) && hasSky(tree.sky) ? String(tree.sky) : null
+    /* ...its parameters' names in their slots (core/environment.js envWithParams: words alone change, so every line is
+       where it was, and the shifts take an error's column back to the one typed) */
+    const skyIn = sky ? envWithParams(sky, tree.skyParams) : null
     if (sky) {
         e.raw('// THE SKY BLOCK (builder/sky.js): compiled into the shade kernel alone, checked here')
-        e.from(SKY_ID, sky)
+        e.from(SKY_ID, skyIn.text, 1, skyIn.shifts)
         e.raw(`fn skyBlockCalled(d: VEC3) -> VEC3 { return ${SKY_FN}(d); }`)
     }
     /* `wgsl` for the scene contract is the materials onwards -- the same place the three
@@ -2404,7 +2408,7 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
            text, never the picture's -- said only when it does, so every other scene's object is what it was */
         ...(tree.features?.spectral ? { spectral: true } : {}),
         /* ...and its environment's code, for the kernels that ask the environment (above): said only when it has one */
-        ...(sky ? { sky } : {}),
+        ...(sky ? { sky: skyIn.text } : {}),
         /* ...and its environment's image (core/envimage.js), by its key -- whether it has one is the kernels' text, which
            picture is not -- with load() beside it, below: said only when it has one */
         ...(envImg ? { envImage: { key: envImg } } : {}),

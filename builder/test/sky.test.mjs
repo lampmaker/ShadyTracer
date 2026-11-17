@@ -19,7 +19,8 @@ import { resolve } from '../emit.js'
 import { CODE_BLOCKS, recipeText, preludeSignatures } from '../coderef.js'
 import { sceneTextOf } from '../../lib/pathtracer/core/uniforms.schema.js'
 import { ENV_STUB, ENV_MAP_STUB, withEnvironment } from '../../lib/pathtracer/core/sdf.js'
-import { ENV_FN, ENV_PRESETS, ENV_DEFAULT, envCodeOf, SKY_BANDS, SKY_BAND_TABLE, SUN_OUTSIDE_TINT, rayleighDepth, angstrom } from '../../lib/pathtracer/core/environment.js'
+import { ENV_FN, ENV_PRESETS, ENV_DEFAULT, envCodeOf, SKY_BANDS, SKY_BAND_TABLE, SUN_OUTSIDE_TINT, rayleighDepth, angstrom,
+         OZONE_SIGMA, OZONE_DU, DOBSON } from '../../lib/pathtracer/core/environment.js'
 import { CIE_X, CIE_Y, CIE_Z, CIE_LO, CIE_N } from '../../lib/pathtracer/core/cie1931.js'
 import { rgbToXYZ, XYZtoxy, xyToCctDuv } from '../../lib/pathtracer/core/colorimetry.js'
 import { ENV_W, ENV_H, ENV_MAP_WGSL, ENV_CONE_THREADS, ENV_CONE_EACH, envSampling, rowZ } from '../../lib/pathtracer/core/envmap.js'
@@ -27,7 +28,16 @@ import { SHADE_PRELUDE, SCENE_PRELUDE } from '../../lib/pathtracer/core/scene_ap
 import { parseHDR, envImageAt, toHalf, envImageTexels, linearFromSRGB, ENV_IMAGE_STUB, ENV_IMAGE_WGSL, ENV_IMAGE_RESOURCE } from '../../lib/pathtracer/core/envimage.js'
 import { makeHDR } from '../../lib/pathtracer/darkroom/export/hdr.js'
 import { hdrFromBytes, envPictureOf, usedImages, HDR_TYPE } from '../images.js'
-import { prog_shade, prog_genphotons, prog_envbake } from '../../lib/pathtracer/core/wavefront.js'
+import { prog_shade, prog_genphotons, prog_envbake, prog_envcache } from '../../lib/pathtracer/core/wavefront.js'
+import { envWithParams, replaceWords, envPresetCompiled, ENV_PARAM_SLOTS } from '../../lib/pathtracer/core/environment.js'
+import { ComputeUniformTypes, UniformGroups, UniformSpec } from '../../lib/pathtracer/core/uniforms.schema.js'
+import { ENV_CACHE_STUB, ENV_CACHE_RESOURCE, ENV_CACHE_SIZES, cacheUV } from '../../lib/pathtracer/core/envmap.js'
+import { viewWhiteMatrix, viewWhite, levelLight, IDENTITY4, WB_DEFAULT } from '../../lib/pathtracer/core/whitebalance.js'
+import { XYZtoRGB } from '../../lib/pathtracer/core/colorimetry.js'
+import { typedColumn } from '../emit.js'
+import { withoutComments } from '../helpers.js'
+import { sceneParams } from '../params.js'
+import { liveKeyOfPath } from '../animate.js'
 
 let pass = 0, fail = 0
 const ok = (name, cond, extra = '') => { if (cond) { pass++; return } fail++; console.log(`FAIL  ${name}${extra ? '\n      ' + extra : ''}`) }
@@ -129,7 +139,7 @@ const fnText = (text, name) => { const i = text.indexOf(`fn ${name}(`); return i
     const count = (s, x) => s.split(x).length - 1
     ok('every prelude has the two stubs once', [SHADE_PRELUDE, SCENE_PRELUDE].every(p => count(p, ENV_STUB) === 1 && count(p, ENV_MAP_STUB) === 1))
     const code = 'fn background(dir: VEC3) -> VEC3 { return VEC3(1.0); }   // $& $1 stay as typed'
-    const w = withEnvironment(SHADE_PRELUDE, code, ENV_MAP_WGSL)
+    const w = withEnvironment(SHADE_PRELUDE, code, { map: ENV_MAP_WGSL })
     ok('with code and the map: the stubs replaced, the code after, as typed', !w.includes(ENV_STUB) && !w.includes(ENV_MAP_STUB)
         && /fn envBackground\(dir: VEC3\) -> VEC3 \{ return background\(dir\); \}/.test(w) && w.includes(code) && w.includes('fn envMapSample('))
     ok('...the map only when asked', withEnvironment(SHADE_PRELUDE, code).includes(ENV_MAP_STUB))
@@ -155,9 +165,19 @@ const fnText = (text, name) => { const i = text.indexOf(`fn ${name}(`); return i
     const text = M.SKY_TEMPLATE
     const arr = name => { const m = new RegExp(`const ${name} = array<[^>]*>\\(([^;]*)\\);`).exec(text); return m ? m[1] : null }
     const tauR = arr('SKY_BAND_TAUR')?.split(',').map(Number), haze = arr('SKY_BAND_HAZE')?.split(',').map(Number)
+    const ozone = arr('SKY_BAND_OZONE')?.split(',').map(Number)
     const rgb = [...(arr('SKY_BAND_RGB') ?? '').matchAll(/VEC3\(([^)]*)\)/g)].map(m => m[1].split(',').map(Number))
-    ok('the text\'s sixteen bands are the table\'s: Rayleigh depths, haze, colour', tauR?.length === SKY_BANDS && haze?.length === SKY_BANDS && rgb.length === SKY_BANDS
-        && SKY_BAND_TABLE.every((b, k) => Math.abs(b.tauR - tauR[k]) < 1e-6 && Math.abs(b.haze - haze[k]) < 1e-6 && b.rgb.every((x, c) => Math.abs(x - rgb[k][c]) < 1e-6)))
+    ok('the text\'s sixteen bands are the table\'s: Rayleigh depths, haze, ozone, colour', tauR?.length === SKY_BANDS && haze?.length === SKY_BANDS
+        && ozone?.length === SKY_BANDS && rgb.length === SKY_BANDS
+        && SKY_BAND_TABLE.every((b, k) => Math.abs(b.tauR - tauR[k]) < 1e-6 && Math.abs(b.haze - haze[k]) < 1e-6 && Math.abs(b.ozone - ozone[k]) < 1e-6
+                                         && b.rgb.every((x, c) => Math.abs(x - rgb[k][c]) < 1e-6)))
+    /* THE OZONE (0.next): 300 Dobson units of it (8.06e18 molecules per cm^2), the Chappuis band's cross-sections at 223 K
+       (Serdyuchenko et al. 2014) averaged over each band: their largest about 4.7e-21 cm^2 near 600 nm, so a depth
+       straight up of about 0.038 there -- and next to nothing at the violet end, a little at the red */
+    const peak = SKY_BAND_TABLE.reduce((a, b) => b.ozone > a.ozone ? b : a)
+    ok(`...the ozone's depth peaking at ${peak.nm.toFixed(0)} nm, ${peak.ozone.toFixed(4)} straight up (0.03-0.045 near 600 nm), under 0.001 at 380 nm`,
+        peak.nm > 560 && peak.nm < 640 && peak.ozone > 0.03 && peak.ozone < 0.045 && ozone[0] < 0.001 && ozone[SKY_BANDS - 1] < 0.01
+        && SKY_BAND_TABLE.every((b, k) => Math.abs(b.ozone - OZONE_SIGMA[k] * OZONE_DU * DOBSON) < 1e-12), JSON.stringify(ozone))
     ok('...the depths Hansen & Travis\'s and Angstrom\'s at the bands\' middles', SKY_BAND_TABLE.every(b => Math.abs(b.tauR - rayleighDepth(b.nm / 1000)) < 1e-12)
         && Math.abs(rayleighDepth(0.55) - 0.0973) < 2e-4 && Math.abs(angstrom(550) - 1) < 1e-12)
     const sum = rgb.reduce((a, b) => a.map((x, c) => x + b[c]), [0, 0, 0])
@@ -170,7 +190,7 @@ const fnText = (text, name) => { const i = text.indexOf(`fn ${name}(`); return i
         const pR = 3 / (16 * Math.PI) * (1 + c * c), pM = (1 - g * g) / (4 * Math.PI * Math.pow(1 + g * g - 2 * g * c, 1.5))
         const up = Math.min(1, Math.max(0, (s[2] + 0.05) / 0.05)), dm = mv - ms, L = [0, 0, 0]
         for (let k = 0; k < SKY_BANDS; k++) {
-            const tr = tauR[k], ta = aerosol * haze[k], tau = tr + ta
+            const tr = tauR[k], ta = aerosol * haze[k], tau = tr + ta + ozone[k]
             const k1 = Math.abs(dm) < 1e-3 ? tau * mv * Math.exp(-tau * mv) : mv * (Math.exp(-tau * ms) - Math.exp(-tau * mv)) / dm
             const v = (tr * pR + 0.9 * ta * pM) / tau * k1 * up
             for (let i = 0; i < 3; i++) L[i] += rgb[k][i] * v
@@ -178,7 +198,7 @@ const fnText = (text, name) => { const i = text.indexOf(`fn ${name}(`); return i
         return L.map(x => Math.max(0, E0 * x))
     }
     const sunAt = (E0, el, turb = 0.7) => { const ms = airMass(Math.sin(el)), L = [0, 0, 0]
-        for (let k = 0; k < SKY_BANDS; k++) { const v = Math.exp(-(tauR[k] + (0.05 + 0.1 * turb) * haze[k]) * ms); for (let i = 0; i < 3; i++) L[i] += rgb[k][i] * v }
+        for (let k = 0; k < SKY_BANDS; k++) { const v = Math.exp(-(tauR[k] + (0.05 + 0.1 * turb) * haze[k] + ozone[k]) * ms); for (let i = 0; i < 3; i++) L[i] += rgb[k][i] * v }
         return L.map(x => E0 * x) }
     const skyLux = el => {
         const s = [0, Math.cos(el), Math.sin(el)], N = 200
@@ -190,19 +210,32 @@ const fnText = (text, name) => { const i = text.indexOf(`fn ${name}(`); return i
         return Math.PI * acc / (N * N)
     }
     const r45 = Math.PI / 4, sun45 = Y(sunAt(128000, r45)), sky45 = skyLux(r45)
+    if (process.env.SKY_NUMBERS) {
+        const cct = v => Math.round(xyToCctDuv(...XYZtoxy(rgbToXYZ(v))).cct)
+        for (const el of [45, 15, 5]) { const e = el * Math.PI / 180, s = [0, Math.cos(e), Math.sin(e)]
+            console.log(`${el} deg: sun ${Math.round(Y(sunAt(128000, e)))} lx ${cct(sunAt(1, e))} K, sky ${Math.round(skyLux(e))} lx, zenith ${cct(sunSky([0, 0, 1], s))} K`) }
+    }
     ok(`at the default sun, a clear day: the sun ${Math.round(sun45)} lx head-on (80-110 klx), the sky ${Math.round(sky45)} lx on the level (10-20 klx)`,
         sun45 > 80000 && sun45 < 110000 && sky45 > 10000 && sky45 < 20000)
     const low = sunAt(128000, 5 * Math.PI / 180), high = sunAt(128000, r45)
     ok('a low sun is dimmer and redder: 5 degrees up, a fifth of the light and blue below red by more',
         Y(low) < Y(high) / 4 && low[2] / low[0] < 0.5 * high[2] / high[0])
     ok('the sun set by more than 3 degrees: no sky', Y(sunSky([0, 0, 1], [0, Math.cos(-0.06), Math.sin(-0.06)])) === 0)
-    // the same model at every nanometre (the CIE's table, 1 nm), the sunlight Planck's at 5778 K: the bands' colours
+    /* the same model at every nanometre (the CIE's table, 1 nm), the sunlight Planck's at 5778 K: the bands' colours. Its
+       ozone the bands' own cross-sections drawn through linearly (the 1 nm table is not kept here): what this holds is
+       the bands' sum against the integral, not the ozone's data */
+    const bandNm = SKY_BAND_TABLE.map(b => b.nm)
+    const sigmaAt = l => {
+        if (l <= bandNm[0]) return OZONE_SIGMA[0]
+        for (let k = 1; k < SKY_BANDS; k++) if (l <= bandNm[k]) { const t = (l - bandNm[k - 1]) / (bandNm[k] - bandNm[k - 1]); return OZONE_SIGMA[k - 1] + t * (OZONE_SIGMA[k] - OZONE_SIGMA[k - 1]) }
+        return OZONE_SIGMA[SKY_BANDS - 1]
+    }
     const C2 = 1.438776877e-2, B = l => { const m = l * 1e-9; return 1 / (m ** 5 * (Math.exp(C2 / (m * 5778)) - 1)) }
     const spectral = (d, s, sunOnly) => {
         const aerosol = 0.12, mv = airMass(d[2]), ms = airMass(s[2]), c = d[0] * s[0] + d[1] * s[1] + d[2] * s[2], g = 0.7
         const pR = 3 / (16 * Math.PI) * (1 + c * c), pM = (1 - g * g) / (4 * Math.PI * Math.pow(1 + g * g - 2 * g * c, 1.5)), dm = mv - ms, X = [0, 0, 0]
         for (let i = 0; i < CIE_N; i++) {
-            const l = CIE_LO + i, tr = rayleighDepth(l / 1000), ta = aerosol * angstrom(l), tau = tr + ta
+            const l = CIE_LO + i, tr = rayleighDepth(l / 1000), ta = aerosol * angstrom(l), tau = tr + ta + sigmaAt(l) * OZONE_DU * DOBSON
             const v = sunOnly ? Math.exp(-tau * ms) : (tr * pR + 0.9 * ta * pM) / tau * (Math.abs(dm) < 1e-3 ? tau * mv * Math.exp(-tau * mv) : mv * (Math.exp(-tau * ms) - Math.exp(-tau * mv)) / dm)
             X[0] += B(l) * v * CIE_X[i]; X[1] += B(l) * v * CIE_Y[i]; X[2] += B(l) * v * CIE_Z[i]
         }
@@ -232,13 +265,16 @@ const fnText = (text, name) => { const i = text.indexOf(`fn ${name}(`); return i
 //----------------------------------------------------------------------------------------------------------------------
 {
     const N = ENV_W * ENV_H
-    const out = new Float32Array(N + ENV_CONE_THREADS)
+    /* FOUR FLOATS A TEXEL AND A CONE THREAD (envmap.js ENV_BAKE_MAIN, 0.next): its luminance, then its R, G and B -- the
+       colours for the view's white balance (core/whitebalance.js levelLight). Here grey: each channel the luminance. */
+    const out = new Float32Array(4 * (N + ENV_CONE_THREADS))
+    const put = (i, y, rgb = [y, y, y]) => { out[4 * i] = y; out.set(rgb, 4 * i + 1) }
     // a dim uniform sky, one bright texel, and a bright band near the horizon
-    out.fill(1, 0, N)
+    for (let i = 0; i < N; i++) put(i, 1)
     const hot = 77 * ENV_W + 300
-    out[hot] = 50000
-    for (let x = 0; x < ENV_W; x++) out[120 * ENV_W + x] = 200
-    for (let t = 0; t < ENV_CONE_THREADS; t++) out[N + t] = 2 * ENV_CONE_EACH     // Y cos of 2 in every cone direction
+    put(hot, 50000)
+    for (let x = 0; x < ENV_W; x++) put(120 * ENV_W + x, 200)
+    for (let t = 0; t < ENV_CONE_THREADS; t++) put(N + t, 2 * ENV_CONE_EACH, [2 * ENV_CONE_EACH, 0, 0])   // Y cos of 2, all red
     const S = envSampling(out, 1e-4)
     const T = S.tex, at = (x, y, c) => T[4 * (y * ENV_W + x) + c]
     // the mirror of envMapSample / envMapPdf
@@ -284,10 +320,14 @@ const fnText = (text, name) => { const i = text.indexOf(`fn ${name}(`); return i
     ok('...every drawn direction a unit vector, and the density read back where it was drawn the texel\'s', mismatch === 0
         && pdf(sample([0.3, 0.7])) > 0)
     // the level's lux: of the uniform part pi; the cone's head-on lux its solid angle times its mean
-    const flat = envSampling(new Float32Array(N + ENV_CONE_THREADS).fill(1, 0, N), 0)
+    const flatOut = new Float32Array(4 * (N + ENV_CONE_THREADS))
+    for (let i = 0; i < N; i++) flatOut.set([1, 1, 0.5, 0.25], 4 * i)
+    const flat = envSampling(flatOut, 0)
     ok(`a uniform sky of 1 cd/m^2 puts pi on the level (${flat.skyHorizontal.toFixed(6)})`, Math.abs(flat.skyHorizontal / Math.PI - 1) < 1e-4)
+    ok('...and its colour, channel by channel', [1, 0.5, 0.25].every((c, i) => Math.abs(flat.skyRGB[i] / (Math.PI * c) - 1) < 1e-4), flat.skyRGB)
     ok('the cone: its solid angle times its mean', Math.abs(S.sunNormal - 1e-4 * 2) < 1e-12, S.sunNormal)
-    ok('a black environment: no light, a uniform map', (b => b.skyHorizontal === 0 && Math.abs(b.tex[1] * 4 * Math.PI - 1) < 1e-6)(envSampling(new Float32Array(N + ENV_CONE_THREADS), 0)))
+    ok('...its colour the same way', Math.abs(S.sunRGB[0] - 1e-4 * 2) < 1e-12 && S.sunRGB[1] === 0 && S.sunRGB[2] === 0, S.sunRGB)
+    ok('a black environment: no light, a uniform map', (b => b.skyHorizontal === 0 && Math.abs(b.tex[1] * 4 * Math.PI - 1) < 1e-6)(envSampling(new Float32Array(4 * (N + ENV_CONE_THREADS)), 0)))
     ok('rows run from straight up to straight down', rowZ(0) > 0.99 && rowZ(ENV_H - 1) < -0.99)
 }
 
@@ -355,6 +395,134 @@ const fnText = (text, name) => { const i = text.indexOf(`fn ${name}(`); return i
     ok('shade, the photons and the map look it up and bind it, with one', [sh, ph, bk].every(k => k.body.includes('fn envImage(dir: VEC3) -> VEC3 {\n') && !k.body.includes(ENV_IMAGE_STUB) && ENV_IMAGE_RESOURCE in k.res))
     ok('...and without, the stub, black, and no binding', shNo.body.includes(ENV_IMAGE_STUB) && !(ENV_IMAGE_RESOURCE in shNo.res))
     ok('the panel shows the image\'s rows for code that reads it', (r => r.image && r.names.has('envImageLuminance') && r.names.has('envImageTurn'))(M.skyReads(d.sky)))
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// THE CODE'S OWN PARAMETERS (0.next; core/environment.js envWithParams, model.js skyParams): names in their slots, the
+// lines and the columns typed kept, refused where they would break, live values in sixteen slots
+//----------------------------------------------------------------------------------------------------------------------
+{
+    const stars = M.SKY_PRESETS.find(p => p.id === 'stars')
+    ok('the stars start with their parameters', stars.params.map(q => q.name).join() === 'starDepth,starZoom,starShift,starLuminance,starPeak')
+    const sub = envWithParams(stars.code, stars.params)
+    const words = t => withoutComments(t)
+    ok('...each name in its slot, three numbers .xyz, none left in the code', stars.params.every((q, i) =>
+        sub.text.includes(`UB.envP${i}.${Array.isArray(q.value) ? 'xyz' : 'x'}`) && !new RegExp(`\\b${q.name}\\b`).test(words(sub.text))))
+    ok('...every line where it was, the comments as typed', sub.text.split('\n').length === stars.code.split('\n').length
+        && /starZoom how far into it/.test(sub.text))
+    const R = replaceWords('let a = b.zoom + zoom(1) + zoom; // zoom\n/* zoom */ x = zoom * 2;', new Map([['zoom', 'UB.envP0.x']]))
+    ok('a member, a call and a comment left alone', R.text === 'let a = b.zoom + zoom(1) + UB.envP0.x; // zoom\n/* zoom */ x = UB.envP0.x * 2;', R.text)
+    // a column after a slot is the one typed: the ';' of the first line
+    const typed = 'let a = b.zoom + zoom(1) + zoom; // zoom'
+    ok('...and a column after it taken back to the one typed', typedColumn(R.text.split('\n')[0].indexOf(';') + 1, R.shifts[0]) === typed.indexOf(';') + 1)
+    // the model
+    const d = scene(stars.code)
+    M.setSkyParams(d, stars.params)
+    ok('set, they are the scene\'s, and the file sound', M.skyParamsOf(d).length === 5 && M.validate(d).length === 0)
+    const back = M.parse(M.serialize(d))
+    ok('...saved and read back', JSON.stringify(M.skyParamsOf(back)) === JSON.stringify(stars.params))
+    for (const [why, list, re] of [
+        ['a name that is no word', [{ name: '2x', value: 1 }], /name must be/],
+        ['twice', [{ name: 'a', value: 1 }, { name: 'a', value: 2 }], /twice/],
+        ['a word the code needs', [{ name: 'dir', value: 1 }], /a word the code needs/],
+        ['a value of two numbers', [{ name: 'a', value: [1, 2] }], /a number or three/],
+        ['min above max', [{ name: 'a', value: 1, min: 2, max: 1 }], /min above max/],
+        ['seventeen', Array.from({ length: 17 }, (_, i) => ({ name: `p${i}`, value: i })), /at most 16/],
+        ['a name the code declares itself', [{ name: 'kaliStars', value: 1 }], /declares it too/],
+    ]) {
+        const was = JSON.stringify(M.skyParamsOf(d))
+        throws(`refused: ${why}`, () => M.setSkyParams(d, list), re)
+        ok(`...and nothing changed`, JSON.stringify(M.skyParamsOf(d)) === was)
+    }
+    M.setSkyParam(d, 'starZoom', 3)
+    ok('one value set by name', M.skyParamsOf(d)[1].value === 3)
+    throws('...a name it has not refused', () => M.setSkyParam(d, 'nope', 1), /no environment parameter/)
+    const U = M.skyParamUniforms(d)
+    ok('the slots: all sixteen, the values in their first one or three, 0 in the rest', Object.keys(U).length === ENV_PARAM_SLOTS
+        && U.envP1.join() === '3,0,0,0' && U.envP2.join() === '0,0,0,0' && U.envP4.join() === '20,0,0,0' && U.envP15.join() === '0,0,0,0')
+    ok('...each a uniform every compute kernel declares', Object.keys(U).every(k => ComputeUniformTypes[k] === 'vec4<f32>'))
+    // codegen: the kernels given the code in its slots, an error after a slot at its own line and column
+    const g = generate(M.toTree(d), { id: 'x' })
+    ok('codegen hands the kernels the code with its slots', g.sky === envWithParams(stars.code, M.skyParamsOf(d)).text && /UB\.envP3\.x/.test(g.sky))
+    const line = stars.code.split('\n').findIndex(l => l.includes('VEC3(starPeak)')) + 1
+    const lines = g.body.split('\n')
+    const gen = lines.findIndex(l => l.includes('VEC3(UB.envP4.x)')) + 1
+    const r = resolve(g.map, gen)
+    const typedLine = stars.code.split('\n')[line - 1], emitted = lines[gen - 1]
+    ok('an error there is #sky\'s, at its line and the column typed', r?.node === M.SKY_ID && r?.line === line
+        && typedColumn(emitted.indexOf(';') + 1, r.shifts) === typedLine.indexOf(';') + 1, JSON.stringify(r))
+    const renamed = generate(M.toTree(Object.assign(scene(stars.code), { skyParams: stars.params.map(q => q.name === 'starZoom' ? { ...q, value: 9 } : q) })), { id: 'x' })
+    ok('a value moved is no compile: the text the same', sceneTextOf(renamed) === sceneTextOf(g))
+    // the registry: a row each, live under the environment's id
+    const entries = sceneParams(d)
+    const e = entries.find(x => x.path === 'scene/environment/param/starShift')
+    ok('the registry has a row each, three numbers three', !!e && e.dims === 3 && entries.some(x => x.path === 'scene/environment/param/starZoom'))
+    const pushed = []
+    const live = sceneParams(d, { live: (id, k) => pushed.push([id, k]) }).find(x => x.path === 'scene/environment/param/starZoom')
+    live.set(4)
+    ok('...set through it, the value the model\'s and pushed live as the environment\'s', M.skyParamsOf(d)[1].value === 4
+        && pushed.length === 1 && pushed[0][0] === M.ENVIRONMENT_ID && pushed[0][1] === 'param/starZoom')
+    ok('...and its path the environment\'s for a live push', JSON.stringify(liveKeyOfPath('scene/environment/param/starZoom')) === JSON.stringify({ id: M.ENVIRONMENT_ID, k: 'param/starZoom' }))
+    M.setAnimated(d, 'scene/environment/param/starZoom', true)
+    ok('...and flagged for the timeline', M.isAnimated(d, 'scene/environment/param/starZoom'))
+    // the kernels: the code in its slots compiled into shade, and the renderer's own copy of a preset the same
+    const WG = { makeCompute: async body => body }
+    const sh = await prog_shade(WG, g, 64)
+    ok('shade holds the code in its slots', sh.includes(g.sky))
+    ok('a preset compiled without the builder: the same text and the preset\'s values', envPresetCompiled('stars').code === envWithParams(stars.code, stars.params).text
+        && envPresetCompiled('stars').uniforms.envP0[0] === 17)
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// THE ENVIRONMENT IN A TEXTURE (0.next; core/envmap.js ENV_CACHE_*): the kernel, and envBase reading it outside the cone
+//----------------------------------------------------------------------------------------------------------------------
+{
+    const WG = { makeCompute: async (body, main, u, res, wg) => ({ body, res }) }
+    const g = generate(M.toTree(scene(M.STARS_TEMPLATE)), { id: 'x' })
+    const c = await prog_envcache(WG, g), sh = await prog_shade(WG, g, 64)
+    ok('the texture\'s kernel runs the code and writes the texture', c.body.includes(M.STARS_TEMPLATE) && 'envCacheOut' in c.res)
+    ok('...shade reads it, binding it', sh.body.includes('fn envCacheAt(dir: VEC3) -> VEC3') && !sh.body.includes(ENV_CACHE_STUB) && ENV_CACHE_RESOURCE in sh.res)
+    ok('...outside the sun\'s cone only, the code inside', /if \(envCacheOn\(\) && !inSunCone\(dir\)\)/.test(sh.body))
+    ok('...and the photons, which start in the cone, the code itself', !(ENV_CACHE_RESOURCE in (await prog_genphotons(WG, 64, g)).res))
+    ok('the widths offered the setting\'s', ENV_CACHE_SIZES.join() === Object.values(UniformSpec.envCacheSize.gui.options).join())
+    // cacheUV's texel centres (rows of equal angle from straight up) land back in their texel
+    const w = 64, h = 32
+    let bad = 0
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        const az = (x + 0.5) / w * 2 * Math.PI, z = Math.cos((y + 0.5) / h * Math.PI), s = Math.sqrt(1 - z * z)
+        const [u, v] = cacheUV([s * Math.cos(az), s * Math.sin(az), z])
+        if (Math.floor(u * w) !== x || Math.floor(v * h) !== y) bad++
+    }
+    ok('a direction\'s place in the texture: each texel\'s middle in that texel', bad === 0, `${bad} off`)
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// THE VIEW'S WHITE BALANCE (0.next; core/whitebalance.js): the identity at D65, a warm light made white, auto from the
+// environment's measure
+//----------------------------------------------------------------------------------------------------------------------
+{
+    const I = viewWhiteMatrix({ whiteK: 6506, whiteTint: 0 })
+    ok('6506 K and tint 0: the identity, exactly', I.every((x, i) => x === IDENTITY4[i]))
+    const mul = (m, c) => [0, 1, 2].map(r => m[r] * c[0] + m[4 + r] * c[1] + m[8 + r] * c[2])
+    // a 3000 K white as linear Rec.709 (Planck's xy, Y 1): balanced to 3000 K it comes out neutral
+    const C2 = 1.438776877e-2, B = (l, T) => { const m = l * 1e-9; return 1 / (m ** 5 * (Math.exp(C2 / (m * T)) - 1)) }
+    const white = T => { const X = [0, 0, 0]; for (let i = 0; i < CIE_N; i++) { const b = B(CIE_LO + i, T); X[0] += b * CIE_X[i]; X[1] += b * CIE_Y[i]; X[2] += b * CIE_Z[i] } return XYZtoRGB(X.map(x => x / X[1])) }
+    const warm = white(3000)
+    // tint 0 is D65's Duv (grade.js WB_DEFAULT, the Darkroom's convention): Planck's own locus is that much below it
+    const onLocus = -WB_DEFAULT.duv * 1000
+    const out = mul(viewWhiteMatrix({ whiteK: 3000, whiteTint: onLocus }), warm)
+    ok(`a 3000 K blackbody balanced at 3000 K on the locus comes out neutral (${out.map(x => x.toFixed(3)).join(', ')})`,
+        Math.max(...out) / Math.min(...out) < 1.01, JSON.stringify(out))
+    // auto: the level's light from the environment's measure
+    const env = { skyRGB: [1000, 1000, 1000], sunRGB: warm.map(x => 50000 * x) }
+    const auto = viewWhite({ whiteAuto: 1, uSunElevation: 30, whiteK: 6506 }, env, true)
+    const lvl = levelLight({ uSunElevation: 30 }, env, true)
+    ok(`auto takes the level's light, the sun's at its elevation: ${auto.temp.toFixed(0)} K (from ${auto.from})`, auto.from === 'environment'
+        && Math.abs(lvl[0] - (1000 + 50000 * warm[0] * 0.5)) < 1e-6 && auto.temp > 3000 && auto.temp < 3600)
+    ok('...without the sun\'s cone, the sky\'s alone', viewWhite({ whiteAuto: 1, uSunElevation: 30 }, env, false).temp > 6000)
+    ok('...nothing measured: the setting', viewWhite({ whiteAuto: 1, whiteK: 5000 }, null).temp === 5000)
+    ok('...a black environment: the setting', viewWhite({ whiteAuto: 1, whiteK: 5000 }, { skyRGB: [0, 0, 0], sunRGB: [0, 0, 0] }, true).from === 'setting')
+    ok('the settings are Exposure\'s', ['whiteK', 'whiteTint', 'whiteAuto'].every(k => k in UniformGroups.Exposure) && UniformSpec.whiteK.def === 6506)
 }
 
 //----------------------------------------------------------------------------------------------------------------------

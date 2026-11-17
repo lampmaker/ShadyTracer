@@ -615,6 +615,53 @@ ok('...and the radius row says so by itself (the panel redrawn), the number kept
     await p.evaluate(() => CHECK.panel.show('root'))
     ok('...and shows it again, not white, once the panel is redrawn', Math.abs(await red() - 0.25) < 0.006, String(await red()))
 }
+/* THE CODE'S OWN PARAMETERS (0.next; model.js skyParams): the stars start with theirs, a row each, live; a number added by
+   name, one renamed in the code too, one taken away -- each the code's text, an undo step and a compile */
+{
+    const answers = []
+    // a prompt answered from the list; a confirm (replacing code of the scene's own) accepted
+    const onDialog = d => d.type() === 'confirm' ? d.accept() : d.accept(answers.shift() ?? '')
+    p.on('dialog', onDialog)
+    const button = title => p.evaluate(title => { const b = [...document.querySelectorAll('button')].find(b => b.textContent.trim() === title); b?.click(); return !!b }, title)
+    ok('choosing the stars', await set('start from', 'stars') === 'set')
+    await p.waitForTimeout(50)
+    const names = () => p.evaluate(() => (CHECK.doc.skyParams ?? []).map(q => q.name).join())
+    ok('...gives the scene their parameters with their code', await names() === 'starDepth,starZoom,starShift,starLuminance,starPeak'
+        && await p.evaluate(() => /\bstarZoom\b/.test(CHECK.doc.sky)))
+    let r = await readRows()
+    // (a three-number row's label cell holds Tweakpane's + as well)
+    ok('...a row each, and the buttons to add one', ['starDepth', 'starZoom', 'starShift', 'starLuminance', 'starPeak', 'rename / remove'].every(l => r.some(x => x.replace(/\+$/, '') === l))
+        && await p.evaluate(() => ['+ number…', '+ colour…'].every(t => [...document.querySelectorAll('button')].some(b => b.textContent.trim() === t))), JSON.stringify(r))
+    const s0 = await state()
+    ok('starZoom typed', await set('starZoom', '3.5') === 'set')
+    const s1 = await state()
+    ok('...the scene holds it, pushed live, one undo step, nothing compiled', await p.evaluate(() => CHECK.doc.skyParams[1].value) === 3.5
+        && s1.live.at(-1) === '#environment.param/starZoom' && s1.commits.at(-1) === 'environment.param.starZoom' && s1.structure === s0.structure,
+        JSON.stringify([s1.live.slice(-2), s1.commits.slice(-2)]))
+    answers.push('twinkle')
+    ok('+ number…', await button('+ number…'))
+    await p.waitForTimeout(50)
+    ok('...asks its name and adds it, at 1', await names() === 'starDepth,starZoom,starShift,starLuminance,starPeak,twinkle'
+        && await p.evaluate(() => CHECK.doc.skyParams.at(-1).value) === 1 && (await readRows()).includes('twinkle'))
+    answers.push('peak')
+    ok('rename starPeak', await set('rename / remove', 'starPeak') === 'set')
+    await p.waitForTimeout(50)
+    ok('...renamed, in the code too', await names() === 'starDepth,starZoom,starShift,starLuminance,peak,twinkle'
+        && await p.evaluate(() => /VEC3\(peak\)/.test(CHECK.doc.sky) && !/\bstarPeak\b/.test(CHECK.doc.sky.replace(/\/\/[^\n]*/g, ''))), await p.evaluate(() => CHECK.doc.sky))
+    answers.push('')
+    ok('take twinkle away', await set('rename / remove', 'twinkle') === 'set')
+    await p.waitForTimeout(50)
+    ok('...gone', await names() === 'starDepth,starZoom,starShift,starLuminance,peak' && !(await readRows()).includes('twinkle'))
+    answers.push('kaliStars')
+    await button('+ number…')
+    await p.waitForTimeout(50)
+    ok('a name the code declares is refused, nothing changed', await names() === 'starDepth,starZoom,starShift,starLuminance,peak')
+    await set('start from', 'sun & sky')
+    await p.waitForTimeout(50)
+    p.off('dialog', onDialog)
+    ok('another start (asked first: the code is the scene\'s own now): its code, and none of the stars\' parameters', await names() === ''
+        && !(await readRows()).includes('starZoom') && await p.evaluate(() => /fn sunSky/.test(CHECK.doc.sky)))
+}
 /* EVERY ROW OF THE SCENE'S PROPERTIES SAYS WHAT IT IS (the user, 2026-10-10: "make sure it has tooltips & explanations"):
    a label with no title, in sun & sky and in the studio, and with a value flagged animated */
 {

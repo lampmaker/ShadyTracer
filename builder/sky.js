@@ -16,6 +16,11 @@
 // kernels that ask the environment for light (scene.sky: shade, the sun's photons, the map), which hold no scene -- so
 // it reaches the prelude's shapes and noise and the environment's settings, never the functions block or a parameter
 // (skyProblems says so before a compile). A change to it compiles those alone; the rest come from the pipeline cache.
+//
+// ITS OWN PARAMETERS (0.next; the user, 2026-11-17: "parameters/uniforms added"): `doc.skyParams`, names the code reads
+// as they are, each a value live in one of the environment's sixteen slots (core/environment.js envWithParams, codegen
+// THE SKY puts them there; model.js setSkyParams). A preset starts with its own: the stars' depth, zoom, shift, luminance
+// and peak.
 //======================================================================================================================
 import { helpersOf, withoutComments } from './helpers.js'
 import { ENV_FN, ENV_PRESETS } from '../lib/pathtracer/core/environment.js'
@@ -27,8 +32,9 @@ export const SKY_ID = '#sky'
 /** The function the block defines (the renderer's environment.js ENV_FN). */
 export const SKY_FN = ENV_FN
 
-/** What the panel offers to start the block from: the renderer's presets, as they are -- { id, label, code, sunHint }. */
-export const SKY_PRESETS = ENV_PRESETS.map(p => ({ id: p.id, label: p.label, code: p.text, sunHint: p.sunHint }))
+/** What the panel offers to start the block from: the renderer's presets, as they are -- { id, label, code, sunHint,
+ *  params }, `params` the parameters the code starts with (model.js setSkyParams). */
+export const SKY_PRESETS = ENV_PRESETS.map(p => ({ id: p.id, label: p.label, code: p.text, sunHint: p.sunHint, params: p.params }))
 /** The sun & sky's text: what a scene without code of its own, in envMode 0, is lit by (the default's own function). */
 export const SKY_TEMPLATE = SKY_PRESETS.find(p => p.id === 'sunsky').code
 /** The studio's: the default in envMode 1. */

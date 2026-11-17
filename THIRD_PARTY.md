@@ -15,7 +15,9 @@ The author's own libraries, separate repositories under MIT and included as git 
 [GUISTUFF](https://github.com/lampmaker/GUISTUFF) (`lib/guistuff/`).
 
 Not code, but owed: the signed distance functions follow
-[Inigo Quilez's articles](https://iquilezles.org/articles/distfunctions/).
+[Inigo Quilez's articles](https://iquilezles.org/articles/distfunctions/). The environment's *stars* preset
+(`lib/pathtracer/core/environment.js`) follows [Star Nest](https://www.shadertoy.com/view/XlfGRj) by Kali, Pablo
+Andrioli -- RIP, you are missed.
 
 **Data under another licence.** The CIE 1931 colour-matching functions, 2° observer, 360-830 nm at 1 nm, that a light
 given by its spectrum is coloured by (`lib/pathtracer/core/spd.js`):

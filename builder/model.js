@@ -178,7 +178,7 @@ export const FORMAT = 'raytracer-scene'
    settings change: `sunOutside`, the sunlight above the air, replaces `sunIlluminance`, the sun's at the ground, and
    `skyIlluminance` goes -- the sky's light follows from the sun's and the air now, it is no longer set; `sunHint` says
    whether light sampling aims at the sun. v30to31: sunOutside = 1.28 x sunIlluminance (128 klx above the air for the
-   old default's 100 klx: the new model's own figure at the default sun is 95 klx), the sky's setting dropped. A
+   old default's 100 klx: the new model's own figure at the default sun is 91 klx), the sky's setting dropped. A
    builder of 30 refuses a file of 31 rather than read its environment without a sun. */
 export const VERSION = 31
 /** The most copies an array has: each is a walk of its children at every step near them, until a BVH can tell which
@@ -209,7 +209,8 @@ import { LIGHT_SHAPES, LIGHT_DEFAULTS, lightOf, lightDefaults, lightProblems, ro
 export { HAZE_PARAMS, HAZE_DEFAULTS, hazeSettings } from './hazebox.js'
 import { HAZE_PARAMS, HAZE_DEFAULTS, hazeProblems, hazeNode } from './hazebox.js'
 import { warpProblems, canWarp } from './warp.js'
-import { skyProblems } from './sky.js'
+import { skyProblems, hasSky } from './sky.js'
+import { envParamProblems, envParamUniforms, ENV_PARAM_SLOTS, replaceWords } from '../lib/pathtracer/core/environment.js'
 export { SKY_TEMPLATE, STUDIO_TEMPLATE, STARS_TEMPLATE, SKY_PRESETS, SKY_FN, SKY_ID, hasSky, skyProblems, skyTextOf, skyReads } from './sky.js'
 export { WARP_TEMPLATE, newWarp, warpStepFor, canWarp } from './warp.js'
 /** The object types that are boxes rather than shapes (a haze box): no material, no code, no join -- a size in their
@@ -2203,6 +2204,32 @@ export function setEnvImage(doc, key) {
     doc.envImage = key
     return doc
 }
+/* THE ENVIRONMENT CODE'S PARAMETERS (0.next, version 31; lib/pathtracer/core/environment.js says what one is): `skyParams`,
+   a list of { name, value, min?, max?, step?, colour? } -- a value a number or three -- in the order of their slots. The
+   code names them as they are; codegen puts them in their slots (THE SKY). A name added, renamed or taken away is the
+   code's text, a compile; a value is live (demo.js liveValue, the environment's `param/<name>`). */
+export { envParamProblems, ENV_PARAM_SLOTS, replaceWords }
+/** The scene's environment parameters, as a list (none: []). */
+export const skyParamsOf = doc => Array.isArray(doc?.skyParams) ? doc.skyParams : []
+/** The scene's parameters set whole -- checked first, against its code, so a refusal changes nothing. [] takes them away. */
+export function setSkyParams(doc, list) {
+    const next = structuredClone(list ?? [])
+    const bad = envParamProblems(next, hasSky(doc.sky) ? doc.sky : null)
+    if (bad.length) throw new ModelError(bad)
+    if (next.length) doc.skyParams = next
+    else delete doc.skyParams
+    return doc
+}
+/** One parameter's value, by its name: a number, or three. */
+export function setSkyParam(doc, name, value) {
+    const list = skyParamsOf(doc)
+    const i = list.findIndex(q => q.name === name)
+    if (i < 0) throw new ModelError(`no environment parameter '${name}'`)
+    return setSkyParams(doc, list.map((q, j) => j === i ? { ...q, value } : q))
+}
+/** The renderer's sixteen slots for the scene's parameters (environment.js envParamUniforms): every slot, 0 where none. */
+export const skyParamUniforms = doc => envParamUniforms(skyParamsOf(doc))
+
 /** The names a slot of material `m` may not take: its parameters', and those its code already has. */
 const mustMaterial = (doc, id) => {
     const m = material(doc, id)
@@ -3042,6 +3069,7 @@ export function toTree(doc, { keepDisabled = false } = {}) {
     root.functions = doc.functions ?? ''
     // ...and the environment's code (builder/sky.js) and its image, for the kernels that ask the environment (codegen.js THE SKY)
     root.sky = doc.sky ?? ''
+    if (skyParamsOf(doc).length) root.skyParams = structuredClone(doc.skyParams)
     if (doc.envImage && root.images?.[doc.envImage]) root.envImage = doc.envImage
     if (warps.length) root.warps = warps
     root.unit = doc.unit ?? 'm'
@@ -3225,6 +3253,7 @@ export function validate(doc) {
     if (!p.length) walk(doc, (n, parent) => { if (parent) p.push(...bindProblems(doc, n, parent)) })
     if (doc.functions !== undefined && typeof doc.functions !== 'string') p.push('functions must be a string of WGSL')
     p.push(...skyProblems(doc.sky, typeof doc.functions === 'string' ? doc.functions : ''))
+    p.push(...envParamProblems(doc.skyParams, typeof doc.sky === 'string' && hasSky(doc.sky) ? doc.sky : null))
     if (doc.envImage !== undefined && !(typeof doc.envImage === 'string' && IMAGE_KEY.test(doc.envImage))) p.push('envImage must be an image\'s key')
     for (const id of seen) if (RESERVED_IDS.includes(id) && id !== doc.root.id) p.push(`'${id}' is a reserved id`)
     return p

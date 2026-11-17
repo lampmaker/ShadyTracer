@@ -318,7 +318,10 @@
         The sky's half is split again: half spread like a cosine, half drawn from a map of where the environment is
         bright (<code>core/envmap.js</code>), so stars or a bright window in a photograph are aimed at too -- the
         environment is code that may put its light anywhere. Not measured yet: what would test it is a starry sky's
-        noise with the map's share at 0 and at its half.</p>
+        noise with the map's share at 0 and at its half. The same file runs the code once into a texture of the whole
+        sky, which every ray then reads, the sun's cone excepted, which still asks the code: a costly environment
+        (the stars' fractal) is paid for once a change rather than at every ray. Not measured either: the user's report
+        that the stars were slow is what it answers.</p>
     </div>
     <div data-claim="code">
       <p><strong>Memory only when used.</strong> The shadow-ray queue is two more ray-sized buffers, about 200 MB at

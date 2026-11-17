@@ -124,7 +124,7 @@
       (<cite data-src="lib/pathtracer/core/uniforms.schema.js" data-sym="sunDiameter:       { type: 'f32', def: 0.53"></cite>).
       ShadyTracer's sun and sky works the first out: the sunlight above the air, 128,000 lux
       (<cite data-src="lib/pathtracer/core/uniforms.schema.js" data-sym="sunOutside:        { type: 'f32', def: 128000"></cite>),
-      less what the air takes on the way down -- about 95,000 lux with the sun 45° up.
+      less what the air (and the ozone high in it) takes on the way down -- about 91,000 lux with the sun 45° up.
       Its luminance follows from those two: <var>E</var> = π<var>L</var> sin² α (section 1: the disc's shadow on the
       floor's unit disc is a circle of radius sin α), with α half of 0.53°, 0.00463 radians (an angle measured as the arc it cuts from a circle of radius 1: 180° is π), gives <var>L</var> = 1.488
       billion cd/m². The figure draws the disc at its true size over

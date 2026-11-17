@@ -137,6 +137,10 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
     const sync = () => {
         const scene = build()
         if (RT.scene?.id !== 'built' || scene.wgsl !== RT.scene.wgsl) return 'structural'
+        /* ...nor its environment's code or picture (codegen.js THE SKY): `wgsl` stops before the code, which the kernels
+           asking the environment are handed apart -- so an undone edit of it, or of a parameter's name, was taken for a
+           value and the kernels kept the code undone */
+        if ((scene.sky ?? null) !== (RT.scene.sky ?? null) || (scene.envImage?.key ?? null) !== (RT.scene.envImage?.key ?? null)) return 'structural'
         /* A SCENE SHOWN AS DATA: undoing a node added, moved or deleted is the same text and other records -- written,
            with the values, by the engine (updateSceneData); refused, it is a compile */
         if (RT.scene.writeData) {
@@ -429,9 +433,16 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
        not what the scene shown before had (an example names three settings). A scene without one leaves the
        renderer's as they were. */
     const pushEnvironment = () => {
+        if (current !== shown) return
         const env = M.environmentOf(doc())
-        if (env && current === shown) RT.set(env)
+        if (env) RT.set(env)
+        /* ...and its code's parameters (0.next; model.js skyParams), every slot: a scene without leaves none of the one
+           shown before. Only when they differ from what was pushed (the renderer starts them at 0): a scene with none
+           sets nothing, as before them */
+        const slots = M.skyParamUniforms(doc()), sig = JSON.stringify(slots)
+        if (sig !== slotsPushed) { RT.set(slots); slotsPushed = sig }
     }
+    let slotsPushed = JSON.stringify(M.skyParamUniforms({}))
     /* THE HAZE BOX (hazebox.js; the renderer's core/haze.js), from the document, after any live value -- its own, or a
        group's above it, which moves it -- into the scene the engine holds (RT.updateScene): uniforms, no compile.
        Whether, and taken: true when there is nothing to change. Only for a scene shown with one: whether there is one is
@@ -903,6 +914,12 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
             if (current !== shown) return false      // its uniforms are not the ones compiled
             // the environment's settings are the renderer's own, not the scene's uniforms
             if (id === M.ENVIRONMENT_ID) {
+                // a parameter of its code (model.js skyParams): its slots, all of them (a value moves no slot)
+                if (k.startsWith('param/')) {
+                    const slots = M.skyParamUniforms(doc)
+                    slotsPushed = JSON.stringify(slots)
+                    return RT.set(slots).length === 0
+                }
                 const env = doc.environment
                 return !!env && k in env && RT.set({ [k]: structuredClone(env[k]) }).length === 0
             }

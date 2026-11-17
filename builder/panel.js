@@ -92,6 +92,11 @@ export const ENVIRONMENT_HELP = {
         + '.hdr (its own lm/W: the file then gives its real luminance); a photograph is set to a daylight sky\'s 5000 at its '
         + 'white when loaded -- set it by eye, or to what a light meter read there.',
     envImageTurn: 'The image turned about the vertical, in degrees, anticlockwise seen from above: where its middle faces.',
+    envCache: 'On: the environment\'s code is run once a change, into a texture every ray reads -- fast, whatever the code costs '
+        + '(a fractal of stars is slow). The sun\'s cone is still the code\'s own, exact. Off: the code for every ray. Detail finer '
+        + 'than the texture\'s pixels is averaged.',
+    envCacheSize: 'The texture\'s width in pixels (its height half that): 2048 is 0.18 degree a pixel. 4096 keeps finer detail '
+        + '(small stars) and takes 128 MB of the graphics card\'s memory.',
 }
 
 /* THE VIEW'S ROWS' TOOLTIPS (0.66.0): the scene row's camera and exposure folders, the popovers' fields */
@@ -112,6 +117,12 @@ export const CAMERA_HELP = {
         + 'field of view. A track on it keys all of them at once. Flag it with \u25C7 to keep it offered while only animated values are.',
 }
 export const EXPOSURE_HELP = {
+    whiteK: 'The white balance: the colour of light that should look white, as a camera\'s, in kelvin. 6506 is the screen\'s own white '
+        + '(D65): no change. Daylight is about 5500, a sunlit white wall under the default sun and sky about 5200, a halogen lamp '
+        + '3000. Only the picture shown changes: the light, the readings and the false-colour views do not.',
+    whiteTint: 'The white balance\'s tint, green to magenta: the white\'s distance from the blackbody line, in thousandths (Duv x 1000).',
+    whiteAuto: 'On: the white is what the environment puts on a level white surface -- the sun\'s light and the sky\'s together, as a '
+        + 'camera\'s auto white balance takes a grey card lying in the open. The lamps are not counted. Off: the two rows above.',
     exposureEV: 'The exposure when auto exposure is off, as a camera\'s EV at ISO 100: 15 is a sunlit scene, 12 overcast, 7 an office, 2 a candle-lit room.',
     autoExposure: 'On: the picture is metered as it builds up, as a camera\'s meter would. Off: the EV above.',
     exposureComp: 'Auto exposure\'s correction, in stops: + brighter, - darker.',
@@ -1031,14 +1042,16 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
         const sunRows = (now('sunHint') | 0) !== 0 || reads.sun
         for (const [k, sp] of Object.entries(M.ENVIRONMENT)) {
             // envMode is the default's switch, made by a start below; a row the code does not read is no row
-            const shown = k === 'sunHint' || (SUN_ROWS.includes(k) ? sunRows : k !== 'envMode' && reads.names.has(k))
+            // ...and the texture the code is run into (core/envmap.js), whatever the code: how it is drawn, not what
+            const shown = k === 'sunHint' || k === 'envCache' || (k === 'envCacheSize' ? (now('envCache') | 0) === 1
+                : SUN_ROWS.includes(k) ? sunRows : k !== 'envMode' && reads.names.has(k))
             if (!shown) continue
             const { showIf, ...gui } = sp.gui
             const vec = String(sp.type).startsWith('vec3')
             const put = x => {
                 if (!A.environment(doc, k, vec ? { r: +x.r, g: +x.g, b: +x.b } : x, {}, base)) return
                 said(`scene/environment/${k}`)
-                if (k === 'sunHint') setTimeout(() => { if (shownId === doc.root.id) show(shownId) })
+                if (k === 'sunHint' || k === 'envCache') setTimeout(() => { if (shownId === doc.root.id) show(shownId) })
             }
             /* A COLOUR IS BOUND TO AN OBJECT THAT STAYS, and written on 'change' -- as a light's colour is. Tweakpane sets
                an object colour's r, g and b on the object the binding reads, and never assigns it: through a getter
@@ -1100,6 +1113,9 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
                 if (own && !globalThis.confirm?.(`Replace your environment code with "${p.label}"? (Undo brings it back.)`)) return again()
                 const start = () => {
                     BUILDER.doc.sky = p.code
+                    // ...with the parameters it reads (the stars' depth, zoom ...), in place of any the code before had
+                    if (p.params?.length) BUILDER.doc.skyParams = structuredClone(p.params)
+                    else delete BUILDER.doc.skyParams
                     env('envMode', 2)
                     env('sunHint', p.sunHint)
                     edited(null)
@@ -1120,7 +1136,70 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
         codeEditor(folder, holder, { kind: 'sky', title: 'environment code', owner: doc.root.id,
             names: `fn ${M.SKY_FN}(dir: VEC3) -> VEC3: the luminance, cd/m², seen in direction dir (a unit vector, z up), and the `
                 + 'light the environment casts; sunDirection(), inSunDisc(dir), UB.<setting> and the prelude\'s shapes and noise -- '
-                + 'not the functions block or the scene\'s parameters' })
+                + 'not the functions block or the scene\'s parameters; its own parameters by name (the rows below)' })
+        skyParamRows(folder, doc)
+    }
+
+    /* THE CODE'S OWN PARAMETERS (0.next; model.js skyParams, core/environment.js ENV_PARAM_SLOTS): a row each, live (makeAfter
+       skyParam), flagged for the timeline as any value; then a number or a colour added by name, and one renamed -- in
+       the code too, where it is a word of it -- or taken away. Those three are the code's text: an undo step and a
+       compile. At most sixteen, the environment's slots. */
+    function skyParamRows(folder, doc) {
+        const list = M.skyParamsOf(BUILDER.doc)
+        const again = () => setTimeout(() => { if (shownId === doc.root.id) show(shownId) })
+        const structure = (next, code = BUILDER.doc.sky) => {
+            const was = { sky: BUILDER.doc.sky, params: BUILDER.doc.skyParams }
+            BUILDER.doc.sky = code
+            try { M.setSkyParams(BUILDER.doc, next) } catch (e) {
+                BUILDER.doc.sky = was.sky
+                if (was.params) BUILDER.doc.skyParams = was.params; else delete BUILDER.doc.skyParams
+                console.warn('[builder]', e.message); globalThis.alert?.(String(e.message)); return
+            }
+            edited(null); onApply(); again()
+        }
+        const own = M.hasSky(BUILDER.doc.sky)
+        if (list.length) folder.addBlade({ view: 'separator' })
+        for (const q of list) {
+            const path = `scene/environment/param/${q.name}`
+            const put = v => { if (A.skyParam(BUILDER.doc, q.name, v)) said(path) }
+            let b
+            if (Array.isArray(q.value)) {
+                const [x, y, z] = q.value
+                const H = { v: q.colour ? { r: x, g: y, b: z } : { x, y, z } }
+                b = folder.addBinding(H, 'v', { label: q.name, ...(q.colour ? { color: { type: 'float' } } : {}), ...(q.step ? { x: { step: q.step }, y: { step: q.step }, z: { step: q.step } } : {}) })
+                b.on('change', () => put(q.colour ? [+H.v.r, +H.v.g, +H.v.b] : [+H.v.x, +H.v.y, +H.v.z]))
+            } else {
+                const H = { get v() { return M.skyParamsOf(BUILDER.doc).find(x => x.name === q.name)?.value ?? q.value }, set v(x) { put(+x) } }
+                b = folder.addBinding(H, 'v', { label: q.name, ...(q.min !== undefined ? { min: q.min } : {}), ...(q.max !== undefined ? { max: q.max } : {}), ...(q.step ? { step: q.step } : {}) })
+            }
+            rowTip(b, `A parameter of the environment's code: written ${q.name} in it, moved live (no compile). `
+                + 'The texture the environment is drawn from is made again as it moves.')
+            flagRow(b, path)
+        }
+        // adding one needs code of the scene's own to read it: the default's text is no one's to change by a parameter
+        if (!own) return
+        const ask = (what, then) => {
+            const name = globalThis.prompt?.(`The new ${what}'s name, as the code will read it:`)
+            if (name == null || !name.trim()) return
+            then(name.trim())
+        }
+        if (list.length < M.ENV_PARAM_SLOTS) {
+            folder.addButton({ title: '+ number…' }).on('click', () => ask('number', name => structure([...list, { name, value: 1 }])))
+            folder.addButton({ title: '+ colour…' }).on('click', () => ask('colour', name => structure([...list, { name, value: [1, 1, 1], colour: true }])))
+        }
+        if (!list.length) return
+        const pick = { which: '' }
+        rowTip(folder.addBinding(pick, 'which', { label: 'rename / remove', options: { 'choose…': '', ...Object.fromEntries(list.map(q => [q.name, q.name])) } }),
+            'Renames a parameter, in the code too where it is a word of it, or takes it away (an empty name). A compile.')
+            .on('change', ev => {
+                const q = list.find(x => x.name === ev.value)
+                if (!q) return
+                const to = globalThis.prompt?.(`Rename '${q.name}' to (empty takes it away; the code then no longer has it):`, q.name)
+                if (to == null || to.trim() === q.name) return again()
+                const name = to.trim()
+                if (!name) return structure(list.filter(x => x !== q))
+                structure(list.map(x => x === q ? { ...x, name } : x), M.replaceWords(BUILDER.doc.sky, new Map([[q.name, name]])).text)
+            })
     }
 
 

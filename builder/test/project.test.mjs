@@ -528,6 +528,57 @@ ${m}`, module: { getCompilationInfo: async () => ({ messages: [] }) }, ready: Pr
     eq('a radius set during a compile ends up in the scene that compiled', got.replayed, 7)
 }
 {
+    /* THE ENVIRONMENT'S CODE UNDONE IS A COMPILE (0.next; demo.js sync): the scene's `wgsl` stops before the code, which
+       the kernels asking the environment are handed apart (codegen.js THE SKY), so sync compared only `wgsl` and took an
+       undone code edit for a value -- the kernels kept the code undone. And a parameter of the code (model.js skyParams)
+       moved live into its slot, no compile. Over a stand-in renderer as above. */
+    const { installBuilder } = await import('../demo.js')
+    const state = {}
+    let compiles = 0
+    const RT = {
+        scene: null,
+        set(values) { for (const [k, v] of Object.entries(values)) state[k] = structuredClone(v); return [] },
+        get: () => structuredClone(state),
+        settings: () => ({}), applySettings: () => [],
+        updateScene() { return [] },
+        async setScene(s) { compiles++; RT.scene = s; return 1 },
+    }
+    const gpu = { makeCompute: (b, m) => ({ wgsl: `${b}
+${m}`, module: { getCompilationInfo: async () => ({ messages: [] }) }, ready: Promise.resolve() }), makeShader: () => ({ getCompilationInfo: async () => ({ messages: [] }) }) }
+    const got = {}
+    const log = console.log; console.log = () => { }
+    try {
+        const d0 = P.blankScene('S')
+        M.addObject(d0, 'root', { id: 'ball', primitive: 'sphere' })
+        const B = installBuilder({}, { RT, gpu, project: P.createProject([d0]) })
+        await B.apply()
+        const stars = M.SKY_PRESETS.find(p => p.id === 'stars')
+        B.doc.sky = stars.code
+        M.setSkyParams(B.doc, stars.params)
+        B.commit(null)
+        await B.apply()
+        got.withCode = [RT.scene.sky?.includes('UB.envP1.x'), state.envP1?.[0]]
+        M.setSkyParam(B.doc, 'starZoom', 5)
+        const before = compiles
+        got.live = [B.live(M.ENVIRONMENT_ID, 'param/starZoom'), state.envP1?.[0], compiles === before]
+        B.commit('environment.param.starZoom')
+        B.doc.sky = stars.code.replace('return stars(dir);', 'return 0.5 * stars(dir);')
+        B.commit(null)
+        await B.apply()
+        got.edited = RT.scene.sky.includes('0.5 * stars')
+        got.sync = B.undo()
+        await B.apply()                       // what the host does with 'structural'
+        got.undoneCode = !RT.scene.sky.includes('0.5 * stars')
+        got.valueUndo = B.undo()
+        got.zoomBack = state.envP1?.[0]
+    } finally { console.log = log }
+    eq('a scene with the stars: the kernels given the code in its slots, the slots pushed', got.withCode, [true, 2])
+    eq('a parameter moved live: its slot, no compile', got.live, [true, 5, true])
+    ok('an edited code compiled', got.edited)
+    eq('...and its undo a compile, not a value: the code before it back in the kernels', [got.sync, got.undoneCode], ['structural', true])
+    eq('...and a value undone live, back in its slot', [got.valueUndo, got.zoomBack], ['live', 2])
+}
+{
     /* A LIVE VALUE SET WHILE A COMPILE RUNS IS NOT LOST (the user, 2026-10-01: an own blend ticked on "does not
        get applied until I set it to some value and then back to 0"). A compile's uniforms are the document's
        when it began, and the renderer swaps them in only when it ends (lib/pathtracer/index.js setScene,

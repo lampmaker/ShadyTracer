@@ -12,11 +12,13 @@ from** puts in one of four, each the renderer's own text, to read and change:
 - **Sun & sky**: daylight, physically. Sunlight of **Sun above the air** lux (128 000 is the real sun's) comes down
   through the air and its haze (**Sky Turbidity**) and is scattered once on the way: the disc is what gets through,
   and the sky is what is scattered towards you. The sun is placed by its azimuth (a compass bearing: 0 towards +y,
-  90 towards +x) and its elevation. With the sun 45° up it gives about 95 000 lux from the sun and 12 000 from the
-  sky; a low sun is dimmer and redder, and the sky darker.
+  90 towards +x) and its elevation. The ozone high up takes some orange out. With the sun 45° up it gives about
+  91 000 lux from the sun and 11 500 from the sky, the sun about 5000 K; a low sun is dimmer and redder, and the sky
+  darker. Sunlight is warmer than the screen's white: for a white sunlit floor, tick **White from the environment** (below).
 - **Studio**: an even light from every direction, brighter from above by a share you set. There is no sun and no
   hard shadow, which is good for showing an object as it is. Its level is in lux, and its colour is a tint.
-- **Stars**: a fractal night sky. Turn the exposure up, or leave auto exposure on.
+- **Stars**: a fractal night sky, after Star Nest by Kali (Pablo Andrioli). Its depth, zoom, shift, brightness and
+  peak are parameters (below). Turn the exposure up, or leave auto exposure on.
 - **Image…**: a panorama of the surroundings, as CAD and render programs light with: a Radiance `.hdr`, or a PNG,
   JPEG or WebP, 360° across and 180° up (equirectangular). It is kept in the scene's file. **Image (cd/m² at 1.0)**
   sets its brightness: 179 for a calibrated `.hdr` (Radiance's own lumens per watt), and a daylight sky's 5000 at a
@@ -32,6 +34,16 @@ The code can call `sunDirection()`, `inSunDisc(dir)`, `envImage(dir)`, `UB.` and
 and the functions of Help › Reference › Functions for code (noise among them). It cannot reach the scene's functions
 block or its parameters: it is compiled into the kernels that hold no scene. A change to it is a compile of those
 alone; every row is live.
+
+**Parameters of its own**: **+ number…** and **+ colour…** under the box add a value the code reads by its name, as
+`starZoom` in the stars. A row each, live: moving one changes the picture without a compile, and its **◇** flags it
+for the [Timeline](cmd:view.tools.timeline). **rename / remove** renames one, in the code too, or takes it away with
+an empty name. Up to 16; a name the code declares itself (a `let`, a function's argument) is refused.
+
+**Environment from a texture** (on by default) runs the code once after each change into a picture of the whole sky,
+**Texture width** pixels across, and every ray reads that instead of running the code. A heavy code, such as the
+stars, then costs a short pause after a change rather than slowing every frame. The sun's disc is still asked of the
+code, so it stays sharp. Turn it off for detail finer than the texture.
 
 Every setting has a tooltip. The scene's **environment radius** sits next to them: how far the scene reaches. Anything
 beyond it is not drawn, and a ray that passes it sees the environment. Keep it larger than everything in the scene.
@@ -64,6 +76,12 @@ Light is in real units, so a room is hundreds of times darker than a sunny stree
 does. **◐** in the view's toolbar has the **exposure**: metered automatically by default, with a compensation, or set
 by hand in EV. The **tone curve** turns the light into the picture's colours: PBR Neutral by default, or AgX, ACES,
 Reinhard, Hable, clip.
+
+**White balance (K)** and **White tint** in the same popover say which light should look white, as on a camera: a
+temperature in kelvin and a tint (green to magenta). 6506 K and tint 0 is the screen's own white, D65, and changes
+nothing. With **White from the environment** ticked, the white is what the environment puts on a level white surface, the sun's and the sky's light together, so
+a sunlit white floor looks white at any sun height. It changes only what you see: the light in the picture, readings
+in lux and cd/m², and the false-colour views are untouched.
 
 The exposure belongs to the scene, as the camera does (below): a sunlit street and a dim room in one project each keep
 their own.

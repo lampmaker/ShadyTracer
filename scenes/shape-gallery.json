@@ -1031,7 +1031,9 @@
     "sunOutside": 128000,
     "uSkyTurbidity": 0.7,
     "envImageLuminance": 179,
-    "envImageTurn": 0
+    "envImageTurn": 0,
+    "envCache": 1,
+    "envCacheSize": 2048
   },
   "view": {
     "camera": {
@@ -1056,6 +1058,9 @@
       "focus": 0
     },
     "exposure": {
+      "whiteK": 6506,
+      "whiteTint": 0,
+      "whiteAuto": 0,
       "exposureEV": 15,
       "autoExposure": 1,
       "exposureComp": 0,
