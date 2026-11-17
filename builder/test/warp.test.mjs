@@ -36,7 +36,7 @@ const WARP_LIB_MARK = "THE RAY WARPS' OWN"
     const d = M.createDoc()
     M.addObject(d, 'root', { id: 'ball', primitive: 'sphere' })
     M.addLight(d, 'root', { id: 'lamp', shape: 'disc' })
-    ok('the model is version 30', M.VERSION === 30)
+    ok('the model is version 30 or later', M.VERSION >= 30)
     ok('an object can carry a warp, a light cannot', M.canWarp(M.find(d, 'ball').node) && !M.canWarp(M.find(d, 'lamp').node))
     M.setWarp(d, 'ball', M.newWarp(0.02))
     eq('a new warp is the template, not drawn, with its step', M.find(d, 'ball').node.warp, { code: WARP_TEMPLATE, draw: false, step: 0.02 })
@@ -52,7 +52,7 @@ const WARP_LIB_MARK = "THE RAY WARPS' OWN"
     eq('saved and read back whole', back.root.children[0].warp, M.find(d, 'ball').node.warp)
     const old = JSON.parse(M.serialize(d)); delete old.root.children[0].warp; old.version = 29
     const up = M.parse(JSON.stringify(old))
-    ok('a file of 29 is read, with no warp', up.version === 30 && !up.root.children[0].warp && M.validate(up).length === 0)
+    ok('a file of 29 is read, with no warp', up.version === M.VERSION && !up.root.children[0].warp && M.validate(up).length === 0)
     M.setWarp(d, 'ball', null)
     ok('taken away', !('warp' in M.find(d, 'ball').node))
     ok('the step to start with: a fiftieth of the size, a twentieth of a unit when nothing is known', warpStepFor(100) === 2 && warpStepFor(null) === 0.05 && warpStepFor(0) === 0.05)

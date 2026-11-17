@@ -1,6 +1,6 @@
 {
   "format": "raytracer-scene",
-  "version": 30,
+  "version": 31,
   "app": "0.40.0+7820558",
   "title": "Prism",
   "nextId": 19,
@@ -364,12 +364,11 @@
       "b": 1
     },
     "studioTop": 0.5,
-    "sunIlluminance": 100000,
     "sunDiameter": 0.53,
-    "skyIlluminance": 15000,
     "uSunAzimuth": 45,
     "uSunElevation": 45,
-    "uSkyTurbidity": 0.7
+    "uSkyTurbidity": 0.7,
+    "sunOutside": 128000
   },
   "blocks": [
     {

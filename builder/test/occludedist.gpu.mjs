@@ -343,8 +343,8 @@ await emitterRays('glowing panels by hand, in a haze box', panels('od-panels-haz
 const W = 32, H = 24, SAMPLES = 6
 const target = WG.device.createTexture({ size: [W, H], format: WG.format, usage: GPUTextureUsage.RENDER_ATTACHMENT }).createView()
 const bagFor = (scene, cam, { cull = {}, ...over } = {}) => {
-    const v = { ...U.defaultUniformValues(), envMode: 0, uSunElevation: 50, uSunAzimuth: 30, sunDiameter: 0.53, sunIlluminance: 100000,
-                skyIlluminance: 20000, nee: 1, lt: 1, ltPhotons: 1, ltLearn: 0, maxbounce: 8, rr: 0, fireflyClamp: 0,
+    const v = { ...U.defaultUniformValues(), envMode: 0, uSunElevation: 50, uSunAzimuth: 30, sunDiameter: 0.53,
+                 nee: 1, lt: 1, ltPhotons: 1, ltLearn: 0, maxbounce: 8, rr: 0, fireflyClamp: 0,
                 maxaverages: 0, autoExposure: 0, sppm: 0, ...over }
     const traced = effective(v)
     const derived = derive(traced, { unit: scene.unit, extent: scene.extent, envRadius: scene.envRadius, haze: scene.haze })

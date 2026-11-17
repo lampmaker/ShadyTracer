@@ -629,8 +629,9 @@ for (const [name, { mod }] of modules) {
     ok('ch.5: rho E / pi gives the expected column of the measured floor rows, which TESTING.md records with them', want3.every(([m, h, x]) => P.floorL(h, 0.8, m !== 'sky', m !== 'sun').toFixed(1) === x)
         && P.MEASURED.every(([, , v]) => T.includes(`| ${v.toFixed(1)} |`)), want3.map(([m, h]) => P.floorL(h, 0.8, m !== 'sky', m !== 'sun').toFixed(1)).join(' '))
     const tests = readFileSync(join(REPO, 'lib/pathtracer/tests.js'), 'utf8'), sch = readFileSync(join(REPO, 'lib/pathtracer/core/uniforms.schema.js'), 'utf8')
-    ok('ch.5: the figures\' 100,000 and 15,000 lux and albedo 0.8 are the renderer\'s defaults and the test\'s floor', P.SUN_E === +/sunIlluminance:\s*\{ type: 'f32', def: (\d+)/.exec(sch)[1]
-        && P.SKY_E === +/skyIlluminance:\s*\{ type: 'f32', def: (\d+)/.exec(sch)[1] && /const FLOOR_ALBEDO = 0\.8\b/.test(tests))
+    ok('ch.5: the figures\' 100,000 and 15,000 lux are the third run\'s, the sun 0.53 degrees and 128,000 lux above the air the renderer\'s defaults, albedo 0.8 the test\'s floor',
+        P.SUN_E === 100000 && P.SKY_E === 15000 && /sunDiameter:\s*\{ type: 'f32', def: 0\.53\b/.test(sch)
+        && /sunOutside:\s*\{ type: 'f32', def: 128000\b/.test(sch) && /const FLOOR_ALBEDO = 0\.8\b/.test(tests))
 }
 
 {
@@ -1041,8 +1042,8 @@ for (const [name, { mod }] of modules) {
     ok('ch.21: kit/gpu.js lays out a struct as tinywebgpu does: the small one in both orders, every type, and ShadyTracer\'s UB', agree(Gc.SMALL) && agree(Gc.SMALL_BAD) && agree(Gc.ENGINE_UB)
         && agree([['a', 'f32'], ['m3', 'mat3x3<f32>'], ['b', 'u32'], ['v2', 'vec2<i32>'], ['m2', 'mat2x2<f32>'], ['c', 'f32'], ['m4', 'mat4x4<f32>'], ['v3', 'vec3<u32>'], ['d', 'i32']]))
     const L1 = K.layoutStruct(Gc.SMALL), L2 = K.layoutStruct(Gc.SMALL_BAD), L3 = K.layoutStruct(Gc.ENGINE_UB)
-    ok('ch.21: the page\'s structs: 64 bytes (8 padding), 80 (24), and UB 110 fields in 784 bytes (48)', L1.bytes === 64 && 4 * L1.padWords === 8 && L2.bytes === 80 && 4 * L2.padWords === 24
-        && L3.fields.length === 110 && L3.bytes === 784 && 4 * L3.padWords === 48, `${L3.fields.length} ${L3.bytes} ${4 * L3.padWords}`)
+    ok('ch.21: the page\'s structs: 64 bytes (8 padding), 80 (24), and UB 138 fields in 1120 bytes (28)', L1.bytes === 64 && 4 * L1.padWords === 8 && L2.bytes === 80 && 4 * L2.padWords === 24
+        && L3.fields.length === 138 && L3.bytes === 1120 && 4 * L3.padWords === 28, `${L3.fields.length} ${L3.bytes} ${4 * L3.padWords}`)
     // lock-step: a group is as long as its slowest lane
     const ls = K.lockstep([1, 5, 2, 2, 3, 3], 2)
     ok('ch.21: lockstep: groups as long as their slowest lane', ls.time === 2 * (5 + 2 + 3) && ls.work === 16 && Math.abs(ls.use - 0.8) < 1e-12)

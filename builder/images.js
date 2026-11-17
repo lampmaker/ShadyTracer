@@ -20,6 +20,8 @@
 // emitter's glow -- at most one slot a material; 'none' leaves it to the code.
 //======================================================================================================================
 import { PROJECTIONS, WRAPS, FILTERS, FACES, USES, SLOT_DEFAULTS, IMAGE_MAX_EDGE, IMAGE_RESOURCE, heightStats, pack16 } from '../lib/pathtracer/core/images.js'
+import { parseHDR, linearFromSRGB } from '../lib/pathtracer/core/envimage.js'
+import { makeHDR } from '../lib/pathtracer/darkroom/export/hdr.js'
 
 export { SLOT_DEFAULTS, PROJECTIONS, WRAPS, FILTERS, FACES, USES, IMAGE_MAX_EDGE }
 
@@ -40,8 +42,12 @@ export const SLOT_HELP = {
     sharpness: 'Triplanar only: how quickly the three projections hand over where the surface turns, 1 to 64.',
 }
 
-/** The image types a scene keeps: what every browser decodes. */
-export const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp']
+/** The image types a scene keeps: what every browser decodes -- and a Radiance .hdr (0.next), this repository's own
+ *  reader's (core/envimage.js parseHDR), for an image of the environment: light, not a colour, so no material's texture. */
+export const HDR_TYPE = 'image/vnd.radiance'
+/** ...of which a material's texture may be these: a .hdr is the environment's alone (its atlas is 8 bits a channel). */
+export const TEXTURE_TYPES = ['image/png', 'image/jpeg', 'image/webp']
+export const IMAGE_TYPES = [...TEXTURE_TYPES, HDR_TYPE]
 /** The prefix of a slot's key and uniform; a material's own parameter may not start with it (model.js). */
 export const SLOT_PREFIX = 'img_'
 /** A slot's key, as the panel and the builder's live() name it: its uniform is codegen's uniformName(material, key). */
@@ -120,10 +126,12 @@ export function slotsProblems(m, taken = []) {
     return p
 }
 
-/** The keys of the pictures a scene's materials use, in the order first used. */
+/** The keys of the pictures a scene's materials use, in the order first used -- and its environment's image (0.next,
+ *  doc.envImage; core/envimage.js), so a file keeps it. */
 export function usedImages(doc) {
     const out = []
     for (const m of doc?.materials ?? []) for (const s of m.images ?? []) if (!out.includes(s.image)) out.push(s.image)
+    if (typeof doc?.envImage === 'string' && !out.includes(doc.envImage)) out.push(doc.envImage)
     return out
 }
 
@@ -261,9 +269,15 @@ export async function withHeights(entry) {
  * or WebP the browser can decode.
  */
 export async function imageFromFile(file) {
-    const type = IMAGE_TYPES.includes(file.type) ? file.type : null
     const name = String(file.name ?? 'image')
-    if (!type) throw new Error(`'${file.name ?? 'the file'}' is not a PNG, JPEG or WebP image${file.type ? ` (it is ${file.type})` : ''}`)
+    // a Radiance .hdr, which browsers name no type: told by its name or its first bytes
+    const hdrByName = file.type === HDR_TYPE || /\.(hdr|rgbe)$/i.test(name)
+    if (hdrByName || !file.type) {
+        const bytes = new Uint8Array(await file.arrayBuffer())
+        if (hdrByName || /^#\?(RADIANCE|RGBE)/.test(String.fromCharCode(...bytes.subarray(0, 10)))) return hdrFromBytes(bytes, name)
+    }
+    const type = TEXTURE_TYPES.includes(file.type) ? file.type : null
+    if (!type) throw new Error(`'${file.name ?? 'the file'}' is not a PNG, JPEG or WebP image (nor, for the environment, a Radiance .hdr)${file.type ? ` (it is ${file.type})` : ''}`)
     const bytes = new Uint8Array(await file.arrayBuffer())
     const info = type === 'image/png' ? pngInfo(bytes) : null
     if (isDeepGrey(info)) {
@@ -301,6 +315,36 @@ export async function imageFromFile(file) {
     // the bound from the bytes kept, as the atlas will be given them (a JPEG re-encoded is not the canvas drawn)
     await withHeights(got.entry)
     return { ...got, scaled: { width, height } }
+}
+
+/**
+ * A Radiance .hdr's bytes as a picture: { key, entry, scaled }, as imageFromFile gives one. Read here (parseHDR) to know
+ * its size and that it reads; wider than IMAGE_MAX_EDGE (or taller) it is box-filtered down by a whole factor and written
+ * again (the darkroom's writer, makeHDR), so the file it travels in stays a size a scene can hold. Throws, saying why, for
+ * a file that does not read.
+ */
+export async function hdrFromBytes(bytes, name = 'image.hdr') {
+    let pic
+    try { pic = parseHDR(bytes) } catch (e) { throw new Error(`'${name}' could not be read as a Radiance HDR: ${e?.message ?? e}`) }
+    const k = Math.max(1, Math.ceil(Math.max(pic.width, pic.height) / IMAGE_MAX_EDGE))
+    if (k === 1) return { ...(await entryFromBytes(bytes, { name, type: HDR_TYPE, width: pic.width, height: pic.height })), scaled: null }
+    const w = Math.floor(pic.width / k), h = Math.floor(pic.height / k), rgb = new Float32Array(w * h * 3)
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) for (let c = 0; c < 3; c++) {
+        let sum = 0
+        for (let dy = 0; dy < k; dy++) for (let dx = 0; dx < k; dx++) sum += pic.rgb[((y * k + dy) * pic.width + x * k + dx) * 3 + c]
+        rgb[(y * w + x) * 3 + c] = sum / (k * k)
+    }
+    const out = makeHDR({ w, h })
+    out.addRows(rgb, h)
+    const small = new Uint8Array(await out.finish().arrayBuffer())
+    return { ...(await entryFromBytes(small, { name, type: HDR_TYPE, width: w, height: h })), scaled: { width: pic.width, height: pic.height } }
+}
+
+/** A picture's light for the environment (core/envimage.js): { width, height, rgb } linear -- a .hdr's own numbers, a
+ *  PNG's, JPEG's or WebP's decoded by the browser and then from sRGB. */
+export async function envPictureOf(entry) {
+    if (entry.type === HDR_TYPE) return parseHDR(fromBase64(entry.data))
+    return linearFromSRGB(await pixelsOf(entry))
 }
 
 //----------------------------------------------------------------------------------------------------------------------

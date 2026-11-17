@@ -224,6 +224,15 @@ export function sceneParams(doc, hooks = {}) {
                    get: () => vec ? toArray(now()) : now(),
                    set: (x, o = {}) => H.environment(doc, k, vec ? { r: x[0], g: x[1], b: x[2] } : x, o, base) })
     }
+    // ---- ...and its code's own parameters (model.js skyParams): live, each in its slot (demo.js liveValue)
+    for (const q of M.skyParamsOf(doc)) {
+        const vec = Array.isArray(q.value)
+        const now = () => M.skyParamsOf(doc).find(x => x.name === q.name)?.value ?? (vec ? [0, 0, 0] : 0)
+        out.push({ path: `scene/environment/param/${q.name}`, label: `Environment › ${q.name}`, group: 'scene · Environment',
+                   reveal: reveal(M.ENVIRONMENT_ID), min: q.min, max: q.max, step: q.step, dims: vec ? 3 : 1,
+                   get: () => vec ? now().slice() : now(),
+                   set: (x, o = {}) => H.skyParam(doc, q.name, vec ? [+x[0], +x[1], +x[2]] : +x, o) })
+    }
     /* ANIMATED (model.js setAnimated): what the Parameters panel and the timeline's + track offer alone while any value
        is flagged (lib/shell/params.js onlyAnimated). A compile-time value is never: no uniform carries it. */
     const flagged = new Set(M.animatedPaths(doc))           // once: an entry each asking the tree would be entries x nodes
@@ -282,6 +291,13 @@ export function makeAfter({ live = () => { }, commit = () => { }, structure = ()
             try { M.setEnvironment(doc, { ...pick, [k]: v }) } catch (e) { console.warn('[builder]', e.message); return false }
             live(M.ENVIRONMENT_ID, k)
             if (!o.quiet) commit(`environment.${k}`)
+            return true
+        },
+        /** ONE PARAMETER OF THE ENVIRONMENT'S CODE (model.js skyParams): its value through the model, then its slot */
+        skyParam(doc, name, v, o = {}) {
+            try { M.setSkyParam(doc, name, v) } catch (e) { console.warn('[builder]', e.message); return false }
+            live(M.ENVIRONMENT_ID, `param/${name}`)
+            if (!o.quiet) commit(`environment.param.${name}`)
             return true
         },
         light(doc, node, patch, o = {}) {

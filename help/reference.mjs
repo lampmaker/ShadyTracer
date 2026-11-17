@@ -18,7 +18,7 @@ import { FIELDS, FIELD_LABELS, COAT_PRESETS, RELIEFS, PRESETS, FEATURES, picture
 import { LIGHT_SHAPES, LIGHT_DEFAULTS } from '../builder/lights.js'
 import { HAZE_DEFAULTS, HAZE_G_MAX, KOSCHMIEDER } from '../builder/hazebox.js'
 import { codeOnly } from '../builder/codegen.js'
-import { SLOT_DEFAULTS, SLOT_HELP, IMAGE_TYPES } from '../builder/images.js'
+import { SLOT_DEFAULTS, SLOT_HELP, TEXTURE_TYPES } from '../builder/images.js'
 import { IMAGE_MAX_EDGE } from '../lib/pathtracer/core/images.js'
 import { referenceMarkdown as scriptReference } from '../tools/scriptref.js'
 import { TOKENS, SHORT_TOKENS } from '../lib/wgsl_shorthand.js'
@@ -104,7 +104,7 @@ function materials() {
     s += `\n## Starting points\n\nThe Properties panel's **+** makes a material from one of these: ${Object.values(PRESETS).map(p => `*${p.label}*`).join(', ')}. `
         + 'The Library has many more, with real values.\n'
     s += '\n## Coating presets\n\n' + Object.entries(COAT_PRESETS).map(([k, v]) => `- **${k}**: ${Object.entries(v).map(([f, x]) => `${FIELD_LABELS[f] ?? f} ${x}`).join(', ')}`).join('\n') + '\n'
-    s += '\n## Image textures\n\nA material can show image textures (' + IMAGE_TYPES.map(t => t.slice(6).toUpperCase()).join(', ') + ', up to '
+    s += '\n## Image textures\n\nA material can show image textures (' + TEXTURE_TYPES.map(t => t.slice(6).toUpperCase()).join(', ') + ', up to '
         + `${IMAGE_MAX_EDGE} pixels on the longer side; a larger one is scaled down), each placed on every object wearing it by a projection in `
         + 'the object\'s [pattern frame](../modelling/materials.md#turning-a-pattern-the-pattern-frame). One can be the material\'s colour; '
         + 'the others are for its code (`sample(name)`: [Functions for code](code.md#a-materials-image-textures)). Every setting is live but the '

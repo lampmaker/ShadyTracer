@@ -43,7 +43,7 @@ export const CHAPTERS = [
         [`${K}pick.js`, `${K}tracebasics.js`, `${K}tolerances.js`, `${K}sdf.js`, 'lib/pathtracer/PRECISION.md', `${K}test/floor.test.mjs`]),
 
     C('light', 'photometry', 'Measuring light', 'The units of light (lumen, candela, lux), how light weakens with distance and slant, the sun.', 'draft',
-        [`${K}photometry.js`, `${K}sdf.js`, 'builder/lights.js', 'builder/sources.js']),
+        [`${K}photometry.js`, `${K}sdf.js`, `${K}environment.js`, `${K}envimage.js`, 'builder/lights.js', 'builder/sources.js']),
     C('light', 'colour', 'Colour', 'How three numbers stand for a colour, and what colour temperature means.', 'draft',
         [`${K}colorimetry.js`, `${K}spectral.js`, `${K}spd.js`, `${K}cie1931.js`, 'builder/lights.js']),
     C('light', 'pixels', 'From light to pixels', 'From light to the brightness of a screen: exposure and tone.', 'draft',
@@ -63,7 +63,7 @@ export const CHAPTERS = [
     C('paths', 'paths', 'Following a path', 'Following light bounce by bounce, and choosing the bounces that matter.', 'draft',
         [`${K}materials_pbr.js`, `${K}tracebasics.js`, `${K}uniforms.schema.js`, 'tutorial/kit/flatland.js']),
     C('paths', 'nee', 'Aim at the light', 'Aiming a ray at the lamp at every bounce: next event estimation.', 'draft',
-        [`${K}tracebasics.js`, `${K}materials_pbr.js`]),
+        [`${K}tracebasics.js`, `${K}materials_pbr.js`, `${K}envmap.js`]),
     C('paths', 'mis', 'Two ways to the light', 'Two ways of finding light, combined without counting it twice.', 'draft',
         [`${K}tracebasics.js`, `${K}materials_pbr.js`]),
     C('paths', 'emitters', 'Every glowing thing is a light', 'Finding the glowing surfaces in a scene, so they can be aimed at too.', 'draft',

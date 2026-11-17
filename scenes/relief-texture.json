@@ -1,6 +1,6 @@
 {
   "format": "raytracer-scene",
-  "version": 30,
+  "version": 31,
   "title": "Relief and texture",
   "nextId": 20,
   "unit": "mm",
@@ -838,12 +838,16 @@
       "b": 1
     },
     "studioTop": 0.5,
-    "sunIlluminance": 100000,
+    "sunHint": 1,
     "sunDiameter": 0.53,
-    "skyIlluminance": 15000,
     "uSunAzimuth": 110,
     "uSunElevation": 15,
-    "uSkyTurbidity": 0.7
+    "sunOutside": 128000,
+    "uSkyTurbidity": 0.7,
+    "envImageLuminance": 179,
+    "envImageTurn": 0,
+    "envCache": 1,
+    "envCacheSize": 2048
   },
   "view": {
     "camera": {
@@ -868,6 +872,9 @@
       "focus": 0
     },
     "exposure": {
+      "whiteK": 6506,
+      "whiteTint": 0,
+      "whiteAuto": 1,
       "exposureEV": 15,
       "autoExposure": 1,
       "exposureComp": 0,

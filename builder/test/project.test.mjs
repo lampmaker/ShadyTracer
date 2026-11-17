@@ -91,12 +91,12 @@ throws('and so is broken JSON', () => P.parse('{'), /JSON/)
 {
     // a workspace: the project, the current scene, and the renderer's settings, whatever they are -- but what each
     // scene has of its own (0.66.0): the camera, the exposure and the tolerance are in the scenes (model.js VIEW)
-    const settings = { values: { sunIlluminance: 90000, tint: [1, 0.9, 0.8], exposureEV: 9, eps: 0 }, camera: { mode: 'orbit', azimuth: 12 }, size: { mode: 'fit' } }
+    const settings = { values: { sunOutside: 90000, tint: [1, 0.9, 0.8], exposureEV: 9, eps: 0 }, camera: { mode: 'orbit', azimuth: 12 }, size: { mode: 'fit' } }
     const w = P.parse(P.serializeWorkspace(p, p.scenes[1].key, settings)).workspace
     ok('a workspace round-trips its project', w && P.serialize(w.project) === P.serialize(p))
     eq('and which scene was current', w.current, p.scenes[1].key)
     eq('and the renderer settings, without the camera, the exposure or the tolerance', w.renderer,
-        { size: { mode: 'fit' }, values: { sunIlluminance: 90000, tint: [1, 0.9, 0.8] } })
+        { size: { mode: 'fit' }, values: { sunOutside: 90000, tint: [1, 0.9, 0.8] } })
     const lost = JSON.parse(P.serializeWorkspace(p, 's999', {}))
     eq('a current scene it does not have falls back to the first', P.parse(JSON.stringify(lost)).workspace.current, p.scenes[0].key)
     const noRenderer = JSON.parse(P.serializeWorkspace(p, 's1')); noRenderer.renderer = 3
@@ -526,6 +526,57 @@ ${m}`, module: { getCompilationInfo: async () => ({ messages: [] }) }, ready: Pr
     eq('a radius set live reaches the scene the renderer holds, without a compile', [got.took, got.live, got.same], [true, 40, true])
     eq('an undone radius is the same shader, and goes back live', [got.sync, got.undone], ['live', 25])
     eq('a radius set during a compile ends up in the scene that compiled', got.replayed, 7)
+}
+{
+    /* THE ENVIRONMENT'S CODE UNDONE IS A COMPILE (0.next; demo.js sync): the scene's `wgsl` stops before the code, which
+       the kernels asking the environment are handed apart (codegen.js THE SKY), so sync compared only `wgsl` and took an
+       undone code edit for a value -- the kernels kept the code undone. And a parameter of the code (model.js skyParams)
+       moved live into its slot, no compile. Over a stand-in renderer as above. */
+    const { installBuilder } = await import('../demo.js')
+    const state = {}
+    let compiles = 0
+    const RT = {
+        scene: null,
+        set(values) { for (const [k, v] of Object.entries(values)) state[k] = structuredClone(v); return [] },
+        get: () => structuredClone(state),
+        settings: () => ({}), applySettings: () => [],
+        updateScene() { return [] },
+        async setScene(s) { compiles++; RT.scene = s; return 1 },
+    }
+    const gpu = { makeCompute: (b, m) => ({ wgsl: `${b}
+${m}`, module: { getCompilationInfo: async () => ({ messages: [] }) }, ready: Promise.resolve() }), makeShader: () => ({ getCompilationInfo: async () => ({ messages: [] }) }) }
+    const got = {}
+    const log = console.log; console.log = () => { }
+    try {
+        const d0 = P.blankScene('S')
+        M.addObject(d0, 'root', { id: 'ball', primitive: 'sphere' })
+        const B = installBuilder({}, { RT, gpu, project: P.createProject([d0]) })
+        await B.apply()
+        const stars = M.SKY_PRESETS.find(p => p.id === 'stars')
+        B.doc.sky = stars.code
+        M.setSkyParams(B.doc, stars.params)
+        B.commit(null)
+        await B.apply()
+        got.withCode = [RT.scene.sky?.includes('UB.envP1.x'), state.envP1?.[0]]
+        M.setSkyParam(B.doc, 'starZoom', 5)
+        const before = compiles
+        got.live = [B.live(M.ENVIRONMENT_ID, 'param/starZoom'), state.envP1?.[0], compiles === before]
+        B.commit('environment.param.starZoom')
+        B.doc.sky = stars.code.replace('return stars(dir);', 'return 0.5 * stars(dir);')
+        B.commit(null)
+        await B.apply()
+        got.edited = RT.scene.sky.includes('0.5 * stars')
+        got.sync = B.undo()
+        await B.apply()                       // what the host does with 'structural'
+        got.undoneCode = !RT.scene.sky.includes('0.5 * stars')
+        got.valueUndo = B.undo()
+        got.zoomBack = state.envP1?.[0]
+    } finally { console.log = log }
+    eq('a scene with the stars: the kernels given the code in its slots, the slots pushed', got.withCode, [true, 2])
+    eq('a parameter moved live: its slot, no compile', got.live, [true, 5, true])
+    ok('an edited code compiled', got.edited)
+    eq('...and its undo a compile, not a value: the code before it back in the kernels', [got.sync, got.undoneCode], ['structural', true])
+    eq('...and a value undone live, back in its slot', [got.valueUndo, got.zoomBack], ['live', 2])
 }
 {
     /* A LIVE VALUE SET WHILE A COMPILE RUNS IS NOT LOST (the user, 2026-10-01: an own blend ticked on "does not

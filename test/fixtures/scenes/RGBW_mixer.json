@@ -1,6 +1,6 @@
 {
   "format": "raytracer-scene",
-  "version": 30,
+  "version": 31,
   "title": "RGBW_mixer",
   "nextId": 19,
   "unit": "mm",

@@ -43,11 +43,11 @@ const throws = f => { try { f(); return false } catch (e) { return e instanceof 
     M.setAnimated(d, 'scene/ball/radius', true)
     M.setAnimated(d, 'scene/g/transform/position', true)
     M.setAnimated(d, `scene/${mat.id}/roughness`, true)
-    M.setAnimated(d, 'scene/environment/sunIlluminance', true)
+    M.setAnimated(d, 'scene/environment/sunOutside', true)
     eq('flags kept on their owners, relative', [M.find(d, 'ball').node.animate, M.find(d, 'g').node.animate, mat.animate, d.root.animate],
-       [['radius'], ['transform/position'], ['roughness'], ['environment/sunIlluminance']])
+       [['radius'], ['transform/position'], ['roughness'], ['environment/sunOutside']])
     eq('listed: the environment, the nodes in tree order, then the materials', M.animatedPaths(d),
-       ['scene/environment/sunIlluminance', 'scene/ball/radius', 'scene/g/transform/position', `scene/${mat.id}/roughness`])
+       ['scene/environment/sunOutside', 'scene/ball/radius', 'scene/g/transform/position', `scene/${mat.id}/roughness`])
     ok('isAnimated', M.isAnimated(d, 'scene/ball/radius') && !M.isAnimated(d, 'scene/cube/size'))
     M.setAnimated(d, 'scene/ball/radius', true)
     eq('flagged twice: once', M.find(d, 'ball').node.animate, ['radius'])
@@ -97,9 +97,9 @@ const throws = f => { try { f(); return false } catch (e) { return e instanceof 
 
 /* ---- WHAT A FLAG KEEPS ---- */
 {
-    eq('a path to its live key', ['scene/a/radius', 'scene/a/transform/rotation', 'scene/a/join/blend', 'scene/a/light/cct', 'scene/environment/sunIlluminance', 'scene/m1#relief/scale']
+    eq('a path to its live key', ['scene/a/radius', 'scene/a/transform/rotation', 'scene/a/join/blend', 'scene/a/light/cct', 'scene/environment/sunOutside', 'scene/m1#relief/scale']
         .map(liveKeyOfPath), [{ id: 'a', k: 'radius' }, { id: 'a', k: 'transform' }, { id: 'a', k: 'jblend' }, { id: 'a', k: 'light' },
-                              { id: M.ENVIRONMENT_ID, k: 'sunIlluminance' }, { id: 'm1#relief', k: 'scale' }])
+                              { id: M.ENVIRONMENT_ID, k: 'sunOutside' }, { id: 'm1#relief', k: 'scale' }])
     // a component: the group's parameter is no uniform; what is bound to it is -- and on, through a group bound to it
     const d = M.createDoc()
     M.ensureMaterial(d)

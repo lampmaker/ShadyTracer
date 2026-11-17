@@ -93,10 +93,11 @@ const floor = (doc, material) => shape(doc, 'root', 'plane', { label: 'floor', m
  *  view, a lens -- whatever is not the page's start (model.js CAMERA_DEFAULTS: 40 degrees, perspective, a pinhole). */
 const orbit = (target, azimuth, above, distance, more = {}) =>
     ({ mode: 'orbit', target, azimuth, elevation: 90 - above, distance, dimensions: distance, ...more })
-/** THE VIEW AN EXAMPLE IS SAVED WITH: its camera and its exposure, each whole (the defaults where it says nothing) */
-const viewOf = (camera, exposure = {}) => ({
+/** THE VIEW AN EXAMPLE IS SAVED WITH: its camera and its exposure, each whole (the defaults where it says nothing --
+ *  the white from the environment among them, on under the sun & sky: model.js sceneViewOf, litBySunSky) */
+const viewOf = (doc, camera, exposure = {}) => ({
     camera: { ...structuredClone(M.CAMERA_DEFAULTS), ...camera },
-    exposure: { ...Object.fromEntries(Object.entries(M.VIEW_EXPOSURE).map(([k, sp]) => [k, sp.def])), ...exposure },
+    exposure: { ...M.sceneViewOf(doc).exposure, ...exposure },
 })
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -857,7 +858,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
         delete doc.$mats
         delete doc.$detectors
         // the view in the file, whole (viewOf above): what the example is seen with whatever was shown before it
-        M.setView(doc, viewOf(camera, exposure))
+        M.setView(doc, viewOf(doc, camera, exposure))
         const bad = M.validate(doc)
         if (bad.length) throw new Error(`${file}: ${bad.join('; ')}`)
         writeFileSync(new URL(file, here), M.serialize(doc) + '\n')

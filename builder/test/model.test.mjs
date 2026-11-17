@@ -637,12 +637,12 @@ throws('another version is refused, not guessed at',
     // a version 14 file: the radius in environment, in metres
     const v14 = (unit, env) => { const o = JSON.parse(M.serialize(M.createDoc())); o.version = 14; o.unit = unit; if (env) o.environment = env; return o }
     const up = o => M.parse(JSON.stringify(o))
-    const full = { envMode: 0, sunIlluminance: 90000, envRadius: 400 }
+    const full = { envMode: 0, sunOutside: 90000, envRadius: 400 }
     const a = up(v14('m', full))
     eq('14 -> 15, and on to the current version', a.version, M.VERSION)
     ok('the 400 m default, which every environment copied from the renderer holds, is dropped -- not moved',
         !('envRadius' in a) && !('envRadius' in a.environment))
-    eq('...and the rest of the environment stays', a.environment, { envMode: 0, sunIlluminance: 90000 })
+    eq('...and the rest of the environment stays', a.environment, { envMode: 0, sunOutside: 90000 })
     const b = up(v14('mm', { envMode: 0, envRadius: 0.3 }))
     eq('another radius moves to the scene, in its unit (0.3 m in a mm scene), rounded clean', b.envRadius, 300)
     eq('...gone from the environment', b.environment, { envMode: 0 })
@@ -1585,8 +1585,9 @@ throws('another version is refused, not guessed at',
     const d = M.createDoc({ title: 'view' })
     const v0 = M.sceneViewOf(d)
     ok('a scene with no view has no camera: the builder shows it from the camera there is', v0.camera === null)
-    eq('...and the whole exposure, at the schema\'s defaults', v0.exposure,
-        Object.fromEntries(Object.entries(M.VIEW_EXPOSURE).map(([k, sp]) => [k, sp.def])))
+    // ...the white from the environment on, the scene being under the default sun & sky (model.js litBySunSky, 0.next)
+    eq('...and the whole exposure, at the schema\'s defaults (the white from the environment on, under the sun & sky)', v0.exposure,
+        { ...Object.fromEntries(Object.entries(M.VIEW_EXPOSURE).map(([k, sp]) => [k, sp.def])), whiteAuto: 1 })
     // an example's camera as it was (scenes/examples.js before 0.66.0): no field of view, no projection, no lens
     M.setView(d, { camera: { mode: 'orbit', target: [0, -20, 25], azimuth: -60, elevation: 65, distance: 330, dimensions: 330 } })
     const c = M.sceneViewOf(d).camera

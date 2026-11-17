@@ -291,7 +291,7 @@ export function lightBench() {
         camera: CAMERA,
         pin: { maxaverages: 0, maxiter: 400, maxbounce: 10, rr: 0, nee: 1, lt: 1, ltPhotons: 1, ltLearn: 1, ltRadius: 15,
                emitRadius: 15, neeEmitShare: 0.5, ltEmitShare: 0.5, envUniform: 0, fireflyClamp: 0, eps: 0,
-               sunIlluminance: 0, skyIlluminance: 0, ...PLAIN, ...LAMBERT, beam_benchlamp: lamp.beam, beam_benchsmall: small.beam,
+               envSun: 0, envSky: 0, ...PLAIN, ...LAMBERT, beam_benchlamp: lamp.beam, beam_benchsmall: small.beam,
                beam_benchside: side.beam },
         clearLearned: true,
         extra: {

@@ -40,8 +40,10 @@ Nothing to install and no server. The page runs on your own graphics card.
 
 ## Highlights
 
-- **Light in physical units.** Luminance in cd/m², illuminance in lux, a sun and sky given by the
-  illuminance they deliver. A white floor reads its textbook value to 0.1 % **✓**
+- **Light in physical units.** Luminance in cd/m², illuminance in lux. A white floor reads its textbook value to
+  0.1 % **✓**
+- **The environment is code**: a function of direction returning cd/m² -- a physical sun and sky, a studio, stars or
+  an HDR panorama -- that a ray leaving the scene sees and that lights it, found by light sampling wherever it is bright
 - **Caustics through glass**, by tracing photons from the sun and learning where they are worth
   sending **✓**; and what is **seen through glass or in a mirror**, lit right, by a photon map
 - **Any glowing surface is a light**, with nothing declared: found by the paths that hit it,

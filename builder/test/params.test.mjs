@@ -121,7 +121,7 @@ ok('the bundled scenes have parameters at all', total > 50, `${total}`)
     eq('a light\'s luminance: its face\'s uniforms', run(`scene/${L.id}/light/luminance`, 500), [`live ${L.id}.light`, `commit ${L.id}.light`])
     eq('...through the model', M.lightOf(M.find(doc, L.id).node).luminance, 500)
     // THE ENVIRONMENT: a scene without one takes the renderer's whole set the first time, then its own
-    const renderer = { envMode: 0, sunIlluminance: 90000, uSunElevation: 40, studioColor: { r: 1, g: 1, b: 1 } }
+    const renderer = { envMode: 0, sunOutside: 90000, uSunElevation: 40, studioColor: { r: 1, g: 1, b: 1 } }
     const P2 = makeParams()
     P2.provide('scene', () => sceneParams(doc, { ...hooks, environment: () => renderer }))
     eq('a scene without an environment reads the renderer\'s', P2.read('scene/environment/uSunElevation'), 40)
@@ -129,14 +129,14 @@ ok('the bundled scenes have parameters at all', total > 50, `${total}`)
     eq('setting one pushes it to the renderer, one undo step', calls, ['live #environment.uSunElevation', 'commit environment.uSunElevation'])
     const sorted = o => Object.fromEntries(Object.entries(o).sort(([a], [b]) => a.localeCompare(b)))
     eq('...and the scene now holds the renderer\'s whole set, with the change', sorted(doc.environment),
-        sorted({ envMode: 0, sunIlluminance: 90000, uSunElevation: 55, studioColor: { r: 1, g: 1, b: 1 } }))
-    renderer.sunIlluminance = 1
-    eq('from then on it reads its own, whatever the renderer has', P2.read('scene/environment/sunIlluminance'), 90000)
+        sorted({ envMode: 0, sunOutside: 90000, uSunElevation: 55, studioColor: { r: 1, g: 1, b: 1 } }))
+    renderer.sunOutside = 1
+    eq('from then on it reads its own, whatever the renderer has', P2.read('scene/environment/sunOutside'), 90000)
     P2.write('scene/environment/studioColor', [0.5, 0.5, 1])
     eq('a colour is stored as the renderer\'s {r, g, b}', doc.environment.studioColor, { r: 0.5, g: 0.5, b: 1 })
     let refused = false
-    try { M.setEnvironment(doc, { sunIlluminance: -5 }) } catch { refused = true }
-    ok('the model refuses a value out of the setting\'s range, and keeps what it had', refused && doc.environment.sunIlluminance === 90000)
+    try { M.setEnvironment(doc, { sunOutside: -5 }) } catch { refused = true }
+    ok('the model refuses a value out of the setting\'s range, and keeps what it had', refused && doc.environment.sunOutside === 90000)
     refused = false
     try { M.setEnvironment(doc, { exposureEV: 3 }) } catch { refused = true }
     ok('...and a setting that is not the environment\'s', refused && !('exposureEV' in doc.environment))

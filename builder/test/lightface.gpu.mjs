@@ -188,7 +188,7 @@ async function run(scene, body, input, n) {
         R.hud = () => { }
         let err = null
         try { await quietly(() => R.init()) } catch (e) { err = e?.message ?? String(e) }
-        const v = { ...U.defaultUniformValues(), envMode: 0, sunIlluminance: 0, skyIlluminance: 0, nee: 1, lt: 0, maxbounce: 6, rr: 0,
+        const v = { ...U.defaultUniformValues(), envMode: 0, envSun: 0, envSky: 0, nee: 1, lt: 0, maxbounce: 6, rr: 0,
                     fireflyClamp: 0, maxaverages: 0, autoExposure: 0, sppm: 0, ...over }
         const traced = effective(v)
         const derived = derive(traced, { unit: scene.unit, extent: scene.extent, envRadius: scene.envRadius, tolerance: scene.tolerance })

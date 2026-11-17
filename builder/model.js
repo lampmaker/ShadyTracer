@@ -173,7 +173,14 @@ export const FORMAT = 'raytracer-scene'
    does to a ray (where it goes, where it is, its colour, light added, whether it stops), `step` the longest step inside
    (the scene's unit), `draw` whether the object is drawn too. Nothing in a version 29 file changes; a builder of 29
    refuses a file of 30 rather than draw a warp's region as a solid and save the scene without its warp. */
-export const VERSION = 30
+/* 31: THE ENVIRONMENT IS CODE (0.next; lib/pathtracer/core/environment.js, builder/sky.js; the user, 2026-11-17): `sky` on
+   the scene, the WGSL of its environment -- background(dir), cd/m^2 -- and the sun & sky physical, so the environment's
+   settings change: `sunOutside`, the sunlight above the air, replaces `sunIlluminance`, the sun's at the ground, and
+   `skyIlluminance` goes -- the sky's light follows from the sun's and the air now, it is no longer set; `sunHint` says
+   whether light sampling aims at the sun. v30to31: sunOutside = 1.28 x sunIlluminance (128 klx above the air for the
+   old default's 100 klx: the new model's own figure at the default sun is 91 klx), the sky's setting dropped. A
+   builder of 30 refuses a file of 31 rather than read its environment without a sun. */
+export const VERSION = 31
 /** The most copies an array has: each is a walk of its children at every step near them, until a BVH can tell which
  *  copies are near (call 4: chosen, not measured). */
 export const ARRAY_MAX = 16
@@ -202,6 +209,9 @@ import { LIGHT_SHAPES, LIGHT_DEFAULTS, lightOf, lightDefaults, lightProblems, ro
 export { HAZE_PARAMS, HAZE_DEFAULTS, hazeSettings } from './hazebox.js'
 import { HAZE_PARAMS, HAZE_DEFAULTS, hazeProblems, hazeNode } from './hazebox.js'
 import { warpProblems, canWarp } from './warp.js'
+import { skyProblems, hasSky } from './sky.js'
+import { envParamProblems, envParamUniforms, ENV_PARAM_SLOTS, replaceWords } from '../lib/pathtracer/core/environment.js'
+export { SKY_TEMPLATE, STUDIO_TEMPLATE, STARS_TEMPLATE, SKY_PRESETS, SKY_FN, SKY_ID, hasSky, skyProblems, skyTextOf, skyReads } from './sky.js'
 export { WARP_TEMPLATE, newWarp, warpStepFor, canWarp } from './warp.js'
 /** The object types that are boxes rather than shapes (a haze box): no material, no code, no join -- a size in their
  *  own frame and settings of their own. (An export box was one until 0.83.0: the print export's box is its dialog's
@@ -243,7 +253,8 @@ import { INTERPS, EASES } from '../lib/timeline/timeline.js'
 export const RESERVED_PARAMS = ['xf', 'blend', 'bxlo', 'bxhi', 'vis', 'jblend', 'pat']
 
 /** Ids codegen uses for things that are not nodes -- the functions block maps its lines to
- *  'functions' -- so no node or material may take them. */
+ *  'functions' -- so no node or material may take them. (The sky block's, '#sky', builder/sky.js SKY_ID, is no id a
+ *  node can have, so it needs no place here: a scene with a node called sky stays a scene this builder reads.) */
 export const RESERVED_IDS = ['root', 'functions']
 
 /** The WGSL types a compile-time parameter may have. A constant is a scalar: it exists to be a
@@ -2183,6 +2194,42 @@ export function addImage(doc, { key, entry }) {
     if (!doc.images[key]) doc.images[key] = entry
     return key
 }
+/** THE ENVIRONMENT'S IMAGE (0.next, version 31; lib/pathtracer/core/envimage.js): the key of the scene's picture its
+ *  environment's code reads with envImage(dir), or null to have none. The picture is the scene's (addImage), kept by its
+ *  key like a material's; naming one the scene does not have is no error (images.js: an undo's text may) -- it reads
+ *  black, as a slot's does. Its presence is the kernels' text: a compile. */
+export function setEnvImage(doc, key) {
+    if (key == null) { delete doc.envImage; return doc }
+    if (!IMAGE_KEY.test(key)) throw new ModelError(`'${key}' is not an image's key`)
+    doc.envImage = key
+    return doc
+}
+/* THE ENVIRONMENT CODE'S PARAMETERS (0.next, version 31; lib/pathtracer/core/environment.js says what one is): `skyParams`,
+   a list of { name, value, min?, max?, step?, colour? } -- a value a number or three -- in the order of their slots. The
+   code names them as they are; codegen puts them in their slots (THE SKY). A name added, renamed or taken away is the
+   code's text, a compile; a value is live (demo.js liveValue, the environment's `param/<name>`). */
+export { envParamProblems, ENV_PARAM_SLOTS, replaceWords }
+/** The scene's environment parameters, as a list (none: []). */
+export const skyParamsOf = doc => Array.isArray(doc?.skyParams) ? doc.skyParams : []
+/** The scene's parameters set whole -- checked first, against its code, so a refusal changes nothing. [] takes them away. */
+export function setSkyParams(doc, list) {
+    const next = structuredClone(list ?? [])
+    const bad = envParamProblems(next, hasSky(doc.sky) ? doc.sky : null)
+    if (bad.length) throw new ModelError(bad)
+    if (next.length) doc.skyParams = next
+    else delete doc.skyParams
+    return doc
+}
+/** One parameter's value, by its name: a number, or three. */
+export function setSkyParam(doc, name, value) {
+    const list = skyParamsOf(doc)
+    const i = list.findIndex(q => q.name === name)
+    if (i < 0) throw new ModelError(`no environment parameter '${name}'`)
+    return setSkyParams(doc, list.map((q, j) => j === i ? { ...q, value } : q))
+}
+/** The renderer's sixteen slots for the scene's parameters (environment.js envParamUniforms): every slot, 0 where none. */
+export const skyParamUniforms = doc => envParamUniforms(skyParamsOf(doc))
+
 /** The names a slot of material `m` may not take: its parameters', and those its code already has. */
 const mustMaterial = (doc, id) => {
     const m = material(doc, id)
@@ -2550,8 +2597,20 @@ export const exposureSettings = e => e && typeof e === 'object'
 export function sceneViewOf(doc) {
     const c = doc?.view?.camera
     const camera = c ? { ...structuredClone(CAMERA_DEFAULTS), ...cameraSettings(c) } : null
-    const exposure = { ...Object.fromEntries(Object.entries(VIEW_EXPOSURE).map(([k, sp]) => [k, sp.def])), ...exposureSettings(doc?.view?.exposure) }
+    const exposure = { ...Object.fromEntries(Object.entries(VIEW_EXPOSURE).map(([k, sp]) => [k, sp.def])),
+                       whiteAuto: litBySunSky(doc) ? 1 : 0, ...exposureSettings(doc?.view?.exposure) }
     return { camera, exposure }
+}
+/* THE WHITE FROM THE ENVIRONMENT, ON BY DEFAULT UNDER THE SUN & SKY (0.next; the user, 2026-11-17: "set white balance auto
+   on by default for sun and sky"): a physical sun of about 5000 K is beige against the screen's D65, as on a camera set
+   to daylight, and a camera's auto white balance would take it as white. Not for the other environments: the stars'
+   blue, a studio's tint or a photograph's sunset are what they were chosen for. A scene's own setting wins; a scene that
+   names none -- every scene saved before the setting -- takes this. */
+/** Whether the scene is lit by the sun & sky: the default's in sun & sky (envMode not the studio), or code of its own
+ *  calling the sun & sky preset's sunSky(). */
+export function litBySunSky(doc) {
+    if (!hasSky(doc?.sky)) return ((doc?.environment?.envMode ?? 0) | 0) !== 1
+    return /\bsunSky\s*\(/.test(String(doc.sky).replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/\/\/[^\n]*/g, ' '))
 }
 /** Set the scene's view: `camera` and `exposure` each over what it has, checked first (a refusal changes nothing).
  *  Only the settings each knows are kept; null for either takes it away. */
@@ -3020,6 +3079,10 @@ export function toTree(doc, { keepDisabled = false } = {}) {
     const used = usedImages(doc).filter(k => doc.images?.[k])
     if (used.length) root.images = Object.fromEntries(used.map(k => [k, doc.images[k]]))
     root.functions = doc.functions ?? ''
+    // ...and the environment's code (builder/sky.js) and its image, for the kernels that ask the environment (codegen.js THE SKY)
+    root.sky = doc.sky ?? ''
+    if (skyParamsOf(doc).length) root.skyParams = structuredClone(doc.skyParams)
+    if (doc.envImage && root.images?.[doc.envImage]) root.envImage = doc.envImage
     if (warps.length) root.warps = warps
     root.unit = doc.unit ?? 'm'
     // where the scene stops, in that unit (codegen hands it to the renderer); absent is the renderer's default
@@ -3201,6 +3264,9 @@ export function validate(doc) {
     // the bindings, once the tree itself is sound (their targets are read off each node's parameters and its block)
     if (!p.length) walk(doc, (n, parent) => { if (parent) p.push(...bindProblems(doc, n, parent)) })
     if (doc.functions !== undefined && typeof doc.functions !== 'string') p.push('functions must be a string of WGSL')
+    p.push(...skyProblems(doc.sky, typeof doc.functions === 'string' ? doc.functions : ''))
+    p.push(...envParamProblems(doc.skyParams, typeof doc.sky === 'string' && hasSky(doc.sky) ? doc.sky : null))
+    if (doc.envImage !== undefined && !(typeof doc.envImage === 'string' && IMAGE_KEY.test(doc.envImage))) p.push('envImage must be an image\'s key')
     for (const id of seen) if (RESERVED_IDS.includes(id) && id !== doc.root.id) p.push(`'${id}' is a reserved id`)
     return p
 }
@@ -3303,6 +3369,7 @@ export function upgrade(doc) {
     if (d.version === 27) d.version = 28          // nothing to change: a join's shape is new
     if (d.version === 28) d.version = 29          // nothing to change: pictures are new
     if (d.version === 29) d.version = 30          // nothing to change: ray warps are new
+    if (d.version === 30) d = v30to31(d)
     return d
 }
 
@@ -3313,6 +3380,20 @@ export function upgrade(doc) {
  *  - A DETECTOR OR A LIMITER IS AN OBJECT'S ROLE, not a material's type (OPTICS_ROLES): each object wearing such a
  *    material takes its role and the material is a surface; and the scene's `analysis` feature, off for a new scene, is
  *    on for one that had any -- so it shows and measures what it did. */
+/* THE ENVIRONMENT AS CODE (version 31): the sun's illuminance at the ground becomes the sunlight above the air, the sky's
+   goes (VERSION's note says why), and a `sky` block written before the version -- this branch's own, never released --
+   stays as it is. Every scene keeps its envMode: without code of its own it is lit by the default, which envMode
+   steers as before. */
+export const ENV_RETIRED = Object.freeze(['sunIlluminance', 'skyIlluminance', 'skyCodeIlluminance'])
+function v30to31(d) {
+    const env = d.environment
+    if (env && typeof env === 'object' && !Array.isArray(env)) {
+        if (Number.isFinite(env.sunIlluminance) && !('sunOutside' in env)) env.sunOutside = Math.round(env.sunIlluminance * 1.28)
+        for (const k of ENV_RETIRED) delete env[k]
+    }
+    d.version = 31
+    return d
+}
 function v26to27(d) {
     dropExportBoxes(d.root)
     // a scene that had a detector or a limiter has them as roles, and the analysis that shows them on

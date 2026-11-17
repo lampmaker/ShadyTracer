@@ -42,7 +42,7 @@
 //======================================================================================================================
 
 import { FIELDS as MATERIAL_FIELDS, FIELDS_OF, COAT_FIELDS, hasCoating, reliefMaterialId, reliefOwner, fieldsOf } from './materials.js'
-import { hasSlots, slotOf, colourSlot, slotKey, attachImages } from './images.js'
+import { hasSlots, slotOf, colourSlot, slotKey, attachImages, envPictureOf } from './images.js'
 import { IMAGES_WGSL, IMAGE_RESOURCE, IMAGE_TYPE, packImages, slotMatrix } from '../lib/pathtracer/core/images.js'
 import { hasFace, lightOf, lightRGBObject, beamOf, arraysOf, copyCount, arrayedLightProblem } from './lights.js'
 import { copyPattern, codeOf, contentKey, ARRAY_WINDOW_WGSL } from './arrays.js'
@@ -59,6 +59,8 @@ import { BODY_MARKER } from './validate.js'
 import { matrixOf } from './transform.js'
 import { hazeOf } from './hazebox.js'
 import { warpOwner } from './warp.js'
+import { SKY_ID, SKY_FN, hasSky } from './sky.js'
+import { envWithParams } from '../lib/pathtracer/core/environment.js'
 import { WARP_FLAGS } from '../lib/pathtracer/core/warp.js'
 /* the most objects the optics trace tells apart (optics/kernels.js OPT_TAGS: a tag past it is clamped to its last) */
 import { OPT_TAGS as OPT_TAG_LIMIT } from '../lib/pathtracer/optics/kernels.js'
@@ -1061,6 +1063,12 @@ export function generate(tree, opts = {}) {
         const atlas = atlasOf(tree)
         result.resources = { ...(result.resources || {}), [IMAGE_RESOURCE]: IMAGE_TYPE }
         attachImages(result, atlas, tree.images ?? {})
+    }
+    /* ITS ENVIRONMENT'S IMAGE (core/envimage.js): decoded when the renderer asks for it (raytrace_main.js R.ensureEnv),
+       once a picture -- a .hdr by this repository's reader, a photograph by the browser and then from sRGB */
+    if (result.envImage) {
+        const entry = tree.images[result.envImage.key]
+        Object.defineProperty(result.envImage, 'load', { enumerable: false, value: () => envPictureOf(entry) })
     }
     /* WHICH ARRAYS' COPIES HAVE A WINDOW, AND HOW (arrays.js): id -> the pattern's code, as the render copy's text compiles
        it in -- a copies edit that makes another pattern of one needs that text again (demo.js nodeLive) */
@@ -2358,6 +2366,23 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
        is (readsLocal); a scene whose code does not name it keeps the text it had. */
     const scatter = (tree.materials || []).some(m => (FIELDS_OF[m.type ?? 'surface'] ?? FIELDS_OF.surface).includes('scatterDistance')
                                                     && (m.params?.scatterDistance > 0 || /\bm\.scatterDistance\b/.test(codeOnly(m.code ?? ''))))
+    /* THE SKY (builder/sky.js; the renderer's sdf.js THE ENVIRONMENT): the scene's environment code, LAST, so the check
+       compiles it and lists its errors at its own lines (mapped to SKY_ID) while `wgsl` -- what the scene's kernels
+       compile -- stops before it: the kernels that ask the environment for light are given it, as `sky`, so a change to
+       it compiles them alone. The line after it calls the block's function as envBackground will (withEnvironment), so
+       a block that defines none, or one of another signature, fails here and not first in a kernel. Only for a block
+       with code: a scene without is lit by the default, and is the text it was. */
+    const skyAt = e.lines.length
+    const envImg = !Array.isArray(tree) && tree.envImage && tree.images?.[tree.envImage] ? tree.envImage : null
+    const sky = !Array.isArray(tree) && hasSky(tree.sky) ? String(tree.sky) : null
+    /* ...its parameters' names in their slots (core/environment.js envWithParams: words alone change, so every line is
+       where it was, and the shifts take an error's column back to the one typed) */
+    const skyIn = sky ? envWithParams(sky, tree.skyParams) : null
+    if (sky) {
+        e.raw('// THE SKY BLOCK (builder/sky.js): compiled into the shade kernel alone, checked here')
+        e.from(SKY_ID, skyIn.text, 1, skyIn.shifts)
+        e.raw(`fn skyBlockCalled(d: VEC3) -> VEC3 { return ${SKY_FN}(d); }`)
+    }
     /* `wgsl` for the scene contract is the materials onwards -- the same place the three
        hand-written scenes put there, since the kernels prepend the engine prelude themselves
        and would otherwise see it twice. `body` is the whole file, which is what the probe
@@ -2382,7 +2407,12 @@ function emitScene(tree, { id = 'built', title = 'Scene builder', pick = false, 
         /* ...and whether the Optics page traces it by wavelength (0.83.0; model.js setFeatures `spectral`): the optics kernels'
            text, never the picture's -- said only when it does, so every other scene's object is what it was */
         ...(tree.features?.spectral ? { spectral: true } : {}),
-        wgsl: e.lines.slice(preludeLines).join('\n'),
+        /* ...and its environment's code, for the kernels that ask the environment (above): said only when it has one */
+        ...(sky ? { sky: skyIn.text } : {}),
+        /* ...and its environment's image (core/envimage.js), by its key -- whether it has one is the kernels' text, which
+           picture is not -- with load() beside it, below: said only when it has one */
+        ...(envImg ? { envImage: { key: envImg } } : {}),
+        wgsl: e.lines.slice(preludeLines, skyAt).join('\n'),
         uniforms,
         body: e.wgsl,
         map: e.map,

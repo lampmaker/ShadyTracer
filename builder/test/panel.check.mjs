@@ -582,17 +582,24 @@ ok('...and the radius row says so by itself (the panel redrawn), the number kept
     ok('0 is the automatic one: nothing in the scene', await set(TOL, '0') === 'set' && await p.evaluate(() => !('tolerance' in CHECK.doc)))
     void field
 }
-// THE ENVIRONMENT, in the Scene folder since 0.52.0 (the user, 2026-10-10): its source and its settings after the radius;
-// its old id shows the scene; a source chosen redraws it with that source's settings
+// THE ENVIRONMENT, in the Scene folder since 0.52.0 (the user, 2026-10-10): its settings after the radius; its old id shows
+// the scene. AS CODE (0.next; builder/sky.js): the rows are the ones its code reads -- the default's sun & sky its sun and
+// haze -- then its code, and a start chosen gives it that start's text and redraws it with that text's settings
 {
     const rows = await rowsOf('root'), folders = await p.evaluate(() => [...document.querySelectorAll('.tp-fldv_t')].map(t => t.textContent.trim()))
-    ok('the Scene folder holds the environment: its folder, its source after the radius', folders.includes('environment')
-        && rows.indexOf('Source') > rows.indexOf('environment radius (cm)'), JSON.stringify({ rows, folders }))
+    ok('the Scene folder holds the environment: its folder, the sun & sky\'s rows after the radius, then its start and its code', folders.includes('environment')
+        && rows.indexOf('Sun above the air (lx)') > rows.indexOf('environment radius (cm)') && rows.indexOf('start from') > rows.indexOf('Sun above the air (lx)')
+        && rows.includes('environment code') && !rows.includes('Source') && !rows.includes('Studio (lx, horizontal)'), JSON.stringify({ rows, folders }))
     const old = await rowsOf('#environment')
     ok('...and the environment\'s old id shows the Scene', JSON.stringify(old) === JSON.stringify(rows), JSON.stringify(old))
-    ok('choosing the studio', await set('Source', 'studio') === 'set')
+    const shown = await p.evaluate(() => [...document.querySelectorAll('textarea')].map(t => t.value).find(v => /fn background/.test(v)) ?? null)
+    ok('...its code box showing what the scene is lit by: the default\'s sun & sky, word for word', shown === (await import('../model.js')).SKY_TEMPLATE)
+    ok('choosing the studio', await set('start from', 'studio') === 'set')
     await p.waitForTimeout(50)
-    ok('...redraws it with the studio\'s settings', (await readRows()).includes('Studio (lx, horizontal)'), JSON.stringify(await readRows()))
+    ok('...gives the scene the studio\'s code, its own, no sun to aim at', await p.evaluate(() => /fn studioLight/.test(CHECK.doc.sky ?? '')
+        && CHECK.doc.environment?.envMode === 2 && CHECK.doc.environment?.sunHint === 0), JSON.stringify(await p.evaluate(() => CHECK.doc.environment)))
+    ok('...and redraws it with the studio\'s settings, not the sun\'s', (await readRows()).includes('Studio (lx, horizontal)')
+        && !(await readRows()).includes('Sun above the air (lx)'), JSON.stringify(await readRows()))
     /* THE STUDIO COLOUR SET (the user, 2026-10-10: "it always resets to white"): its picker's red field typed, the scene
        holding it, and the row still showing it once redrawn */
     const red = v => p.evaluate(v => {
@@ -608,6 +615,75 @@ ok('...and the radius row says so by itself (the panel redrawn), the number kept
     await p.evaluate(() => CHECK.panel.show('root'))
     ok('...and shows it again, not white, once the panel is redrawn', Math.abs(await red() - 0.25) < 0.006, String(await red()))
 }
+/* THE CODE'S OWN PARAMETERS (0.next; model.js skyParams): the stars start with theirs, a row each, live; a number added by
+   name, one renamed in the code too, one taken away -- each the code's text, an undo step and a compile */
+{
+    const answers = []
+    // a prompt answered from the list; a confirm (replacing code of the scene's own) accepted
+    const onDialog = d => d.type() === 'confirm' ? d.accept() : d.accept(answers.shift() ?? '')
+    p.on('dialog', onDialog)
+    const button = title => p.evaluate(title => { const b = [...document.querySelectorAll('button')].find(b => b.textContent.trim() === title); b?.click(); return !!b }, title)
+    ok('choosing the stars', await set('start from', 'stars') === 'set')
+    await p.waitForTimeout(50)
+    const names = () => p.evaluate(() => (CHECK.doc.skyParams ?? []).map(q => q.name).join())
+    ok('...gives the scene their parameters with their code', await names() === 'starDepth,starZoom,starShift,starLuminance,starPeak'
+        && await p.evaluate(() => /\bstarZoom\b/.test(CHECK.doc.sky)))
+    let r = await readRows()
+    // (a three-number row's label cell holds Tweakpane's + as well)
+    ok('...a row each, and the buttons to add one', ['starDepth', 'starZoom', 'starShift', 'starLuminance', 'starPeak', 'rename / remove'].every(l => r.some(x => x.replace(/\+$/, '') === l))
+        && await p.evaluate(() => ['+ number…', '+ colour…'].every(t => [...document.querySelectorAll('button')].some(b => b.textContent.trim() === t))), JSON.stringify(r))
+    const s0 = await state()
+    ok('starZoom typed', await set('starZoom', '3.5') === 'set')
+    const s1 = await state()
+    ok('...the scene holds it, pushed live, one undo step, nothing compiled', await p.evaluate(() => CHECK.doc.skyParams[1].value) === 3.5
+        && s1.live.at(-1) === '#environment.param/starZoom' && s1.commits.at(-1) === 'environment.param.starZoom' && s1.structure === s0.structure,
+        JSON.stringify([s1.live.slice(-2), s1.commits.slice(-2)]))
+    answers.push('twinkle')
+    ok('+ number…', await button('+ number…'))
+    await p.waitForTimeout(50)
+    ok('...asks its name and adds it, at 1', await names() === 'starDepth,starZoom,starShift,starLuminance,starPeak,twinkle'
+        && await p.evaluate(() => CHECK.doc.skyParams.at(-1).value) === 1 && (await readRows()).includes('twinkle'))
+    answers.push('peak')
+    ok('rename starPeak', await set('rename / remove', 'starPeak') === 'set')
+    await p.waitForTimeout(50)
+    ok('...renamed, in the code too', await names() === 'starDepth,starZoom,starShift,starLuminance,peak,twinkle'
+        && await p.evaluate(() => /VEC3\(peak\)/.test(CHECK.doc.sky) && !/\bstarPeak\b/.test(CHECK.doc.sky.replace(/\/\/[^\n]*/g, ''))), await p.evaluate(() => CHECK.doc.sky))
+    answers.push('')
+    ok('take twinkle away', await set('rename / remove', 'twinkle') === 'set')
+    await p.waitForTimeout(50)
+    ok('...gone', await names() === 'starDepth,starZoom,starShift,starLuminance,peak' && !(await readRows()).includes('twinkle'))
+    answers.push('kaliStars')
+    await button('+ number…')
+    await p.waitForTimeout(50)
+    ok('a name the code declares is refused, nothing changed', await names() === 'starDepth,starZoom,starShift,starLuminance,peak')
+    await set('start from', 'sun & sky')
+    await p.waitForTimeout(50)
+    p.off('dialog', onDialog)
+    ok('another start (asked first: the code is the scene\'s own now): its code, and none of the stars\' parameters', await names() === ''
+        && !(await readRows()).includes('starZoom') && await p.evaluate(() => /fn sunSky/.test(CHECK.doc.sky)))
+}
+/* A START SETS THE VIEW'S WHITE FROM THE ENVIRONMENT (0.next; the user, 2026-11-17: on by default for the sun & sky): on
+   with the sun & sky, off with another start -- through the view the page hands the panel (the third panel here has one) */
+{
+    const start = id => p.evaluate(id => {
+        CHECK.viewPanel.show('root')
+        const row = [...document.querySelectorAll('#t3 .tp-lblv')].find(r => r.querySelector('.tp-lblv_l')?.textContent.trim() === 'start from')
+        const sel = row?.querySelector('select')
+        if (!sel) return 'no start'
+        sel.selectedIndex = [...sel.options].findIndex(o => o.textContent.trim().startsWith(id))
+        sel.dispatchEvent(new Event('change', { bubbles: true }))
+        return 'set'
+    }, id)
+    const onDialog = d => d.accept()
+    p.on('dialog', onDialog)
+    ok('the stars started from the panel with a view', await start('stars') === 'set')
+    await p.waitForTimeout(50)
+    ok('...the white from the environment off', await p.evaluate(() => CHECK.exposure.values.whiteAuto) === 0)
+    await start('sun & sky')
+    await p.waitForTimeout(50)
+    ok('the sun & sky: on', await p.evaluate(() => CHECK.exposure.values.whiteAuto) === 1)
+    p.off('dialog', onDialog)
+}
 /* EVERY ROW OF THE SCENE'S PROPERTIES SAYS WHAT IT IS (the user, 2026-10-10: "make sure it has tooltips & explanations"):
    a label with no title, in sun & sky and in the studio, and with a value flagged animated */
 {
@@ -615,11 +691,11 @@ ok('...and the radius row says so by itself (the panel redrawn), the number kept
         return [...document.querySelectorAll('.tp-lblv_l, .tp-fldv_t')].filter(l => l.textContent.trim() && !l.title).map(l => l.textContent.trim()) })
     const inStudio = await untitled()
     ok('every row and folder of the scene\'s properties has a tooltip, in the studio', !inStudio.length, JSON.stringify(inStudio))
-    await set('Source', 'sun')
-    await p.evaluate(() => CHECK.M.setAnimated(CHECK.doc, 'scene/environment/sunIlluminance', true))
+    await set('start from', 'sun & sky')
+    await p.evaluate(() => CHECK.M.setAnimated(CHECK.doc, 'scene/environment/sunOutside', true))
     const inSun = await untitled()
     ok('...in sun and sky, with a value animated', !inSun.length, JSON.stringify(inSun))
-    await p.evaluate(() => CHECK.M.setAnimated(CHECK.doc, 'scene/environment/sunIlluminance', false))
+    await p.evaluate(() => CHECK.M.setAnimated(CHECK.doc, 'scene/environment/sunOutside', false))
     const { ENVIRONMENT_HELP } = await import('../panel.js').catch(() => ({}))
     const M = await import('../model.js')
     ok('...and every environment setting has its explanation', !!ENVIRONMENT_HELP && Object.keys(M.ENVIRONMENT).every(k => ENVIRONMENT_HELP[k]),

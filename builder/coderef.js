@@ -441,6 +441,41 @@ export const CODE_BLOCKS = {
             { name: 'shadows', why: 'Shadow rays aim straight at a lamp and are not warped: light through the region is found by the paths alone, so it is grainier.' },
         ],
     },
+    /* THE ENVIRONMENT'S CODE (builder/sky.js; lib/pathtracer/core/environment.js, sdf.js THE ENVIRONMENT): a module of its
+       own, defining background(dir). Its recipes are lines for that function's body, each a whole answer (a return) in
+       cd/m^2, so one put in at the top replaces what the function gave. */
+    sky: {
+        label: 'the environment\'s code',
+        runs: 'for every ray that leaves the scene, every light sample aimed at the environment and every sun photon, in its function background(dir), which returns cd/m²',
+        reads: [
+            { name: 'dir', type: 'VEC3', text: 'where the ray goes, a unit direction: z up, x and y level (the sun\'s azimuth is from +y towards +x)' },
+            { name: 'sunDirection()', type: 'VEC3', text: 'towards the sun, as the sun rows set it: the cone light sampling aims at' },
+            { name: 'inSunDisc(dir)', type: 'bool', text: 'whether dir is inside the sun\'s disc, of the sun rows\' size -- the edge light sampling uses' },
+            { name: 'UB.sunSin2', type: 'f32', text: 'sin² of the sun\'s angular radius: a disc of luminance L puts L pi sin² on a surface facing it' },
+            { name: 'UB.sunOutside', type: 'f32', text: 'the Sun above the air row, lx' },
+            { name: 'UB.uSkyTurbidity', type: 'f32', text: 'the Sky Turbidity row' },
+            { name: 'UB.uSunElevation', type: 'f32', text: 'the sun\'s elevation row, in degrees' },
+            { name: 'UB.studioIlluminance', type: 'f32', text: 'the studio\'s lux row' },
+        ],
+        sets: [],
+        recipes: [
+            { title: 'Evening: deep blue above, warm at the horizon (3000 cd/m² at its brightest)', code: 'return mix(VEC3(1.0, 0.55, 0.3), VEC3(0.05, 0.1, 0.35), smoothstep(-0.05, 0.4, dir.z)) * 3000.0;' },
+            { title: 'Black, with a grey ground below the horizon (100 cd/m²)', code: 'return select(VEC3(0.0), VEC3(100.0), dir.z < 0.0);' },
+            { title: 'Clouds: noise across the sky, white on blue', code: [
+                'let cloud = smoothstep(0.1, 0.6, fbm3(dir * 4.0, 3u, 5u, 2.0, 0.5).w);',
+                'return mix(VEC3(0.25, 0.45, 0.9), VEC3(1.0), cloud) * 5000.0 * smoothstep(-0.1, 0.1, dir.z);'] },
+            { title: 'A sun of its own in the sun rows\' disc: 100 000 lx head-on, white', code: 'return select(VEC3(0.0), VEC3(100000.0 / (PI * UB.sunSin2)), inSunDisc(dir));' },
+            { title: 'Two moons: small bright discs, a cool and a warm one', code: [
+                'let a = smoothstep(0.9995, 0.9996, dot(dir, normalize(VEC3(0.5, 0.6, 0.6))));',
+                'let b = smoothstep(0.9997, 0.9998, dot(dir, normalize(VEC3(-0.7, 0.2, 0.4))));',
+                'return VEC3(2500.0, 2600.0, 3000.0) * a + VEC3(3000.0, 2200.0, 1500.0) * b;'] },
+        ],
+        fns: ['Noise'],
+        cannot: [
+            { name: 'the functions block, the scene\'s parameters', why: 'The environment is compiled into the kernels that hold no scene: it reaches the prelude\'s shapes and noise and the environment\'s settings, and a helper it needs goes in its own block.' },
+            { name: 'where the sun is aimed at', why: 'Light sampling and the sun\'s photons aim at the cone the sun rows set (Sun sampled directly): a bright disc the code puts elsewhere is found by the map of the environment instead, with more grain. Put it where the rows say, with sunDirection().' },
+        ],
+    },
     functions: {
         label: 'the scene\'s functions',
         runs: 'when the other blocks call them',
