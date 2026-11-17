@@ -436,7 +436,7 @@ export function installBuilder(window, { RT, gpu, project: initial, current: ini
         if (current !== shown) return
         const env = M.environmentOf(doc())
         if (env) RT.set(env)
-        /* ...and its code's parameters (0.next; model.js skyParams), every slot: a scene without leaves none of the one
+        /* ...and its code's parameters (0.87.0; model.js skyParams), every slot: a scene without leaves none of the one
            shown before. Only when they differ from what was pushed (the renderer starts them at 0): a scene with none
            sets nothing, as before them */
         const slots = M.skyParamUniforms(doc()), sig = JSON.stringify(slots)

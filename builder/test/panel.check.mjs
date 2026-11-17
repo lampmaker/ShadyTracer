@@ -583,7 +583,7 @@ ok('...and the radius row says so by itself (the panel redrawn), the number kept
     void field
 }
 // THE ENVIRONMENT, in the Scene folder since 0.52.0 (the user, 2026-10-10): its settings after the radius; its old id shows
-// the scene. AS CODE (0.next; builder/sky.js): the rows are the ones its code reads -- the default's sun & sky its sun and
+// the scene. AS CODE (0.87.0; builder/sky.js): the rows are the ones its code reads -- the default's sun & sky its sun and
 // haze -- then its code, and a start chosen gives it that start's text and redraws it with that text's settings
 {
     const rows = await rowsOf('root'), folders = await p.evaluate(() => [...document.querySelectorAll('.tp-fldv_t')].map(t => t.textContent.trim()))
@@ -615,7 +615,7 @@ ok('...and the radius row says so by itself (the panel redrawn), the number kept
     await p.evaluate(() => CHECK.panel.show('root'))
     ok('...and shows it again, not white, once the panel is redrawn', Math.abs(await red() - 0.25) < 0.006, String(await red()))
 }
-/* THE CODE'S OWN PARAMETERS (0.next; model.js skyParams): the stars start with theirs, a row each, live; a number added by
+/* THE CODE'S OWN PARAMETERS (0.87.0; model.js skyParams): the stars start with theirs, a row each, live; a number added by
    name, one renamed in the code too, one taken away -- each the code's text, an undo step and a compile */
 {
     const answers = []
@@ -662,7 +662,7 @@ ok('...and the radius row says so by itself (the panel redrawn), the number kept
     ok('another start (asked first: the code is the scene\'s own now): its code, and none of the stars\' parameters', await names() === ''
         && !(await readRows()).includes('starZoom') && await p.evaluate(() => /fn sunSky/.test(CHECK.doc.sky)))
 }
-/* A START SETS THE VIEW'S WHITE FROM THE ENVIRONMENT (0.next; the user, 2026-11-17: on by default for the sun & sky): on
+/* A START SETS THE VIEW'S WHITE FROM THE ENVIRONMENT (0.87.0; the user, 2026-11-17: on by default for the sun & sky): on
    with the sun & sky, off with another start -- through the view the page hands the panel (the third panel here has one) */
 {
     const start = id => p.evaluate(id => {

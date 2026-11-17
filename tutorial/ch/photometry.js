@@ -53,7 +53,7 @@ export function panelSeen(d, a, L = PANEL_L) {
 export const panelE = (d, a, L = PANEL_L) => { const X = a / (2 * d), s = X / Math.sqrt(1 + X * X); return 4 * L * s * Math.atan(s) }
 
 /* THE SUN AND SKY of the photometry rows' third run (docs/TESTING.md), a clear day's: 100 klx and 15 klx, the renderer's
-   own settings until 0.next, when its sun and sky became physical (core/environment.js) and these two its results */
+   own settings until 0.87.0, when its sun and sky became physical (core/environment.js) and these two its results */
 export const SUN_E = 100000, SKY_E = 15000
 /** the share of a cosine-weighted bounce off a level surface that lands in a disc of half-angle `half` at elevation
  *  `elev` (radians), the whole disc up: its cosine-weighted solid angle over pi, pi sin^2(half) sin(elev) / pi */

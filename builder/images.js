@@ -42,7 +42,7 @@ export const SLOT_HELP = {
     sharpness: 'Triplanar only: how quickly the three projections hand over where the surface turns, 1 to 64.',
 }
 
-/** The image types a scene keeps: what every browser decodes -- and a Radiance .hdr (0.next), this repository's own
+/** The image types a scene keeps: what every browser decodes -- and a Radiance .hdr (0.87.0), this repository's own
  *  reader's (core/envimage.js parseHDR), for an image of the environment: light, not a colour, so no material's texture. */
 export const HDR_TYPE = 'image/vnd.radiance'
 /** ...of which a material's texture may be these: a .hdr is the environment's alone (its atlas is 8 bits a channel). */
@@ -126,7 +126,7 @@ export function slotsProblems(m, taken = []) {
     return p
 }
 
-/** The keys of the pictures a scene's materials use, in the order first used -- and its environment's image (0.next,
+/** The keys of the pictures a scene's materials use, in the order first used -- and its environment's image (0.87.0,
  *  doc.envImage; core/envimage.js), so a file keeps it. */
 export function usedImages(doc) {
     const out = []

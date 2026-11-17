@@ -173,7 +173,7 @@ export const FORMAT = 'raytracer-scene'
    does to a ray (where it goes, where it is, its colour, light added, whether it stops), `step` the longest step inside
    (the scene's unit), `draw` whether the object is drawn too. Nothing in a version 29 file changes; a builder of 29
    refuses a file of 30 rather than draw a warp's region as a solid and save the scene without its warp. */
-/* 31: THE ENVIRONMENT IS CODE (0.next; lib/pathtracer/core/environment.js, builder/sky.js; the user, 2026-11-17): `sky` on
+/* 31: THE ENVIRONMENT IS CODE (0.87.0; lib/pathtracer/core/environment.js, builder/sky.js; the user, 2026-11-17): `sky` on
    the scene, the WGSL of its environment -- background(dir), cd/m^2 -- and the sun & sky physical, so the environment's
    settings change: `sunOutside`, the sunlight above the air, replaces `sunIlluminance`, the sun's at the ground, and
    `skyIlluminance` goes -- the sky's light follows from the sun's and the air now, it is no longer set; `sunHint` says
@@ -2194,7 +2194,7 @@ export function addImage(doc, { key, entry }) {
     if (!doc.images[key]) doc.images[key] = entry
     return key
 }
-/** THE ENVIRONMENT'S IMAGE (0.next, version 31; lib/pathtracer/core/envimage.js): the key of the scene's picture its
+/** THE ENVIRONMENT'S IMAGE (0.87.0, version 31; lib/pathtracer/core/envimage.js): the key of the scene's picture its
  *  environment's code reads with envImage(dir), or null to have none. The picture is the scene's (addImage), kept by its
  *  key like a material's; naming one the scene does not have is no error (images.js: an undo's text may) -- it reads
  *  black, as a slot's does. Its presence is the kernels' text: a compile. */
@@ -2204,7 +2204,7 @@ export function setEnvImage(doc, key) {
     doc.envImage = key
     return doc
 }
-/* THE ENVIRONMENT CODE'S PARAMETERS (0.next, version 31; lib/pathtracer/core/environment.js says what one is): `skyParams`,
+/* THE ENVIRONMENT CODE'S PARAMETERS (0.87.0, version 31; lib/pathtracer/core/environment.js says what one is): `skyParams`,
    a list of { name, value, min?, max?, step?, colour? } -- a value a number or three -- in the order of their slots. The
    code names them as they are; codegen puts them in their slots (THE SKY). A name added, renamed or taken away is the
    code's text, a compile; a value is live (demo.js liveValue, the environment's `param/<name>`). */
@@ -2601,7 +2601,7 @@ export function sceneViewOf(doc) {
                        whiteAuto: litBySunSky(doc) ? 1 : 0, ...exposureSettings(doc?.view?.exposure) }
     return { camera, exposure }
 }
-/* THE WHITE FROM THE ENVIRONMENT, ON BY DEFAULT UNDER THE SUN & SKY (0.next; the user, 2026-11-17: "set white balance auto
+/* THE WHITE FROM THE ENVIRONMENT, ON BY DEFAULT UNDER THE SUN & SKY (0.87.0; the user, 2026-11-17: "set white balance auto
    on by default for sun and sky"): a physical sun of about 5000 K is beige against the screen's D65, as on a camera set
    to daylight, and a camera's auto white balance would take it as white. Not for the other environments: the stars'
    blue, a studio's tint or a photograph's sunset are what they were chosen for. A scene's own setting wins; a scene that

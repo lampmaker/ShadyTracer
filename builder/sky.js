@@ -1,5 +1,5 @@
 //======================================================================================================================
-// THE ENVIRONMENT'S CODE, the builder's side (0.next; the renderer's is lib/pathtracer/core/environment.js, which says
+// THE ENVIRONMENT'S CODE, the builder's side (0.87.0; the renderer's is lib/pathtracer/core/environment.js, which says
 // what it is, and sdf.js THE ENVIRONMENT, which says how it is called).
 //
 // The user (2026-11-16, 2026-11-17): "could the sun-sky be shown and edited as a code block too?" -- with "the exact
@@ -17,7 +17,7 @@
 // it reaches the prelude's shapes and noise and the environment's settings, never the functions block or a parameter
 // (skyProblems says so before a compile). A change to it compiles those alone; the rest come from the pipeline cache.
 //
-// ITS OWN PARAMETERS (0.next; the user, 2026-11-17: "parameters/uniforms added"): `doc.skyParams`, names the code reads
+// ITS OWN PARAMETERS (0.87.0; the user, 2026-11-17: "parameters/uniforms added"): `doc.skyParams`, names the code reads
 // as they are, each a value live in one of the environment's sixteen slots (core/environment.js envWithParams, codegen
 // THE SKY puts them there; model.js setSkyParams). A preset starts with its own: the stars' depth, zoom, shift, luminance
 // and peak.

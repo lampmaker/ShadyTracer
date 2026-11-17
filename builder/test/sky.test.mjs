@@ -1,5 +1,5 @@
 //======================================================================================================================
-// Tests for the environment as code (0.next; lib/pathtracer/core/environment.js, envmap.js, sdf.js THE ENVIRONMENT, and
+// Tests for the environment as code (0.87.0; lib/pathtracer/core/environment.js, envmap.js, sdf.js THE ENVIRONMENT, and
 // the builder's side, builder/sky.js). Run: node builder/test/sky.test.mjs
 //
 // The presets are the model: the default the renderer compiles is their own functions, and the code box starts from
@@ -171,7 +171,7 @@ const fnText = (text, name) => { const i = text.indexOf(`fn ${name}(`); return i
         && ozone?.length === SKY_BANDS && rgb.length === SKY_BANDS
         && SKY_BAND_TABLE.every((b, k) => Math.abs(b.tauR - tauR[k]) < 1e-6 && Math.abs(b.haze - haze[k]) < 1e-6 && Math.abs(b.ozone - ozone[k]) < 1e-6
                                          && b.rgb.every((x, c) => Math.abs(x - rgb[k][c]) < 1e-6)))
-    /* THE OZONE (0.next): 300 Dobson units of it (8.06e18 molecules per cm^2), the Chappuis band's cross-sections at 223 K
+    /* THE OZONE (0.87.0): 300 Dobson units of it (8.06e18 molecules per cm^2), the Chappuis band's cross-sections at 223 K
        (Serdyuchenko et al. 2014) averaged over each band: their largest about 4.7e-21 cm^2 near 600 nm, so a depth
        straight up of about 0.038 there -- and next to nothing at the violet end, a little at the red */
     const peak = SKY_BAND_TABLE.reduce((a, b) => b.ozone > a.ozone ? b : a)
@@ -265,7 +265,7 @@ const fnText = (text, name) => { const i = text.indexOf(`fn ${name}(`); return i
 //----------------------------------------------------------------------------------------------------------------------
 {
     const N = ENV_W * ENV_H
-    /* FOUR FLOATS A TEXEL AND A CONE THREAD (envmap.js ENV_BAKE_MAIN, 0.next): its luminance, then its R, G and B -- the
+    /* FOUR FLOATS A TEXEL AND A CONE THREAD (envmap.js ENV_BAKE_MAIN, 0.87.0): its luminance, then its R, G and B -- the
        colours for the view's white balance (core/whitebalance.js levelLight). Here grey: each channel the luminance. */
     const out = new Float32Array(4 * (N + ENV_CONE_THREADS))
     const put = (i, y, rgb = [y, y, y]) => { out[4 * i] = y; out.set(rgb, 4 * i + 1) }
@@ -398,7 +398,7 @@ const fnText = (text, name) => { const i = text.indexOf(`fn ${name}(`); return i
 }
 
 //----------------------------------------------------------------------------------------------------------------------
-// THE CODE'S OWN PARAMETERS (0.next; core/environment.js envWithParams, model.js skyParams): names in their slots, the
+// THE CODE'S OWN PARAMETERS (0.87.0; core/environment.js envWithParams, model.js skyParams): names in their slots, the
 // lines and the columns typed kept, refused where they would break, live values in sixteen slots
 //----------------------------------------------------------------------------------------------------------------------
 {
@@ -474,7 +474,7 @@ const fnText = (text, name) => { const i = text.indexOf(`fn ${name}(`); return i
 }
 
 //----------------------------------------------------------------------------------------------------------------------
-// THE ENVIRONMENT IN A TEXTURE (0.next; core/envmap.js ENV_CACHE_*): the kernel, and envBase reading it outside the cone
+// THE ENVIRONMENT IN A TEXTURE (0.87.0; core/envmap.js ENV_CACHE_*): the kernel, and envBase reading it outside the cone
 //----------------------------------------------------------------------------------------------------------------------
 {
     const WG = { makeCompute: async (body, main, u, res, wg) => ({ body, res }) }
@@ -497,7 +497,7 @@ const fnText = (text, name) => { const i = text.indexOf(`fn ${name}(`); return i
 }
 
 //----------------------------------------------------------------------------------------------------------------------
-// THE VIEW'S WHITE BALANCE (0.next; core/whitebalance.js): the identity at D65, a warm light made white, auto from the
+// THE VIEW'S WHITE BALANCE (0.87.0; core/whitebalance.js): the identity at D65, a warm light made white, auto from the
 // environment's measure
 //----------------------------------------------------------------------------------------------------------------------
 {

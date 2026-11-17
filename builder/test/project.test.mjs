@@ -528,7 +528,7 @@ ${m}`, module: { getCompilationInfo: async () => ({ messages: [] }) }, ready: Pr
     eq('a radius set during a compile ends up in the scene that compiled', got.replayed, 7)
 }
 {
-    /* THE ENVIRONMENT'S CODE UNDONE IS A COMPILE (0.next; demo.js sync): the scene's `wgsl` stops before the code, which
+    /* THE ENVIRONMENT'S CODE UNDONE IS A COMPILE (0.87.0; demo.js sync): the scene's `wgsl` stops before the code, which
        the kernels asking the environment are handed apart (codegen.js THE SKY), so sync compared only `wgsl` and took an
        undone code edit for a value -- the kernels kept the code undone. And a parameter of the code (model.js skyParams)
        moved live into its slot, no compile. Over a stand-in renderer as above. */

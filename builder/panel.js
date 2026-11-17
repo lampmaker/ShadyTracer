@@ -1015,7 +1015,7 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
         }
     }
 
-    /* THE ENVIRONMENT (0.next; builder/sky.js, lib/pathtracer/core/environment.js): its code, background(dir) in cd/m^2,
+    /* THE ENVIRONMENT (0.87.0; builder/sky.js, lib/pathtracer/core/environment.js): its code, background(dir) in cd/m^2,
        and the rows its code reads. The code box shows what the scene is lit by -- its own code, or the default's preset for
        its envMode, the very text the renderer compiles -- and the first edit makes it the scene's. Its ROWS ARE THE
        CODE'S: a setting is shown when the text reads it (UB.<name>), so the sun & sky shows the sun above the air and the
@@ -1143,7 +1143,7 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
         skyParamRows(folder, doc)
     }
 
-    /* THE CODE'S OWN PARAMETERS (0.next; model.js skyParams, core/environment.js ENV_PARAM_SLOTS): a row each, live (makeAfter
+    /* THE CODE'S OWN PARAMETERS (0.87.0; model.js skyParams, core/environment.js ENV_PARAM_SLOTS): a row each, live (makeAfter
        skyParam), flagged for the timeline as any value; then a number or a colour added by name, and one renamed -- in
        the code too, where it is a word of it -- or taken away. Those three are the code's text: an undo step and a
        compile. At most sixteen, the environment's slots. */
