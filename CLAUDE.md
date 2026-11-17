@@ -226,6 +226,7 @@ node library/test/thumbs.test.mjs   # the library's pictures: keyed by what an i
 node library/test/studio.test.mjs   # the studio's scenes and camera framing, an item that cannot share a part failing alone, no GPU (what it renders is the user's to judge)
 node library/test/edit.test.mjs     # an item's editing scene for every built-in item; open, save, close, undo and redo on the real builder
 node tools/test/timeline.test.mjs   # the timeline's registry: live parameters only, a track moving one, quietly; the page's timeline from before 0.67.0 given to the scene shown, once
+node tools/test/causticlens.test.mjs # a caustic lens's height map from a picture (tools/causticlens.mjs, 0.next), no GPU: its 16-bit PNG read back exactly by builder/images.js decodePNG16; the Neumann Poisson solver against cosines; heightAt's twin through the written B-spline coefficients passing through the designed heights; the screen's light traced through them like the picture's, flipped and flat not; twice the distance about half the relief
 node bench/test/bench.test.mjs     # the benchmark: every row what its label says (reliefs, units byte-identical, settings), the studio scenes framed, the runner
 node bench/test/wgslgraph.test.mjs # the call graph shaderstats.mjs counts scene copies with (node bench/shaderstats.mjs: kernel sizes, per-sample CPU)
 node bench/test/copies.test.mjs    # the copies shade, the optics shade and pick hold of the SDF, getMaterial2, the normal and the BSDF's functions, every scene: a new call site fails it
