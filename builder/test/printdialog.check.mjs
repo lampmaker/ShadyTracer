@@ -114,8 +114,12 @@ ok('STL: no "colour from" and no samples', !(await shownRow('select[data-setting
 await pick('format', '3mf')
 ok('3MF: "colour from" offered, Material to start, no samples or look for it', await shownRow('select[data-setting="light"]') && !(await shownRow('input[data-setting="samples"]'))
     && !(await shownRow('input[data-setting="litStops"]')) && await p.evaluate(() => document.querySelector('.print-dialog select[data-setting="light"]').value === 'material'))
-ok('...its three choices: Material, As lit (the view), Lit from all sides', await p.evaluate(() =>
-    [...document.querySelectorAll('.print-dialog select[data-setting="light"] option')].map(o => o.value).join() === 'material,lit,allsides'))
+ok('...its four choices: Material, As lit (the view), As lit all around, Lit from all sides', await p.evaluate(() =>
+    [...document.querySelectorAll('.print-dialog select[data-setting="light"] option')].map(o => o.value).join() === 'material,lit,around,allsides'))
+await pick('light', 'around')
+ok('...As lit, all around: its views (6 to start) and samples offered', await shownRow('select[data-setting="views"]') && await shownRow('input[data-setting="samples"]')
+    && await p.evaluate(() => document.querySelector('.print-dialog select[data-setting="views"]').value === '6'))
+await pick('views', '14')
 await pick('light', 'allsides')
 ok('...Lit from all sides: its samples offered, 64 to start', await shownRow('input[data-setting="samples"]')
     && await p.evaluate(() => document.querySelector('.print-dialog input[data-setting="samples"]').value === '64'))
@@ -124,7 +128,7 @@ s = await shown()
 ok('...0 samples refused, said, Export off', !s.exportOn && /samples/.test(s.text), JSON.stringify(s))
 await type('input[data-setting="samples"]', 128)
 await pick('light', 'lit')
-ok('As lit (the view): no samples, it renders nothing of its own', !(await shownRow('input[data-setting="samples"]')))
+ok('As lit (the view): no samples and no views, it renders nothing of its own', !(await shownRow('input[data-setting="samples"]')) && !(await shownRow('select[data-setting="views"]')))
 // the look over the view's (0.next): brightness in stops and contrast, offered for lit colours, refused out of range
 ok('...its brightness and contrast offered, 0 to start (0 and 0: the view\'s own look)', await shownRow('input[data-setting="litStops"]') && await shownRow('input[data-setting="litContrast"]')
     && await p.evaluate(() => ['litStops', 'litContrast'].every(k => document.querySelector(`.print-dialog input[data-setting="${k}"]`).value === '0')))
@@ -136,8 +140,8 @@ await type('input[data-setting="litStops"]', 1.5)
 await press('Export')
 await p.waitForTimeout(50)
 const lit = await p.evaluate(() => CHECK.T.exports.at(-1))
-ok('...Export asks for the colours as lit, with the brightness and contrast', lit?.light === 'lit' && lit.format === '3mf'
-    && lit.litStops === 1.5 && lit.litContrast === 0.3, JSON.stringify(lit))
+ok('...Export asks for the colours as lit, with the brightness and contrast (and the views chosen, kept)', lit?.light === 'lit' && lit.format === '3mf'
+    && lit.litStops === 1.5 && lit.litContrast === 0.3 && lit.views === 14, JSON.stringify(lit))
 s = await shown()
 ok('...and says what they came to: the points, how many the view showed, EV, the spread, the black and white shares, the colours',
     /lit: 4,321 points, 3,000 \(69 %\) seen from the view, the rest the material's colour; EV 9\.5; brightness 5 % \/ median \/ 95 %: 0\.05 \/ 0\.31 \/ 0\.62, black 2 %, white 0 %; colours #FF0000/.test(s.text), s.text)

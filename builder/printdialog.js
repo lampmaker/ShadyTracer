@@ -15,7 +15,7 @@
 //======================================================================================================================
 
 import { hex } from './mesh.js'
-import { EXPORT_DEFAULTS, FORMATS, LIGHTS, fittedBox, exportGrid, gridProblem, settingsProblems, boxProblems, corners, centreOf, sizeOf, boxOf } from './exportbox.js'
+import { EXPORT_DEFAULTS, FORMATS, LIGHTS, AROUND_COUNTS, fittedBox, exportGrid, gridProblem, settingsProblems, boxProblems, corners, centreOf, sizeOf, boxOf } from './exportbox.js'
 
 const STORE = 'shadytracer.print'
 const remembered = () => {
@@ -52,6 +52,7 @@ export function openPrintDialog({ doc, selected = null, boxes = null, estimate =
         samples: Number.isInteger(R.samples) && R.samples >= 1 ? R.samples : EXPORT_DEFAULTS.samples,
         litStops: Number.isFinite(R.litStops) && Math.abs(R.litStops) <= 10 ? R.litStops : EXPORT_DEFAULTS.litStops,
         litContrast: Number.isFinite(R.litContrast) && Math.abs(R.litContrast) <= 1 ? R.litContrast : EXPORT_DEFAULTS.litContrast,
+        views: AROUND_COUNTS.includes(R.views) ? R.views : EXPORT_DEFAULTS.views,
         box: null, fitted: 'none', typed: false, busy: false,
     }
 
@@ -106,8 +107,9 @@ export function openPrintDialog({ doc, selected = null, boxes = null, estimate =
        without the light that only the lights' rays bring (through glass) -- and for that, how many samples a point */
     const light = row('colour from', add('select', { title: 'Material: each surface its material\'s colour. '
         + 'As lit: the colours the view shows -- its light, shadows and glow, its exposure and tone curve -- on the side the camera sees; the rest keeps its material\'s colour. '
+        + 'As lit, all around: the same, rendered from several cameras round the part, so every side gets its light (takes a render a view; shiny surfaces may differ where two views meet). '
         + 'Lit from all sides: the light traced at every point, the hidden side too, but without light that only comes through glass or from a ray file.' }, fieldStyle)).querySelector('select')
-    for (const [v, t] of [['material', 'Material'], ['lit', 'As lit (the view)'], ['allsides', 'Lit from all sides (no light through glass)']])
+    for (const [v, t] of [['material', 'Material'], ['lit', 'As lit (the view)'], ['around', 'As lit, all around (renders views)'], ['allsides', 'Lit from all sides (no light through glass)']])
         light.appendChild(add('option', { value: v, textContent: t }))
     light.value = S.light
     light.dataset.setting = 'light'
@@ -122,6 +124,11 @@ export function openPrintDialog({ doc, selected = null, boxes = null, estimate =
     const litContrast = row('contrast', add('input', { type: 'number', step: '0.05', min: '-1', max: '1', value: S.litContrast,
         title: 'Added to the view\'s contrast: above 0 the lights and shadows further apart, below 0 closer.' }, fieldStyle)).querySelector('input')
     litContrast.dataset.setting = 'litContrast'
+    // ...and for all around, how many cameras: each a render of its own
+    const views = row('views', add('select', { title: 'How many cameras round the part: more reach into its corners, and take longer (a render each).' }, fieldStyle)).querySelector('select')
+    for (const v of AROUND_COUNTS) views.appendChild(add('option', { value: v, textContent: `${v} views` }))
+    views.value = String(S.views)
+    views.dataset.setting = 'views'
     // how far the simplified mesh may move: 0 keeps every triangle the grid gave (simplify.js)
     const deviation = row('deviation (mm)', add('input', { type: 'number', step: '0.005', min: '0', value: S.deviation,
         title: 'How far the mesh may be simplified, in mm: flat regions become a few large triangles, curved ones keep small ones. 0: every triangle the grid gives.' }, fieldStyle)).querySelector('input')
@@ -139,6 +146,7 @@ export function openPrintDialog({ doc, selected = null, boxes = null, estimate =
     samples.oninput = () => { S.samples = Math.round(+samples.value); refresh() }
     litStops.oninput = () => { S.litStops = litStops.value === '' ? NaN : +litStops.value; refresh() }
     litContrast.oninput = () => { S.litContrast = litContrast.value === '' ? NaN : +litContrast.value; refresh() }
+    views.onchange = () => { S.views = +views.value; refresh() }
     format.onchange = () => { S.format = format.value; refresh() }
 
     const grid = el.appendChild(add('div', {}, { color: '#8a8f96', fontSize: '11px', margin: '4px 0', whiteSpace: 'pre-wrap' }))
@@ -180,7 +188,7 @@ export function openPrintDialog({ doc, selected = null, boxes = null, estimate =
               + (S.subject === 'object' && S.box.frames.length ? 'In the object\'s own frame, its z up on the bed.' : 'In the world, z up on the bed.')
         let text = '', problem = null
         const bad = [...settingsProblems({ cell: S.cell, colours: S.colours, deviation: S.deviation, light: S.light, samples: S.samples,
-                                          litStops: S.litStops, litContrast: S.litContrast }), ...(S.box ? boxProblems(S.box) : ['no box'])]
+                                          litStops: S.litStops, litContrast: S.litContrast, views: S.views }), ...(S.box ? boxProblems(S.box) : ['no box'])]
         if (bad.length) problem = bad[0]
         else {
             try {
@@ -196,20 +204,21 @@ export function openPrintDialog({ doc, selected = null, boxes = null, estimate =
         const coloured = S.format === '3mf' || S.format === 'obj'
         colours.parentElement.style.display = coloured ? 'flex' : 'none'
         light.parentElement.style.display = coloured ? 'flex' : 'none'
-        const lit = coloured && (S.light === 'lit' || S.light === 'allsides')
+        const lit = coloured && (S.light === 'lit' || S.light === 'around' || S.light === 'allsides')
         for (const e of [litStops, litContrast]) e.parentElement.style.display = lit ? 'flex' : 'none'
-        samples.parentElement.style.display = coloured && S.light === 'allsides' ? 'flex' : 'none'
+        samples.parentElement.style.display = coloured && (S.light === 'allsides' || S.light === 'around') ? 'flex' : 'none'
+        views.parentElement.style.display = coloured && S.light === 'around' ? 'flex' : 'none'
     }
 
     async function run() {
         if (S.busy || go.disabled) return
         S.busy = true; refresh(false)
         remember({ cell: S.cell, colours: S.colours, deviation: S.deviation, light: S.light, samples: S.samples,
-                   litStops: S.litStops, litContrast: S.litContrast, format: S.format })
+                   litStops: S.litStops, litContrast: S.litContrast, views: S.views, format: S.format })
         const t0 = performance.now()
         try {
             const r = await onExport({ subject: S.subject === 'object' ? node.id : null, box: S.box, format: S.format, cell: S.cell, colours: S.colours, deviation: S.deviation,
-                light: S.light, samples: S.samples, litStops: S.litStops, litContrast: S.litContrast }, t => say(t))
+                light: S.light, samples: S.samples, litStops: S.litStops, litContrast: S.litContrast, views: S.views }, t => say(t))
             say(`${S.format === 'obj' ? 'OBJ + MTL (keep the two files together)' : S.format.toUpperCase()}: ${r.triangles.toLocaleString()} triangles`
                 + (r.meshed > r.triangles ? ` (simplified from ${r.meshed.toLocaleString()})` : '')
                 + `, ${(r.bytes.length / 1048576).toFixed(1)} MB`
@@ -254,7 +263,8 @@ export function openPrintDialog({ doc, selected = null, boxes = null, estimate =
    of the middle and the ends, the share clipped */
 export function litLine(l) {
     const s = l.spread, pc = x => `${Math.round(100 * x)} %`
-    const seen = l.mode === 'lit' ? `, ${l.seen.toLocaleString()} (${pc(l.seen / Math.max(1, l.points))}) seen from the view, the rest the material's colour` : ''
+    const from = l.mode === 'lit' ? 'the view' : l.mode === 'around' ? `the ${l.views ?? ''} views`.replace('  ', ' ') : null
+    const seen = from ? `, ${l.seen.toLocaleString()} (${pc(l.seen / Math.max(1, l.points))}) seen from ${from}, the rest the material's colour` : ''
     return `lit: ${l.points.toLocaleString()} points${seen}${Number.isFinite(l.ev) ? `; EV ${l.ev.toFixed(1)}` : ''}`
         + (s ? `; brightness 5 % / median / 95 %: ${s.p5.toFixed(2)} / ${s.median.toFixed(2)} / ${s.p95.toFixed(2)}, black ${pc(s.black)}, white ${pc(s.white)}` : '')
 }

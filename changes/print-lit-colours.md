@@ -9,13 +9,20 @@ outside the picture, facing away from the camera, or hidden behind something. Th
 (`core/field.js`) decides the last case by marching from each point towards the camera. It now shares one SDF call site
 across its three modes, because each call site is a whole copy of the scene to compile.
 
+*As lit, all around* (`RT.viewsAround`, `core/probes.js` aroundViews) covers the side the view doesn't show, such as a
+back lit from behind. It renders the part from 6, 14 or 26 cameras round it (the cube's faces, then its corners, then its
+edges). Each camera is far enough out to frame the whole part, and each picture is an ordinary offscreen render with the
+user's settings, so every light is in it. Every picture is developed with the live view's look and one exposure, and each
+point takes its colour from the camera that sees it most squarely. The user's camera is put back after, its up vector too,
+which the facade test caught missing on the first try. A shiny surface can change where two cameras meet.
+
 The first version traced each point on its own, from every side, with a ray list instead of a camera (the **probes**:
 `genrays.js` camtype 2, `R.setProbes`, `RT.renderProbes`). That can't use light tracing, the lights' rays or the photon
 map, which are joined to a camera's picture. On a cube lit through a lamp's glass, the lit patch came out black where the
 view showed a green glow (the user, 2026-11-16). It stays as a second choice, *Lit from all sides (no light through
 glass)*, for a part whose hidden side matters and whose light falls on it directly.
 
-For both, **brightness** (stops of exposure) and **contrast** (added to the view's) adjust the look over the view's own
+For all three, **brightness** (stops of exposure) and **contrast** (added to the view's) adjust the look over the view's own
 (`core/probes.js` probeView); 0 and 0 is the view's look. After the export the dialog says what the colours came to:
 - the points, and how many of them the view showed;
 - the EV;
@@ -38,4 +45,6 @@ How it looks printed, or how long it takes on a real GPU, hasn't been measured.
 **What to look at:** the user's cube under the lamp with the green glass. Let the view settle, then export it as 3MF or
 OBJ with *colour from: As lit (the view)* and 8 to 16 colours. In the slicer, the top should carry the green patch where
 the view shows it, and the sides their light and shadow. The side away from the camera should be the wood's own colour.
-The dialog's "lit:" line says how much of the part the view showed.
+The dialog's "lit:" line says how much of the part the view showed. Then try *As lit, all around* with 6 views. The
+part's back should carry its own light too, including any light from behind it. Note how long the export took, and
+whether two views meet visibly on a glossy part.

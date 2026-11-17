@@ -81,11 +81,15 @@ The box is fitted to it, and drawn dashed in the picture while the dialog is ope
     with its exposure, tone curve and every light in it: shadows, glow, light through glass. Let the view settle first,
     because the export takes the picture as it is. A point the camera can't see takes its material's colour: the back,
     a face turned away, or one hidden behind something.
+  - **As lit, all around (renders views)**: the same, from *views* cameras placed round the part (6, 14 or 26). Each
+    renders a picture with *samples* samples and the view's settings and look, and each point takes its colour from the
+    camera that sees it most squarely. Every side then gets its light, a back lit from behind included. It takes a
+    render per view, and a shiny surface can change where two views meet, since each sees a different reflection.
   - **Lit from all sides (no light through glass)**: the renderer traces the light at every point, the hidden side too,
     for *samples* samples each (64 to start: more is less speckle, and longer). Light that only arrives through glass or
     a mirror, or from a ray file, is missing. Use it when the back of the part matters and the light falls on it directly.
 
-  For both lit choices, **brightness** (in stops: +1 doubles the light, −1 halves it) and **contrast** (added to the
+  For the lit choices, **brightness** (in stops: +1 doubles the light, −1 halves it) and **contrast** (added to the
   view's, −1 to 1) adjust the look; 0 and 0 is the view's own. After the export, the dialog says how the colours came
   out: how many points, how many the view showed, the exposure, how bright the darkest 5 %, the middle and the brightest
   5 % are, how many came out black or white, and the colours chosen. Too dark or too bright: change brightness. All one

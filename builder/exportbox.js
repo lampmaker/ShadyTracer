@@ -24,7 +24,8 @@
 //   colours   how many colours a 3MF may have: the filaments the printer holds
 //   light     'material', the material's own colour; 'lit', the part as the view shows it, on the side the camera
 //             sees; 'allsides', lit by the renderer at every point from every side (0.next; LIGHTS)
-//   samples   for 'allsides', the renderer's samples at each point: more is less speckle and longer
+//   samples   for 'around' each view's samples, for 'allsides' each point's: more is less speckle and longer
+//   views     for 'around': how many cameras round the part, 6, 14 or 26 (0.next)
 //   litStops, litContrast  for 'lit' and 'allsides' (0.next): brighter by so many stops of exposure than the view, and
 //             contrast added to the view's (core/probes.js probeView); 0 and 0 the view's own look
 //   deviation how far, in mm, the mesh may be simplified from what the grid gave (simplify.js, 0.next): 0 keeps every
@@ -53,7 +54,7 @@ import { lineage, toParent, framesTo } from './bounds.js'
 import { find, toTree } from './model.js'
 import { UNITS } from '../lib/pathtracer/core/photometry.js'
 import { FIELD_GRID, FIELD_POINTS, FIELD_MAX_POINTS, fieldInput } from '../lib/pathtracer/core/field.js'
-import { colourSpread } from '../lib/pathtracer/core/probes.js'
+import { colourSpread, AROUND_COUNTS } from '../lib/pathtracer/core/probes.js'
 import { createMesher, centroids, quantize, toSRGB, openEdges } from './mesh.js'
 import { write3MF, writeSTL, writeOBJ } from './print.js'
 import { simplify } from './simplify.js'
@@ -62,12 +63,15 @@ import { boxCuts, cutsOf, vertexProbes, smoothVertices, triangleColours } from '
 /* deviation 0.05 mm: on a sphere of 10 mm meshed at the default cell, 70 056 triangles become about 7 100 and no point
    of the mesh moves more than 0.013 mm from the true sphere (test/simplify.test.mjs, in node) -- under a tenth of a
    0.4 mm nozzle's line. */
-export const EXPORT_DEFAULTS = Object.freeze({ cell: 0.4, colours: 4, deviation: 0.05, light: 'material', samples: 64, litStops: 0, litContrast: 0 })
+export const EXPORT_DEFAULTS = Object.freeze({ cell: 0.4, colours: 4, deviation: 0.05, light: 'material', samples: 64, litStops: 0, litContrast: 0, views: 6 })
 /** What a 3MF's colours are (0.next): the material's own (its baseColor, as before); 'lit', the part as the view shows
- *  it -- its own picture's colours, every light in them, on the side the camera sees; or 'allsides', the light the
+ *  it -- its own picture's colours, every light in them, on the side the camera sees; 'around', the same from `views`
+ *  cameras round the part, each rendered (every side, every light); or 'allsides', the light the
  *  renderer traces at every point from every side, without the light that comes only by the lights' rays (through
  *  glass, a ray file's) (litcolour.js) */
-export const LIGHTS = ['material', 'lit', 'allsides']
+export const LIGHTS = ['material', 'lit', 'around', 'allsides']
+/** For 'around': how many cameras (core/probes.js) */
+export { AROUND_COUNTS }
 /** The files: 3MF with colour, OBJ with its MTL (colour, for a slicer that reads an OBJ's and not a 3MF's: print.js
  *  writeOBJ, 0.next), STL with none */
 export const FORMATS = ['3mf', 'obj', 'stl']
@@ -84,6 +88,7 @@ export function settingsProblems(E) {
     if (E?.deviation !== undefined && !(Number.isFinite(E.deviation) && E.deviation >= 0)) p.push('the deviation must be mm >= 0 (0: not simplified)')
     if (E?.light !== undefined && !LIGHTS.includes(E.light)) p.push(`the colours must be one of ${LIGHTS.join(', ')}`)
     if (E?.samples !== undefined && !(Number.isInteger(E.samples) && E.samples >= 1 && E.samples <= 65536)) p.push('the samples must be a whole number from 1 to 65536')
+    if (E?.views !== undefined && !AROUND_COUNTS.includes(E.views)) p.push(`the views must be ${AROUND_COUNTS.join(', ')}`)
     if (E?.litStops !== undefined && !(Number.isFinite(E.litStops) && Math.abs(E.litStops) <= 10)) p.push('the brightness must be stops from -10 to 10')
     if (E?.litContrast !== undefined && !(Number.isFinite(E.litContrast) && Math.abs(E.litContrast) <= 1)) p.push('the contrast must be from -1 to 1')
     if (!(Number.isInteger(E?.colours) && E.colours >= 1 && E.colours <= 64)) p.push('the colours must be a whole number from 1 to 64')
@@ -236,7 +241,9 @@ export function boxDistance(g, i, j, k) {
 /**
  * Sample, mesh, colour, simplify and write. `sample(input, outFloats)` is the renderer's field at points, of the scene being
  * printed: the one showing, or one made of the selected object alone (subjectTree). `see({ points, normals, offset,
- * look })` the view's colour at each point, for `light` 'lit' (index.js viewColours): { colour, seen, view } -- and
+ * look })` the view's colour at each point, for `light` 'lit' (index.js viewColours): { colour, seen, view };
+ * `around({ points, normals, offset, look, views, samples, onProgress })` the same from cameras all round, for 'around'
+ * (index.js viewsAround) -- and
  * `probe({ points, dirs, offset, samples, look, onProgress })` the renderer's light along a ray at each point, for
  * 'allsides' (index.js renderProbes): { colour, view }. Both the scene SHOWN, whatever is printed, so one object is
  * coloured as it stands among the rest. `doc` gives the unit and the file's name, `box` where to print. Resolves to { bytes,
@@ -247,12 +254,12 @@ export function boxDistance(g, i, j, k) {
  * not checked, a big mesh), which is 0 unless something is wrong with the mesher or the simplifier, and is said rather
  * than hidden.
  */
-export async function runExport({ sample, probe = null, see = null, doc, box, format = '3mf', cell = EXPORT_DEFAULTS.cell, colours = EXPORT_DEFAULTS.colours,
+export async function runExport({ sample, probe = null, see = null, around = null, doc, box, format = '3mf', cell = EXPORT_DEFAULTS.cell, colours = EXPORT_DEFAULTS.colours,
                                   deviation = EXPORT_DEFAULTS.deviation, light = EXPORT_DEFAULTS.light, samples = EXPORT_DEFAULTS.samples,
-                                  litStops = EXPORT_DEFAULTS.litStops, litContrast = EXPORT_DEFAULTS.litContrast,
+                                  litStops = EXPORT_DEFAULTS.litStops, litContrast = EXPORT_DEFAULTS.litContrast, views = EXPORT_DEFAULTS.views,
                                   smooth = 1, name, stem, onProgress = () => { } }) {
     if (!FORMATS.includes(format)) throw new Error(`format must be one of ${FORMATS.join(', ')}`)
-    const bad = settingsProblems({ cell, colours, deviation, light, samples, litStops, litContrast })
+    const bad = settingsProblems({ cell, colours, deviation, light, samples, litStops, litContrast, views })
     if (bad.length) throw new Error(bad[0])
     const g = exportGrid(doc.unit, box, { cell })
     const why = gridProblem(g)
@@ -307,8 +314,9 @@ export async function runExport({ sample, probe = null, see = null, doc, box, fo
         }
         /* ---- AS LIT (litcolour.js): each vertex the colour the view shows there -- or, 'allsides', the light the renderer
            traces at it from every side -- and the material's colour where the box cuts or the view does not reach */
-        if (light === 'lit' || light === 'allsides') {
+        if (light === 'lit' || light === 'around' || light === 'allsides') {
             if (light === 'lit' && !see) throw new Error('colours as lit need the view (no see given)')
+            if (light === 'around' && !around) throw new Error('colours all around need the renderer (no around given)')
             if (light === 'allsides' && !probe) throw new Error('colours lit from all sides need the renderer (no probe given)')
             const { cut, onCut } = cutsOf(mesh.positions, mesh.triangles, g.sizeMm, g.spacing, cuts)
             const P = vertexProbes(mesh.positions, mesh.triangles, cut, onCut)
@@ -336,6 +344,12 @@ export async function runExport({ sample, probe = null, see = null, doc, box, fo
                     // a vertex the view does not show has no colour from it: no probe, so its triangles take the others'
                     seen = r.seen
                     for (let v = 0; v < P.probe.length; v++) if (P.probe[v] >= 0 && !seen[P.probe[v]]) P.probe[v] = -1
+                } else if (light === 'around') {
+                    onProgress(`lighting all around: ${views} views of ${P.count.toLocaleString()} points, ${samples} samples each`)
+                    r = await around({ points, normals, offset, look, views, samples,
+                        onProgress: (k, n) => onProgress(`lighting all around: ${views} views, ${Math.round(100 * k / n)} %`) })
+                    seen = r.seen
+                    for (let v = 0; v < P.probe.length; v++) if (P.probe[v] >= 0 && !seen[P.probe[v]]) P.probe[v] = -1
                 } else {
                     const dirs = normals.map(x => -x)            // looking AT the surface: against its outward normal
                     onProgress(`lighting: ${P.count.toLocaleString()} points, ${samples} samples each`)
@@ -345,7 +359,7 @@ export async function runExport({ sample, probe = null, see = null, doc, box, fo
                 // what came out, said by the dialog: how much the view reached, and whether it was dark, bright or flat
                 const shown = seen ? seen.reduce((s, x) => s + x, 0) : P.count
                 const kept = seen ? r.colour.filter((_, i) => seen[Math.floor(i / 3)]) : r.colour
-                lit = { mode: light, points: P.count, seen: shown, ev: r.view?.ev ?? null, spread: colourSpread(kept) }
+                lit = { mode: light, points: P.count, seen: shown, views: r.views ?? null, ev: r.view?.ev ?? null, spread: colourSpread(kept) }
                 const smoothed = smoothVertices(r.colour, mesh.triangles, P.probe, smooth)
                 rgb.set(triangleColours(mesh.triangles, P.probe, smoothed, cut, rgb))
             }

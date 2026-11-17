@@ -15,7 +15,7 @@ import { runExport, boxOf, settingsProblems, LIGHTS } from '../exportbox.js'
 import { createMesher, openEdges } from '../mesh.js'
 import { toParent } from '../bounds.js'
 import { boxCuts, cutsOf, vertexProbes, smoothVertices, triangleColours } from '../litcolour.js'
-import { probePicture, probeRays, probePlace, PROBE_OVERRIDES, PROBES_PER_RENDER, probeView, colourSpread, viewSample } from '../../lib/pathtracer/core/probes.js'
+import { probePicture, probeRays, probePlace, PROBE_OVERRIDES, PROBES_PER_RENDER, probeView, colourSpread, viewSample, aroundDirections, aroundViews, AROUND_COUNTS } from '../../lib/pathtracer/core/probes.js'
 import { FIELD_GRID, FIELD_HEADER } from '../../lib/pathtracer/core/field.js'
 
 let pass = 0, fail = 0
@@ -62,6 +62,31 @@ const T = (pos = [0, 0, 0], rot = [0, 0, 0], scale = 1) => ({ pos: { x: pos[0], 
     ok('the view sampled: a pixel\'s centre its own colour, top row up (y +1 the top), left column at x -1',
         at(-0.75, 0.5) === '0,0,0' && at(0.75, -0.5) === '1,1,0' && at(-1, 1) === '0,0,0' && at(1, -1) === '1,1,0', `${at(-0.75, 0.5)} ${at(0.75, -0.5)}`)
     ok('...between centres, bilinear', at(-0.5, 0) === `${(1 / 6).toFixed(6).replace(/0+$/, '')},0.5,0`, at(-0.5, 0))
+    // ALL AROUND (0.next): the cameras' directions, and each camera framing every point
+    for (const n of AROUND_COUNTS) {
+        const D = aroundDirections(n)
+        const unitAll = D.every(d => Math.abs(Math.hypot(...d) - 1) < 1e-12)
+        const distinct = D.every((d, i) => D.every((e, j) => i === j || Math.hypot(d[0] - e[0], d[1] - e[1], d[2] - e[2]) > 0.5))
+        ok(`all around, ${n} views: ${n} unit directions, none two the same`, D.length === n && unitAll && distinct)
+    }
+    let threwA = false
+    try { aroundDirections(7) } catch { threwA = true }
+    ok('...another count refused', threwA)
+    {
+        const pts = new Float32Array([10, 0, 0, -2, 3, 1, 4, -5, 2, 0, 0, 8, 1, 1, -3])
+        const fov = 35, V = aroundViews(pts, 14, fov)
+        let outside = 0, badUp = 0
+        for (const v of V) {
+            const ax = v.target.map((t, a) => t - v.pos[a]), al = Math.hypot(...ax)
+            for (let k = 0; k < pts.length; k += 3) {
+                const d = [pts[k] - v.pos[0], pts[k + 1] - v.pos[1], pts[k + 2] - v.pos[2]], dl = Math.hypot(...d)
+                // inside the square picture's inscribed cone: the angle from the axis under half the field
+                if (Math.acos((d[0] * ax[0] + d[1] * ax[1] + d[2] * ax[2]) / (dl * al)) > fov / 2 * Math.PI / 180) outside++
+            }
+            if (Math.abs((v.up[0] * ax[0] + v.up[1] * ax[1] + v.up[2] * ax[2]) / al) > 0.99) badUp++
+        }
+        ok('...every point inside every camera\'s picture, its up never along its axis', outside === 0 && badUp === 0, `${outside} outside, ${badUp} bad up`)
+    }
     // how the colours came out: luminance percentiles and the clipped shares
     const cs = new Float32Array(300)
     for (let k = 0; k < 100; k++) cs.fill(k < 10 ? 0 : k >= 95 ? 1 : k / 100, 3 * k, 3 * k + 3)
@@ -276,6 +301,25 @@ const standIn = f => async (input, outFloats) => {
     const pv = rv.palette.map(c => c.map(v => Math.round(v * 255)))
     ok('...red where the view saw, the material\'s green elsewhere, never the black an unseen point carries',
         pv.some(c => c[0] > 240 && c[1] < 15) && pv.some(c => c[1] > 240 && c[0] < 15) && !pv.some(c => c.every(v => v < 20)), JSON.stringify(pv))
+    // ALL AROUND (0.next; index.js viewsAround): the same mapping, asked with the views and samples
+    let roundAsked = null
+    const around = async o => {
+        roundAsked = o
+        const n = o.points.length / 3, colour = new Float32Array(3 * n), seen = new Uint8Array(n)
+        // every point but the very bottom seen, blue
+        for (let k = 0; k < n; k++) if (o.points[3 * k + 2] > C[2] - R + 0.001) { seen[k] = 1; colour.set([0, 0, 1], 3 * k) }
+        o.onProgress?.(1, 2)
+        return { colour, seen, view: { ev: 6 }, views: o.views }
+    }
+    const said2 = []
+    const ra = await runExport({ sample: standIn(f), probe, see, around, doc: d, box, cell: 1, colours: 3, format: '3mf', light: 'around', views: 14, samples: 32, onProgress: t => said2.push(t) })
+    ok('all around: the cameras asked once, with the views, samples, look and outward normals', roundAsked?.views === 14 && roundAsked.samples === 32
+        && roundAsked.look?.stops === 0 && roundAsked.normals?.length === roundAsked.points.length, JSON.stringify({ views: roundAsked?.views, samples: roundAsked?.samples }))
+    ok('...said what it is doing, and how many the views showed', said2.some(t => /all around: 14 views/.test(t)) && ra.lit?.mode === 'around' && ra.lit.views === 14 && ra.lit.seen > 0)
+    ok('...the views count checked', settingsProblems({ cell: 1, colours: 4, views: 14 }).length === 0 && settingsProblems({ cell: 1, colours: 4, views: 7 }).length === 1)
+    let msgA = ''
+    try { await runExport({ sample: standIn(f), probe, see, doc: d, box, cell: 1, format: '3mf', light: 'around' }) } catch (e) { msgA = e.message }
+    ok('...with no renderer to ask: said', /all around/.test(msgA), msgA)
     let msg0 = ''
     try { await runExport({ sample: standIn(f), probe, doc: d, box, cell: 1, format: '3mf', light: 'lit' }) } catch (e) { msg0 = e.message }
     ok('...with no view to ask: said', /view/.test(msg0), msg0)
@@ -292,7 +336,7 @@ const standIn = f => async (input, outFloats) => {
     let msg = ''
     try { await runExport({ sample: standIn(f), doc: d, box, cell: 1, format: '3mf', light: 'allsides' }) } catch (e) { msg = e.message }
     ok('lit from all sides with no renderer to ask: said', /renderer/.test(msg), msg)
-    ok('the settings: material, lit and from all sides, samples a whole number from 1', LIGHTS.join() === 'material,lit,allsides' && settingsProblems({ cell: 1, colours: 4, light: 'allsides', samples: 64 }).length === 0
+    ok('the settings: material, lit and from all sides, samples a whole number from 1', LIGHTS.join() === 'material,lit,around,allsides' && settingsProblems({ cell: 1, colours: 4, light: 'allsides', samples: 64 }).length === 0
         && settingsProblems({ cell: 1, colours: 4, light: 'sunny' }).length === 1 && settingsProblems({ cell: 1, colours: 4, samples: 0 }).length === 1
         && settingsProblems({ cell: 1, colours: 4, samples: 2.5 }).length === 1)
 }
