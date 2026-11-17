@@ -2485,7 +2485,7 @@
     "exposure": {
       "whiteK": 6506,
       "whiteTint": 0,
-      "whiteAuto": 0,
+      "whiteAuto": 1,
       "exposureEV": 15,
       "autoExposure": 1,
       "exposureComp": 0,

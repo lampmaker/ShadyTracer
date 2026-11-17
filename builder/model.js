@@ -2597,8 +2597,20 @@ export const exposureSettings = e => e && typeof e === 'object'
 export function sceneViewOf(doc) {
     const c = doc?.view?.camera
     const camera = c ? { ...structuredClone(CAMERA_DEFAULTS), ...cameraSettings(c) } : null
-    const exposure = { ...Object.fromEntries(Object.entries(VIEW_EXPOSURE).map(([k, sp]) => [k, sp.def])), ...exposureSettings(doc?.view?.exposure) }
+    const exposure = { ...Object.fromEntries(Object.entries(VIEW_EXPOSURE).map(([k, sp]) => [k, sp.def])),
+                       whiteAuto: litBySunSky(doc) ? 1 : 0, ...exposureSettings(doc?.view?.exposure) }
     return { camera, exposure }
+}
+/* THE WHITE FROM THE ENVIRONMENT, ON BY DEFAULT UNDER THE SUN & SKY (0.next; the user, 2026-11-17: "set white balance auto
+   on by default for sun and sky"): a physical sun of about 5000 K is beige against the screen's D65, as on a camera set
+   to daylight, and a camera's auto white balance would take it as white. Not for the other environments: the stars'
+   blue, a studio's tint or a photograph's sunset are what they were chosen for. A scene's own setting wins; a scene that
+   names none -- every scene saved before the setting -- takes this. */
+/** Whether the scene is lit by the sun & sky: the default's in sun & sky (envMode not the studio), or code of its own
+ *  calling the sun & sky preset's sunSky(). */
+export function litBySunSky(doc) {
+    if (!hasSky(doc?.sky)) return ((doc?.environment?.envMode ?? 0) | 0) !== 1
+    return /\bsunSky\s*\(/.test(String(doc.sky).replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/\/\/[^\n]*/g, ' '))
 }
 /** Set the scene's view: `camera` and `exposure` each over what it has, checked first (a refusal changes nothing).
  *  Only the settings each knows are kept; null for either takes it away. */

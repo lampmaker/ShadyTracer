@@ -32,7 +32,9 @@ every ray. Off: the code for every ray, as before.
 white balance (Bradford, from the Darkroom), or *White from the environment* takes what the environment puts on a
 level white surface, the sun's and the sky's light together. 6506 K and tint 0 is no change. The display's alone: the
 light the picture holds, the readings and the false-colour views are untouched. A physical sun of 4980 K is warm
-against the screen's D65 white, as on a camera set to daylight; *White from the environment* makes it white.
+against the screen's D65 white, as on a camera set to daylight; *White from the environment* makes it white, and is
+on by default in a scene lit by the sun & sky (the examples under it too; a scene's own setting wins). *start from*
+sets it: on for the sun & sky, off for the studio, the stars and an image.
 
 Light sampling now also draws from a map of where the environment is bright, baked on the GPU whenever the code or a
 setting changes. So stars, a second moon or the sun in a photograph light the scene, instead of being found by chance.
@@ -59,6 +61,7 @@ measured; sun-only and sky-only are `envSky` 0 and `envSun` 0.
   as sharp either way.
 - *stars*: drag *starZoom* and *starLuminance*: the sky should follow without a compile. *+ number…* `twinkle`, use it
   in the code, Apply; rename it; remove it.
-- *First steps*, ◐ › *White from the environment* on: the sunlit floor should go neutral. At 6506 K and 0 it should
-  look exactly as before. Move the sun to 10° with it on: still neutral; off at 6506 K, orange.
+- *First steps* opens with ◐ › *White from the environment* on: the sunlit floor should look neutral, not beige. Off,
+  at 6506 K and 0, it should look exactly as before. Move the sun to 10°: on, still neutral; off, orange.
+- *start from* › *stars*: it should switch off (the stars keep their blue); back to *sun & sky*: on again.
 - Tests › photometry, illuminance, cosine-law and render-modes: every ratio should read 1.

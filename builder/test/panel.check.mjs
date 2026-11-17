@@ -662,6 +662,28 @@ ok('...and the radius row says so by itself (the panel redrawn), the number kept
     ok('another start (asked first: the code is the scene\'s own now): its code, and none of the stars\' parameters', await names() === ''
         && !(await readRows()).includes('starZoom') && await p.evaluate(() => /fn sunSky/.test(CHECK.doc.sky)))
 }
+/* A START SETS THE VIEW'S WHITE FROM THE ENVIRONMENT (0.next; the user, 2026-11-17: on by default for the sun & sky): on
+   with the sun & sky, off with another start -- through the view the page hands the panel (the third panel here has one) */
+{
+    const start = id => p.evaluate(id => {
+        CHECK.viewPanel.show('root')
+        const row = [...document.querySelectorAll('#t3 .tp-lblv')].find(r => r.querySelector('.tp-lblv_l')?.textContent.trim() === 'start from')
+        const sel = row?.querySelector('select')
+        if (!sel) return 'no start'
+        sel.selectedIndex = [...sel.options].findIndex(o => o.textContent.trim().startsWith(id))
+        sel.dispatchEvent(new Event('change', { bubbles: true }))
+        return 'set'
+    }, id)
+    const onDialog = d => d.accept()
+    p.on('dialog', onDialog)
+    ok('the stars started from the panel with a view', await start('stars') === 'set')
+    await p.waitForTimeout(50)
+    ok('...the white from the environment off', await p.evaluate(() => CHECK.exposure.values.whiteAuto) === 0)
+    await start('sun & sky')
+    await p.waitForTimeout(50)
+    ok('the sun & sky: on', await p.evaluate(() => CHECK.exposure.values.whiteAuto) === 1)
+    p.off('dialog', onDialog)
+}
 /* EVERY ROW OF THE SCENE'S PROPERTIES SAYS WHAT IT IS (the user, 2026-10-10: "make sure it has tooltips & explanations"):
    a label with no title, in sun & sky and in the studio, and with a value flagged animated */
 {

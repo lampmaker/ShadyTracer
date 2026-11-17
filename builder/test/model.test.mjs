@@ -1585,8 +1585,9 @@ throws('another version is refused, not guessed at',
     const d = M.createDoc({ title: 'view' })
     const v0 = M.sceneViewOf(d)
     ok('a scene with no view has no camera: the builder shows it from the camera there is', v0.camera === null)
-    eq('...and the whole exposure, at the schema\'s defaults', v0.exposure,
-        Object.fromEntries(Object.entries(M.VIEW_EXPOSURE).map(([k, sp]) => [k, sp.def])))
+    // ...the white from the environment on, the scene being under the default sun & sky (model.js litBySunSky, 0.next)
+    eq('...and the whole exposure, at the schema\'s defaults (the white from the environment on, under the sun & sky)', v0.exposure,
+        { ...Object.fromEntries(Object.entries(M.VIEW_EXPOSURE).map(([k, sp]) => [k, sp.def])), whiteAuto: 1 })
     // an example's camera as it was (scenes/examples.js before 0.66.0): no field of view, no projection, no lens
     M.setView(d, { camera: { mode: 'orbit', target: [0, -20, 25], azimuth: -60, elevation: 65, distance: 330, dimensions: 330 } })
     const c = M.sceneViewOf(d).camera

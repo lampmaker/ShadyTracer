@@ -523,6 +523,16 @@ const fnText = (text, name) => { const i = text.indexOf(`fn ${name}(`); return i
     ok('...nothing measured: the setting', viewWhite({ whiteAuto: 1, whiteK: 5000 }, null).temp === 5000)
     ok('...a black environment: the setting', viewWhite({ whiteAuto: 1, whiteK: 5000 }, { skyRGB: [0, 0, 0], sunRGB: [0, 0, 0] }, true).from === 'setting')
     ok('the settings are Exposure\'s', ['whiteK', 'whiteTint', 'whiteAuto'].every(k => k in UniformGroups.Exposure) && UniformSpec.whiteK.def === 6506)
+    /* ON BY DEFAULT UNDER THE SUN & SKY (the user, 2026-11-17), off under the others; a scene's own setting wins */
+    const autoOf = d => M.sceneViewOf(d).exposure.whiteAuto
+    const studio = scene(); M.setEnvironment(studio, { envMode: 1 })
+    const ownSun = scene(M.SKY_TEMPLATE), ownStars = scene(M.STARS_TEMPLATE), noted = scene('// sunSky( in a comment only\nfn background(dir: VEC3) -> VEC3 { return VEC3(1.0); }')
+    ok('the white from the environment: on for a scene under the default sun & sky, and one whose code calls sunSky()',
+        autoOf(scene()) === 1 && autoOf(ownSun) === 1 && M.litBySunSky(scene()) && M.litBySunSky(ownSun))
+    ok('...off in the studio, under the stars, and for code naming sunSky only in a comment', autoOf(studio) === 0 && autoOf(ownStars) === 0 && autoOf(noted) === 0)
+    const set0 = scene(); M.setView(set0, { exposure: { whiteAuto: 0 } })
+    ok('...a scene\'s own setting kept', autoOf(set0) === 0)
+    ok('the renderer\'s own default stays off: a host showing no scene of the builder\'s (the Tests panel, the bench, the library)', UniformSpec.whiteAuto.def === 0)
 }
 
 //----------------------------------------------------------------------------------------------------------------------

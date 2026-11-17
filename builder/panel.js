@@ -1118,6 +1118,9 @@ export function installBuilderPanel(table, BUILDER, { onLabel = () => { }, onStr
                     else delete BUILDER.doc.skyParams
                     env('envMode', 2)
                     env('sunHint', p.sunHint)
+                    /* ...and the view's white from the environment with it (model.js litBySunSky): on under the sun & sky,
+                       whose 5000 K sun is beige against the screen's white, off for the others, whose colour is the point */
+                    try { view?.setExposure?.('whiteAuto', p.id === 'sunsky' ? 1 : 0); said('view/exposure/whiteAuto') } catch (e) { console.warn('[panel] exposure', e) }
                     edited(null)
                     onApply()
                     again()

@@ -14,7 +14,8 @@ from** puts in one of four, each the renderer's own text, to read and change:
   and the sky is what is scattered towards you. The sun is placed by its azimuth (a compass bearing: 0 towards +y,
   90 towards +x) and its elevation. The ozone high up takes some orange out. With the sun 45° up it gives about
   91 000 lux from the sun and 11 500 from the sky, the sun about 5000 K; a low sun is dimmer and redder, and the sky
-  darker. Sunlight is warmer than the screen's white: for a white sunlit floor, tick **White from the environment** (below).
+  darker. Sunlight is warmer than the screen's white, so under the sun & sky **White from the environment** (below) is
+  on by default and a white floor in the sun looks white.
 - **Studio**: an even light from every direction, brighter from above by a share you set. There is no sun and no
   hard shadow, which is good for showing an object as it is. Its level is in lux, and its colour is a tint.
 - **Stars**: a fractal night sky, after Star Nest by Kali (Pablo Andrioli). Its depth, zoom, shift, brightness and
@@ -80,7 +81,9 @@ Reinhard, Hable, clip.
 **White balance (K)** and **White tint** in the same popover say which light should look white, as on a camera: a
 temperature in kelvin and a tint (green to magenta). 6506 K and tint 0 is the screen's own white, D65, and changes
 nothing. With **White from the environment** ticked, the white is what the environment puts on a level white surface, the sun's and the sky's light together, so
-a sunlit white floor looks white at any sun height. It changes only what you see: the light in the picture, readings
+a sunlit white floor looks white at any sun height. It is on by default in a scene lit by the sun & sky, and off
+under the stars, the studio and an image, whose colour is the point; choosing a start in **start from** sets it that
+way again. It changes only what you see: the light in the picture, readings
 in lux and cd/m², and the false-colour views are untouched.
 
 The exposure belongs to the scene, as the camera does (below): a sunlit street and a dim room in one project each keep
