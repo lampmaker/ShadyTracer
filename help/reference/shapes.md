@@ -197,7 +197,7 @@ A parabolic reflector with its FOCUS AT THIS NODE'S ORIGIN, opening to +z: the m
 
 ### faceted reflector
 
-The parabolic reflector in flat facets, their corners on the paraboloid (focus at this node's origin, opening to +z): rings rings of equal width, facets facets round the rim, and going inward the count halves wherever a facet would be narrower than minWidth (held at one ring's width at most, so the facets stay convex) -- fewer facets near the centre. facets 0 is round (faceted along the radius only), rings 0 smooth along the radius (faceted round it only). solid and wall as the reflector's: 1 the filled paraboloid capped at the rim (glass, or to subtract), 0 a mirror with its wall behind. Every number is live. (shapes.js NfacetedReflector: exact inside, a bound outside.)
+The parabolic reflector in flat facets, their corners on the paraboloid (focus at this node's origin, opening to +z): rings rings of equal width, facets facets round the rim, and going inward the count halves (once a ring, down to 3) wherever a facet would be narrower than minWidth, measured round its ring -- fewer facets near the centre. facets 0 is round (faceted along the radius only), rings 0 smooth along the radius (faceted round it only). solid and wall as the reflector's: 1 the filled paraboloid capped at the rim (glass, or to subtract), 0 a mirror with its wall behind. Every number is live. (shapes.js NfacetedReflector: exact inside and a bound outside while the facets are convex; a minWidth past a ring's width can fold them the other way at a halving, and then a bound both sides.)
 
 | parameter | starts at |
 |---|---|
