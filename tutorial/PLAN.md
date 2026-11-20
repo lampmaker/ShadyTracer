@@ -149,8 +149,10 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
    -> builder/joins.js, scene_api.js csgRound*, import/fillet.js, import/freeform.js. Planned for it too (0.84.0): a
    convex solid as the intersection of half-spaces, exact inside by the largest plane distance -- the faceted
    reflector, flat facets with their corners on a paraboloid (the lifting map's lower hull, so convex while the count
-   round it halves no finer than a ring's width: past that a coarse facet rose through a finer one), each facet a
-   line in its fold's (u, z), the point's own sector the largest -> shapes.js NfacetedReflector.
+   round it halves no finer than a ring's width), each facet a line in its fold's (u, z), the point's own sector the
+   largest; and where it is not (0.next: past a ring's width a halving's middle facet rises slower than the ring
+   inside it, a ridge on that ring, told by comparing the two lines' slopes), the heightfield's bound |z - h| /
+   sqrt(1 + L^2) held up by the hull's and the bands' own distances -> shapes.js NfacetedReflector, facetConvex.
    *Read:* iq-distfunctions, iq-interior, iq-fbmsdf,
    iq-smin; Shapiro and Vossler 1991 (named in words, not yet in kit/reading.js).
 4. **Which way is up** (draft): the normal as the field's gradient; a shape's own against forward differences (the
