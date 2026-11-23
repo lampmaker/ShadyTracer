@@ -550,6 +550,11 @@ A scene is WGSL distance code plus its materials, parameters and resources; see
 `OPTICS`, `MEASURE`, `PARAMS`, `LIBRARY`, `TIMELINE`, `SHELL` and `HELP`, among others, are on
 `window` for the console.
 
+**Add-ins** are modules from outside this repository that the page loads as it starts. A private repository's
+add-ins can add panels, commands and settings, and drive the renderer, the scene and the optics through one
+versioned API. See [`docs/ADDINS.md`](docs/ADDINS.md), and [`docs/addins/template/`](docs/addins/template/README.md)
+to start one.
+
 ---
 
 ## Checked against known answers
