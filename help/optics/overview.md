@@ -45,4 +45,7 @@ The **+** menu's Optics shapes include two parabolic reflectors, their focus at 
 smooth, and the **faceted reflector** is made of flat facets: `facets` round the rim, `rings` along the radius, and
 fewer facets round the centre wherever they would be narrower than `minWidth`. Each has a `solid` switch. At 0 it is a
 mirror with a wall behind it. At 1 it is the filled paraboloid, capped flat at the rim: give it a glass for a TIR
-reflector, or subtract it from another shape for a parabolic cavity.
+reflector, or subtract it from another shape for a parabolic cavity. Both have a `focusOffset`, 0 to start: it moves
+the focus off the axis to a ring of that radius, each half of the mirror focused on its own side (or across the axis,
+when negative), so a source as wide as the ring sends its edge out parallel instead of its centre -- for the beam of an
+LED that is not a point.

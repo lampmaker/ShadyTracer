@@ -14,13 +14,14 @@ let pass = 0, fail = 0
 const ok = (name, cond, extra = '') => { if (cond) { pass++; return } fail++; console.log(`FAIL  ${name}${extra ? '\n      ' + extra : ''}`) }
 
 const want = { sphere: 'Nsphere', box: 'NboxRounded', cylinder: 'Ncylinder', capsule: 'Ncapsule', lens: 'Nlens', disc: 'Ndisc', rectangle: 'Nrectangle', plane: 'Nplane',
-               tube: 'Ntube', cone: 'sdCappedCone', dome: 'Ndome', reflector: 'Nparabolic', octahedron: 'Noctahedron', pyramid: 'Nfrustum', prism: 'Nprism', 'round cone': 'NroundCone' }
+               tube: 'Ntube', cone: 'sdCappedCone', dome: 'Ndome', reflector: 'NparabolicOffset', octahedron: 'Noctahedron', pyramid: 'Nfrustum', prism: 'Nprism', 'round cone': 'NroundCone' }
 for (const [k, fn] of Object.entries(want)) {
     const a = plainShapeOf(PRIMITIVES[k].code)
     ok(`the ${k}'s own code is one plain shape, ${fn}`, a?.fn === fn, JSON.stringify(a))
 }
-// Ndish: the reflector's own code before 0.84.0, kept by every scene saved with it (the examples among them)
-const older = ['Ndish']
+// Ndish: the reflector's own code before 0.84.0, kept by every scene saved with it (the examples among them); Nparabolic
+// its code from then to 0.next, before its focus offset
+const older = ['Ndish', 'Nparabolic']
 ok('every plain shape is a built-in\'s, or one a built-in was', [...PLAIN_SHAPES].every(f => Object.values(want).includes(f) || older.includes(f)) && PLAIN_SHAPES.size === Object.keys(want).length + older.length)
 ok('...the old reflector\'s code still one plain shape, Ndish', plainShapeOf('C = add_new(C, Ndish(p, focal, aperture, wall), MATERIAL);')?.fn === 'Ndish')
 ok('...its arguments as written (no spaces round punctuation), a whole expression each', JSON.stringify(plainShapeOf(PRIMITIVES.cylinder.code).args) === JSON.stringify(['height * 0.5', 'radius'])

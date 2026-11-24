@@ -152,7 +152,11 @@ the CI's list read from CLAUDE.md. *Read:* rtiow, pbr.
    round it halves no finer than a ring's width), each facet a line in its fold's (u, z), the point's own sector the
    largest; and where it is not (0.next: past a ring's width a halving's middle facet rises slower than the ring
    inside it, a ridge on that ring, told by comparing the two lines' slopes), the heightfield's bound |z - h| /
-   sqrt(1 + L^2) held up by the hull's and the bands' own distances -> shapes.js NfacetedReflector, facetConvex.
+   sqrt(1 + L^2) held up by the hull's and the bands' own distances -> shapes.js NfacetedReflector, facetConvex. And
+   the focus moved off the axis (0.next): each half's parabola focused on a ring, the profile (|r| - c)^2 the parabola
+   and its mirror image across the axis, their intersection (c < 0, exact in the bowl) or union (c > 0, exact behind
+   it); a band falling outward a tent, its sectors' least plane the point's own, never convex, so the heightfield ->
+   shapes.js g2ParabolaOffset, NdishOffset, NfacetedReflectorOffset.
    *Read:* iq-distfunctions, iq-interior, iq-fbmsdf,
    iq-smin; Shapiro and Vossler 1991 (named in words, not yet in kit/reading.js).
 4. **Which way is up** (draft): the normal as the field's gradient; a shape's own against forward differences (the
