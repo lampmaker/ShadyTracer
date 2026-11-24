@@ -1,0 +1,39 @@
+# The private site: the public ShadyTracer (the submodule, at the commit it is pinned to) with this repository's
+# add-ins beside it, on one origin, behind a login. One origin, so the login's cookie is sent with every import --
+# an add-in imported across origins (from shadytracer.com) would be fetched without it.
+#
+# NOT GitHub Pages: outside GitHub Enterprise a Pages site is public, even one built from a private repository.
+# Here: Cloudflare Pages, with Cloudflare Access in front of it (Zero Trust > Access > Applications: one for the
+# site's domain, a policy naming who may sign in). Check that the site asks for a login, in a private window,
+# before putting anything in addins/.
+#
+# Needs the repository secrets CLOUDFLARE_API_TOKEN (Pages: Edit) and CLOUDFLARE_ACCOUNT_ID, and a Pages project
+# named below. Moving to a newer ShadyTracer is moving the submodule: git -C ShadyTracer checkout <commit>.
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: The public page, the add-ins and their list, in one folder
+        run: |
+          rsync -a --exclude .git ShadyTracer/ dist/
+          cp -r addins dist/addins
+          cp addins.json dist/addins.json
+          echo "$(git -C ShadyTracer rev-parse HEAD) private" > dist/REVISION
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name=shadytracer-private --branch=main

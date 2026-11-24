@@ -116,8 +116,8 @@
         import { installFocusPick } from './lib/pathtracer/focuspick.js'
         import { installViewList } from './builder/viewlist.js'
         import { report, reloadFresh, staleFiles } from './diagnose.js'
-        import { versionText, loadRevision, stamp } from './version.js'
-        import { safeStartOf, started, safeNote, firstCompile } from './start.js'
+        import { versionText, loadRevision, stamp, VERSION } from './version.js'
+        import { safeStartOf, started, safeNote, firstCompile, STARTING_KEY } from './start.js'
         import { createProjectStore, indexedDbProjects, memoryProjects } from './workspace/store.js'
         import { createTabs } from './workspace/tabs.js'
         import { createAutosave, recoverAll } from './workspace/autosave.js'
@@ -136,6 +136,8 @@
         import { makeScriptApi } from './tools/scriptapi.js'
         import { download as downloadBlob } from './lib/pathtracer/darkroom/export/run.js'
         import { installHelp } from './help/panel.js'
+        import { createAddins } from './lib/addins/loader.js'
+        import { installAddinsPanel } from './lib/addins/panel.js'
 
         //==============================================================================================================
         // DEVICE AND LAYOUT -- the host's job
@@ -397,6 +399,24 @@
         const openHelp = () => SHELL.isOpen('help') ? SHELL.open('help')
             : SHELL.open('help', undefined, undefined, { floating: { width: Math.min(900, innerWidth - 80), height: Math.min(680, innerHeight - 80) } });
         SHELL.command({ id: 'view.help', label: 'Help: the help pages', help: 'The help pages (Help › Contents, F1)', run: openHelp });
+        /* ADD-INS (lib/addins/, docs/ADDINS.md): modules from outside this repository -- a private one's -- imported as the
+           page starts. Their register() runs HERE: after the page's panels, before the View entries are made and the
+           layout restored, so an add-in's panel has a View entry and a saved layout keeps it (lib/shell/README.md). Their
+           start() once the page is up (the end of this script). None on a safe start: ?safe, or a last start that never
+           finished (start.js's mark, read here without setting it -- an add-in may be why it never finished). */
+        let addinStorage = null, unfinished = false;
+        try { addinStorage = window.localStorage; unfinished = !!addinStorage.getItem(STARTING_KEY); } catch { }
+        const ADDINS = window.ADDINS = createAddins({ base: location.href, search: location.search, storage: addinStorage,
+            importer: url => import(url),
+            fetchText: async url => { const r = await fetch(url, { cache: 'no-cache' }); return r.ok ? r.text() : null; },
+            confirm: async text => window.confirm(text),
+            safe: new URLSearchParams(location.search).has('safe') || unfinished,
+            log: (kind, text) => (console[kind] ?? console.log)(text) });
+        const addinsEl = SHELL.panel({ id: 'addins', title: 'Add-ins', module: 'app', menu: false,
+            help: 'Modules from outside ShadyTracer loaded into this page: what was loaded and how it went, and your own list' });
+        await ADDINS.register({ SHELL, PARAMS, base: location.href, storage: addinStorage, importer: url => import(url),
+                                app: { version: VERSION, text: versionText() } });
+        const ADDINS_PANEL = installAddinsPanel(addinsEl, ADDINS, { say: t => SHELL.status(t) });
         /* THE WINDOW VERBS AND "LAYOUT: X" IN NO MENU (0.63.0): the first are the buttons on every group's header, the second
            the layout buttons on the menu bar; the palette keeps both */
         SHELL.standardCommands({ window: false, layouts: false });
@@ -1534,12 +1554,13 @@
         /* THE SCRIPT (tools/script.js; builder/model.js SCRIPT): the scene shown's, handed over as each is shown, kept into
            it at every keystroke. Each run gets an API of its own (tools/scriptapi.js), stopped by its own signal: the same
            registry, renderer, builder and Analysis pane a person works through. SCRIPT in the console. */
+        const scriptApi = (signal, log, job = 'script') => makeScriptApi({ PARAMS, RT, BUILDER, OPTICS: window.OPTICS, signal, log,
+            save: downloadBlob, progress: p => SHELL.progress(job, p),
+            frame: () => new Promise(r => requestAnimationFrame(r)), build: versionText });
         window.SCRIPT = installScript(scriptEl, {
             scene: { script: () => BUILDER.script(), keep: text => BUILDER.keepScript(text) },
             status: t => SHELL.status(t),
-            api: (signal, log) => makeScriptApi({ PARAMS, RT, BUILDER, OPTICS: window.OPTICS, signal, log,
-                save: downloadBlob, progress: job => SHELL.progress('script', job),
-                frame: () => new Promise(r => requestAnimationFrame(r)), build: versionText }),
+            api: (signal, log) => scriptApi(signal, log),
         });
         BUILDER.onScript = text => window.SCRIPT.showScene(text);
 
@@ -1678,6 +1699,10 @@
             // the site's front page (index.html, 0.80.0): what ShadyTracer is, what it needs, the tutorial -- this page was / before it
             C({ id: 'help.home', menu: 'Help', label: 'ShadyTracer homepage', run: () => window.open('./', '_blank', 'noopener'),
                 help: 'The front page of shadytracer.com: what ShadyTracer does, what it needs, the tutorial and the code (opens in a new tab)' });
+            C({ id: 'help.addins', menu: 'Help', label: 'Add-ins…',
+                help: 'Modules from outside ShadyTracer loaded into this page: what was loaded, how it went, and your own list',
+                run: () => { ADDINS_PANEL.show(); SHELL.isOpen('addins') ? SHELL.open('addins')
+                    : SHELL.open('addins', undefined, undefined, { floating: { width: Math.min(560, innerWidth - 80), height: Math.min(480, innerHeight - 80) } }); } });
             C({ id: 'help.about', menu: 'Help', label: 'About', run: () => SHELL.status(`${versionText()} © Matthijs Keuper · a wavefront SDF path tracer with a technical optics trace · what changed: CHANGELOG.md · support it: Help › Support ShadyTracer…`) });
         }
 
@@ -1706,6 +1731,17 @@
             if (note) { status(note); console.warn('[projects]', note); }
         }
         RT.start()
+        /* THE ADD-INS' START (lib/addins/loader.js): the page is up -- the renderer, the builder, the optics page, the first
+           compile and the project as it was left. Not awaited: an add-in's start does not hold the render loop. Their
+           builder edits go through the tree as its own do (a step of undo, the tree redrawn, the scene compiled). */
+        ADDINS.start({ RT, BUILDER, OPTICS: window.OPTICS, gpu: WG, scriptApi: (signal, log) => scriptApi(signal, log, 'addin'),
+            edited: async () => { builderTree?.rebuild(); builderPanel?.refresh(); await builderTree?.apply(); },
+            others: { Q, TIMELINE: window.TIMELINE, SCRIPT: window.SCRIPT, MEASURE: window.MEASURE, LIBRARY: window.LIBRARY, HELP: window.HELP } })
+            .then(list => {
+                ADDINS_PANEL.show();
+                const bad = list.filter(a => a.state === 'failed' || a.state === 'refused');
+                if (bad.length) SHELL.status(`add-in${bad.length > 1 ? 's' : ''} not loaded: ${bad.map(a => a.name ?? a.url).join(', ')} -- Help › Add-ins…`);
+            }, e => console.error('[add-ins]', e));
     </script>
 </body>
 
