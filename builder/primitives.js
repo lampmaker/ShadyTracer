@@ -289,7 +289,7 @@ export const PRIMITIVES = {
     /* THE FOCUS OFF THE AXIS (the user, 2026-11-23: "a radial offset for the focus point, normally 0 ... to optimise
        the beam of a light source that is not a point"): focusOffset moves each meridian's parabola's focus out to that
        radius, so the foci are a ring in z = 0 (shapes.js NdishOffset). Negative is across the axis. A length; its
-       range either way, as wide as the aperture's. Before 0.next both presets' code had no offset (Nparabolic,
+       range either way, as wide as the aperture's. Before 0.88.0 both presets' code had no offset (Nparabolic,
        NfacetedReflector), and a scene saved then keeps it: the same shapes at 0. */
     reflector: {
         group: 'optics',

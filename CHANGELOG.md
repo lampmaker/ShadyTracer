@@ -16,6 +16,96 @@ for example "ShadyTracer 0.1.0 · 1819ac6 (main)". So no hash is written here.
 **Each entry** says what changed and **what to look at**: what only the user's card or eye can confirm,
 as PLAN.md does.
 
+## 0.88.0 — 2026-11-25
+
+**Add-ins: modules from outside this repository, loaded into the page as it starts** (`lib/addins/`,
+`docs/ADDINS.md`). An add-in is an ES module with a declaration (`addin = { id, name, api: 1 }`) and two functions:
+`register(st)`, called before the View entries are made and the layout restored, so its panels and commands keep their
+place in a saved layout; and `start(st)`, once the page is up. `st` is the contract:
+
+- the shell (panels, commands, the status bar, the palette), each under the add-in's id;
+- the parameter registry, with the add-in's own settings under `addin/<id>/`;
+- the scene script's API (settings by path, `settled()`, renders, the optics analysis);
+- the builder (an edit is one step of undo and a compile);
+- the renderer and the optics page, and a namespaced storage.
+
+`st.unstable` hands over the page's own objects, with no promise across versions.
+
+The page finds add-ins in `addins.json` beside `app.html` (empty here, written by a private deploy), in the address
+(`?addins=`, `?addin=`), and in your own list under **Help › Add-ins…**. From the address, only the page's own origin
+and `localhost` load without asking; anything else is asked about first and then remembered. A safe start loads none.
+An add-in that fails, by a 404, a throw, a hang or the wrong API version, is said in the panel and stops nothing else.
+
+`docs/addins/template/` is the start of a private repository: the public one as a submodule, an example add-in (one
+setting swept against a detector's uniformity, the loop an inverse design is made of), and a workflow that publishes
+both behind a login on Cloudflare Pages (not GitHub Pages, whose sites are public).
+
+**What to look at:**
+- With no add-in, the page starts as before.
+- **Help › Add-ins…** says "None".
+- Serving the template's copy locally with `?addins=/addins.json`:
+  - **Analysis › Example: sweep a setting** opens its panel;
+  - a live scene setting swept against a scene with a detector prints each step's U0, and leaves the setting at the
+    best;
+  - the panel says *started*.
+- `?safe` loads none.
+
+**The faceted reflector's `minWidth` is what it says: the narrowest a facet may be round its ring.** Until now it was
+held at one ring's width, so a `minWidth` wider than a ring (`aperture / rings`) did nothing -- with many thin rings
+the count barely halved, however large `minWidth` was set. It was held there because past it the facets are no longer
+convex: at a halving, the middle triangle (from the coarse chord out to the next ring) can rise less steeply than
+the ring inside it, a ridge on that ring, and the exact distance (the largest of the facets' plane distances) only
+holds for a convex bowl. Now `minWidth` is not held. Where every ring's crease is a valley the shape is the same
+exact distance as before; where one is a ridge (`facetConvex` in `core/shapes.js` tells, from the slopes, and
+`shapes.test.mjs` checks it against the mesh's own convexity over 768 layouts), the shape is the heightfield of the
+point's own band's facets, a bound both sides: `|z - h| / sqrt(1 + L^2)` (L the steepest facet), raised by the convex
+hull's distance in the air and the bands' under the mirror, so about exact near most facets. With a wall, the wall's
+back there is the mirror moved down by `wall` along the smooth paraboloid's normal at that radius -- about `wall`
+thick, exactly where a facet is as steep as the paraboloid; moving each facet back along its own normal opened a step
+where a ridge and a valley meet. A ring still halves at most once, and never below 3 or from an odd count.
+
+A tie in the halving's test is gone with it: the shape read a ring's radius as `ro - dr` and its mesh
+(`facetRings`) as `dr * i`, which split `2 r sin(pi / m) = minWidth` one way in each.
+
+**What to look at:** a faceted reflector with, say, `aperture` 0.5, `rings` 12, `facets` 48 and `minWidth` 0.1 (a
+ring is 0.042 wide): the count should now halve from 48 at the rim down to 3 near the centre, each facet round its
+ring at least 0.1 wide wherever halving can make it so (48, 24, 12, 6, 3 inward). Before, the same settings stopped at
+6 round the centre, with facets down to about a ring's width. Look at the creases where the count halves: the facets
+meet edge to edge with no gap or step, solid (`solid` 1, glass) and as a mirror with its wall. A reflector whose `minWidth` is under a ring's width (the preset's 0.04 against 0.083)
+renders as before. Where a ridge appears, rendering that reflector may be somewhat slower (the march takes shorter
+steps near its steep facets); the preset is unaffected.
+
+**Both parabolic reflectors have a `focusOffset`: the focus moved off the axis to a ring of that radius.** At 0 (where
+a new one starts) the reflector is the paraboloid it was. Otherwise each half of the mirror, seen in a cut through the
+axis, is the parabola whose focus sits `focusOffset` out from the axis in z = 0 -- the mirror `z = (r - focusOffset)^2
+/ 4f - f`, turned about the axis -- so the foci make a ring, and a source as wide as that ring sends its edge out
+parallel instead of its centre: room to tune the beam of an LED that is not a point. Positive puts each half's focus
+on its own side (the mirror rises from the ring both ways: a bump on the axis); negative puts it across the axis
+(each half focuses through the axis: a point there, like a cone's). The offset is a length, converted with the scene's
+unit, and held at most the aperture.
+
+The faceted reflector takes it too: its corners on that mirror, the apex included. A negative offset keeps the facets
+convex wherever they were (the exact distance, as before); a positive one makes the bands inside the ring fall outward
+-- a tent, whose sectors meet in ridges -- and the shape is then the facets' heightfield, the bound both sides that a
+`minWidth` past a ring's width already gave (`facetConvex` takes the offset and says which). Its troughs (`rings` 0)
+are the same heightfield with a positive offset.
+
+The distance is never too large either way, and the code says on which side it is exact (`g2ParabolaOffset` in
+`core/shapes.js`): the profile is the parabola and its mirror image across the axis, intersected for a negative offset
+(exact in the bowl) and joined for a positive one (exact behind the wall). Both presets' code calls new functions,
+`NparabolicOffset` and `NfacetedReflectorOffset`; the old `Ndish`, `Nparaboloid`, `Nparabolic` and
+`NfacetedReflector` stay, the new ones at 0 bit for bit, so a scene saved before keeps its reflector as it was -- and
+without the new parameter: insert a new reflector to get it. `shapes.test.mjs` holds the new shapes to their profile
+and their mesh (and a ray from the ring leaving along +z, smooth and solid); `reflector.gpu.mjs` their WGSL to their
+JS twins on Dawn.
+
+**What to look at:** a new reflector from the + menu's Optics shapes (`aperture` 0.5, `focal` 0.125), a mirror
+material, a light at its origin. Move `focusOffset` up to about 0.1 and down to about -0.1: the mirror should grow a
+low bump on the axis and then a point there, the rim lower and higher, with no hole, seam or black ring at the axis or
+at the ring's radius, mirror and `solid` 1 alike. The same on the faceted reflector: the facets should stay closed,
+and with a positive offset the inner rings tilt down toward the rim. In the Optics page's far field, with a source
+about as wide as the ring, watch the beam angle as the offset moves: nothing here has measured what it does to a beam.
+
 ## 0.87.0 — 2026-11-17
 
 **The environment is code, in cd/m²: a physical sun and sky, a studio, stars or an image, and whatever you write.**
